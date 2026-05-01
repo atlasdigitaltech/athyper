@@ -24,6 +24,10 @@
  *   POST   /api/records/:entity/:id/action/:code — execute entity operation (ActionBar)
  *
  *   GET    /api/activity/:entity/:id           — per-record activity log
+ *
+ * Composite intake (registered before generic :entity routes):
+ *   POST   /api/records/supplier/check-duplicates — pre-submit duplicate check
+ *   POST   /api/records/supplier/intake            — composite transactional create
  */
 
 import type { Router } from "express";
@@ -38,6 +42,7 @@ import { createBulkCrudRoutes }       from "./bulk-crud.route.js";
 import { createExportRoutes }         from "./export.route.js";
 import { createActionDispatcherRoute } from "./action-dispatcher.route.js";
 import { createActivityRoute }        from "./activity.route.js";
+import { createSupplierIntakeRoute }  from "./supplier-intake.route.js";
 
 export interface RecordsRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,6 +68,8 @@ export function registerRecordsRoutes(router: Router, deps: RecordsRoutesDeps): 
   createExportRoutes(router,           deps);
   createActionDispatcherRoute(router,  deps);
   createActivityRoute(router,          deps);
+  // Composite intake — must register before generic :entity/* to avoid shadowing
+  createSupplierIntakeRoute(router,    deps);
 
   if (deps.importQueue && deps.objectStorage) {
     createImportRoutes(router, {

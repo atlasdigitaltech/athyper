@@ -95,6 +95,40 @@ export {
   type KpiStripCell,
 } from "./kpi";
 
+// ── Composite intake wizard (multi-entity onboarding) ────────────────────────
+// CompositeFlowWizard: accepts injected engine for multi-entity intake (e.g. supplier)
+// useCompositeIntakeEngine: manages flat fields + child rows + step navigation
+// ChildRecordRepeater: generic repeater for child-entity rows
+// CompletionSummaryPanel: right-rail section completion tracker
+// DuplicateCheckBanner: debounced pre-submit duplicate check
+export {
+  CompositeFlowWizard,
+  type CompositeFlowWizardProps,
+  ChildRecordRepeater,
+  type ChildRecordRepeaterProps,
+  CompletionSummaryPanel,
+  type CompletionSummaryPanelProps,
+  DuplicateCheckBanner,
+  type DuplicateCheckBannerProps,
+  useCompositeIntakeEngine,
+  type CompositeIntakeEngineReturn,
+  type CompositeIntakeState,
+  childFieldToBinding,
+} from "./composite";
+export type {
+  CompositeFlowBundle,
+  CompositeFlowStep,
+  FlowSectionDescriptor,
+  SectionType,
+  ChildFieldSpec,
+  SupplierIntakePayload,
+  SectionCompletionReport,
+  SectionCompletionStatus,
+  DuplicateCheckResult,
+  DuplicateMatch,
+  DuplicateMatchSeverity,
+} from "./composite";
+
 // ── Boot-time renderer registration ──────────────────────────────────────────
 // Call registerDocumentRenderers() once at app startup (root layout).
 export { registerDocumentRenderers } from "./register";

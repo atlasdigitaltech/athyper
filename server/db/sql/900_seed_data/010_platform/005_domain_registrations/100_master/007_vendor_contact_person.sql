@@ -86,7 +86,7 @@ WHERE ef.entity_version_id = ev.id
 -- ── 5. display_config + natural_key_fields ───────────────────────────────────
 UPDATE control.entity
 SET display_config        = jsonb_build_object(
-        'detail_renderer',    'standard',
+        'detail_renderer',    'master',
         'list_columns',       '["contact_name","business_title","is_primary","status"]'::jsonb,
         'default_sort_field', 'contact_name',
         'default_sort_order', 'asc'

@@ -40,7 +40,7 @@ export default async function AppEntityDetailRoute({
       entityCode={entity}
       recordId={id}
       editMode={mode === "edit"}
-      approvableRenderer={ApprovableDetailPage}
+      documentRenderer={ApprovableDetailPage}
     />
   );
 }

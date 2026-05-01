@@ -2,6 +2,7 @@ import {
   DEFAULT_DISPLAY_CONFIG,
   type ResolvedDisplayConfig,
   type DetailRenderer,
+  type DetailProfile,
   type ListRenderer,
   type ViewMode,
 } from "./displayConfig.defaults";
@@ -9,7 +10,10 @@ import {
 type RawDisplayConfig = Record<string, unknown>;
 
 const DETAIL_RENDERERS = new Set<DetailRenderer>([
-  "standard", "master", "approvable", "ledger", "generic",
+  "master", "document", "ledger",
+]);
+const DETAIL_PROFILES = new Set<DetailProfile>([
+  "simple", "rich", "read-only",
 ]);
 const LIST_RENDERERS = new Set<ListRenderer>([
   "table", "kanban", "dashboard", "spreadsheet",
@@ -19,9 +23,28 @@ const VIEW_MODES = new Set<ViewMode>([
 ]);
 
 function toDetailRenderer(v: unknown): DetailRenderer {
+  // Compatibility normalizer — maps all legacy DB values to the canonical three.
+  // Keep these cases forever; remove only after 081_backfill confirms no rows remain.
+  switch (v) {
+    case "rich_master":   return "master";   // richness → detail_profile:"rich"
+    case "approvable":    return "document";  // behavior flag, not renderer
+    case "standard":      return "master";   // unused alias
+    case "generic":       return "master";   // unused alias
+    case "line_item":     return "master";   // sub-entity — not a top-level renderer
+    case "distribution":  return "master";   // sub-entity — not a top-level renderer
+  }
   return DETAIL_RENDERERS.has(v as DetailRenderer)
     ? (v as DetailRenderer)
     : DEFAULT_DISPLAY_CONFIG.detail_renderer;
+}
+
+function toDetailProfile(renderer: DetailRenderer, raw: RawDisplayConfig): DetailProfile {
+  const v = raw["detail_profile"];
+  if (DETAIL_PROFILES.has(v as DetailProfile)) return v as DetailProfile;
+  // Infer profile from legacy renderer values before SQL seeds are cleaned up.
+  if (raw["detail_renderer"] === "rich_master") return "rich";
+  if (raw["detail_renderer"] === "approvable")  return "rich";  // document + rich
+  return DEFAULT_DISPLAY_CONFIG.detail_profile;
 }
 
 function toListRenderer(v: unknown): ListRenderer {
@@ -42,12 +65,14 @@ function toViewModes(v: unknown): ViewMode[] {
  * in the required fields. Pass entity.display_config directly.
  */
 export function resolvePresentationConfig(raw: RawDisplayConfig): ResolvedDisplayConfig {
+  const detail_renderer = toDetailRenderer(raw["detail_renderer"]);
   return {
     ...DEFAULT_DISPLAY_CONFIG,
     // Passthrough optional keys (title_field, subtitle_field, icon, color, etc.)
     ...raw,
     // Normalised required fields — validate enum membership, fall back to defaults
-    detail_renderer:    toDetailRenderer(raw["detail_renderer"]),
+    detail_renderer,
+    detail_profile:     toDetailProfile(detail_renderer, raw),
     list_renderer:      toListRenderer(raw["list_renderer"]),
     view_modes:         toViewModes(raw["view_modes"]),
     list_columns:       Array.isArray(raw["list_columns"])

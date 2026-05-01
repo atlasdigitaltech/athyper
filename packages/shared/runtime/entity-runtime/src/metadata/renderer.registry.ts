@@ -9,7 +9,6 @@
  */
 
 import { EntityDetailPage } from "../detail";
-import { RichMasterDetailPage } from "../detail";
 import { EntityListPage, KanbanView, DashboardView, ExcelView } from "../list";
 
 // Re-export the lines registry from runtime-shared so callers can
@@ -25,15 +24,13 @@ export {
 
 /**
  * Maps display_config.detail_renderer → the React component that renders
- * the detail page for that strategy.
+ * the detail page for that strategy. RichMasterDetailPage is not listed here —
+ * it is selected internally by EntityDetailPage when detail_profile = "rich".
  */
 export const detailRendererMap = {
-  standard:     EntityDetailPage,
-  master:       EntityDetailPage,
-  generic:      EntityDetailPage,
-  approvable:   EntityDetailPage,
-  ledger:       EntityDetailPage,
-  rich_master:  RichMasterDetailPage,
+  master:   EntityDetailPage,
+  document: EntityDetailPage,
+  ledger:   EntityDetailPage,
 } as const;
 
 /**

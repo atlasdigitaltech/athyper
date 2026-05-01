@@ -4,7 +4,7 @@
  * @athyper/entity-runtime — Generic Approvable Document Detail Page
  *
  * Full-page renderer for DOCUMENT entities with is_approvable = true.
- * Dispatched by EntityDetailPage when resolveRendererFamily() returns "approvable".
+ * Dispatched by EntityDetailPage when resolveRendererFamily() returns "document".
  *
  * All tabs are resolved via resolveTabs() — no hardcoded tab list.
  * Tabs: overview | lines(Items) | distributions(Accounting) | workflow |

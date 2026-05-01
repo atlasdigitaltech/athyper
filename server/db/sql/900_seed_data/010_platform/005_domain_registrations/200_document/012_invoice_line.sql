@@ -108,7 +108,7 @@ ON CONFLICT DO NOTHING;
 -- ── 4. display_config ────────────────────────────────────────────────────────
 UPDATE control.entity
 SET display_config = jsonb_build_object(
-    'detail_renderer',    'line_item',
+    'detail_renderer',    'master',
     'title_field',        'item_description',
     'subtitle_field',     'procurement_type',
     'list_columns',       '["line_no","item_description","procurement_type","quantity","unit_price","gross_amount","match_status"]'::jsonb,

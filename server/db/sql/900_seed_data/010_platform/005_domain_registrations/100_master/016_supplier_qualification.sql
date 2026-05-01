@@ -74,7 +74,7 @@ ON CONFLICT DO NOTHING;
 -- ── 4. display_config + natural_key_fields ───────────────────────────────────
 UPDATE control.entity
 SET display_config        = jsonb_build_object(
-        'detail_renderer',    'standard',
+        'detail_renderer',    'master',
         'list_columns',       '["onboarding_status","is_approved_supplier","is_blocked","risk_tier","status"]'::jsonb,
         'default_sort_field', 'onboarding_status',
         'default_sort_order', 'asc'

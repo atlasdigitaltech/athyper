@@ -22,6 +22,7 @@
     "./actions": "./src/actions/index.ts",
     "./orchestrator": "./src/orchestrator/index.ts",
     "./intake": "./src/intake/index.ts",
+    "./composite": "./src/composite/index.ts",
     "./register": "./src/register.ts"
   },
   "scripts": {

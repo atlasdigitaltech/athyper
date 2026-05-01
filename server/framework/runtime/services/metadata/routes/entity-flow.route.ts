@@ -163,6 +163,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           "eff.help_text",
           "eff.placeholder",
           "eff.sort_order",
+          "eff.section_key",
           "ef.name as field_name",
           sql<string>`COALESCE(ef.label, ef.name)`.as("field_label"),
           "ef.data_type",
@@ -170,6 +171,76 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
         .where("eff.flow_step_id", "in", stepIds)
         .orderBy("eff.sort_order", "asc")
         .execute();
+
+      // ── Section descriptors (composite intake) ────────────────────────────
+      // Fetched for all steps; empty for standard flows.
+      const sectionRows = stepIds.length > 0
+        ? await db
+            .selectFrom("control.entity_flow_section as efsec")
+            .select([
+              "efsec.id",
+              "efsec.flow_step_id",
+              "efsec.section_key",
+              "efsec.label",
+              "efsec.section_type",
+              "efsec.entity_code",
+              "efsec.payload_key",
+              "efsec.field_codes",
+              "efsec.min_rows",
+              "efsec.max_rows",
+              "efsec.default_row",
+              "efsec.permission_code",
+              "efsec.restricted_view_only",
+              "efsec.visible_when",
+              "efsec.sort_order",
+              "efsec.collapse_default",
+              "efsec.icon_key",
+              "efsec.help_text",
+            ])
+            .where("efsec.flow_step_id", "in", stepIds)
+            .orderBy("efsec.sort_order", "asc")
+            .execute()
+        : [];
+
+      // For repeater/singleton sections, resolve child entity fields from
+      // control.entity_field filtered by the section's field_codes list.
+      const childEntityCodes = [
+        ...new Set(
+          sectionRows
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .filter((s: any) => s.entity_code && (s.section_type === "repeater" || s.section_type === "singleton"))
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .map((s: any) => String(s.entity_code)),
+        ),
+      ];
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const childFieldsByEntity = new Map<string, any[]>();
+      if (childEntityCodes.length > 0) {
+        for (const code of childEntityCodes) {
+          const rows = await db
+            .selectFrom("control.entity_field as ef")
+            .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
+            .innerJoin("control.entity as e", "e.id", "ev.entity_id")
+            .select([
+              "ef.id as entity_field_id",
+              "ef.name as field_name",
+              sql<string>`COALESCE(ef.label, ef.name)`.as("field_label"),
+              "ef.data_type",
+              "ef.cardinality",
+              "ef.ui_type",
+              "ef.sort_order",
+              sql<boolean>`ef.cardinality = 'one'`.as("is_required"),
+            ])
+            .where(sql`COALESCE(e.entity_code, e.name)`, "=", code)
+            .where("e.tenant_id", "is", null)
+            .where("ev.status", "=", "EFFECTIVE")
+            .where("ef.is_active", "=", true)
+            .orderBy("ef.sort_order", "asc")
+            .execute();
+          childFieldsByEntity.set(code, rows);
+        }
+      }
 
       // ── User override permissions ─────────────────────────────────────────
       // Only evaluate the permission codes actually referenced by this flow.
@@ -211,6 +282,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
       // ── Assemble FlowBundle ───────────────────────────────────────────────
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const steps = stepRows.map((s: any) => {
+        // Flat field bindings for this step (legacy FlowWizard path)
         const stepFields = fieldRows
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .filter((f: any) => f.flow_step_id === s.id)
@@ -242,6 +314,56 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             ? (s.advance_rule as Record<string, unknown>)
             : {};
 
+        // Build sections for this step (composite intake path)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const stepSections = sectionRows
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .filter((sec: any) => sec.flow_step_id === s.id)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((sec: any) => {
+            const sType = String(sec.section_type ?? "fields");
+            const sKey  = String(sec.section_key);
+
+            // For "fields" sections: include matching flat field bindings
+            const sectionFields = sType === "fields"
+              ? stepFields.filter((f) => (f as unknown as Record<string, unknown>)["section_key"] === sKey)
+              : [];
+
+            // For "repeater"/"singleton": resolve child entity fields from the
+            // pre-fetched childFieldsByEntity map, filtered by field_codes list
+            const rawFieldCodes = Array.isArray(sec.field_codes) ? sec.field_codes as string[] : [];
+            const childEntityCode = sec.entity_code ? String(sec.entity_code) : null;
+            let childFields: unknown[] = [];
+
+            if ((sType === "repeater" || sType === "singleton") && childEntityCode) {
+              const allChildFields = childFieldsByEntity.get(childEntityCode) ?? [];
+              childFields = rawFieldCodes.length > 0
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ? allChildFields.filter((cf: any) => rawFieldCodes.includes(String(cf.field_name)))
+                : allChildFields;
+            }
+
+            return {
+              section_key:          sKey,
+              label:                String(sec.label),
+              section_type:         sType,
+              entity_code:          childEntityCode,
+              payload_key:          sec.payload_key ? String(sec.payload_key) : null,
+              sort_order:           Number(sec.sort_order ?? 0),
+              collapse_default:     Boolean(sec.collapse_default ?? false),
+              visible_when:         sec.visible_when ?? null,
+              permission_code:      sec.permission_code ? String(sec.permission_code) : null,
+              restricted_view_only: Boolean(sec.restricted_view_only ?? false),
+              min_rows:             sec.min_rows != null ? Number(sec.min_rows) : null,
+              max_rows:             sec.max_rows != null ? Number(sec.max_rows) : null,
+              default_row:          sec.default_row ?? null,
+              icon_key:             sec.icon_key ? String(sec.icon_key) : null,
+              help_text:            sec.help_text ? String(sec.help_text) : null,
+              fields:               sectionFields,
+              child_fields:         childFields,
+            };
+          });
+
         return {
           id: s.id as string,
           step_key: s.step_key as string,
@@ -257,6 +379,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           },
           layout_hint: (s.layout_hint ?? "two_column") as string,
           fields: stepFields,
+          sections: stepSections,
         };
       });
 

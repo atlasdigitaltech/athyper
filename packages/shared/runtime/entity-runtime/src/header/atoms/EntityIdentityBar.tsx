@@ -94,22 +94,50 @@ export function EntityIdentityBar({
           <TypeChip className="shrink-0">{identity.typeLabel}</TypeChip>
         )}
 
-        {/* Number — copyable by default; opt out with identifierAction: "none" */}
-        {canCopy ? (
-          <button
-            type="button"
-            onClick={handleCopyNumber}
-            title="Copy to clipboard"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground tabular-nums shrink-0 hover:text-foreground/70 transition-colors"
-          >
-            {identity.number}
-            {copied && <Check className="h-3 w-3 flex-none text-muted-foreground" />}
-          </button>
-        ) : (
-          <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
-            {identity.number}
-          </span>
-        )}
+        {/* Identity block: name primary, code secondary (stacked) */}
+        <div className="flex flex-col min-w-0 shrink leading-none gap-0.5">
+          {identity.name ? (
+            <span className="text-sm font-semibold text-foreground truncate">
+              {identity.name}
+            </span>
+          ) : (
+            /* no name — render number prominently in place of name */
+            canCopy ? (
+              <button
+                type="button"
+                onClick={handleCopyNumber}
+                title="Copy to clipboard"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground tabular-nums hover:text-foreground/70 transition-colors text-left"
+              >
+                {identity.number}
+                {copied && <Check className="h-3 w-3 flex-none text-muted-foreground" />}
+              </button>
+            ) : (
+              <span className="text-sm font-semibold text-foreground tabular-nums">
+                {identity.number}
+              </span>
+            )
+          )}
+
+          {/* Code — only shown when name is present */}
+          {identity.name && (
+            canCopy ? (
+              <button
+                type="button"
+                onClick={handleCopyNumber}
+                title="Copy to clipboard"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums hover:text-foreground/60 transition-colors text-left"
+              >
+                {identity.number}
+                {copied && <Check className="h-2.5 w-2.5 flex-none" />}
+              </button>
+            ) : (
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {identity.number}
+              </span>
+            )
+          )}
+        </div>
 
         {/* Inline classification: "· Vendor", "· Manufacturer" — config-driven */}
         {identity.classification && (

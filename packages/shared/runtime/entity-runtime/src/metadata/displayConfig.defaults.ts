@@ -6,13 +6,16 @@
  * should always work with this type, never the raw JSONB shape.
  */
 
-export type DetailRenderer = "standard" | "master" | "approvable" | "ledger" | "generic";
-export type ListRenderer  = "table" | "kanban" | "dashboard" | "spreadsheet";
-export type ViewMode      = "table" | "kanban" | "dashboard" | "spreadsheet";
+export type DetailRenderer = "master" | "document" | "ledger";
+export type DetailProfile  = "simple" | "rich" | "read-only";
+export type ListRenderer   = "table" | "kanban" | "dashboard" | "spreadsheet";
+export type ViewMode       = "table" | "kanban" | "dashboard" | "spreadsheet";
 
 export interface ResolvedDisplayConfig {
   // ── Rendering strategy ───────────────────────────────────────────────────
   detail_renderer: DetailRenderer;
+  /** Richness of the master detail page. Defaults to "simple". */
+  detail_profile:  DetailProfile;
   list_renderer:   ListRenderer;
   view_modes:      ViewMode[];
 
@@ -53,7 +56,8 @@ export interface ResolvedDisplayConfig {
 
 /** Canonical defaults applied when a display_config key is absent or null. */
 export const DEFAULT_DISPLAY_CONFIG: ResolvedDisplayConfig = {
-  detail_renderer:    "standard",
+  detail_renderer:    "master",
+  detail_profile:     "simple",
   list_renderer:      "table",
   view_modes:         ["table"],
   list_columns:       ["code", "name", "status"],

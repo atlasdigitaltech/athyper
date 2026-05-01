@@ -15,7 +15,8 @@
     "./contracts": "./src/theme-contract.ts",
     "./presets": "./src/presets/registry.ts",
     "./validator": "./src/preset-validator.ts",
-    "./domain-intents": "./src/domain-intents.ts"
+    "./domain-intents": "./src/domain-intents.ts",
+    "./record-badge": "./src/recordBadge.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

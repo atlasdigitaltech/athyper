@@ -65,7 +65,13 @@ export interface HeaderIdentity {
    */
   number: string;
   /**
-   * Inline classification shown after the number with a "·" separator.
+   * Entity display name shown inline after the code in P1 row.
+   * Driven by display_config.title_field — no hardcoding.
+   * e.g. "Athyper Group Holdings" for a supplier record.
+   */
+  name?: string;
+  /**
+   * Inline classification shown after the name with a "·" separator.
    * e.g. "Vendor" for a supplier, "Manufacturer" for another.
    * Driven by display_config.rich_master_config.classification_field — no hardcoding.
    */

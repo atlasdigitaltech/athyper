@@ -135,6 +135,11 @@ export const CompiledEntitySchema = z.object({
   field_groups: z.array(FieldGroupSchema),
 
   display_config: z.object({
+    /**
+     * Field name holding the business code / primary identifier shown in P1.
+     * Defaults to "code" when absent. Drives identity.number in EntityIdentityBar.
+     */
+    code_field: z.string().optional(),
     title_field: z.string().optional(),
     subtitle_field: z.string().optional(),
     icon: z.string().optional(),
@@ -144,17 +149,21 @@ export const CompiledEntitySchema = z.object({
     list_columns: z.array(z.string()).optional(),
     search_fields: z.array(z.string()).optional(),
     /**
-     * Selects the detail-page rendering strategy.
-     *   "standard"    — generic field-grid + tabs (MASTER / CONTROL / REFERENCE)
-     *   "master"      — same as standard, legacy alias
-     *   "approvable"  — ApprovableDocumentShell with rich financial header
-     *   "ledger"      — read-only ledger / log viewer
-     *   "generic"     — deprecated alias for "standard"; kept for DB compat
-     *   "rich_master" — RichMasterDetailPage: EntityHeader + config-driven tabs
-     *                   driven entirely by display_config.rich_master_config.
-     *                   One component for all master entities — no per-entity TSX.
+     * Selects the detail-page rendering strategy. Three canonical values:
+     *   "master"   — EntityDetailPage: field-grid + tabs. Richness controlled by detail_profile.
+     *   "document" — ApprovableDetailPage: rich document shell with process health,
+     *                KPI strip, lines/distributions tabs, workflow, approvals.
+     *   "ledger"   — Read-only log view: no edit ops, no entity form.
      */
-    detail_renderer: z.enum(["standard", "master", "approvable", "ledger", "generic", "rich_master"]).optional(),
+    detail_renderer: z.enum(["master", "document", "ledger"]).optional(),
+    /**
+     * Controls the visual richness of the master detail page.
+     * Only meaningful when detail_renderer = "master".
+     *   "simple"    — field grid + tabs only; generic header.
+     *   "rich"      — EntityIdentityBar + KPI rail + platform panels driven by master_config.
+     *   "read-only" — same as simple but all edit operations are hidden.
+     */
+    detail_profile: z.enum(["simple", "rich", "read-only"]).optional(),
     /**
      * Selects the list-view rendering strategy. Default: "table".
      */
@@ -186,7 +195,7 @@ export const CompiledEntitySchema = z.object({
     alternate_flows: z.array(z.string()).optional(),
     /**
      * Field-name hints consumed by buildApprovableHeaderFromRecord().
-     * Populated for every entity with detail_renderer = "approvable".
+     * Populated for every entity with detail_renderer = "document".
      * All values are entity field *names* (not column_names).
      */
     document_header: z.object({
@@ -257,7 +266,7 @@ export const CompiledEntitySchema = z.object({
     ).optional(),
 
     /**
-     * Configuration for detail_renderer = "rich_master".
+     * Configuration for detail_profile = "rich" master entities.
      * Drives RichMasterDetailPage — one generic component for all master entities.
      * All entity-specific layout decisions live here in SQL, never in TSX.
      *
@@ -270,7 +279,7 @@ export const CompiledEntitySchema = z.object({
      *   "activity"     — EventsPanel
      *   "blank"        — placeholder with blank_message
      */
-    rich_master_config: z.object({
+    master_config: z.object({
       /** Chip label in P1 identity row, e.g. "SUPPLIER". Defaults to entity_name uppercased. */
       type_label: z.string().optional(),
       /** Field names to display as KPI fact cells in the P2 header rail. */
@@ -290,6 +299,27 @@ export const CompiledEntitySchema = z.object({
         empty_title:      z.string().optional(),
         empty_description: z.string().optional(),
         /** For renderer="blank": message shown in the placeholder. */
+        blank_message:    z.string().optional(),
+      })).optional(),
+    }).optional(),
+    /**
+     * @deprecated Use master_config. Kept for DB rows not yet migrated by 081_backfill.sql.
+     * The compiler emits master_config = rich_master_config when master_config is absent.
+     * Remove once all seeds use master_config.
+     */
+    rich_master_config: z.object({
+      type_label:   z.string().optional(),
+      header_facts: z.array(z.string()).optional(),
+      tabs:         z.array(z.object({
+        id:               z.string(),
+        label:            z.string(),
+        renderer:         z.string(),
+        entity_code:      z.string().optional(),
+        display_fields:   z.array(z.string()).optional(),
+        add_href_template: z.string().optional(),
+        add_label:        z.string().optional(),
+        empty_title:      z.string().optional(),
+        empty_description: z.string().optional(),
         blank_message:    z.string().optional(),
       })).optional(),
     }).optional(),

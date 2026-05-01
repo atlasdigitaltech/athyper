@@ -54,6 +54,7 @@ import {
 import { resolveFieldRenderer } from "../field-renderers/registry";
 import { useOperationDispatch } from "../actions/useOperationDispatch";
 import { EntityForm, type EntityFormHandle } from "../form/EntityForm";
+import { ChildSummaryCardsPanel, type ViewOnlyReason } from "./ChildSummaryCardsPanel";
 
 // ── Public props ──────────────────────────────────────────────────────────────
 
@@ -154,10 +155,13 @@ function buildHeaderModel(
     : undefined;
   const classification = classRawVal ? formatValue(classRawVal, classField) : undefined;
 
-  // P1 — identity
+  // P1 — identity: all four header slots driven by display_config field properties
+  const codeFieldName     = entity.display_config.code_field ?? "code";
   const titleFieldName    = entity.display_config.title_field;
   const subtitleFieldName = entity.display_config.subtitle_field;
-  const title       = titleFieldName && data[titleFieldName]
+
+  const codeNumber  = data[codeFieldName] ? String(data[codeFieldName]) : recordId;
+  const entityName  = titleFieldName && data[titleFieldName]
     ? String(data[titleFieldName])
     : undefined;
   const description = subtitleFieldName &&
@@ -166,9 +170,8 @@ function buildHeaderModel(
       ? String(data[subtitleFieldName])
       : undefined;
 
-  const typeLabel  = config.type_label
+  const typeLabel = config.type_label
     ?? entity.entity_name.toUpperCase().replace(/_/g, " ");
-  const codeNumber = data["code"] ? String(data["code"]) : recordId;
 
   const editStatus = isDirty
     ? { label: "Unsaved changes", intent: "warning" as SemanticIntent }
@@ -202,10 +205,10 @@ function buildHeaderModel(
   return {
     identity: {
       typeLabel,
-      typeHref:       `/app/${entity.entity_code}`,
-      number:         codeNumber,
+      typeHref:         `/app/${entity.entity_code}`,
+      number:           codeNumber,
+      name:             entityName,
       classification,
-      title,
       description,
       identifierAction: "copy",
       status: editMode
@@ -291,11 +294,6 @@ function OverviewRenderer({
 
 // ── View-only chip — only shown when editing is actually blocked ──────────────
 // Never shown in normal view mode when Edit is available.
-
-interface ViewOnlyReason {
-  label:   string;
-  tooltip: string;
-}
 
 function ViewOnlyChip({ reason }: { reason: ViewOnlyReason }) {
   return (
@@ -1135,6 +1133,22 @@ export function RichMasterDetailPage({
           <Card>
             <CardContent className="pt-5">
               <ChildEntityPanel
+                tab={activeTabDef}
+                recordUuid={record.id}
+                editMode={editMode}
+                viewOnlyReason={viewOnlyReason}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState title="Child entity not configured" description="Set entity_code in the tab config." />
+        );
+
+      case "summary_cards_with_drawer":
+        return activeTabDef.entity_code ? (
+          <Card>
+            <CardContent className="pt-5">
+              <ChildSummaryCardsPanel
                 tab={activeTabDef}
                 recordUuid={record.id}
                 editMode={editMode}

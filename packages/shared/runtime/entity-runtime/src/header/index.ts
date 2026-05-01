@@ -44,6 +44,14 @@ export { useRailState, type RailState } from "./hooks/useRailState";
 // ── Telemetry (Phase 2) ───────────────────────────────────────────────────
 export { ENTITY_HEADER_EVENTS, type EntityHeaderEvent } from "./telemetry";
 
+// ── Builders ──────────────────────────────────────────────────────────────
+export {
+  buildMasterHeaderModel,
+  formatValue,
+  titleCase,
+  type MasterHeaderConfig,
+} from "./builders/buildMasterHeaderModel";
+
 // ── Fixtures — dev/test only, never import in production code ─────────────
 export {
   FIXTURES,

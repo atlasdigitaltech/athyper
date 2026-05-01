@@ -18,7 +18,7 @@
 -- ── 1. Update bank_account entity display_config ─────────────────────────────
 UPDATE control.entity
    SET display_config = jsonb_build_object(
-       'detail_renderer',    'standard',
+       'detail_renderer',    'master',
        'title_field',        'name',
        'subtitle_field',     'account_holder_name',
        'list_columns',       '["name","account_holder_name","currency_code","status"]'::jsonb,

@@ -15,7 +15,7 @@
 -- ── company_code_customer_profile ────────────────────────────────────────────
 UPDATE control.entity
 SET display_config     = jsonb_build_object(
-        'detail_renderer',    'standard',
+        'detail_renderer',    'master',
         'list_columns',       '["customer_id","company_code_id","ar_account_id","credit_limit_local"]'::jsonb,
         'default_sort_field', 'created_at',
         'default_sort_order', 'desc'
@@ -30,7 +30,7 @@ WHERE table_schema = 'master' AND table_name = 'company_code_customer_profile'
 -- ── company_code_supplier_profile ────────────────────────────────────────────
 UPDATE control.entity
 SET display_config     = jsonb_build_object(
-        'detail_renderer',    'standard',
+        'detail_renderer',    'master',
         'list_columns',       '["supplier_id","company_code_id","ap_account_id","payment_method_id"]'::jsonb,
         'default_sort_field', 'created_at',
         'default_sort_order', 'desc'

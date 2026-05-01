@@ -97,7 +97,7 @@ WHERE ef.entity_version_id = ev.id
 -- ── 4. display_config ─────────────────────────────────────────────────────────
 UPDATE control.entity
 SET display_config = jsonb_build_object(
-    'detail_renderer',    'approvable',
+    'detail_renderer',    'document',
     'title_field',        'document_no',
     'list_columns',       '["document_no","status","entry_date","fiscal_period","currency_code","total_debit","total_credit"]'::jsonb,
     'default_sort_field', 'entry_date',

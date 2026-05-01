@@ -1,37 +1,35 @@
 /**
  * @athyper/entity-runtime — EntityDetailPage
  *
- * Renders a master record detail view with:
- *   - PageShell (Region 1 header + Region 2 tabs + Region 3 content)
- *   - Tabbed sections from field_groups
- *   - Comments / Activity tabs when enabled by resolveTabs()
- *   - editMode: when true (via ?mode=edit URL param), field values become
- *     inputs via EntityForm rendered inline — same shell, no route change.
+ * Top-level dispatcher for /app/[entity]/[id]. Routes to one of three shells:
+ *   master + rich  → RichMasterDetailPage (EntityHeader + SQL-driven tabs)
+ *   document       → ApprovableDetailPage (injected via documentRenderer prop)
+ *   master + simple→ GenericDetailReadView (EntityHeader + field-grid + tabs)
  *
- * For entities with detail_renderer = "approvable" delegates to
- * ApprovableDetailPage (which has its own rich shell via ApprovableDocumentShell).
+ * All three shells use EntityHeader for consistent identity bar, actions, and tabs.
+ * PageHeader is not used on entity detail pages.
  */
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { cn } from "@athyper/theme/utils";
 import { useCompiledEntity, useEntityDetail, useEntityOperations, useUpdateEntity } from "@athyper/query";
 import { useQuery } from "@tanstack/react-query";
-import { resolveDetailConfig, resolveRendererFamily, resolveTabs } from "@athyper/metadata-client/compiled-reader";
+import { resolveDetailConfig, resolveRendererFamily, resolveTabs, resolveRichMasterConfig } from "@athyper/metadata-client/compiled-reader";
 import { RichMasterDetailPage } from "./RichMasterDetailPage";
 import {
   Card, CardContent,
-  Skeleton, Badge, Button,
+  Skeleton,
 } from "@athyper/ui/primitives";
 import { CommentList } from "@athyper/collaboration-ui/comments";
 import { ActivityTimeline } from "@athyper/collaboration-ui/activity";
 import type { ActivityEntry } from "@athyper/api-contracts/workflow";
 import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
+import type { HeaderTab } from "../header/types";
+import { EntityHeader } from "../header/EntityHeader";
+import { buildMasterHeaderModel } from "../header/builders/buildMasterHeaderModel";
+import { useOperationDispatch } from "../actions/useOperationDispatch";
 import { resolveFieldRenderer } from "../field-renderers/registry";
-import { ActionBar } from "../actions/ActionBar";
-import { PageShell } from "../shell/PageShell";
-import { PageHeader, ModeBadge } from "../shell/PageHeader";
 import { EntityForm } from "../form/EntityForm";
 
 // ── Activity tab ───────────────────────────────────────────────────────────────
@@ -59,23 +57,27 @@ function ActivityTab({ entityCode, recordId }: { entityCode: string; recordId: s
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
-export interface ApprovableRendererProps {
+/** Props passed to the injected document-renderer component. */
+export interface DocumentRendererProps {
   entity:     CompiledEntity;
   record:     { id: string; data: Record<string, unknown>; status?: string };
   operations: EntityOperation[] | undefined;
   recordId:   string;
 }
 
+/** @deprecated Use DocumentRendererProps */
+export type ApprovableRendererProps = DocumentRendererProps;
+
 export interface EntityDetailPageProps {
   entityCode: string;
   recordId: string;
   /** When true (URL: ?mode=edit) renders EntityForm in-place in the same shell. */
   editMode?: boolean;
-  /** Renderer for entities with detail_renderer="approvable". Pass ApprovableDetailPage from @athyper/document-runtime. */
-  approvableRenderer?: React.ComponentType<ApprovableRendererProps>;
+  /** Renderer for entities with detail_renderer="document". Pass ApprovableDetailPage from @athyper/document-runtime. */
+  documentRenderer?: React.ComponentType<DocumentRendererProps>;
 }
 
-// ── Generic read-mode view — owns tab state ────────────────────────────────
+// ── Generic simple-master read view — owns tab + action state ─────────────
 
 interface GenericDetailReadViewProps {
   entityCode:  string;
@@ -90,153 +92,139 @@ interface GenericDetailReadViewProps {
 function GenericDetailReadView({
   entityCode, recordId, entity, record, operations, onEditClick, canEdit,
 }: GenericDetailReadViewProps) {
-  const detailConfig  = resolveDetailConfig(entity);
-  const data          = record.data;
-  const resolvedTabs  = resolveTabs(entity, null, []);
-  const hasComments   = resolvedTabs.includes("comments");
-  const hasActivity   = resolvedTabs.includes("events");
+  const router       = useRouter();
+  const opDispatch   = useOperationDispatch({ entityCode, recordId, recordUuid: record.id });
+  const detailConfig = resolveDetailConfig(entity);
+  const masterConfig = resolveRichMasterConfig(entity);
+  const data         = record.data;
+  const resolvedTabs = resolveTabs(entity, null, []);
+  const hasComments  = resolvedTabs.includes("comments");
+  const hasActivity  = resolvedTabs.includes("events");
 
-  const title = detailConfig.titleField
-    ? String(data[detailConfig.titleField.name] ?? entityCode)
-    : entityCode;
-  const subtitle = detailConfig.subtitleField
-    ? String(data[detailConfig.subtitleField.name] ?? "")
-    : undefined;
-
-  const allTabKeys: { key: string; label: string }[] = [
-    ...detailConfig.sections.map((s) => ({ key: s.group.group_key, label: s.group.label })),
-    ...(hasComments ? [{ key: "__comments", label: "Comments" }] : []),
-    ...(hasActivity  ? [{ key: "__activity", label: "Activity"  }] : []),
+  const headerTabs: HeaderTab[] = [
+    ...detailConfig.sections.map((s) => ({ id: s.group.group_key, label: s.group.label })),
+    ...(hasComments ? [{ id: "__comments", label: "Comments" }] : []),
+    ...(hasActivity  ? [{ id: "__activity", label: "Activity"  }] : []),
   ];
 
-  const defaultTabKey: string =
-    detailConfig.sections[0]?.group.group_key ??
-    (hasComments ? "__comments" : (hasActivity ? "__activity" : ""));
+  const defaultTabId = headerTabs[0]?.id ?? "";
+  const [activeTab, setActiveTab] = useState(defaultTabId);
 
-  const [activeTab, setActiveTab] = useState(defaultTabKey);
-  const hasTabs = allTabKeys.length > 0;
+  // Append Edit as an explicit action so it appears in the EntityHeader action bar.
+  const editAction = canEdit
+    ? [{ id: "__edit", label: "Edit", placement: "secondary" as const, order: 999 }]
+    : [];
 
-  const header = (
-    <PageHeader
-      typeChip={entity.entity_name}
-      title={title}
-      titleVariant="doc"
-      statusSlot={record.status ? <Badge variant="outline">{record.status}</Badge> : undefined}
-      subtitle={subtitle}
-      actions={
-        <div className="flex items-center gap-1.5">
-          {operations && (
-            <ActionBar
-              operations={operations}
-              surface="DETAIL"
-              entityCode={entityCode}
-              recordId={recordId}
-            />
-          )}
-          {canEdit && (
-            <Button variant="outline" size="sm" onClick={onEditClick}>
-              Edit
-            </Button>
-          )}
-        </div>
-      }
-    />
+  const headerModel = buildMasterHeaderModel(
+    entity,
+    data,
+    { type_label: masterConfig.type_label },
+    headerTabs.length > 0 ? headerTabs : undefined,
+    recordId,
+    operations,
+    false,   // editMode
+    false,   // isDirty
   );
+  // Splice in the Edit action (buildMasterHeaderModel maps ops from entity_operations;
+  // the Edit navigate-op is already included if seeded, but we guard canEdit explicitly).
+  const editActionsAlreadyPresent = headerModel.actions.some(
+    (a) => (a.id ?? "").toLowerCase().includes("edit"),
+  );
+  if (!editActionsAlreadyPresent && canEdit) {
+    headerModel.actions = [...headerModel.actions, ...editAction];
+  }
 
-  // Region 2 — interactive tab bar (state lives in this component)
-  const context = hasTabs ? (
-    <div className="flex items-center gap-0.5">
-      {allTabKeys.map(({ key, label }) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => setActiveTab(key)}
-          className={cn(
-            "rounded-md px-3 py-1 text-xs font-medium transition-colors",
-            activeTab === key
-              ? "bg-muted text-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-          )}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  ) : undefined;
+  function handleAction(id: string) {
+    if (id === "__edit") { onEditClick(); return; }
+    const op = (operations ?? []).find((o) => o.permission_code === id);
+    if (!op) return;
+    if (op.handler_type === "NAVIGATE" && op.handler_target) {
+      router.push(op.handler_target.replace("{id}", encodeURIComponent(recordId)));
+      return;
+    }
+    void opDispatch.dispatch(id, operations ?? []);
+  }
 
   return (
-    <PageShell header={header} context={context}>
-      {/* Header card — key identifying fields */}
-      <Card>
-        <CardContent className="pt-5">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-            {detailConfig.headerFields.map((field) => {
-              const Renderer = resolveFieldRenderer(field);
-              return (
-                <div key={field.name}>
-                  <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
-                    {field.label ?? field.name}
-                  </dt>
-                  <dd className="text-sm font-normal text-foreground leading-snug">
-                    <Renderer value={data[field.name]} field={field} mode="view" />
-                  </dd>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+    <>
+      <EntityHeader
+        model={headerModel}
+        onBack={() => router.back()}
+        onAction={handleAction}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
-      {hasTabs && (
-        <div className="mt-2.5 space-y-2">
-          {detailConfig.sections.map((section) =>
-            activeTab === section.group.group_key ? (
-              <Card key={section.group.group_key}>
-                <CardContent className="pt-5">
-                  <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
-                    {section.fields.map((field) => {
-                      const Renderer = resolveFieldRenderer(field);
-                      return (
-                        <div key={field.name}>
-                          <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
-                            {field.label ?? field.name}
-                          </dt>
-                          <dd className="text-sm font-normal text-foreground leading-snug">
-                            <Renderer value={data[field.name]} field={field} mode="view" />
-                          </dd>
-                        </div>
-                      );
-                    })}
+      <div className="flex flex-col gap-2.5">
+        {/* Header card — key identifying fields */}
+        <Card>
+          <CardContent className="pt-5">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
+              {detailConfig.headerFields.map((field) => {
+                const Renderer = resolveFieldRenderer(field);
+                return (
+                  <div key={field.name}>
+                    <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
+                      {field.label ?? field.name}
+                    </dt>
+                    <dd className="text-sm font-normal text-foreground leading-snug">
+                      <Renderer value={data[field.name]} field={field} mode="view" />
+                    </dd>
                   </div>
-                </CardContent>
-              </Card>
-            ) : null,
-          )}
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
-          {activeTab === "__comments" && hasComments && (
-            <Card>
+        {/* Tab content */}
+        {detailConfig.sections.map((section) =>
+          activeTab === section.group.group_key ? (
+            <Card key={section.group.group_key}>
               <CardContent className="pt-5">
-                <CommentList entityType={entityCode} entityId={recordId} />
+                <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+                  {section.fields.map((field) => {
+                    const Renderer = resolveFieldRenderer(field);
+                    return (
+                      <div key={field.name}>
+                        <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
+                          {field.label ?? field.name}
+                        </dt>
+                        <dd className="text-sm font-normal text-foreground leading-snug">
+                          <Renderer value={data[field.name]} field={field} mode="view" />
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
-          )}
+          ) : null,
+        )}
 
-          {activeTab === "__activity" && hasActivity && (
-            <Card>
-              <CardContent className="pt-5">
-                <ActivityTab entityCode={entityCode} recordId={recordId} />
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-    </PageShell>
+        {activeTab === "__comments" && hasComments && (
+          <Card>
+            <CardContent className="pt-5">
+              <CommentList entityType={entityCode} entityId={recordId} />
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === "__activity" && hasActivity && (
+          <Card>
+            <CardContent className="pt-5">
+              <ActivityTab entityCode={entityCode} recordId={recordId} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </>
   );
 }
 
 // ── Main dispatcher ────────────────────────────────────────────────────────────
 
-export function EntityDetailPage({ entityCode, recordId, editMode = false, approvableRenderer: ApprovableRenderer }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityCode, recordId, editMode = false, documentRenderer: ApprovableRenderer }: EntityDetailPageProps) {
   const router = useRouter();
   const { data: entity, isLoading: metaLoading } = useCompiledEntity(entityCode);
   const { data: record, isLoading: recordLoading } = useEntityDetail(entityCode, recordId);
@@ -279,10 +267,16 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false, appro
     );
   }
 
-  // Delegate to specialised shells based on resolved renderer family
+  // Delegate to specialised shells based on resolved renderer family + profile
   const renderer = resolveRendererFamily(entity);
+  const profile  = entity.display_config.detail_profile ?? "simple";
 
-  if (renderer === "rich_master") {
+  // ledger + read-only profile: never editable regardless of operations
+  const isReadOnly = renderer === "ledger" || profile === "read-only";
+  const resolvedCanEdit = isReadOnly ? false : canEdit;
+  const resolvedEditMode = isReadOnly ? false : effectiveEditMode;
+
+  if (renderer === "master" && profile === "rich") {
     return (
       <RichMasterDetailPage
         entity={entity}
@@ -294,7 +288,7 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false, appro
     );
   }
 
-  if (renderer === "approvable" && ApprovableRenderer) {
+  if (renderer === "document" && ApprovableRenderer) {
     return (
       <ApprovableRenderer
         entity={entity}
@@ -306,39 +300,44 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false, appro
   }
 
   // ── Generic master record renderer ─────────────────────────────────────────
-  const detailConfig = resolveDetailConfig(entity);
   const data = record.data as Record<string, unknown>;
 
-  const title = detailConfig.titleField
-    ? String(data[detailConfig.titleField.name] ?? entityCode)
-    : entityCode;
-  const subtitle = detailConfig.subtitleField
-    ? String(data[detailConfig.subtitleField.name] ?? "")
-    : undefined;
+  // ── Edit mode — EntityHeader in "Editing" state + EntityForm below ────────
+  if (resolvedEditMode) {
+    const editConfig    = resolveRichMasterConfig(entity);
+    const editDetailCfg = resolveDetailConfig(entity);
+    const editCodeField  = entity.display_config.code_field ?? "code";
+    const editCodeNumber = data[editCodeField] ? String(data[editCodeField]) : recordId;
+    const editEntityName = editDetailCfg.titleField && data[editDetailCfg.titleField.name]
+      ? String(data[editDetailCfg.titleField.name])
+      : undefined;
 
-  // ── Edit mode — same shell, EntityForm in Region 3 ────────────────────────
-  if (effectiveEditMode) {
-    const header = (
-      <PageHeader
-        typeChip={entity.entity_name}
-        title={title}
-        titleVariant="doc"
-        statusSlot={<ModeBadge>Editing</ModeBadge>}
-        subtitle={subtitle}
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/app/${entityCode}/${recordId}`)}
-          >
-            Cancel
-          </Button>
-        }
-      />
+    const editModel = buildMasterHeaderModel(
+      entity, data,
+      { type_label: editConfig.type_label },
+      undefined,   // no tabs in edit mode
+      recordId,
+      undefined,   // actions come from editMode branch inside builder
+      true,        // editMode
+      false,       // isDirty — static header; form manages dirty state internally
     );
+    // Override identity for edit mode: number + name from record, status = Editing
+    editModel.identity.number = editCodeNumber;
+    editModel.identity.name   = editEntityName;
+    editModel.identity.identifierAction = "none";
+    editModel.identity.status = { label: "Editing", intent: "info" };
 
     return (
-      <PageShell header={header}>
+      <>
+        <EntityHeader
+          model={editModel}
+          onBack={() => router.back()}
+          onAction={(id) => {
+            if (id === "__exit" || id === "__discard") {
+              router.push(`/app/${entityCode}/${recordId}`);
+            }
+          }}
+        />
         <EntityForm
           entityCode={entityCode}
           initialData={data}
@@ -349,7 +348,7 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false, appro
           onCancel={() => router.push(`/app/${entityCode}/${recordId}`)}
           submitting={updateMutation.isPending}
         />
-      </PageShell>
+      </>
     );
   }
 
@@ -362,7 +361,7 @@ export function EntityDetailPage({ entityCode, recordId, editMode = false, appro
       record={record}
       operations={operations}
       onEditClick={() => router.push(`/app/${entityCode}/${recordId}?mode=edit`)}
-      canEdit={canEdit}
+      canEdit={resolvedCanEdit}
     />
   );
 }

@@ -160,34 +160,35 @@ export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
  * EntityDetailPage (RUNTIME_ROUTING_SPEC §8).
  *
  * Families:
- *   "generic"      — EntityDetailPage: field-grid + tabs
- *   "approvable"   — ApprovableDetailPage: DocumentHeader + ProcessHealthStrip + ActionBar + tabs
- *   "ledger"       — read-only ledger / log viewer
- *   "rich_master"  — RichMasterDetailPage: EntityHeader + config-driven tabs.
- *                    One component for all master entities; entity config lives in
- *                    display_config.rich_master_config (SQL only, never TSX).
+ *   "master"       — EntityDetailPage: simple field-grid for reference/master entities.
+ *                    Covers all simple entity classes (MASTER, CONTROL, REFERENCE,
+ *                    DIMENSION, LOOKUP, LEDGER, LOG, AGGREGATE).
+ *   "document"     — ApprovableDetailPage: rich document shell with process health,
+ *                    KPI strip, lines/distributions tabs, workflow, approvals.
+ *   "ledger"       — Read-only log view; no edit ops, no EntityForm.
+ *
+ * Richness within "master" is controlled by display_config.detail_profile:
+ *   "simple"    — field grid + tabs only.
+ *   "rich"      — EntityIdentityBar + KPI rail + platform panels (master_config).
+ *   "read-only" — simple but all edit operations are hidden.
  *
  * Resolution order:
- *   1. display_config.detail_renderer — explicit DB override
- *   2. feature_flags.is_approvable = true → "approvable"
- *   3. entity_class ∈ {LEDGER, LOG, AGGREGATE} → "ledger"
- *   4. fallback → "generic"
+ *   1. display_config.detail_renderer — explicit DB value ("master" | "document" | "ledger")
+ *   2. feature_flags.is_approvable = true → "document"
+ *   3. fallback → "master"
  */
-export type RendererFamily = "generic" | "approvable" | "ledger" | "standard" | "master" | "rich_master";
+export type RendererFamily = "master" | "document" | "ledger";
 
 export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
   const explicit = entity.display_config.detail_renderer;
   if (explicit) return explicit as RendererFamily;
 
-  if (entity.feature_flags?.is_approvable) return "approvable";
+  if (entity.feature_flags?.is_approvable) return "document";
 
-  const cls = entity.entity_class;
-  if (cls === "LEDGER" || cls === "LOG" || cls === "AGGREGATE") return "ledger";
-
-  return "generic";
+  return "master";
 }
 
-// ── Rich master config types and resolver ─────────────────────────────────────
+// ── Master config types and resolver ─────────────────────────────────────────
 
 export type RichMasterTabRenderer =
   | "overview"
@@ -197,7 +198,33 @@ export type RichMasterTabRenderer =
   | "comments"
   | "attachments"
   | "activity"
-  | "blank";
+  | "blank"
+  | "summary_cards_with_drawer";
+
+/**
+ * Config for the summary_cards_with_drawer renderer.
+ * Lives inside a RichMasterTab as `config` and drives RecordSummaryCard +
+ * RecordDetailDrawer without any per-entity TSX.
+ */
+export interface SummaryCardsConfig {
+  /** Field name whose value becomes the card's primary identity line. */
+  title: string;
+  /** Ordered field names rendered as the facts line ("AED · ****7890 · Gulf LLC"). */
+  facts?: string[];
+  /**
+   * Badge evaluator keys — order determines display order.
+   * Built-in keys: "primary" | "status" | "verified" | "expiry"
+   */
+  badges?: string[];
+  /**
+   * Alert rule keys evaluated against each record.
+   * Built-in rules: "cert_expired" | "cert_expiring_soon" | "bank_missing_verification"
+   *   | "bank_inactive" | "tax_missing_id"
+   */
+  alertRules?: string[];
+  /** SQL ORDER BY fragments applied when sorting the card list client-side. */
+  defaultSort?: string[];
+}
 
 /** A single section within a composite-renderer tab (entity fields or a child-entity list). */
 export interface RichMasterTabSection {
@@ -237,9 +264,11 @@ export interface RichMasterTab {
   link_entity_code?: string;
   /** The owner_type value to inject into the link record (e.g. 'supplier'). */
   link_owner_type?: string;
+  /** Config for summary_cards_with_drawer renderer. */
+  config?: SummaryCardsConfig;
 }
 
-export interface RichMasterConfig {
+export interface MasterConfig {
   type_label?: string;
   /** Field name whose value is shown inline on the identity line: "ACME-CONSULT-US · Vendor" */
   classification_field?: string;
@@ -249,7 +278,10 @@ export interface RichMasterConfig {
   platform_panels?: Array<"comments" | "attachments" | "activity">;
 }
 
-const DEFAULT_RICH_MASTER_TABS: RichMasterTab[] = [
+/** @deprecated Use MasterConfig */
+export type RichMasterConfig = MasterConfig;
+
+const DEFAULT_MASTER_TABS: RichMasterTab[] = [
   { id: "__profile",     label: "Profile",     renderer: "fields"      },
   { id: "__comments",    label: "Comments",    renderer: "comments"    },
   { id: "__attachments", label: "Attachments", renderer: "attachments" },
@@ -257,13 +289,18 @@ const DEFAULT_RICH_MASTER_TABS: RichMasterTab[] = [
 ];
 
 /**
- * Resolve rich_master_config from a compiled entity.
- * Returns defaults when the entity has no explicit rich_master_config.
+ * Resolve master_config from a compiled entity.
+ * Returns defaults when the entity has no explicit master_config.
  */
-export function resolveRichMasterConfig(entity: CompiledEntity): RichMasterConfig {
-  const cfg = entity.display_config.rich_master_config;
-  if (!cfg) return { tabs: DEFAULT_RICH_MASTER_TABS };
-  return { ...cfg, tabs: cfg.tabs ?? DEFAULT_RICH_MASTER_TABS };
+export function resolveMasterConfig(entity: CompiledEntity): MasterConfig {
+  const cfg = entity.display_config.master_config ?? entity.display_config.rich_master_config;
+  if (!cfg) return { tabs: DEFAULT_MASTER_TABS };
+  return { ...cfg, tabs: cfg.tabs ?? DEFAULT_MASTER_TABS };
+}
+
+/** @deprecated Use resolveMasterConfig */
+export function resolveRichMasterConfig(entity: CompiledEntity): MasterConfig {
+  return resolveMasterConfig(entity);
 }
 
 // ── Semantic resolver detection ───────────────────────────────────────────────

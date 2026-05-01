@@ -1270,22 +1270,31 @@ model entity_flow_field {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model entity_flow_section {
-  id               String    @id(map: "efsec_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id        String?   @db.Uuid
-  flow_step_id     String    @db.Uuid
-  section_key      String
-  label            String
-  description      String?
-  sort_order       Int       @default(0) @db.SmallInt
-  collapse_default Boolean   @default(false)
-  visible_when     Json?
-  reveal_behavior  String    @default("honor_default")
-  icon_key         String?
-  help_text        String?
-  created_at       DateTime  @default(now()) @db.Timestamptz(6)
-  created_by       String    @db.Uuid
-  updated_at       DateTime? @db.Timestamptz(6)
-  updated_by       String?   @db.Uuid
+  id                   String    @id(map: "efsec_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id            String?   @db.Uuid
+  flow_step_id         String    @db.Uuid
+  section_key          String
+  label                String
+  description          String?
+  sort_order           Int       @default(0) @db.SmallInt
+  collapse_default     Boolean   @default(false)
+  visible_when         Json?
+  reveal_behavior      String    @default("honor_default")
+  icon_key             String?
+  help_text            String?
+  created_at           DateTime  @default(now()) @db.Timestamptz(6)
+  created_by           String    @db.Uuid
+  updated_at           DateTime? @db.Timestamptz(6)
+  updated_by           String?   @db.Uuid
+  section_type         String    @default("fields")
+  entity_code          String?
+  payload_key          String?
+  field_codes          Json?
+  min_rows             Int?      @db.SmallInt
+  max_rows             Int?      @db.SmallInt
+  default_row          Json?
+  permission_code      String?
+  restricted_view_only Boolean   @default(false)
 
   @@unique([flow_step_id, section_key], map: "efsec_step_key_uq")
   @@unique([flow_step_id, sort_order], map: "efsec_step_order_uq")
@@ -15188,4 +15197,20 @@ model supplier_service_coverage {
   @@index([tenant_id, country_code], map: "ssc_country_idx", where: raw("(country_code IS NOT NULL)"))
   @@index([tenant_id, supplier_id], map: "ssc_supplier_idx")
   @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model intake_idempotency {
+  id              String   @id(map: "iidem_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id       String   @db.Uuid
+  entity_code     String
+  idempotency_key String
+  result_payload  Json     @default("{}")
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  expires_at      DateTime @default(dbgenerated("(now() + '01:00:00'::interval)")) @db.Timestamptz(6)
+
+  @@unique([tenant_id, entity_code, idempotency_key], map: "iidem_uq")
+  @@index([expires_at], map: "iidem_expires_idx")
+  @@schema("control")
 }

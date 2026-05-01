@@ -115,7 +115,7 @@ WHERE ef.entity_version_id = ev.id
                   'credit_limit', 'contact_email', 'contact_phone',
                   'vendor_type', 'tax_id');
 
--- ── 6. display_config — rich_master renderer + list/search + tab config ──────
+-- ── 6. display_config — master renderer (detail_profile:rich) + list/search + tab config ──
 -- All supplier-specific layout decisions live here in SQL.
 -- Adding a new master entity with rich tabs = SQL only, zero new TSX files.
 
@@ -158,29 +158,41 @@ DO $dc$ DECLARE
             )),
 
         -- 3. Coverage — geographic/service coverage
-        jsonb_build_object('id','__coverage','label','Coverage','renderer','child',
+        jsonb_build_object('id','__coverage','label','Coverage','renderer','summary_cards_with_drawer',
             'entity_code','supplier_service_coverage',
             'display_fields',jsonb_build_array('coverage_level','coverage_type','country_code'),
             'add_href_template','/app/supplier_service_coverage/new?parent_id={uuid}',
             'add_label','Add Coverage',
             'empty_title','No service coverage defined',
-            'empty_description','Define where this supplier can ship or deliver services.'),
+            'empty_description','Define where this supplier can ship or deliver services.',
+            'config',jsonb_build_object(
+                'title',      'country_code',
+                'facts',      jsonb_build_array('coverage_level','coverage_type'),
+                'badges',     jsonb_build_array('status'),
+                'alertRules', jsonb_build_array()
+            )),
 
         -- 4. Tax — per-country tax registrations
-        jsonb_build_object('id','__tax','label','Tax','renderer','child',
+        jsonb_build_object('id','__tax','label','Tax','renderer','summary_cards_with_drawer',
             'entity_code','supplier_tax_profile',
             'display_fields',jsonb_build_array('country_code','taxation_type','tax_number'),
             'add_href_template','/app/supplier_tax_profile/new?parent_id={uuid}',
             'add_label','Add Tax Profile',
             'empty_title','No tax profiles configured',
-            'empty_description','Add per-country tax registrations, VAT/GST/SST/WHT numbers.'),
+            'empty_description','Add per-country tax registrations, VAT/GST/SST/WHT numbers.',
+            'config',jsonb_build_object(
+                'title',      'taxation_type',
+                'facts',      jsonb_build_array('country_code','tax_number','vat_number'),
+                'badges',     jsonb_build_array('status','verified'),
+                'alertRules', jsonb_build_array('tax_missing_id')
+            )),
 
         -- 5. Banking — remittance bank accounts
-        -- entity_code points at the view (v_supplier_bank_account) for listing via parent_fk=supplier_id.
-        -- create_entity_code + link_entity_code drive the two-step create in ChildEntityPanel:
+        -- entity_code points at the view (supplier_bank_account) for listing via parent_fk.
+        -- create_entity_code + link_entity_code drive the two-step create:
         --   Step 1: POST /api/records/bank_account     (creates the physical bank account)
         --   Step 2: POST /api/records/bank_account_link (creates owner_type=supplier link)
-        jsonb_build_object('id','__banking','label','Banking','renderer','child',
+        jsonb_build_object('id','__banking','label','Banking','renderer','summary_cards_with_drawer',
             'entity_code','supplier_bank_account',
             'create_entity_code','bank_account',
             'link_entity_code','bank_account_link',
@@ -189,16 +201,30 @@ DO $dc$ DECLARE
             'add_href_template','/app/bank_account/new?parent_id={uuid}',
             'add_label','Add Bank Account',
             'empty_title','No bank accounts registered',
-            'empty_description','Add bank accounts used for AP payment remittances.'),
+            'empty_description','Add bank accounts used for AP payment remittances.',
+            'config',jsonb_build_object(
+                'title',      'bank_name',
+                'facts',      jsonb_build_array('currency_code','account_number','account_holder_name'),
+                'badges',     jsonb_build_array('primary','status','verified'),
+                'alertRules', jsonb_build_array('bank_missing_verification','bank_inactive'),
+                'defaultSort',jsonb_build_array('is_primary desc','updated_at desc')
+            )),
 
         -- 6. Certifications — ISO, Halal, ESG, safety, statutory
-        jsonb_build_object('id','__certifications','label','Certifications','renderer','child',
+        jsonb_build_object('id','__certifications','label','Certifications','renderer','summary_cards_with_drawer',
             'entity_code','supplier_certification',
             'display_fields',jsonb_build_array('custom_name','certificate_number','effective_until'),
             'add_href_template','/app/supplier_certification/new?parent_id={uuid}',
             'add_label','Add Certification',
             'empty_title','No certifications on file',
-            'empty_description','Add ISO, Halal, ESG, safety, or regulatory certifications.'),
+            'empty_description','Add ISO, Halal, ESG, safety, or regulatory certifications.',
+            'config',jsonb_build_object(
+                'title',      'custom_name',
+                'facts',      jsonb_build_array('certificate_number','effective_until'),
+                'badges',     jsonb_build_array('status','expiry'),
+                'alertRules', jsonb_build_array('cert_expired','cert_expiring_soon'),
+                'defaultSort',jsonb_build_array('effective_until asc')
+            )),
 
         -- 7. Standing — composite: Qualification + Blocks & Holds
         jsonb_build_object('id','__standing','label','Standing','renderer','composite',
@@ -218,13 +244,19 @@ DO $dc$ DECLARE
             )),
 
         -- 8. Governance — shareholders, UBOs, directors, signatories
-        jsonb_build_object('id','__governance','label','Governance','renderer','child',
+        jsonb_build_object('id','__governance','label','Governance','renderer','summary_cards_with_drawer',
             'entity_code','supplier_governance',
             'display_fields',jsonb_build_array('relation_type','member_name','ownership_pct'),
             'add_href_template','/app/supplier_governance/new?parent_id={uuid}',
             'add_label','Add Relation',
             'empty_title','No governance structure recorded',
-            'empty_description','Add shareholders, UBOs, directors, signatories, and related parties.')
+            'empty_description','Add shareholders, UBOs, directors, signatories, and related parties.',
+            'config',jsonb_build_object(
+                'title',      'member_name',
+                'facts',      jsonb_build_array('relation_type','ownership_pct','appointed_date'),
+                'badges',     jsonb_build_array('status'),
+                'alertRules', jsonb_build_array()
+            ))
 
         -- Comments / Attachments / Activity are NOT tabs — they are platform_panels
     );
@@ -236,8 +268,10 @@ DO $dc$ DECLARE
         'tabs',                v_tabs
     );
     v_base jsonb := jsonb_build_object(
-        'detail_renderer', 'rich_master',
+        'detail_renderer', 'master',
+        'detail_profile',  'rich',
         'list_renderer',   'table',
+        'code_field',      'code',
         'title_field',     'name',
         'subtitle_field',  'legal_name',
         'search_fields',   jsonb_build_array('code','name','legal_name','tax_id','registration_no'),
@@ -246,16 +280,20 @@ DO $dc$ DECLARE
 BEGIN
     -- Fresh DB: set full config
     UPDATE control.entity
-    SET display_config = v_base || jsonb_build_object('rich_master_config', v_rmc)
+    SET display_config = v_base || jsonb_build_object('master_config', v_rmc)
     WHERE table_schema = 'master' AND table_name = 'supplier'
       AND tenant_id IS NULL AND display_config = '{}'::jsonb;
 
-    -- Already-seeded DB: patch to rich_master + always overwrite rich_master_config.
-    -- No IS DISTINCT guard — re-running is safe and ensures stale type_label/tabs are corrected.
+    -- Already-seeded DB: merge canonical values + always overwrite master_config.
+    -- Uses || operator so all other keys are preserved; safe to re-run.
     UPDATE control.entity
-    SET display_config = jsonb_set(
-            jsonb_set(display_config, '{detail_renderer}', '"rich_master"'),
-            '{rich_master_config}', v_rmc)
+    SET display_config = display_config || jsonb_build_object(
+            'detail_renderer', 'master',
+            'detail_profile',  'rich',
+            'code_field',      'code',
+            'title_field',     'name',
+            'subtitle_field',  'legal_name',
+            'master_config',   v_rmc)
     WHERE table_schema = 'master' AND table_name = 'supplier'
       AND tenant_id IS NULL
       AND display_config != '{}'::jsonb;

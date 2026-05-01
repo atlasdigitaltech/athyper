@@ -191,7 +191,7 @@ WHERE ef.entity_version_id = ev.id
 -- any explicit tenant override or later migration is not overwritten.
 UPDATE control.entity
 SET display_config = jsonb_build_object(
-    'detail_renderer', 'approvable',
+    'detail_renderer', 'document',
     'title_field',     'document_no',
     'subtitle_field',  'supplier_id',
     'list_columns',    '["document_no","status","supplier_id","invoice_date","due_date","total_amount","currency_code"]'::jsonb,

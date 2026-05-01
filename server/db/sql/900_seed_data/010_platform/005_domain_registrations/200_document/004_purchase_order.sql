@@ -112,7 +112,7 @@ WHERE table_schema = 'document'
 -- ── 4. display_config ─────────────────────────────────────────────────────────
 UPDATE control.entity
 SET display_config = jsonb_build_object(
-    'detail_renderer',    'approvable',
+    'detail_renderer',    'document',
     'title_field',        'document_no',
     'subtitle_field',     'supplier_id',
     'list_columns',       '["document_no","status","supplier_id","order_date","delivery_date","total_amount","currency_code"]'::jsonb,

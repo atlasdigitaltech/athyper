@@ -3717,6 +3717,15 @@ export type entity_flow_section = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+    section_type: Generated<string>;
+    entity_code: string | null;
+    payload_key: string | null;
+    field_codes: unknown | null;
+    min_rows: number | null;
+    max_rows: number | null;
+    default_row: unknown | null;
+    permission_code: string | null;
+    restricted_view_only: Generated<boolean>;
 };
 export type entity_flow_step = {
     id: Generated<string>;
@@ -4535,6 +4544,15 @@ export type industry_crosswalk = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
+};
+export type intake_idempotency = {
+    id: Generated<string>;
+    tenant_id: string;
+    entity_code: string;
+    idempotency_key: string;
+    result_payload: Generated<unknown>;
+    created_at: Generated<Timestamp>;
+    expires_at: Generated<Timestamp>;
 };
 export type intent_profile_override = {
     id: Generated<string>;
@@ -8916,6 +8934,7 @@ export type DB = {
     "control.forecast_budget_bridge": forecast_budget_bridge;
     "control.forecast_line": forecast_line;
     "control.hook_action_registry": hook_action_registry;
+    "control.intake_idempotency": intake_idempotency;
     "control.intent_profile_override": intent_profile_override;
     "control.intent_to_accounting_profile_rule": intent_to_accounting_profile_rule;
     "control.lifecycle": lifecycle;

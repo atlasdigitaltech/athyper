@@ -131,7 +131,7 @@ ON CONFLICT DO NOTHING;
 -- ── supplier_bank_account: display_config + natural_key_fields ───────────────
 UPDATE control.entity
 SET display_config        = jsonb_build_object(
-        'detail_renderer',    'standard',
+        'detail_renderer',    'master',
         'list_columns',       '["bank_name","account_number","currency_code","account_id_type","is_primary","is_verified"]'::jsonb,
         'default_sort_field', 'is_primary',
         'default_sort_order', 'desc'

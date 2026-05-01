@@ -91,7 +91,7 @@ ON CONFLICT DO NOTHING;
 -- ── 4. display_config + natural_key_fields ───────────────────────────────────
 UPDATE control.entity
 SET display_config        = jsonb_build_object(
-        'detail_renderer',    'standard',
+        'detail_renderer',    'master',
         'list_columns',       '["country_code","tax_classification","is_vat_registered","has_tax_clearance","status"]'::jsonb,
         'default_sort_field', 'country_code',
         'default_sort_order', 'asc'
