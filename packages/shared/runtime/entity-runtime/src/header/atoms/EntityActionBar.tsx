@@ -42,7 +42,7 @@ function ActionButton({ action, onAction }: { action: HeaderAction; onAction?: (
       aria-busy={action.pending || undefined}
       onClick={() => { action.onSelect?.(); onAction?.(action.id); }}
       className={cn(
-        "inline-flex items-center gap-[7px] h-[34px] px-3.5 rounded-lg text-xs font-semibold tracking-wider leading-none whitespace-nowrap transition-opacity",
+        "inline-flex items-center gap-[7px] h-8 px-3.5 rounded-lg text-xs font-semibold tracking-wider leading-none whitespace-nowrap transition-opacity",
         isDanger
           ? "bg-destructive text-destructive-foreground hover:opacity-90"
           : "bg-foreground text-background hover:opacity-85",
@@ -88,7 +88,7 @@ function SecondaryButton({ action, onAction }: { action: HeaderAction; onAction?
       aria-busy={action.pending || undefined}
       onClick={() => { action.onSelect?.(); onAction?.(action.id); }}
       className={cn(
-        "h-[34px] px-3 rounded-lg text-xs font-medium text-muted-foreground border border-border bg-card hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap",
+        "h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground border border-border bg-card hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap",
         action.disabled && "opacity-40",
         action.pending && "opacity-40 pointer-events-none",
       )}
@@ -202,7 +202,7 @@ export function EntityActionBar({ actions, onAction, className }: EntityActionBa
       {inMenu.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-[34px] px-2.5 gap-1 text-xs">
+            <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs">
               More
               <ChevronDown className="h-3 w-3" />
             </Button>

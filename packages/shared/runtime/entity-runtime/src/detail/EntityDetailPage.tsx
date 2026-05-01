@@ -24,6 +24,7 @@ export interface DocumentRendererProps {
   record:     { id: string; data: Record<string, unknown>; status?: string };
   operations: EntityOperation[] | undefined;
   recordId:   string;
+  editMode?:  boolean;
 }
 
 export interface EntityDetailPageProps {
@@ -48,8 +49,16 @@ export function EntityDetailPage({
   const canEdit = operations === undefined
     || operations.some(
         op => op.is_enabled &&
-              op.handler_type === "NAVIGATE" &&
-              (op.handler_target ?? "").includes("mode=edit"),
+              (
+                ["edit", "update"].includes(op.permission_code) ||
+                (
+                  op.handler_type === "NAVIGATE" &&
+                  (
+                    (op.handler_target ?? "").includes("mode=edit") ||
+                    (op.handler_target ?? "").includes("/edit")
+                  )
+                )
+              ),
       );
   const effectiveEditMode = editMode && canEdit;
 
@@ -125,6 +134,7 @@ export function EntityDetailPage({
         record={record}
         operations={operations}
         recordId={recordId}
+        editMode={editMode}
       />
     );
   }

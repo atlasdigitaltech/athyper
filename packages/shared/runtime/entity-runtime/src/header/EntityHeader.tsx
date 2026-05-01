@@ -20,7 +20,6 @@
  */
 
 import { type ReactNode, useState } from "react";
-import { ChevronDown, ChevronUp, Pin } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import type { EntityHeaderModel, HeaderMode } from "./types";
 import { useRailState } from "./hooks/useRailState";
@@ -36,6 +35,8 @@ export interface EntityHeaderProps {
   model: EntityHeaderModel;
   mode?: HeaderMode;
   onModeChange?: (mode: HeaderMode) => void;
+  /** When true, renders edit-mode chrome: accent bar, ring, and "Editing" badge. */
+  editMode?: boolean;
   onAction?: (id: string) => void;
   onBack?: () => void;
   /**
@@ -52,38 +53,6 @@ export interface EntityHeaderProps {
   /** Arbitrary content rendered below the identity bar — visible in all modes. */
   extensionSlot?: ReactNode;
   className?: string;
-}
-
-// ── Mode toggle — header infrastructure, not a model-driven atom ──────────
-
-function ModeToggle({ mode, onChange }: { mode: HeaderMode; onChange: (m: HeaderMode) => void }) {
-  const isCollapsed = mode === "collapsed";
-  const isPinned    = mode === "pinned";
-  return (
-    <div className="flex items-center gap-1">
-      <button
-        type="button"
-        title={isCollapsed ? "Expand header" : "Collapse header"}
-        onClick={() => onChange(isCollapsed ? "expanded" : "collapsed")}
-        className="w-[28px] h-[28px] rounded-md border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-      >
-        {isCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-      </button>
-      <button
-        type="button"
-        title={isPinned ? "Unpin header" : "Pin header"}
-        onClick={() => onChange(isPinned ? "expanded" : "pinned")}
-        className={cn(
-          "w-[28px] h-[28px] rounded-md border flex items-center justify-center transition-colors",
-          isPinned
-            ? "border-foreground bg-foreground text-background"
-            : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-        )}
-      >
-        <Pin className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
 }
 
 // ── Audit meta bar ────────────────────────────────────────────────────────
@@ -109,6 +78,7 @@ export function EntityHeader({
   model,
   mode: initialMode = "expanded",
   onModeChange,
+  editMode = false,
   onAction,
   onBack,
   onTypeClick,
@@ -127,28 +97,24 @@ export function EntityHeader({
 
   const rail = useRailState(model.progress);
 
-  // Mode controls (collapse/pin) are only meaningful when collapsible content exists.
-  // A header with no facts and no audit has nothing to collapse.
-  const hasExpandableContent = !!(model.facts?.length || model.audit);
+  const xlFact = model.facts?.find((f) => f.xl);
+  const amountSummary = xlFact
+    ? { label: xlFact.label, amount: xlFact.value, currency: xlFact.currency, subtext: xlFact.subValue }
+    : undefined;
+  const nonXlFacts = model.facts?.filter((f) => !f.xl) ?? [];
 
-  const actionsSlot = (
-    <div className="flex items-center gap-2 flex-wrap justify-end">
-      <EntityActionBar actions={model.actions} onAction={onAction} />
-      {model.actions.length > 0 && hasExpandableContent && (
-        <span className="w-px h-5 bg-border/60 self-center shrink-0" />
-      )}
-      {hasExpandableContent && <ModeToggle mode={mode} onChange={handleMode} />}
-    </div>
-  );
+  const actionsSlot = <EntityActionBar actions={model.actions} onAction={onAction} />;
 
   // Pinned: sticky strip — P1 + ext + compact P3 + P5 only
   if (isPinned) {
     return (
       <div className={cn(
         "sticky top-0 z-30 overflow-hidden rounded-xl border bg-card shadow-sm",
+        editMode && "ring-1 ring-inset ring-primary/30",
         className,
       )}>
-        <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} />
+        {editMode && <div className="h-[2px] bg-primary/70" />}
+        <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} amountSummary={amountSummary} editMode={editMode} />
         {extensionSlot && (
           <div className="border-t border-border/60 px-4 py-2 sm:px-5 lg:px-[22px]">
             {extensionSlot}
@@ -175,9 +141,14 @@ export function EntityHeader({
 
   // Expanded + Collapsed:
   return (
-    <div className={cn("overflow-hidden rounded-xl border bg-card shadow-sm", className)}>
+    <div className={cn(
+      "overflow-hidden rounded-xl border bg-card shadow-sm",
+      editMode && "ring-1 ring-inset ring-primary/30",
+      className,
+    )}>
+      {editMode && <div className="h-[2px] bg-primary/70" />}
       {/* P1 — always visible */}
-      <EntityIdentityBar identity={model.identity} onBack={onBack} actionsSlot={actionsSlot} />
+      <EntityIdentityBar identity={model.identity} onBack={onBack} actionsSlot={actionsSlot} amountSummary={amountSummary} editMode={editMode} />
 
       {/* Extension slot — always visible when present */}
       {extensionSlot && (
@@ -193,14 +164,9 @@ export function EntityHeader({
         </div>
       )}
 
-      {/* P2 — facts.
-           Expanded: full grid.
-           Collapsed: only when an xl=true hero fact exists (e.g. invoice total).
-           Master entities have no xl facts → collapsed shows identity row only.
-           Document entities mark their total as xl → collapsed shows the hero cell. */}
-      {(model.facts?.length ?? 0) > 0 &&
-        (isExpanded || model.facts!.some((f) => f.xl)) && (
-        <EntityFactRail facts={model.facts!} mode={mode} />
+      {/* P2 — non-xl facts (xl/total is now in the identity bar). */}
+      {nonXlFacts.length > 0 && (
+        <EntityFactRail facts={nonXlFacts} mode={mode} />
       )}
 
       {/* P3 + P4 — expanded only: full status dimensions + progress timeline */}

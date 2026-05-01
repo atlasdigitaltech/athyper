@@ -34,11 +34,13 @@ type Intent = SemanticIntent | "primary" | "accent" | "muted";
 const DESTRUCTIVE_CODES = new Set([
   "cancel", "reverse", "void", "delete", "archive", "remove",
   "reject", "deny", "revoke", "suspend",
+  "cancel_document", "reverse_document", "void_document",
 ]);
 
 const CONFIRMATION_CODES = new Set([
   "submit", "approve", "deny", "reject", "post", "reverse",
   "cancel", "void", "delete", "hold", "release_hold",
+  "cancel_document", "reverse_document", "void_document",
 ]);
 
 const PLACEMENT_TO_GROUP: Record<string, ActionBundleGroup> = {
@@ -48,18 +50,25 @@ const PLACEMENT_TO_GROUP: Record<string, ActionBundleGroup> = {
   CONTEXT: "overflow",
 };
 
+const ACTION_LABEL_OVERRIDES: Record<string, string> = {
+  update:           "Edit",
+  cancel_document:  "Cancel",
+  reverse_document: "Reverse",
+  void_document:    "Void",
+};
+
 // ── Built-in status-driven action groups ────────────────────────────────────
 // Applied automatically for any entity with detail_renderer = "document"
 // when no entity-specific action_groups is found in display_config.
 // Entity-specific config (display_config.action_groups) overrides this entirely.
 
 const DOCUMENT_STATUS_GROUPS: ActionGroupsConfig = {
-  draft:            { primary: ["update", "submit"],        working: ["cancel"] },
-  submitted:        { primary: ["approve", "deny"],         working: ["cancel"] },
-  pending_approval: { primary: ["approve", "deny"],         working: ["cancel"] },
-  in_review:        { primary: ["approve", "deny"],         working: ["cancel"] },
-  on_hold:          { primary: ["release_hold"],            working: ["cancel"] },
-  approved:         { primary: ["post"],                    working: ["propose_payment", "cancel"], output: ["view_je"] },
+  draft:            { primary: ["edit", "submit"],          working: ["cancel_document"] },
+  submitted:        { primary: ["approve", "reject"],       working: ["cancel_document"] },
+  pending_approval: { primary: ["approve", "reject"],       working: ["cancel_document"] },
+  in_review:        { primary: ["approve", "reject"],       working: ["cancel_document"] },
+  on_hold:          { primary: ["release_hold"],            working: ["cancel_document"] },
+  approved:         { primary: ["post"],                    working: ["propose_payment", "cancel_document"], output: ["view_je"] },
   posted:           { primary: ["propose_payment"],         working: ["allocate_payment"],          output: ["view_je"] },
   partially_paid:   { primary: ["propose_payment"],         working: ["allocate_payment"],          output: ["view_je"] },
   paid:             { output: ["view_je"] },
@@ -337,6 +346,30 @@ type ActionGroupsConfig = Record<string, {
   output?: string[];
 }>;
 
+const ACTION_CODE_ALIASES: Record<string, string[]> = {
+  update:           ["edit"],
+  edit:             ["update"],
+  cancel:           ["cancel_document"],
+  cancel_document:  ["cancel"],
+  deny:             ["reject"],
+  reject:           ["deny"],
+  reverse:          ["reverse_document"],
+  reverse_document: ["reverse"],
+  void:             ["void_document"],
+  void_document:    ["void"],
+};
+
+function expandActionCodes(codes: string[] | undefined): Set<string> {
+  const expanded = new Set<string>();
+  for (const code of codes ?? []) {
+    expanded.add(code);
+    for (const alias of ACTION_CODE_ALIASES[code] ?? []) {
+      expanded.add(alias);
+    }
+  }
+  return expanded;
+}
+
 function buildActionBundle(
   operations: EntityOperation[],
   statusNorm: string,
@@ -360,7 +393,7 @@ function buildActionBundle(
 
       return {
         action_code: code,
-        label: op.label_override ?? titleCase(code),
+        label: op.label_override ?? ACTION_LABEL_OVERRIDES[code] ?? titleCase(code),
         group,
         icon_key: op.icon_override,
         is_destructive: DESTRUCTIVE_CODES.has(code),
@@ -376,18 +409,17 @@ function buildActionBundle(
   const statusConfig = actionGroups?.[statusNorm];
   if (!statusConfig) return items;
 
-  const allListed = new Set([
-    ...(statusConfig.primary ?? []),
-    ...(statusConfig.working ?? []),
-    ...(statusConfig.output  ?? []),
-  ]);
+  const primaryCodes = expandActionCodes(statusConfig.primary);
+  const workingCodes = expandActionCodes(statusConfig.working);
+  const outputCodes  = expandActionCodes(statusConfig.output);
+  const allListed    = new Set([...primaryCodes, ...workingCodes, ...outputCodes]);
 
   return items
     .filter((item) => allListed.has(item.action_code))
     .map((item) => {
       const c = item.action_code;
-      if (statusConfig.primary?.includes(c)) return { ...item, group: "primary" as ActionBundleGroup };
-      if (statusConfig.working?.includes(c)) return { ...item, group: "working" as ActionBundleGroup };
+      if (primaryCodes.has(c)) return { ...item, group: "primary" as ActionBundleGroup };
+      if (workingCodes.has(c)) return { ...item, group: "working" as ActionBundleGroup };
       return { ...item, group: "output" as ActionBundleGroup };
     });
 }

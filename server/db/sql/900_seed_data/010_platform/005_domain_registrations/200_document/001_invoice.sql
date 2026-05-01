@@ -198,12 +198,12 @@ SET display_config = jsonb_build_object(
     'default_sort_field', 'invoice_date',
     'default_sort_order', 'desc',
     'action_groups', jsonb_build_object(
-        'draft',          jsonb_build_object('primary', '["update","submit"]'::jsonb,        'working', '["cancel"]'::jsonb),
-        'submitted',      jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
-        'pending_approval',jsonb_build_object('primary','["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
-        'in_review',      jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
-        'on_hold',        jsonb_build_object('primary', '["release_hold"]'::jsonb,           'working', '["cancel"]'::jsonb),
-        'approved',       jsonb_build_object('primary', '["post"]'::jsonb,                   'working', '["propose_payment","cancel"]'::jsonb, 'output', '["view_je"]'::jsonb),
+        'draft',          jsonb_build_object('primary', '["edit","submit"]'::jsonb,          'working', '["cancel_document"]'::jsonb),
+        'submitted',      jsonb_build_object('primary', '["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
+        'pending_approval',jsonb_build_object('primary','["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
+        'in_review',      jsonb_build_object('primary', '["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
+        'on_hold',        jsonb_build_object('primary', '["release_hold"]'::jsonb,           'working', '["cancel_document"]'::jsonb),
+        'approved',       jsonb_build_object('primary', '["post"]'::jsonb,                   'working', '["propose_payment","cancel_document"]'::jsonb, 'output', '["view_je"]'::jsonb),
         'posted',         jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,         'output', '["view_je"]'::jsonb),
         'partially_paid', jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,         'output', '["view_je"]'::jsonb),
         'paid',           jsonb_build_object('output',  '["view_je"]'::jsonb),
@@ -250,12 +250,12 @@ SET display_config = jsonb_set(
     display_config,
     '{action_groups}',
     jsonb_build_object(
-        'draft',           jsonb_build_object('primary', '["update","submit"]'::jsonb,        'working', '["cancel"]'::jsonb),
-        'submitted',       jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
-        'pending_approval',jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
-        'in_review',       jsonb_build_object('primary', '["approve","deny"]'::jsonb,         'working', '["cancel"]'::jsonb),
-        'on_hold',         jsonb_build_object('primary', '["release_hold"]'::jsonb,           'working', '["cancel"]'::jsonb),
-        'approved',        jsonb_build_object('primary', '["post"]'::jsonb,                   'working', '["propose_payment","cancel"]'::jsonb, 'output', '["view_je"]'::jsonb),
+        'draft',           jsonb_build_object('primary', '["edit","submit"]'::jsonb,          'working', '["cancel_document"]'::jsonb),
+        'submitted',       jsonb_build_object('primary', '["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
+        'pending_approval',jsonb_build_object('primary', '["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
+        'in_review',       jsonb_build_object('primary', '["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
+        'on_hold',         jsonb_build_object('primary', '["release_hold"]'::jsonb,           'working', '["cancel_document"]'::jsonb),
+        'approved',        jsonb_build_object('primary', '["post"]'::jsonb,                   'working', '["propose_payment","cancel_document"]'::jsonb, 'output', '["view_je"]'::jsonb),
         'posted',          jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,         'output', '["view_je"]'::jsonb),
         'partially_paid',  jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,         'output', '["view_je"]'::jsonb),
         'paid',            jsonb_build_object('output',  '["view_je"]'::jsonb),
@@ -267,6 +267,30 @@ SET display_config = jsonb_set(
 WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
   AND tenant_id IS NULL
   AND (display_config -> 'action_groups') IS NULL;
+
+-- ── 4c2. Patch: align action_groups with the operation taxonomy (edit/reject/cancel_document)
+UPDATE control.entity
+SET display_config = jsonb_set(
+    display_config,
+    '{action_groups}',
+    jsonb_build_object(
+        'draft',           jsonb_build_object('primary', '["edit","submit"]'::jsonb,          'working', '["cancel_document"]'::jsonb),
+        'submitted',       jsonb_build_object('primary', '["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
+        'pending_approval',jsonb_build_object('primary', '["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
+        'in_review',       jsonb_build_object('primary', '["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
+        'on_hold',         jsonb_build_object('primary', '["release_hold"]'::jsonb,           'working', '["cancel_document"]'::jsonb),
+        'approved',        jsonb_build_object('primary', '["post"]'::jsonb,                   'working', '["propose_payment","cancel_document"]'::jsonb, 'output', '["view_je"]'::jsonb),
+        'posted',          jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,                  'output', '["view_je"]'::jsonb),
+        'partially_paid',  jsonb_build_object('primary', '["propose_payment"]'::jsonb,        'working', '["allocate_payment"]'::jsonb,                  'output', '["view_je"]'::jsonb),
+        'paid',            jsonb_build_object('output',  '["view_je"]'::jsonb),
+        'cancelled',       jsonb_build_object(),
+        'rejected',        jsonb_build_object('working', '["copy"]'::jsonb)
+    ),
+    true
+)
+WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
+  AND tenant_id IS NULL
+  AND (display_config -> 'action_groups') IS NOT NULL;
 
 -- ── 4d. Patch: gross_amount → total_amount in display_config on already-seeded DBs
 --    Needed because the initial UPDATE above only fires when display_config = '{}'.

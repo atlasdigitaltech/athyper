@@ -19,13 +19,13 @@ import { buildDocumentHeaderModel } from "../header";
 import { AmountSummaryCard } from "../amounts";
 import { FlowModal } from "../intake";
 import { ValidationBanner } from "../validation";
-import { EntityHeader } from "@athyper/entity-runtime/header";
+import { EntityHeader, EntityProgressRow, useRailState } from "@athyper/entity-runtime/header";
 import type { PlatformPanelIcon } from "@athyper/entity-runtime/header";
 import { resolveLinesRenderer } from "@athyper/runtime-shared/renderer-registry";
 import { resolvePresentationConfig as resolveDisplayConfig } from "@athyper/entity-runtime/metadata";
 import { useOperationDispatch } from "@athyper/entity-runtime/actions";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
-import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
+import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
 import { resolveFieldRenderer } from "@athyper/entity-runtime/field-renderers";
 import {
   TasksPanel,
@@ -52,6 +52,7 @@ export interface DocumentDetailPageProps {
   operations: EntityOperation[] | undefined;
   /** Canonical business key from the URL [id] segment — used for sub-resource BFF calls */
   recordId:   string;
+  editMode?:  boolean;
 }
 
 // ── Sub-panels ────────────────────────────────────────────────────────────────
@@ -371,6 +372,44 @@ const HEADER_DISPLAY_FIELDS = new Set([
   "document_no", "status", "code", "name",
 ]);
 
+const DOCUMENT_EDIT_SKIP_FIELDS = new Set([
+  "document_no", "status", "code", "name",
+  "created_at", "created_by", "updated_at", "updated_by",
+  "approved_at", "approved_by", "posted_at", "posted_by",
+  "status_changed_at", "status_changed_by",
+  "workflow_request_id", "ap_je_id",
+]);
+
+function normaliseStatusValue(value: unknown): string {
+  return String(value ?? "draft").toLowerCase().replace(/[\s-]/g, "_");
+}
+
+function getDocumentStatus(entity: CompiledEntity, record: { data: Record<string, unknown>; status?: string }): string {
+  const statusField = entity.display_config.document_header?.status_field ?? "status";
+  return normaliseStatusValue(record.status ?? record.data[statusField]);
+}
+
+function isDocumentEditableField(field: EntityField): boolean {
+  return (
+    !field.is_readonly &&
+    !field.is_computed &&
+    field.origin !== "system" &&
+    field.data_type !== "lifecycle_state" &&
+    !DOCUMENT_EDIT_SKIP_FIELDS.has(field.name)
+  );
+}
+
+function valuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+function getCsrfToken(): string {
+  if (typeof document === "undefined") return "";
+  const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]!) : "";
+}
+
 function fmtFieldValue(
   value: unknown,
   dataType: string,
@@ -475,6 +514,76 @@ function DocumentFieldsPanel({
 
 // ── Inline title editor ───────────────────────────────────────────────────────
 
+function DocumentEditableFieldsPanel({
+  entity,
+  data,
+  fieldErrors,
+  onFieldChange,
+}: {
+  entity: CompiledEntity;
+  data: Record<string, unknown>;
+  fieldErrors: Record<string, string>;
+  onFieldChange: (name: string, value: unknown) => void;
+}) {
+  const grouped = FIELD_BANDS.map((band) => ({
+    ...band,
+    fields: entity.fields
+      .filter((f) =>
+        isDocumentEditableField(f) &&
+        (f.sort_order ?? 0) >= band.min &&
+        (f.sort_order ?? 0) <= band.max,
+      )
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+  })).filter((g) => g.fields.length > 0);
+
+  if (grouped.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center">
+          <p className="text-sm text-muted-foreground">No editable draft fields are configured.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {grouped.map((group) => (
+        <Card key={group.key}>
+          <CardContent className="pt-5">
+            <h4 className="mb-3 text-xs font-medium text-muted-foreground">
+              {group.label}
+            </h4>
+            <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
+              {group.fields.map((field) => {
+                const Renderer = resolveFieldRenderer(field);
+                const value = data[field.name] ?? data[field.column_name ?? ""];
+                const error = fieldErrors[field.name];
+                return (
+                  <div key={field.name} className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground leading-normal">
+                      {field.label ?? field.name}
+                      {field.is_required && <span className="ml-1 text-destructive">*</span>}
+                    </label>
+                    <Renderer
+                      value={value}
+                      field={field}
+                      mode="edit"
+                      onChange={(v) => onFieldChange(field.name, v)}
+                      error={error}
+                    />
+                    {error && <p className="text-xs text-destructive">{error}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 function InlineTitleEdit({
   value, titleField, entityCode, recordId, onSaved,
 }: {
@@ -566,9 +675,11 @@ export function DocumentDetailPage({
   record,
   operations,
   recordId,
+  editMode = false,
 }: DocumentDetailPageProps) {
-  const router  = useRouter();
-  const data    = record.data;
+  const router      = useRouter();
+  const queryClient = useQueryClient();
+  const data        = record.data;
 
   const detailConfig  = resolveDetailConfig(entity);
   const resolvedTabs  = resolveTabs(entity, null, []);
@@ -584,7 +695,50 @@ export function DocumentDetailPage({
     recordUuid: record.id,
   });
 
-  const orchestrator = buildOrchestratorFromRecord(entity, data, operations ?? []);
+  const statusNorm = getDocumentStatus(entity, record);
+  const isDraftStatus = statusNorm === "draft";
+  const canEditDraft = isDraftStatus && (
+    operations === undefined ||
+    operations.some((op) =>
+      op.is_enabled &&
+      (op.surface === "DETAIL" || op.surface === "BOTH") &&
+      ["edit", "update"].includes(op.permission_code),
+    )
+  );
+  const effectiveEditMode = editMode && canEditDraft;
+
+  const [editBaseline, setEditBaseline] = useState<Record<string, unknown>>(data);
+  const [editFormData, setEditFormData] = useState<Record<string, unknown>>(data);
+  const [fieldErrors, setFieldErrors]   = useState<Record<string, string>>({});
+  const [saveError, setSaveError]       = useState<string | null>(null);
+  const [savingDraft, setSavingDraft]   = useState(false);
+
+  useEffect(() => {
+    setEditBaseline(data);
+    setEditFormData(data);
+    setFieldErrors({});
+    setSaveError(null);
+  }, [data]);
+
+  const editableFieldNames = useMemo(
+    () => new Set(entity.fields.filter(isDocumentEditableField).map((field) => field.name)),
+    [entity.fields],
+  );
+
+  const editPatch = useMemo(() => {
+    const patch: Record<string, unknown> = {};
+    for (const fieldName of editableFieldNames) {
+      if (!valuesEqual(editFormData[fieldName], editBaseline[fieldName])) {
+        patch[fieldName] = editFormData[fieldName] ?? null;
+      }
+    }
+    return patch;
+  }, [editFormData, editBaseline, editableFieldNames]);
+
+  const isDirty = Object.keys(editPatch).length > 0;
+  const displayData = effectiveEditMode ? { ...data, ...editFormData } : data;
+
+  const orchestrator = buildOrchestratorFromRecord(entity, displayData, operations ?? [], statusNorm);
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -733,7 +887,7 @@ export function DocumentDetailPage({
     ...(resolvedTabs.includes("reports")       ? [{ id: "__reports",       label: "Reports" }]       : []),
   ];
 
-  const headerModel = buildDocumentHeaderModel(entity, data, {
+  const headerModelBase = buildDocumentHeaderModel(entity, displayData, {
     statusDimensions:    orchestrator.statusDimensions ?? [],
     actionBundle:        orchestrator.actionBundle,
     resolvedPartyName:   resolvedPartyName ?? undefined,
@@ -741,6 +895,70 @@ export function DocumentDetailPage({
     resolvedCompanyCode: resolvedCompanyCode ?? undefined,
     tabs,
   });
+
+  const headerModel = useMemo(() => {
+    const model = {
+      ...headerModelBase,
+      identity: { ...headerModelBase.identity },
+      actions:  [...headerModelBase.actions],
+    };
+
+    const hasEdit = model.actions.some((action) => action.id === "edit" || action.id === "update");
+    if (!effectiveEditMode && canEditDraft && !hasEdit) {
+      model.actions = [
+        { id: "edit", label: "Edit", placement: "primary", order: 1, icon: "pencil" },
+        ...model.actions.map((action) => ({ ...action, order: action.order + 10 })),
+      ];
+    }
+
+    if (effectiveEditMode) {
+      const submitAction = model.actions.find((action) => action.id === "submit");
+      const passthrough = model.actions.filter((action) =>
+        !["edit", "update", "submit"].includes(action.id),
+      );
+      model.identity.status = {
+        label: isDirty ? "Unsaved Draft" : "Editing Draft",
+        intent: isDirty ? "warning" as const : "info" as const,
+      };
+      model.actions = [
+        {
+          id:        "__document_save",
+          label:     "Save",
+          placement: "primary",
+          order:     1,
+          disabled:  !isDirty || savingDraft,
+          pending:   savingDraft,
+        },
+        ...(submitAction
+          ? [{
+              ...submitAction,
+              placement: "primary" as const,
+              order:     2,
+              disabled:  submitAction.disabled || savingDraft,
+            }]
+          : []),
+        {
+          id:        "__document_undo",
+          label:     "Undo",
+          placement: "secondary",
+          order:     3,
+          disabled:  !isDirty || savingDraft,
+        },
+        {
+          id:        "__document_exit",
+          label:     "Exit Edit",
+          placement: "overflow",
+          order:     90,
+          group:     "record",
+        },
+        ...passthrough.map((action, index) => ({ ...action, order: 100 + index })),
+      ];
+    }
+
+    return model;
+  }, [headerModelBase, effectiveEditMode, canEditDraft, isDirty, savingDraft]);
+
+  const overviewRail = useRailState(headerModel.progress);
 
   const [activeTab,   setActiveTab]   = useState(tabs[0]?.id ?? "");
   const [activePanel, setActivePanel] = useState<string | null>(null);
@@ -796,8 +1014,6 @@ export function DocumentDetailPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasPlatformComments, hasPlatformAttachments, resolvedTabs.join(","), commentsCount, commentsCountQuery.isPending, attachmentsCount, attachmentsCountQuery.isPending]);
 
-  const queryClient = useQueryClient();
-
   const linesQuery = useQuery<{ data: DocumentLine[] }>({
     queryKey: ["record-lines", entity.entity_code, recordId],
     queryFn: async ({ signal }) => {
@@ -835,6 +1051,78 @@ export function DocumentDetailPage({
     void queryClient.invalidateQueries({ queryKey: ["record-distributions", entity.entity_code, recordId] });
   }
 
+  function handleDocumentFieldChange(name: string, value: unknown) {
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+    setSaveError(null);
+  }
+
+  function resetDraftChanges() {
+    setEditFormData(editBaseline);
+    setFieldErrors({});
+    setSaveError(null);
+  }
+
+  function validateDraftChanges(): boolean {
+    const nextErrors: Record<string, string> = {};
+    for (const field of entity.fields) {
+      if (!isDocumentEditableField(field) || !field.is_required) continue;
+      const value = editFormData[field.name];
+      if (value === undefined || value === null || value === "") {
+        nextErrors[field.name] = `${field.label ?? field.name} is required`;
+      }
+    }
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }
+
+  async function saveDraftChanges(): Promise<boolean> {
+    if (!isDirty) return true;
+    if (!validateDraftChanges()) return false;
+
+    setSavingDraft(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}`,
+        {
+          method:  "PATCH",
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+          body:    JSON.stringify({ data: editPatch }),
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+        const message = typeof body["message"] === "string"
+          ? body["message"]
+          : `Save failed (${res.status})`;
+        setSaveError(message);
+        return false;
+      }
+
+      const savedData = { ...editBaseline, ...editPatch };
+      setEditBaseline(savedData);
+      setEditFormData(savedData);
+      if (titleField && typeof savedData[titleField] === "string") {
+        setLiveTitle(savedData[titleField]);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["entity-detail", entity.entity_code, recordId] });
+      await queryClient.invalidateQueries({ queryKey: ["entity-list", entity.entity_code] });
+      router.refresh();
+      return true;
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Save failed. Please try again.");
+      return false;
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
   const title = detailConfig.titleField
     ? String(data[detailConfig.titleField.name] ?? entity.entity_code)
     : entity.entity_code;
@@ -851,32 +1139,67 @@ export function DocumentDetailPage({
     setActiveTab(tabId);
   }
 
+  function findOperation(action: string): EntityOperation | undefined {
+    const candidates = action === "edit" ? ["edit", "update"] : [action];
+    return (operations ?? []).find((op) => candidates.includes(op.permission_code));
+  }
+
+  async function handleHeaderAction(action: string) {
+    if (effectiveEditMode) {
+      if (action === "__document_save") {
+        await saveDraftChanges();
+        return;
+      }
+      if (action === "__document_undo") {
+        resetDraftChanges();
+        return;
+      }
+      if (action === "__document_exit") {
+        if (isDirty && !confirm("Discard unsaved draft changes?")) return;
+        resetDraftChanges();
+        router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
+        return;
+      }
+      if (action === "submit") {
+        const saved = await saveDraftChanges();
+        if (!saved) return;
+        await opDispatch.dispatch(action, operations ?? []);
+        return;
+      }
+    }
+
+    if (action === "edit" || action === "update") {
+      router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}?mode=edit`);
+      return;
+    }
+    if (action === "copy") { void navigator.clipboard?.writeText(title); return; }
+    if (action === "view_je") {
+      const jeId = record.data["ap_je_id"] as string | null | undefined;
+      if (jeId) { router.push(`/app/journal_entry/${jeId}`); }
+      return;
+    }
+    const op = findOperation(action);
+    if (op?.handler_type === "NAVIGATE" && op.handler_target) {
+      const url = op.handler_target
+        .replace(/\{id\}/g, record.id)
+        .replace(/\{recordId\}/g, recordId);
+      router.push(url);
+      return;
+    }
+    if (action === "allocate_payment") {
+      router.push(`/finance/ap?invoice=${record.id}`);
+      return;
+    }
+    await opDispatch.dispatch(action, operations ?? []);
+  }
+
   return (
     <>
       <EntityHeader
-        model={headerModel}
+        model={{ ...headerModel, statuses: undefined, progress: undefined, facts: headerModel.facts?.filter((f) => f.xl) }}
         onBack={() => router.back()}
-        onAction={async (action) => {
-          if (action === "copy") { void navigator.clipboard?.writeText(title); return; }
-          if (action === "view_je") {
-            const jeId = record.data["ap_je_id"] as string | null | undefined;
-            if (jeId) { router.push(`/app/journal_entry/${jeId}`); }
-            return;
-          }
-          const op = (operations ?? []).find((o) => o.permission_code === action);
-          if (op?.handler_type === "NAVIGATE" && op.handler_target) {
-            const url = op.handler_target
-              .replace(/\{id\}/g, record.id)
-              .replace(/\{recordId\}/g, recordId);
-            router.push(url);
-            return;
-          }
-          if (action === "allocate_payment") {
-            router.push(`/finance/ap?invoice=${record.id}`);
-            return;
-          }
-          await opDispatch.dispatch(action, operations ?? []);
-        }}
+        editMode={effectiveEditMode}
+        onAction={(action) => { void handleHeaderAction(action); }}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         platformIcons={platformIcons.length > 0 ? platformIcons : undefined}
@@ -887,25 +1210,41 @@ export function DocumentDetailPage({
       <div className="flex flex-col gap-2.5">
         {activeTab === "__overview" && (
           <div className="space-y-5">
-            {titleField && (
-              <div className="px-1 pt-1">
-                <InlineTitleEdit
-                  value={liveTitle}
-                  titleField={titleField}
-                  entityCode={entity.entity_code}
-                  recordId={record.id}
-                  onSaved={(v) => { setLiveTitle(v); router.refresh(); }}
+            {(headerModel.progress || (headerModel.statuses?.length ?? 0) > 0) && (
+              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <EntityProgressRow
+                  progress={headerModel.progress}
+                  statuses={headerModel.statuses}
+                  railExpanded={overviewRail.expanded}
+                  onToggleRail={overviewRail.toggle}
+                  className="border-t-0"
                 />
               </div>
             )}
             {hasAmountBreakdown && (
               <AmountSummaryCard lines={orchestrator.amountBreakdown} />
             )}
-            <DocumentFieldsPanel
-              entity={entity}
-              data={data}
-              resolvedRefs={resolvedRefs}
-            />
+            {effectiveEditMode ? (
+              <>
+                {saveError && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {saveError}
+                  </div>
+                )}
+                <DocumentEditableFieldsPanel
+                  entity={entity}
+                  data={editFormData}
+                  fieldErrors={fieldErrors}
+                  onFieldChange={handleDocumentFieldChange}
+                />
+              </>
+            ) : (
+              <DocumentFieldsPanel
+                entity={entity}
+                data={data}
+                resolvedRefs={resolvedRefs}
+              />
+            )}
           </div>
         )}
 
@@ -913,21 +1252,46 @@ export function DocumentDetailPage({
           activeTab === section.group.group_key && idx > 0 ? (
             <Card key={section.group.group_key}>
               <CardContent className="pt-5">
-                <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 lg:grid-cols-3">
-                  {section.fields.map((field) => {
-                    const Renderer = resolveFieldRenderer(field);
-                    return (
-                      <div key={field.name}>
-                        <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
-                          {field.label ?? field.name}
-                        </dt>
-                        <dd className="text-sm font-normal text-foreground leading-snug">
-                          <Renderer value={data[field.name]} field={field} mode="view" />
-                        </dd>
-                      </div>
-                    );
-                  })}
-                </div>
+                {effectiveEditMode ? (
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
+                    {section.fields.filter(isDocumentEditableField).map((field) => {
+                      const Renderer = resolveFieldRenderer(field);
+                      const error = fieldErrors[field.name];
+                      return (
+                        <div key={field.name} className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground leading-normal">
+                            {field.label ?? field.name}
+                            {field.is_required && <span className="ml-1 text-destructive">*</span>}
+                          </label>
+                          <Renderer
+                            value={editFormData[field.name]}
+                            field={field}
+                            mode="edit"
+                            onChange={(v) => handleDocumentFieldChange(field.name, v)}
+                            error={error}
+                          />
+                          {error && <p className="text-xs text-destructive">{error}</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 lg:grid-cols-3">
+                    {section.fields.map((field) => {
+                      const Renderer = resolveFieldRenderer(field);
+                      return (
+                        <div key={field.name}>
+                          <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
+                            {field.label ?? field.name}
+                          </dt>
+                          <dd className="text-sm font-normal text-foreground leading-snug">
+                            <Renderer value={data[field.name]} field={field} mode="view" />
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : null,

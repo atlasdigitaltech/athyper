@@ -824,7 +824,6 @@ export function MasterDetailPage({
       {
         type_label:           config.type_label,
         classification_field: config.classification_field,
-        header_facts:         config.header_facts,
       },
       headerTabs, recordId, operations, editMode, isDirty,
     ),
@@ -1187,6 +1186,8 @@ export function SimpleDetailPage({
 
   const [activeTab,   setActiveTab]   = useState("__overview");
   const [activePanel, setActivePanel] = useState<string | null>(null);
+  const formRef  = useRef<EntityFormHandle>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   // Platform panel gating — identical to MasterDetailPage: driven by masterConfig.platform_panels
   const hasPlatformComments    = (masterConfig.platform_panels ?? []).includes("comments");
@@ -1233,61 +1234,91 @@ export function SimpleDetailPage({
     [masterConfig.platform_panels, commentsCount, commentsCountQuery.isPending, attachmentsCount, attachmentsCountQuery.isPending],
   );
 
-  // Edit renders as primary (filled button) to match master entity pattern
-  const editAction = canEdit
-    ? [{ id: "__edit", label: "Edit", placement: "primary" as const, order: 999 }]
+  // Standard CRUD actions — injected only when not already provided by DB operations
+  const mutable = entity.display_config.detail_profile !== "read-only";
+  const editAction = canEdit && mutable
+    ? [{ id: "__edit",   label: "Edit",   placement: "primary"  as const, order: 10 }]
+    : [];
+  const copyAction = canEdit && mutable
+    ? [{ id: "__copy",   label: "Copy",   placement: "overflow" as const, order: 20, group: "record" as const }]
+    : [];
+  const deleteAction = canEdit && mutable
+    ? [{ id: "__delete", label: "Delete", placement: "danger"   as const, order: 30, group: "record" as const }]
     : [];
 
-  const headerModel = buildMasterHeaderModel(
-    entity, data,
-    {
-      type_label:           masterConfig.type_label,
-      classification_field: masterConfig.classification_field,
-      header_facts:         masterConfig.header_facts,
-    },
-    headerTabs,
-    recordId, operations, false, false,
-  );
-  if (!headerModel.actions.some((a) => (a.id ?? "").toLowerCase().includes("edit")) && canEdit) {
-    headerModel.actions = [...editAction, ...headerModel.actions];
-  }
+  // Build header model — edit mode gets Save/Discard actions; view mode gets Edit/Copy/Delete injected
+  const headerModel = editMode
+    ? buildMasterHeaderModel(
+        entity, data,
+        { type_label: masterConfig.type_label, classification_field: masterConfig.classification_field },
+        headerTabs, recordId, undefined, true, isDirty,
+      )
+    : (() => {
+        const m = buildMasterHeaderModel(
+          entity, data,
+          { type_label: masterConfig.type_label, classification_field: masterConfig.classification_field },
+          headerTabs, recordId, operations, false, false,
+        );
+        if (!m.actions.some((a) => (a.id ?? "").toLowerCase().includes("edit")) && canEdit && mutable)
+          m.actions = [...editAction, ...m.actions];
+        if (!m.actions.some((a) => (a.id ?? "").toLowerCase().includes("copy")) && canEdit && mutable)
+          m.actions = [...m.actions, ...copyAction];
+        if (!m.actions.some((a) => (a.id ?? "").toLowerCase().includes("delete")) && canEdit && mutable)
+          m.actions = [...m.actions, ...deleteAction];
+        return m;
+      })();
 
-  // ── Edit mode ──────────────────────────────────────────────────────────────
-  if (editMode) {
-    const editConfig = resolveMasterConfig(entity);
-    const editModel  = buildMasterHeaderModel(
-      entity, data,
-      { type_label: editConfig.type_label, classification_field: editConfig.classification_field },
-      undefined, recordId, undefined, true, false,
-    );
-    return (
-      <>
-        <EntityHeader
-          model={editModel}
-          onBack={() => router.back()}
-          onAction={(id) => {
-            if (id === "__exit" || id === "__discard") {
-              router.push(`/app/${entityCode}/${recordId}`);
-            }
-          }}
-        />
-        <EntityForm
-          entityCode={entityCode}
-          initialData={data}
-          onSubmit={async (formData) => {
-            await updateMutation.mutateAsync(formData);
-            router.push(`/app/${entityCode}/${recordId}`);
-          }}
-          onCancel={() => router.push(`/app/${entityCode}/${recordId}`)}
-          submitting={updateMutation.isPending}
-        />
-      </>
-    );
-  }
-
-  // ── Read mode ──────────────────────────────────────────────────────────────
   function handleAction(id: string) {
-    if (id === "__edit") { router.push(`/app/${entityCode}/${recordId}?mode=edit`); return; }
+    if (editMode) {
+      if (id === "__exit" || id === "__discard") {
+        setIsDirty(false);
+        router.push(`/app/${entityCode}/${recordId}`);
+      } else if (id === "__save") {
+        void formRef.current?.submit();
+      }
+      return;
+    }
+
+    if (id === "__edit") {
+      router.push(`/app/${entityCode}/${recordId}?mode=edit`);
+      return;
+    }
+
+    if (id === "__copy") {
+      const SKIP = new Set(["id", "code", "status", "created_at", "updated_at", "created_by", "updated_by"]);
+      const copyData = Object.fromEntries(
+        entity.fields
+          .filter((f) => f.origin !== "system" && !f.is_readonly && f.data_type !== "lifecycle_state" && !SKIP.has(f.name))
+          .map((f) => [f.name, data[f.name] ?? data[f.column_name ?? ""]])
+          .filter(([, v]) => v !== undefined && v !== null),
+      );
+      void (async () => {
+        const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ data: copyData }),
+        });
+        if (!res.ok) return;
+        const created = await res.json() as Record<string, unknown>;
+        const newId = String(created["code"] ?? created["id"] ?? "");
+        router.push(newId ? `/app/${entityCode}/${encodeURIComponent(newId)}` : `/app/${entityCode}`);
+      })();
+      return;
+    }
+
+    if (id === "__delete") {
+      if (!confirm(`Delete this record? This cannot be undone.`)) return;
+      void (async () => {
+        const res = await fetch(
+          `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`,
+          { method: "DELETE" },
+        );
+        if (!res.ok) return;
+        router.push(`/app/${entityCode}`);
+      })();
+      return;
+    }
+
     const op = (operations ?? []).find((o) => o.permission_code === id);
     if (!op) return;
     if (op.handler_type === "NAVIGATE" && op.handler_target) {
@@ -1316,30 +1347,50 @@ export function SimpleDetailPage({
         activePlatformIcon={activePanel ?? undefined}
       />
       <div className="flex flex-col gap-2.5">
-        {activeTab === "__overview" && (
-          <Card>
-            <CardContent className="pt-5">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-                {allFields.map((field) => {
-                  const Renderer = resolveFieldRenderer(field);
-                  return (
-                    <div key={field.name}>
-                      <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
-                        {field.label ?? field.name}
-                      </dt>
-                      <dd className="text-sm font-normal text-foreground leading-snug">
-                        <Renderer value={data[field.name]} field={field} mode="view" />
-                      </dd>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+        {editMode ? (
+          <EntityForm
+            ref={formRef}
+            entityCode={entityCode}
+            initialData={data}
+            onSubmit={async (formData) => {
+              await updateMutation.mutateAsync(formData);
+              setIsDirty(false);
+              router.push(`/app/${entityCode}/${recordId}`);
+            }}
+            onCancel={() => {
+              setIsDirty(false);
+              router.push(`/app/${entityCode}/${recordId}`);
+            }}
+            onChange={() => setIsDirty(true)}
+            submitting={updateMutation.isPending}
+            hideActions
+          />
+        ) : (
+          activeTab === "__overview" && (
+            <Card>
+              <CardContent className="pt-5">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
+                  {allFields.map((field) => {
+                    const Renderer = resolveFieldRenderer(field);
+                    return (
+                      <div key={field.name}>
+                        <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
+                          {field.label ?? field.name}
+                        </dt>
+                        <dd className="text-sm font-normal text-foreground leading-snug">
+                          <Renderer value={data[field.name]} field={field} mode="view" />
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )
         )}
       </div>
 
-      {/* Platform context panels — slide-in drawer, consistent with master entity */}
+      {/* Platform context panels — slide-in drawer, present in both view and edit modes */}
       <EntityContextDrawer
         open={activePanel !== null}
         onOpenChange={(open) => { if (!open) setActivePanel(null); }}

@@ -424,6 +424,7 @@ export const CompiledEntitySchema = z.object({
 
   governance_level: z.string(),
   security_tier: z.string(),
+  mutability: z.enum(["mutable", "immutable"]).optional(),
   compiled_at: z.string().datetime(),
   compiled_hash: z.string(),
 });

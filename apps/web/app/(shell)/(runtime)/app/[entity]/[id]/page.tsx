@@ -14,8 +14,6 @@ import { DocumentDetailPage } from "@athyper/document-runtime";
  *
  * Mode flag:
  *   ?mode=edit  — renders fields as inputs in the same shell (master records).
- *                 For document records, edit is handled by workflow actions
- *                 inside DocumentDetailPage; the mode flag is ignored there.
  *
  * Sub-routes still available:
  *   /app/[entity]/[id]/attachments → file attachments
