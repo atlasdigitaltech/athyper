@@ -39,11 +39,20 @@ services:
 
   # Meilisearch: enable the bundled mini-dashboard in staging. MEILI_ENV
   # only toggles the dashboard UI in v1.x — master-key auth is enforced
-  # regardless. External access stays gated by the Traefik basic-auth popup.
-  # Production keeps MEILI_ENV=production (UI disabled).
+  # regardless. Production keeps MEILI_ENV=production (UI disabled).
+  #
+  # The Traefik basic-auth middleware (DASHBOARD_AUTH_MW) is removed for
+  # staging because the mini-dashboard sends Authorization: Bearer <key>
+  # on every API call, which overrides the cached Basic auth header and
+  # causes Traefik to re-prompt on every request. Meilisearch's own
+  # master-key auth provides access control — the API rejects requests
+  # without a valid key, so the dashboard is functional but the indexes
+  # remain protected.
   meilisearch:
     environment:
       MEILI_ENV: development
+    labels:
+      - traefik.http.routers.meilisearch.middlewares=
 
   # Keycloak: optimized mode — disables dev defaults, enables theme caching
   iam:
