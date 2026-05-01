@@ -24,6 +24,7 @@ import {
 } from "react";
 import { UploadCloud, X, AlertCircle, FileText } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { formatBytes } from "@athyper/runtime-shared/core";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,12 +55,6 @@ export interface DragDropUploadZoneProps {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function validateFile(file: File, accept: string | undefined, maxSizeMb: number): string | undefined {
   if (maxSizeMb > 0 && file.size > maxSizeMb * 1024 * 1024) {

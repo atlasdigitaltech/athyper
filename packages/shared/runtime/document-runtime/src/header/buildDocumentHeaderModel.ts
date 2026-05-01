@@ -1,5 +1,5 @@
 /**
- * mapDocumentHeaderModel
+ * buildDocumentHeaderModel
  *
  * Converts a generic CompiledEntity + record data into an EntityHeaderModel
  * (the new header contract). This is the Phase 5 VIEW adapter — it replaces
@@ -26,40 +26,7 @@ import type {
   HeaderProgressStage,
   HeaderAuditMeta,
 } from "@athyper/entity-runtime/header";
-import { statusToIntent } from "@athyper/runtime-shared/core";
-
-// ── Formatters ────────────────────────────────────────────────────────────────
-
-function fmtDate(iso: unknown): string {
-  if (!iso || typeof iso !== "string") return "—";
-  try {
-    return new Date(iso).toLocaleDateString("en-GB", {
-      day: "2-digit", month: "short", year: "numeric",
-    });
-  } catch {
-    return String(iso);
-  }
-}
-
-function fmtDateTime(iso: unknown): string | undefined {
-  if (!iso || typeof iso !== "string") return undefined;
-  try {
-    return new Date(iso).toLocaleString("en-GB", {
-      day: "2-digit", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit", hour12: false,
-    });
-  } catch {
-    return String(iso);
-  }
-}
-
-function fmtAmount(val: unknown): string | undefined {
-  const n = typeof val === "number" ? val : Number(val);
-  if (Number.isNaN(n)) return undefined;
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2, maximumFractionDigits: 2,
-  }).format(n);
-}
+import { statusToIntent, fmtDate, fmtDateTime, fmtAmountMaybe } from "@athyper/runtime-shared/core";
 
 // ── Stage constants (standard AP/document lifecycle) ─────────────────────────
 
@@ -166,11 +133,10 @@ export interface MapDocumentHeaderModelOpts {
 /**
  * Maps a CompiledEntity + raw record data into an EntityHeaderModel.
  *
- * Use in ApprovableDetailPage (and other document detail pages) to produce
- * the model consumed by EntityHeader, replacing the old ApprovableDocumentHeaderDTO
- * + ApprovableDocumentShell pattern.
+ * Use in DocumentDetailPage (and other document detail pages) to produce
+ * the model consumed by EntityHeader, replacing the old ApprovableDocumentHeaderDTO pattern.
  */
-export function mapDocumentHeaderModel(
+export function buildDocumentHeaderModel(
   entity: CompiledEntity,
   data: Record<string, unknown>,
   opts: MapDocumentHeaderModelOpts = {},
@@ -234,11 +200,11 @@ export function mapDocumentHeaderModel(
   }
 
   // Amount / total fact (xl emphasis)
-  const amountVal = dh?.amount_field ? fmtAmount(data[dh.amount_field]) : undefined;
+  const amountVal = dh?.amount_field ? fmtAmountMaybe(data[dh.amount_field]) : undefined;
   if (amountVal) {
     const currency = dh?.currency_field ? String(data[dh.currency_field] ?? "") : "";
-    const subtotal = dh?.subtotal_field ? fmtAmount(data[dh.subtotal_field]) : undefined;
-    const tax      = dh?.tax_field      ? fmtAmount(data[dh.tax_field])      : undefined;
+    const subtotal = dh?.subtotal_field ? fmtAmountMaybe(data[dh.subtotal_field]) : undefined;
+    const tax      = dh?.tax_field      ? fmtAmountMaybe(data[dh.tax_field])      : undefined;
     const subValue = [
       subtotal ? `Subtotal ${subtotal}` : null,
       tax      ? `Tax ${tax}`           : null,
@@ -341,5 +307,5 @@ export function mapDocumentHeaderModel(
   return model;
 }
 
-/** Canonical name. @deprecated Use buildDocumentHeaderModel. */
-export { mapDocumentHeaderModel as buildDocumentHeaderModel };
+/** @deprecated Use buildDocumentHeaderModel. */
+export { buildDocumentHeaderModel as mapDocumentHeaderModel };

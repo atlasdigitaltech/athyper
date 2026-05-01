@@ -38,7 +38,7 @@ registerDefaults();
 
 // ── Register all lines renderers once at module load ──────────────────────────
 // Wires generic / journal / payment renderer keys into the renderer-registry
-// so resolveLinesRenderer() works in ApprovableDetailPage.
+// so resolveLinesRenderer() works in DocumentDetailPage.
 registerDocumentRenderers();
 
 // ── Initialize API clients once at module load ────────────────────────────────

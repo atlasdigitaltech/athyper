@@ -2,7 +2,7 @@
  * registerDocumentRenderers — boot-time lines renderer registration.
  *
  * Call this ONCE at app startup (e.g. in apps/web/app/layout.tsx or the
- * equivalent root layout) before any ApprovableDetailPage mounts.
+ * equivalent root layout) before any DocumentDetailPage mounts.
  *
  * Why here: document-runtime (Layer 4) owns the concrete renderer components.
  * Entity-runtime (Layer 3) owns the registry API but cannot import Layer-4

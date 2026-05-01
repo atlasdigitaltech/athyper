@@ -24,8 +24,8 @@ export {
 
 /**
  * Maps display_config.detail_renderer → the React component that renders
- * the detail page for that strategy. RichMasterDetailPage is not listed here —
- * it is selected internally by EntityDetailPage when detail_profile = "rich".
+ * the detail page for that strategy. MasterDetailPage is not listed here —
+ * it is selected internally by EntityDetailPage when detail_renderer = "master".
  */
 export const detailRendererMap = {
   master:   EntityDetailPage,

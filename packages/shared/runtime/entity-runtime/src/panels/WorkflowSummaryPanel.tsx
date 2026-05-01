@@ -5,6 +5,7 @@ import { GitBranch, Loader2, Circle, CheckCircle2, XCircle, User, Clock } from "
 import { Skeleton } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
+import { fmtDateTime } from "@athyper/runtime-shared/core";
 
 // ── API shapes ────────────────────────────────────────────────────────────────
 
@@ -40,16 +41,6 @@ interface ApiWorkflowRequest {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmtDateTime(iso: string | null): string | undefined {
-  if (!iso) return undefined;
-  const d = new Date(iso);
-  return (
-    d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) +
-    " · " +
-    d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-  );
-}
 
 function fmtElapsed(hours: number | undefined): string | undefined {
   if (hours === undefined) return undefined;

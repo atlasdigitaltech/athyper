@@ -12,6 +12,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/"
   },
+  "dependencies": {
+    "@athyper/runtime-shared": "workspace:*"
+  },
   "peerDependencies": {
     "@athyper/theme": "workspace:*",
     "lucide-react": ">=1.0.0",

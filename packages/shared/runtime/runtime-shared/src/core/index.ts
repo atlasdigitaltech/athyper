@@ -1,4 +1,9 @@
 export {
+  formatBytes,
+  fmtDate,
+  fmtDateTime,
+  fmtAmountMaybe,
+  titleCase,
   getCurrencySymbol,
   fmtAmount,
   fmtNum,

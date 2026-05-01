@@ -93,11 +93,6 @@ const INLINE_SEARCH_ENTITY_MAP: Record<string, string> = {
   asset_class_id:  "asset_class",
 };
 
-/**
- * Dimension entities whose records are scoped to a company_code.
- * TODO: replace with CompiledEntity.feature_flags.is_company_scoped lookup once
- * entity engine seeds set that flag for DIMENSION-class entities.
- */
 const COMPANY_CODE_SCOPED = new Set(["cost_center", "profit_center", "project", "site"]);
 
 function resolveSearchEntity(fieldName: string): string | null {

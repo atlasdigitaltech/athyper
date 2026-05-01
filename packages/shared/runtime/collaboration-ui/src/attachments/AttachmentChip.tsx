@@ -10,6 +10,7 @@
 
 import { X, Paperclip, FileText, Image, FileSpreadsheet, File, AlertCircle, RotateCcw } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { formatBytes } from "@athyper/runtime-shared/core";
 import type { StagedAttachment, CommentAttachmentItem } from "../hooks/attachments";
 
 // ── File icon resolver ────────────────────────────────────────────────────────
@@ -22,12 +23,6 @@ function FileIcon({ contentType, className }: { contentType: string; className?:
   if (contentType.includes("spreadsheet") || contentType.includes("excel") || contentType.includes("csv"))
     return <FileSpreadsheet className={cn("shrink-0 text-success", className)} />;
   return <File className={cn("shrink-0", className)} />;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // ── Staged chip ───────────────────────────────────────────────────────────────

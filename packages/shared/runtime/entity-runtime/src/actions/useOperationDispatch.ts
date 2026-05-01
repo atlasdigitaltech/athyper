@@ -11,7 +11,7 @@
  *   API      — direct POST to the operation endpoint, no UI required.
  *   INLINE   — edit-in-place, delegated to the field renderer.
  *
- * Reusable across ApprovableDetailPage and any future document page.
+ * Reusable across DocumentDetailPage and any future document page.
  * NOT purchase-invoice-specific.
  *
  * Returns:

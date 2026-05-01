@@ -45,7 +45,7 @@ import {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export interface ApprovableDetailPageProps {
+export interface DocumentDetailPageProps {
   entity:     CompiledEntity;
   record:     { id: string; data: Record<string, unknown>; status?: string };
   operations: EntityOperation[] | undefined;
@@ -558,12 +558,12 @@ function InlineTitleEdit({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function ApprovableDetailPage({
+export function DocumentDetailPage({
   entity,
   record,
   operations,
   recordId,
-}: ApprovableDetailPageProps) {
+}: DocumentDetailPageProps) {
   const router  = useRouter();
   const data    = record.data;
 
@@ -1019,9 +1019,5 @@ export function ApprovableDetailPage({
   );
 }
 
-// ── Phase 5 canonical names ───────────────────────────────────────────────────
-
-/** Canonical name for the document detail page props. */
-export type DocumentDetailPageProps = ApprovableDetailPageProps;
-/** Canonical name for the document detail page component. */
-export { ApprovableDetailPage as DocumentDetailPage };
+/** @deprecated Use DocumentDetailPage / DocumentDetailPageProps. */
+export { DocumentDetailPage as ApprovableDetailPage, type DocumentDetailPageProps as ApprovableDetailPageProps };

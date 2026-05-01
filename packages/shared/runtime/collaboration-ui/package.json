@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*",
     "@tiptap/core": "^2.11.0",
     "@tiptap/extension-link": "^2.11.0",
     "@tiptap/extension-placeholder": "^2.11.0",

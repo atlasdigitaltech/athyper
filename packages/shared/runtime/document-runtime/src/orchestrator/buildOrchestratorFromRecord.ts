@@ -25,15 +25,9 @@ import type {
   ValidationNotice,
 } from "@athyper/api-contracts/documents";
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
-import { POSITIVE, IN_FLIGHT, NEGATIVE, statusToIntent } from "@athyper/runtime-shared/core";
+import { POSITIVE, IN_FLIGHT, NEGATIVE, statusToIntent, titleCase } from "@athyper/runtime-shared/core";
 
 type Intent = SemanticIntent | "primary" | "accent" | "muted";
-
-function formatLabel(code: string): string {
-  return code
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 // ── Action code heuristics ──────────────────────────────────────────────────
 
@@ -74,9 +68,9 @@ const APPROVABLE_STATUS_GROUPS: ActionGroupsConfig = {
   reversed:         { working: ["copy"] },
 };
 
-// ── Amount formatting ───────────────────────────────────────────────────────
+// ── Amount coercion (val → number for arithmetic, not display) ───────────────
 
-function fmtAmount(val: unknown): number {
+function coerceAmount(val: unknown): number {
   const n = typeof val === "number" ? val : Number(val);
   return Number.isNaN(n) ? 0 : n;
 }
@@ -156,7 +150,7 @@ function buildStatusDimensions(
     dimension: "lifecycle",
     label: "Status",
     status_code: statusNorm,
-    status_label: formatLabel(statusNorm),
+    status_label: titleCase(statusNorm),
     intent: statusToIntent(statusNorm),
   });
 
@@ -174,9 +168,9 @@ function buildStatusDimensions(
 
   // 3. Settlement — when entity has payment fields
   if (flags?.has_payment_schedule || data["paid_amount"] != null || data["outstanding_amount"] != null) {
-    const paid = fmtAmount(data["paid_amount"]);
-    const payable = fmtAmount(data["payable_amount"]);
-    const outstanding = fmtAmount(data["outstanding_amount"]);
+    const paid = coerceAmount(data["paid_amount"]);
+    const payable = coerceAmount(data["payable_amount"]);
+    const outstanding = coerceAmount(data["outstanding_amount"]);
 
     let settlementCode = "unpaid";
     let settlementLabel = "Unpaid";
@@ -208,7 +202,7 @@ function buildStatusDimensions(
       dimension: "matching",
       label: "Reconciliation",
       status_code: matchStatus,
-      status_label: formatLabel(matchStatus),
+      status_label: titleCase(matchStatus),
       intent: statusToIntent(matchStatus),
     });
   }
@@ -232,7 +226,7 @@ function buildHealthTiles(
       dimension: "approval",
       label: "Approval",
       severity: isApproved ? "success" : NEGATIVE.has(statusNorm) ? "error" : IN_FLIGHT.has(statusNorm) ? "warning" : "neutral",
-      summary: isApproved ? "Approved" : NEGATIVE.has(statusNorm) ? formatLabel(statusNorm) : IN_FLIGHT.has(statusNorm) ? "In progress" : "Not started",
+      summary: isApproved ? "Approved" : NEGATIVE.has(statusNorm) ? titleCase(statusNorm) : IN_FLIGHT.has(statusNorm) ? "In progress" : "Not started",
       satellite_intent: "view_approval_trail",
     });
   }
@@ -290,7 +284,7 @@ function buildAmountBreakdown(
   if (dh.subtotal_field && data[dh.subtotal_field] != null) {
     lines.push({
       label: "Subtotal",
-      amount: fmtAmount(data[dh.subtotal_field]),
+      amount: coerceAmount(data[dh.subtotal_field]),
       currency_code: currency,
       is_total: false,
       indent: 0,
@@ -301,7 +295,7 @@ function buildAmountBreakdown(
   if (dh.tax_field && data[dh.tax_field] != null) {
     lines.push({
       label: "Tax",
-      amount: fmtAmount(data[dh.tax_field]),
+      amount: coerceAmount(data[dh.tax_field]),
       currency_code: currency,
       is_total: false,
       indent: 0,
@@ -312,7 +306,7 @@ function buildAmountBreakdown(
   if (dh.amount_field && data[dh.amount_field] != null) {
     lines.push({
       label: "Total",
-      amount: fmtAmount(data[dh.amount_field]),
+      amount: coerceAmount(data[dh.amount_field]),
       currency_code: currency,
       is_total: true,
       indent: 0,
@@ -321,7 +315,7 @@ function buildAmountBreakdown(
 
   // Outstanding (common DDL pattern)
   if (data["outstanding_amount"] != null) {
-    const outstanding = fmtAmount(data["outstanding_amount"]);
+    const outstanding = coerceAmount(data["outstanding_amount"]);
     lines.push({
       label: "Outstanding",
       amount: outstanding,
@@ -366,7 +360,7 @@ function buildActionBundle(
 
       return {
         action_code: code,
-        label: op.label_override ?? formatLabel(code),
+        label: op.label_override ?? titleCase(code),
         group,
         icon_key: op.icon_override,
         is_destructive: DESTRUCTIVE_CODES.has(code),

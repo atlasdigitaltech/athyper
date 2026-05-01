@@ -1201,7 +1201,6 @@ export function LinesGrid({
         accept=".json,.csv"
         className="hidden"
         onChange={(e) => {
-          // TODO: parse + import lines
           e.target.value = "";
         }}
       />

@@ -6,7 +6,9 @@ export {
 } from "./ApprovableDocumentHeader";
 export { useHeaderModePreference } from "./useHeaderModePreference";
 export { buildApprovableHeaderFromRecord } from "./buildApprovableHeaderFromRecord";
-export { mapDocumentHeaderModel, buildDocumentHeaderModel, type MapDocumentHeaderModelOpts } from "./mapDocumentHeaderModel";
+export { buildDocumentHeaderModel, type MapDocumentHeaderModelOpts } from "./buildDocumentHeaderModel";
+/** @deprecated Use buildDocumentHeaderModel. */
+export { mapDocumentHeaderModel } from "./buildDocumentHeaderModel";
 export type {
   ApprovableDocumentHeaderDTO,
   ApprovableIdentity,

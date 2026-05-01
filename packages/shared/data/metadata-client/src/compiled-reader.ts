@@ -18,6 +18,10 @@ import {
   type EntityClassProfile,
   type OverlayTabChange,
   CANONICAL_TAB_ORDER,
+  type MasterConfig,
+  type MasterTab,
+  type MasterTabSection,
+  type SummaryCardsConfig,
 } from "@athyper/api-contracts/metadata";
 import {
   type EntityListPresentationConfig,
@@ -163,7 +167,7 @@ export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
  *   "master"       — EntityDetailPage: simple field-grid for reference/master entities.
  *                    Covers all simple entity classes (MASTER, CONTROL, REFERENCE,
  *                    DIMENSION, LOOKUP, LEDGER, LOG, AGGREGATE).
- *   "document"     — ApprovableDetailPage: rich document shell with process health,
+ *   "document"     — DocumentDetailPage: rich document shell with process health,
  *                    KPI strip, lines/distributions tabs, workflow, approvals.
  *   "ledger"       — Read-only log view; no edit ops, no EntityForm.
  *
@@ -189,94 +193,9 @@ export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
 }
 
 // ── Master config types and resolver ─────────────────────────────────────────
-
-export type RichMasterTabRenderer =
-  | "overview"
-  | "fields"
-  | "child"
-  | "composite"
-  | "comments"
-  | "attachments"
-  | "activity"
-  | "blank"
-  | "summary_cards_with_drawer";
-
-/**
- * Config for the summary_cards_with_drawer renderer.
- * Lives inside a MasterTab as `config` and drives RecordSummaryCard +
- * RecordDetailDrawer without any per-entity TSX.
- */
-export interface SummaryCardsConfig {
-  /** Field name whose value becomes the card's primary identity line. */
-  title: string;
-  /** Ordered field names rendered as the facts line ("AED · ****7890 · Gulf LLC"). */
-  facts?: string[];
-  /**
-   * Badge evaluator keys — order determines display order.
-   * Built-in keys: "primary" | "status" | "verified" | "expiry"
-   */
-  badges?: string[];
-  /**
-   * Alert rule keys evaluated against each record.
-   * Built-in rules: "cert_expired" | "cert_expiring_soon" | "bank_missing_verification"
-   *   | "bank_inactive" | "tax_missing_id"
-   */
-  alertRules?: string[];
-  /** SQL ORDER BY fragments applied when sorting the card list client-side. */
-  defaultSort?: string[];
-}
-
-/** A single section within a composite-renderer tab (entity fields or a child-entity list). */
-export interface MasterTabSection {
-  id: string;
-  label: string;
-  type: "fields" | "child";
-  entity_code?: string;
-  display_fields?: string[];
-  add_href_template?: string;
-  add_label?: string;
-  empty_title?: string;
-  empty_description?: string;
-}
-
-export interface MasterTab {
-  id: string;
-  label: string;
-  renderer: RichMasterTabRenderer;
-  entity_code?: string;
-  display_fields?: string[];
-  add_href_template?: string;
-  add_label?: string;
-  empty_title?: string;
-  empty_description?: string;
-  blank_message?: string;
-  /** Ordered sections for composite-renderer tabs (anchored section nav). */
-  composite_sections?: MasterTabSection[];
-  /**
-   * For view-backed child tabs (e.g. supplier_bank_account view): the entity to use for the
-   * create form and the first POST.  When absent, entity_code is used for both list and create.
-   */
-  create_entity_code?: string;
-  /**
-   * When set, a second POST is made to this entity after the primary record is created.
-   * Used for polymorphic link tables (e.g. bank_account_link).
-   */
-  link_entity_code?: string;
-  /** The owner_type value to inject into the link record (e.g. 'supplier'). */
-  link_owner_type?: string;
-  /** Config for summary_cards_with_drawer renderer. */
-  config?: SummaryCardsConfig;
-}
-
-export interface MasterConfig {
-  type_label?: string;
-  /** Field name whose value is shown inline on the identity line: "ACME-CONSULT-US · Vendor" */
-  classification_field?: string;
-  header_facts?: string[];
-  tabs?: MasterTab[];
-  /** Platform context panels shown as icon buttons in the tab bar (Comments / Attachments / Activity). */
-  platform_panels?: Array<"comments" | "attachments" | "activity">;
-}
+// MasterConfig, MasterTab, MasterTabSection, SummaryCardsConfig are canonical
+// in @athyper/api-contracts/metadata — imported and re-exported from there.
+export type { MasterConfig, MasterTab, MasterTabSection, SummaryCardsConfig };
 
 const DEFAULT_MASTER_TABS: MasterTab[] = [
   { id: "__profile",     label: "Profile",     renderer: "fields"      },

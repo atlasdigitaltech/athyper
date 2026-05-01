@@ -9,6 +9,7 @@ import { adminStatusIntent } from "@athyper/theme/domain-intents";
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
 import type { EntityHeaderModel, HeaderAction, HeaderFact, HeaderTab } from "../types";
+import { titleCase } from "@athyper/runtime-shared/core";
 
 // ── Placement map: entity_operation.placement → HeaderAction.placement ────────
 
@@ -62,10 +63,6 @@ export function formatValue(val: unknown, field?: EntityField): string {
   if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) return formatDate(val);
   if (dt === "enum" || dt === "lifecycle_state") return titleCase(String(val));
   return String(val);
-}
-
-export function titleCase(s: string): string {
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ── Facts rail builder ────────────────────────────────────────────────────────

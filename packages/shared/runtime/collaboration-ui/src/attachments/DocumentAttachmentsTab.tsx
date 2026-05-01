@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Button } from "@athyper/ui/primitives";
+import { formatBytes } from "@athyper/runtime-shared/core";
 import { getCsrfToken } from "../utils/csrf";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -45,12 +46,6 @@ type SortOption    = "date-desc" | "date-asc" | "name-asc" | "name-desc" | "size
 type FileCategory  = "all" | "images" | "pdf" | "docs" | "sheets" | "other";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024)             return `${bytes} B`;
-  if (bytes < 1024 * 1024)      return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function formatDate(dateStr: string, includeTime = false): string {
   if (!dateStr) return "—";

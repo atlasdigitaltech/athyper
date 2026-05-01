@@ -391,6 +391,9 @@ importers:
       '@athyper/api-contracts':
         specifier: workspace:*
         version: link:../../data/api-contracts
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../runtime-shared
       '@tiptap/core':
         specifier: ^2.11.0
         version: 2.27.2(@tiptap/pm@2.27.2)
@@ -660,6 +663,10 @@ importers:
         version: 6.0.3
 
   packages/shared/ui/content-ui:
+    dependencies:
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../../runtime/runtime-shared
     devDependencies:
       '@athyper/config':
         specifier: workspace:*

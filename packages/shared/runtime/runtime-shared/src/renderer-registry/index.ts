@@ -13,7 +13,7 @@
 import type { ComponentType } from "react";
 
 /**
- * Minimal props that every lines renderer receives from ApprovableDetailPage.
+ * Minimal props that every lines renderer receives from DocumentDetailPage.
  * Phase 4 will tighten this to import CompiledEntity directly.
  */
 export interface LinesRendererProps {

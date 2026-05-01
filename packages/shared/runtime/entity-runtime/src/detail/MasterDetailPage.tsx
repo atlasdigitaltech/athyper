@@ -1,13 +1,11 @@
 "use client";
 
 /**
- * RichMasterDetailPage — generic detail shell for master entities (detail_profile="rich").
+ * MasterDetailPage — generic detail shell for master entities (detail_profile="rich").
  * All layout decisions live in SQL (display_config.master_config). Zero per-entity TSX.
  *
  * Tab renderers: overview | fields | child | composite | comments | attachments | activity | blank | summary_cards_with_drawer
  * Platform panels: Comments / Attachments / Activity as icon buttons in the tab bar (Sheet slide-ins).
- *
- * @deprecated Will be renamed MasterDetailPage in Phase 3. Keep this alias until then.
  */
 
 import { useState, useMemo, useRef, type ReactNode } from "react";
@@ -27,21 +25,25 @@ import { EntityHeader } from "../header";
 import type { PlatformPanelIcon } from "../header/atoms/EntityTabBar";
 import { AttachmentsPanel, CommentsPanel, EventsPanel } from "../panels";
 import type { HeaderTab } from "../header/types";
-import { buildMasterHeaderModel, formatValue, titleCase } from "../header/builders/buildMasterHeaderModel";
+import { buildMasterHeaderModel, formatValue } from "../header/builders/buildMasterHeaderModel";
+import { formatBytes, titleCase } from "@athyper/runtime-shared/core";
 import {
+  resolveDetailConfig,
   resolveMasterConfig,
+  resolveTabs,
   type MasterConfig,
   type MasterTab,
   type MasterTabSection,
 } from "@athyper/metadata-client/compiled-reader";
 import { resolveFieldRenderer } from "../field-renderers/registry";
+import { CommentList } from "@athyper/collaboration-ui/comments";
 import { useOperationDispatch } from "../actions/useOperationDispatch";
 import { EntityForm, type EntityFormHandle } from "../form/EntityForm";
 import { ChildSummaryCardsPanel, type ViewOnlyReason } from "./ChildSummaryCardsPanel";
 
 // ── Public props ──────────────────────────────────────────────────────────────
 
-export interface RichMasterDetailPageProps {
+export interface MasterDetailPageProps {
   entity:     CompiledEntity;
   record:     { id: string; data: Record<string, unknown>; status?: string };
   operations: EntityOperation[] | undefined;
@@ -50,12 +52,6 @@ export interface RichMasterDetailPageProps {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024)        return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 // ── KPI mini-card ─────────────────────────────────────────────────────────────
 
@@ -688,13 +684,13 @@ const PANEL_LABELS: Record<string, string> = {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function RichMasterDetailPage({
+export function MasterDetailPage({
   entity,
   record,
   operations,
   recordId,
   editMode = false,
-}: RichMasterDetailPageProps) {
+}: MasterDetailPageProps) {
   const router         = useRouter();
   const data           = record.data;
   const updateMutation = useUpdateEntity(entity.entity_code, recordId);
@@ -1168,3 +1164,165 @@ export function RichMasterDetailPage({
     </>
   );
 }
+
+// ── SimpleDetailPage — generic master shell for detail_profile = "simple" / "read-only" ──
+
+export interface SimpleDetailPageProps {
+  entityCode:  string;
+  recordId:    string;
+  entity:      CompiledEntity;
+  record:      { id: string; data: Record<string, unknown>; status?: string };
+  operations:  EntityOperation[] | undefined;
+  editMode?:   boolean;
+  canEdit?:    boolean;
+}
+
+export function SimpleDetailPage({
+  entityCode, recordId, entity, record, operations, editMode = false, canEdit = true,
+}: SimpleDetailPageProps) {
+  const router         = useRouter();
+  const updateMutation = useUpdateEntity(entityCode, recordId);
+  const opDispatch     = useOperationDispatch({ entityCode, recordId, recordUuid: record.id });
+  const data           = record.data as Record<string, unknown>;
+  const detailConfig   = resolveDetailConfig(entity);
+  const masterConfig   = resolveMasterConfig(entity);
+  const resolvedTabs   = resolveTabs(entity, null, []);
+  const hasComments    = resolvedTabs.includes("comments");
+  const hasActivity    = resolvedTabs.includes("events");
+
+  const headerTabs: HeaderTab[] = [
+    ...detailConfig.sections.map((s) => ({ id: s.group.group_key, label: s.group.label })),
+    ...(hasComments ? [{ id: "__comments", label: "Comments" }] : []),
+    ...(hasActivity  ? [{ id: "__activity", label: "Activity"  }] : []),
+  ];
+
+  const [activeTab, setActiveTab] = useState(headerTabs[0]?.id ?? "");
+
+  const editAction = canEdit
+    ? [{ id: "__edit", label: "Edit", placement: "secondary" as const, order: 999 }]
+    : [];
+
+  const headerModel = buildMasterHeaderModel(
+    entity, data,
+    {
+      type_label:           masterConfig.type_label,
+      classification_field: masterConfig.classification_field,
+      header_facts:         masterConfig.header_facts,
+    },
+    headerTabs.length > 0 ? headerTabs : undefined,
+    recordId, operations, false, false,
+  );
+  if (!headerModel.actions.some((a) => (a.id ?? "").toLowerCase().includes("edit")) && canEdit) {
+    headerModel.actions = [...headerModel.actions, ...editAction];
+  }
+
+  // ── Edit mode ──────────────────────────────────────────────────────────────
+  if (editMode) {
+    const editConfig = resolveMasterConfig(entity);
+    const editModel  = buildMasterHeaderModel(
+      entity, data,
+      { type_label: editConfig.type_label, classification_field: editConfig.classification_field },
+      undefined, recordId, undefined, true, false,
+    );
+    return (
+      <>
+        <EntityHeader
+          model={editModel}
+          onBack={() => router.back()}
+          onAction={(id) => {
+            if (id === "__exit" || id === "__discard") {
+              router.push(`/app/${entityCode}/${recordId}`);
+            }
+          }}
+        />
+        <EntityForm
+          entityCode={entityCode}
+          initialData={data}
+          onSubmit={async (formData) => {
+            await updateMutation.mutateAsync(formData);
+            router.push(`/app/${entityCode}/${recordId}`);
+          }}
+          onCancel={() => router.push(`/app/${entityCode}/${recordId}`)}
+          submitting={updateMutation.isPending}
+        />
+      </>
+    );
+  }
+
+  // ── Read mode ──────────────────────────────────────────────────────────────
+  function handleAction(id: string) {
+    if (id === "__edit") { router.push(`/app/${entityCode}/${recordId}?mode=edit`); return; }
+    const op = (operations ?? []).find((o) => o.permission_code === id);
+    if (!op) return;
+    if (op.handler_type === "NAVIGATE" && op.handler_target) {
+      router.push(op.handler_target.replace("{id}", encodeURIComponent(recordId)));
+      return;
+    }
+    void opDispatch.dispatch(id, operations ?? []);
+  }
+
+  return (
+    <>
+      <EntityHeader
+        model={headerModel}
+        onBack={() => router.back()}
+        onAction={handleAction}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+      <div className="flex flex-col gap-2.5">
+        <Card>
+          <CardContent className="pt-5">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
+              {detailConfig.headerFields.map((field) => {
+                const Renderer = resolveFieldRenderer(field);
+                return (
+                  <div key={field.name}>
+                    <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
+                      {field.label ?? field.name}
+                    </dt>
+                    <dd className="text-sm font-normal text-foreground leading-snug">
+                      <Renderer value={data[field.name]} field={field} mode="view" />
+                    </dd>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+        {detailConfig.sections.map((section) =>
+          activeTab === section.group.group_key ? (
+            <Card key={section.group.group_key}>
+              <CardContent className="pt-5">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+                  {section.fields.map((field) => {
+                    const Renderer = resolveFieldRenderer(field);
+                    return (
+                      <div key={field.name}>
+                        <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
+                          {field.label ?? field.name}
+                        </dt>
+                        <dd className="text-sm font-normal text-foreground leading-snug">
+                          <Renderer value={data[field.name]} field={field} mode="view" />
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null,
+        )}
+        {activeTab === "__comments" && hasComments && (
+          <Card><CardContent className="pt-5"><CommentList entityType={entityCode} entityId={recordId} /></CardContent></Card>
+        )}
+        {activeTab === "__activity" && hasActivity && (
+          <Card><CardContent className="pt-5"><EventsPanel entityCode={entityCode} recordId={recordId} /></CardContent></Card>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** @deprecated Use MasterDetailPage / MasterDetailPageProps. */
+export { MasterDetailPage as RichMasterDetailPage, type MasterDetailPageProps as RichMasterDetailPageProps };

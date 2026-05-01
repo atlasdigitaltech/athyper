@@ -20,6 +20,7 @@ import {
 } from "@athyper/ui/primitives";
 import type { SummaryCardsConfig, MasterTab } from "@athyper/metadata-client/compiled-reader";
 import { EntityForm, type EntityFormHandle } from "../form/EntityForm";
+import { titleCase } from "@athyper/runtime-shared/core";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -31,10 +32,6 @@ export interface ViewOnlyReason {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function titleCase(s: string): string {
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function formatDate(val: unknown): string {
   if (!val) return "—";
@@ -649,7 +646,7 @@ function DeleteConfirmDialog({
 }
 
 // ── ChildSummaryCardsPanel ────────────────────────────────────────────────────
-// Public export — wired from RichMasterDetailPage for renderer="summary_cards_with_drawer".
+// Public export — wired from MasterDetailPage for renderer="summary_cards_with_drawer".
 
 export function ChildSummaryCardsPanel({
   tab,

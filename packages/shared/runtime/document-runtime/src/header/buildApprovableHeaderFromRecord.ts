@@ -14,13 +14,7 @@
  */
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import type { ApprovableAudit, ApprovableDocumentHeaderDTO, ProgressStage, SlaStatus } from "./types";
-import { statusToIntent } from "@athyper/runtime-shared/core";
-
-// ── Label formatter ───────────────────────────────────────────────────────────
-
-function formatLabel(code: string): string {
-  return code.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
+import { statusToIntent, titleCase, fmtDate, fmtAmountMaybe } from "@athyper/runtime-shared/core";
 
 // ── Stage key normaliser — maps DB status codes to progress rail stage keys ──
 
@@ -28,30 +22,6 @@ function toStageKey(statusKey: string): string {
   if (statusKey === "fully_paid" || statusKey === "partially_paid") return "paid";
   return statusKey;
 }
-
-// ── Date / number formatters ──────────────────────────────────────────────────
-
-const fmtDate = (iso: unknown): string | undefined => {
-  if (!iso || typeof iso !== "string") return undefined;
-  try {
-    return new Date(iso).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return String(iso);
-  }
-};
-
-const fmtAmount = (val: unknown): string | undefined => {
-  const n = typeof val === "number" ? val : Number(val);
-  if (Number.isNaN(n)) return undefined;
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-};
 
 // ── Duration + SLA helpers ────────────────────────────────────────────────────
 
@@ -163,7 +133,7 @@ export function buildApprovableHeaderFromRecord(
   // ── Identity ────────────────────────────────────────────────────────────────
   const numberVal = dh?.number_field ? String(data[dh.number_field] ?? entity.entity_code) : entity.entity_code;
   const statusRaw = dh?.status_field ? data[dh.status_field] : undefined;
-  const statusLabel = statusRaw ? formatLabel(String(statusRaw)) : "Unknown";
+  const statusLabel = statusRaw ? titleCase(String(statusRaw)) : "Unknown";
 
   const titleVal = dh?.title_field && data[dh.title_field]
     ? String(data[dh.title_field])
@@ -199,15 +169,15 @@ export function buildApprovableHeaderFromRecord(
     ? String(data[dh.currency_field] ?? "")
     : "";
 
-  const totalFormatted = dh?.amount_field ? fmtAmount(data[dh.amount_field]) : undefined;
+  const totalFormatted = dh?.amount_field ? fmtAmountMaybe(data[dh.amount_field]) : undefined;
 
   if (totalFormatted) {
     dto.money = {
       totalLabel: dh?.total_label,
       currency,
       formatted: totalFormatted,
-      subtotal: dh?.subtotal_field ? fmtAmount(data[dh.subtotal_field]) : undefined,
-      tax: dh?.tax_field ? fmtAmount(data[dh.tax_field]) : undefined,
+      subtotal: dh?.subtotal_field ? fmtAmountMaybe(data[dh.subtotal_field]) : undefined,
+      tax: dh?.tax_field ? fmtAmountMaybe(data[dh.tax_field]) : undefined,
     };
   }
 

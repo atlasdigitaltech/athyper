@@ -48,9 +48,9 @@ export { ENTITY_HEADER_EVENTS, type EntityHeaderEvent } from "./telemetry";
 export {
   buildMasterHeaderModel,
   formatValue,
-  titleCase,
   type MasterHeaderConfig,
 } from "./builders/buildMasterHeaderModel";
+export { titleCase } from "@athyper/runtime-shared/core";
 
 // ── Fixtures — dev/test only, never import in production code ─────────────
 export {

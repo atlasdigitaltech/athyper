@@ -22,7 +22,6 @@ export {
   type HeaderMode,
   buildApprovableHeaderFromRecord,
   buildDocumentHeaderModel,
-  mapDocumentHeaderModel,
   type MapDocumentHeaderModelOpts,
 } from "./header";
 export { StatusLanes, type StatusLanesProps } from "./status";
@@ -135,9 +134,9 @@ export type {
 export { registerDocumentRenderers } from "./register";
 
 // ── Document detail page ─────────────────────────────────────────────────────
-export { DocumentDetailPage, type DocumentDetailPageProps } from "./pages/ApprovableDetailPage";
+export { DocumentDetailPage, type DocumentDetailPageProps } from "./pages/DocumentDetailPage";
 /** @deprecated Use DocumentDetailPage */
-export { ApprovableDetailPage, type ApprovableDetailPageProps } from "./pages/ApprovableDetailPage";
+export { ApprovableDetailPage, type ApprovableDetailPageProps } from "./pages/DocumentDetailPage";
 
 // ── Entity view descriptors + registry ──────────────────────────────────────
 // Types and registry for optional descriptor overrides.

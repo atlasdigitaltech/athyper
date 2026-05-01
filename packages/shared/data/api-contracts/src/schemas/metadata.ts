@@ -235,7 +235,7 @@ export const CompiledEntitySchema = z.object({
     /**
      * Selects the detail-page rendering strategy. Three canonical values:
      *   "master"   — EntityDetailPage: field-grid + tabs. Richness controlled by detail_profile.
-     *   "document" — ApprovableDetailPage: rich document shell with process health,
+     *   "document" — DocumentDetailPage: rich document shell with process health,
      *                KPI strip, lines/distributions tabs, workflow, approvals.
      *   "ledger"   — Read-only log view: no edit ops, no entity form.
      */
