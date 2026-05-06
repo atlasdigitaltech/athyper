@@ -4,13 +4,27 @@
  * GET  /api/finance/bank/accounts                     — house bank accounts for a scope
  * GET  /api/finance/bank/statement/:bankAccountId     — payment_entry rows for a bank account
  * GET  /api/finance/bank/unreconciled/:bankAccountId  — uncleared payments (pending recon)
- * POST /api/finance/bank/reconcile                    — mark selected payments as cleared
+ * POST /api/finance/bank/reconcile                    — [DEPRECATED] mark payments cleared (legacy)
+ *
+ * Phase 5 — Bank Statement Import & Reconciliation:
+ * POST /api/finance/bank/statements/import            — upload CSV/OFX statement file
+ * GET  /api/finance/bank/statements/:bankAccountId    — list imported statements
+ * GET  /api/finance/bank/statements/:statementId/lines — statement lines with recon status
+ * POST /api/finance/bank/statements/:statementId/auto-match — run auto-match engine
+ * POST /api/finance/bank/reconcile/match              — manual: link payment ↔ statement line
+ * POST /api/finance/bank/reconcile/split              — manual: split statement line across payments
+ * POST /api/finance/bank/reconcile/exception          — mark statement line as exception
+ * POST /api/finance/bank/reconcile/sign-off           — sign off statement + post adjustment JEs
  */
 
 import type { RequestHandler, Router } from "express";
 import { sql, type Kysely } from "kysely";
+import type { IncomingMessage } from "node:http";
 import { type FinanceRouteDeps, parseScopeParams, resolveCompanyIds } from "./finance.route.js";
 import { verifyBearer, resolveTenantId, isUuid } from "@athyper/svc-shared";
+import { importBankStatement }   from "./bank-statement-import.service.js";
+import { runAutoMatch }          from "./bank-auto-match.service.js";
+import { postReconAdjustment }   from "./bank-recon-posting.service.js";
 
 export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger } = deps;
@@ -190,10 +204,10 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
     } catch (err) { logger?.error("finance_bank_unreconciled_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
 
-  // ── POST /api/finance/bank/reconcile ─────────────────────────────────────
-  // Mark a set of payment_entry rows as cleared (bank reconciliation action).
-  // Body: { bank_account_id: string, payment_ids: string[], cleared_date?: string }
-  // Only updates posted, un-cleared payments. Returns { cleared, cleared_date }.
+  // ── POST /api/finance/bank/reconcile  [DEPRECATED] ──────────────────────
+  // Legacy: directly sets status='cleared' on payment_entry rows.
+  // Kept for backward compatibility with the bank recon UI until Phase 5 UI lands.
+  // New code should use the Phase 5 statement-import + sign-off flow instead.
   router.post("/finance/bank/reconcile", (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -217,7 +231,6 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
         res.status(400).json({ error: "MISSING_FIELD", message: "'payment_ids' must be a non-empty array" });
         return;
       }
-      // Sanitise: only accept valid UUIDs
       const paymentIds = body.payment_ids.filter(isUuid);
       if (paymentIds.length === 0) {
         res.status(400).json({ error: "INVALID_VALUE", message: "No valid payment UUIDs provided" });
@@ -225,8 +238,10 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
       }
 
       const clearedDate = body.cleared_date ? new Date(body.cleared_date) : new Date();
-      const clearedDateStr = clearedDate.toISOString().split("T")[0]!; // YYYY-MM-DD
+      const clearedDateStr = clearedDate.toISOString().split("T")[0]!;
 
+      // DEPRECATED: still sets status='cleared' for UI backward-compat.
+      // Phase 5 sign-off keeps status='posted' and uses cleared_date instead.
       const result = await db
         .updateTable("document.payment_entry")
         .set({ status: "cleared", cleared_date: clearedDateStr, updated_at: sql`now()` })
@@ -238,12 +253,519 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
         .executeTakeFirst();
 
       const cleared = Number(result?.numUpdatedRows ?? 0);
-      res.json({ cleared, cleared_date: clearedDate.toISOString() });
+      res.json({ cleared, cleared_date: clearedDate.toISOString(), _deprecated: true });
     } catch (err) {
       logger?.error("finance_bank_reconcile_error", { err: String(err) });
       next(err);
     }
   }) as RequestHandler);
+
+
+  // ── POST /api/finance/bank/statements/import ──────────────────────────────
+  // Uploads a CSV or OFX bank statement file.
+  // Content-Type: multipart/form-data
+  //   file:           the statement file (required)
+  //   bank_account_id: uuid (required)
+  //   company_code_id: uuid (required)
+  //   format:          csv | ofx | auto  (default: auto)
+  //   statement_ref:   bank-assigned reference (optional)
+  //   period_start:    YYYY-MM-DD override (optional)
+  //   period_end:      YYYY-MM-DD override (optional)
+  //   currency_code:   3-char ISO (optional — inferred from bank account)
+  router.post("/finance/bank/statements/import", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_HEADER", message: "Tenant resolution failed" }); return; }
+
+      // Read raw multipart body via the relay (already parsed by express-formidable or raw buffer)
+      // In our stack multipart arrives as req.body._file_<field> Buffer or via req.files.
+      // We accept both raw Buffer on req.body.file and the parsed files object.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bodyAny = req.body as any;
+      const rawBytes: Buffer | undefined =
+        Buffer.isBuffer(bodyAny?.file) ? bodyAny.file :
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        Buffer.isBuffer((req as any)?.files?.file?.data) ? (req as any).files.file.data :
+        undefined;
+
+      if (!rawBytes || rawBytes.length === 0) {
+        res.status(400).json({ error: "MISSING_FILE", message: "No statement file received" });
+        return;
+      }
+
+      const bankAccountId = String(bodyAny?.bank_account_id ?? "");
+      const companyCodeId = String(bodyAny?.company_code_id ?? "");
+      if (!isUuid(bankAccountId)) { res.status(400).json({ error: "MISSING_FIELD", message: "bank_account_id required" }); return; }
+      if (!isUuid(companyCodeId)) { res.status(400).json({ error: "MISSING_FIELD", message: "company_code_id required" }); return; }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fileName = String((req as any)?.files?.file?.name ?? bodyAny?.file_name ?? "upload.csv");
+      const format   = (bodyAny?.format as "csv" | "ofx" | "auto" | undefined) ?? "auto";
+
+      const result = await importBankStatement(db, {
+        tenantId,
+        companyCodeId,
+        bankAccountId,
+        createdBy:    claims["sub"] as string ?? "system",
+        fileName,
+        rawBytes,
+        format,
+        statementRef: bodyAny?.statement_ref ?? undefined,
+        periodStart:  bodyAny?.period_start  ?? undefined,
+        periodEnd:    bodyAny?.period_end     ?? undefined,
+        currencyCode: bodyAny?.currency_code  ?? undefined,
+      });
+
+      res.status(result.isDuplicate ? 200 : 201).json(result);
+    } catch (err) {
+      logger?.error("finance_bank_import_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── GET /api/finance/bank/statements/:bankAccountId ───────────────────────
+  // Lists imported statements for a bank account.
+  router.get("/finance/bank/statements/:bankAccountId", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json({ items: [] }); return; }
+
+      const bankAccountId = req.params["bankAccountId"] as string;
+      if (!isUuid(bankAccountId)) { res.json({ items: [] }); return; }
+
+      const limit  = Math.min(200, parseInt(String(req.query["limit"]  ?? "50"), 10));
+      const offset =               parseInt(String(req.query["offset"] ?? "0"),  10);
+
+      const items = await db
+        .selectFrom("document.bank_statement as bst")
+        .select([
+          "bst.id", "bst.statement_ref as statementRef",
+          "bst.period_start_date as periodStart", "bst.period_end_date as periodEnd",
+          "bst.opening_balance as openingBalance", "bst.closing_balance as closingBalance",
+          "bst.currency_code as currencyCode",
+          "bst.line_count as lineCount", "bst.source_format as sourceFormat",
+          "bst.status", "bst.created_at as importedAt",
+        ])
+        .where("bst.tenant_id",       "=", tenantId)
+        .where("bst.bank_account_id", "=", bankAccountId)
+        .orderBy("bst.period_end_date", "desc")
+        .limit(limit).offset(offset)
+        .execute();
+
+      res.json({ items });
+    } catch (err) { logger?.error("finance_bank_statements_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+
+  // ── GET /api/finance/bank/statements/:statementId/lines ──────────────────
+  router.get("/finance/bank/statements/:statementId/lines", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json({ items: [] }); return; }
+
+      const statementId = req.params["statementId"] as string;
+      if (!isUuid(statementId)) { res.json({ items: [] }); return; }
+
+      const reconStatus = req.query["reconStatus"] as string | undefined;
+
+      let q = db
+        .selectFrom("document.bank_statement_line as bsl")
+        .select([
+          "bsl.id", "bsl.line_no as lineNo",
+          "bsl.transaction_date as transactionDate", "bsl.value_date as valueDate",
+          "bsl.description", "bsl.reference_number as referenceNumber",
+          "bsl.counterparty_name as counterpartyName",
+          "bsl.amount", "bsl.currency_code as currencyCode",
+          "bsl.transaction_type as transactionType",
+          "bsl.recon_status as reconStatus", "bsl.recon_case_id as reconCaseId",
+        ])
+        .where("bsl.tenant_id",        "=", tenantId)
+        .where("bsl.bank_statement_id","=", statementId);
+
+      if (reconStatus) q = q.where("bsl.recon_status", "=", reconStatus) as typeof q;
+
+      const items = await q.orderBy("bsl.line_no", "asc").execute();
+      res.json({ items });
+    } catch (err) { logger?.error("finance_bank_stmt_lines_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/bank/statements/:statementId/auto-match ────────────
+  // Runs the auto-match engine for a specific statement.
+  // Body: { company_code_id: string, bank_account_id: string }
+  router.post("/finance/bank/statements/:statementId/auto-match", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_HEADER" }); return; }
+
+      const statementId = req.params["statementId"] as string;
+      if (!isUuid(statementId)) { res.status(400).json({ error: "INVALID_PARAM", message: "statementId must be a UUID" }); return; }
+
+      // Load statement to get bank_account_id + company_code_id
+      const stmt = await db
+        .selectFrom("document.bank_statement as bst")
+        .select(["bst.bank_account_id", "bst.company_code_id"])
+        .where("bst.id",        "=", statementId)
+        .where("bst.tenant_id", "=", tenantId)
+        .executeTakeFirst() as { bank_account_id: string; company_code_id: string } | undefined;
+
+      if (!stmt) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+
+      // Mark statement as 'matching'
+      await db
+        .updateTable("document.bank_statement")
+        .set({ status: "matching", updated_at: sql`now()` })
+        .where("id", "=", statementId)
+        .execute();
+
+      const result = await runAutoMatch(db, {
+        tenantId,
+        bankAccountId: stmt.bank_account_id,
+        companyCodeId: stmt.company_code_id,
+        statementId,
+        createdBy: claims["sub"] as string ?? "system",
+      });
+
+      res.json({ statementId, ...result });
+    } catch (err) { logger?.error("finance_bank_auto_match_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/bank/reconcile/match ────────────────────────────────
+  // Manual: link a specific payment_entry to a bank_statement_line.
+  // Body: { payment_entry_id, bank_statement_line_id, notes? }
+  router.post("/finance/bank/reconcile/match", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_HEADER" }); return; }
+
+      const body = req.body as {
+        payment_entry_id?: string;
+        bank_statement_line_id?: string;
+        notes?: string;
+      };
+
+      if (!isUuid(body.payment_entry_id ?? "")) { res.status(400).json({ error: "MISSING_FIELD", message: "payment_entry_id required" }); return; }
+      if (!isUuid(body.bank_statement_line_id ?? "")) { res.status(400).json({ error: "MISSING_FIELD", message: "bank_statement_line_id required" }); return; }
+
+      const payId  = body.payment_entry_id!;
+      const lineId = body.bank_statement_line_id!;
+      const userId = claims["sub"] as string ?? "system";
+
+      // Load both rows
+      const pay = await db
+        .selectFrom("document.payment_entry as pe")
+        .select(["pe.payment_amount", "pe.payment_direction", "pe.posting_date", "pe.company_code_id", "pe.bank_account_id"])
+        .where("pe.id", "=", payId).where("pe.tenant_id", "=", tenantId)
+        .executeTakeFirst() as { payment_amount: string; payment_direction: string; posting_date: string; company_code_id: string; bank_account_id: string } | undefined;
+      if (!pay) { res.status(404).json({ error: "NOT_FOUND", message: "Payment not found" }); return; }
+
+      const line = await db
+        .selectFrom("document.bank_statement_line as bsl")
+        .select(["bsl.amount", "bsl.transaction_date", "bsl.bank_statement_id"])
+        .where("bsl.id", "=", lineId).where("bsl.tenant_id", "=", tenantId)
+        .executeTakeFirst() as { amount: string; transaction_date: string; bank_statement_id: string } | undefined;
+      if (!line) { res.status(404).json({ error: "NOT_FOUND", message: "Statement line not found" }); return; }
+
+      const payAmt  = parseFloat(pay.payment_amount) * (pay.payment_direction === "OUTBOUND" ? -1 : 1);
+      const lineAmt = parseFloat(line.amount);
+      const diff    = payAmt - lineAmt;
+
+      // Generate case number
+      const datePart   = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const caseNumber = `RC-${datePart}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+
+      const caseRow = await sql<{ id: string }>`
+        INSERT INTO document.bank_recon_case
+          (tenant_id, company_code_id, bank_account_id, case_number,
+           case_type, confidence_score, status, difference_amount, currency_code,
+           matched_at, created_at, created_by)
+        VALUES (
+          ${tenantId}::uuid, ${pay.company_code_id}::uuid, ${pay.bank_account_id}::uuid, ${caseNumber},
+          'manual', 1.0, 'matched', ${diff}, 'USD',
+          now(), now(), ${userId}::uuid
+        )
+        RETURNING id
+      `.execute(db);
+
+      const caseId = caseRow.rows[0]?.id;
+      if (!caseId) throw new Error("Failed to create recon case");
+
+      await sql`
+        INSERT INTO document.bank_recon_case_line
+          (tenant_id, bank_recon_case_id, side, payment_entry_id, amount, notes, created_at, created_by)
+        VALUES
+          (${tenantId}::uuid, ${caseId}::uuid, 'payment', ${payId}::uuid,
+           ${Math.abs(parseFloat(pay.payment_amount))}, ${body.notes ?? null}, now(), ${userId}::uuid),
+          (${tenantId}::uuid, ${caseId}::uuid, 'statement', NULL, ${Math.abs(lineAmt)}, NULL, now(), ${userId}::uuid)
+      `.execute(db);
+
+      // Fix: insert statement line correctly
+      await sql`
+        UPDATE document.bank_recon_case_line
+           SET bank_statement_line_id = ${lineId}::uuid
+         WHERE bank_recon_case_id = ${caseId}::uuid AND side = 'statement'
+      `.execute(db);
+
+      await db.updateTable("document.bank_statement_line")
+        .set({ recon_status: "matched", recon_case_id: caseId, updated_at: sql`now()` })
+        .where("id", "=", lineId).execute();
+
+      await db.updateTable("document.payment_entry")
+        .set({ cleared_date: line.transaction_date, bank_statement_line_id: lineId, updated_at: sql`now()` })
+        .where("id", "=", payId).execute();
+
+      res.status(201).json({ caseId, caseNumber, differenceAmount: diff });
+    } catch (err) { logger?.error("finance_bank_manual_match_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/bank/reconcile/split ────────────────────────────────
+  // Manual: split one statement line across multiple payment_entry rows.
+  // Body: { bank_statement_line_id, splits: [{ payment_entry_id, amount }][], notes? }
+  router.post("/finance/bank/reconcile/split", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_HEADER" }); return; }
+
+      const body = req.body as {
+        bank_statement_line_id?: string;
+        splits?: Array<{ payment_entry_id: string; amount: number }>;
+        notes?: string;
+      };
+
+      if (!isUuid(body.bank_statement_line_id ?? "")) { res.status(400).json({ error: "MISSING_FIELD", message: "bank_statement_line_id required" }); return; }
+      if (!Array.isArray(body.splits) || body.splits.length < 2) { res.status(400).json({ error: "INVALID_VALUE", message: "splits must have at least 2 entries" }); return; }
+
+      const lineId = body.bank_statement_line_id!;
+      const userId = claims["sub"] as string ?? "system";
+
+      const line = await db
+        .selectFrom("document.bank_statement_line as bsl")
+        .select(["bsl.amount", "bsl.transaction_date", "bsl.bank_statement_id"])
+        .where("bsl.id", "=", lineId).where("bsl.tenant_id", "=", tenantId)
+        .executeTakeFirst() as { amount: string; transaction_date: string; bank_statement_id: string } | undefined;
+      if (!line) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+
+      // Resolve company + bank account from first payment
+      const firstPay = await db
+        .selectFrom("document.payment_entry as pe")
+        .select(["pe.company_code_id", "pe.bank_account_id"])
+        .where("pe.id", "=", body.splits[0]!.payment_entry_id)
+        .where("pe.tenant_id", "=", tenantId)
+        .executeTakeFirst() as { company_code_id: string; bank_account_id: string } | undefined;
+      if (!firstPay) { res.status(404).json({ error: "NOT_FOUND", message: "First payment not found" }); return; }
+
+      const totalSplitAmt = body.splits.reduce((s, sp) => s + sp.amount, 0);
+      const diff = parseFloat(line.amount) - totalSplitAmt;
+
+      const datePart   = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const caseNumber = `RC-${datePart}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+
+      const caseRow = await sql<{ id: string }>`
+        INSERT INTO document.bank_recon_case
+          (tenant_id, company_code_id, bank_account_id, case_number,
+           case_type, confidence_score, status, difference_amount, currency_code,
+           matched_at, created_at, created_by)
+        VALUES (
+          ${tenantId}::uuid, ${firstPay.company_code_id}::uuid, ${firstPay.bank_account_id}::uuid, ${caseNumber},
+          'manual', 1.0, 'matched', ${diff}, 'USD',
+          now(), now(), ${userId}::uuid
+        )
+        RETURNING id
+      `.execute(db);
+
+      const caseId = caseRow.rows[0]?.id;
+      if (!caseId) throw new Error("Failed to create split recon case");
+
+      // Statement side
+      await sql`
+        INSERT INTO document.bank_recon_case_line
+          (tenant_id, bank_recon_case_id, side, bank_statement_line_id, amount, notes, created_at, created_by)
+        VALUES
+          (${tenantId}::uuid, ${caseId}::uuid, 'statement', ${lineId}::uuid,
+           ${Math.abs(parseFloat(line.amount))}, ${body.notes ?? null}, now(), ${userId}::uuid)
+      `.execute(db);
+
+      // Payment sides
+      for (const sp of body.splits) {
+        await sql`
+          INSERT INTO document.bank_recon_case_line
+            (tenant_id, bank_recon_case_id, side, payment_entry_id, amount, created_at, created_by)
+          VALUES
+            (${tenantId}::uuid, ${caseId}::uuid, 'payment', ${sp.payment_entry_id}::uuid,
+             ${sp.amount}, now(), ${userId}::uuid)
+        `.execute(db);
+
+        await db.updateTable("document.payment_entry")
+          .set({ cleared_date: line.transaction_date, bank_statement_line_id: lineId, updated_at: sql`now()` })
+          .where("id", "=", sp.payment_entry_id).execute();
+      }
+
+      await db.updateTable("document.bank_statement_line")
+        .set({ recon_status: "split", recon_case_id: caseId, updated_at: sql`now()` })
+        .where("id", "=", lineId).execute();
+
+      res.status(201).json({ caseId, caseNumber, differenceAmount: diff });
+    } catch (err) { logger?.error("finance_bank_split_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/bank/reconcile/exception ────────────────────────────
+  // Mark a statement line as an exception (unresolvable, needs external action).
+  // Body: { bank_statement_line_id, notes }
+  router.post("/finance/bank/reconcile/exception", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_HEADER" }); return; }
+
+      const body = req.body as { bank_statement_line_id?: string; notes?: string };
+      if (!isUuid(body.bank_statement_line_id ?? "")) { res.status(400).json({ error: "MISSING_FIELD" }); return; }
+
+      await db.updateTable("document.bank_statement_line")
+        .set({ recon_status: "exception", updated_at: sql`now()` })
+        .where("id", "=", body.bank_statement_line_id!)
+        .where("tenant_id", "=", tenantId)
+        .execute();
+
+      res.json({ updated: true });
+    } catch (err) { logger?.error("finance_bank_exception_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/bank/reconcile/sign-off ─────────────────────────────
+  // Sign off an entire bank statement: posts adjustment JEs for all open cases
+  // that have a non-zero difference, then marks statement status='signed_off'.
+  // Body: {
+  //   statement_id, book_id, posting_date, fiscal_year, period_number
+  // }
+  router.post("/finance/bank/reconcile/sign-off", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_HEADER" }); return; }
+
+      const body = req.body as {
+        statement_id?: string;
+        book_id?: string;
+        posting_date?: string;
+        fiscal_year?: number;
+        period_number?: number;
+      };
+
+      if (!isUuid(body.statement_id ?? "")) { res.status(400).json({ error: "MISSING_FIELD", message: "statement_id required" }); return; }
+      if (!isUuid(body.book_id ?? "")) { res.status(400).json({ error: "MISSING_FIELD", message: "book_id required" }); return; }
+      if (!body.posting_date || !body.fiscal_year || !body.period_number) {
+        res.status(400).json({ error: "MISSING_FIELD", message: "posting_date, fiscal_year, period_number required" });
+        return;
+      }
+
+      const stmt = await db
+        .selectFrom("document.bank_statement as bst")
+        .select(["bst.bank_account_id", "bst.company_code_id", "bst.status"])
+        .where("bst.id",        "=", body.statement_id!)
+        .where("bst.tenant_id", "=", tenantId)
+        .executeTakeFirst() as { bank_account_id: string; company_code_id: string; status: string } | undefined;
+
+      if (!stmt) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      if (stmt.status === "signed_off") { res.status(409).json({ error: "ALREADY_SIGNED_OFF" }); return; }
+
+      // Validate: all lines must be matched, split, exception, or excluded
+      const openLines = await db
+        .selectFrom("document.bank_statement_line as bsl")
+        .select(db.fn.count<string>("bsl.id").as("cnt"))
+        .where("bsl.tenant_id",        "=", tenantId)
+        .where("bsl.bank_statement_id","=", body.statement_id!)
+        .where("bsl.recon_status",     "=", "unmatched")
+        .executeTakeFirst() as { cnt: string } | undefined;
+
+      const openCount = parseInt(openLines?.cnt ?? "0", 10);
+      if (openCount > 0) {
+        res.status(422).json({
+          error: "UNMATCHED_LINES",
+          message: `${openCount} statement line(s) are still unmatched. Resolve or mark as exception before sign-off.`,
+          openCount,
+        });
+        return;
+      }
+
+      // Post adjustment JEs for bank_charge / fx_difference cases
+      const cases = await db
+        .selectFrom("document.bank_recon_case as brc")
+        .select(["brc.id", "brc.case_type"])
+        .where("brc.tenant_id",      "=", tenantId)
+        .where("brc.bank_account_id","=", stmt.bank_account_id)
+        .where("brc.status",         "in", ["open", "matched"])
+        .where("brc.case_type",      "in", ["bank_charge", "fx_difference", "near_match"])
+        .execute() as Array<{ id: string; case_type: string }>;
+
+      const userId = claims["sub"] as string ?? "system";
+      const jeIds: string[] = [];
+
+      for (const c of cases) {
+        const postResult = await postReconAdjustment(db, {
+          tenantId,
+          companyCodeId: stmt.company_code_id,
+          bankAccountId: stmt.bank_account_id,
+          reconCaseId:   c.id,
+          postedBy:      userId,
+          postingDate:   body.posting_date!,
+          fiscalYear:    body.fiscal_year!,
+          periodNumber:  body.period_number!,
+          bookId:        body.book_id!,
+        });
+        if (postResult.jeId) jeIds.push(postResult.jeId);
+      }
+
+      // Mark statement signed_off
+      await db
+        .updateTable("document.bank_statement")
+        .set({ status: "signed_off", signed_off_at: sql`now()`, signed_off_by: userId, updated_at: sql`now()` })
+        .where("id",        "=", body.statement_id!)
+        .where("tenant_id", "=", tenantId)
+        .execute();
+
+      res.json({
+        statementId:  body.statement_id,
+        status:       "signed_off",
+        jesPosted:    jeIds.length,
+        jeIds,
+      });
+    } catch (err) { logger?.error("finance_bank_signoff_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
 
   return router;
 }

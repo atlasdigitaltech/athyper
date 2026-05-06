@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { ReactNode } from "react";
-import { ChevronLeft, Check, Pencil } from "lucide-react";
+import type { MouseEvent, ReactNode } from "react";
+import { AppWindow, ChevronLeft, Check, Copy, ExternalLink, Pencil } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
+import { Badge, type BadgeProps } from "@athyper/ui/primitives";
 
 import type { HeaderIdentity } from "../types";
 
@@ -26,10 +26,36 @@ function amountFontClass(amount: string): string {
   return "text-xs font-semibold";
 }
 
+function statusBadgeVariant(intent: HeaderIdentity["status"]["intent"]): BadgeProps["variant"] {
+  switch (intent) {
+    case "success":
+      return "success";
+    case "warning":
+      return "warning";
+    case "error":
+      return "destructive";
+    case "info":
+      return "info";
+    case "primary":
+    case "accent":
+      return "default";
+    case "muted":
+    case "neutral":
+    default:
+      return "muted";
+  }
+}
+
 export interface EntityIdentityBarProps {
   identity: HeaderIdentity;
-  /** Pre-composed action cluster buttons. */
+  /** Pre-composed action cluster for tablet/desktop (sm+). */
   actionsSlot?: ReactNode;
+  /**
+   * Pre-composed compact action cluster for mobile (< sm).
+   * Rendered in row 1 of the stacked mobile layout next to the type chip.
+   * When omitted, falls back to actionsSlot.
+   */
+  mobileActionsSlot?: ReactNode;
   /** Hero amount (e.g. invoice total) shown as two-row block in the top-right. */
   amountSummary?: AmountSummary;
   /** When true, shows the "Editing" badge next to the status badge. */
@@ -46,16 +72,48 @@ export interface EntityIdentityBarProps {
 export function EntityIdentityBar({
   identity,
   actionsSlot,
+  mobileActionsSlot,
   amountSummary,
   editMode = false,
   onBack,
   onTypeClick,
   className,
 }: EntityIdentityBarProps) {
-  const { subtleBadge } = resolveSemanticColors(identity.status.intent);
   const [copied, setCopied] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [contextCopied, setContextCopied] = useState<string | null>(null);
 
   const canCopy = identity.identifierAction !== "none";
+  const copyItems = [
+    ...(identity.number ? [{ key: "code", label: "Code", value: identity.number }] : []),
+    ...(identity.name && identity.name !== identity.number
+      ? [{ key: "name", label: "Name", value: identity.name }]
+      : []),
+  ];
+
+  const handleIdentityContextMenu = (event: MouseEvent) => {
+    event.preventDefault();
+    setContextCopied(null);
+    setContextMenu({
+      x: Math.min(event.clientX, Math.max(16, window.innerWidth - 320)),
+      y: Math.min(event.clientY, Math.max(16, window.innerHeight - 260)),
+    });
+  };
+
+  const openCurrentRecord = (features?: string) => {
+    window.open(window.location.href, "_blank", features ?? "noopener,noreferrer");
+    setContextMenu(null);
+  };
+
+  const handleContextCopy = (key: string, value: string) => {
+    void navigator.clipboard.writeText(value).then(() => {
+      setContextCopied(key);
+      setTimeout(() => {
+        setContextCopied(null);
+        setContextMenu(null);
+      }, 1200);
+    });
+  };
 
   const handleCopyNumber = async () => {
     try {
@@ -163,12 +221,9 @@ export function EntityIdentityBar({
 
   // ── Status badge ──────────────────────────────────────────────────────────
   const statusBadge = (
-    <span className={cn(
-      "inline-flex items-center rounded border px-2 py-0.5 text-xs font-semibold leading-none shrink-0",
-      subtleBadge,
-    )}>
+    <Badge variant={statusBadgeVariant(identity.status.intent)} className="shrink-0 font-semibold">
       {identity.status.label}
-    </span>
+    </Badge>
   );
 
   // ── Edit-mode indicator — shown only when actively editing ────────────────
@@ -187,7 +242,10 @@ export function EntityIdentityBar({
         {chipEl}
 
         {/* Name / code — immediately after chip */}
-        <div className="flex flex-col min-w-0 shrink leading-none gap-0.5 max-w-[220px]">
+        <div
+          className="flex flex-col min-w-0 shrink leading-none gap-0.5 max-w-[220px]"
+          onContextMenu={handleIdentityContextMenu}
+        >
           {namePrimary}
           {codeSecondary}
         </div>
@@ -228,25 +286,37 @@ export function EntityIdentityBar({
         </div>
       </div>
 
-      {/* ── mobile (< sm) ──────────────────────────────────────────────────
-          Row A: chip · name/code (flex-1) · status · actions
-          Row B: amount summary (if present)                              */}
-      <div className="sm:hidden flex flex-col gap-2">
+      {/* ── mobile (< sm) ─────────────────────────────────────────────────
+          Row 1: chip (back + type) | flex spacer | primary action | ⋯
+          Row 2: entity name
+          Row 3: entity code + status badge [+ editing badge]
+          Row 4: amount summary (if present)                            */}
+      <div className="sm:hidden flex flex-col gap-1.5">
+
+        {/* Row 1 */}
         <div className="flex items-center gap-2 min-w-0">
           {chipEl}
-          <div className="flex-1 flex flex-col min-w-0 leading-none gap-0.5">
-            {namePrimary}
-            {codeSecondary}
-          </div>
-          {statusBadge}
-          {editingBadge}
-          <div className="flex items-center gap-2 shrink-0">
-            {actionsSlot}
+          <div className="flex-1" />
+          <div className="flex items-center gap-1.5 shrink-0">
+            {mobileActionsSlot ?? actionsSlot}
           </div>
         </div>
 
+        {/* Row 2: name */}
+        <div className="px-0.5 leading-none" onContextMenu={handleIdentityContextMenu}>
+          {namePrimary}
+        </div>
+
+        {/* Row 3: code + status */}
+        <div className="flex items-center gap-2 px-0.5 flex-wrap">
+          <span onContextMenu={handleIdentityContextMenu}>{codeSecondary}</span>
+          {statusBadge}
+          {editingBadge}
+        </div>
+
+        {/* Row 4: amount (documents / invoices) */}
         {amountSummary && (
-          <div className="flex flex-col gap-0.5 min-w-0">
+          <div className="flex flex-col gap-0.5 min-w-0 px-0.5">
             <div className="flex items-baseline gap-1.5 flex-wrap">
               <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider leading-none shrink-0">
                 TOTAL
@@ -264,6 +334,66 @@ export function EntityIdentityBar({
           </div>
         )}
       </div>
+
+      {contextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(event) => { event.preventDefault(); setContextMenu(null); }}
+          />
+          <div
+            className="fixed z-50 min-w-[260px] max-w-[320px] rounded-lg border bg-popover py-1 shadow-md"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+              onClick={() => openCurrentRecord("noopener,noreferrer")}
+            >
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              Open in new tab
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+              onClick={() => openCurrentRecord("noopener,noreferrer,width=1280,height=800")}
+            >
+              <AppWindow className="h-3.5 w-3.5 shrink-0" />
+              Open in new window
+            </button>
+
+            {canCopy && copyItems.length > 0 && (
+              <>
+                <div className="my-1 h-px bg-border" />
+                <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                  Copy field
+                </div>
+                {copyItems.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-1 text-left transition-colors hover:bg-muted"
+                    onClick={() => handleContextCopy(item.key, item.value)}
+                  >
+                    <span className="w-[90px] shrink-0 truncate text-xs text-muted-foreground">{item.label}</span>
+                    {contextCopied === item.key ? (
+                      <span className="flex items-center gap-1 text-xs text-green-500">
+                        <Check className="h-3 w-3" />Copied!
+                      </span>
+                    ) : (
+                      <span className="flex-1 truncate text-xs font-medium">{item.value}</span>
+                    )}
+                    {contextCopied !== item.key && (
+                      <Copy className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+                    )}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        </>
+      )}
 
     </div>
   );

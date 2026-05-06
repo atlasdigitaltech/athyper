@@ -65,16 +65,20 @@ set "ATHYPER_DATA=!ATHYPER_DATA_ROOT!"
 
 echo.
 echo ==========================
-echo STACK_DIR        = %STACK_DIR%
-echo ATHYPER_DATA_ROOT = !ATHYPER_DATA_ROOT!
+echo STACK_DIR             = %STACK_DIR%
+echo ATHYPER_DATA_ROOT     = !ATHYPER_DATA_ROOT!
+echo ATHYPER_SECRETS_ROOT  = !ATHYPER_SECRETS_ROOT!
 echo ==========================
 echo.
 
 REM ----------------------------
 REM Create folder structure (idempotent) - must match every ${ATHYPER_DATA}/*
-REM bind mount in stack\compose\**\*.yml. Keep this list in sync with
-REM data-dirs-reset.bat.
+REM and ${ATHYPER_SECRETS_ROOT}/* bind mount in stack\compose\**\*.yml.
+REM Keep this list in sync with data-dirs-reset.bat.
 REM ----------------------------
+echo Creating secrets directory structure...
+mkdir "!ATHYPER_SECRETS_ROOT!\gateway\certs"  >nul 2>&1
+
 echo Creating data directory structure...
 mkdir "!ATHYPER_DATA!\db"                      >nul 2>&1
 mkdir "!ATHYPER_DATA!\meilisearch"             >nul 2>&1
@@ -91,6 +95,7 @@ mkdir "!ATHYPER_DATA!\uptime-kuma"             >nul 2>&1
 
 echo.
 echo Done:
+echo   !ATHYPER_SECRETS_ROOT!\gateway\certs
 echo   !ATHYPER_DATA!\db
 echo   !ATHYPER_DATA!\meilisearch
 echo   !ATHYPER_DATA!\memorycache

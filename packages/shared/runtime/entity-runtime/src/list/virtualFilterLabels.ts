@@ -28,7 +28,7 @@ export const VIRTUAL_FILTER_LABELS: Record<string, VirtualFilterLabelFn> = {
 
   __created_by: (value, ctx) =>
     value === "me" || (ctx.principalId && value === ctx.principalId)
-      ? "Created by me"
+      ? "My documents"
       : "Created by someone",
 
   /** S4 — Tags (deferred; registered now for enforcement) */

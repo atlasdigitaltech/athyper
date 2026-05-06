@@ -104,6 +104,50 @@ COMMENT ON VIEW master.v_resolved_address IS
     'For historical or future links, query address_link directly.';
 
 
+-- v_business_partner_address — address_link + address for business_partner owner_type
+-- Exposes id (from address_link) as the record primary key so the entity engine
+-- can serve GET /records/business_partner_address?parent_id=<bp_uuid>.
+CREATE OR REPLACE VIEW master.v_business_partner_address
+    WITH (security_invoker = true, security_barrier = true)
+AS
+SELECT
+    al.id,
+    al.tenant_id,
+    al.owner_id,
+    al.address_id,
+    al.purpose,
+    al.is_primary,
+    al.effective_from,
+    al.effective_until,
+    al.metadata,
+    al.created_at,
+    al.created_by,
+    al.updated_at,
+    al.updated_by,
+    -- address display fields
+    a.address_type,
+    a.line1,
+    a.city,
+    a.region,
+    a.postal_code,
+    a.country_code,
+    a.formatted_address,
+    -- country label
+    c.name              AS country_name
+FROM master.address_link al
+JOIN master.address a
+    ON  a.tenant_id = al.tenant_id
+    AND a.id        = al.address_id
+LEFT JOIN shared.country c
+    ON  c.code = a.country_code
+WHERE al.owner_type = 'business_partner';
+
+COMMENT ON VIEW master.v_business_partner_address IS
+    'Address links scoped to owner_type=business_partner, joined with address and country. '
+    'id = address_link.id (the link PK). No temporal filter — shows all links including expired. '
+    'SECURITY INVOKER — RLS on underlying tables enforces tenant isolation.';
+
+
 -- ============================================================================
 -- CORE FINANCE — mv_company_postable_account
 -- Materialized view caching the set of GL accounts postable per company.
@@ -379,6 +423,314 @@ COMMENT ON VIEW master.v_bank_account_link_resolved IS
     'fintech fields and correspondent bank. Account values masked. SECURITY INVOKER.';
 
 
+-- v_business_partner_bank_account - canonical BP-owned banking lens.
+-- Includes legacy supplier/customer-owned links as a compatibility bridge by
+-- resolving their parent business_partner_id through the role anchor.
+CREATE OR REPLACE VIEW master.v_business_partner_bank_account
+    WITH (security_invoker = true, security_barrier = true)
+AS
+WITH bp_scoped_link AS (
+    SELECT
+        bal.*,
+        bal.owner_id AS business_partner_id
+    FROM master.bank_account_link bal
+    WHERE bal.owner_type = 'business_partner'
+
+    UNION ALL
+
+    SELECT
+        bal.*,
+        s.business_partner_id
+    FROM master.bank_account_link bal
+    JOIN master.supplier s
+      ON s.tenant_id = bal.tenant_id
+     AND s.id        = bal.owner_id
+    WHERE bal.owner_type = 'supplier'
+
+    UNION ALL
+
+    SELECT
+        bal.*,
+        c.business_partner_id
+    FROM master.bank_account_link bal
+    JOIN master.customer c
+      ON c.tenant_id = bal.tenant_id
+     AND c.id        = bal.owner_id
+    WHERE bal.owner_type = 'customer'
+)
+SELECT
+    bal.id,
+    bal.tenant_id,
+    bal.business_partner_id,
+    ba.account_id_value                      AS account_number,
+    ba.currency_code,
+    ba.account_holder_name,
+    ba.account_id_type,
+    ba.account_nature,
+    ba.is_verified,
+    bal.purpose,
+    bal.is_primary,
+    bal.effective_from,
+    bal.effective_until,
+    COALESCE(bp.name, ba.bank_name_override) AS bank_name,
+    ba.bic_override,
+    ba.bank_party_id,
+    bal.bank_account_id,
+    bal.created_at,
+    bal.updated_at,
+    bal.owner_type,
+    bal.owner_id,
+    bal.company_code_id,
+    cc.code                                  AS company_code,
+    COALESCE(cc.display_name, cc.name)       AS company_code_name,
+    ba.account_id_value,
+    CASE
+        WHEN ba.account_last4 IS NOT NULL
+        THEN repeat('*', greatest(length(ba.account_id_value) - 4, 0)) || ba.account_last4
+        ELSE repeat('*', greatest(length(ba.account_id_value) - 4, 0))
+             || right(ba.account_id_value, 4)
+    END                                      AS account_id_value_masked,
+    ba.account_last4,
+    ba.verified_at,
+    ba.verified_by,
+    ba.verification_method,
+    ba.bank_name_override,
+    COALESCE(bp.bic, ba.bic_override)        AS bic,
+    COALESCE(bp.country_code, ba.bank_country_override) AS bank_country_code,
+    ba.bank_country_override,
+    bp.institution_type,
+    bp.branch_code,
+    bp.branch_name,
+    bp.national_bank_code_type,
+    bp.national_bank_code,
+    bp.supports_swift,
+    bp.supports_local_clearing,
+    bp.supports_sepa,
+    bp.supports_ach,
+    ba.provider_account_ref,
+    cbp.name                                 AS correspondent_bank_name,
+    cbp.bic                                  AS correspondent_bic,
+    bal.metadata                             AS link_metadata,
+    ba.metadata                              AS account_metadata
+FROM bp_scoped_link bal
+JOIN master.bank_account ba
+  ON ba.id        = bal.bank_account_id
+ AND ba.tenant_id = bal.tenant_id
+LEFT JOIN master.bank_party bp
+  ON bp.id        = ba.bank_party_id
+ AND bp.tenant_id = ba.tenant_id
+LEFT JOIN master.bank_party cbp
+  ON cbp.id        = ba.correspondent_bank_party_id
+ AND cbp.tenant_id = ba.tenant_id
+LEFT JOIN master.company_code cc
+  ON cc.id        = bal.company_code_id
+ AND cc.tenant_id = bal.tenant_id;
+
+COMMENT ON VIEW master.v_business_partner_bank_account IS
+    'Canonical BP banking view over bank_account_link + bank_account. '
+    'owner_type=business_partner is canonical; supplier/customer owner links '
+    'are included as temporary compatibility rows via their BP role anchors.';
+
+
+-- v_supplier_bank_account - temporary supplier compatibility view.
+-- New writes should use owner_type='business_partner' and read through
+-- v_business_partner_bank_account. This view keeps Supplier Banking tabs
+-- working while callers move to BP-owned banking.
+CREATE OR REPLACE VIEW master.v_supplier_bank_account
+    WITH (security_invoker = true, security_barrier = true)
+AS
+WITH supplier_scoped_link AS (
+    SELECT
+        bal.*,
+        s.id AS supplier_id
+    FROM master.supplier s
+    JOIN master.bank_account_link bal
+      ON bal.tenant_id = s.tenant_id
+     AND bal.owner_id  = s.business_partner_id
+    WHERE bal.owner_type = 'business_partner'
+
+    UNION ALL
+
+    SELECT
+        bal.*,
+        bal.owner_id AS supplier_id
+    FROM master.bank_account_link bal
+    WHERE bal.owner_type = 'supplier'
+)
+SELECT
+    bal.id,
+    bal.tenant_id,
+    bal.supplier_id,
+    ba.account_id_value                      AS account_number,
+    ba.currency_code,
+    ba.account_holder_name,
+    ba.account_id_type,
+    ba.account_nature,
+    ba.is_verified,
+    bal.purpose,
+    bal.is_primary,
+    bal.effective_from,
+    bal.effective_until,
+    COALESCE(bp.name, ba.bank_name_override) AS bank_name,
+    ba.bic_override,
+    ba.bank_party_id,
+    bal.bank_account_id,
+    bal.created_at,
+    bal.updated_at
+FROM supplier_scoped_link bal
+JOIN master.bank_account ba
+  ON ba.id        = bal.bank_account_id
+ AND ba.tenant_id = bal.tenant_id
+LEFT JOIN master.bank_party bp
+  ON bp.id        = ba.bank_party_id
+ AND bp.tenant_id = ba.tenant_id;
+
+COMMENT ON VIEW master.v_supplier_bank_account IS
+    'Temporary compatibility view for supplier banking. Shows canonical '
+    'BP-owned bank links for each supplier plus legacy owner_type=supplier '
+    'links. New code should use master.v_business_partner_bank_account.';
+
+-- ============================================================================
+-- BP role summary
+-- ============================================================================
+
+DROP VIEW IF EXISTS master.v_business_partner_role_summary;
+CREATE OR REPLACE VIEW master.v_business_partner_role_summary AS
+WITH supplier_scope AS (
+    SELECT
+        supplier_id,
+        tenant_id,
+        (COUNT(*) FILTER (WHERE is_active))::integer AS active_scope_count,
+        COUNT(*)::integer AS company_scope_count,
+        (COUNT(*) FILTER (WHERE is_blocked))::integer AS blocked_scope_count,
+        (MIN(currency_code) FILTER (WHERE is_active AND currency_code IS NOT NULL))::text AS primary_currency_code,
+        MAX(updated_at) AS last_scope_updated_at
+    FROM master.company_code_supplier_profile
+    GROUP BY tenant_id, supplier_id
+),
+customer_scope AS (
+    SELECT
+        customer_id,
+        tenant_id,
+        (COUNT(*) FILTER (WHERE is_active))::integer AS active_scope_count,
+        COUNT(*)::integer AS company_scope_count,
+        (COUNT(*) FILTER (WHERE is_blocked))::integer AS blocked_scope_count,
+        (MIN(currency_code) FILTER (WHERE is_active AND currency_code IS NOT NULL))::text AS primary_currency_code,
+        MAX(updated_at) AS last_scope_updated_at
+    FROM master.company_code_customer_profile
+    GROUP BY tenant_id, customer_id
+)
+SELECT
+    s.id,
+    s.tenant_id,
+    s.business_partner_id,
+    'supplier'::text AS role_kind,
+    'Supplier Role'::text AS role_label,
+    'supplier'::text AS role_entity_code,
+    s.id AS role_record_id,
+    s.supplier_code AS role_code,
+    s.supplier_type AS role_type,
+    s.status,
+    s.is_active,
+    COALESCE(ss.active_scope_count, 0)::integer AS active_scope_count,
+    COALESCE(ss.company_scope_count, 0)::integer AS company_scope_count,
+    COALESCE(ss.blocked_scope_count, 0)::integer AS blocked_scope_count,
+    COALESCE(s.is_payment_ready, false) AS is_payment_ready,
+    NULL::boolean AS is_key_account,
+    NULL::text AS risk_rating,
+    COALESCE(ss.blocked_scope_count, 0) > 0 OR s.status IN ('on_hold', 'suspended') AS is_blocked,
+    ss.primary_currency_code,
+    NULL::integer AS open_document_count,
+    NULL::numeric(18,4) AS ytd_amount,
+    ss.primary_currency_code AS ytd_currency_code,
+    10::integer AS display_order,
+    s.created_at,
+    GREATEST(
+        COALESCE(s.updated_at, s.created_at),
+        COALESCE(ss.last_scope_updated_at, s.created_at)
+    ) AS updated_at
+FROM master.supplier s
+LEFT JOIN supplier_scope ss
+  ON ss.supplier_id = s.id
+ AND ss.tenant_id = s.tenant_id
+UNION ALL
+SELECT
+    c.id,
+    c.tenant_id,
+    c.business_partner_id,
+    'customer'::text AS role_kind,
+    'Customer Role'::text AS role_label,
+    'customer'::text AS role_entity_code,
+    c.id AS role_record_id,
+    c.customer_code AS role_code,
+    c.customer_type AS role_type,
+    c.status,
+    c.is_active,
+    COALESCE(cs.active_scope_count, 0)::integer AS active_scope_count,
+    COALESCE(cs.company_scope_count, 0)::integer AS company_scope_count,
+    COALESCE(cs.blocked_scope_count, 0)::integer AS blocked_scope_count,
+    NULL::boolean AS is_payment_ready,
+    COALESCE(c.is_key_account, false) AS is_key_account,
+    c.risk_rating,
+    COALESCE(cs.blocked_scope_count, 0) > 0 OR c.status IN ('on_hold', 'credit_hold') AS is_blocked,
+    cs.primary_currency_code,
+    NULL::integer AS open_document_count,
+    NULL::numeric(18,4) AS ytd_amount,
+    cs.primary_currency_code AS ytd_currency_code,
+    20::integer AS display_order,
+    c.created_at,
+    GREATEST(
+        COALESCE(c.updated_at, c.created_at),
+        COALESCE(cs.last_scope_updated_at, c.created_at)
+    ) AS updated_at
+FROM master.customer c
+LEFT JOIN customer_scope cs
+  ON cs.customer_id = c.id
+ AND cs.tenant_id = c.tenant_id;
+
+COMMENT ON VIEW master.v_business_partner_role_summary IS
+    'BP 360 read model for Overview role cards. One row per supplier/customer role, '
+    'with role identity, status, company-code scope counts, block posture, and typed '
+    'future AP/AR document metrics. SECURITY INVOKER; base-table RLS applies.';
+
+-- ============================================================================
+-- BP 360 governance summary
+-- ============================================================================
+
+DROP VIEW IF EXISTS master.v_business_partner_governance_summary;
+CREATE OR REPLACE VIEW master.v_business_partner_governance_summary AS
+SELECT
+    tenant_id,
+    party_id AS business_partner_id,
+    SUM(CASE
+        WHEN relation_type = 'shareholder' AND is_active THEN COALESCE(ownership_pct, 0)
+        ELSE 0
+    END) AS disclosed_equity_pct,
+    SUM(CASE
+        WHEN relation_type IN ('ubo', 'shareholder') AND is_active
+            THEN COALESCE(beneficial_ownership_pct, ownership_pct, 0)
+        ELSE 0
+    END) AS disclosed_beneficial_ownership_pct,
+    COUNT(*) FILTER (WHERE relation_type = 'ubo' AND is_active) AS ubo_count,
+    COUNT(*) FILTER (WHERE relation_type IN ('director', 'board_member', 'officer') AND is_active) AS leadership_count,
+    COUNT(*) FILTER (WHERE relation_type IN ('signatory', 'authorized_representative', 'proxy') AND is_active) AS signatory_count,
+    COUNT(*) FILTER (WHERE relation_type IN ('auditor', 'advisor', 'company_secretary') AND is_active) AS advisory_count,
+    COUNT(*) FILTER (WHERE sanctions_status IN ('flagged', 'blocked') AND is_active) AS sanctions_issue_count,
+    COUNT(*) FILTER (WHERE pep_status = 'pep' AND is_active) AS pep_count,
+    COUNT(*) FILTER (WHERE kyc_status IN ('verified', 'passed') AND is_active) AS kyc_verified_count,
+    COUNT(*) FILTER (WHERE evidence_status IN ('verified', 'waived') AND is_active) AS evidence_ready_count,
+    MAX(last_screened_at) FILTER (WHERE is_active) AS last_screened_at,
+    MAX(last_reviewed_at) FILTER (WHERE is_active) AS last_reviewed_at,
+    MIN(next_review_at) FILTER (WHERE is_active AND next_review_at IS NOT NULL) AS next_review_at
+FROM master.party_governance_relation
+WHERE party_type = 'business_partner'
+GROUP BY tenant_id, party_id;
+
+COMMENT ON VIEW master.v_business_partner_governance_summary IS
+    'BP 360 read model for governance posture: ownership disclosure, UBOs, leadership, '
+    'signatories, compliance exceptions, and review cadence. SECURITY INVOKER; base-table RLS applies.';
+
+
 -- ============================================================================
 -- UI Principal views
 -- ============================================================================
@@ -434,3 +786,35 @@ COMMENT ON VIEW master.v_effective_principal_ui IS
     '— no tenant-level column for these. '
     'Working-context defaults fall back to principal_profile (HR/operational defaults). '
     'SECURITY INVOKER — RLS on base tables applies to the calling session.';
+
+
+-- ============================================================================
+-- §RK  master.v_tenant_risk_source_config — redacted source config view
+-- Omits api_config (provider credentials). Application code uses this view
+-- for all display and management surfaces. Server-side integration workers
+-- read api_config directly from the base table, running as athyperadmin.
+-- ============================================================================
+
+DROP VIEW IF EXISTS master.v_tenant_risk_source_config;
+CREATE OR REPLACE VIEW master.v_tenant_risk_source_config AS
+SELECT
+    id,
+    tenant_id,
+    source_code,
+    is_enabled,
+    custom_trust_level,
+    -- api_config intentionally excluded; contains provider credentials.
+    -- Read from master.tenant_risk_source_config as athyperadmin only.
+    status,
+    created_at,
+    created_by,
+    updated_at,
+    updated_by
+FROM master.tenant_risk_source_config;
+
+COMMENT ON VIEW master.v_tenant_risk_source_config IS
+    'Redacted view of master.tenant_risk_source_config. api_config (provider API '
+    'credentials) is excluded from this view. '
+    'All application-facing reads (settings UI, config management) MUST use this view. '
+    'Integration workers that call provider APIs read the base table as athyperadmin. '
+    'SECURITY INVOKER — RLS on the base table applies to the calling session.';

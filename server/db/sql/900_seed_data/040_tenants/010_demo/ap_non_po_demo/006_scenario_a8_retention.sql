@@ -26,7 +26,7 @@ BEGIN
     SELECT id INTO v_cc_id FROM master.company_code
       WHERE tenant_id = v_tenant_id AND code = 'AUIC';
     SELECT id INTO v_vendor_id FROM master.supplier
-      WHERE tenant_id = v_tenant_id AND code = 'ACME-CONSULT-US';
+      WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US';
 
     SELECT id INTO v_sc_opex_id FROM master.spend_category
       WHERE tenant_id = v_tenant_id

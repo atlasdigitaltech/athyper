@@ -16,7 +16,8 @@ FROM shared.permission_category c
 JOIN (VALUES
     ('hold',         'Hold',             'workflow', 'record', 'medium', 92),
     ('release_hold', 'Release Hold',     'workflow', 'record', 'medium', 93),
-    ('view_match',   'View Match Case',  'utility',  'record', 'low',    75)
+    ('view_match',   'View Match Case',  'utility',  'record', 'low',    75),
+    ('extend',       'Extend Record',    'entity',   'record', 'medium', 76)
 ) AS v(code, name, cat, st, rl, so) ON c.code = v.cat
 ON CONFLICT (code) DO NOTHING;
 
@@ -33,7 +34,7 @@ INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL, 'supplier', 'create',  'LIST',   'PRIMARY',  'NAVIGATE', '/app/supplier/new',          false, 10, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'supplier', 'create',  'LIST',   'PRIMARY',  'NAVIGATE', '/app/business_partner/new?mode=supplier', false, 10, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'supplier', 'update',  'DETAIL', 'PRIMARY',  'NAVIGATE', '/app/supplier/{id}?mode=edit', true, 20, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'supplier', 'cancel',  'DETAIL', 'OVERFLOW', 'MODAL',    'deactivate',                 true,  30, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'supplier', 'close',   'DETAIL', 'OVERFLOW', 'MODAL',    'archive',                    true,  40, '00000000-0000-0000-0000-000000000000'),
@@ -47,8 +48,8 @@ INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL, 'customer', 'create',  'LIST',   'PRIMARY',  'NAVIGATE', '/master/customer/new',       false, 10, '00000000-0000-0000-0000-000000000000'),
-    (NULL, 'customer', 'update',  'DETAIL', 'PRIMARY',  'NAVIGATE', '/master/customer/{id}/edit', true,  20, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'customer', 'create',  'LIST',   'PRIMARY',  'NAVIGATE', '/app/business_partner/new?mode=customer', false, 10, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'customer', 'update',  'DETAIL', 'PRIMARY',  'NAVIGATE', '/app/customer/{id}?mode=edit', true,  20, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'customer', 'cancel',  'DETAIL', 'OVERFLOW', 'MODAL',    'deactivate',                 true,  30, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'customer', 'close',   'DETAIL', 'OVERFLOW', 'MODAL',    'archive',                    true,  40, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'customer', 'export',  'LIST',   'TOOLBAR',  'API',      'export',                     false, 50, '00000000-0000-0000-0000-000000000000')
@@ -71,6 +72,39 @@ END
 WHERE tenant_id IS NULL
   AND entity_name IN ('purchase_invoice','purchase_order','journal_entry','payment_entry')
   AND permission_code IN ('create','update')
+  AND handler_type = 'NAVIGATE';
+
+-- BP-first create entry points for supplier/customer role creation.
+UPDATE control.entity_operation
+SET handler_target = CASE
+    WHEN entity_name = 'supplier' AND permission_code = 'create' THEN '/app/business_partner/new?mode=supplier'
+    WHEN entity_name = 'customer' AND permission_code = 'create' THEN '/app/business_partner/new?mode=customer'
+    WHEN entity_name = 'customer' AND permission_code = 'update' THEN '/app/customer/{id}?mode=edit'
+    ELSE handler_target
+END
+WHERE tenant_id IS NULL
+  AND entity_name IN ('supplier','customer')
+  AND permission_code IN ('create','update')
+  AND handler_type = 'NAVIGATE';
+
+INSERT INTO control.entity_operation
+    (tenant_id, entity_name, permission_code, surface, placement,
+     handler_type, handler_target, is_record_required, sort_order, created_by)
+VALUES
+    (NULL, 'business_partner', 'create', 'LIST', 'PRIMARY', 'NAVIGATE', '/app/business_partner/new', false, 10, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'business_partner', 'extend', 'DETAIL', 'PRIMARY', 'NAVIGATE', '/app/business_partner/new?mode=extension&bp={id}', true, 20, '00000000-0000-0000-0000-000000000000'),
+    (NULL, 'business_partner', 'export', 'LIST', 'TOOLBAR', 'API', 'export', false, 50, '00000000-0000-0000-0000-000000000000')
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
+
+UPDATE control.entity_operation
+SET handler_target = CASE
+    WHEN permission_code = 'create' THEN '/app/business_partner/new'
+    WHEN permission_code = 'extend' THEN '/app/business_partner/new?mode=extension&bp={id}'
+    ELSE handler_target
+END
+WHERE tenant_id IS NULL
+  AND entity_name = 'business_partner'
+  AND permission_code IN ('create','extend')
   AND handler_type = 'NAVIGATE';
 
 -- ══════════════════════════════════════════════════════════════════════════════

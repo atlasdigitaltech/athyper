@@ -24,6 +24,7 @@ export {
   useApprovalContext,
   useSubmitWorkflowAction,
   useWorkflowActivity,
+  useRecentActivity,
   // Notifications
   useNotifications,
   useUnreadCount,

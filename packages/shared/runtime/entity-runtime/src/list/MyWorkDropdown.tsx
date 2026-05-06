@@ -15,7 +15,7 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, UserCircle } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import type { EntityListFilters } from "@athyper/api-contracts/entity-list";
@@ -100,8 +100,9 @@ export function MyWorkDropdown({
             : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
         )}
       >
-        {label}
-        <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
+        <UserCircle className={cn("h-3.5 w-3.5 shrink-0", isPersonal ? "text-primary" : "text-muted-foreground")} />
+        <span className="hidden sm:inline">{label}</span>
+        <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (

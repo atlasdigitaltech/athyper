@@ -347,6 +347,7 @@ type ActionGroupsConfig = Record<string, {
 }>;
 
 const ACTION_CODE_ALIASES: Record<string, string[]> = {
+  complete:         ["submit"],
   update:           ["edit"],
   edit:             ["update"],
   cancel:           ["cancel_document"],

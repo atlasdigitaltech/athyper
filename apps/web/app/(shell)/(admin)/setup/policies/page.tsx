@@ -772,7 +772,7 @@ function NewPolicyDialog({ open, onOpenChange }: NewPolicyDialogProps) {
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Entity Type *</Label>
-            <Input value={entityType} onChange={(e) => setEntityType(e.target.value)} placeholder="e.g. journal_entry" />
+            <Input value={entityType} onChange={(e) => setEntityType(e.target.value)} placeholder="Enter entity type" />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Description</Label>
@@ -1082,12 +1082,13 @@ function PolicyGrid() {
 // ── PolicyEvaluator tab ───────────────────────────────────────────────────────
 
 function PolicyEvaluator() {
-  const [entityType, setEntityType] = useState("journal_entry");
+  const [entityType, setEntityType] = useState("");
   const [payload, setPayload]       = useState("{\n  \"amount\": 50000\n}");
   const [companyCodeId, setCompanyCodeId] = useState("");
   const [legalEntityId, setLegalEntityId] = useState("");
   const [result, setResult]         = useState<EvalResult | null>(null);
   const [error, setError]           = useState<string | null>(null);
+  const canEvaluate = entityType.trim().length > 0 && payload.trim().length > 0;
 
   const evaluate = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
@@ -1135,7 +1136,7 @@ function PolicyEvaluator() {
               <Input
                 value={entityType}
                 onChange={(e) => setEntityType(e.target.value)}
-                placeholder="e.g. journal_entry"
+                placeholder="Enter entity type"
                 className="font-mono text-sm"
               />
             </div>
@@ -1169,7 +1170,7 @@ function PolicyEvaluator() {
               </div>
             </div>
             {error && <p className="text-xs text-destructive">{error}</p>}
-            <Button className="w-full" onClick={run} loading={evaluate.isPending}>
+            <Button className="w-full" onClick={run} loading={evaluate.isPending} disabled={!canEvaluate}>
               <Play className="mr-2 h-3.5 w-3.5" />
               Run Evaluation
             </Button>

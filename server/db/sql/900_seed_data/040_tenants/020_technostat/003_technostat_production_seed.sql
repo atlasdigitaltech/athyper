@@ -592,6 +592,7 @@ END $p10$;
 -- ║  P11: FISCAL PERIODS — FY2025 (open) + FY2026 (future) per CC           ║
 -- ╚═══════════════════════════════════════════════════════════════════════════╝
 
+-- NOTE: FY2026 period 5 is opened for May journal-entry testing; other FY2026 monthly periods remain future.
 DO $p11$
 DECLARE
     v_su       uuid := '00000000-0000-0000-0000-000000000000';
@@ -636,7 +637,9 @@ BEGIN
                 VALUES (v_tid, v_cc.id,
                         v_cc.code || '-' || v_fy || '-P' || lpad(v_pnum::text, 2, '0'),
                         'FY' || v_fy || ' Period ' || v_pnum || ' (' || to_char(v_pstart, 'Mon YYYY') || ')',
-                        v_fy, v_pnum, 'normal', v_pstart, v_pend, v_pnum, v_status, v_su, v_meta)
+                        v_fy, v_pnum, 'normal', v_pstart, v_pend, v_pnum,
+                        CASE WHEN v_fy = 2025 OR (v_fy = 2026 AND v_pnum = 5) THEN 'open' ELSE 'future' END,
+                        v_su, v_meta)
                 ON CONFLICT (tenant_id, company_code_id, fiscal_year, period_number)
                 DO UPDATE SET start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date, name = EXCLUDED.name, status = EXCLUDED.status, updated_at = now(), updated_by = v_su;
             END LOOP;
@@ -650,7 +653,7 @@ BEGIN
         END LOOP;
     END LOOP;
 
-    RAISE NOTICE '[P11] Fiscal periods seeded: FY2025 (open) + FY2026 (future) for 4 company codes';
+    RAISE NOTICE '[P11] Fiscal periods seeded: FY2025 open + FY2026 P5 open for 4 company codes';
 END $p11$;
 
 
@@ -713,6 +716,47 @@ BEGIN
 
     RAISE NOTICE '[P12] 4 ledger books + 11 assignments seeded (DDL-aligned)';
 END $p12$;
+
+DO $p12a$
+DECLARE
+    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_tid  uuid;
+    v_meta jsonb := '{"_seed": {"pack": "003_prod_bps", "version": "1.0.0"}}'::jsonb;
+    v_row  record;
+BEGIN
+    SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
+
+    FOR v_row IN
+        SELECT ba.company_code_id, ba.book_id
+        FROM   master.company_code_book_assignment ba
+        JOIN   master.ledger_book lb
+               ON lb.id = ba.book_id AND lb.tenant_id = ba.tenant_id
+        WHERE  ba.tenant_id = v_tid
+          AND  ba.status    = 'active'
+          AND  lb.category  = 'statutory'
+    LOOP
+        INSERT INTO governance.book_period_status (
+            tenant_id, company_code_id, book_id,
+            fiscal_year, period_number,
+            status, opened_at, opened_by,
+            created_by, metadata
+        )
+        VALUES (
+            v_tid, v_row.company_code_id, v_row.book_id,
+            2026, 5,
+            'open', now(), v_su,
+            v_su, v_meta
+        )
+        ON CONFLICT (tenant_id, company_code_id, book_id, fiscal_year, period_number)
+        DO UPDATE SET
+            status     = 'open',
+            opened_at  = COALESCE(governance.book_period_status.opened_at, now()),
+            updated_at = now(),
+            updated_by = v_su;
+    END LOOP;
+
+    RAISE NOTICE '[P12A] FY2026 P5 statutory book periods opened for Technostat';
+END $p12a$;
 
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -846,13 +890,9 @@ BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_pt', 'version', '2.0.0', 'seeded_at', now()::text));
 
-    -- Remove stale rows before re-seeding: DELETE bypasses the immutability BEFORE UPDATE
-    -- trigger and avoids CHECK constraint violations on pre-existing rows with legacy values.
-    DELETE FROM master.payment_term_discount_tier
-    WHERE tenant_id = v_tid;
-
-    DELETE FROM master.payment_term
-    WHERE tenant_id = v_tid;
+    -- Payment terms are referenced by company-code supplier/customer profiles and
+    -- document discount results. Preserve existing rows and only insert missing
+    -- seed terms; active payment terms are immutable by design.
 
     INSERT INTO master.payment_term (tenant_id, code, name, description,
         applicable_to, base_event, due_rule_type, due_days,
@@ -878,7 +918,7 @@ BEGIN
         INSERT INTO master.payment_term_discount_tier (tenant_id, payment_term_id, tier_no,
             qualify_within_days, discount_pct, discount_basis_mode, metadata, created_by)
         VALUES (v_tid, v_pt_210, 1, 10, 2.00, 'GROSS', v_meta, v_su)
-        ON CONFLICT (payment_term_id, tier_no) DO UPDATE SET discount_pct=EXCLUDED.discount_pct;
+        ON CONFLICT (payment_term_id, tier_no) DO NOTHING;
     END IF;
 
     RAISE NOTICE '[P15] 10 payment terms + 1 discount tier seeded (DDL-aligned)';

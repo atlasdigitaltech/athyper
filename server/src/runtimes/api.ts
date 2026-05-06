@@ -22,6 +22,8 @@ import { registerSearchRoutes } from "@athyper/svc-search";
 import { registerDocumentsRoutes } from "@athyper/svc-documents";
 import { registerCollabRoutes } from "@athyper/svc-collab";
 import { registerCollabAttachmentRoutes } from "../../framework/runtime/services/collab/routes/collab-attachments.route.js";
+import { registerMasterContactsRoutes } from "../../framework/runtime/services/master/routes/contacts.route.js";
+import { registerMasterAddressRoutes } from "../../framework/runtime/services/master/routes/addresses.route.js";
 import { registerFinanceRoutes } from "@athyper/svc-finance";
 import {
   registerPlatformRoutes,
@@ -32,6 +34,7 @@ import {
   registerNotificationRoutes,
 } from "@athyper/svc-platform";
 import { registerJobsRoutes } from "@athyper/svc-jobs";
+import { mapPostgresBusinessError } from "@athyper/svc-shared";
 import { registerJobsAdminRoutes } from "../../framework/runtime/services/jobs/routes/jobs.admin.route.js";
 import { registerJobsBoardRoutes } from "../../framework/runtime/services/jobs/routes/jobs.board.route.js";
 
@@ -448,6 +451,18 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     objectStorage: objectStorageRef.current ?? undefined,
   });
 
+  registerMasterContactsRoutes(apiRouter, {
+    db:     db.kysely,
+    auth:   { verifyToken: (token: string) => auth.verifyToken(token) },
+    logger,
+  });
+
+  registerMasterAddressRoutes(apiRouter, {
+    db:     db.kysely,
+    auth:   { verifyToken: (token: string) => auth.verifyToken(token) },
+    logger,
+  });
+
   // Track B2 — cross-entity search. `search` is null when Meilisearch is
   // not configured; the route returns 503 in that case.
   registerSearchRoutes(apiRouter, {
@@ -650,6 +665,28 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    const businessError = mapPostgresBusinessError(err);
+    if (businessError) {
+      logger.warn("handled_business_error", {
+        err: businessError.code,
+        message: businessError.message,
+        details: businessError.details,
+      });
+      res.status(businessError.status).json({
+        error: businessError.code,
+        message: businessError.message,
+        field: businessError.field,
+        details: businessError.details,
+        errors: [{
+          code: businessError.code,
+          message: businessError.message,
+          field: businessError.field,
+          details: businessError.details,
+        }],
+      });
+      return;
+    }
+
     logger.error("unhandled_error", { err: err.message, stack: err.stack });
     res.status(500).json({
       error: "INTERNAL_ERROR",

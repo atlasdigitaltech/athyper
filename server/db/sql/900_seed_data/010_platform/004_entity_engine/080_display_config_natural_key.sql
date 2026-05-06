@@ -448,3 +448,61 @@ SET display_config = jsonb_build_object(
 )
 WHERE name = 'dashboard' AND tenant_id IS NULL
   AND display_config->>'list_columns' = '["code","name","status"]';
+
+-- =============================================================================
+-- §I  IAM join-table overrides — CONTROL entities without code/name columns
+--     These tables use composite natural keys; §A/§E defaults are wrong for them.
+--     Conditions cover both: still-empty ('{}'::jsonb) and §A-defaulted state.
+-- =============================================================================
+
+-- ── principal_identity_binding ────────────────────────────────────────────────
+UPDATE control.entity
+SET display_config     = jsonb_build_object(
+        'detail_renderer',    'master',
+        'list_columns',       '["provider_code","subject_id","sync_status","created_at"]'::jsonb,
+        'default_sort_field', 'created_at',
+        'default_sort_order', 'desc'
+    ),
+    natural_key_fields = ARRAY['principal_id', 'provider_code']
+WHERE entity_code = 'principal_identity_binding' AND tenant_id IS NULL
+  AND (display_config = '{}'::jsonb
+       OR display_config->>'list_columns' = '["code","name","status"]');
+
+-- ── tenant_module_subscription ────────────────────────────────────────────────
+UPDATE control.entity
+SET display_config     = jsonb_build_object(
+        'detail_renderer',    'master',
+        'list_columns',       '["module_id","status","subscribed_at"]'::jsonb,
+        'default_sort_field', 'subscribed_at',
+        'default_sort_order', 'desc'
+    ),
+    natural_key_fields = ARRAY['tenant_id', 'module_id']
+WHERE entity_code = 'tenant_module_subscription' AND tenant_id IS NULL
+  AND (display_config = '{}'::jsonb
+       OR display_config->>'list_columns' = '["code","name","status"]');
+
+-- ── tenant_feature_entitlement ────────────────────────────────────────────────
+UPDATE control.entity
+SET display_config     = jsonb_build_object(
+        'detail_renderer',    'master',
+        'list_columns',       '["feature_id","status","activated_at"]'::jsonb,
+        'default_sort_field', 'activated_at',
+        'default_sort_order', 'desc'
+    ),
+    natural_key_fields = ARRAY['tenant_id', 'feature_id']
+WHERE entity_code = 'tenant_feature_entitlement' AND tenant_id IS NULL
+  AND (display_config = '{}'::jsonb
+       OR display_config->>'list_columns' = '["code","name","status"]');
+
+-- ── tenant_permission_override ────────────────────────────────────────────────
+UPDATE control.entity
+SET display_config     = jsonb_build_object(
+        'detail_renderer',    'master',
+        'list_columns',       '["permission_id","is_granted","created_at"]'::jsonb,
+        'default_sort_field', 'created_at',
+        'default_sort_order', 'desc'
+    ),
+    natural_key_fields = ARRAY['tenant_id', 'permission_id']
+WHERE entity_code = 'tenant_permission_override' AND tenant_id IS NULL
+  AND (display_config = '{}'::jsonb
+       OR display_config->>'list_columns' = '["code","name","status"]');

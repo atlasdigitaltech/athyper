@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import { cn } from "@athyper/theme/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-md border font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
@@ -16,9 +16,14 @@ const badgeVariants = cva(
         info: "border-transparent bg-info text-info-foreground",
         muted: "border-transparent bg-muted text-muted-foreground",
       },
+      size: {
+        md: "px-2 py-0.5 text-xs",
+        sm: "h-5 px-1.5 py-0 text-[10px] leading-none",
+      },
     },
     defaultVariants: {
       variant: "default",
+      size: "md",
     },
   },
 );
@@ -33,13 +38,16 @@ type BadgeVariant =
   | "info"
   | "muted";
 
+type BadgeSize = "sm" | "md";
+
 export interface BadgeProps extends ComponentPropsWithoutRef<"div"> {
   variant?: BadgeVariant | null;
+  size?: BadgeSize | null;
   children?: ReactNode;
 }
 
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+function Badge({ className, variant, size, ...props }: BadgeProps) {
+  return <div className={cn(badgeVariants({ variant, size }), className)} {...props} />;
 }
 
 export { Badge, badgeVariants };

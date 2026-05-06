@@ -55,6 +55,22 @@ export type FieldDataType = z.infer<typeof FieldDataTypeSchema>;
 export const FieldCardinalitySchema = z.enum(["one", "many", "zero_or_one"]);
 export const FieldOriginSchema = z.enum(["system", "standard", "business"]);
 
+export const ReferencePickerConfigSchema = z.object({
+  /** Primary label in chooser rows, commonly "name". */
+  label_field: z.string().nullable().optional(),
+  /** Secondary code line in chooser rows, commonly "code". */
+  code_field: z.string().nullable().optional(),
+  /** Optional descriptive text line, commonly "description". */
+  description_field: z.string().nullable().optional(),
+  /** Field used to build /app/{entity}/{id}; falls back to code/id conventions. */
+  navigation_field: z.string().nullable().optional(),
+  /** Backward-compatible alias for navigation_field. */
+  record_id_field: z.string().nullable().optional(),
+  show_code: z.boolean().optional(),
+  show_description: z.boolean().optional(),
+  show_view_action: z.boolean().optional(),
+});
+
 // ═══════════════════════════════════════════════════════════════
 // ENTITY FIELD — from control.entity_field DDL
 // ═══════════════════════════════════════════════════════════════
@@ -93,10 +109,30 @@ export const EntityFieldSchema = z.object({
     target_entity: z.string(),
     target_field: z.string().optional(),
     display_field: z.string().optional(),
+    label_field: z.string().nullable().optional(),
+    code_field: z.string().nullable().optional(),
+    description_field: z.string().nullable().optional(),
+    navigation_field: z.string().nullable().optional(),
+    record_id_field: z.string().nullable().optional(),
+    show_code: z.boolean().optional(),
+    show_description: z.boolean().optional(),
+    show_view_action: z.boolean().optional(),
+    picker: ReferencePickerConfigSchema.optional(),
   }).nullable(),
 
   sort_order: z.number().int(),
   group_key: z.string().nullable(),
+  ui_hint: z.record(z.string(), z.unknown()).nullable().optional(),
+  filter_config: z.object({
+    section_key: z.string().optional(),
+    section_label: z.string().optional(),
+    section_order: z.number().int().optional(),
+    control_type: z.string().optional(),
+    quick_filter: z.boolean().optional(),
+    quick_label: z.string().optional(),
+    quick_order: z.number().int().optional(),
+    value_label_map: z.record(z.string(), z.string()).optional(),
+  }).nullable().optional(),
   i18n_key: z.string().nullable(),
 });
 export type EntityField = z.infer<typeof EntityFieldSchema>;
@@ -118,34 +154,154 @@ export type FieldGroup = z.infer<typeof FieldGroupSchema>;
 // MASTER CONFIG SUB-SCHEMAS
 // ═══════════════════════════════════════════════════════════════
 
-/** Section within a composite-renderer tab (field grid or child entity list). */
+/** Config for the summary_cards_with_drawer tab renderer and child_list sections. */
+const SummaryCardsConfigSchema = z.object({
+  /** Field name rendered as each card's primary identity line. */
+  title:          z.string(),
+  /**
+   * Optional high-density business presentation for child sections.
+   * The value is metadata, not entity-code-driven: any child list can opt into
+   * these reusable renderers when its field shape matches the view.
+   */
+  presentation:   z.enum([
+    "cards",
+    "scorecard",
+    "timeline",
+    "profile_cards",
+    "policy_matrix",
+    "ability_cards",
+    "temporal_rules",
+  ]).optional(),
+  /**
+   * Presentation-specific knobs. Kept intentionally open so SQL metadata can
+   * evolve without TypeScript learning every business noun.
+   */
+  presentation_config: z.record(z.string(), z.unknown()).optional(),
+  /** Ordered field names rendered as the card facts line. */
+  facts:          z.array(z.string()).optional(),
+  /** Badge evaluator keys (e.g. "primary", "status", "verified", "expiry"). */
+  badges:         z.array(z.string()).optional(),
+  /** Alert rule keys evaluated per record. */
+  alertRules:     z.array(z.string()).optional(),
+  /** Default sort order fragments. */
+  defaultSort:    z.array(z.string()).optional(),
+  /** Group cards by this field name (phase 2 rendering — schema-ready). */
+  group_by_field: z.string().optional(),
+  /** Ordered group key values for display; ungrouped keys sort to the end. */
+  group_order:    z.array(z.string()).optional(),
+  /** Human-readable labels for group keys. */
+  group_labels:   z.record(z.string(), z.string()).optional(),
+});
+export type SummaryCardsConfig = z.infer<typeof SummaryCardsConfigSchema>;
+
+// ── Visibility condition — controls tab/section rendering ─────────────────────
+
+/**
+ * Runtime condition that gates whether a tab or composite section is rendered.
+ * Evaluated client-side via a lightweight child-entity existence check.
+ */
+export const VisibilityConditionSchema = z.object({
+  /**
+   * child_exists — section is shown only when the target child entity
+   * has at least one record associated with this parent record.
+   */
+  type:               z.enum(["child_exists"]),
+  entity_code:        z.string(),
+  owner_type_filter:  z.string().optional(),
+  party_type_filter:  z.string().optional(),
+});
+export type VisibilityCondition = z.infer<typeof VisibilityConditionSchema>;
+
+/**
+ * Section within a composite-renderer tab.
+ *   fields     — read/edit field grid sourced from the parent entity's own fields.
+ *   child      — single child entity record (e.g. supplier role).
+ *   child_list — paginated card list of child entity records (e.g. certifications
+ *                inside Trust & Compliance). Driven by config like summary_cards_with_drawer.
+ */
 const MasterTabSectionSchema = z.object({
-  id:                 z.string(),
-  label:              z.string(),
-  type:               z.enum(["fields", "child"]),
-  entity_code:        z.string().optional(),
-  display_fields:     z.array(z.string()).optional(),
-  add_href_template:  z.string().optional(),
-  add_label:          z.string().optional(),
-  empty_title:        z.string().optional(),
-  empty_description:  z.string().optional(),
+  id:                   z.string(),
+  label:                z.string(),
+  type:                 z.enum(["fields", "child", "child_list"]),
+  entity_code:          z.string().optional(),
+  display_fields:       z.array(z.string()).optional(),
+  add_href_template:    z.string().optional(),
+  add_label:            z.string().optional(),
+  owner_type_filter:    z.string().optional(),
+  party_type_filter:    z.string().optional(),
+  /**
+   * When set, the child entity panel uses the value of this field from the parent
+   * record as the parent_id for queries and creates, instead of the record's own id.
+   * Use when child records are owned by a related entity (e.g. 'business_partner_id'
+   * on the supplier page to query/create records owned by the business partner).
+   */
+  parent_id_field:      z.string().optional(),
+  /**
+   * When set, the records API performs a single-query two-hop:
+   *   WHERE parentFkCol IN (SELECT id FROM throughTable WHERE throughParentFk = recordUuid)
+   * The intermediary table and its parent_fk are resolved at runtime from control.entity,
+   * so no entity-specific logic lives in TypeScript — only the entity_code lives here.
+   * Example: business_partner page showing supplier-owned certifications passes
+   *   through_entity="supplier"; backend reads supplier.feature_flags.parent_fk=
+   *   "business_partner_id" and builds the subquery automatically.
+   */
+  through_entity:       z.string().optional(),
+  empty_title:          z.string().optional(),
+  empty_description:    z.string().optional(),
+  /** Card config for type=child_list. Same shape as the tab-level config. */
+  config:               SummaryCardsConfigSchema.optional(),
+  /**
+   * When set the section is gated: it is only rendered (and its nav pill shown)
+   * when the condition evaluates to true at runtime.
+   */
+  visibility_condition: VisibilityConditionSchema.optional(),
 });
 export type MasterTabSection = z.infer<typeof MasterTabSectionSchema>;
 
-/** Config for the summary_cards_with_drawer tab renderer. */
-const SummaryCardsConfigSchema = z.object({
-  /** Field name rendered as each card's primary identity line. */
-  title:       z.string(),
-  /** Ordered field names rendered as the card facts line. */
-  facts:       z.array(z.string()).optional(),
-  /** Badge evaluator keys (e.g. "primary", "status", "verified", "expiry"). */
-  badges:      z.array(z.string()).optional(),
-  /** Alert rule keys evaluated per record. */
-  alertRules:  z.array(z.string()).optional(),
-  /** Default sort order fragments. */
-  defaultSort: z.array(z.string()).optional(),
+// ── Completeness check — drives the Overview strip ───────────────────────────
+
+/**
+ * A single check entry in master_config.completeness_checks.
+ * The Overview renderer evaluates each check against live data and surfaces
+ * at most 3 severity-ordered items in the completeness strip.
+ */
+export const CompletenessCheckSchema = z.object({
+  /** Stable key used for deduplication and React keying. */
+  key:        z.string(),
+  /**
+   * Strip label. Supports the {date} placeholder for child_field_expiry,
+   * which is replaced with the earliest expiring record's formatted date.
+   */
+  message:    z.string(),
+  /** Tab id to navigate to when the user clicks this strip item. */
+  tab_target: z.string().optional(),
+  /** Visual severity. Ordering: blocking > warning > info. */
+  severity:   z.enum(["blocking", "warning", "info"]),
+  /**
+   * When set the check is only evaluated when this role entity has
+   * at least one record for the current parent (customer or supplier).
+   */
+  role_gate:    z.enum(["customer", "supplier"]).optional(),
+  /**
+   * Evaluation strategy:
+   *   field_null        — parent record field is null or empty.
+   *   child_missing     — child entity has no records (deferred: requires address entity).
+   *   child_field_expiry — any child record has a date field expiring within threshold_days.
+   *   child_any_match   — any child record has a field value matching one of the given values.
+   */
+  check_type:   z.enum(["field_null", "child_missing", "child_field_expiry", "child_any_match"]),
+  /** Entity code to query for child_* check types. */
+  child_entity: z.string().optional(),
+  /**
+   * Check-type-specific parameters:
+   *   field_null:         { field: string }
+   *   child_missing:      { owner_type_filter?: string }
+   *   child_field_expiry: { field: string; threshold_days: number }
+   *   child_any_match:    { field: string; values: string[] }
+   */
+  check_config: z.record(z.string(), z.unknown()).optional(),
 });
-export type SummaryCardsConfig = z.infer<typeof SummaryCardsConfigSchema>;
+export type CompletenessCheck = z.infer<typeof CompletenessCheckSchema>;
 
 /** A single tab in a master entity's tab strip. */
 const MasterTabSchema = z.object({
@@ -161,12 +317,33 @@ const MasterTabSchema = z.object({
     "activity",
     "blank",
     "summary_cards_with_drawer",
+    "contacts_channel_accordion",
+    "addresses_accordion",
   ]),
   /** Required for renderer="child" or "summary_cards_with_drawer". */
   entity_code:         z.string().optional(),
   display_fields:      z.array(z.string()).optional(),
   add_href_template:   z.string().optional(),
   add_label:           z.string().optional(),
+  owner_type_filter:   z.string().optional(),
+  party_type_filter:   z.string().optional(),
+  /**
+   * When set, the child entity panel uses the value of this field from the parent
+   * record as the parent_id for queries and creates, instead of the record's own id.
+   * Use when child records are owned by a related entity (e.g. 'business_partner_id'
+   * on the supplier page to query/create records owned by the business partner).
+   */
+  parent_id_field:     z.string().optional(),
+  /**
+   * When set, the records API performs a single-query two-hop:
+   *   WHERE parentFkCol IN (SELECT id FROM throughTable WHERE throughParentFk = recordUuid)
+   * The intermediary table and its parent_fk are resolved at runtime from control.entity,
+   * so no entity-specific logic lives in TypeScript — only the entity_code lives here.
+   * Example: business_partner page showing supplier-owned certifications passes
+   *   through_entity="supplier"; backend reads supplier.feature_flags.parent_fk=
+   *   "business_partner_id" and builds the subquery automatically.
+   */
+  through_entity:      z.string().optional(),
   empty_title:         z.string().optional(),
   empty_description:   z.string().optional(),
   blank_message:       z.string().optional(),
@@ -179,9 +356,27 @@ const MasterTabSchema = z.object({
   /** owner_type injected into the link record. */
   link_owner_type:     z.string().optional(),
   /** Config for renderer="summary_cards_with_drawer". */
-  config:              SummaryCardsConfigSchema.optional(),
+  config:               SummaryCardsConfigSchema.optional(),
+  /**
+   * When set the tab content is gated: rendered only when the condition
+   * evaluates to true. Nav pill visibility is phase 2.
+   */
+  visibility_condition: VisibilityConditionSchema.optional(),
 });
 export type MasterTab = z.infer<typeof MasterTabSchema>;
+
+/** A single secondary status dimension shown in the header strip (P3 rail). */
+export const StatusDimensionConfigSchema = z.object({
+  id:           z.string(),
+  label:        z.string(),
+  source_entity: z.string(),
+  source_field:  z.string(),
+  true_label:   z.string(),
+  false_label:  z.string(),
+  true_intent:  z.string(),
+  false_intent: z.string(),
+});
+export type StatusDimensionConfig = z.infer<typeof StatusDimensionConfigSchema>;
 
 /** Config for detail_profile="rich" master entities (master_config). */
 export const MasterConfigSchema = z.object({
@@ -191,12 +386,48 @@ export const MasterConfigSchema = z.object({
   classification_field: z.string().optional(),
   /** Field names to display as KPI fact cells (P2 header rail for rich profile). */
   header_facts:         z.array(z.string()).optional(),
+  /** Secondary boolean status dimensions shown as chips in the P3 status strip. */
+  status_dimensions:    z.array(StatusDimensionConfigSchema).optional(),
   /** Platform context panels shown as icon buttons in the tab bar. */
   platform_panels:      z.array(z.enum(["comments", "attachments", "activity"])).optional(),
   /** Ordered tab definitions. Falls back to [fields, comments, attachments, activity] when absent. */
   tabs:                 z.array(MasterTabSchema).optional(),
+  /**
+   * Completeness checks evaluated in the Overview tab's strip.
+   * Max 3 items are surfaced, sorted by severity (blocking → warning → info).
+   * Checks with role_gate are only evaluated when that role entity exists.
+   */
+  completeness_checks:  z.array(CompletenessCheckSchema).optional(),
 });
 export type MasterConfig = z.infer<typeof MasterConfigSchema>;
+
+/**
+ * First-screen intake mode shown by entity-specific launchers such as
+ * /app/business_partner/new. The mode controls the launcher card and points to
+ * either a metadata flow or a route-level handler.
+ */
+export const EntityIntakeModeSchema = z.object({
+  code: z.string(),
+  label: z.string(),
+  description: z.string().optional(),
+  icon: z.string().optional(),
+  href: z.string().optional(),
+  flow_entity: z.string().optional(),
+  flow_code: z.string().optional(),
+  persistence_mode: z.string().optional(),
+  sort_order: z.number().int().optional(),
+}).passthrough();
+export type EntityIntakeMode = z.infer<typeof EntityIntakeModeSchema>;
+
+/**
+ * Metadata-controlled redirect for /app/[entity]/new.
+ * href_template supports {entity_code} and {entity} placeholders.
+ */
+export const EntityCreateRedirectSchema = z.object({
+  href_template: z.string().min(1),
+  preserve_query: z.boolean().optional(),
+}).passthrough();
+export type EntityCreateRedirect = z.infer<typeof EntityCreateRedirectSchema>;
 
 // ═══════════════════════════════════════════════════════════════
 // COMPILED ENTITY — from snapshot.entity_compiled.compiled_json
@@ -232,6 +463,22 @@ export const CompiledEntitySchema = z.object({
     default_sort_order: z.enum(["asc", "desc"]).optional(),
     list_columns: z.array(z.string()).optional(),
     search_fields: z.array(z.string()).optional(),
+    filter_bar: z.object({
+      quick_filters: z.array(z.object({
+        key: z.string(),
+        label: z.string(),
+        icon: z.string().optional(),
+        field: z.string().optional(),
+        value: z.unknown().optional(),
+        op: z.string().optional(),
+        sort_order: z.number().int().optional(),
+      })).optional(),
+      sections: z.array(z.object({
+        key: z.string(),
+        label: z.string(),
+        sort_order: z.number().int().optional(),
+      })).optional(),
+    }).optional(),
     /**
      * Selects the detail-page rendering strategy. Three canonical values:
      *   "master"   — EntityDetailPage: field-grid + tabs. Richness controlled by detail_profile.
@@ -272,11 +519,31 @@ export const CompiledEntitySchema = z.object({
      */
     status_field_names: z.array(z.string()).optional(),
     /**
+     * Document/status progress stages consumed by document header models.
+     * Kept metadata-driven so documents can define their own lifecycle labels.
+     */
+    lifecycle_stages: z.array(z.object({
+      key: z.string(),
+      label: z.string(),
+    })).optional(),
+    /**
      * Alternate intake flow codes available for this entity.
      * Each code maps to a flow definition in entity_flow.
      * Default: [] (single default flow only).
      */
     alternate_flows: z.array(z.string()).optional(),
+    /**
+     * First-screen intake launcher modes. This lets Meta Studio / metadata
+     * seeds control cards such as Supplier, Customer, and Extension without
+     * adding new front-end route files.
+     */
+    intake_modes: z.array(EntityIntakeModeSchema).optional(),
+    /**
+     * Optional redirect rule for /app/[entity]/new. This allows entities whose
+     * create experience is hosted by another metadata runtime to opt in without
+     * hardcoding entity names in the shell route.
+     */
+    create_redirect: EntityCreateRedirectSchema.optional(),
     /**
      * Field-name hints consumed by buildDocumentHeaderModel().
      * Populated for every entity with detail_renderer = "document".
@@ -323,6 +590,11 @@ export const CompiledEntitySchema = z.object({
       status_changed_at_field: z.string().optional(),
       /** Lifecycle: status_changed_by user field */
       status_changed_by_field: z.string().optional(),
+      /** Document/status progress stages scoped to this header presentation. */
+      lifecycle_stages: z.array(z.object({
+        key: z.string(),
+        label: z.string(),
+      })).optional(),
     }).optional(),
     /**
      * Semantic resolver key for status-field badge coloring in list/detail views.
@@ -420,6 +692,12 @@ export const CompiledEntitySchema = z.object({
      * Set true in entity engine seeds for DIMENSION-class entities with company scope.
      */
     is_company_scoped: z.boolean().optional(),
+    /**
+     * Entity detail page is permanently read-only — profile fields, child tabs, and Add buttons
+     * are all suppressed. Only platform panels (comments, attachments) remain interactive.
+     * Set true for master data entities that are managed through dedicated intake flows.
+     */
+    is_readonly: z.boolean().optional(),
   }),
 
   governance_level: z.string(),

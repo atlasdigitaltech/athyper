@@ -11,12 +11,13 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import type { EntityPickerOption } from "./EntityPicker";
+import type { EntityPickerOption, EntityPickerOptionConfig } from "./EntityPicker";
 
 export interface UseEntitySearchOptions {
   entityCode: string | null;
   /** Extra query params appended to every search request. */
   searchParams?: Record<string, string>;
+  optionConfig?: EntityPickerOptionConfig;
   limit?: number;
 }
 
@@ -29,24 +30,97 @@ export interface UseEntitySearchResult {
   onOpen: () => void;
 }
 
-function rowToOption(row: Record<string, unknown>): EntityPickerOption {
+function textValue(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  return undefined;
+}
+
+function firstText(row: Record<string, unknown>, keys: Array<string | undefined>): string | undefined {
+  for (const key of keys) {
+    if (!key) continue;
+    const value = textValue(row[key]);
+    if (value) return value;
+  }
+  return undefined;
+}
+
+function sameText(left: string | undefined, right: string | undefined): boolean {
+  return !!left && !!right && left.toLowerCase() === right.toLowerCase();
+}
+
+export function entityRowToPickerOption(
+  row: Record<string, unknown>,
+  entityCode: string | null,
+  optionConfig?: EntityPickerOptionConfig,
+): EntityPickerOption {
   const keys = Object.keys(row);
+  const normalizedEntityCode = entityCode?.replace(/-/g, "_");
   const nameKey = keys.find((k) => k !== "id" && k.endsWith("_name"));
-  const label = nameKey && row[nameKey]
-    ? String(row[nameKey])
-    : row["name"]
-      ? String(row["name"])
-      : String(row["code"] ?? row["id"] ?? "").slice(0, 8);
+  const entityNameKey = normalizedEntityCode ? `${normalizedEntityCode}_name` : undefined;
+  const codeKey = normalizedEntityCode ? `${normalizedEntityCode}_code` : undefined;
+  const rawCode = firstText(row, [
+    optionConfig?.codeField ?? undefined,
+    codeKey,
+    "code",
+    "document_no",
+    "document_number",
+    "number",
+  ]);
+  const label = firstText(row, [
+    optionConfig?.labelField ?? undefined,
+    entityNameKey,
+    "name",
+    "display_name",
+    "title",
+    nameKey,
+  ])
+    ?? rawCode
+    ?? textValue(row["id"])?.slice(0, 8)
+    ?? "";
+  const description = firstText(row, [
+    optionConfig?.descriptionField ?? undefined,
+    "description",
+    "display_description",
+    "short_description",
+    "long_description",
+    "summary",
+  ]);
+  const code = optionConfig?.showCode === false || sameText(rawCode, label) ? undefined : rawCode;
+  const normalizedDescription = optionConfig?.showDescription === false
+    || sameText(description, label)
+    || sameText(description, rawCode)
+    ? undefined
+    : description;
+  const recordId = firstText(row, [
+    optionConfig?.recordIdField ?? undefined,
+    optionConfig?.codeField ?? undefined,
+    codeKey,
+    "code",
+    "document_no",
+    "document_number",
+    "number",
+  ]);
+
   return {
     value: String(row["id"] ?? ""),
     label,
-    description: row["code"] ? String(row["code"]) : undefined,
+    code,
+    description: normalizedDescription,
+    recordId,
   };
 }
 
 export function useEntitySearch({
   entityCode,
   searchParams,
+  optionConfig,
   limit = 20,
 }: UseEntitySearchOptions): UseEntitySearchResult {
   const [options, setOptions] = useState<EntityPickerOption[]>([]);
@@ -79,7 +153,7 @@ export function useEntitySearch({
           if (!res.ok) { setOptions([]); return; }
           const body = await res.json() as { data?: Record<string, unknown>[] };
           if (!abortRef.current.signal.aborted) {
-            setOptions((body.data ?? []).map(rowToOption));
+            setOptions((body.data ?? []).map((row) => entityRowToPickerOption(row, entityCode, optionConfig)));
           }
         } catch (err) {
           if (!(err instanceof DOMException && err.name === "AbortError")) {
@@ -90,7 +164,7 @@ export function useEntitySearch({
         }
       }, delay);
     },
-    [entityCode, searchParams, limit],
+    [entityCode, searchParams, optionConfig, limit],
   );
 
   const onQueryChange = useCallback(

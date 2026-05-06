@@ -100,7 +100,15 @@ WHERE e.table_schema = 'document' AND e.table_name = 'accounting_distribution'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
--- ── 4. display_config ────────────────────────────────────────────────────────
+-- ── 4. Natural key — distribution_no is the business key within a source line ─
+UPDATE control.entity
+SET natural_key_fields = ARRAY['distribution_no']
+WHERE table_schema    = 'document'
+  AND table_name      = 'accounting_distribution'
+  AND tenant_id       IS NULL
+  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
+
+-- ── 5. display_config ────────────────────────────────────────────────────────
 UPDATE control.entity
 SET display_config = jsonb_build_object(
     'detail_renderer',    'master',

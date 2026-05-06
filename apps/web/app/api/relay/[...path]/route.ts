@@ -18,6 +18,11 @@ import { RUNTIME_API_URL, buildRuntimeHeaders, sanitizeContentDisposition } from
 
 type Params = { params: Promise<{ path: string[] }> };
 
+const PASSTHROUGH_REQUEST_HEADERS = [
+  "Idempotency-Key",
+  "X-Idempotency-Key",
+] as const;
+
 async function relay(req: NextRequest, { params }: Params): Promise<NextResponse> {
   const session = await getServerSession();
   if (!session) {
@@ -25,7 +30,10 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
   }
 
   const { path } = await params;
-  const upstreamPath = "/" + path.join("/");
+  const joined = path.join("/");
+  // Callers that use relayFetch() pass paths without the /api/ prefix (e.g. "/audit/events").
+  // Callers that build the URL manually may already include it (e.g. "/api/relay/api/records/...").
+  const upstreamPath = joined.startsWith("api/") ? "/" + joined : "/api/" + joined;
 
   // Preserve query string
   const search = req.nextUrl.search;
@@ -35,6 +43,10 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
   const reqContentType = req.headers.get("Content-Type") ?? "";
 
   const forwarded = new Headers(Object.entries(buildRuntimeHeaders(session)));
+  for (const headerName of PASSTHROUGH_REQUEST_HEADERS) {
+    const value = req.headers.get(headerName);
+    if (value) forwarded.set(headerName, value);
+  }
 
   const init: RequestInit = {
     method: req.method,

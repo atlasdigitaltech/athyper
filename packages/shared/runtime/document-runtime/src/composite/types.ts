@@ -25,6 +25,9 @@ export interface ChildFieldSpec {
   field_name: string;
   field_label: string;
   data_type: string;
+  enum_domain_code?: string | null;
+  reference_config?: Record<string, unknown> | null;
+  lookup_config?: Record<string, unknown> | null;
   is_required: boolean;
   cardinality: string;
   ui_variant: string | null;
@@ -47,6 +50,9 @@ export function childFieldToBinding(
     field_name: spec.field_name,
     field_label: spec.field_label,
     data_type: spec.data_type,
+    enum_domain_code: spec.enum_domain_code ?? null,
+    reference_config: spec.reference_config ?? null,
+    lookup_config: spec.lookup_config ?? null,
     mode: spec.is_required ? "required" : "editable",
     span: 1,
     sort_order: spec.sort_order,
@@ -170,7 +176,6 @@ export interface SupplierIntakePayload {
   };
 
   identifiers: Record<string, unknown>[];
-  service_coverage: Record<string, unknown>[];
   certifications: Record<string, unknown>[];
   tax_profiles: Record<string, unknown>[];
   /** Always {} — backend owns all qualification defaults. */
@@ -187,6 +192,7 @@ export interface SupplierIntakePayload {
 export type SectionCompletionStatus = "complete" | "partial" | "empty" | "optional_empty";
 
 export interface SectionCompletionReport {
+  step_key: string;
   section_key: string;
   label: string;
   status: SectionCompletionStatus;
@@ -203,13 +209,23 @@ export interface SectionCompletionReport {
 export type DuplicateMatchSeverity = "blocker" | "warning" | "info";
 
 export interface DuplicateMatch {
-  supplier_id: string;
+  business_partner_id?: string;
+  business_partner_code?: string;
+  supplier_id?: string | null;
+  supplier_code?: string | null;
+  customer_id?: string | null;
+  customer_code?: string | null;
+  role_codes?: string[];
+  supplier_company_code_ids?: string[];
+  customer_company_code_ids?: string[];
+  href?: string;
   code: string;
   name: string;
   match_type: "exact_match" | "strong_match" | "weak_match";
   severity: DuplicateMatchSeverity;
   matched_field: string;
   score: number;
+  recommended_action?: "edit_existing" | "extend_role" | "extend_company_code" | "review";
 }
 
 export interface DuplicateCheckResult {
@@ -220,4 +236,12 @@ export interface DuplicateCheckResult {
     action_hint?: string;
   }>;
   matches: DuplicateMatch[];
+  blocking?: boolean;
+  duplicate_policy?: {
+    source: string;
+    exact_fields: string[];
+    strong_name_threshold: number;
+    weak_name_threshold: number;
+    block_on_exact: boolean;
+  };
 }

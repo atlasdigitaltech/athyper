@@ -7,6 +7,7 @@
 -- ============================================================================
 
 -- §F1  master.legal_entity — statutory / registered body
+-- IAM: IdP org membership maps here via master.legal_entity_identity_binding.
 -- Address: via master.address_link (owner_type='legal_entity')
 -- Contact: via master.contact_link (owner_type='legal_entity')
 CREATE TABLE IF NOT EXISTS master.legal_entity (
@@ -15,21 +16,46 @@ CREATE TABLE IF NOT EXISTS master.legal_entity (
     tenant_id        uuid         NOT NULL,
     code             text         NOT NULL,
     name             text         NOT NULL,
+    display_name     text,
 
-    -- Table-specific (statutory identity)
-    description              text,
-    country_code             character(2)  NOT NULL,
-    functional_currency      character(3)  NOT NULL,
-    reporting_currency       character(3)  NOT NULL,
+    -- Statutory identity
+    legal_name                    text,
+    legal_form                    text,
+    registration_no               text,
+    registration_country_code     char(2),
+    tax_registration_number       text,
+    tax_residence_country_code    char(2),
+    incorporation_date            date,
+    website_url                   text,
+
+    -- Group structure
     entity_type              text          NOT NULL,
     parent_entity_id         uuid,
     consolidation_method     text          NOT NULL DEFAULT 'full',
     ownership_pct            numeric(5,2),
-    tax_registration_number  text,
-    incorporation_date       date,
     regulatory_framework     text,
 
-    -- Metadata
+    -- Finance scope
+    country_code             char(2)       NOT NULL,
+    functional_currency      char(3)       NOT NULL,
+    reporting_currency       char(3)       NOT NULL,
+
+    -- Temporal validity
+    effective_from           date,
+    effective_until          date,
+
+    -- Extended profile
+    description              text,
+    long_description         text,
+    aliases                  text[]        NOT NULL DEFAULT '{}',
+    tags                     jsonb         NOT NULL DEFAULT '[]'::jsonb,
+    business_types           text[]        NOT NULL DEFAULT '{}',
+    founded_year             smallint,
+    employee_count_band      text,
+    annual_revenue_band      text,
+
+    -- Reference
+    external_ref             text,
     metadata                 jsonb         NOT NULL DEFAULT '{}'::jsonb,
 
     -- Lifecycle
@@ -44,18 +70,34 @@ CREATE TABLE IF NOT EXISTS master.legal_entity (
     updated_at       timestamptz,
     updated_by       uuid,
 
-    CONSTRAINT legal_entity_pkey            PRIMARY KEY (id),
-    CONSTRAINT legal_entity_tenant_code_uq  UNIQUE (tenant_id, code),
-    CONSTRAINT legal_entity_tenant_id_uq    UNIQUE (tenant_id, id),
-    CONSTRAINT legal_entity_no_self_ref     CHECK (parent_entity_id IS DISTINCT FROM id),
-    CONSTRAINT legal_entity_ownership_chk   CHECK (ownership_pct IS NULL
-                                                   OR (ownership_pct > 0 AND ownership_pct <= 100)),
-    CONSTRAINT legal_entity_code_nonempty   CHECK (btrim(code) <> ''),
-    CONSTRAINT legal_entity_name_nonempty   CHECK (btrim(name) <> '')
+    CONSTRAINT legal_entity_pkey                PRIMARY KEY (id),
+    CONSTRAINT legal_entity_tenant_code_uq      UNIQUE (tenant_id, code),
+    CONSTRAINT legal_entity_tenant_id_uq        UNIQUE (tenant_id, id),
+    CONSTRAINT legal_entity_no_self_ref         CHECK (parent_entity_id IS DISTINCT FROM id),
+    CONSTRAINT legal_entity_ownership_chk       CHECK (ownership_pct IS NULL
+                                                       OR (ownership_pct > 0 AND ownership_pct <= 100)),
+    CONSTRAINT legal_entity_code_nonempty       CHECK (btrim(code) <> ''),
+    CONSTRAINT legal_entity_name_nonempty       CHECK (btrim(name) <> ''),
+    CONSTRAINT legal_entity_status_chk          CHECK (status IN (
+                                                    'draft', 'active', 'dormant',
+                                                    'in_liquidation', 'dissolved', 'archived')),
+    CONSTRAINT legal_entity_effective_order_chk CHECK (effective_until IS NULL
+                                                       OR effective_from IS NULL
+                                                       OR effective_until >= effective_from),
+    CONSTRAINT legal_entity_founded_year_chk    CHECK (founded_year IS NULL
+                                                       OR (founded_year BETWEEN 1800 AND 2200)),
+    CONSTRAINT legal_entity_reg_country_fmt_chk CHECK (registration_country_code IS NULL
+                                                       OR registration_country_code ~ '^[A-Z]{2}$'),
+    CONSTRAINT legal_entity_tax_country_fmt_chk CHECK (tax_residence_country_code IS NULL
+                                                       OR tax_residence_country_code ~ '^[A-Z]{2}$'),
+    CONSTRAINT legal_entity_website_fmt_chk     CHECK (website_url IS NULL
+                                                       OR website_url ~ '^https?://')
 );
 
 COMMENT ON TABLE master.legal_entity IS
-  'ARCHETYPE=B;SCOPE=T. Statutory / registered body. Group structure with consolidation hierarchy. '
+  'ARCHETYPE=B;SCOPE=T. Statutory / registered body. IAM org membership boundary: '
+  'IdP org maps here via master.legal_entity_identity_binding. '
+  'Group structure with consolidation hierarchy. '
   'Addresses via master.address_link (owner_type=''legal_entity'').';
 
 
@@ -68,26 +110,31 @@ CREATE TABLE IF NOT EXISTS master.company_code (
     tenant_id        uuid         NOT NULL,
     code             text         NOT NULL,
     name             text         NOT NULL,
+    display_name     text,
 
-    -- Table-specific (link to statutory body)
+    -- Link to statutory body
     legal_entity_id          uuid         NOT NULL,
 
-    -- Table-specific (accounting boundary)
+    -- Accounting boundary
     description              text,
-    functional_currency      character(3)  NOT NULL,
+    functional_currency      char(3)       NOT NULL,
+    country_code             char(2),
     fiscal_year_start_month  smallint      NOT NULL DEFAULT 1,
     fiscal_year_variant      text          DEFAULT 'calendar',
     default_ledger_book_id   uuid,
     regulatory_framework     text,
+    timezone_code            text,
 
-    -- Table-specific (tax)
+    -- Tax
     tax_registration_number  text,
     tax_jurisdiction_id      uuid,
 
-    -- Table-specific (operational)
+    -- Operational
     is_intercompany_enabled  boolean      NOT NULL DEFAULT false,
 
-    -- Metadata
+    -- Reference
+    external_ref             text,
+    tags                     jsonb        NOT NULL DEFAULT '[]'::jsonb,
     metadata                 jsonb        NOT NULL DEFAULT '{}'::jsonb,
 
     -- Lifecycle
@@ -102,12 +149,16 @@ CREATE TABLE IF NOT EXISTS master.company_code (
     updated_at       timestamptz,
     updated_by       uuid,
 
-    CONSTRAINT company_code_pkey            PRIMARY KEY (id),
-    CONSTRAINT company_code_tenant_code_uq  UNIQUE (tenant_id, code),
-    CONSTRAINT company_code_tenant_id_uq    UNIQUE (tenant_id, id),
-    CONSTRAINT company_code_fy_start_chk    CHECK (fiscal_year_start_month BETWEEN 1 AND 12),
-    CONSTRAINT company_code_code_nonempty   CHECK (btrim(code) <> ''),
-    CONSTRAINT company_code_name_nonempty   CHECK (btrim(name) <> '')
+    CONSTRAINT company_code_pkey              PRIMARY KEY (id),
+    CONSTRAINT company_code_tenant_code_uq    UNIQUE (tenant_id, code),
+    CONSTRAINT company_code_tenant_id_uq      UNIQUE (tenant_id, id),
+    CONSTRAINT company_code_fy_start_chk      CHECK (fiscal_year_start_month BETWEEN 1 AND 12),
+    CONSTRAINT company_code_code_nonempty     CHECK (btrim(code) <> ''),
+    CONSTRAINT company_code_name_nonempty     CHECK (btrim(name) <> ''),
+    CONSTRAINT company_code_status_chk        CHECK (status IN (
+                                                  'draft', 'active', 'inactive', 'archived')),
+    CONSTRAINT company_code_country_fmt_chk   CHECK (country_code IS NULL
+                                                     OR country_code ~ '^[A-Z]{2}$')
 );
 
 COMMENT ON TABLE master.company_code IS
@@ -921,164 +972,8 @@ COMMENT ON TABLE master.company_code_book_assignment IS
 -- Depends on: §F1–F16 (Core Finance Master), shared.commodity_code, shared.industry_code
 -- =============================================================================
 
--- §P1  master.customer — AR counterparty (B2B/B2C/government)
--- Pure tenant-level party master (WHO). Company-specific terms in company_code_customer_profile.
-CREATE TABLE IF NOT EXISTS master.customer (
-    -- Identity
-    id               uuid         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id        uuid         NOT NULL,
-    code             text         NOT NULL,
-    name             text         NOT NULL,
-
-    -- Table-specific
-    display_name     text,
-    customer_type    text         NOT NULL DEFAULT 'corporate',
-    tax_id           text,
-    description      text,
-    risk_rating      text,
-    is_key_account   boolean      NOT NULL DEFAULT false,
-
-    -- Legal / registration
-    legal_name                  text,
-    registration_no             text,
-    registration_country_code   char(2),
-    tax_id_type                 text,
-    tax_country_code            char(2),
-    website_url                 text,
-    external_ref                text,
-    parent_customer_id          uuid,
-
-    -- Metadata
-    metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
-    tags             jsonb        NOT NULL DEFAULT '[]'::jsonb,
-
-    -- Lifecycle
-    status           text         NOT NULL DEFAULT 'active',
-    is_active        boolean      GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at timestamptz,
-    status_changed_by uuid,
-
-    -- Audit
-    created_at       timestamptz  NOT NULL DEFAULT now(),
-    created_by       uuid         NOT NULL,
-    updated_at       timestamptz,
-    updated_by       uuid,
-
-    CONSTRAINT customer_pkey           PRIMARY KEY (id),
-    CONSTRAINT customer_tenant_id_uq   UNIQUE (tenant_id, id),
-    CONSTRAINT customer_tenant_code_uq UNIQUE (tenant_id, code),
-    CONSTRAINT customer_code_nonempty  CHECK (btrim(code) <> ''),
-    CONSTRAINT customer_name_nonempty  CHECK (btrim(name) <> ''),
-    CONSTRAINT customer_reg_country_fmt_chk CHECK (
-        registration_country_code IS NULL
-        OR registration_country_code::text ~ '^[A-Z]{2}$'),
-    CONSTRAINT customer_tax_country_fmt_chk CHECK (
-        tax_country_code IS NULL
-        OR tax_country_code::text ~ '^[A-Z]{2}$'),
-    CONSTRAINT customer_no_self_parent CHECK (parent_customer_id IS DISTINCT FROM id),
-    CONSTRAINT customer_website_fmt_chk CHECK (website_url IS NULL OR website_url ~ '^https?://')
-);
-
-COMMENT ON TABLE master.customer IS
-    'ARCHETYPE=B;SCOPE=T. AR counterparty — pure tenant-level party master (WHO). B2B/B2C/government. '
-    'Company-specific terms (payment, credit, currency) live in company_code_customer_profile. '
-    'Classifications via commodity_classification bridge.';
-COMMENT ON COLUMN master.customer.legal_name IS
-    'Full registered legal name. May differ from trading name in customer.name.';
-COMMENT ON COLUMN master.customer.registration_no IS
-    'Company registration / incorporation number. Free text — format varies by jurisdiction.';
-COMMENT ON COLUMN master.customer.registration_country_code IS
-    'ISO 3166-1 alpha-2 country of legal registration.';
-COMMENT ON COLUMN master.customer.tax_id_type IS
-    'Type of tax identifier: VAT, GST, TIN, EIN, ABN, etc. '
-    'Lookup-validated via domain master.tax_id_type (no inline CHECK — business vocabulary).';
-COMMENT ON COLUMN master.customer.tax_country_code IS
-    'ISO 3166-1 alpha-2 country where tax_id is registered.';
-COMMENT ON COLUMN master.customer.website_url IS
-    'Customer corporate website. Must begin with http:// or https://.';
-COMMENT ON COLUMN master.customer.external_ref IS
-    'Opaque key from upstream CRM/ERP. Unique per tenant when populated.';
-COMMENT ON COLUMN master.customer.parent_customer_id IS
-    'Self-referential hierarchy for customer groups. NULL = top-level.';
-
-
--- §P2  master.supplier — AP counterparty (vendor/contractor/manufacturer)
--- Pure tenant-level party master (WHO). Company-specific terms + banking in company_code_supplier_profile.
-CREATE TABLE IF NOT EXISTS master.supplier (
-    -- Identity
-    id               uuid         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id        uuid         NOT NULL,
-    code             text         NOT NULL,
-    name             text         NOT NULL,
-
-    -- Table-specific
-    display_name     text,
-    supplier_type    text         NOT NULL DEFAULT 'vendor',
-    tax_id           text,
-    description      text,
-
-    -- Legal / registration
-    legal_name                  text,
-    registration_no             text,
-    registration_country_code   char(2),
-    tax_id_type                 text,
-    tax_country_code            char(2),
-    website_url                 text,
-    external_ref                text,
-    parent_supplier_id          uuid,
-
-    -- Metadata
-    metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
-    tags             jsonb        NOT NULL DEFAULT '[]'::jsonb,
-
-    -- Lifecycle
-    status           text         NOT NULL DEFAULT 'active',
-    is_active        boolean      GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at timestamptz,
-    status_changed_by uuid,
-
-    -- Audit
-    created_at       timestamptz  NOT NULL DEFAULT now(),
-    created_by       uuid         NOT NULL,
-    updated_at       timestamptz,
-    updated_by       uuid,
-
-    CONSTRAINT supplier_pkey           PRIMARY KEY (id),
-    CONSTRAINT supplier_tenant_id_uq   UNIQUE (tenant_id, id),
-    CONSTRAINT supplier_tenant_code_uq UNIQUE (tenant_id, code),
-    CONSTRAINT supplier_code_nonempty  CHECK (btrim(code) <> ''),
-    CONSTRAINT supplier_name_nonempty  CHECK (btrim(name) <> ''),
-    CONSTRAINT supplier_reg_country_fmt_chk CHECK (
-        registration_country_code IS NULL
-        OR registration_country_code::text ~ '^[A-Z]{2}$'),
-    CONSTRAINT supplier_tax_country_fmt_chk CHECK (
-        tax_country_code IS NULL
-        OR tax_country_code::text ~ '^[A-Z]{2}$'),
-    CONSTRAINT supplier_no_self_parent CHECK (parent_supplier_id IS DISTINCT FROM id),
-    CONSTRAINT supplier_website_fmt_chk CHECK (website_url IS NULL OR website_url ~ '^https?://')
-);
-
-COMMENT ON TABLE master.supplier IS
-    'ARCHETYPE=B;SCOPE=T. AP counterparty — pure tenant-level party master (WHO). Vendor/contractor/manufacturer. '
-    'Company-specific terms + banking live in company_code_supplier_profile. '
-    'Classifications via commodity_classification bridge.';
-COMMENT ON COLUMN master.supplier.legal_name IS
-    'Full registered legal name for invoices, contracts, and withholding certificates.';
-COMMENT ON COLUMN master.supplier.registration_no IS
-    'Company registration / incorporation number. Free text.';
-COMMENT ON COLUMN master.supplier.registration_country_code IS
-    'ISO 3166-1 alpha-2 country of legal registration.';
-COMMENT ON COLUMN master.supplier.tax_id_type IS
-    'Type of tax identifier. Lookup-validated via domain master.tax_id_type.';
-COMMENT ON COLUMN master.supplier.tax_country_code IS
-    'ISO 3166-1 alpha-2 country where tax_id is registered.';
-COMMENT ON COLUMN master.supplier.website_url IS
-    'Supplier corporate website. Must begin with http:// or https://.';
-COMMENT ON COLUMN master.supplier.external_ref IS
-    'Opaque key from upstream procurement/ERP. Unique per tenant.';
-COMMENT ON COLUMN master.supplier.parent_supplier_id IS
-    'Self-referential hierarchy for vendor groups. NULL = top-level.';
-
+-- §P1/§P2  master.business_partner + master.customer + master.supplier
+-- Moved to 01h_tables_business_partner.sql (BP-first design)
 
 -- §P3  master.employee — internal workforce, links to principal
 CREATE TABLE IF NOT EXISTS master.employee (
@@ -1522,252 +1417,79 @@ COMMENT ON TABLE master.commodity_classification IS
     'EXCLUDE constraint ensures at most one primary per (entity, type, domain).';
 
 
--- §P9  master.company_code_customer_profile — company-specific AR settings per customer
--- SAP KNB1 equivalent: one row per (customer, company_code).
--- Renamed from customer_company_profile (idempotent — handles both old and new installs)
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'master' AND table_name = 'customer_company_profile'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'master' AND table_name = 'company_code_customer_profile'
-  ) THEN
-    ALTER TABLE master.customer_company_profile RENAME TO company_code_customer_profile;
-  END IF;
-END$$;
-
-CREATE TABLE IF NOT EXISTS master.company_code_customer_profile (
-    -- Identity
-    id               uuid         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id        uuid         NOT NULL,
-
-    -- Parent references
-    customer_id      uuid         NOT NULL,
-    company_code_id  uuid         NOT NULL,
-
-    -- Company-specific AR settings
-    payment_terms    text,
-    credit_limit     numeric(18,4),
-    currency_code    character(3),
-    ar_gl_account_id uuid,
-    credit_rating    text,
-    is_blocked       boolean      NOT NULL DEFAULT false,
-    block_reason     text,
-
-    -- Extended AR settings
-    default_accounting_profile_id  uuid,
-    credit_limit_currency_code     char(3),
-    tax_group_id                   uuid,
-    default_receipt_method_id      uuid,
-    default_dimension_set_id       uuid,
-    statement_cycle_code           text,
-    dunning_policy_id              uuid,
-
-    -- Metadata
-    metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
-
-    -- Lifecycle
-    status           text         NOT NULL DEFAULT 'active',
-    is_active        boolean      GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at timestamptz,
-    status_changed_by uuid,
-
-    -- Audit
-    created_at       timestamptz  NOT NULL DEFAULT now(),
-    created_by       uuid         NOT NULL,
-    updated_at       timestamptz,
-    updated_by       uuid,
-
-    CONSTRAINT ccp_pkey PRIMARY KEY (id),
-    CONSTRAINT ccp_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT ccp_customer_company_uq UNIQUE (tenant_id, customer_id, company_code_id),
-    CONSTRAINT ccp_credit_nonneg CHECK (credit_limit IS NULL OR credit_limit >= 0),
-    CONSTRAINT ccp_block_reason_chk CHECK (NOT is_blocked OR block_reason IS NOT NULL),
-    CONSTRAINT ccp_credit_limit_currency_fmt_chk CHECK (
-        credit_limit_currency_code IS NULL
-        OR credit_limit_currency_code::text ~ '^[A-Z]{3}$'),
-    CONSTRAINT ccp_credit_limit_currency_required_chk CHECK (
-        credit_limit IS NULL OR credit_limit_currency_code IS NOT NULL)
-);
-
-COMMENT ON TABLE master.company_code_customer_profile IS
-    'ARCHETYPE=B;SCOPE=T. Company-specific AR settings per customer. One customer can have different payment terms, '
-    'credit limits, and currencies per company_code. SAP KNB1 equivalent.';
-COMMENT ON COLUMN master.company_code_customer_profile.ar_gl_account_id IS
-    'DEPRECATED (Phase 2). Use default_accounting_profile_id -> master.accounting_profile. '
-    'Will be dropped after migration verification.';
-COMMENT ON COLUMN master.company_code_customer_profile.default_accounting_profile_id IS
-    'FK to master.accounting_profile (identity table). AR postings resolve through '
-    'posting roles and Engine 4.13 rules. Supersedes ar_gl_account_id (Phase 2).';
-COMMENT ON COLUMN master.company_code_customer_profile.credit_limit_currency_code IS
-    'ISO 4217 currency for credit_limit. Required when credit_limit is set.';
-COMMENT ON COLUMN master.company_code_customer_profile.tax_group_id IS
-    'Default tax group for this customer x company combination.';
-COMMENT ON COLUMN master.company_code_customer_profile.default_receipt_method_id IS
-    'Default collection/receipt method. FK to master.payment_method. '
-    'Direction-validated by trigger: must be INBOUND or BOTH.';
-COMMENT ON COLUMN master.company_code_customer_profile.default_dimension_set_id IS
-    'Default composite dimensions for AR journal entries.';
-COMMENT ON COLUMN master.company_code_customer_profile.statement_cycle_code IS
-    'Statement generation frequency. Lookup-validated via domain master.statement_cycle.';
-COMMENT ON COLUMN master.company_code_customer_profile.dunning_policy_id IS
-    'FUTURE ANCHOR — no FK target yet. Collections escalation policy. '
-    'FK will be added when dunning_policy entity is created.';
-
-
--- §P10  master.company_code_supplier_profile — company-specific AP settings per supplier
--- SAP LFB1 equivalent: one row per (supplier, company_code).
--- Renamed from supplier_company_profile (idempotent — handles both old and new installs)
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'master' AND table_name = 'supplier_company_profile'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'master' AND table_name = 'company_code_supplier_profile'
-  ) THEN
-    ALTER TABLE master.supplier_company_profile RENAME TO company_code_supplier_profile;
-  END IF;
-END$$;
-
-CREATE TABLE IF NOT EXISTS master.company_code_supplier_profile (
-    -- Identity
-    id               uuid         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id        uuid         NOT NULL,
-
-    -- Parent references
-    supplier_id      uuid         NOT NULL,
-    company_code_id  uuid         NOT NULL,
-
-    -- Company-specific AP settings
-    payment_terms    text,
-    payment_method   text,         -- DEPRECATED (Phase 2): use payment_method_id FK
-    currency_code    character(3),
-    ap_gl_account_id uuid,         -- DEPRECATED (Phase 2): use default_accounting_profile_id
-    withholding_tax_code text,
-    is_blocked       boolean      NOT NULL DEFAULT false,
-    block_reason     text,
-
-    -- Banking (company-specific — different banks per jurisdiction)
-    -- Phase 3: inline bank_account_* columns will be dropped after migration to bank_account_link
-    bank_account_name    text,
-    bank_account_number  text,
-    bank_swift_code      text,
-    bank_country_code    character(2),
-
-    -- Extended AP settings
-    default_accounting_profile_id      uuid,
-    payment_term_id                    uuid,    -- FK → master.payment_term; replaces legacy payment_terms text
-    payment_method_id                  uuid,
-    preferred_remittance_bank_link_id  uuid,
-    tax_group_id                       uuid,
-    default_wht_tax_group_id           uuid,       -- FK → control.tax_group; WHT components only
-    settlement_profile_id              uuid,
-    default_dimension_set_id           uuid,
-    supplier_reconciliation_profile_id uuid,
-    invoice_hold_policy_id             uuid,
-
-    -- Metadata
-    metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
-
-    -- Lifecycle
-    status           text         NOT NULL DEFAULT 'active',
-    is_active        boolean      GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at timestamptz,
-    status_changed_by uuid,
-
-    -- Audit
-    created_at       timestamptz  NOT NULL DEFAULT now(),
-    created_by       uuid         NOT NULL,
-    updated_at       timestamptz,
-    updated_by       uuid,
-
-    CONSTRAINT scp_pkey PRIMARY KEY (id),
-    CONSTRAINT scp_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT scp_supplier_company_uq UNIQUE (tenant_id, supplier_id, company_code_id),
-    CONSTRAINT scp_block_reason_chk CHECK (NOT is_blocked OR block_reason IS NOT NULL),
-    CONSTRAINT scp_swift_chk CHECK (
-        bank_swift_code IS NULL
-        OR bank_swift_code ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'
-    )
-);
-
-COMMENT ON TABLE master.company_code_supplier_profile IS
-    'ARCHETYPE=B;SCOPE=T. Company-specific AP settings + banking per supplier. One supplier can have different '
-    'payment terms, methods, and bank accounts per company_code. SAP LFB1 equivalent.';
-COMMENT ON COLUMN master.company_code_supplier_profile.payment_method IS
-    'DEPRECATED (Phase 2). Use payment_method_id FK -> master.payment_method. '
-    'Will be dropped after migration verification.';
-COMMENT ON COLUMN master.company_code_supplier_profile.ap_gl_account_id IS
-    'DEPRECATED (Phase 2). Use default_accounting_profile_id -> master.accounting_profile. '
-    'Will be dropped after migration verification.';
-COMMENT ON COLUMN master.company_code_supplier_profile.default_accounting_profile_id IS
-    'FK to master.accounting_profile (identity table). AP postings resolve through '
-    'posting roles and Engine 4.13 rules. Supersedes ap_gl_account_id.';
-COMMENT ON COLUMN master.company_code_supplier_profile.payment_method_id IS
-    'FK to master.payment_method. Direction-validated by trigger: must be '
-    'OUTBOUND or BOTH. Replaces free-text payment_method column.';
-COMMENT ON COLUMN master.company_code_supplier_profile.preferred_remittance_bank_link_id IS
-    'FK to master.bank_account_link. Trigger-validated: must belong to same '
-    'supplier and compatible company scope. Replaces inline bank_account_* columns.';
-COMMENT ON COLUMN master.company_code_supplier_profile.tax_group_id IS
-    'Default tax group for AP transactions with this supplier x company.';
-COMMENT ON COLUMN master.company_code_supplier_profile.default_wht_tax_group_id IS
-    'FK → control.tax_group (tenant-composite). Replaces free-text withholding_tax_code. '
-    'Group should contain components where tax_type.category = WITHHOLDING.';
-COMMENT ON COLUMN master.company_code_supplier_profile.settlement_profile_id IS
-    'FUTURE ANCHOR — no FK target yet. Settlement behavior configuration.';
-COMMENT ON COLUMN master.company_code_supplier_profile.default_dimension_set_id IS
-    'Default composite dimensions for AP journal entries.';
-COMMENT ON COLUMN master.company_code_supplier_profile.supplier_reconciliation_profile_id IS
-    'FUTURE ANCHOR — no FK target yet. AP reconciliation behavior.';
-COMMENT ON COLUMN master.company_code_supplier_profile.invoice_hold_policy_id IS
-    'FUTURE ANCHOR — no FK target yet. Automatic invoice hold rules.';
-
+-- §P9 / §P10  company_code_customer_profile + company_code_supplier_profile
+-- Moved to 01h_tables_business_partner.sql alongside business_partner, customer, supplier.
 -- ============================================================================
--- Extend master.supplier with business profile columns
--- Kept out of the original CREATE TABLE to preserve a clean, minimal root.
--- These are filterable facts that belong on the supplier, not in metadata JSON.
+-- END: party tables moved. See 01h_tables_business_partner.sql for full DDL.
 -- ============================================================================
 
-ALTER TABLE master.supplier
-    ADD COLUMN IF NOT EXISTS long_description       text,
-    ADD COLUMN IF NOT EXISTS aliases                text[]      NOT NULL DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS business_types         text[]      NOT NULL DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS legal_form             text,
-    ADD COLUMN IF NOT EXISTS founded_year           smallint,
-    ADD COLUMN IF NOT EXISTS employee_count_band    text,
-    ADD COLUMN IF NOT EXISTS annual_revenue_band    text;
 
-DO $$ BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'supplier_founded_year_chk'
-          AND conrelid = 'master.supplier'::regclass
-    ) THEN
-        ALTER TABLE master.supplier
-            ADD CONSTRAINT supplier_founded_year_chk
-                CHECK (founded_year IS NULL OR (founded_year BETWEEN 1800 AND 2200));
-    END IF;
-END $$;
+-- §F99  master.legal_entity_business_partner_link — identity bridge
+-- Maps a legal entity to its own Business Partner identity (self_bp) or to a
+-- known external network identity. Covers identity only — NOT operational AP/AR
+-- control, which belongs in master.intercompany_trading_pair (01j).
+-- FK to business_partner added in 03_constraints.sql (load-order safe).
+CREATE TABLE IF NOT EXISTS master.legal_entity_business_partner_link (
+    id                   uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id            uuid        NOT NULL,
+    legal_entity_id      uuid        NOT NULL,
+    business_partner_id  uuid        NOT NULL,
 
-COMMENT ON COLUMN master.supplier.long_description IS
-    'Extended company description / about-us text. description holds the short one-liner.';
-COMMENT ON COLUMN master.supplier.aliases IS
-    'Trading names, brand aliases, abbreviations known by. Used for search/disambiguation.';
-COMMENT ON COLUMN master.supplier.business_types IS
-    'Multi-value business type codes (lookup: master.supplier_business_type). '
-    'e.g. {service_provider, technology_provider}.';
-COMMENT ON COLUMN master.supplier.legal_form IS
-    'Legal incorporation form (lookup: master.supplier_legal_form). '
-    'e.g. private_limited, public_listed, partnership, sole_proprietor.';
-COMMENT ON COLUMN master.supplier.founded_year IS
-    'Year the company was founded / incorporated. 4-digit year, 1800–2200.';
-COMMENT ON COLUMN master.supplier.employee_count_band IS
-    'Headcount band (lookup: master.employee_count_band). e.g. 11_50, 51_200.';
-COMMENT ON COLUMN master.supplier.annual_revenue_band IS
-    'Revenue band in USD (lookup: master.annual_revenue_band). e.g. 100k_1m, 1m_10m.';
+    -- Nature of the link
+    relationship_type    text        NOT NULL,
+        -- 'self_bp'        — the legal entity's canonical internal BP identity;
+        --                    the linked BP must have partner_category = 'internal'.
+        --                    Validated by trigger trg_lebpl_self_bp_guard.
+        -- 'network_identity' — external portal / EDI / e-invoice network identity.
+        --                    Use business_partner_network_link for per-network details.
 
+    -- Lifecycle
+    status               text        NOT NULL DEFAULT 'active',
+    is_active            boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+
+    notes                text,
+
+    -- Audit
+    created_at           timestamptz NOT NULL DEFAULT now(),
+    created_by           uuid        NOT NULL,
+    updated_at           timestamptz,
+    updated_by           uuid,
+
+    CONSTRAINT lebpl_pkey                    PRIMARY KEY (id),
+    CONSTRAINT lebpl_tenant_id_uq            UNIQUE (tenant_id, id),
+    CONSTRAINT lebpl_le_bp_type_uq           UNIQUE (tenant_id, legal_entity_id, business_partner_id, relationship_type),
+    CONSTRAINT lebpl_relationship_type_chk   CHECK (relationship_type IN (
+                                                 'self_bp', 'network_identity')),
+    CONSTRAINT lebpl_status_chk              CHECK (status IN ('active', 'inactive', 'archived'))
+);
+
+-- Drop constraint carried over from a prior schema version (same reason as ictp).
+ALTER TABLE IF EXISTS master.legal_entity_business_partner_link
+    DROP CONSTRAINT IF EXISTS lebpl_audit_pair_chk;
+
+-- Additive guard: existing DBs built before is_active was added to the DDL.
+ALTER TABLE master.legal_entity_business_partner_link
+    ADD COLUMN IF NOT EXISTS is_active boolean GENERATED ALWAYS AS (status = 'active') STORED;
+
+-- One active self_bp per legal entity — enforced at DB level.
+CREATE UNIQUE INDEX IF NOT EXISTS lebpl_one_active_self_bp_uidx
+    ON master.legal_entity_business_partner_link (tenant_id, legal_entity_id)
+    WHERE relationship_type = 'self_bp' AND status = 'active';
+
+CREATE INDEX IF NOT EXISTS lebpl_legal_entity_idx
+    ON master.legal_entity_business_partner_link (tenant_id, legal_entity_id);
+CREATE INDEX IF NOT EXISTS lebpl_business_partner_idx
+    ON master.legal_entity_business_partner_link (tenant_id, business_partner_id);
+
+COMMENT ON TABLE master.legal_entity_business_partner_link IS
+    'ARCHETYPE=B;SCOPE=T. Identity bridge between a statutory legal entity and a '
+    'business_partner record. Primary use: self_bp — maps each LE to its own internal '
+    'BP so it can appear as a transacting party. Intercompany AP/AR control is in '
+    'master.intercompany_trading_pair. Normal external-supplier flows do not need this table.';
+COMMENT ON COLUMN master.legal_entity_business_partner_link.relationship_type IS
+    'self_bp: LE''s own canonical BP identity (partner_category must be ''internal''). '
+    'network_identity: external portal / EDI / e-invoicing identity.';
+COMMENT ON COLUMN master.legal_entity_business_partner_link.is_active IS
+    'Generated: status = ''active''. At most one active self_bp per legal entity (partial unique index).';
+COMMENT ON COLUMN master.legal_entity_business_partner_link.business_partner_id IS
+    'FK to master.business_partner(tenant_id, id). Added in 03_constraints.sql (load-order safe).';

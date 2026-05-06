@@ -36,6 +36,32 @@ export interface EntityFlowRoutesDeps {
   checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string, personaId: string) => Promise<Record<string, { decision: string } | undefined>>;
 }
 
+function normalizeReferenceConfig(row: {
+  reference_config?: unknown;
+  validation?: unknown;
+}): Record<string, unknown> | null {
+  if (row.reference_config && typeof row.reference_config === "object" && !Array.isArray(row.reference_config)) {
+    const rawConfig = row.reference_config as Record<string, unknown>;
+    return {
+      ...rawConfig,
+      target_entity: rawConfig["target_entity"] ?? rawConfig["ref_entity"] ?? "",
+      target_field: rawConfig["target_field"],
+      display_field: rawConfig["display_field"],
+    };
+  }
+  if (row.validation && typeof row.validation === "object" && !Array.isArray(row.validation)) {
+    const validation = row.validation as Record<string, unknown>;
+    if (validation["ref_entity"]) {
+      return {
+        target_entity: validation["ref_entity"],
+        target_field: validation["target_field"],
+        display_field: validation["display_field"],
+      };
+    }
+  }
+  return null;
+}
+
 export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps): Router {
   const { db, auth, logger, checkPermissionBatch } = deps;
 
@@ -167,6 +193,11 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           "ef.name as field_name",
           sql<string>`COALESCE(ef.label, ef.name)`.as("field_label"),
           "ef.data_type",
+          "ef.enum_domain_code",
+          "ef.ui_type",
+          "ef.reference_config",
+          "ef.validation",
+          "ef.lookup_config",
         ])
         .where("eff.flow_step_id", "in", stepIds)
         .orderBy("eff.sort_order", "asc")
@@ -227,10 +258,14 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
               "ef.name as field_name",
               sql<string>`COALESCE(ef.label, ef.name)`.as("field_label"),
               "ef.data_type",
+              "ef.enum_domain_code",
               "ef.cardinality",
-              "ef.ui_type",
+              sql<string | null>`ef.ui_type`.as("ui_variant"),
+              "ef.reference_config",
+              "ef.validation",
+              "ef.lookup_config",
               "ef.sort_order",
-              sql<boolean>`ef.cardinality = 'one'`.as("is_required"),
+              "ef.is_required",
             ])
             .where(sql`COALESCE(e.entity_code, e.name)`, "=", code)
             .where("e.tenant_id", "is", null)
@@ -251,16 +286,20 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
         try {
           const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
 
-          const overrideCodes = [
+          const permissionCodes = [
             ...new Set(
-              fieldRows
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                .map((f: any) => f.override_permission as string | null)
-                .filter((c): c is string => Boolean(c)),
+              [
+                ...fieldRows
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  .map((f: any) => f.override_permission as string | null),
+                ...sectionRows
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  .map((s: any) => s.permission_code as string | null),
+              ].filter((c): c is string => Boolean(c)),
             ),
           ];
 
-          if (overrideCodes.length > 0 && checkPermissionBatch) {
+          if (permissionCodes.length > 0 && checkPermissionBatch) {
             const personaRow = await db
               .selectFrom("master.principal_persona as pp")
               .select(["pp.persona_id"])
@@ -271,7 +310,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
               (personaRow?.persona_id as string | undefined) ?? "00000000-0000-0000-0000-000000000000";
 
             const batch = await checkPermissionBatch(db, tenantId, principalId, personaId);
-            userPermissions = overrideCodes.filter((code) => batch[code]?.decision === "allow");
+            userPermissions = permissionCodes.filter((code) => batch[code]?.decision === "allow");
           }
         } catch (permErr) {
           logger?.warn("entity_flow_permissions_resolve_failed", { entityCode, sub, err: String(permErr) });
@@ -293,6 +332,11 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             field_name: f.field_name as string,
             field_label: f.field_label as string,
             data_type: f.data_type as string,
+            enum_domain_code: (f.enum_domain_code ?? null) as string | null,
+            reference_config: normalizeReferenceConfig(f),
+            lookup_config: (f.lookup_config && typeof f.lookup_config === "object"
+              ? f.lookup_config as Record<string, unknown>
+              : null),
             mode: f.mode as string,
             derivation_mode: (f.derivation_mode ?? null) as string | null,
             visible_when: f.visible_when ?? null,
@@ -301,11 +345,12 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             derive_expression: (f.derive_expression ?? null) as string | null,
             override_permission: (f.override_permission ?? null) as string | null,
             summary_role: (f.summary_role ?? null) as string | null,
-            ui_variant: (f.ui_variant ?? null) as string | null,
+            ui_variant: ((f.ui_type === "country" ? "country" : f.ui_variant) ?? null) as string | null,
             span: (Number(f.span) || 1) as 1 | 2 | 3,
             help_text: (f.help_text ?? null) as string | null,
             placeholder: (f.placeholder ?? null) as string | null,
             sort_order: Number(f.sort_order ?? 0),
+            section_key: (f.section_key ?? null) as string | null,
             is_overridden: false,
           }));
 
@@ -337,10 +382,17 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
 
             if ((sType === "repeater" || sType === "singleton") && childEntityCode) {
               const allChildFields = childFieldsByEntity.get(childEntityCode) ?? [];
-              childFields = rawFieldCodes.length > 0
+              const selectedChildFields = rawFieldCodes.length > 0
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 ? allChildFields.filter((cf: any) => rawFieldCodes.includes(String(cf.field_name)))
                 : allChildFields;
+              childFields = selectedChildFields.map((cf) => ({
+                ...cf,
+                reference_config: normalizeReferenceConfig(cf),
+                lookup_config: cf.lookup_config && typeof cf.lookup_config === "object"
+                  ? cf.lookup_config as Record<string, unknown>
+                  : null,
+              }));
             }
 
             return {

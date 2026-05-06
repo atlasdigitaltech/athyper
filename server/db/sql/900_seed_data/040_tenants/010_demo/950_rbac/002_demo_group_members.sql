@@ -53,37 +53,11 @@ BEGIN
                       || CASE WHEN p.code LIKE '%.OWNER' THEN '-OWNER' ELSE '-ADMIN' END
     WHERE p.id IN (
         'bb001000-0000-0000-0000-000000000001'::uuid,
-        'bb001000-0000-0000-0000-000000000002'::uuid,
-        'bb001000-0000-0000-0000-000000000003'::uuid,
-        'bb001000-0000-0000-0000-000000000004'::uuid,
-        'bb001000-0000-0000-0000-000000000005'::uuid,
-        'bb001000-0000-0000-0000-000000000006'::uuid,
-        'bb001000-0000-0000-0000-000000000007'::uuid,
-        'bb001000-0000-0000-0000-000000000008'::uuid,
-        'bb001000-0000-0000-0000-000000000009'::uuid,
-        'bb001000-0000-0000-0000-00000000000a'::uuid,
-        'bb001000-0000-0000-0000-00000000000b'::uuid,
-        'bb001000-0000-0000-0000-00000000000c'::uuid,
-        'bb001000-0000-0000-0000-00000000000d'::uuid,
-        'bb001000-0000-0000-0000-00000000000e'::uuid,
-        'bb001000-0000-0000-0000-00000000000f'::uuid,
-        'bb001000-0000-0000-0000-000000000010'::uuid,
-        'bb001000-0000-0000-0000-000000000011'::uuid,
-        'bb001000-0000-0000-0000-000000000012'::uuid,
-        'bb001000-0000-0000-0000-000000000013'::uuid,
-        'bb001000-0000-0000-0000-000000000014'::uuid,
-        'bb001000-0000-0000-0000-000000000015'::uuid,
-        'bb001000-0000-0000-0000-000000000016'::uuid,
-        'bb001000-0000-0000-0000-000000000017'::uuid,
-        'bb001000-0000-0000-0000-000000000018'::uuid,
-        'bb001000-0000-0000-0000-000000000019'::uuid,
-        'bb001000-0000-0000-0000-00000000001a'::uuid,
-        'bb001000-0000-0000-0000-00000000001b'::uuid,
-        'bb001000-0000-0000-0000-00000000001c'::uuid
+        'bb001000-0000-0000-0000-000000000002'::uuid
     )
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
- 
-    RAISE NOTICE '[002_demo_auth_group_members] Step 1 complete — 28 tenant-level principal users assigned';
+
+    RAISE NOTICE '[002_demo_auth_group_members] Step 1 complete — 2 tenant-level principal users assigned';
  
     -- ── Step 2: Assign CC-level principals (athyper, 34 users) ───────────────
     --
@@ -198,45 +172,6 @@ BEGIN
  
     RAISE NOTICE '[002_demo_auth_group_members] Step 3 complete — demo users assigned to correct scope groups';
  
-    -- ── Step 4: Assign named/demo tenant persona users to their ADMIN groups ────
-    --
-    -- One persona user per tenant (from 005_named_tenant_principals.sql).
-    -- Each is assigned to the ADMIN group of their own tenant.
-    --
-    INSERT INTO master.auth_group_member (
-        tenant_id, principal_id, group_id,
-        joined_at, added_by, created_by
-    )
-    SELECT
-        p.tenant_id,
-        p.id,
-        pg.id,
-        now(), v_su, v_su
-    FROM (VALUES
-        -- (tenant_code,     principal_code,    group_code)
-        ('athyper-hq1', 'siti.aminah',    'ATHYPER_HQ1-ADMIN'),
-        ('pepsi',       'michael.torres', 'PEPSI-ADMIN'),
-        ('coke',        'sarah.johnson',  'COKE-ADMIN'),
-        ('maaza',       'rahul.gupta',    'MAAZA-ADMIN'),
-        ('demo_ca',     'david.chen',     'DEMO_CA-ADMIN'),
-        ('demo_ch',     'sophie.mueller', 'DEMO_CH-ADMIN'),
-        ('demo_de',     'hans.weber',     'DEMO_DE-ADMIN'),
-        ('demo_fr',     'pierre.dupont',  'DEMO_FR-ADMIN'),
-        ('demo_in',     'priya.sharma',   'DEMO_IN-ADMIN'),
-        ('demo_my',     'ahmad.razak',    'DEMO_MY-ADMIN'),
-        ('demo_qa',     'khalid.althani', 'DEMO_QA-ADMIN'),
-        ('demo_sa',     'omar.hassan',    'DEMO_SA-ADMIN'),
-        ('demo_us',     'jennifer.smith', 'DEMO_US-ADMIN')
-    ) AS v(tenant_code, principal_code, group_code)
-    JOIN master.tenant t
-        ON t.code = v.tenant_code AND t.realm_key = 'athyper'
-    JOIN master.principal p
-        ON p.tenant_id = t.id AND p.code = v.principal_code
-    JOIN master.auth_group pg
-        ON pg.tenant_id = t.id AND pg.code = v.group_code
-    ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
- 
-    RAISE NOTICE '[002_demo_auth_group_members] Step 4 complete — 13 named/demo tenant persona users assigned';
     RAISE NOTICE '[002_demo_auth_group_members] Complete';
  
 END $members$;

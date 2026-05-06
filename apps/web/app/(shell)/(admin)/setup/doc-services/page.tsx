@@ -831,17 +831,23 @@ interface ResolverResult {
 }
 
 function ResolverSection() {
-  const [form, setForm] = useState({ entity_name: "document.sales_invoice", operation: "print", variant: "default" });
+  const [form, setForm] = useState({ entity_name: "", operation: "print", variant: "default" });
   const [result, setResult] = useState<ResolverResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const canResolve = form.entity_name.trim().length > 0 && form.operation.trim().length > 0;
 
   async function resolve() {
+    if (!canResolve) return;
     setLoading(true);
     try {
       const r = await fetch("/api/docservices/resolver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          entity_name: form.entity_name.trim(),
+          operation: form.operation.trim(),
+          variant: form.variant.trim() || "default",
+        }),
       });
       setResult(await r.json() as ResolverResult);
     } finally {
@@ -860,7 +866,12 @@ function ResolverSection() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="flex flex-col gap-1">
               <Label className="text-2xs uppercase tracking-wider">entity_name</Label>
-              <Input className="text-xs h-8" value={form.entity_name} onChange={(e) => setForm((p) => ({ ...p, entity_name: e.target.value }))} />
+              <Input
+                className="text-xs h-8"
+                value={form.entity_name}
+                onChange={(e) => setForm((p) => ({ ...p, entity_name: e.target.value }))}
+                placeholder="Enter binding entity name"
+              />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-2xs uppercase tracking-wider">operation</Label>
@@ -879,7 +890,7 @@ function ResolverSection() {
             </div>
           </div>
           <div className="mt-3 flex justify-end">
-            <Button size="sm" onClick={() => void resolve()} disabled={loading}>
+            <Button size="sm" onClick={() => void resolve()} disabled={loading || !canResolve}>
               <Zap className="h-3.5 w-3.5 mr-1" />{loading ? "Resolving…" : "Resolve"}
             </Button>
           </div>

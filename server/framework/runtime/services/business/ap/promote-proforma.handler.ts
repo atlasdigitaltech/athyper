@@ -63,7 +63,7 @@ export async function handlePromoteProforma(
     supplier_invoice_date,
     posting_date,
     received_date,
-    commitment_id = null,
+    commitment_id,   // undefined = absent (do not overwrite); null = explicit clear
   } = body as PromoteBody;
 
   if (!supplier_invoice_number?.trim()) {
@@ -158,6 +158,11 @@ export async function handlePromoteProforma(
       let dueDate: Date | null = null;
       let termSnapshot: Record<string, unknown> | null = null;
 
+      // Effective commitment: body override if explicitly sent, else existing on invoice
+      const effectiveCommitmentId = Object.prototype.hasOwnProperty.call(body, "commitment_id")
+        ? (commitment_id ?? null)
+        : ((invoice["commitment_id"] as string | null | undefined) ?? null);
+
       const paymentTermId = invoice["payment_term_id"] as string | null | undefined;
       if (paymentTermId) {
         const ptaResult = await evaluatePaymentTerm(
@@ -169,6 +174,7 @@ export async function handlePromoteProforma(
           postingDate,
           Number(invoice["total_amount"] ?? 0),
           principalId,
+          effectiveCommitmentId,
           received_date ? new Date(received_date) : undefined,
         );
 
@@ -191,8 +197,12 @@ export async function handlePromoteProforma(
         updated_by:              principalId,
       };
 
-      if (received_date)                setClause["received_date"]  = new Date(received_date);
-      if (commitment_id !== undefined)  setClause["commitment_id"]  = commitment_id;
+      if (received_date)  setClause["received_date"] = new Date(received_date);
+      // Only overwrite commitment_id if the caller explicitly sent the field
+      // (absent = keep existing; null = intentional clear)
+      if (Object.prototype.hasOwnProperty.call(body, "commitment_id")) {
+        setClause["commitment_id"] = commitment_id ?? null;
+      }
       if (fiscalYear   !== null)        setClause["fiscal_year"]    = fiscalYear;
       if (periodNumber !== null)        setClause["period_number"]  = periodNumber;
       if (baselineDate !== null)        setClause["baseline_date"]  = baselineDate;

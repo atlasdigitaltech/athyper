@@ -1655,7 +1655,7 @@ COMMENT ON TABLE master.bank_account_link IS
 
 COMMENT ON COLUMN master.bank_account_link.owner_type IS
     'Polymorphic discriminator. FK to master.owner_type.code. '
-    'Values: ''company_code'', ''supplier'', ''customer'', ''employee''.';
+    'Values: ''business_partner'', ''company_code'', ''supplier'', ''customer'', ''employee''.';
 COMMENT ON COLUMN master.bank_account_link.company_code_id IS
     'Optional company-code scope. NULL = valid for all company codes. '
     'When set, this link is jurisdiction-specific. SAP LFB1 scoping.';
@@ -1712,6 +1712,86 @@ COMMENT ON VIEW master.v_supplier_bank_account IS
     'bank_account_link (owner_type=''supplier'') + bank_account + optional bank_party. '
     'Filtered by supplier_id (= bank_account_link.owner_id). '
     'Entity: supplier_bank_account. Used by entity Banking tab.';
+
+-- ============================================================================
+-- §BK3c v_business_partner_bank_account — read-only denormalised view
+-- ============================================================================
+-- Canonical BP-owned banking lens. Joins bank_account_link
+-- (owner_type='business_partner') with bank_account so the Business Partner
+-- Banking tab can list and filter by business_partner_id via ?parent_id.
+-- ============================================================================
+
+CREATE OR REPLACE VIEW master.v_business_partner_bank_account AS
+SELECT
+    bal.id,
+    bal.tenant_id,
+    bal.owner_id                                       AS business_partner_id,
+    ba.account_id_value                                AS account_number,
+    ba.currency_code,
+    ba.account_holder_name,
+    ba.account_id_type,
+    ba.account_nature,
+    ba.is_verified,
+    bal.purpose,
+    bal.is_primary,
+    bal.effective_from,
+    bal.effective_until,
+    COALESCE(bp.name, ba.bank_name_override)           AS bank_name,
+    ba.bic_override,
+    ba.bank_party_id,
+    bal.bank_account_id,
+    bal.created_at,
+    bal.updated_at,
+    bal.owner_type,
+    bal.owner_id,
+    bal.company_code_id,
+    cc.code                                           AS company_code,
+    COALESCE(cc.display_name, cc.name)                AS company_code_name,
+    ba.account_id_value,
+    CASE
+        WHEN ba.account_last4 IS NOT NULL
+        THEN repeat('*', greatest(length(ba.account_id_value) - 4, 0)) || ba.account_last4
+        ELSE repeat('*', greatest(length(ba.account_id_value) - 4, 0))
+             || right(ba.account_id_value, 4)
+    END                                                AS account_id_value_masked,
+    ba.account_last4,
+    ba.verified_at,
+    ba.verified_by,
+    ba.verification_method,
+    ba.bank_name_override,
+    COALESCE(bp.bic, ba.bic_override)                  AS bic,
+    COALESCE(bp.country_code, ba.bank_country_override) AS bank_country_code,
+    ba.bank_country_override,
+    bp.institution_type,
+    bp.branch_code,
+    bp.branch_name,
+    bp.national_bank_code_type,
+    bp.national_bank_code,
+    bp.supports_swift,
+    bp.supports_local_clearing,
+    bp.supports_sepa,
+    bp.supports_ach,
+    ba.provider_account_ref,
+    cbp.name                                           AS correspondent_bank_name,
+    cbp.bic                                            AS correspondent_bic,
+    bal.metadata                                       AS link_metadata,
+    ba.metadata                                        AS account_metadata
+FROM   master.bank_account_link  bal
+JOIN   master.bank_account       ba  ON  ba.id        = bal.bank_account_id
+                                    AND  ba.tenant_id  = bal.tenant_id
+LEFT JOIN master.bank_party      bp  ON  bp.id        = ba.bank_party_id
+                                    AND  bp.tenant_id  = ba.tenant_id
+LEFT JOIN master.bank_party      cbp ON  cbp.id       = ba.correspondent_bank_party_id
+                                    AND  cbp.tenant_id = ba.tenant_id
+LEFT JOIN master.company_code    cc  ON  cc.id        = bal.company_code_id
+                                    AND  cc.tenant_id  = bal.tenant_id
+WHERE  bal.owner_type = 'business_partner';
+
+COMMENT ON VIEW master.v_business_partner_bank_account IS
+    'ARCHETYPE=V;SCOPE=T. Read-only view: BP-owned bank accounts resolved through '
+    'bank_account_link (owner_type=''business_partner'') + bank_account + optional bank_party. '
+    'Filtered by business_partner_id (= bank_account_link.owner_id). '
+    'Entity: business_partner_bank_account. Used by Business Partner Banking tab.';
 
 -- ============================================================================
 -- §BK4  bank_account_house_config — house-bank operational extension

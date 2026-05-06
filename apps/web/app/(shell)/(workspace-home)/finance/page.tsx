@@ -33,6 +33,12 @@ import { FinanceKpiCards } from "./_components/FinanceKpiCards";
 
 const WORKBENCH_ACTIONS = [
   {
+    href: "/app/business_partner",
+    title: "Business Partners",
+    description: "Supplier and customer roles with company-code settings",
+    icon: Building2,
+  },
+  {
     href: "/finance/ap",
     title: "AP Workbench",
     description: "Payables invoices, aging buckets, outbound payments",

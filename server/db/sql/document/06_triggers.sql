@@ -78,8 +78,14 @@ DROP TRIGGER IF EXISTS trg_je_immutability_guard ON document.journal_entry;
 CREATE TRIGGER trg_je_immutability_guard
     BEFORE UPDATE ON document.journal_entry
     FOR EACH ROW
-    WHEN (OLD.status IN ('posted', 'reversed'))
+    WHEN (OLD.status IN ('pending_approval', 'approved', 'posted', 'reversed'))
     EXECUTE FUNCTION document.trg_je_immutability_guard();
+
+DROP TRIGGER IF EXISTS trg_je_status_insert_guard ON document.journal_entry;
+CREATE TRIGGER trg_je_status_insert_guard
+    BEFORE INSERT ON document.journal_entry
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_je_status_insert_guard();
 
 DROP TRIGGER IF EXISTS trg_je_updated_at ON document.journal_entry;
 CREATE TRIGGER trg_je_updated_at BEFORE UPDATE ON document.journal_entry
@@ -117,7 +123,8 @@ CREATE TRIGGER trg_je_sync_base_currency
 -- gate first, then validate state machine.
 DROP TRIGGER IF EXISTS trg_je_period_gate ON document.journal_entry;
 CREATE TRIGGER trg_je_period_gate
-    BEFORE INSERT ON document.journal_entry
+    BEFORE INSERT OR UPDATE OF status, posting_date, fiscal_period_id, book_id, company_code_id
+    ON document.journal_entry
     FOR EACH ROW
     EXECUTE FUNCTION document.trg_je_period_gate_fn();
 
@@ -131,7 +138,7 @@ DROP TRIGGER IF EXISTS trg_je_workflow_gate ON document.journal_entry;
 CREATE TRIGGER trg_je_workflow_gate
     BEFORE UPDATE OF status ON document.journal_entry
     FOR EACH ROW
-    WHEN (NEW.status = 'posted' AND OLD.status = 'created')
+    WHEN (NEW.status = 'posted' AND OLD.status IN ('created', 'approved'))
     EXECUTE FUNCTION document.trg_je_workflow_gate_fn();
 
 COMMENT ON TRIGGER trg_je_workflow_gate ON document.journal_entry IS
@@ -196,7 +203,8 @@ CREATE TRIGGER trg_jl_validate_party
 -- and before trg_jl_validate_p* (posting controls).
 DROP TRIGGER IF EXISTS trg_jl_validate_dimensions ON document.journal_line;
 CREATE TRIGGER trg_jl_validate_dimensions
-    BEFORE INSERT ON document.journal_line
+    BEFORE INSERT OR UPDATE OF cost_center_id, profit_center_id, project_id, site_id
+    ON document.journal_line
     FOR EACH ROW
     EXECUTE FUNCTION document.trg_jl_validate_dimensions_fn();
 
@@ -209,7 +217,8 @@ COMMENT ON TRIGGER trg_jl_validate_dimensions ON document.journal_line IS
 -- Alphabetically fires after denorm trigger (trg_jl_sync_*).
 DROP TRIGGER IF EXISTS trg_jl_validate_posting_controls ON document.journal_line;
 CREATE TRIGGER trg_jl_validate_posting_controls
-    BEFORE INSERT ON document.journal_line
+    BEFORE INSERT OR UPDATE OF gl_account_id, company_code_id
+    ON document.journal_line
     FOR EACH ROW
     EXECUTE FUNCTION document.trg_jl_validate_posting_controls_fn();
 
@@ -221,7 +230,8 @@ COMMENT ON TRIGGER trg_jl_validate_posting_controls ON document.journal_line IS
 -- overspend_policy BLOCK/ESCALATE/WARN/ALLOW.
 DROP TRIGGER IF EXISTS trg_jl_check_budget ON document.journal_line;
 CREATE TRIGGER trg_jl_check_budget
-    BEFORE INSERT ON document.journal_line
+    BEFORE INSERT OR UPDATE OF base_debit, gl_account_id, cost_center_id, profit_center_id, project_id
+    ON document.journal_line
     FOR EACH ROW
     EXECUTE FUNCTION document.trg_jl_check_budget_fn();
 
@@ -252,6 +262,11 @@ DROP TRIGGER IF EXISTS trg_jlr_doc_type_lookup ON document.journal_line_referenc
 CREATE TRIGGER trg_jlr_doc_type_lookup
     BEFORE INSERT OR UPDATE OF ref_doc_type ON document.journal_line_reference
     FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('document.jlr_ref_doc_type', 'ref_doc_type');
+
+DROP TRIGGER IF EXISTS trg_jlr_append_only_guard ON document.journal_line_reference;
+CREATE TRIGGER trg_jlr_append_only_guard
+    BEFORE UPDATE OR DELETE ON document.journal_line_reference
+    FOR EACH ROW EXECUTE FUNCTION document.trg_jlr_append_only_guard();
 
 
 -- =============================================================================
@@ -663,3 +678,49 @@ DROP TRIGGER IF EXISTS trg_whtc_updated_at ON document.wht_certificate;
 CREATE TRIGGER trg_whtc_updated_at
     BEFORE UPDATE ON document.wht_certificate
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- =============================================================================
+-- §ROW_VERSION  Generic row_version increment trigger
+-- =============================================================================
+-- Shared function — attached to every aggregate-root table that carries
+-- a row_version column. Increments the version on every UPDATE so callers
+-- can use optimistic concurrency (WHERE row_version = :expected → 0 rows → 409).
+--
+-- Trigger firing order on purchase_invoice (alphabetical BEFORE triggers):
+--   trg_pi_immutability_guard  ← blocks edits on terminal/posted invoices
+--   trg_pi_row_version         ← increments row_version  ← NEW
+--   trg_pi_status_changed      ← sets status_changed_at/by
+--   trg_pi_status_guard        ← validates state-machine transitions
+--   trg_pi_updated_at          ← sets updated_at
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION shared.trg_increment_row_version()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    NEW.row_version := OLD.row_version + 1;
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION shared.trg_increment_row_version() IS
+    'Generic BEFORE UPDATE trigger: increments row_version by 1 on every update. '
+    'Attach to aggregate-root tables that carry a row_version column. '
+    'Pairs with optimistic-lock saves: caller passes expected_row_version in WHERE; '
+    '0 rows updated → 409 Conflict. Side-effect: trg_pil_sync_header updates to the '
+    'invoice header also increment row_version, making line mutations visible to the '
+    'header-save conflict check.';
+
+-- §PI  Purchase Invoice row_version
+DROP TRIGGER IF EXISTS trg_pi_row_version ON document.purchase_invoice;
+CREATE TRIGGER trg_pi_row_version
+    BEFORE UPDATE ON document.purchase_invoice
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_increment_row_version();
+
+COMMENT ON TRIGGER trg_pi_row_version ON document.purchase_invoice IS
+    'Increments row_version on every UPDATE to purchase_invoice, including updates '
+    'triggered by trg_pil_sync_header when lines change. This is intentional: any '
+    'mutation to the invoice aggregate (header or lines) advances the version so a '
+    'concurrently open header-save sees the conflict and returns 409. '
+    'Phase 2: attach the same trigger to purchase_order, journal_entry, payment_entry '
+    'once those tables have row_version added in 01z_row_version.sql.';

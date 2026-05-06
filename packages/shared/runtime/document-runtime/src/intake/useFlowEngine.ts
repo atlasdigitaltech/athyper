@@ -136,6 +136,129 @@ function evalSyncDerivation(
 
 // ── Initialise draft from default_source ──────────────────────────────────────
 
+function stringValue(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function companyCurrency(row: Record<string, unknown> | null | undefined): string | null {
+  return (
+    stringValue(row?.["functional_currency"]) ??
+    stringValue(row?.["base_currency"]) ??
+    stringValue(row?.["base_currency_code"]) ??
+    stringValue(row?.["currency_code"])
+  )?.toUpperCase() ?? null;
+}
+
+function rowLabel(row: Record<string, unknown>): string {
+  const keys = Object.keys(row);
+  const nameKey = keys.find((k) => k !== "id" && k.endsWith("_name"));
+  if (nameKey && row[nameKey]) return String(row[nameKey]);
+  if (row.name) return String(row.name);
+  const codeKey = keys.find((k) => k !== "id" && k.endsWith("_code") && k !== "currency_code");
+  if (codeKey && row[codeKey]) return String(row[codeKey]);
+  if (row.code) return String(row.code);
+  return String(row.id ?? "").slice(0, 8);
+}
+
+async function fetchRecord(entityCode: string, id: string): Promise<Record<string, unknown> | null> {
+  const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(id)}`);
+  if (!res.ok) return null;
+  const body = await res.json() as { data?: Record<string, unknown> };
+  return body.data ?? null;
+}
+
+async function resolveAssignedLedgerBook(
+  companyCodeId: string,
+): Promise<{ id: string; label: string } | null> {
+  const filters = encodeURIComponent(JSON.stringify({ company_code_id: companyCodeId, status: "active" }));
+  const assignmentRes = await fetch(
+    `/api/relay/api/records/company_code_book_assignment?filters=${filters}&page_size=50`,
+  );
+  if (!assignmentRes.ok) return null;
+
+  const assignmentBody = await assignmentRes.json() as { data?: Record<string, unknown>[] };
+  const assignments = (assignmentBody.data ?? [])
+    .filter((row) => typeof row["book_id"] === "string")
+    .sort((a, b) => Number(a["priority"] ?? 0) - Number(b["priority"] ?? 0));
+
+  for (const assignment of assignments) {
+    const bookId = assignment["book_id"] as string;
+    const book = await fetchRecord("ledger_book", bookId);
+    if (!book) continue;
+    if (book["status"] != null && book["status"] !== "active") continue;
+    if (book["is_manual_je_allowed"] === false) continue;
+    if (book["category"] != null && book["category"] !== "statutory") continue;
+    return { id: bookId, label: rowLabel(book) };
+  }
+
+  return null;
+}
+
+async function resolveCompanyLedgerBook(
+  company: Record<string, unknown>,
+  companyCodeId: string,
+): Promise<{ id: string; label: string } | null> {
+  const assignedBook = await resolveAssignedLedgerBook(companyCodeId);
+  if (assignedBook) return assignedBook;
+
+  const defaultBookId = stringValue(company["default_ledger_book_id"]);
+  if (defaultBookId) {
+    const book = await fetchRecord("ledger_book", defaultBookId);
+    if (
+      book
+      && (book["status"] == null || book["status"] === "active")
+      && book["is_manual_je_allowed"] !== false
+      && (book["category"] == null || book["category"] === "statutory")
+    ) {
+      return { id: defaultBookId, label: rowLabel(book) };
+    }
+  }
+  return null;
+}
+
+function usesCompanyCurrencyDerivation(field: FlowFieldBinding): boolean {
+  const expr = field.derive_expression ?? "";
+  return (
+    expr === "company.functional_currency(company_code_id)" ||
+    expr === "company.functional_currency" ||
+    expr === "company_code.base_currency(company_code_id)" ||
+    expr === "company_code.base_currency" ||
+    expr === "company_code.functional_currency" ||
+    expr === "company_code.functional_currency(company_code_id)"
+  );
+}
+
+function usesCompanyBookDerivation(field: FlowFieldBinding): boolean {
+  const expr = field.derive_expression ?? "";
+  return (
+    expr === "company.default_manual_ledger_book(company_code_id)" ||
+    expr === "company.default_ledger_book(company_code_id)" ||
+    expr === "company.default_ledger_book" ||
+    expr === "company_code.default_manual_ledger_book(company_code_id)" ||
+    expr === "company_code.default_manual_ledger_book" ||
+    expr === "company_code.default_ledger_book(company_code_id)" ||
+    expr === "company_code.default_ledger_book"
+  );
+}
+
+function companyDerivedFields(steps: FlowStep[]): { currency: string[]; book: string[]; all: string[] } {
+  const currency = new Set<string>();
+  const book = new Set<string>();
+  for (const step of steps) {
+    for (const field of step.fields) {
+      if (usesCompanyCurrencyDerivation(field)) currency.add(field.field_name);
+      if (usesCompanyBookDerivation(field)) book.add(field.field_name);
+    }
+  }
+  return {
+    currency: [...currency],
+    book: [...book],
+    all: [...currency, ...book],
+  };
+}
+
 function buildInitialDraft(
   steps: FlowStep[],
   userCtx?: Record<string, unknown>,
@@ -372,32 +495,96 @@ export function useFlowEngine(
   const companyCodeId = String(state.draft["company_code_id"] ?? "");
 
   useEffect(() => {
+    const derived = companyDerivedFields(sortedSteps);
+    if (derived.all.length === 0) return;
+
     if (!companyCodeId) {
       setState((prev) => {
-        if (prev.overrides.has("base_currency_code") || prev.draft["base_currency_code"] == null) {
-          return prev;
+        const newDraft = { ...prev.draft };
+        const newLabels = { ...prev.displayLabels };
+        let changed = false;
+        let labelsChanged = false;
+
+        for (const name of derived.all) {
+          if (newDraft[name] != null) {
+            newDraft[name] = null;
+            changed = true;
+          }
+          if (name in newLabels) {
+            delete newLabels[name];
+            labelsChanged = true;
+          }
         }
-        return { ...prev, draft: { ...prev.draft, base_currency_code: null } };
+
+        return changed || labelsChanged
+          ? { ...prev, draft: newDraft, displayLabels: newLabels }
+          : prev;
       });
       return;
     }
 
     let cancelled = false;
 
-    void fetch(`/api/relay/api/records/company_code/${encodeURIComponent(companyCodeId)}`)
-      .then((r) => (r.ok ? (r.json() as Promise<{ data?: Record<string, unknown> }>) : Promise.reject()))
-      .then((resp) => {
+    void fetchRecord("company_code", companyCodeId)
+      .then(async (company) => {
         if (cancelled) return;
-        const rec = resp.data;
-        if (!rec) return;
-        // functional_currency is char(3) — trim trailing spaces from DB
-        const functionalCurrency = (rec["functional_currency"] as string | null | undefined)?.trim() ?? null;
-        if (!functionalCurrency) return;
+        if (!company) return;
+        // Company currency fields can vary by seed/version, so normalize whichever one exists.
+        const currency = companyCurrency(company);
+        const ledgerBook = derived.book.length > 0
+          ? await resolveCompanyLedgerBook(company, companyCodeId)
+          : null;
+        if (cancelled) return;
 
         setState((prev) => {
-          if (prev.overrides.has("base_currency_code")) return prev;
-          if (prev.draft["base_currency_code"] === functionalCurrency) return prev;
-          return { ...prev, draft: { ...prev.draft, base_currency_code: functionalCurrency } };
+          const newDraft = { ...prev.draft };
+          const newLabels = { ...prev.displayLabels };
+          let changed = false;
+          let labelsChanged = false;
+
+          if (currency) {
+            for (const name of derived.currency) {
+              if (!prev.overrides.has(name) && newDraft[name] !== currency) {
+                newDraft[name] = currency;
+                changed = true;
+              }
+            }
+          } else {
+            for (const name of derived.currency) {
+              if (!prev.overrides.has(name) && newDraft[name] != null) {
+                newDraft[name] = null;
+                changed = true;
+              }
+            }
+          }
+
+          if (ledgerBook) {
+            for (const name of derived.book) {
+              if (!prev.overrides.has(name) && newDraft[name] !== ledgerBook.id) {
+                newDraft[name] = ledgerBook.id;
+                changed = true;
+              }
+              if (newDraft[name] === ledgerBook.id && newLabels[name] !== ledgerBook.label) {
+                newLabels[name] = ledgerBook.label;
+                labelsChanged = true;
+              }
+            }
+          } else {
+            for (const name of derived.book) {
+              if (!prev.overrides.has(name) && newDraft[name] != null) {
+                newDraft[name] = null;
+                changed = true;
+              }
+              if (name in newLabels) {
+                delete newLabels[name];
+                labelsChanged = true;
+              }
+            }
+          }
+
+          return changed || labelsChanged
+            ? { ...prev, draft: newDraft, displayLabels: newLabels }
+            : prev;
         });
       })
       .catch(() => null);
@@ -406,7 +593,7 @@ export function useFlowEngine(
       cancelled = true;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyCodeId]);
+  }, [companyCodeId, sortedSteps]);
 
   const currentStep = sortedSteps[state.currentStepIndex]!;
   const ruleCtx = useMemo(() => makeCtx(state.draft, userCtx), [state.draft, userCtx]);

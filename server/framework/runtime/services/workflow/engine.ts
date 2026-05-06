@@ -15,7 +15,7 @@
  *   The engine checks for an existing pending request before inserting (idempotent).
  */
 
-import type { Kysely, Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 import { evaluateJsonLogic } from "./jsonlogic.js";
 import type { ApproverResolverService } from "./approver-resolver.service.js";
 
@@ -144,7 +144,7 @@ export class WorkflowEngine {
     const defs = await this.db
       .selectFrom("control.workflow_definition as wd")
       .select(["wd.id", "wd.rules"])
-      .where("wd.tenant_id", "=", tenantId)
+      .where("wd.tenant_id", "in", [tenantId, "00000000-0000-0000-0000-000000000000"])
       .where("wd.entity_type", "=", entityType)
       .where("wd.is_active", "=", true)
       .where("wd.effective_from", "<=", now)
@@ -154,6 +154,7 @@ export class WorkflowEngine {
           eb("wd.effective_to", ">", now),
         ]),
       )
+      .orderBy(sql<number>`case when wd.tenant_id = ${tenantId} then 0 else 1 end`, "asc")
       .orderBy("wd.effective_from", "asc")
       .execute();
 

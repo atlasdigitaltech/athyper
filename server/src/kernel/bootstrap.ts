@@ -447,7 +447,8 @@ export async function bootstrap(
       baseUrl: process.env["GOTENBERG_BASE_URL"],
     });
   } else if (!pdfRenderer) {
-    logger.warn("pdf_renderer_not_configured", {
+    const log = config.env === "local" ? logger.info.bind(logger) : logger.warn.bind(logger);
+    log("pdf_renderer_not_configured", {
       message: "Neither GOTENBERG_BASE_URL nor RENDERER_BASE_URL+RENDERER_INTERNAL_TOKEN set — PDF rendering disabled",
     });
   }

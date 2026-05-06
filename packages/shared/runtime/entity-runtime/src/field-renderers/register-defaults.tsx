@@ -9,10 +9,23 @@ import { useQuery } from "@tanstack/react-query";
 import { Input, Checkbox, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@athyper/ui/primitives";
 // Select primitives kept for EnumRenderer (LookupSelect).
 import { DatePicker, AsyncCombobox } from "@athyper/ui/composites";
-import { EntityPicker } from "@athyper/runtime-shared/entity-search";
+import {
+  EntityPicker,
+  entityRowToPickerOption,
+  resolveEntityPickerOptionConfig,
+  type EntityPickerOptionConfig,
+} from "@athyper/runtime-shared/entity-search";
 import { MoneySummary, QuantityUnit } from "@athyper/domain-widgets";
 import { useLookupDomain } from "@athyper/query";
 import { registerFieldRenderer, type FieldRendererProps } from "./registry";
+
+function humanizeToken(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 // ── Text / String ───────────────────────────────────────────────
 
@@ -107,12 +120,20 @@ function MoneyRenderer({ value, mode, onChange, error }: FieldRendererProps) {
 // ── Enum / Lookup ───────────────────────────────────────────────
 
 function EnumRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+  const domainCode = field.enum_domain_code ?? "";
+  const { data } = useLookupDomain(domainCode, { enabled: mode === "view" && !!domainCode });
+
   if (mode === "view") {
-    return <Badge variant="outline">{String(value ?? "—")}</Badge>;
+    if (value === null || value === undefined || value === "") {
+      return <span className="text-sm text-muted-foreground">—</span>;
+    }
+    const code = String(value);
+    const label = data?.values?.find((v) => v.code === code)?.name ?? humanizeToken(code);
+    return <Badge variant="outline">{label}</Badge>;
   }
   return (
     <LookupSelect
-      domainCode={field.enum_domain_code ?? ""}
+      domainCode={domainCode}
       value={String(value ?? "")}
       onChange={(v) => onChange?.(v)}
       error={error}
@@ -174,11 +195,15 @@ function getReferenceEntityCode(field: FieldRendererProps["field"]): string | nu
 function ReferencePickerField({
   entityCode,
   value,
+  displayLabel,
+  optionConfig,
   onChange,
   error,
 }: {
   entityCode: string | null;
   value: string;
+  displayLabel?: string | null;
+  optionConfig?: EntityPickerOptionConfig;
   onChange: (v: string) => void;
   error?: string;
 }) {
@@ -186,9 +211,12 @@ function ReferencePickerField({
     <EntityPicker
       entityCode={entityCode}
       value={value || null}
+      displayLabel={displayLabel}
+      optionConfig={optionConfig}
       onChange={(v) => onChange(v ?? "")}
       disabled={!entityCode}
       error={error}
+      loadOnOpen
       placeholder="Search records…"
     />
   );
@@ -198,10 +226,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
   const entityCode    = getReferenceEntityCode(field);
-  const displayField  = field.reference_config?.display_field ?? "name";
+  const optionConfig  = resolveEntityPickerOptionConfig(field.reference_config);
   const uuid          = typeof value === "string" && UUID_RE.test(value) ? value : null;
 
-  const { data: refRecord } = useQuery<{ data: Record<string, unknown> } | null>({
+  const { data: refRecord, isLoading: refRecordLoading } = useQuery<{ data: Record<string, unknown> } | null>({
     queryKey: ["entity-ref", entityCode ?? "", uuid ?? ""],
     queryFn: async ({ signal }) => {
       const res = await fetch(
@@ -211,15 +239,21 @@ function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendere
       if (!res.ok) return null;
       return res.json() as Promise<{ data: Record<string, unknown> }>;
     },
-    enabled: mode === "view" && !!entityCode && !!uuid,
+    enabled: !!entityCode && !!uuid,
     staleTime: 5 * 60 * 1000,
   });
 
+  const displayLabel = (() => {
+    const refData = refRecord?.data;
+    if (!refData) return null;
+    return entityRowToPickerOption(refData, entityCode, optionConfig).label || null;
+  })();
+  const pickerDisplayLabel = displayLabel ?? (uuid && refRecordLoading ? "Loading..." : null);
+
   if (mode === "view") {
     if (!value) return <span className="text-sm text-muted-foreground">—</span>;
-    const displayName = refRecord?.data?.[displayField];
-    if (displayName && typeof displayName === "string") {
-      return <span className="text-sm">{displayName}</span>;
+    if (displayLabel) {
+      return <span className="text-sm">{displayLabel}</span>;
     }
     return (
       <span className="font-mono text-xs text-muted-foreground">
@@ -232,6 +266,8 @@ function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendere
     <ReferencePickerField
       entityCode={entityCode}
       value={String(value ?? "")}
+      displayLabel={pickerDisplayLabel}
+      optionConfig={optionConfig}
       onChange={(v) => onChange?.(v)}
       error={error}
     />
@@ -301,6 +337,57 @@ function JsonRenderer({ value, mode }: FieldRendererProps) {
   return <pre className="text-xs">{JSON.stringify(value, null, 2)}</pre>;
 }
 
+// Array values render as compact chips in read mode, with a simple comma editor fallback.
+function normalizeArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (item === null || item === undefined) return "";
+        return typeof item === "object" ? JSON.stringify(item) : String(item);
+      })
+      .filter(Boolean);
+  }
+  if (typeof value === "string") {
+    if (!value.trim()) return [];
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) return normalizeArray(parsed);
+    } catch {
+      // Fall back to comma splitting below.
+    }
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function ArrayRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+  const values = normalizeArray(value);
+
+  if (mode === "view") {
+    if (values.length === 0) {
+      return <span className="text-sm text-muted-foreground">-</span>;
+    }
+    return (
+      <div className="flex flex-wrap gap-1">
+        {values.map((item, index) => (
+          <Badge key={`${item}-${index}`} variant="secondary">
+            {field.data_type === "text_array" ? humanizeToken(item) : item}
+          </Badge>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <Input
+      value={values.join(", ")}
+      onChange={(e) => onChange?.(e.target.value.split(",").map((item) => item.trim()).filter(Boolean))}
+      placeholder={field.label ?? field.name}
+      error={error}
+    />
+  );
+}
+
 // ── Registration ────────────────────────────────────────────────
 
 /**
@@ -343,4 +430,10 @@ export function registerDefaults(): void {
   // JSON
   registerFieldRenderer("json", JsonRenderer);
   registerFieldRenderer("jsonb", JsonRenderer);
+
+  // Arrays
+  registerFieldRenderer("text_array", ArrayRenderer);
+  registerFieldRenderer("uuid_array", ArrayRenderer);
+  registerFieldRenderer("int_array", ArrayRenderer);
+  registerFieldRenderer("jsonb_array", ArrayRenderer);
 }

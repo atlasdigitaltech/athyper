@@ -2,6 +2,7 @@
  * Finance Routes — read-model endpoints for the GL Workbench
  *
  * GET  /api/finance/accounts/search            — GL account search (code/name ILIKE, node_type filter)
+ * GET  /api/finance/tax-groups/search          — tax group chooser (code/name/type filtered)
  * GET  /api/finance/master/companies           — list companies for scope selector
  * GET  /api/finance/master/entities            — list legal entities for scope selector
  * GET  /api/finance/period-status              — fiscal + book period status for a scope
@@ -561,6 +562,75 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
 
       res.json({ data: rows.rows });
     } catch (err) { logger?.error("finance_accounts_search_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // ── GET /api/finance/tax-groups/search?q=&category=&id=&limit= ────────────
+  // Searches control.tax_group through its active rate schedules so callers can
+  // pick the group ID that invoice tax calculation expects.
+  router.get("/finance/tax-groups/search", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json({ data: [] }); return; }
+
+      const q        = ((req.query["q"]        as string | undefined) ?? "").trim();
+      const id       = ((req.query["id"]       as string | undefined) ?? "").trim();
+      const category = ((req.query["category"] as string | undefined) ?? "").trim().toUpperCase();
+      const limit    = Math.min(50, Math.max(1, Number(req.query["limit"] ?? 10)));
+      const pattern  = `%${q}%`;
+      const idFilter = id || null;
+
+      const rows = await sql<{
+        id: string; code: string; name: string; description: string | null;
+        category: string; rate_value: string | null; tax_type_code: string | null;
+      }>`
+        SELECT DISTINCT ON (tg.id)
+          tg.id,
+          tg.code,
+          tg.name,
+          tg.description,
+          tt.category,
+          trs.rate_value,
+          tt.code AS tax_type_code
+        FROM control.tax_group tg
+        JOIN control.tax_group_component tgc
+          ON  tgc.tax_group_id = tg.id
+          AND tgc.tenant_id    = tg.tenant_id
+          AND tgc.is_active    = true
+        JOIN control.tax_rate_schedule trs
+          ON  trs.id        = tgc.tax_rate_schedule_id
+          AND trs.tenant_id = tgc.tenant_id
+          AND trs.is_active = true
+        JOIN master.tax_type tt
+          ON  tt.id        = trs.tax_type_id
+          AND tt.tenant_id = trs.tenant_id
+          AND tt.status    = 'active'
+        WHERE tg.tenant_id = ${tenantId}::uuid
+          AND tg.status    = 'active'
+          AND (${idFilter}::uuid IS NULL OR tg.id = ${idFilter}::uuid)
+          AND (${category} = '' OR tt.category = ${category})
+          AND (
+            tt.category = 'WITHHOLDING'
+            OR trs.tax_direction IN ('PURCHASE', 'BOTH')
+            OR trs.wht_basis IS NOT NULL
+          )
+          AND (
+            ${q} = ''
+            OR tg.code ILIKE ${pattern}
+            OR tg.name ILIKE ${pattern}
+            OR COALESCE(tg.description, '') ILIKE ${pattern}
+            OR tt.code ILIKE ${pattern}
+            OR tt.name ILIKE ${pattern}
+          )
+        ORDER BY tg.id, tgc.calculation_seq
+        LIMIT ${limit}
+      `.execute(db);
+
+      res.json({ data: rows.rows });
+    } catch (err) { logger?.error("finance_tax_groups_search_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
 
   // ── GET /api/finance/master/controls?companyCode= ─────────────────────────

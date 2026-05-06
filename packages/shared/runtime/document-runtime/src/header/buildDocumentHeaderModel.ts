@@ -27,13 +27,33 @@ import { statusToIntent, fmtDate, fmtDateTime, fmtAmountMaybe } from "@athyper/r
 
 // ── Stage constants (standard AP/document lifecycle) ─────────────────────────
 
-const LIFECYCLE_STAGES: Array<{ key: string; label: string }> = [
+const DEFAULT_LIFECYCLE_STAGES: Array<{ key: string; label: string }> = [
   { key: "draft",            label: "Draft" },
   { key: "pending_approval", label: "Submitted" },
   { key: "approved",         label: "Approved" },
   { key: "posted",           label: "Posted" },
   { key: "paid",             label: "Paid" },
 ];
+
+function readLifecycleStages(entity: CompiledEntity): Array<{ key: string; label: string }> {
+  const raw =
+    entity.display_config?.document_header?.lifecycle_stages ??
+    entity.display_config?.lifecycle_stages;
+
+  if (!Array.isArray(raw)) return DEFAULT_LIFECYCLE_STAGES;
+
+  const stages = raw
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const row = entry as Record<string, unknown>;
+      const key = typeof row["key"] === "string" ? row["key"].trim() : "";
+      const label = typeof row["label"] === "string" ? row["label"].trim() : "";
+      return key && label ? { key, label } : null;
+    })
+    .filter((stage): stage is { key: string; label: string } => Boolean(stage));
+
+  return stages.length > 0 ? stages : DEFAULT_LIFECYCLE_STAGES;
+}
 
 function normaliseStageKey(s: string): string {
   const k = s.toLowerCase().replace(/[\s-]/g, "_");
@@ -216,15 +236,16 @@ export function buildDocumentHeaderModel(
 
   // ── Progress rail (lifecycle kind) ───────────────────────────────────────────
 
+  const lifecycleStages = readLifecycleStages(entity);
   const stageKey  = normaliseStageKey(statusStr);
-  const stepIndex = LIFECYCLE_STAGES.findIndex((s) => s.key === stageKey);
+  const stepIndex = lifecycleStages.findIndex((s) => s.key === stageKey);
   const effectiveIndex = stepIndex === -1 ? 0 : stepIndex;
   const currentKey = stepIndex === -1 ? "draft" : stageKey;
 
   const createdAtIso       = dh?.created_at_field       ? String(data[dh.created_at_field]       ?? "") : undefined;
   const statusChangedAtIso = dh?.status_changed_at_field ? String(data[dh.status_changed_at_field] ?? "") : undefined;
 
-  const stages: HeaderProgressStage[] = LIFECYCLE_STAGES.map((stage, i): HeaderProgressStage => {
+  const stages: HeaderProgressStage[] = lifecycleStages.map((stage, i): HeaderProgressStage => {
     const isPast    = i < effectiveIndex;
     const isCurrent = i === effectiveIndex;
 

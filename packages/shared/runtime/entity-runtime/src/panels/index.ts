@@ -16,3 +16,4 @@ export { ApprovalsPanel, type ApprovalsPanelProps } from "./ApprovalsPanel";
 export { WorkflowSummaryPanel, type WorkflowSummaryPanelProps } from "./WorkflowSummaryPanel";
 export { AttachmentsPanel, type AttachmentsPanelProps } from "./AttachmentsPanel";
 export { DistributionsPanel, type DistributionsPanelProps } from "./DistributionsPanel";
+export { AddressesPanel } from "../detail/AddressesPanel";

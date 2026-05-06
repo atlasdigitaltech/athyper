@@ -116,7 +116,35 @@ FROM (VALUES
         ON CONFLICT DO NOTHING;
     END IF;
 
-    -- ── company_code_gl_config ────────────────────────────────────────────────
+    -- ledger_book
+    SELECT ev.id INTO v_ev FROM control.entity_version ev
+    JOIN control.entity e ON e.id = ev.entity_id
+    WHERE e.name = 'ledger_book' AND ev.version_no = 1;
+
+    IF v_ev IS NOT NULL THEN
+        INSERT INTO control.entity_field (
+            entity_version_id, name, column_name, label, data_type, ui_type,
+            cardinality, origin, is_required, is_filterable, is_sortable,
+            is_searchable, sort_order, created_by, enum_config)
+SELECT entity_version_id, name, column_name, label, data_type, ui_type,
+    cardinality, origin, is_required, is_filterable, is_sortable,
+    is_searchable, sort_order, created_by,
+    CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
+FROM (VALUES
+            (v_ev,'code',                 'code',                 'Book Code',         'string', 'text',    'one','standard',true, true,  true,  true, 110,v_su),
+            (v_ev,'name',                 'name',                 'Name',              'string', 'text',    'one','standard',true, true,  true,  true, 120,v_su),
+            (v_ev,'category',             'category',             'Category',          'string', 'select',  'one','standard',true, true,  true,  false,130,v_su),
+            (v_ev,'base_currency_code',   'base_currency_code',   'Base Currency',     'string', 'currency','one','standard',true, true,  true,  false,140,v_su),
+            (v_ev,'is_primary',           'is_primary',           'Primary',           'boolean','checkbox','one','standard',false,true,  true,  false,150,v_su),
+            (v_ev,'is_manual_je_allowed', 'is_manual_je_allowed', 'Manual JE Allowed', 'boolean','checkbox','one','standard',false,true,  true,  false,160,v_su),
+            (v_ev,'status',               'status',               'Status',            'string', 'status',  'one','system',  true, true,  true,  false,170,v_su),
+            (v_ev,'sort_order',           'sort_order',           'Sort Order',        'integer','number',  'one','standard',false,false, true,  false,180,v_su)
+) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
+       cardinality, origin, is_required, is_filterable, is_sortable,
+       is_searchable, sort_order, created_by)
+        ON CONFLICT DO NOTHING;
+    END IF;
+
     SELECT ev.id INTO v_ev FROM control.entity_version ev
     JOIN control.entity e ON e.id = ev.entity_id
     WHERE e.name = 'company_code_gl_config' AND ev.version_no = 1;
@@ -156,12 +184,17 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
             (v_ev,'company_code_id', 'company_code_id', 'Company Code', 'uuid',  'reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'book_code',       'book_code',       'Book Code',    'string','text',     'one','standard',true, true,  true,  true, 120,v_su),
-            (v_ev,'is_leading',      'is_leading',      'Leading Book', 'boolean','hidden',  'one','standard',false,true,  false, false,130,v_su)
+            (v_ev,'book_id',         'book_id',         'Ledger Book',  'uuid',  'reference','one','standard',true, true,  false, false,120,v_su),
+            (v_ev,'priority',        'priority',        'Priority',     'integer','number',  'one','standard',true, true,  true,  false,130,v_su),
+            (v_ev,'status',          'status',          'Status',       'string','status',   'one','system',  true, true,  true,  false,140,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
         ON CONFLICT DO NOTHING;
+
+        DELETE FROM control.entity_field
+        WHERE entity_version_id = v_ev
+          AND name IN ('book_code','is_leading');
     END IF;
 
     RAISE NOTICE '035_version_fields/006_fields_coa_gl: done';

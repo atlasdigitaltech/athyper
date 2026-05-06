@@ -169,12 +169,12 @@ export async function handlePostPayment(
     if (!payment) return { status: 404, body: { error: "PAYMENT_NOT_FOUND" } };
 
     const currentStatus = String(payment["status"] ?? "").toLowerCase();
-    if (!["approved", "draft"].includes(currentStatus)) {
+    if (currentStatus !== "approved") {
       return {
         status: 422,
         body: {
           error: "INVALID_STATUS",
-          message: `Payment is in '${currentStatus}' — only approved payments can be posted`,
+          message: `Payment is in '${currentStatus}' — payment must be in approved status before posting`,
         },
       };
     }
@@ -385,6 +385,41 @@ export async function handlePostPayment(
         updated_by     = ${principalId}
       WHERE id = ${paymentId} AND tenant_id = ${tenantId}
     `.execute(trx);
+
+    // ── Update invoice paid_amount / status from posted non-voided allocations ──
+    // Only posted+non-voided payments count toward invoice settlement.
+    // outstanding_amount is GENERATED ALWAYS AS STORED — not written here.
+    const affectedInvoiceIds = [...new Set(
+      allocations
+        .map((a) => a.purchase_invoice_id)
+        .filter((id): id is string => id != null),
+    )];
+
+    for (const invId of affectedInvoiceIds) {
+      await sql`
+        WITH posted_sum AS (
+          SELECT COALESCE(SUM(pea.allocated_amount), 0) AS total_paid
+            FROM document.payment_entry_allocation pea
+            JOIN document.payment_entry             pe  ON pe.id = pea.payment_entry_id
+                                                        AND pe.tenant_id = pea.tenant_id
+           WHERE pea.purchase_invoice_id = ${invId}
+             AND pea.tenant_id           = ${tenantId}
+             AND pe.status               = 'posted'
+             AND pe.is_voided            = false
+        )
+        UPDATE document.purchase_invoice pi
+           SET paid_amount = ps.total_paid,
+               status      = CASE
+                 WHEN ps.total_paid >= COALESCE(pi.payable_amount, pi.total_amount) THEN 'fully_paid'
+                 WHEN ps.total_paid > 0                                             THEN 'partially_paid'
+                 ELSE pi.status
+               END,
+               updated_at  = now()
+          FROM posted_sum ps
+         WHERE pi.id        = ${invId}
+           AND pi.tenant_id = ${tenantId}
+      `.execute(trx);
+    }
 
     logger?.info("payment_posted", { paymentId, jeId, companyId });
 
@@ -634,12 +669,14 @@ export async function handleVoidPayment(
           JOIN document.payment_entry pe ON pe.id = pea.payment_entry_id
           WHERE pea.purchase_invoice_id = ${invId}
             AND pea.tenant_id           = ${tenantId}
+            AND pe.status               = 'posted'
             AND pe.is_voided            = false
         )
+        -- outstanding_amount is GENERATED ALWAYS AS STORED — not written here;
+        -- it recalculates automatically when paid_amount changes.
         UPDATE document.purchase_invoice pi
-        SET paid_amount        = a.total_paid,
-            outstanding_amount = GREATEST(0, COALESCE(pi.payable_amount, pi.total_amount) - a.total_paid),
-            status             = CASE
+        SET paid_amount = a.total_paid,
+            status      = CASE
               WHEN a.total_paid <= 0 THEN
                 CASE WHEN pi.status = 'fully_paid' OR pi.status = 'partially_paid'
                      THEN 'posted' ELSE pi.status END

@@ -14,14 +14,19 @@ import {
 } from "@athyper/ui/primitives";
 import type { RecordVersionSummary } from "@athyper/api-contracts/records";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
+import { queryKeys } from "@athyper/api-contracts/query-keys";
 import { buildOrchestratorFromRecord } from "../orchestrator";
 import { buildDocumentHeaderModel } from "../header";
 import { AmountSummaryCard } from "../amounts";
 import { FlowModal } from "../intake";
 import { ValidationBanner } from "../validation";
 import { EntityHeader, EntityProgressRow, useRailState } from "@athyper/entity-runtime/header";
-import type { PlatformPanelIcon } from "@athyper/entity-runtime/header";
+import type { HeaderAction, PlatformPanelIcon } from "@athyper/entity-runtime/header";
 import { resolveLinesRenderer } from "@athyper/runtime-shared/renderer-registry";
+import {
+  entityRowToPickerOption,
+  resolveEntityPickerOptionConfig,
+} from "@athyper/runtime-shared/entity-search";
 import { resolvePresentationConfig as resolveDisplayConfig } from "@athyper/entity-runtime/metadata";
 import { useOperationDispatch } from "@athyper/entity-runtime/actions";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
@@ -58,11 +63,12 @@ export interface DocumentDetailPageProps {
 // ── Sub-panels ────────────────────────────────────────────────────────────────
 
 function LinesPanel({
-  entityCode, recordId, companyCodeId, record,
+  entity, entityCode, recordId, recordUuid, companyCodeId, record,
   lines, distributions, isLoading, onRefresh, linesRenderer,
-  hasAiClassification, hasLineComposer,
+  hasAiClassification, hasLineComposer, editMode,
 }: {
-  entityCode: string; recordId: string;
+  entity: CompiledEntity;
+  entityCode: string; recordId: string; recordUuid?: string;
   companyCodeId?: string; record?: Record<string, unknown>;
   lines: DocumentLine[];
   distributions: AccountingDistribution[];
@@ -71,6 +77,7 @@ function LinesPanel({
   linesRenderer: string;
   hasAiClassification?: boolean;
   hasLineComposer?: boolean;
+  editMode?: boolean;
 }) {
   const RendererComponent = resolveLinesRenderer(linesRenderer);
   if (!RendererComponent) return null;
@@ -82,8 +89,10 @@ function LinesPanel({
 
   return (
     <RendererComponent
+      entity={entity}
       entityCode={entityCode}
       recordId={recordId}
+      recordUuid={recordUuid}
       companyCodeId={companyCodeId}
       record={record}
       lines={lines}
@@ -93,11 +102,29 @@ function LinesPanel({
       currencyCode={currencyCode}
       hasAiClassification={hasAiClassification}
       hasLineComposer={hasLineComposer}
+      editMode={editMode}
     />
   );
 }
 
 // ── Versions panel ────────────────────────────────────────────────────────────
+
+function resolveDocumentLinesRenderer(
+  entityCode: string,
+  configuredRenderer: string | null,
+  hasLinesTab: boolean,
+): string | null {
+  const normalized = entityCode.replace(/-/g, "_");
+
+  if (normalized === "journal_entry" && (!configuredRenderer || configuredRenderer === "generic")) {
+    return "journal";
+  }
+  if (normalized === "payment_entry" && (!configuredRenderer || configuredRenderer === "generic")) {
+    return "payment";
+  }
+
+  return configuredRenderer ?? (hasLinesTab ? "generic" : null);
+}
 
 interface VersionListResponse {
   data: RecordVersionSummary[];
@@ -191,40 +218,44 @@ function VersionCard({
 
           <div className="flex shrink-0 items-center gap-1.5">
             {canCompareWith ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline" size="sm" className="h-7 gap-1 text-xs"
-                    onClick={() => {
-                      const from = Math.min(pinnedVersion!, version.version_no);
-                      const to   = Math.max(pinnedVersion!, version.version_no);
-                      onNavigateCompare(from, to);
-                    }}
-                  >
-                    <ArrowLeftRight className="h-3 w-3" />
-                    Compare ↔ v{pinnedVersion}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Open diff: v{pinnedVersion} → v{version.version_no}</TooltipContent>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                      onClick={() => {
+                        const from = Math.min(pinnedVersion!, version.version_no);
+                        const to   = Math.max(pinnedVersion!, version.version_no);
+                        onNavigateCompare(from, to);
+                      }}
+                    >
+                      <ArrowLeftRight className="h-3 w-3" />
+                      Compare ↔ v{pinnedVersion}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Open diff: v{pinnedVersion} → v{version.version_no}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={isPinned ? "secondary" : "ghost"} size="sm"
-                    className="h-7 gap-1 text-xs text-muted-foreground"
-                    onClick={() => onSelectCompare(version.version_no)}
-                  >
-                    <ArrowLeftRight className="h-3 w-3" />
-                    {isPinned ? "Deselect" : "Select"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isPinned
-                    ? "Deselect this version"
-                    : `Select v${version.version_no} as compare baseline`}
-                </TooltipContent>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={isPinned ? "secondary" : "ghost"} size="sm"
+                      className="h-7 gap-1 text-xs text-muted-foreground"
+                      onClick={() => onSelectCompare(version.version_no)}
+                    >
+                      <ArrowLeftRight className="h-3 w-3" />
+                      {isPinned ? "Deselect" : "Select"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isPinned
+                      ? "Deselect this version"
+                      : `Select v${version.version_no} as compare baseline`}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
 
             {isCurrentAmendTarget && (
@@ -372,6 +403,48 @@ const HEADER_DISPLAY_FIELDS = new Set([
   "document_no", "status", "code", "name",
 ]);
 
+const DOCUMENT_FIELD_GROUP_LABELS: Record<string, string> = {
+  identity:       "Identity",
+  posting:        "Posting",
+  counterparty:   "Counterparty",
+  dates:          "Dates",
+  source:         "Source",
+  currency:       "Currency",
+  financial:      "Financial",
+  amounts:        "Amounts",
+  references:     "References",
+  reference:      "References",
+  narrative:      "Narrative",
+  reversal:       "Reversal",
+  controls:       "Controls",
+  dimensions:     "Dimensions",
+  matching:       "Matching",
+  audit:          "Audit",
+  metadata:       "Metadata",
+  system:         "System",
+};
+
+const DOCUMENT_FIELD_GROUP_ORDER: Record<string, number> = {
+  identity:     10,
+  posting:      20,
+  counterparty: 30,
+  dates:        40,
+  source:       50,
+  currency:     60,
+  financial:    70,
+  amounts:      80,
+  references:   90,
+  reference:    90,
+  narrative:    100,
+  reversal:     110,
+  controls:     120,
+  dimensions:   130,
+  matching:     140,
+  audit:        900,
+  metadata:     910,
+  system:       920,
+};
+
 const DOCUMENT_EDIT_SKIP_FIELDS = new Set([
   "document_no", "status", "code", "name",
   "created_at", "created_by", "updated_at", "updated_by",
@@ -394,9 +467,78 @@ function isDocumentEditableField(field: EntityField): boolean {
     !field.is_readonly &&
     !field.is_computed &&
     field.origin !== "system" &&
+    field.ui_type !== "hidden" &&
     field.data_type !== "lifecycle_state" &&
     !DOCUMENT_EDIT_SKIP_FIELDS.has(field.name)
   );
+}
+
+function isDocumentDisplayField(field: EntityField): boolean {
+  return (
+    !HEADER_DISPLAY_FIELDS.has(field.name) &&
+    field.ui_type !== "hidden" &&
+    field.data_type !== "lifecycle_state"
+  );
+}
+
+function titleCaseGroupKey(groupKey: string): string {
+  return groupKey
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getDocumentFieldGroupLabel(entity: CompiledEntity, groupKey: string): string {
+  return (
+    entity.field_groups.find((group) => group.group_key === groupKey)?.label ??
+    DOCUMENT_FIELD_GROUP_LABELS[groupKey] ??
+    titleCaseGroupKey(groupKey)
+  );
+}
+
+function getDocumentFieldGroupOrder(groupKey: string, fields: EntityField[]): number {
+  return DOCUMENT_FIELD_GROUP_ORDER[groupKey] ?? Math.min(...fields.map((field) => field.sort_order ?? 0));
+}
+
+function buildDocumentFieldGroups(
+  entity: CompiledEntity,
+  fields: EntityField[],
+) {
+  const byGroup = new Map<string, EntityField[]>();
+  const ungrouped: EntityField[] = [];
+
+  for (const field of fields) {
+    const groupKey = field.group_key?.trim();
+    if (!groupKey) {
+      ungrouped.push(field);
+      continue;
+    }
+    const groupFields = byGroup.get(groupKey) ?? [];
+    groupFields.push(field);
+    byGroup.set(groupKey, groupFields);
+  }
+
+  const grouped = [...byGroup.entries()].map(([key, groupFields]) => {
+    const sortedFields = [...groupFields].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    return {
+      key,
+      label: getDocumentFieldGroupLabel(entity, key),
+      order: getDocumentFieldGroupOrder(key, sortedFields),
+      fields: sortedFields,
+    };
+  });
+
+  const fallbackGroups = FIELD_BANDS.map((band) => ({
+    key:    band.key,
+    label:  band.label,
+    order:  band.min,
+    fields: ungrouped
+      .filter((field) => (field.sort_order ?? 0) >= band.min && (field.sort_order ?? 0) <= band.max)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+  })).filter((group) => group.fields.length > 0);
+
+  return [...grouped, ...fallbackGroups].sort((a, b) => a.order - b.order);
 }
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -431,6 +573,17 @@ function fmtFieldValue(
       };
     } catch { return { text: String(value), kind: "text" }; }
   }
+  if (dataType === "datetime" || dataType === "timestamptz") {
+    try {
+      return {
+        text: new Intl.DateTimeFormat("en-GB", {
+          day: "2-digit", month: "short", year: "numeric",
+          hour: "2-digit", minute: "2-digit",
+        }).format(new Date(String(value))),
+        kind: "text",
+      };
+    } catch { return { text: String(value), kind: "text" }; }
+  }
   if (dataType === "decimal" || dataType === "numeric") {
     const n = Number(value);
     if (!isNaN(n)) {
@@ -458,6 +611,33 @@ function fmtFieldValue(
   return { text: String(value), kind: "text" };
 }
 
+function normaliseFieldValueForEdit(value: unknown, field: EntityField): unknown {
+  if (!value || typeof value !== "string") return value;
+  if (field.data_type === "date") return value.split("T")[0] ?? value;
+  if (field.data_type === "datetime" || field.data_type === "timestamptz") return value.slice(0, 16);
+  return value;
+}
+
+function documentHeaderActionKey(action: HeaderAction): string {
+  if (action.id === "edit" || action.id === "update") return "edit";
+  if (action.label.trim().toLowerCase() === "edit") return "edit";
+  return action.id;
+}
+
+function dedupeDocumentHeaderActions(actions: HeaderAction[]): HeaderAction[] {
+  const seen = new Set<string>();
+  const deduped: HeaderAction[] = [];
+
+  for (const action of actions) {
+    const key = documentHeaderActionKey(action);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(action);
+  }
+
+  return deduped;
+}
+
 function DocumentFieldsPanel({
   entity,
   data,
@@ -467,17 +647,10 @@ function DocumentFieldsPanel({
   data: Record<string, unknown>;
   resolvedRefs: Map<string, string>;
 }) {
-  const grouped = FIELD_BANDS.map((band) => ({
-    ...band,
-    fields: entity.fields
-      .filter((f) =>
-        !HEADER_DISPLAY_FIELDS.has(f.name) &&
-        f.data_type !== "lifecycle_state" &&
-        (f.sort_order ?? 0) >= band.min &&
-        (f.sort_order ?? 0) <= band.max,
-      )
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
-  })).filter((g) => g.fields.length > 0);
+  const grouped = buildDocumentFieldGroups(
+    entity,
+    entity.fields.filter(isDocumentDisplayField),
+  );
 
   if (grouped.length === 0) return null;
 
@@ -525,16 +698,10 @@ function DocumentEditableFieldsPanel({
   fieldErrors: Record<string, string>;
   onFieldChange: (name: string, value: unknown) => void;
 }) {
-  const grouped = FIELD_BANDS.map((band) => ({
-    ...band,
-    fields: entity.fields
-      .filter((f) =>
-        isDocumentEditableField(f) &&
-        (f.sort_order ?? 0) >= band.min &&
-        (f.sort_order ?? 0) <= band.max,
-      )
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
-  })).filter((g) => g.fields.length > 0);
+  const grouped = buildDocumentFieldGroups(
+    entity,
+    entity.fields.filter(isDocumentEditableField),
+  );
 
   if (grouped.length === 0) {
     return (
@@ -557,7 +724,7 @@ function DocumentEditableFieldsPanel({
             <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
               {group.fields.map((field) => {
                 const Renderer = resolveFieldRenderer(field);
-                const value = data[field.name] ?? data[field.column_name ?? ""];
+                const value = normaliseFieldValueForEdit(data[field.name] ?? data[field.column_name ?? ""], field);
                 const error = fieldErrors[field.name];
                 return (
                   <div key={field.name} className="space-y-1.5">
@@ -685,8 +852,11 @@ export function DocumentDetailPage({
   const resolvedTabs  = resolveTabs(entity, null, []);
 
   const resolvedDisplayConfig = resolveDisplayConfig(entity.display_config as Record<string, unknown>);
-  const linesRenderer = resolvedDisplayConfig.lines_renderer
-    ?? (resolvedTabs.includes("lines") ? "generic" : null);
+  const linesRenderer = resolveDocumentLinesRenderer(
+    entity.entity_code,
+    resolvedDisplayConfig.lines_renderer,
+    resolvedTabs.includes("lines"),
+  );
   const hasLinesSection = linesRenderer !== null;
 
   const opDispatch = useOperationDispatch({
@@ -696,8 +866,10 @@ export function DocumentDetailPage({
   });
 
   const statusNorm = getDocumentStatus(entity, record);
-  const isDraftStatus = statusNorm === "draft";
-  const canEditDraft = isDraftStatus && (
+  const subResourceRecordId = record.id;
+  const isJournalEntry = entity.entity_code.replace(/-/g, "_") === "journal_entry";
+  const isEditableDraftStatus = statusNorm === "draft" || statusNorm === "created";
+  const canEditDraft = isEditableDraftStatus && (
     operations === undefined ||
     operations.some((op) =>
       op.is_enabled &&
@@ -712,6 +884,7 @@ export function DocumentDetailPage({
   const [fieldErrors, setFieldErrors]   = useState<Record<string, string>>({});
   const [saveError, setSaveError]       = useState<string | null>(null);
   const [savingDraft, setSavingDraft]   = useState(false);
+  const [submittingDraft, setSubmittingDraft] = useState(false);
 
   useEffect(() => {
     setEditBaseline(data);
@@ -753,7 +926,7 @@ export function DocumentDetailPage({
       .map((f) => ({
         name: f.name,
         targetEntity: f.reference_config!.target_entity,
-        displayField: f.reference_config?.display_field ?? "name",
+        optionConfig: resolveEntityPickerOptionConfig(f.reference_config),
         value: String(data[f.name] ?? data[f.column_name ?? ""]),
       }));
   }, [entity.fields, data]);
@@ -847,15 +1020,10 @@ export function DocumentDetailPage({
 
   const resolvedRefs = useMemo(() => {
     const m = new Map<string, string>();
-    refFields.forEach(({ value, displayField }, i) => {
+    refFields.forEach(({ value, targetEntity, optionConfig }, i) => {
       const result = refQueries[i]?.data;
       if (!result?.data) return;
-      const d = result.data;
-      const label =
-        (d[displayField] as string | undefined) ??
-        (d["name"] as string | undefined) ??
-        (d["code"] as string | undefined) ??
-        null;
+      const label = entityRowToPickerOption(result.data, targetEntity, optionConfig).label || null;
       if (label) m.set(value, label);
     });
     if (partyId && resolvedPartyName) m.set(partyId, resolvedPartyName);
@@ -866,14 +1034,8 @@ export function DocumentDetailPage({
   }, [refFields, refQueries, partyId, resolvedPartyName, companyCodeId, resolvedCompanyCode]);
 
   const hasAmountBreakdown = orchestrator.amountBreakdown.length > 0;
-  const sectionTabs = detailConfig.sections.map((s) => ({
-    id:    s.group.group_key,
-    label: s.group.label,
-  }));
-
   const tabs = [
     { id: "__overview", label: "Overview" },
-    ...sectionTabs,
     ...(hasLinesSection                         ? [{ id: "__lines",         label: "Items" }]         : []),
     ...(resolvedTabs.includes("distributions") ? [{ id: "__distributions", label: "Accounting" }]    : []),
     ...(resolvedTabs.includes("workflow")      ? [{ id: "__workflow",      label: "Workflow" }]      : []),
@@ -897,13 +1059,14 @@ export function DocumentDetailPage({
   });
 
   const headerModel = useMemo(() => {
+    const busy = savingDraft || submittingDraft || opDispatch.isSubmitting;
     const model = {
       ...headerModelBase,
       identity: { ...headerModelBase.identity },
-      actions:  [...headerModelBase.actions],
+      actions:  dedupeDocumentHeaderActions(headerModelBase.actions),
     };
 
-    const hasEdit = model.actions.some((action) => action.id === "edit" || action.id === "update");
+    const hasEdit = model.actions.some((action) => documentHeaderActionKey(action) === "edit");
     if (!effectiveEditMode && canEditDraft && !hasEdit) {
       model.actions = [
         { id: "edit", label: "Edit", placement: "primary", order: 1, icon: "pencil" },
@@ -912,51 +1075,68 @@ export function DocumentDetailPage({
     }
 
     if (effectiveEditMode) {
-      const submitAction = model.actions.find((action) => action.id === "submit");
-      const passthrough = model.actions.filter((action) =>
-        !["edit", "update", "submit"].includes(action.id),
-      );
-      model.identity.status = {
-        label: isDirty ? "Unsaved Draft" : "Editing Draft",
-        intent: isDirty ? "warning" as const : "info" as const,
-      };
+      const submitAction = model.actions.find((action) => action.id === "submit")
+        ?? (
+          isJournalEntry &&
+          (statusNorm === "draft" || statusNorm === "created") &&
+          (operations === undefined || operations.some((op) => op.is_enabled && op.permission_code === "submit"))
+            ? {
+                id:        "submit",
+                label:     "Submit",
+                placement: "primary" as const,
+                order:     2,
+                icon:      "send",
+              }
+            : undefined
+        );
+      if (isDirty) {
+        model.identity.status = {
+          label:  "Unsaved changes",
+          intent: "warning" as const,
+        };
+      }
       model.actions = [
         {
           id:        "__document_save",
           label:     "Save",
           placement: "primary",
           order:     1,
-          disabled:  !isDirty || savingDraft,
+          disabled:  busy,
           pending:   savingDraft,
+          icon:      "save",
         },
         ...(submitAction
           ? [{
               ...submitAction,
               placement: "primary" as const,
               order:     2,
-              disabled:  submitAction.disabled || savingDraft,
+              disabled:  submitAction.disabled || busy,
+              pending:   submittingDraft || opDispatch.isSubmitting,
             }]
           : []),
         {
-          id:        "__document_undo",
-          label:     "Undo",
+          id:        "__document_discard",
+          label:     "Discard",
           placement: "secondary",
           order:     3,
-          disabled:  !isDirty || savingDraft,
+          disabled:  busy,
         },
-        {
-          id:        "__document_exit",
-          label:     "Exit Edit",
-          placement: "overflow",
-          order:     90,
-          group:     "record",
-        },
-        ...passthrough.map((action, index) => ({ ...action, order: 100 + index })),
       ];
     }
 
     return model;
-  }, [headerModelBase, effectiveEditMode, canEditDraft, isDirty, savingDraft]);
+  }, [
+    headerModelBase,
+    effectiveEditMode,
+    canEditDraft,
+    isDirty,
+    savingDraft,
+    submittingDraft,
+    opDispatch.isSubmitting,
+    isJournalEntry,
+    statusNorm,
+    operations,
+  ]);
 
   const overviewRail = useRailState(headerModel.progress);
 
@@ -971,9 +1151,9 @@ export function DocumentDetailPage({
   const hasPlatformAttachments = resolvedTabs.includes("attachments");
 
   const commentsCountQuery = useQuery<{ data: unknown[]; hasMore: boolean }>({
-    queryKey: ["collab-comments", entity.entity_code, recordId],
+    queryKey: ["collab-comments", entity.entity_code, record.id],
     queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ entityType: entity.entity_code, entityId: recordId, limit: "200" });
+      const params = new URLSearchParams({ entityType: entity.entity_code, entityId: record.id, limit: "200" });
       const res = await fetch(`/api/collab/comments?${params}`, { signal, cache: "no-store" });
       if (!res.ok) return { data: [], hasMore: false };
       return res.json() as Promise<{ data: unknown[]; hasMore: boolean }>;
@@ -983,10 +1163,10 @@ export function DocumentDetailPage({
   });
 
   const attachmentsCountQuery = useQuery<{ size_bytes: number; status?: string; visibility?: string }[]>({
-    queryKey: ["attachments", entity.entity_code, recordId],
+    queryKey: ["attachments", entity.entity_code, record.id],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/api/documents/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/attachments`,
+        `/api/relay/api/documents/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/attachments`,
         { signal },
       );
       if (!res.ok) return [];
@@ -1015,10 +1195,10 @@ export function DocumentDetailPage({
   }, [hasPlatformComments, hasPlatformAttachments, resolvedTabs.join(","), commentsCount, commentsCountQuery.isPending, attachmentsCount, attachmentsCountQuery.isPending]);
 
   const linesQuery = useQuery<{ data: DocumentLine[] }>({
-    queryKey: ["record-lines", entity.entity_code, recordId],
+    queryKey: ["record-lines", entity.entity_code, subResourceRecordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/lines`,
+        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(subResourceRecordId)}/lines`,
         { signal },
       );
       if (!res.ok) throw new Error(`lines ${res.status}`);
@@ -1031,10 +1211,10 @@ export function DocumentDetailPage({
   });
 
   const distQuery = useQuery<{ data: AccountingDistribution[] }>({
-    queryKey: ["record-distributions", entity.entity_code, recordId],
+    queryKey: ["record-distributions", entity.entity_code, subResourceRecordId],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/distributions`,
+        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(subResourceRecordId)}/distributions`,
         { signal },
       );
       if (!res.ok) throw new Error(`distributions ${res.status}`);
@@ -1047,8 +1227,10 @@ export function DocumentDetailPage({
   });
 
   function onLinesRefresh() {
-    void queryClient.invalidateQueries({ queryKey: ["record-lines", entity.entity_code, recordId] });
-    void queryClient.invalidateQueries({ queryKey: ["record-distributions", entity.entity_code, recordId] });
+    void queryClient.invalidateQueries({ queryKey: ["record-lines", entity.entity_code, subResourceRecordId] });
+    void queryClient.invalidateQueries({ queryKey: ["record-distributions", entity.entity_code, subResourceRecordId] });
+    void queryClient.invalidateQueries({ queryKey: ["entity-detail", entity.entity_code, recordId] });
+    void queryClient.invalidateQueries({ queryKey: ["entity-list", entity.entity_code] });
   }
 
   function handleDocumentFieldChange(name: string, value: unknown) {
@@ -1066,6 +1248,42 @@ export function DocumentDetailPage({
     setEditFormData(editBaseline);
     setFieldErrors({});
     setSaveError(null);
+  }
+
+  function applyStatusToDetailCache(status: string | null) {
+    if (!status) return;
+    queryClient.setQueryData(
+      queryKeys.entityDetail.byId(entity.entity_code, recordId),
+      (current: unknown) => {
+        if (!current || typeof current !== "object") return current;
+        const cachedRecord = current as { status?: string; data?: Record<string, unknown> };
+        return {
+          ...cachedRecord,
+          status,
+          data: {
+            ...(cachedRecord.data ?? {}),
+            status,
+          },
+        };
+      },
+    );
+  }
+
+  async function refreshRecordState() {
+    const detailKey = queryKeys.entityDetail.byId(entity.entity_code, recordId);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: detailKey }),
+      record.id !== recordId
+        ? queryClient.invalidateQueries({ queryKey: queryKeys.entityDetail.byId(entity.entity_code, record.id) })
+        : Promise.resolve(),
+      queryClient.invalidateQueries({ queryKey: queryKeys.entityList.byType(entity.entity_code) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.workflowInbox.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.workflowInbox.count }),
+      queryClient.invalidateQueries({ queryKey: ["record-workflow", entity.entity_code, recordId] }),
+      queryClient.invalidateQueries({ queryKey: ["record-approvals", entity.entity_code, recordId] }),
+      queryClient.invalidateQueries({ queryKey: ["activity", entity.entity_code] }),
+    ]);
+    await queryClient.refetchQueries({ queryKey: detailKey, exact: true });
   }
 
   function validateDraftChanges(): boolean {
@@ -1111,15 +1329,48 @@ export function DocumentDetailPage({
       if (titleField && typeof savedData[titleField] === "string") {
         setLiveTitle(savedData[titleField]);
       }
-      await queryClient.invalidateQueries({ queryKey: ["entity-detail", entity.entity_code, recordId] });
-      await queryClient.invalidateQueries({ queryKey: ["entity-list", entity.entity_code] });
-      router.refresh();
+      await refreshRecordState();
       return true;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Save failed. Please try again.");
       return false;
     } finally {
       setSavingDraft(false);
+    }
+  }
+
+  async function submitJournalEntry(): Promise<boolean> {
+    setSubmittingDraft(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(
+        `/api/finance/journals/${encodeURIComponent(record.id)}/submit`,
+        {
+          method:  "POST",
+          headers: { "X-CSRF-Token": getCsrfToken() },
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+        const message = typeof body["message"] === "string"
+          ? body["message"]
+          : typeof body["error"] === "string"
+          ? body["error"]
+          : `Submit failed (${res.status})`;
+        setSaveError(message);
+        return false;
+      }
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      applyStatusToDetailCache(typeof body["status"] === "string" ? body["status"] : null);
+      await refreshRecordState();
+      await queryClient.invalidateQueries({ queryKey: ["record-lines", entity.entity_code, subResourceRecordId] });
+      await queryClient.invalidateQueries({ queryKey: ["record-distributions", entity.entity_code, subResourceRecordId] });
+      return true;
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Submit failed. Please try again.");
+      return false;
+    } finally {
+      setSubmittingDraft(false);
     }
   }
 
@@ -1147,15 +1398,13 @@ export function DocumentDetailPage({
   async function handleHeaderAction(action: string) {
     if (effectiveEditMode) {
       if (action === "__document_save") {
-        await saveDraftChanges();
+        const saved = await saveDraftChanges();
+        if (saved) {
+          router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
+        }
         return;
       }
-      if (action === "__document_undo") {
-        resetDraftChanges();
-        return;
-      }
-      if (action === "__document_exit") {
-        if (isDirty && !confirm("Discard unsaved draft changes?")) return;
+      if (action === "__document_discard" || action === "__document_exit") {
         resetDraftChanges();
         router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
         return;
@@ -1163,9 +1412,24 @@ export function DocumentDetailPage({
       if (action === "submit") {
         const saved = await saveDraftChanges();
         if (!saved) return;
+        if (isJournalEntry) {
+          const submitted = await submitJournalEntry();
+          if (submitted) {
+            router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
+          }
+          return;
+        }
         await opDispatch.dispatch(action, operations ?? []);
         return;
       }
+    }
+
+    if (action === "submit" && isJournalEntry) {
+      const submitted = await submitJournalEntry();
+      if (submitted) {
+        router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
+      }
+      return;
     }
 
     if (action === "edit" || action === "update") {
@@ -1248,60 +1512,13 @@ export function DocumentDetailPage({
           </div>
         )}
 
-        {detailConfig.sections.map((section, idx) =>
-          activeTab === section.group.group_key && idx > 0 ? (
-            <Card key={section.group.group_key}>
-              <CardContent className="pt-5">
-                {effectiveEditMode ? (
-                  <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
-                    {section.fields.filter(isDocumentEditableField).map((field) => {
-                      const Renderer = resolveFieldRenderer(field);
-                      const error = fieldErrors[field.name];
-                      return (
-                        <div key={field.name} className="space-y-1.5">
-                          <label className="text-xs font-medium text-muted-foreground leading-normal">
-                            {field.label ?? field.name}
-                            {field.is_required && <span className="ml-1 text-destructive">*</span>}
-                          </label>
-                          <Renderer
-                            value={editFormData[field.name]}
-                            field={field}
-                            mode="edit"
-                            onChange={(v) => handleDocumentFieldChange(field.name, v)}
-                            error={error}
-                          />
-                          {error && <p className="text-xs text-destructive">{error}</p>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 lg:grid-cols-3">
-                    {section.fields.map((field) => {
-                      const Renderer = resolveFieldRenderer(field);
-                      return (
-                        <div key={field.name}>
-                          <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
-                            {field.label ?? field.name}
-                          </dt>
-                          <dd className="text-sm font-normal text-foreground leading-snug">
-                            <Renderer value={data[field.name]} field={field} mode="view" />
-                          </dd>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : null,
-        )}
-
         {activeTab === "__lines" && (
           <Card className="overflow-hidden">
             <LinesPanel
+              entity={entity}
               entityCode={entity.entity_code}
-              recordId={recordId}
+              recordId={subResourceRecordId}
+              recordUuid={record.id}
               companyCodeId={companyCodeId}
               record={data}
               lines={linesQuery.data?.data ?? []}
@@ -1311,6 +1528,7 @@ export function DocumentDetailPage({
               linesRenderer={linesRenderer ?? "generic"}
               hasAiClassification={Boolean(entity.feature_flags?.["has_ai_classification"])}
               hasLineComposer={Boolean(entity.feature_flags?.["has_line_composer"])}
+              editMode={effectiveEditMode}
             />
           </Card>
         )}
@@ -1446,10 +1664,10 @@ export function DocumentDetailPage({
       >
         <div className="px-6 py-5">
           {activePanel === "comments" && (
-            <CommentsPanel entityCode={entity.entity_code} recordId={recordId} onCountChange={setPanelCount} />
+            <CommentsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} onCountChange={setPanelCount} />
           )}
           {activePanel === "attachments" && (
-            <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
+            <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
           )}
           {activePanel === "activity" && (() => {
             // Resolve field names via document_header config, fall back to standard names

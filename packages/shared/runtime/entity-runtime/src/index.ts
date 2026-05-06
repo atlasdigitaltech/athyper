@@ -22,6 +22,12 @@ export {
   type DocumentRendererProps,
 } from "./detail";
 export { EntityForm, type EntityFormProps } from "./form";
+export {
+  EntityIntakeLauncher,
+  normalizeModes,
+  type EntityIntakeLauncherProps,
+} from "./intake";
+export type { EntityIntakeMode } from "./intake";
 export { ActionBar, type ActionBarProps } from "./actions";
 export {
   registerFieldRenderer, resolveFieldRenderer, registerDefaults,

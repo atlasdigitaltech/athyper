@@ -18,9 +18,10 @@ import type { SectionCompletionReport } from "./types";
 export interface CompletionSummaryPanelProps {
   report: SectionCompletionReport[];
   className?: string;
+  title?: string;
 }
 
-export function CompletionSummaryPanel({ report, className }: CompletionSummaryPanelProps) {
+export function CompletionSummaryPanel({ report, className, title = "Completion" }: CompletionSummaryPanelProps) {
   const required   = report.filter(r => r.is_required && !r.is_restricted);
   const optional   = report.filter(r => !r.is_required && !r.is_restricted);
   const restricted = report.filter(r => r.is_restricted);
@@ -33,7 +34,7 @@ export function CompletionSummaryPanel({ report, className }: CompletionSummaryP
       {/* Overall progress */}
       <div className="rounded-xl border border-border bg-card p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground">Completion</span>
+          <span className="text-xs font-semibold text-foreground">{title}</span>
           <span className="text-xs font-bold text-primary">{pct}%</span>
         </div>
         <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">

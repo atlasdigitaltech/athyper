@@ -646,12 +646,12 @@ CREATE INDEX IF NOT EXISTS ba_active_pidx   ON master.company_code_book_assignme
 
 -- ── master.customer (pure tenant master) ───────────────────────────────────
 CREATE INDEX IF NOT EXISTS cust_tenant_idx    ON master.customer (tenant_id);
-CREATE INDEX IF NOT EXISTS cust_active_pidx   ON master.customer (tenant_id, code) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS cust_active_pidx   ON master.customer (tenant_id, customer_code) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS cust_type_idx      ON master.customer (tenant_id, customer_type);
 
 -- ── master.supplier (pure tenant master) ───────────────────────────────────
 CREATE INDEX IF NOT EXISTS supp_tenant_idx    ON master.supplier (tenant_id);
-CREATE INDEX IF NOT EXISTS supp_active_pidx   ON master.supplier (tenant_id, code) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS supp_active_pidx   ON master.supplier (tenant_id, supplier_code) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS supp_type_idx      ON master.supplier (tenant_id, supplier_type);
 
 -- ── master.employee ────────────────────────────────────────────────────────
@@ -1054,15 +1054,9 @@ CREATE INDEX IF NOT EXISTS pp_employee_idx
     ON master.principal_profile (tenant_id, employee_id)
     WHERE employee_id IS NOT NULL;
 
--- customer hierarchy + external ref (unique indexes created in 06_constraints)
-CREATE INDEX IF NOT EXISTS customer_parent_idx
-    ON master.customer (tenant_id, parent_customer_id)
-    WHERE parent_customer_id IS NOT NULL;
-
--- supplier hierarchy + external ref (unique indexes created in 06_constraints)
-CREATE INDEX IF NOT EXISTS supplier_parent_idx
-    ON master.supplier (tenant_id, parent_supplier_id)
-    WHERE parent_supplier_id IS NOT NULL;
+-- parent hierarchy moved from customer/supplier to business_partner (index defined in 01h)
+DROP INDEX IF EXISTS master.customer_parent_idx;
+DROP INDEX IF EXISTS master.supplier_parent_idx;
 
 -- company_code_customer_profile extended
 CREATE INDEX IF NOT EXISTS ccp_accounting_profile_idx
@@ -1187,5 +1181,35 @@ CREATE INDEX IF NOT EXISTS content_item_kind_locale_idx
 COMMENT ON INDEX master.content_item_fts_idx IS
     'GIN full-text search over title + summary for GET /content/search. '
     'Updated automatically on INSERT/UPDATE. Sprint 30.';
+
+
+-- ============================================================================
+-- Supplier company-code extension indexes
+-- (company_code_supplier_spend_policy / intent_policy / posting_override)
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS csspo_profile_idx
+    ON master.company_code_supplier_spend_policy (tenant_id, supplier_profile_id);
+CREATE INDEX IF NOT EXISTS csspo_category_idx
+    ON master.company_code_supplier_spend_policy (tenant_id, spend_category_id);
+CREATE INDEX IF NOT EXISTS csspo_active_pidx
+    ON master.company_code_supplier_spend_policy (tenant_id, supplier_profile_id)
+    WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS csip_profile_idx
+    ON master.company_code_supplier_intent_policy (tenant_id, supplier_profile_id);
+CREATE INDEX IF NOT EXISTS csip_intent_idx
+    ON master.company_code_supplier_intent_policy (tenant_id, business_intent_id);
+CREATE INDEX IF NOT EXISTS csip_active_pidx
+    ON master.company_code_supplier_intent_policy (tenant_id, supplier_profile_id)
+    WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS cspo_profile_idx
+    ON master.company_code_supplier_posting_override (tenant_id, supplier_profile_id);
+CREATE INDEX IF NOT EXISTS cspo_role_idx
+    ON master.company_code_supplier_posting_override (tenant_id, posting_role_code);
+CREATE INDEX IF NOT EXISTS cspo_active_pidx
+    ON master.company_code_supplier_posting_override (tenant_id, supplier_profile_id, effective_from)
+    WHERE status = 'active';
 
 

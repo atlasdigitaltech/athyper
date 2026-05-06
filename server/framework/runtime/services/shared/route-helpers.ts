@@ -198,3 +198,120 @@ export async function resolveFieldMap(db: Kysely<any>, entityCode: string): Prom
   }
   return map;
 }
+
+/**
+ * Returns a Map from physical column_name → data_type for all array-typed
+ * fields on the entity's effective version.
+ * Detects arrays by the `[]` suffix (e.g. text[], enum[], uuid[]) and the
+ * legacy `_array` suffix (text_array, uuid_array, int_array, jsonb_array).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function resolveArrayColumns(db: Kysely<any>, entityCode: string): Promise<Map<string, string>> {
+  const name = entityCode.replace(/-/g, "_");
+  const rows = await db
+    .selectFrom("control.entity_field as ef")
+    .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
+    .innerJoin("control.entity as e", "e.id", "ev.entity_id")
+    .select(["ef.column_name", "ef.data_type"])
+    .where("e.name", "=", name)
+    .where("e.tenant_id", "is", null)
+    .where("ev.status", "=", "EFFECTIVE")
+    .where("ef.is_active", "=", true)
+    .where((eb) => eb.or([
+      eb("ef.data_type", "like", "%[]"),
+      eb("ef.data_type", "in", ["text_array", "uuid_array", "int_array", "jsonb_array"]),
+    ]))
+    .execute();
+
+  const map = new Map<string, string>();
+  for (const r of rows) {
+    map.set(r.column_name as string, r.data_type as string);
+  }
+  return map;
+}
+
+/**
+ * Coerces values in mappedData to JS arrays for columns registered as array
+ * types in entity_field (text_array / uuid_array / int_array / jsonb_array).
+ *
+ * Accepted input for each array column:
+ *   - Already a JS array → passed through unchanged
+ *   - JSON string starting with "[" → JSON.parse'd
+ *   - Comma-separated string → split + trim (integers parsed for int_array)
+ *   - null / undefined → unchanged (let DB default or NOT NULL fire)
+ */
+export function coerceArrayFields(
+  mappedData: Record<string, unknown>,
+  arrayColumns: Map<string, string>,
+): void {
+  for (const [col, dataType] of arrayColumns) {
+    const raw = mappedData[col];
+    if (raw === undefined || raw === null || Array.isArray(raw)) continue;
+
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) { mappedData[col] = parsed; continue; }
+        } catch { /* fall through to comma-split */ }
+      }
+      const parts = trimmed.split(",").map((s) => s.trim()).filter((s) => s !== "");
+      const isIntArray = dataType === "int_array" || dataType === "int[]" || dataType === "integer[]";
+      mappedData[col] = isIntArray ? parts.map((s) => parseInt(s, 10)) : parts;
+    }
+  }
+}
+
+// Database business errors.
+
+export interface RouteBusinessError {
+  status: number;
+  code: string;
+  message: string;
+  field?: string;
+  details?: Record<string, unknown>;
+}
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
+
+function stripPgErrorPrefix(message: string): string {
+  return message.replace(/^error:\s*/i, "").trim();
+}
+
+/**
+ * Maps business-rule exceptions raised by PostgreSQL triggers/functions into
+ * normal API errors. These are expected user-correctable failures, not 500s.
+ */
+export function mapPostgresBusinessError(err: unknown): RouteBusinessError | null {
+  const message = stripPgErrorPrefix(getErrorMessage(err));
+
+  const fiscalPeriodMatch = /^PERIOD_NOT_OPEN:\s*Fiscal period\s+(\d+)\/(\d+)\s+for company\s+([0-9a-f-]+)\s+has status\s+"([^"]+)"\./i.exec(message);
+  if (fiscalPeriodMatch) {
+    const [, fiscalYear, periodNumber, companyCodeId, status] = fiscalPeriodMatch;
+    return {
+      status: 422,
+      code: "PERIOD_NOT_OPEN",
+      message: `Fiscal period ${fiscalYear}/${periodNumber} is not open for this company (status: ${status}). Open the fiscal period before submitting the document.`,
+      field: "posting_date",
+      details: { fiscal_year: Number(fiscalYear), period_number: Number(periodNumber), company_code_id: companyCodeId, period_status: status },
+    };
+  }
+
+  const bookPeriodMatch = /^BOOK_PERIOD_NOT_OPEN:\s*Book period\s+(\d+)\/(\d+)\s+for company\s+([0-9a-f-]+)\/book\s+([0-9a-f-]+)\s+has status\s+"([^"]+)"\./i.exec(message);
+  if (bookPeriodMatch) {
+    const [, fiscalYear, periodNumber, companyCodeId, bookId, status] = bookPeriodMatch;
+    return {
+      status: 422,
+      code: "BOOK_PERIOD_NOT_OPEN",
+      message: `Ledger book period ${fiscalYear}/${periodNumber} is not open for this company (status: ${status}). Open the book period before submitting the document.`,
+      field: "posting_date",
+      details: { fiscal_year: Number(fiscalYear), period_number: Number(periodNumber), company_code_id: companyCodeId, book_id: bookId, period_status: status },
+    };
+  }
+
+  return null;
+}

@@ -985,3 +985,46 @@ CREATE POLICY tenant_insert ON control.metadata_change_application_log
     FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_write   ON control.metadata_change_application_log
     FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- =============================================================================
+-- control.record_edit_lock
+-- Tenant-scoped pessimistic edit-session locks.
+-- Principals may read, acquire, heartbeat, and release their own tenant's locks.
+-- Force-release (admin) handled by permission check in the API route, not by RLS.
+-- =============================================================================
+
+ALTER TABLE control.record_edit_lock ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.record_edit_lock FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read   ON control.record_edit_lock;
+DROP POLICY IF EXISTS tenant_write  ON control.record_edit_lock;
+DROP POLICY IF EXISTS tenant_update ON control.record_edit_lock;
+DROP POLICY IF EXISTS tenant_delete ON control.record_edit_lock;
+DROP POLICY IF EXISTS admin_write   ON control.record_edit_lock;
+
+-- Principals can see all locks for their tenant (needed to show "Kumar is editing this")
+CREATE POLICY tenant_read ON control.record_edit_lock
+    FOR SELECT
+    USING (tenant_id = shared.current_tenant_id());
+
+-- Only insert rows scoped to own tenant
+CREATE POLICY tenant_write ON control.record_edit_lock
+    FOR INSERT
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+-- Update (heartbeat renewal) — own tenant only
+CREATE POLICY tenant_update ON control.record_edit_lock
+    FOR UPDATE
+    USING  (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+-- Delete (release / stale eviction) — own tenant only
+CREATE POLICY tenant_delete ON control.record_edit_lock
+    FOR DELETE
+    USING (tenant_id = shared.current_tenant_id());
+
+-- Admin: full access for seeding, migrations, and force-unlock operations
+CREATE POLICY admin_write ON control.record_edit_lock
+    FOR ALL TO athyperadmin
+    USING (true) WITH CHECK (true);

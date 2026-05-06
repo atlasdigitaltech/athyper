@@ -46,3 +46,41 @@ CREATE POLICY tenant_deny_update ON ledger.asset_revaluation_reserve FOR UPDATE 
 CREATE POLICY tenant_deny_delete ON ledger.asset_revaluation_reserve FOR DELETE USING (false);
 CREATE POLICY admin_read         ON ledger.asset_revaluation_reserve FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write        ON ledger.asset_revaluation_reserve FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── ledger.tax_calculation (append-only) ─────────────────────────────────────
+-- Phase 3: immutable tax audit trail written at invoice posting.
+-- No UPDATE or DELETE — reversal uses a new row with reverses_calculation_id.
+ALTER TABLE ledger.tax_calculation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ledger.tax_calculation FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read        ON ledger.tax_calculation;
+DROP POLICY IF EXISTS tenant_insert      ON ledger.tax_calculation;
+DROP POLICY IF EXISTS tenant_deny_update ON ledger.tax_calculation;
+DROP POLICY IF EXISTS tenant_deny_delete ON ledger.tax_calculation;
+DROP POLICY IF EXISTS admin_read         ON ledger.tax_calculation;
+DROP POLICY IF EXISTS admin_write        ON ledger.tax_calculation;
+CREATE POLICY tenant_read        ON ledger.tax_calculation FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert      ON ledger.tax_calculation FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_deny_update ON ledger.tax_calculation FOR UPDATE USING (false);
+CREATE POLICY tenant_deny_delete ON ledger.tax_calculation FOR DELETE USING (false);
+CREATE POLICY admin_read         ON ledger.tax_calculation FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write        ON ledger.tax_calculation FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── ledger.tax_credit_movement (append-only) ─────────────────────────────────
+-- Phase 3: input-tax / WHT movement ledger written at posting and reversal.
+-- Append-only — reversals are new rows, not mutations.
+ALTER TABLE ledger.tax_credit_movement ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ledger.tax_credit_movement FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read        ON ledger.tax_credit_movement;
+DROP POLICY IF EXISTS tenant_insert      ON ledger.tax_credit_movement;
+DROP POLICY IF EXISTS tenant_deny_update ON ledger.tax_credit_movement;
+DROP POLICY IF EXISTS tenant_deny_delete ON ledger.tax_credit_movement;
+DROP POLICY IF EXISTS admin_read         ON ledger.tax_credit_movement;
+DROP POLICY IF EXISTS admin_write        ON ledger.tax_credit_movement;
+CREATE POLICY tenant_read        ON ledger.tax_credit_movement FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert      ON ledger.tax_credit_movement FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_deny_update ON ledger.tax_credit_movement FOR UPDATE USING (false);
+CREATE POLICY tenant_deny_delete ON ledger.tax_credit_movement FOR DELETE USING (false);
+CREATE POLICY admin_read         ON ledger.tax_credit_movement FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write        ON ledger.tax_credit_movement FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

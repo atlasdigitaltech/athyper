@@ -181,3 +181,8 @@ __pycache__/
 # Scratch / Prototype work
 # =========================
 tmp/
+
+# =========================
+# Claude Code artifacts
+# =========================
+.codex/

@@ -647,3 +647,91 @@ CREATE INDEX IF NOT EXISTS pil_gr_line_idx
 CREATE INDEX IF NOT EXISTS mtc_resolution_idx
     ON control.match_tolerance_config (entity_name, match_type, tolerance_type, tenant_id NULLS LAST, company_code_id NULLS LAST)
     WHERE is_active = true;
+
+
+-- ============================================================================
+-- §BST-IDX  document.bank_statement — indexes
+-- ============================================================================
+
+-- Primary list query: all statements for a bank account ordered by period
+CREATE INDEX IF NOT EXISTS bst_bank_account_period_idx
+    ON document.bank_statement (tenant_id, bank_account_id, period_end_date DESC);
+
+-- Status filter: find statements in 'matching' state needing attention
+CREATE INDEX IF NOT EXISTS bst_status_idx
+    ON document.bank_statement (tenant_id, status)
+    WHERE status IN ('imported', 'matching');
+
+-- Company-scope browse
+CREATE INDEX IF NOT EXISTS bst_company_idx
+    ON document.bank_statement (tenant_id, company_code_id, period_end_date DESC);
+
+
+-- ============================================================================
+-- §BSL-IDX  document.bank_statement_line — indexes
+-- ============================================================================
+
+-- Parent statement → lines (list panel, totals)
+CREATE INDEX IF NOT EXISTS bsl_statement_line_idx
+    ON document.bank_statement_line (tenant_id, bank_statement_id, line_no ASC);
+
+-- Unmatched lines: primary matching engine query
+CREATE INDEX IF NOT EXISTS bsl_unmatched_idx
+    ON document.bank_statement_line (tenant_id, bank_statement_id, transaction_date)
+    WHERE recon_status = 'unmatched';
+
+-- Recon case lookup (follows shortcut FK)
+CREATE INDEX IF NOT EXISTS bsl_recon_case_idx
+    ON document.bank_statement_line (recon_case_id)
+    WHERE recon_case_id IS NOT NULL;
+
+-- Date + amount: used by T1/T2 matching engine scans
+CREATE INDEX IF NOT EXISTS bsl_date_amount_idx
+    ON document.bank_statement_line (tenant_id, bank_statement_id, transaction_date, amount);
+
+
+-- ============================================================================
+-- §BRC-IDX  document.bank_recon_case — indexes
+-- ============================================================================
+
+-- All cases for a bank account (main reconciliation view)
+CREATE INDEX IF NOT EXISTS brc_bank_account_idx
+    ON document.bank_recon_case (tenant_id, bank_account_id, created_at DESC);
+
+-- Open cases needing sign-off
+CREATE INDEX IF NOT EXISTS brc_open_idx
+    ON document.bank_recon_case (tenant_id, bank_account_id)
+    WHERE status IN ('open', 'matched');
+
+-- Company scope
+CREATE INDEX IF NOT EXISTS brc_company_idx
+    ON document.bank_recon_case (tenant_id, company_code_id, created_at DESC);
+
+
+-- ============================================================================
+-- §BRCL-IDX  document.bank_recon_case_line — indexes
+-- ============================================================================
+
+-- Lines for a case (case detail view)
+CREATE INDEX IF NOT EXISTS brcl_case_idx
+    ON document.bank_recon_case_line (tenant_id, bank_recon_case_id);
+
+-- Payment-side lookup: has this payment already been matched?
+CREATE INDEX IF NOT EXISTS brcl_payment_idx
+    ON document.bank_recon_case_line (tenant_id, payment_entry_id)
+    WHERE payment_entry_id IS NOT NULL;
+
+-- Statement-side lookup: has this line already been matched?
+CREATE INDEX IF NOT EXISTS brcl_stmt_line_idx
+    ON document.bank_recon_case_line (tenant_id, bank_statement_line_id)
+    WHERE bank_statement_line_id IS NOT NULL;
+
+
+-- ============================================================================
+-- §PE-BSLID-IDX  document.payment_entry.bank_statement_line_id — index
+-- ============================================================================
+
+-- Cleared payment lookup (bank recon sign-off, cleared-date reporting)
+CREATE INDEX IF NOT EXISTS pe_bank_stmt_line_idx
+    ON document.payment_entry (bank_statement_line_id)
+    WHERE bank_statement_line_id IS NOT NULL;

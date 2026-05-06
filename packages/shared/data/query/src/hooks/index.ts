@@ -9,10 +9,11 @@
  * All hooks use canonical query keys from api-contracts/query-keys.
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { queryKeys } from "@athyper/api-contracts/query-keys";
 import { type CompiledEntity, type LookupDomainBundle, type EntityOperation, type StatusRoute, type EntityCapability } from "@athyper/api-contracts/metadata";
 import { type MasterRecord } from "@athyper/api-contracts/records";
-import { type InboxItem, type ApprovalAction, type ApprovalContext, type WorkflowEvent } from "@athyper/api-contracts/workflow";
+import { type InboxItem, type ApprovalAction, type ApprovalContext, type WorkflowEvent, type ActivityEntry } from "@athyper/api-contracts/workflow";
 import { type Notification, type SavedView } from "@athyper/api-contracts/platform";
 import { type MetadataClient, type RecordsClient, type WorkflowClient, type PlatformClient, type DocumentsClient, type EntityListParams } from "@athyper/api-client";
 import { type DocumentDetail, type FlowBundle, type StatusTransitionRequest } from "@athyper/api-contracts/documents";
@@ -88,7 +89,7 @@ export function useLookupDomain(domainCode: string, opts?: { enabled?: boolean }
     queryKey: queryKeys.lookupDomain.byCode(domainCode),
     queryFn: () => meta().getLookupDomainBundle(domainCode),
     staleTime: 10 * 60 * 1000,
-    enabled: opts?.enabled ?? true,
+    enabled: !!domainCode && (opts?.enabled ?? true),
   });
 }
 
@@ -278,6 +279,19 @@ export function useWorkflowActivity(requestId: string, enabled = true) {
   });
 }
 
+export function useRecentActivity(limit = 20) {
+  return useQuery<{ data: ActivityEntry[] }>({
+    queryKey: ["activity", "recent", limit],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/relay/api/activity/recent?limit=${limit}`, { signal });
+      if (!res.ok) return { data: [] };
+      return res.json() as Promise<{ data: ActivityEntry[] }>;
+    },
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+}
+
 // ── Notifications Hooks ─────────────────────────────────────────
 
 export function useNotifications(params?: Record<string, string>) {
@@ -331,4 +345,129 @@ export function useUpdateView(entityCode: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.savedViews.byEntity(entityCode) });
     },
   });
+}
+
+// ── Edit Lock Hook ──────────────────────────────────────────────
+//
+// Manages the full pessimistic-lock lifecycle for a single record:
+//   1. acquire()   — POST /:entity/:id/lock; returns lock_token + row_version
+//   2. heartbeat   — PUT /:entity/:id/lock/heartbeat every `heartbeatMs` ms
+//   3. release()   — DELETE /:entity/:id/lock (idempotent; called on unmount too)
+//
+// apiFetch must be an auth-aware fetch wrapper that prepends the API base URL
+// and injects the Authorization header. Example:
+//   (path, init) => fetch(`${apiBase}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, ...init?.headers } })
+
+export interface EditLockState {
+  isLocked:   boolean;
+  lockToken:  string | null;
+  rowVersion: number | null;
+  error:      string | null;
+}
+
+export interface UseEditLockOptions {
+  entityCode:       string;
+  recordId:         string;
+  apiFetch:         (path: string, init?: RequestInit) => Promise<Response>;
+  heartbeatMs?:     number;
+  onVersionChange?: (version: number) => void;
+}
+
+export function useEditLock(opts: UseEditLockOptions): EditLockState & {
+  acquire:  () => Promise<{ lockToken: string; rowVersion: number } | null>;
+  release:  () => Promise<void>;
+} {
+  const { entityCode, recordId, apiFetch, heartbeatMs = 30_000, onVersionChange } = opts;
+
+  const [state, setState] = useState<EditLockState>({
+    isLocked: false, lockToken: null, rowVersion: null, error: null,
+  });
+
+  // Keep refs stable across renders so the interval closure always reads current values
+  const lockTokenRef    = useRef<string | null>(null);
+  const apiFetchRef     = useRef(apiFetch);
+  const onVersionRef    = useRef(onVersionChange);
+  apiFetchRef.current   = apiFetch;
+  onVersionRef.current  = onVersionChange;
+
+  const lockPath = `/api/records/${entityCode}/${recordId}/lock`;
+
+  const acquire = useCallback(async () => {
+    try {
+      const res  = await apiFetchRef.current(lockPath, { method: "POST" });
+      const data = await res.json() as Record<string, unknown>;
+      if (!res.ok) {
+        setState((s) => ({ ...s, error: String(data["error"] ?? "LOCK_FAILED") }));
+        return null;
+      }
+      const token   = data["lock_token"]   as string;
+      const version = data["row_version"]  as number;
+      lockTokenRef.current = token;
+      setState({ isLocked: true, lockToken: token, rowVersion: version, error: null });
+      onVersionRef.current?.(version);
+      return { lockToken: token, rowVersion: version };
+    } catch (err) {
+      setState((s) => ({ ...s, error: String(err) }));
+      return null;
+    }
+  }, [lockPath]);
+
+  const release = useCallback(async () => {
+    const token = lockTokenRef.current;
+    if (!token) return;
+    lockTokenRef.current = null;
+    setState({ isLocked: false, lockToken: null, rowVersion: null, error: null });
+    try {
+      await apiFetchRef.current(lockPath, {
+        method:  "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ lock_token: token }),
+      });
+    } catch {
+      // Release is best-effort; server TTL + sweep worker will clean up
+    }
+  }, [lockPath]);
+
+  // Heartbeat interval — only runs while locked
+  useEffect(() => {
+    if (!state.isLocked) return;
+
+    const interval = setInterval(async () => {
+      const token = lockTokenRef.current;
+      if (!token) return;
+      try {
+        const res  = await apiFetchRef.current(`${lockPath}/heartbeat`, {
+          method:  "PUT",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ lock_token: token }),
+        });
+        if (!res.ok) {
+          // Lock expired or stolen — surface to caller
+          lockTokenRef.current = null;
+          setState({ isLocked: false, lockToken: null, rowVersion: null, error: "LOCK_EXPIRED" });
+        }
+      } catch {
+        // Network blip — keep state, next heartbeat will retry
+      }
+    }, heartbeatMs);
+
+    return () => clearInterval(interval);
+  }, [state.isLocked, lockPath, heartbeatMs]);
+
+  // Release lock on unmount (best-effort)
+  useEffect(() => {
+    return () => {
+      const token = lockTokenRef.current;
+      if (!token) return;
+      lockTokenRef.current = null;
+      apiFetchRef.current(lockPath, {
+        method:  "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ lock_token: token }),
+      }).catch(() => {});
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockPath]);
+
+  return { ...state, acquire, release };
 }

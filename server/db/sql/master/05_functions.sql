@@ -646,9 +646,9 @@ BEGIN
             USING ERRCODE = 'foreign_key_violation';
     END IF;
 
-    IF v_channel NOT IN ('phone', 'sms', 'whatsapp') THEN
+    IF v_channel NOT IN ('phone', 'fax', 'sms', 'whatsapp') THEN
         RAISE EXCEPTION
-            'contact_phone: contact_link % has channel_type "%" — must be phone, sms, or whatsapp',
+            'contact_phone: contact_link % has channel_type "%" — must be phone, fax, sms, or whatsapp',
             NEW.contact_link_id, v_channel
             USING ERRCODE = 'check_violation';
     END IF;
@@ -1273,6 +1273,339 @@ COMMENT ON FUNCTION master.fn_create_owner_contact_address IS
   'Primary promotion delegated to fn_set_primary_address_link / '
   'fn_set_primary_contact_link (locked paths, safe under concurrency). '
   'p_email and p_phone are optional; omit to skip contact rows.';
+
+
+-- ============================================================================
+-- fn_resolve_party_address — BP-aware address resolver for supplier/customer.
+-- Extends fn_resolve_address with a fallback chain that walks up to the role's
+-- business_partner when no matching address exists at the role level.
+--
+-- Resolution chain (supplier / customer):
+--   1. Role exact:   address_link (owner_type=<role>, purpose=p_purpose)
+--   2. Role default: address_link (owner_type=<role>, purpose='default')      [skipped if p_purpose='default']
+--   3. BP exact:     address_link (owner_type='business_partner', purpose=p_purpose)
+--   4. BP default:   address_link (owner_type='business_partner', purpose='default') [skipped if p_purpose='default']
+--   5. BP fallback:  address_link (owner_type='business_partner', purpose IN ('registered','hq'))
+--   6. NULL
+--
+-- For owner_type='business_partner': delegates directly to fn_resolve_address.
+-- Returns (address_id, purpose_matched, source, is_fallback).
+-- source = 'role' | 'business_partner'
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.fn_resolve_party_address(
+    p_tenant_id  uuid,
+    p_owner_type text,
+    p_owner_id   uuid,
+    p_purpose    text DEFAULT 'default'
+)
+RETURNS TABLE (
+    address_id      uuid,
+    purpose_matched text,
+    source          text,
+    is_fallback     boolean
+)
+LANGUAGE plpgsql STABLE PARALLEL SAFE
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_bp_id uuid;
+BEGIN
+    -- Business partner: delegate to the single-owner resolver
+    IF p_owner_type = 'business_partner' THEN
+        RETURN QUERY
+            SELECT r.address_id, r.purpose_matched,
+                   'business_partner'::text, r.is_fallback
+            FROM master.fn_resolve_address(
+                p_tenant_id, 'business_partner', p_owner_id, p_purpose) r;
+        RETURN;
+    END IF;
+
+    -- 1. Role exact purpose
+    RETURN QUERY
+        SELECT al.address_id, al.purpose, 'role'::text, false::boolean
+        FROM master.address_link al
+        WHERE al.tenant_id      = p_tenant_id
+          AND al.owner_type     = p_owner_type
+          AND al.owner_id       = p_owner_id
+          AND al.purpose        = p_purpose
+          AND al.is_primary     = true
+          AND al.effective_from <= CURRENT_DATE
+          AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+        LIMIT 1;
+
+    IF FOUND THEN RETURN; END IF;
+
+    -- 2. Role default fallback
+    IF p_purpose <> 'default' THEN
+        RETURN QUERY
+            SELECT al.address_id, 'default'::text, 'role'::text, true::boolean
+            FROM master.address_link al
+            WHERE al.tenant_id      = p_tenant_id
+              AND al.owner_type     = p_owner_type
+              AND al.owner_id       = p_owner_id
+              AND al.purpose        = 'default'
+              AND al.is_primary     = true
+              AND al.effective_from <= CURRENT_DATE
+              AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+            LIMIT 1;
+
+        IF FOUND THEN RETURN; END IF;
+    END IF;
+
+    -- Resolve the parent BP id for this role
+    CASE p_owner_type
+        WHEN 'supplier' THEN
+            SELECT s.business_partner_id INTO v_bp_id
+              FROM master.supplier s
+             WHERE s.id = p_owner_id AND s.tenant_id = p_tenant_id;
+        WHEN 'customer' THEN
+            SELECT c.business_partner_id INTO v_bp_id
+              FROM master.customer c
+             WHERE c.id = p_owner_id AND c.tenant_id = p_tenant_id;
+        ELSE v_bp_id := NULL;
+    END CASE;
+
+    IF v_bp_id IS NULL THEN RETURN; END IF;
+
+    -- 3. BP exact purpose
+    RETURN QUERY
+        SELECT al.address_id, al.purpose, 'business_partner'::text, true::boolean
+        FROM master.address_link al
+        WHERE al.tenant_id      = p_tenant_id
+          AND al.owner_type     = 'business_partner'
+          AND al.owner_id       = v_bp_id
+          AND al.purpose        = p_purpose
+          AND al.is_primary     = true
+          AND al.effective_from <= CURRENT_DATE
+          AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+        LIMIT 1;
+
+    IF FOUND THEN RETURN; END IF;
+
+    -- 4. BP default fallback
+    IF p_purpose <> 'default' THEN
+        RETURN QUERY
+            SELECT al.address_id, 'default'::text, 'business_partner'::text, true::boolean
+            FROM master.address_link al
+            WHERE al.tenant_id      = p_tenant_id
+              AND al.owner_type     = 'business_partner'
+              AND al.owner_id       = v_bp_id
+              AND al.purpose        = 'default'
+              AND al.is_primary     = true
+              AND al.effective_from <= CURRENT_DATE
+              AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+            LIMIT 1;
+
+        IF FOUND THEN RETURN; END IF;
+    END IF;
+
+    -- 5. BP registered / hq last resort
+    RETURN QUERY
+        SELECT al.address_id, al.purpose, 'business_partner'::text, true::boolean
+        FROM master.address_link al
+        WHERE al.tenant_id      = p_tenant_id
+          AND al.owner_type     = 'business_partner'
+          AND al.owner_id       = v_bp_id
+          AND al.purpose        IN ('registered', 'hq')
+          AND al.is_primary     = true
+          AND al.effective_from <= CURRENT_DATE
+          AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+        ORDER BY CASE al.purpose WHEN 'registered' THEN 0 ELSE 1 END
+        LIMIT 1;
+END;
+$$;
+
+COMMENT ON FUNCTION master.fn_resolve_party_address(uuid, text, uuid, text) IS
+  'BP-aware address resolver. '
+  'Chain: role purpose → role default → BP purpose → BP default → BP registered/hq → NULL. '
+  'owner_type=''business_partner'' delegates to fn_resolve_address. '
+  'Returns (address_id, purpose_matched, source, is_fallback).';
+
+
+-- ============================================================================
+-- fn_resolve_party_contact — BP-aware contact resolver for supplier/customer.
+-- Mirrors fn_resolve_party_address for the contact_link table.
+--
+-- Resolution chain (supplier / customer):
+--   1. Role exact:        contact_link (owner_type=<role>, channel=p_channel, purpose=p_purpose)
+--   2. Role notification: contact_link (owner_type=<role>, channel=p_channel, purpose='notification') [skipped if p_purpose='notification']
+--   3. BP exact:          contact_link (owner_type='business_partner', channel=p_channel, purpose=p_purpose)
+--   4. BP notification:   contact_link (owner_type='business_partner', channel=p_channel, purpose='notification')
+--   5. BP any primary:    contact_link (owner_type='business_partner', channel=p_channel, is_primary=true)
+--   6. NULL
+--
+-- For owner_type='business_partner': resolves directly (steps 3-5 only).
+-- Returns (contact_link_id, value, purpose_matched, source, is_fallback).
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.fn_resolve_party_contact(
+    p_tenant_id    uuid,
+    p_owner_type   text,
+    p_owner_id     uuid,
+    p_channel_type text,           -- 'email' | 'phone' | 'whatsapp' …
+    p_purpose      text DEFAULT 'notification'
+)
+RETURNS TABLE (
+    contact_link_id uuid,
+    value           text,
+    purpose_matched text,
+    source          text,
+    is_fallback     boolean
+)
+LANGUAGE plpgsql STABLE PARALLEL SAFE
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_bp_id uuid;
+BEGIN
+    -- Business partner: resolve directly
+    IF p_owner_type = 'business_partner' THEN
+        -- BP exact purpose
+        RETURN QUERY
+            SELECT cl.id, cl.value, cl.purpose, 'business_partner'::text, false::boolean
+            FROM master.contact_link cl
+            WHERE cl.tenant_id    = p_tenant_id
+              AND cl.owner_type   = 'business_partner'
+              AND cl.owner_id     = p_owner_id
+              AND cl.channel_type = p_channel_type
+              AND cl.purpose      = p_purpose
+              AND cl.is_primary   = true
+              AND cl.is_active    = true
+            LIMIT 1;
+
+        IF FOUND THEN RETURN; END IF;
+
+        -- BP notification fallback
+        IF p_purpose <> 'notification' THEN
+            RETURN QUERY
+                SELECT cl.id, cl.value, 'notification'::text, 'business_partner'::text, true::boolean
+                FROM master.contact_link cl
+                WHERE cl.tenant_id    = p_tenant_id
+                  AND cl.owner_type   = 'business_partner'
+                  AND cl.owner_id     = p_owner_id
+                  AND cl.channel_type = p_channel_type
+                  AND cl.purpose      = 'notification'
+                  AND cl.is_primary   = true
+                  AND cl.is_active    = true
+                LIMIT 1;
+
+            IF FOUND THEN RETURN; END IF;
+        END IF;
+
+        -- BP any primary
+        RETURN QUERY
+            SELECT cl.id, cl.value, cl.purpose, 'business_partner'::text, true::boolean
+            FROM master.contact_link cl
+            WHERE cl.tenant_id    = p_tenant_id
+              AND cl.owner_type   = 'business_partner'
+              AND cl.owner_id     = p_owner_id
+              AND cl.channel_type = p_channel_type
+              AND cl.is_primary   = true
+              AND cl.is_active    = true
+            ORDER BY cl.created_at
+            LIMIT 1;
+
+        RETURN;
+    END IF;
+
+    -- 1. Role exact purpose
+    RETURN QUERY
+        SELECT cl.id, cl.value, cl.purpose, 'role'::text, false::boolean
+        FROM master.contact_link cl
+        WHERE cl.tenant_id    = p_tenant_id
+          AND cl.owner_type   = p_owner_type
+          AND cl.owner_id     = p_owner_id
+          AND cl.channel_type = p_channel_type
+          AND cl.purpose      = p_purpose
+          AND cl.is_primary   = true
+          AND cl.is_active    = true
+        LIMIT 1;
+
+    IF FOUND THEN RETURN; END IF;
+
+    -- 2. Role notification fallback
+    IF p_purpose <> 'notification' THEN
+        RETURN QUERY
+            SELECT cl.id, cl.value, 'notification'::text, 'role'::text, true::boolean
+            FROM master.contact_link cl
+            WHERE cl.tenant_id    = p_tenant_id
+              AND cl.owner_type   = p_owner_type
+              AND cl.owner_id     = p_owner_id
+              AND cl.channel_type = p_channel_type
+              AND cl.purpose      = 'notification'
+              AND cl.is_primary   = true
+              AND cl.is_active    = true
+            LIMIT 1;
+
+        IF FOUND THEN RETURN; END IF;
+    END IF;
+
+    -- Resolve the parent BP id
+    CASE p_owner_type
+        WHEN 'supplier' THEN
+            SELECT s.business_partner_id INTO v_bp_id
+              FROM master.supplier s
+             WHERE s.id = p_owner_id AND s.tenant_id = p_tenant_id;
+        WHEN 'customer' THEN
+            SELECT c.business_partner_id INTO v_bp_id
+              FROM master.customer c
+             WHERE c.id = p_owner_id AND c.tenant_id = p_tenant_id;
+        ELSE v_bp_id := NULL;
+    END CASE;
+
+    IF v_bp_id IS NULL THEN RETURN; END IF;
+
+    -- 3. BP exact purpose
+    RETURN QUERY
+        SELECT cl.id, cl.value, cl.purpose, 'business_partner'::text, true::boolean
+        FROM master.contact_link cl
+        WHERE cl.tenant_id    = p_tenant_id
+          AND cl.owner_type   = 'business_partner'
+          AND cl.owner_id     = v_bp_id
+          AND cl.channel_type = p_channel_type
+          AND cl.purpose      = p_purpose
+          AND cl.is_primary   = true
+          AND cl.is_active    = true
+        LIMIT 1;
+
+    IF FOUND THEN RETURN; END IF;
+
+    -- 4. BP notification fallback
+    IF p_purpose <> 'notification' THEN
+        RETURN QUERY
+            SELECT cl.id, cl.value, 'notification'::text, 'business_partner'::text, true::boolean
+            FROM master.contact_link cl
+            WHERE cl.tenant_id    = p_tenant_id
+              AND cl.owner_type   = 'business_partner'
+              AND cl.owner_id     = v_bp_id
+              AND cl.channel_type = p_channel_type
+              AND cl.purpose      = 'notification'
+              AND cl.is_primary   = true
+              AND cl.is_active    = true
+            LIMIT 1;
+
+        IF FOUND THEN RETURN; END IF;
+    END IF;
+
+    -- 5. BP any primary contact
+    RETURN QUERY
+        SELECT cl.id, cl.value, cl.purpose, 'business_partner'::text, true::boolean
+        FROM master.contact_link cl
+        WHERE cl.tenant_id    = p_tenant_id
+          AND cl.owner_type   = 'business_partner'
+          AND cl.owner_id     = v_bp_id
+          AND cl.channel_type = p_channel_type
+          AND cl.is_primary   = true
+          AND cl.is_active    = true
+        ORDER BY cl.created_at
+        LIMIT 1;
+END;
+$$;
+
+COMMENT ON FUNCTION master.fn_resolve_party_contact(uuid, text, uuid, text, text) IS
+  'BP-aware contact resolver. '
+  'Chain: role purpose → role notification → BP purpose → BP notification → BP any primary → NULL. '
+  'owner_type=''business_partner'' resolves directly. '
+  'Returns (contact_link_id, value, purpose_matched, source, is_fallback).';
 
 
 -- ============================================================================
@@ -3774,6 +4107,7 @@ DECLARE
     v_link_owner_type  text;
     v_link_owner_id    uuid;
     v_link_company_id  uuid;
+    v_supplier_bp_id   uuid;
 BEGIN
     IF NEW.preferred_remittance_bank_link_id IS NULL THEN
         RETURN NEW;
@@ -3791,20 +4125,31 @@ BEGIN
             USING ERRCODE = 'foreign_key_violation';
     END IF;
 
-    -- Owner must be the same supplier
-    IF v_link_owner_type <> 'supplier' THEN
+    SELECT business_partner_id
+    INTO v_supplier_bp_id
+    FROM master.supplier
+    WHERE tenant_id = NEW.tenant_id
+      AND id = NEW.supplier_id;
+
+    IF v_supplier_bp_id IS NULL THEN
         RAISE EXCEPTION
-            'company_code_supplier_profile: bank_account_link (%) has owner_type "%" '
-            '— must be "supplier" for supplier remittance',
-            NEW.preferred_remittance_bank_link_id, v_link_owner_type
-            USING ERRCODE = 'check_violation';
+            'company_code_supplier_profile: supplier (%) not found',
+            NEW.supplier_id
+            USING ERRCODE = 'foreign_key_violation';
     END IF;
 
-    IF v_link_owner_id <> NEW.supplier_id THEN
+    -- Canonical owner is the supplier's BP. Supplier-owned links remain valid
+    -- only as a compatibility lens for older data.
+    IF NOT (
+        (v_link_owner_type = 'business_partner' AND v_link_owner_id = v_supplier_bp_id)
+        OR
+        (v_link_owner_type = 'supplier' AND v_link_owner_id = NEW.supplier_id)
+    ) THEN
         RAISE EXCEPTION
-            'company_code_supplier_profile: bank_account_link (%) belongs to supplier (%), '
-            'but this profile is for supplier (%). Must match.',
-            NEW.preferred_remittance_bank_link_id, v_link_owner_id, NEW.supplier_id
+            'company_code_supplier_profile: bank_account_link (%) belongs to owner_type "%", owner_id (%), '
+            'but this profile is for supplier (%) / business partner (%). Must match.',
+            NEW.preferred_remittance_bank_link_id, v_link_owner_type, v_link_owner_id,
+            NEW.supplier_id, v_supplier_bp_id
             USING ERRCODE = 'check_violation';
     END IF;
 
@@ -3823,7 +4168,8 @@ $$;
 
 COMMENT ON FUNCTION master.trg_scp_validate_remittance_bank_link IS
     'Validates that preferred_remittance_bank_link_id on company_code_supplier_profile '
-    'references a bank_account_link owned by the same supplier and scoped to '
+    'references a bank_account_link owned by the supplier business_partner '
+    '(canonical) or the same supplier (legacy compatibility), and scoped to '
     'the same or tenant-wide company.';
 
 

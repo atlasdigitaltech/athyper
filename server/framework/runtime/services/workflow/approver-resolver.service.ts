@@ -119,6 +119,9 @@ export class ApproverResolverService {
       case "hierarchy_based":
         return this.resolveByHierarchy(spec, context);
 
+      case "requester":
+        return [{ type: "principal", id: context.requestedBy }];
+
       default:
         this.deps.logger?.warn("approver_resolver_unknown_type", { type: spec.type });
         return [];
@@ -339,6 +342,7 @@ export class ApproverResolverService {
 function normaliseType(type: string): string {
   switch (type) {
     case "principal":       return "direct_principal";
+    case "role":            return "role_based";
     case "group":           return "group_based";
     case "requester_manager": return "hierarchy_based";
     default:                return type;

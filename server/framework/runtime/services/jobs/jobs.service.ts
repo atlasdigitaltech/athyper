@@ -57,6 +57,7 @@ import { createKcSyncWorker, type KcAdminConfig } from "./workers/kc-sync.worker
 import { createEndpointHealthWorker } from "./workers/endpoint-health.worker.js";
 import { createTikaExtractWorker, type TikaObjectStorage } from "./workers/tika-extract.worker.js";
 import { createBackupWorker, type BackupObjectStorage } from "./workers/backup.worker.js";
+import { createStaleLockWorker } from "./workers/stale-lock.worker.js";
 import type { PreviewContentJobData, RenderDocumentJobData, ExtractTextJobData, DbBackupJobData } from "./jobs.types.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,6 +92,8 @@ export interface JobsServiceOptions {
   tikaExtractSweepMs?: number;
   /** Milliseconds between event.outbox purge runs (default: 3 600 000) */
   outboxPurgeSweepMs?: number;
+  /** Milliseconds between stale edit-lock eviction sweeps (default: 300 000) */
+  staleLockSweepMs?: number;
 }
 
 export interface JobsServiceDeps {
@@ -161,6 +164,7 @@ const QUEUE_NAME_TO_KEY: Record<string, keyof JobsQueues> = {
   [QUEUE_NAME.ENDPOINT_HEALTH]:   "endpointHealth",
   [QUEUE_NAME.TIKA_EXTRACT]:      "tikaExtract",
   [QUEUE_NAME.BACKUP]:            "backup",
+  [QUEUE_NAME.STALE_LOCK]:        "staleLock",
 };
 
 // ─── Exported queue map type ──────────────────────────────────────────────────
@@ -177,6 +181,7 @@ export interface JobsQueues {
   endpointHealth:  Queue<SweepJobData>;
   tikaExtract:     Queue<ExtractTextJobData | SweepJobData>;
   backup:          Queue<DbBackupJobData>;
+  staleLock:       Queue;
 }
 
 // ─── Service factory ──────────────────────────────────────────────────────────
@@ -220,6 +225,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     endpointHealthSweepMs        = DEFAULT_INTERVALS.ENDPOINT_HEALTH_SWEEP_MS,
     tikaExtractSweepMs           = DEFAULT_INTERVALS.TIKA_EXTRACT_SWEEP_MS,
     outboxPurgeSweepMs           = DEFAULT_INTERVALS.OUTBOX_PURGE_SWEEP_MS,
+    staleLockSweepMs             = DEFAULT_INTERVALS.STALE_LOCK_SWEEP_MS,
   } = options;
 
   // BullMQ recommends separate IORedis connections per Queue/Worker.
@@ -241,6 +247,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     endpointHealth:  new Queue(QUEUE_NAME.ENDPOINT_HEALTH,   { connection: conn }),
     tikaExtract:     new Queue(QUEUE_NAME.TIKA_EXTRACT,      { connection: conn }),
     backup:          new Queue(QUEUE_NAME.BACKUP,             { connection: conn }),
+    staleLock:       new Queue(QUEUE_NAME.STALE_LOCK,        { connection: conn }),
   };
 
   // ── Workers (consumers) ──────────────────────────────────────────────────
@@ -296,6 +303,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     ...(backupStorage
       ? [createBackupWorker({ connection: conn, backupStorage, logger })]
       : []),
+    createStaleLockWorker({ db, connection: conn, logger }),
   ];
 
   // ── Error handlers on workers ────────────────────────────────────────────
@@ -501,6 +509,13 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
           });
         }
       }
+
+      // ── Stale edit-session lock eviction ─────────────────────────────────
+      await queues.staleLock.upsertJobScheduler(
+        SCHEDULER_ID.STALE_LOCK_SWEEP,
+        { every: staleLockSweepMs },
+        { name: JOB_NAME.STALE_LOCK_SWEEP, data: {} as Record<string, never> },
+      );
 
       // ── Code-based CronRegistry entries ──────────────────────────────────
       // Modules call cronRegistry.register() before start(); we apply them here.

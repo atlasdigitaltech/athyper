@@ -37,6 +37,22 @@ WHERE entity_class = 'DOCUMENT'
   AND (display_config ? 'list_renderer')
   AND (display_config->>'lines_renderer') IS NULL;
 
+-- Specialized document line renderers. These child tables are not compatible
+-- with the generic purchase-invoice-style line grid.
+UPDATE control.entity
+SET display_config = display_config
+  || '{"lines_renderer": "journal"}'::jsonb
+WHERE entity_code = 'journal_entry'
+  AND (display_config ? 'list_renderer')
+  AND (display_config->>'lines_renderer') = 'generic';
+
+UPDATE control.entity
+SET display_config = display_config
+  || '{"lines_renderer": "payment"}'::jsonb
+WHERE entity_code = 'payment_entry'
+  AND (display_config ? 'list_renderer')
+  AND (display_config->>'lines_renderer') = 'generic';
+
 -- ── Step 3: Normalise simple legacy aliases → "master" ───────────────────────
 UPDATE control.entity
 SET display_config = display_config

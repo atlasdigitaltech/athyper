@@ -6,6 +6,7 @@ import { createPeriodCloseRoutes } from "./period-close.route.js";
 import { createJournalRoutes } from "./journal.route.js";
 import { createAnalyticsRoutes } from "./analytics.route.js";
 import { createReportsRoutes } from "./reports.route.js";
+import { createIntakeRoutes } from "./intake.route.js";
 
 export function registerFinanceRoutes(router: Router, deps: FinanceRouteDeps): void {
   createFinanceRoutes(router, deps);
@@ -15,4 +16,5 @@ export function registerFinanceRoutes(router: Router, deps: FinanceRouteDeps): v
   createJournalRoutes(router, deps);
   createAnalyticsRoutes(router, deps);
   createReportsRoutes(router, deps);
+  createIntakeRoutes(router, deps);
 }

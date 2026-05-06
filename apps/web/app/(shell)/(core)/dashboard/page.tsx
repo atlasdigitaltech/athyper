@@ -16,12 +16,12 @@
 import { Bell, Bookmark, Briefcase, Building2, ChevronRight, Factory, FolderKanban, Inbox, LayoutDashboard, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
-import { EmptyState } from "@athyper/ui/composites";
 import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@athyper/ui/primitives";
 import { ActionLinkCard } from "@/components/home/ActionLinkCard";
 import { SectionLabel } from "@/components/home/SectionLabel";
 import { useShellSession } from "@/components/providers/SessionProvider";
-import { useInbox } from "@athyper/query";
+import { useInbox, useRecentActivity } from "@athyper/query";
+import { ActivityFeed } from "@athyper/collaboration-ui/activity";
 
 // ── Workspace cards ────────────────────────────────────────────────────────────
 
@@ -78,6 +78,7 @@ const QUICK_LINKS = [
 export default function DashboardPage() {
   const { bff } = useShellSession();
   const { data: inboxData, isLoading: inboxLoading } = useInbox();
+  const { data: activityData, isLoading: activityLoading } = useRecentActivity(20);
   const pendingCount = inboxData?.data?.length ?? 0;
 
   const firstName = bff.displayName.split(" ")[0] ?? bff.displayName;
@@ -133,17 +134,19 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* ── Recent activity placeholder ──────────────────────────────────── */}
+        {/* ── Recent activity ──────────────────────────────────────────────── */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={<LayoutDashboard className="h-8 w-8 text-muted-foreground/20" />}
-              description="Recent documents, entity changes, and workflow events will appear here."
-              className="py-8"
-            />
+            {activityLoading ? (
+              <div className="space-y-2 py-2">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+              </div>
+            ) : (
+              <ActivityFeed entries={activityData?.data ?? []} />
+            )}
           </CardContent>
         </Card>
 

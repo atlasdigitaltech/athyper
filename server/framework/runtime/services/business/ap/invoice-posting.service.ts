@@ -25,6 +25,11 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { matchInvoice } from "./invoice-match.service.js";
+import { updatePartyBalanceOnPosting } from "./advance-balance.service.js";
+import { postInvoiceTaxCalculations, reverseInvoiceTaxCalculations } from "./tax-calculation.service.js";
+import { deriveApInvoiceProfile } from "./acct-profile-derivation.service.js";
+import { buildJeLinesFromProfile } from "./journal-from-profile.service.js";
+import type { InvoiceLineCtx, InvoiceCtx, PostingCtx } from "./journal-from-profile.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -117,6 +122,28 @@ async function resolveApControlAccount(
   return result.rows[0]?.account_id ?? null;
 }
 
+async function resolveWhtPayableAccount(
+  db:        AnyDb,
+  tenantId:  string,
+  companyId: string,
+): Promise<string | null> {
+  const result = await sql<{ account_id: string }>`
+    SELECT ga.id AS account_id
+    FROM   master.gl_account ga
+    JOIN   master.company_code_chart_assignment cca
+           ON  cca.chart_of_account_id = ga.chart_of_account_id
+           AND cca.tenant_id           = ${tenantId}
+           AND cca.company_code_id     = ${companyId}
+           AND cca.status              = 'active'
+    WHERE  ga.tenant_id      = ${tenantId}
+      AND  ga.subledger_type = 'wht_payable'
+      AND  ga.is_active      = true
+      AND  ga.node_type      = 'posting'
+    LIMIT  1
+  `.execute(db);
+  return result.rows[0]?.account_id ?? null;
+}
+
 // ── JE code generation ─────────────────────────────────────────────────────────
 
 async function nextJeCode(db: AnyDb, tenantId: string, companyId: string): Promise<string> {
@@ -174,6 +201,13 @@ export async function handlePostInvoice(
     const baseCurrencyCode = String(invoice["base_currency_code"] ?? currencyCode);
     const exchangeRate    = Number(invoice["exchange_rate"] ?? 1) || 1;
     const invoiceSource   = String(invoice["invoice_source"] ?? "non_po");
+    const invoiceType     = String(invoice["invoice_type"] ?? "standard");
+    // AP sign convention: credit_note = supplier credit memo (reduces liability);
+    // debit_note = buyer-issued debit memo to supplier (also reduces AP liability).
+    // Both invert the JE: DR AP Control / CR Expense instead of DR Expense / CR AP Control.
+    const isCreditNote    = invoice["is_credit_note"] === true
+                            || invoiceType === "credit_note"
+                            || invoiceType === "debit_note";
     const now             = new Date();
 
     // Run matching (for PO-based — informational pre-flight, not blocking unless exception)
@@ -220,6 +254,23 @@ export async function handlePostInvoice(
         status: 422,
         body: { error: "NO_AP_CONTROL_ACCOUNT", message: "No AP Control posting role account configured for this company" },
       };
+    }
+
+    // Resolve WHT payable amount and account (required when any line carries WHT)
+    const totalWhtAmount = Math.abs(Number(invoice["withholding_tax_amount"] ?? 0));
+    const totalWhtBase   = totalWhtAmount * exchangeRate;
+    let whtPayableAccountId: string | null = null;
+    if (totalWhtAmount > 0) {
+      whtPayableAccountId = await resolveWhtPayableAccount(trx, tenantId, companyId);
+      if (!whtPayableAccountId) {
+        return {
+          status: 422,
+          body: {
+            error:   "NO_WHT_PAYABLE_ACCOUNT",
+            message: "Invoice has withholding tax but no WHT Payable GL account (subledger_type='wht_payable') is configured for this company",
+          },
+        };
+      }
     }
 
     // Resolve fiscal period for posting_date
@@ -272,7 +323,8 @@ export async function handlePostInvoice(
     // ── Create journal_entry ──────────────────────────────────────────────
     const jeCode = await nextJeCode(trx, tenantId, companyId);
 
-    const totalPayable = Number(invoice["payable_amount"] ?? invoice["total_amount"] ?? 0);
+    // Math.abs: payable_amount can be negative for credit notes; JE amounts must be non-negative.
+    const totalPayable = Math.abs(Number(invoice["payable_amount"] ?? invoice["total_amount"] ?? 0));
     const totalBase    = totalPayable * exchangeRate;
 
     const jeResult = await sql<{ id: string }>`
@@ -302,32 +354,310 @@ export async function handlePostInvoice(
     const jeId = jeResult.rows[0]?.id;
     if (!jeId) return { status: 500, body: { error: "JE_CREATE_FAILED" } };
 
-    // ── Create journal_lines: one DR per invoice line + one CR for AP Control ─
-    let lineSeq = 10;
+    // ── JE line generation: profile-driven path with legacy fallback ─────────
+    //
+    // Phase 4: try the accounting-profile engine first.  If the tenant has no
+    // matching profile seeded, or account resolution fails (e.g. COA not
+    // configured for input-tax-recoverable), fall back to the legacy
+    // hard-coded Dr Expense / Cr AP / Cr WHT path.
 
-    for (const line of lines) {
-      const debitAccount = await resolvePostingAccount(
-        trx, tenantId, companyId,
-        line.spend_category_id,
-        line.business_intent_id,
-        line.is_asset,
-      );
+    const pId = principalId ?? "00000000-0000-0000-0000-000000000000";
 
-      if (!debitAccount) {
-        return {
-          status: 422,
-          body: {
-            error:   "NO_EXPENSE_ACCOUNT",
-            message: `No expense GL account found for line ${line.line_no} (${line.item_description}). Assign a spend_category, business_intent, or ensure the company chart has at least one active posting-type expense account.`,
-          },
-        };
+    // Dominant intent = business_intent_id of the line with the largest |net_amount|.
+    // Used by deriveApInvoiceProfile (Step 1) to route OPEX → AP_NON_PO_STANDARD
+    // vs CAPEX → AP_NON_PO_CAPEX via intent_to_accounting_profile_rule.
+    const dominantIntentId: string | null = lines.reduce<{ id: string | null; amt: number }>(
+      (best, line) => {
+        const amt = Math.abs(Number(line.net_amount));
+        return amt > best.amt ? { id: line.business_intent_id, amt } : best;
+      },
+      { id: null, amt: 0 },
+    ).id;
+
+    const derivedProfile = await deriveApInvoiceProfile(
+      trx, tenantId, invoiceSource, invoiceType, dominantIntentId,
+    );
+
+    // Build the invoice + posting context objects required by the profile engine
+    const invoiceCtx: InvoiceCtx = {
+      totalAmount:      Math.abs(Number(invoice["total_amount"]   ?? 0)),
+      payableAmount:    Math.abs(Number(invoice["payable_amount"] ?? invoice["total_amount"] ?? 0)),
+      taxAmount:        Math.abs(Number(invoice["tax_amount"]     ?? 0)),
+      whtAmount:        totalWhtAmount,
+      retentionAmount:  Math.abs(Number(invoice["retention_amount"] ?? 0)),
+      currencyCode,
+      baseCurrencyCode,
+      exchangeRate,
+      supplierId:       String(invoice["supplier_id"]   ?? ""),
+      supplierName:     String(invoice["supplier_name"] ?? String(invoice["supplier_id"] ?? "")),
+      isCreditNote,
+      invoiceType,
+    };
+
+    const postingCtx: PostingCtx = {
+      tenantId,
+      companyId,
+      bookId,
+      fiscalPeriodId: fp.id,
+      fiscalYear:     fp.fiscal_year,
+      periodNumber:   fp.period_number,
+      postingDate,
+      principalId:    pId,
+      jeId,
+    };
+
+    const lineCtxArr: InvoiceLineCtx[] = lines.map(l => ({
+      id:               l.id,
+      lineNo:           l.line_no,
+      description:      l.item_description,
+      netAmount:        Number(l.net_amount),
+      taxAmount:        Number(l.tax_amount),
+      whtAmount:        Number(l.withholding_tax_amount),
+      spendCategoryId:  l.spend_category_id,
+      businessIntentId: l.business_intent_id,
+      costCenterId:     l.cost_center_id,
+      profitCenterId:   l.profit_center_id,
+      projectId:        l.project_id,
+    }));
+
+    const profileResult = derivedProfile
+      ? await buildJeLinesFromProfile(trx, derivedProfile, invoiceCtx, lineCtxArr, postingCtx)
+      : null;
+
+    if (profileResult) {
+      // ── Profile-driven JE lines ─────────────────────────────────────────
+      for (const jl of profileResult.jeLines) {
+        const txnDebit  = jl.postingSide === "DEBIT"  ? jl.amount     : 0;
+        const txnCredit = jl.postingSide === "CREDIT" ? jl.amount     : 0;
+        const baseDebit  = jl.postingSide === "DEBIT"  ? jl.baseAmount : 0;
+        const baseCredit = jl.postingSide === "CREDIT" ? jl.baseAmount : 0;
+
+        await sql`
+          INSERT INTO document.journal_line (
+            tenant_id, journal_entry_id, line_no, gl_account_id,
+            company_code_id, book_id,
+            fiscal_period_id, fiscal_year, period_number, posting_date,
+            transaction_currency, transaction_debit, transaction_credit,
+            base_currency, base_debit, base_credit, exchange_rate,
+            description,
+            subledger_type, party_type, party_id,
+            cost_center_id, profit_center_id, project_id,
+            source_doc_line_id,
+            created_by
+          ) VALUES (
+            ${tenantId}, ${jeId}, ${jl.lineNo}, ${jl.glAccountId},
+            ${companyId}, ${bookId},
+            ${fp.id}, ${fp.fiscal_year}, ${fp.period_number}, ${postingDate},
+            ${currencyCode}, ${txnDebit}, ${txnCredit},
+            ${baseCurrencyCode}, ${baseDebit}, ${baseCredit}, ${exchangeRate},
+            ${jl.description},
+            ${jl.subledgerType ?? null}, ${jl.partyType ?? null}, ${jl.partyId ?? null},
+            ${jl.costCenterId ?? null}, ${jl.profitCenterId ?? null}, ${jl.projectId ?? null},
+            ${jl.sourceDocLineId ?? null},
+            ${pId}
+          )
+        `.execute(trx);
       }
 
-      const lineNetBase  = Number(line.net_amount) * exchangeRate;
-      const lineTaxBase  = Number(line.tax_amount) * exchangeRate;
-      const debitAmount  = Number(line.net_amount) + Number(line.tax_amount);
-      const debitBase    = lineNetBase + lineTaxBase;
+      // Per-line side effects (independent of JE generation path)
+      for (const line of lines) {
+        const distAccountId = profileResult.lineAccountMap.get(line.id);
+        if (distAccountId) {
+          const lineAmount = Math.abs(Number(line.net_amount) + Number(line.tax_amount));
+          await sql`
+            INSERT INTO document.accounting_distribution (
+              tenant_id,
+              source_doc_type, source_doc_id, source_line_id,
+              distribution_no, distribution_basis, split_pct,
+              distributed_amount, currency_code,
+              account_source, gl_account_id,
+              business_intent_id, spend_category_id,
+              cost_center_id, profit_center_id, project_id,
+              created_by
+            ) VALUES (
+              ${tenantId},
+              'PURCHASE_INVOICE_LINE', ${invoiceId}, ${line.id},
+              1, 'PERCENT', 100,
+              ${lineAmount}, ${currencyCode},
+              'FIXED', ${distAccountId},
+              ${line.business_intent_id ?? null}, ${line.spend_category_id ?? null},
+              ${line.cost_center_id ?? null}, ${line.profit_center_id ?? null}, ${line.project_id ?? null},
+              ${pId}
+            )
+            ON CONFLICT DO NOTHING
+          `.execute(trx);
+        }
 
+        if (line.commitment_line_id) {
+          await sql`
+            UPDATE document.commitment_line
+               SET invoiced_quantity = COALESCE(invoiced_quantity, 0) + ${Number(line.quantity)},
+                   updated_at = now()
+             WHERE id = ${line.commitment_line_id} AND tenant_id = ${tenantId}
+          `.execute(trx);
+        }
+
+        if (line.is_asset && line.asset_category_id) {
+          await sql`
+            INSERT INTO document.asset_transaction (
+              tenant_id, company_code_id,
+              asset_id, asset_book_id, book_type, txn_type,
+              amount, currency_code,
+              effective_date, fiscal_year, period_number,
+              reference_je_id,
+              performed_by, performed_at,
+              status, created_by, created_at
+            )
+            SELECT
+              ${tenantId}, ${companyId},
+              a.id, ab.id, ab.book_type, 'capitalize',
+              ${Number(line.net_amount)}, ${currencyCode},
+              ${postingDate}, ${fp.fiscal_year}, ${fp.period_number},
+              ${jeId},
+              ${pId}, ${now},
+              'posted',
+              ${pId}, ${now}
+            FROM master.asset a
+            JOIN master.asset_book ab ON ab.asset_id = a.id AND ab.tenant_id = ${tenantId}
+            WHERE a.tenant_id = ${tenantId}
+              AND a.asset_class_id = ${line.asset_category_id}
+              AND a.source_invoice_line_id = ${line.id}
+            LIMIT 1
+          `.execute(trx);
+        }
+      }
+
+    } else {
+      // ── Legacy path (hard-coded Dr/Cr construction) ─────────────────────
+      // Used when no accounting profile is found for the tenant/source/type,
+      // or when account resolution fails (e.g. input-tax GL not configured).
+      //
+      // Produces: DR Expense(+Tax) per line / CR AP Control / CR WHT Payable.
+
+      let lineSeq = 10;
+
+      for (const line of lines) {
+        const debitAccount = await resolvePostingAccount(
+          trx, tenantId, companyId,
+          line.spend_category_id,
+          line.business_intent_id,
+          line.is_asset,
+        );
+
+        if (!debitAccount) {
+          return {
+            status: 422,
+            body: {
+              error:   "NO_EXPENSE_ACCOUNT",
+              message: `No expense GL account found for line ${line.line_no} (${line.item_description}). Assign a spend_category, business_intent, or ensure the company chart has at least one active posting-type expense account.`,
+            },
+          };
+        }
+
+        const lineNetBase  = Number(line.net_amount) * exchangeRate;
+        const lineTaxBase  = Number(line.tax_amount) * exchangeRate;
+        // Math.abs: credit-note lines may be negative; JE amounts are always non-negative.
+        const lineAmount   = Math.abs(Number(line.net_amount) + Number(line.tax_amount));
+        const lineBase     = Math.abs(lineNetBase + lineTaxBase);
+        // Standard: DR expense / CR AP.  Credit note: DR AP / CR expense (inverted).
+        const lineDebit    = isCreditNote ? 0 : lineAmount;
+        const lineCredit   = isCreditNote ? lineAmount : 0;
+        const lineBaseDebit  = isCreditNote ? 0 : lineBase;
+        const lineBaseCredit = isCreditNote ? lineBase : 0;
+
+        await sql`
+          INSERT INTO document.journal_line (
+            tenant_id, journal_entry_id, line_no, gl_account_id,
+            company_code_id, book_id,
+            fiscal_period_id, fiscal_year, period_number, posting_date,
+            transaction_currency, transaction_debit, transaction_credit,
+            base_currency, base_debit, base_credit, exchange_rate,
+            description,
+            cost_center_id, profit_center_id, project_id,
+            source_doc_line_id,
+            created_by
+          ) VALUES (
+            ${tenantId}, ${jeId}, ${lineSeq}, ${debitAccount},
+            ${companyId}, ${bookId},
+            ${fp.id}, ${fp.fiscal_year}, ${fp.period_number}, ${postingDate},
+            ${currencyCode}, ${lineDebit}, ${lineCredit},
+            ${baseCurrencyCode}, ${lineBaseDebit}, ${lineBaseCredit}, ${exchangeRate},
+            ${line.item_description},
+            ${line.cost_center_id ?? null}, ${line.profit_center_id ?? null}, ${line.project_id ?? null},
+            ${line.id},
+            ${pId}
+          )
+        `.execute(trx);
+
+        await sql`
+          INSERT INTO document.accounting_distribution (
+            tenant_id,
+            source_doc_type, source_doc_id, source_line_id,
+            distribution_no, distribution_basis, split_pct,
+            distributed_amount, currency_code,
+            account_source, gl_account_id,
+            business_intent_id, spend_category_id,
+            cost_center_id, profit_center_id, project_id,
+            created_by
+          ) VALUES (
+            ${tenantId},
+            'PURCHASE_INVOICE_LINE', ${invoiceId}, ${line.id},
+            1, 'PERCENT', 100,
+            ${lineAmount}, ${currencyCode},
+            'FIXED', ${debitAccount},
+            ${line.business_intent_id ?? null}, ${line.spend_category_id ?? null},
+            ${line.cost_center_id ?? null}, ${line.profit_center_id ?? null}, ${line.project_id ?? null},
+            ${pId}
+          )
+          ON CONFLICT DO NOTHING
+        `.execute(trx);
+
+        lineSeq += 10;
+
+        if (line.commitment_line_id) {
+          await sql`
+            UPDATE document.commitment_line
+               SET invoiced_quantity = COALESCE(invoiced_quantity, 0) + ${Number(line.quantity)},
+                   updated_at = now()
+             WHERE id = ${line.commitment_line_id} AND tenant_id = ${tenantId}
+          `.execute(trx);
+        }
+
+        if (line.is_asset && line.asset_category_id) {
+          await sql`
+            INSERT INTO document.asset_transaction (
+              tenant_id, company_code_id,
+              asset_id, asset_book_id, book_type, txn_type,
+              amount, currency_code,
+              effective_date, fiscal_year, period_number,
+              reference_je_id,
+              performed_by, performed_at,
+              status, created_by, created_at
+            )
+            SELECT
+              ${tenantId}, ${companyId},
+              a.id, ab.id, ab.book_type, 'capitalize',
+              ${Number(line.net_amount)}, ${currencyCode},
+              ${postingDate}, ${fp.fiscal_year}, ${fp.period_number},
+              ${jeId},
+              ${pId}, ${now},
+              'posted',
+              ${pId}, ${now}
+            FROM master.asset a
+            JOIN master.asset_book ab ON ab.asset_id = a.id AND ab.tenant_id = ${tenantId}
+            WHERE a.tenant_id = ${tenantId}
+              AND a.asset_class_id = ${line.asset_category_id}
+              AND a.source_invoice_line_id = ${line.id}
+            LIMIT 1
+          `.execute(trx);
+        }
+      }
+
+      // Legacy: CR AP Control
+      const apDebit      = isCreditNote ? totalPayable : 0;
+      const apCredit     = isCreditNote ? 0 : totalPayable;
+      const apBaseDebit  = isCreditNote ? totalBase : 0;
+      const apBaseCredit = isCreditNote ? 0 : totalBase;
       await sql`
         INSERT INTO document.journal_line (
           tenant_id, journal_entry_id, line_no, gl_account_id,
@@ -336,113 +666,50 @@ export async function handlePostInvoice(
           transaction_currency, transaction_debit, transaction_credit,
           base_currency, base_debit, base_credit, exchange_rate,
           description,
-          cost_center_id, profit_center_id, project_id,
-          source_doc_line_id,
+          subledger_type,
+          party_type, party_id,
           created_by
         ) VALUES (
-          ${tenantId}, ${jeId}, ${lineSeq}, ${debitAccount},
+          ${tenantId}, ${jeId}, ${lineSeq}, ${apControlAccountId},
           ${companyId}, ${bookId},
           ${fp.id}, ${fp.fiscal_year}, ${fp.period_number}, ${postingDate},
-          ${currencyCode}, ${debitAmount}, 0,
-          ${baseCurrencyCode}, ${debitBase}, 0, ${exchangeRate},
-          ${line.item_description},
-          ${line.cost_center_id ?? null}, ${line.profit_center_id ?? null}, ${line.project_id ?? null},
-          ${line.id},
-          ${principalId ?? "00000000-0000-0000-0000-000000000000"}
+          ${currencyCode}, ${apDebit}, ${apCredit},
+          ${baseCurrencyCode}, ${apBaseDebit}, ${apBaseCredit}, ${exchangeRate},
+          ${"AP Control — " + String(invoice["supplier_name"] ?? String(invoice["supplier_id"] ?? ""))},
+          'ap',
+          'supplier', ${invoice["supplier_id"] ?? null},
+          ${pId}
         )
       `.execute(trx);
 
-      // Write accounting_distribution
-      await sql`
-        INSERT INTO document.accounting_distribution (
-          tenant_id,
-          source_doc_type, source_doc_id, source_line_id,
-          distribution_no, distribution_basis, split_pct,
-          distributed_amount, currency_code,
-          account_source, gl_account_id,
-          business_intent_id, spend_category_id,
-          cost_center_id, profit_center_id, project_id,
-          created_by
-        ) VALUES (
-          ${tenantId},
-          'PURCHASE_INVOICE_LINE', ${invoiceId}, ${line.id},
-          1, 'PERCENT', 100,
-          ${debitAmount}, ${currencyCode},
-          'FIXED', ${debitAccount},
-          ${line.business_intent_id ?? null}, ${line.spend_category_id ?? null},
-          ${line.cost_center_id ?? null}, ${line.profit_center_id ?? null}, ${line.project_id ?? null},
-          ${principalId ?? "00000000-0000-0000-0000-000000000000"}
-        )
-        ON CONFLICT DO NOTHING
-      `.execute(trx);
-
-      lineSeq += 10;
-
-      // ── Update commitment_line.invoiced_quantity ──────────────────────
-      if (line.commitment_line_id) {
+      // Legacy: CR WHT Payable
+      if (totalWhtAmount > 0 && whtPayableAccountId) {
+        const whtDebit      = isCreditNote ? totalWhtAmount : 0;
+        const whtCredit     = isCreditNote ? 0 : totalWhtAmount;
+        const whtBaseDebit  = isCreditNote ? totalWhtBase : 0;
+        const whtBaseCredit = isCreditNote ? 0 : totalWhtBase;
+        lineSeq += 10;
         await sql`
-          UPDATE document.commitment_line
-             SET invoiced_quantity = COALESCE(invoiced_quantity, 0) + ${Number(line.quantity)},
-                 updated_at = now()
-           WHERE id = ${line.commitment_line_id} AND tenant_id = ${tenantId}
-        `.execute(trx);
-      }
-
-      // ── Create asset_transaction for capital lines ────────────────────
-      if (line.is_asset && line.asset_category_id) {
-        await sql`
-          INSERT INTO document.asset_transaction (
-            tenant_id, company_code_id,
-            asset_id, asset_book_id, book_type, txn_type,
-            amount, currency_code,
-            effective_date, fiscal_year, period_number,
-            reference_je_id,
-            performed_by, performed_at,
-            status, created_by, created_at
+          INSERT INTO document.journal_line (
+            tenant_id, journal_entry_id, line_no, gl_account_id,
+            company_code_id, book_id,
+            fiscal_period_id, fiscal_year, period_number, posting_date,
+            transaction_currency, transaction_debit, transaction_credit,
+            base_currency, base_debit, base_credit, exchange_rate,
+            description,
+            created_by
+          ) VALUES (
+            ${tenantId}, ${jeId}, ${lineSeq}, ${whtPayableAccountId},
+            ${companyId}, ${bookId},
+            ${fp.id}, ${fp.fiscal_year}, ${fp.period_number}, ${postingDate},
+            ${currencyCode}, ${whtDebit}, ${whtCredit},
+            ${baseCurrencyCode}, ${whtBaseDebit}, ${whtBaseCredit}, ${exchangeRate},
+            'WHT Payable',
+            ${pId}
           )
-          SELECT
-            ${tenantId}, ${companyId},
-            a.id, ab.id, ab.book_type, 'capitalize',
-            ${Number(line.net_amount)}, ${currencyCode},
-            ${postingDate}, ${fp.fiscal_year}, ${fp.period_number},
-            ${jeId},
-            ${principalId ?? "00000000-0000-0000-0000-000000000000"}, ${now},
-            'posted',
-            ${principalId ?? "00000000-0000-0000-0000-000000000000"}, ${now}
-          FROM master.asset a
-          JOIN master.asset_book ab ON ab.asset_id = a.id AND ab.tenant_id = ${tenantId}
-          WHERE a.tenant_id = ${tenantId}
-            AND a.asset_class_id = ${line.asset_category_id}
-            AND a.source_invoice_line_id = ${line.id}
-          LIMIT 1
         `.execute(trx);
       }
-    }
-
-    // CR: AP Control — credit the full payable amount
-    await sql`
-      INSERT INTO document.journal_line (
-        tenant_id, journal_entry_id, line_no, gl_account_id,
-        company_code_id, book_id,
-        fiscal_period_id, fiscal_year, period_number, posting_date,
-        transaction_currency, transaction_debit, transaction_credit,
-        base_currency, base_debit, base_credit, exchange_rate,
-        description,
-        subledger_type,
-        party_type, party_id,
-        created_by
-      ) VALUES (
-        ${tenantId}, ${jeId}, ${lineSeq}, ${apControlAccountId},
-        ${companyId}, ${bookId},
-        ${fp.id}, ${fp.fiscal_year}, ${fp.period_number}, ${postingDate},
-        ${currencyCode}, 0, ${totalPayable},
-        ${baseCurrencyCode}, 0, ${totalBase}, ${exchangeRate},
-        ${"AP Control — " + String(invoice["supplier_name"] ?? String(invoice["supplier_id"] ?? ""))},
-        'ap',
-        'supplier', ${invoice["supplier_id"] ?? null},
-        ${principalId ?? "00000000-0000-0000-0000-000000000000"}
-      )
-    `.execute(trx);
+    } // end legacy path
 
     // ── Transition JE: draft → created (validates balance, caches totals) ────────
     await sql`
@@ -480,6 +747,24 @@ export async function handlePostInvoice(
 
     if (!updated.rows[0]) {
       return { status: 409, body: { error: "CONFLICT", message: "Invoice was modified concurrently — please retry" } };
+    }
+
+    // Phase 2: update party advance/retention balance on posting (non-PO invoices only).
+    // PO-based invoices track commitment_line exposure; non-PO uses party_advance_balance.
+    const supplierId = String(invoice["supplier_id"] ?? "");
+    if (invoiceSource !== "po_based" && invoiceSource !== "contract_based" && supplierId) {
+      await updatePartyBalanceOnPosting(
+        trx, tenantId, invoiceId, supplierId, companyId,
+        currencyCode, 1, principalId, logger,
+      );
+    }
+
+    // Phase 3: write ledger.tax_calculation, invoice_tax_snapshot, tax_credit_movement.
+    if (bookId) {
+      await postInvoiceTaxCalculations(
+        trx, tenantId, companyId, bookId, invoiceId, principalId,
+        currencyCode, exchangeRate, fp.fiscal_year, fp.period_number, jeId,
+      );
     }
 
     logger?.info("ap_invoice_posted", { tenantId, invoiceId, jeId, jeCode });
@@ -641,6 +926,21 @@ export async function handleReverseInvoice(
     if (!updated.rows[0]) {
       return { status: 409, body: { error: "CONFLICT", message: "Invoice was modified concurrently" } };
     }
+
+    // Phase 2: reverse party advance/retention balance for non-PO invoices (sign = -1)
+    const revSource     = String(invoice["invoice_source"] ?? "non_po");
+    const revSupplierId = String(invoice["supplier_id"]    ?? "");
+    const revCompanyId  = String(invoice["company_code_id"] ?? "");
+    const revCurrency   = String(invoice["currency_code"]   ?? "");
+    if (revSource !== "po_based" && revSource !== "contract_based" && revSupplierId) {
+      await updatePartyBalanceOnPosting(
+        trx, tenantId, invoiceId, revSupplierId, revCompanyId,
+        revCurrency, -1, principalId, logger,
+      );
+    }
+
+    // Phase 3: write reversal rows into tax_calculation and tax_credit_movement.
+    await reverseInvoiceTaxCalculations(trx, tenantId, invoiceId, principalId, revJeId);
 
     logger?.info("ap_invoice_reversed", { tenantId, invoiceId, revJeId });
     return {

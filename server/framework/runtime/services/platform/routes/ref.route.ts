@@ -45,8 +45,10 @@ import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import {
   verifyBearer,
+  extractOrgHeaders,
   parsePagination,
   parseSearch,
+  resolveTenantId,
   setCachePrivate,
 } from "@athyper/svc-shared";
 
@@ -1110,6 +1112,65 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
   // ── GET /platform/ref/fx-rates ──────────────────────────────────────────────
   // Returns the latest active rate per pair+type.
   // ?base=, ?quote=, ?rate_type=, ?date= (YYYY-MM-DD, defaults to today)
+
+  const listCertificationTypesHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const q = req.query as Record<string, unknown>;
+      const { page, limit, offset } = parsePagination(q);
+      const search = parseSearch(q);
+      const sf = resolveStatusFilter(q);
+      const id = typeof q["id"] === "string" && q["id"].trim() ? q["id"].trim() : null;
+
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = xOrg ? await resolveTenantId(db, xOrg, xRealm) : null;
+
+      let base = db.selectFrom("master.certification_type as ct");
+      if (tenantId) {
+        base = base.where((eb) => eb.or([
+          eb("ct.tenant_id" as never, "is", null as never),
+          eb("ct.tenant_id" as never, "=", tenantId as never),
+        ])) as typeof base;
+      } else {
+        base = base.where("ct.tenant_id" as never, "is", null as never) as typeof base;
+      }
+      if (id) {
+        base = base.where("ct.id" as never, "=", id as never) as typeof base;
+      }
+      if (search) {
+        base = base.where((eb) => eb.or([
+          eb("ct.name" as never, "ilike", `%${search}%` as never),
+          eb("ct.code" as never, "ilike", `%${search}%` as never),
+          eb("ct.issuing_body" as never, "ilike", `%${search}%` as never),
+          eb("ct.category" as never, "ilike", `%${search}%` as never),
+        ])) as typeof base;
+      }
+      base = applyStatus(base, sf, "ct.status");
+
+      const [countRow, rows] = await Promise.all([
+        base.select((eb) => eb.fn.countAll<string>().as("n")).executeTakeFirst(),
+        base
+          .select([
+            "ct.id", "ct.code", "ct.name", "ct.issuing_body",
+            "ct.category", "ct.description", "ct.is_custom", "ct.status",
+          ] as never[])
+          .orderBy("ct.is_custom" as never, "asc")
+          .orderBy("ct.category" as never, "asc")
+          .orderBy("ct.name" as never, "asc")
+          .limit(limit)
+          .offset(offset)
+          .execute(),
+      ]);
+
+      refResponse(res, rows, Number(countRow?.n ?? 0), page, limit);
+    } catch (err) {
+      logger?.error("ref_certification_types_error", { err: String(err) });
+      next(err);
+    }
+  };
+  router.get("/platform/ref/certification-types", listCertificationTypesHandler);
 
   const listFxRatesHandler: RequestHandler = async (req, res, next) => {
     try {

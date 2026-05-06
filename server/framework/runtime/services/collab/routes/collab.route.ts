@@ -226,6 +226,10 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         res.status(400).json({ error: "entityType and entityId are required" });
         return;
       }
+      if (!isUuid(entityId)) {
+        res.json({ ok: true, data: [], hasMore: false });
+        return;
+      }
 
       const tenantId = await resolveTenant(req, res, db);
       if (!tenantId) {
@@ -297,7 +301,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const entityType = req.query["entityType"] as string | undefined;
       const entityId   = req.query["entityId"]   as string | undefined;
 
-      if (!entityType || !entityId) {
+      if (!entityType || !entityId || !isUuid(entityId)) {
         res.json({ ok: true, count: 0 });
         return;
       }
@@ -371,6 +375,10 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       if (!entityType || !entityId) {
         res.status(400).json({ error: "entityType and entityId are required" });
+        return;
+      }
+      if (!isUuid(entityId)) {
+        res.json({ ok: true });
         return;
       }
 
@@ -1497,11 +1505,13 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const idsRaw     = ((req.query["ids"]        as string) ?? "").trim();
       if (!entityCode || !idsRaw) { res.json({ bookmarked_ids: [] }); return; }
 
-      const recordIds = idsRaw.split(",").map((s) => s.trim()).filter(Boolean);
-      if (recordIds.length > 100) {
+      const allBookmarkIds = idsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+      if (allBookmarkIds.length > 100) {
         res.status(400).json({ error: "MAX_100_IDS", max: 100 });
         return;
       }
+      const recordIds = allBookmarkIds.filter(isUuid);
+      if (recordIds.length === 0) { res.json({ bookmarked_ids: [] }); return; }
 
       const tenantId = await resolveTenant(req, res, db);
       if (!tenantId) { res.json({ bookmarked_ids: [] }); return; }
@@ -1538,22 +1548,23 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const idsRaw     = ((req.query["ids"]        as string) ?? "").trim();
       if (!entityCode || !idsRaw) { res.json({ counts: {} }); return; }
 
-      const recordIds = idsRaw.split(",").map((s) => s.trim()).filter(Boolean);
-      if (recordIds.length > 100) {
+      const allIds    = idsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+      if (allIds.length > 100) {
         res.status(400).json({ error: "MAX_100_IDS", max: 100 });
         return;
       }
+      const recordIds = allIds.filter(isUuid);
+      if (recordIds.length === 0) { res.json({ counts: {} }); return; }
 
       const tenantId = await resolveTenant(req, res, db);
       if (!tenantId) { res.json({ counts: {} }); return; }
 
-      type CountRow = { record_id: string; total: unknown; open_count: unknown };
+      type CountRow = { record_id: string; total: unknown };
       const rows = await (db
         .selectFrom("master.comment as c" as never)
         .select([
           "c.entity_id as record_id" as never,
           sql`count(*)`.as("total"),
-          sql`count(*) filter (where c.status = 'open')`.as("open_count"),
         ])
         .where("c.tenant_id"   as never, "=",  tenantId   as never)
         .where("c.entity_type" as never, "=",  entityCode  as never)
@@ -1564,10 +1575,8 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const counts: Record<string, { total: number; hasOpen: boolean }> = {};
       for (const row of rows) {
-        counts[row.record_id] = {
-          total:   Number(row.total),
-          hasOpen: Number(row.open_count) > 0,
-        };
+        const total = Number(row.total);
+        counts[row.record_id] = { total, hasOpen: total > 0 };
       }
 
       res.json({ counts });

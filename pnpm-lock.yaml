@@ -1285,6 +1285,9 @@ importers:
 
   server/framework/runtime/services/records:
     dependencies:
+      '@athyper/svc-iam':
+        specifier: workspace:*
+        version: link:../iam
       '@athyper/svc-shared':
         specifier: workspace:*
         version: link:../shared

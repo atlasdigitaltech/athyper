@@ -65,12 +65,20 @@ function isSectionVisible(sec: FlowSectionDescriptor, flatFields: Record<string,
   }
 }
 
+function isSystemManagedChildField(field: { field_name: string; data_type?: string | null }): boolean {
+  return field.field_name === "status" || field.data_type === "lifecycle_state";
+}
+
+function requesterManagedChildFields(sec: FlowSectionDescriptor) {
+  return (sec.child_fields ?? []).filter((field) => !isSystemManagedChildField(field));
+}
+
 function countRequiredFields(sec: FlowSectionDescriptor): number {
   if (sec.section_type === "fields") {
     return sec.fields.filter(f => f.mode === "required").length;
   }
   if (sec.section_type === "repeater" || sec.section_type === "singleton") {
-    return (sec.child_fields ?? []).filter(f => f.is_required).length;
+    return requesterManagedChildFields(sec).filter(f => f.is_required).length;
   }
   return 0;
 }
@@ -90,7 +98,7 @@ function countFilledRequiredFields(
   }
   if (sec.section_type === "repeater" || sec.section_type === "singleton") {
     if (childRows.length === 0) return 0;
-    const requiredNames = (sec.child_fields ?? []).filter(f => f.is_required).map(f => f.field_name);
+    const requiredNames = requesterManagedChildFields(sec).filter(f => f.is_required).map(f => f.field_name);
     let filled = 0;
     for (const row of childRows) {
       for (const name of requiredNames) {
@@ -104,6 +112,18 @@ function countFilledRequiredFields(
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
+
+function hasText(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function stripSystemManagedRowFields(row: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...row };
+  delete out["status"];
+  delete out["status_changed_at"];
+  delete out["status_changed_by"];
+  return out;
+}
 
 export function useCompositeIntakeEngine(
   bundle: CompositeFlowBundle,
@@ -197,7 +217,7 @@ export function useCompositeIntakeEngine(
           newErrors[`${sec.section_key}__min`] = `At least ${min} ${sec.label} row${min === 1 ? "" : "s"} required.`;
           valid = false;
         }
-        for (const cf of sec.child_fields ?? []) {
+        for (const cf of requesterManagedChildFields(sec)) {
           if (!cf.is_required) continue;
           rows.forEach((row, idx) => {
             const v = row[cf.field_name];
@@ -208,12 +228,28 @@ export function useCompositeIntakeEngine(
             }
           });
         }
+        if (sec.payload_key === "certifications") {
+          rows.forEach((row, idx) => {
+            const hasRegisteredType = hasText(row["certification_type_id"]);
+            const hasCustomName = hasText(row["custom_name"]);
+            if (!hasRegisteredType && !hasCustomName) {
+              newErrors[`${sec.section_key}__${idx}__certification_type_id`] =
+                "Select a certification type or enter a custom name.";
+              valid = false;
+            }
+            if (hasRegisteredType && hasCustomName) {
+              newErrors[`${sec.section_key}__${idx}__custom_name`] =
+                "Use either Certification Type or Custom Name, not both.";
+              valid = false;
+            }
+          });
+        }
       }
 
       if (sec.section_type === "singleton") {
         const rows = state.childRows[sec.payload_key ?? ""] ?? [];
         const row = rows[0] ?? {};
-        for (const cf of sec.child_fields ?? []) {
+        for (const cf of requesterManagedChildFields(sec)) {
           if (!cf.is_required) continue;
           const v = row[cf.field_name];
           if (v === undefined || v === null || v === "") {
@@ -283,7 +319,7 @@ export function useCompositeIntakeEngine(
     // Collect all visible sections across all steps to build payload
     const allSections = sortedSteps.flatMap(step => step.sections);
 
-    const getRows = (payloadKey: string) => rows[payloadKey] ?? [];
+    const getRows = (payloadKey: string) => (rows[payloadKey] ?? []).map(stripSystemManagedRowFields);
 
     // Only include sections that are visible (driver-field conditionals)
     const bankVisible = allSections.some(
@@ -315,7 +351,6 @@ export function useCompositeIntakeEngine(
         anticipated_risk_tier:      asStr(flat["anticipated_risk_tier"]),
       },
       identifiers:       getRows("identifiers"),
-      service_coverage:  getRows("service_coverage"),
       certifications:    getRows("certifications"),
       tax_profiles:      getRows("tax_profiles"),
       qualification:     {} as Record<string, never>,
@@ -330,54 +365,56 @@ export function useCompositeIntakeEngine(
   // ── Completion report ─────────────────────────────────────────────────────
 
   const completionReport = useCallback((): SectionCompletionReport[] => {
-    const allSections = sortedSteps.flatMap(step => step.sections);
     const report: SectionCompletionReport[] = [];
 
-    for (const sec of allSections) {
-      if (sec.section_type === "summary") continue;
-      if (!isSectionVisible(sec, state.flatFields)) continue;
+    for (const step of sortedSteps) {
+      for (const sec of step.sections) {
+        if (sec.section_type === "summary") continue;
+        if (!isSectionVisible(sec, state.flatFields)) continue;
 
-      const payloadKey = sec.payload_key ?? "";
-      const rows = sec.section_type === "fields"
-        ? []
-        : (state.childRows[payloadKey] ?? []);
+        const payloadKey = sec.payload_key ?? "";
+        const rows = sec.section_type === "fields"
+          ? []
+          : (state.childRows[payloadKey] ?? []);
 
-      const minRows = sec.min_rows ?? 0;
-      const requiredFieldCount = countRequiredFields(sec);
-      const filledFieldCount = countFilledRequiredFields(
-        sec,
-        state.flatFields,
-        rows,
-      );
+        const minRows = sec.min_rows ?? 0;
+        const requiredFieldCount = countRequiredFields(sec);
+        const filledFieldCount = countFilledRequiredFields(
+          sec,
+          state.flatFields,
+          rows,
+        );
 
-      const isRequired = sec.section_type === "fields"
-        ? requiredFieldCount > 0
-        : minRows > 0;
+        const isRequired = sec.section_type === "fields"
+          ? requiredFieldCount > 0
+          : minRows > 0;
 
-      let status: SectionCompletionReport["status"];
-      if (sec.section_type === "fields") {
-        if (filledFieldCount === requiredFieldCount && requiredFieldCount > 0) status = "complete";
-        else if (filledFieldCount > 0) status = "partial";
-        else if (!isRequired) status = "optional_empty";
-        else status = "empty";
-      } else {
-        if (rows.length === 0 && !isRequired) status = "optional_empty";
-        else if (rows.length < minRows) status = "empty";
-        else if (filledFieldCount < requiredFieldCount * rows.length) status = "partial";
-        else status = "complete";
+        let status: SectionCompletionReport["status"];
+        if (sec.section_type === "fields") {
+          if (filledFieldCount === requiredFieldCount && requiredFieldCount > 0) status = "complete";
+          else if (filledFieldCount > 0) status = "partial";
+          else if (!isRequired) status = "optional_empty";
+          else status = "empty";
+        } else {
+          if (rows.length === 0 && !isRequired) status = "optional_empty";
+          else if (rows.length < minRows) status = "empty";
+          else if (filledFieldCount < requiredFieldCount * rows.length) status = "partial";
+          else status = "complete";
+        }
+
+        report.push({
+          step_key:            step.step_key,
+          section_key:         sec.section_key,
+          label:               sec.label,
+          status,
+          required_field_count: requiredFieldCount,
+          filled_field_count:   filledFieldCount,
+          row_count:            rows.length,
+          min_rows:             minRows,
+          is_required:          isRequired,
+          is_restricted:        sec.restricted_view_only ?? false,
+        });
       }
-
-      report.push({
-        section_key:         sec.section_key,
-        label:               sec.label,
-        status,
-        required_field_count: requiredFieldCount,
-        filled_field_count:   filledFieldCount,
-        row_count:            rows.length,
-        min_rows:             minRows,
-        is_required:          isRequired,
-        is_restricted:        sec.restricted_view_only ?? false,
-      });
     }
 
     return report;

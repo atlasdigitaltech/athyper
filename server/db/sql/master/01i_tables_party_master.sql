@@ -1,220 +1,26 @@
 -- ============================================================================
 -- master/01i_tables_party_master.sql
--- Three-party master architecture — structural refinements + new qualification tables
+-- Concept: Party qualification, network links, and IdP identity bindings
+-- Depends on: 01h_tables_business_partner.sql (master.supplier, master.customer)
+--             01b_tables_finance.sql (master.legal_entity)
 --
--- Part A: party_tax_profile
---         Rename master.supplier_tax_profile → master.party_tax_profile
---         Add polymorphic owner_type/owner_id; drop supplier_id
--- Part B: party_contact_person
---         Strip inline phone/fax/address columns; channels → contact_link/address_link
--- Part C: master.customer — add extended business profile columns
--- Part D: master.legal_entity — add statutory profile columns + extended status CHECK
--- Part E: master.supplier_qualification — onboarding, procurement, risk, performance
--- Part F: master.customer_qualification — credit, KYC/AML, AR risk, collections
+-- Tables:
+--   §PQ1  master.supplier_qualification       — onboarding, risk, performance (role-specific)
+--   §PQ2  master.customer_qualification       — credit, KYC/AML, AR risk (role-specific)
+--   §PQ3  master.business_partner_network_link — external network account links (BP-level)
+--   §PQ4  master.legal_entity_identity_binding — IdP org to legal entity binding
 --
--- All statements are idempotent: IF NOT EXISTS / IF EXISTS / DO $$ guards.
--- Depends on: 01h_tables_supplier_master.sql
+-- FKs       → 03_constraints.sql
+-- Indexes   → 04_indexes.sql (inline below for inline deployment)
+-- Triggers  → 06_triggers.sql
+-- RLS       → 08_rls.sql
 -- ============================================================================
 
 
--- ── Part A: party_tax_profile ─────────────────────────────────────────────────
--- Rename supplier_tax_profile → party_tax_profile, then add polymorphic columns.
--- Idempotent: checks pg_tables before renaming.
-
-DO $$ BEGIN
-  IF EXISTS (
-    SELECT 1 FROM pg_tables WHERE schemaname = 'master' AND tablename = 'supplier_tax_profile'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM pg_tables WHERE schemaname = 'master' AND tablename = 'party_tax_profile'
-  ) THEN
-    EXECUTE 'ALTER TABLE master.supplier_tax_profile RENAME TO party_tax_profile';
-  END IF;
-END $$;
-
-ALTER TABLE master.party_tax_profile
-    ADD COLUMN IF NOT EXISTS owner_type text,
-    ADD COLUMN IF NOT EXISTS owner_id   uuid;
-
-DO $$ BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'master' AND table_name = 'party_tax_profile' AND column_name = 'supplier_id'
-  ) THEN
-    EXECUTE '
-      UPDATE master.party_tax_profile
-         SET owner_type = ''supplier'', owner_id = supplier_id
-       WHERE owner_type IS NULL AND supplier_id IS NOT NULL
-    ';
-  END IF;
-END $$;
-
-DO $$ BEGIN
-  BEGIN ALTER TABLE master.party_tax_profile ALTER COLUMN owner_type SET NOT NULL;
-  EXCEPTION WHEN OTHERS THEN NULL; END;
-  BEGIN ALTER TABLE master.party_tax_profile ALTER COLUMN owner_id   SET NOT NULL;
-  EXCEPTION WHEN OTHERS THEN NULL; END;
-END $$;
-
-ALTER TABLE master.party_tax_profile
-    DROP CONSTRAINT IF EXISTS stp_supplier_country_uq;
-
-DO $$ BEGIN
-  BEGIN
-    ALTER TABLE master.party_tax_profile
-        ADD CONSTRAINT ptp_owner_country_uq UNIQUE (tenant_id, owner_type, owner_id, country_code);
-  EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
-  END;
-END $$;
-
--- Rename pkey / tenant_uq / status_chk constraints to ptp_ prefix
-DO $$ BEGIN
-  BEGIN ALTER TABLE master.party_tax_profile RENAME CONSTRAINT stp_pkey       TO ptp_pkey;
-  EXCEPTION WHEN undefined_object THEN NULL; END;
-  BEGIN ALTER TABLE master.party_tax_profile RENAME CONSTRAINT stp_tenant_uq  TO ptp_tenant_uq;
-  EXCEPTION WHEN undefined_object THEN NULL; END;
-  BEGIN ALTER TABLE master.party_tax_profile RENAME CONSTRAINT stp_status_chk TO ptp_status_chk;
-  EXCEPTION WHEN undefined_object THEN NULL; END;
-  BEGIN ALTER TABLE master.party_tax_profile RENAME CONSTRAINT stp_country_fmt_chk TO ptp_country_fmt_chk;
-  EXCEPTION WHEN undefined_object THEN NULL; END;
-  BEGIN ALTER TABLE master.party_tax_profile RENAME CONSTRAINT stp_gln_fmt_chk     TO ptp_gln_fmt_chk;
-  EXCEPTION WHEN undefined_object THEN NULL; END;
-  BEGIN ALTER TABLE master.party_tax_profile RENAME CONSTRAINT stp_clearance_num_chk TO ptp_clearance_num_chk;
-  EXCEPTION WHEN undefined_object THEN NULL; END;
-END $$;
-
-ALTER TABLE master.party_tax_profile DROP COLUMN IF EXISTS supplier_id;
-
-DROP INDEX IF EXISTS master.stp_supplier_idx;
-DROP INDEX IF EXISTS master.stp_country_idx;
-DROP INDEX IF EXISTS master.stp_clearance_expiry_idx;
-
-CREATE INDEX IF NOT EXISTS ptp_owner_idx
-    ON master.party_tax_profile (tenant_id, owner_type, owner_id);
-CREATE INDEX IF NOT EXISTS ptp_country_idx
-    ON master.party_tax_profile (tenant_id, country_code);
-CREATE INDEX IF NOT EXISTS ptp_clearance_expiry_idx
-    ON master.party_tax_profile (tenant_id, tax_clearance_expiry_date)
-    WHERE has_tax_clearance = true AND tax_clearance_expiry_date IS NOT NULL;
-
-COMMENT ON TABLE master.party_tax_profile IS
-    'ARCHETYPE=B;SCOPE=T. Country-specific tax registration per party (supplier | customer | legal_entity). '
-    'Unique per (owner_type, owner_id, country). Primary tax identity cached on root party row for fast display.';
-COMMENT ON COLUMN master.party_tax_profile.owner_type IS
-    'Polymorphic party type: supplier | customer | legal_entity.';
-COMMENT ON COLUMN master.party_tax_profile.owner_id IS
-    'UUID of the root party (master.supplier.id / master.customer.id / master.legal_entity.id).';
-
-
--- ── Part B: party_contact_person — strip inline contact/address columns ────────
--- Channel contacts → master.contact_link (owner_type = ''party_contact_person'').
--- Addresses       → master.address_link  (owner_type = ''party_contact_person'').
--- email kept at application layer if desired via contact_link; not stored inline.
-
-ALTER TABLE master.party_contact_person
-    DROP COLUMN IF EXISTS email,
-    DROP COLUMN IF EXISTS phone_calling_code,
-    DROP COLUMN IF EXISTS phone_area,
-    DROP COLUMN IF EXISTS phone_number,
-    DROP COLUMN IF EXISTS phone_extension,
-    DROP COLUMN IF EXISTS fax_calling_code,
-    DROP COLUMN IF EXISTS fax_area,
-    DROP COLUMN IF EXISTS fax_number,
-    DROP COLUMN IF EXISTS fax_extension,
-    DROP COLUMN IF EXISTS address_line1,
-    DROP COLUMN IF EXISTS address_line2,
-    DROP COLUMN IF EXISTS city,
-    DROP COLUMN IF EXISTS state_region,
-    DROP COLUMN IF EXISTS postal_code,
-    DROP COLUMN IF EXISTS address_country_code;
-
-COMMENT ON TABLE master.party_contact_person IS
-    'ARCHETYPE=B;SCOPE=T. Named contact person (individual) for any party. '
-    'party_type: supplier | customer | legal_entity | company_code. '
-    'Channel contacts (email/phone/fax) → master.contact_link (owner_type=party_contact_person). '
-    'Addresses → master.address_link (owner_type=party_contact_person). '
-    'Roles → master.party_contact_role.';
-
-
--- ── Part C: master.customer — extended business profile columns ────────────────
--- Mirrors the 7 extended profile columns added to master.supplier in 01b_tables_finance.sql.
-
-ALTER TABLE master.customer
-    ADD COLUMN IF NOT EXISTS long_description       text,
-    ADD COLUMN IF NOT EXISTS aliases                text[]   NOT NULL DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS business_types         text[]   NOT NULL DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS legal_form             text,
-    ADD COLUMN IF NOT EXISTS founded_year           smallint,
-    ADD COLUMN IF NOT EXISTS employee_count_band    text,
-    ADD COLUMN IF NOT EXISTS annual_revenue_band    text;
-
-DO $$ BEGIN
-  BEGIN
-    ALTER TABLE master.customer
-        ADD CONSTRAINT customer_founded_year_chk
-            CHECK (founded_year IS NULL OR (founded_year BETWEEN 1800 AND 2200));
-  EXCEPTION WHEN duplicate_object THEN NULL;
-  END;
-END $$;
-
-
--- ── Part D: master.legal_entity — statutory profile extensions ─────────────────
-
-ALTER TABLE master.legal_entity
-    ADD COLUMN IF NOT EXISTS display_name                  text,
-    ADD COLUMN IF NOT EXISTS legal_name                    text,
-    ADD COLUMN IF NOT EXISTS legal_form                    text,
-    ADD COLUMN IF NOT EXISTS website_url                   text,
-    ADD COLUMN IF NOT EXISTS external_ref                  text,
-    ADD COLUMN IF NOT EXISTS aliases                       text[]   NOT NULL DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS business_types                text[]   NOT NULL DEFAULT '{}',
-    ADD COLUMN IF NOT EXISTS founded_year                  smallint,
-    ADD COLUMN IF NOT EXISTS employee_count_band           text,
-    ADD COLUMN IF NOT EXISTS annual_revenue_band           text,
-    ADD COLUMN IF NOT EXISTS tags                          jsonb    NOT NULL DEFAULT '[]'::jsonb,
-    ADD COLUMN IF NOT EXISTS tax_residence_country_code    char(2),
-    ADD COLUMN IF NOT EXISTS effective_from                date,
-    ADD COLUMN IF NOT EXISTS effective_until               date;
-
--- Extended statutory lifecycle: add dormant/in_liquidation/dissolved/archived
-ALTER TABLE master.legal_entity
-    DROP CONSTRAINT IF EXISTS legal_entity_status_chk;
-DO $$ BEGIN
-  BEGIN
-    ALTER TABLE master.legal_entity
-        ADD CONSTRAINT legal_entity_status_chk
-            CHECK (status IN ('draft', 'active', 'dormant', 'in_liquidation', 'dissolved', 'archived'));
-  EXCEPTION WHEN duplicate_object THEN NULL;
-  END;
-END $$;
-
-DO $$ BEGIN
-  BEGIN ALTER TABLE master.legal_entity
-        ADD CONSTRAINT legal_entity_founded_year_chk
-            CHECK (founded_year IS NULL OR (founded_year BETWEEN 1800 AND 2200));
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN ALTER TABLE master.legal_entity
-        ADD CONSTRAINT legal_entity_effective_order_chk
-            CHECK (effective_until IS NULL OR effective_from IS NULL OR effective_until >= effective_from);
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-
-  BEGIN ALTER TABLE master.legal_entity
-        ADD CONSTRAINT legal_entity_tax_country_fmt_chk
-            CHECK (tax_residence_country_code IS NULL OR tax_residence_country_code ~ '^[A-Z]{2}$');
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-END $$;
-
-COMMENT ON COLUMN master.legal_entity.tax_residence_country_code IS
-    'Country of primary tax residence (may differ from country_code of incorporation). '
-    'ISO 3166-1 alpha-2.';
-COMMENT ON COLUMN master.legal_entity.effective_from IS
-    'Date the legal entity became effective / operational. NULL = from inception.';
-COMMENT ON COLUMN master.legal_entity.effective_until IS
-    'Date the legal entity ceased to be effective (dissolution, merger). NULL = still active.';
-
-
--- ── Part E: master.supplier_qualification ─────────────────────────────────────
--- One row per (tenant, supplier). Onboarding, procurement approval, KYC/AML, performance.
+-- ============================================================================
+-- §PQ1  master.supplier_qualification — supplier standing, risk, and performance
+-- One row per (tenant, supplier). Role-specific — supplier_id FK.
+-- ============================================================================
 
 CREATE TABLE IF NOT EXISTS master.supplier_qualification (
     id              uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -234,7 +40,7 @@ CREATE TABLE IF NOT EXISTS master.supplier_qualification (
     block_reason                text,
     block_start_date            date,
 
-    -- Risk & Compliance
+    -- Risk & compliance
     risk_tier                   text,
     sanctions_status            text        NOT NULL DEFAULT 'not_checked',
     aml_kyc_status              text        NOT NULL DEFAULT 'not_started',
@@ -279,7 +85,9 @@ CREATE TABLE IF NOT EXISTS master.supplier_qualification (
     CONSTRAINT sq_delivery_score_chk    CHECK (delivery_score IS NULL OR delivery_score BETWEEN 0 AND 100),
     CONSTRAINT sq_quality_score_chk     CHECK (quality_score  IS NULL OR quality_score  BETWEEN 0 AND 100),
     CONSTRAINT sq_sla_score_chk         CHECK (sla_score      IS NULL OR sla_score      BETWEEN 0 AND 100),
-    CONSTRAINT sq_counts_chk            CHECK (sourcing_event_count >= 0 AND bid_count >= 0 AND awarded_count >= 0),
+    CONSTRAINT sq_counts_chk            CHECK (sourcing_event_count >= 0
+                                            AND bid_count >= 0
+                                            AND awarded_count >= 0),
     CONSTRAINT sq_block_reason_chk      CHECK (NOT is_blocked OR block_reason IS NOT NULL),
     CONSTRAINT sq_onboarding_status_chk CHECK (onboarding_status IN (
                                             'pending','in_progress','under_review','approved','rejected')),
@@ -303,15 +111,17 @@ CREATE INDEX IF NOT EXISTS sq_blocked_pidx
 COMMENT ON TABLE master.supplier_qualification IS
     'ARCHETYPE=B;SCOPE=T. Supplier qualification, risk, and performance record. '
     'One row per (tenant, supplier). Covers onboarding, procurement approval, KYC/AML, performance scores. '
-    'is_blocked = true gates supplier from appearing on new purchase orders.';
+    'is_blocked=true gates supplier from appearing on new purchase orders.';
 COMMENT ON COLUMN master.supplier_qualification.profile_completeness_pct IS
     'Computed percentage of required onboarding fields completed (0–100). Updated by onboarding workflow.';
 COMMENT ON COLUMN master.supplier_qualification.is_blocked IS
-    'Hard procurement block. block_reason IS NOT NULL required when is_blocked = true.';
+    'Hard procurement block. block_reason IS NOT NULL required when is_blocked=true.';
 
 
--- ── Part F: master.customer_qualification ─────────────────────────────────────
--- One row per (tenant, customer). Credit, KYC/AML, AR risk, collections eligibility.
+-- ============================================================================
+-- §PQ2  master.customer_qualification — customer credit, KYC/AML, AR risk
+-- One row per (tenant, customer). Role-specific — customer_id FK.
+-- ============================================================================
 
 CREATE TABLE IF NOT EXISTS master.customer_qualification (
     id              uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -387,9 +197,182 @@ CREATE INDEX IF NOT EXISTS cq_blocked_pidx
 COMMENT ON TABLE master.customer_qualification IS
     'ARCHETYPE=B;SCOPE=T. Customer credit, KYC/AML, and AR risk qualification. '
     'One row per (tenant, customer). Core AR finance control gate. '
-    'credit_status=blocked prevents new credit exposure. '
-    'dso_days/payment_behavior denormalized from AR aging worker for fast access.';
+    'credit_status=blocked prevents new credit exposure.';
 COMMENT ON COLUMN master.customer_qualification.credit_status IS
     'Credit decision gate: not_assessed | approved | conditional | on_hold | blocked.';
 COMMENT ON COLUMN master.customer_qualification.dso_days IS
     'Days Sales Outstanding — recomputed by AR analytics worker from ledger aging.';
+
+
+-- ============================================================================
+-- §PQ3  master.business_partner_network_link — external network account links
+-- One row per (BP, network provider). Future network platform anchor.
+-- Connection/sync state tracked here; actual sync records in the events outbox.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS master.business_partner_network_link (
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+    business_partner_id     uuid        NOT NULL,
+
+    -- Network provider identity
+    provider_code           text        NOT NULL,
+        -- 'athyper_network' | 'ariba' | 'peppol' | 'tradeshift' | 'custom'
+    network_account_id      text        NOT NULL,
+    external_party_id       text,
+
+    -- Peer platform (same-platform tenant network)
+    remote_tenant_id        uuid,
+    remote_business_partner_id uuid,
+
+    -- Connection state
+    connection_status       text        NOT NULL DEFAULT 'not_linked',
+        -- 'not_linked' | 'invited' | 'connected' | 'suspended'
+    verification_status     text        NOT NULL DEFAULT 'unverified',
+        -- 'unverified' | 'matched' | 'verified' | 'conflict'
+    match_confidence        numeric(5,2),
+
+    -- Sync state
+    sync_status             text        NOT NULL DEFAULT 'pending',
+        -- 'pending' | 'synced' | 'drift' | 'error'
+    last_synced_at          timestamptz,
+
+    -- Timeline
+    invited_at              timestamptz,
+    connected_at            timestamptz,
+
+    -- Raw provider data
+    network_snapshot        jsonb,
+    metadata                jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Audit
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT bpnl_pkey                    PRIMARY KEY (id),
+    CONSTRAINT bpnl_tenant_id_uq            UNIQUE (tenant_id, id),
+    CONSTRAINT bpnl_bp_provider_uq          UNIQUE (tenant_id, business_partner_id, provider_code),
+    CONSTRAINT bpnl_provider_account_uq     UNIQUE (provider_code, network_account_id),
+    CONSTRAINT bpnl_network_account_nonempty CHECK (btrim(network_account_id) <> ''),
+    CONSTRAINT bpnl_provider_code_chk       CHECK (provider_code IN (
+                                                 'athyper_network', 'ariba', 'peppol',
+                                                 'tradeshift', 'custom')),
+    CONSTRAINT bpnl_connection_status_chk   CHECK (connection_status IN (
+                                                 'not_linked', 'invited',
+                                                 'connected', 'suspended')),
+    CONSTRAINT bpnl_verification_status_chk CHECK (verification_status IN (
+                                                 'unverified', 'matched',
+                                                 'verified', 'conflict')),
+    CONSTRAINT bpnl_sync_status_chk         CHECK (sync_status IN (
+                                                 'pending', 'synced', 'drift', 'error')),
+    CONSTRAINT bpnl_match_confidence_chk    CHECK (match_confidence IS NULL
+                                                   OR (match_confidence >= 0 AND match_confidence <= 100)),
+    CONSTRAINT bpnl_audit_pair_chk          CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE INDEX IF NOT EXISTS bpnl_bp_idx
+    ON master.business_partner_network_link (tenant_id, business_partner_id);
+CREATE INDEX IF NOT EXISTS bpnl_provider_idx
+    ON master.business_partner_network_link (provider_code, network_account_id);
+CREATE INDEX IF NOT EXISTS bpnl_sync_pidx
+    ON master.business_partner_network_link (tenant_id, sync_status)
+    WHERE sync_status IN ('pending', 'drift', 'error');
+
+COMMENT ON TABLE master.business_partner_network_link IS
+    'ARCHETYPE=B;SCOPE=T. External network account links for a business partner. '
+    'One row per (BP, provider). Tracks connection, verification, and sync state. '
+    'Full sync logs and network snapshots belong in the Network tab/drawer, not headers.';
+COMMENT ON COLUMN master.business_partner_network_link.provider_code IS
+    'Network provider: athyper_network | ariba | peppol | tradeshift | custom.';
+COMMENT ON COLUMN master.business_partner_network_link.remote_tenant_id IS
+    'Same-platform peer tenant. Populated only when provider_code=athyper_network.';
+COMMENT ON COLUMN master.business_partner_network_link.connection_status IS
+    'Header state: not_linked | invited | connected | suspended. '
+    'This is what the UI badge shows. Full sync details are in Network tab.';
+
+
+-- ============================================================================
+-- §PQ4  master.legal_entity_identity_binding — IdP org to legal entity binding
+-- One row per (legal_entity, provider). Multi-IdP ready.
+-- Mirrors master.principal_identity_binding pattern (without user-specific fields).
+-- Keycloak Org maps to master.legal_entity through this table.
+-- Design: no 'keycloak' in table/column names; provider_code values may reference providers.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS master.legal_entity_identity_binding (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    legal_entity_id     uuid        NOT NULL,
+
+    -- Provider identity (sealed protocol vocabulary)
+    provider_code       text        NOT NULL,
+        -- 'keycloak' | 'azure_ad' | 'okta' | 'google' | 'saml_generic' | 'oidc_generic'
+    realm_key           text        NOT NULL,
+
+    -- External IdP org identity
+    subject_id          text        NOT NULL,   -- IdP org UUID / org ID
+    org_alias           text        NOT NULL,   -- e.g. athyper--ATHQ-LE
+    org_name            text,
+    org_path            text,
+
+    -- Sync health
+    synced_at           timestamptz,
+    sync_status         text        NOT NULL DEFAULT 'pending',
+    sync_error_message  text,
+    sync_retry_count    smallint    NOT NULL DEFAULT 0,
+
+    -- Raw IdP data
+    idp_snapshot        jsonb,
+    provider_attributes jsonb,
+
+    -- IdP lifecycle
+    idp_enabled         boolean     NOT NULL DEFAULT true,
+
+    -- Metadata
+    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Audit
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT leib_pkey                    PRIMARY KEY (id),
+    CONSTRAINT leib_tenant_id_uq            UNIQUE (tenant_id, id),
+    CONSTRAINT leib_legal_entity_provider_uq UNIQUE (tenant_id, legal_entity_id, provider_code),
+    CONSTRAINT leib_subject_provider_uq     UNIQUE (provider_code, realm_key, subject_id),
+    CONSTRAINT leib_alias_provider_uq       UNIQUE (provider_code, realm_key, org_alias),
+    CONSTRAINT leib_provider_code_chk       CHECK (provider_code IN (
+                                                'keycloak', 'azure_ad', 'okta', 'google',
+                                                'saml_generic', 'oidc_generic')),
+    CONSTRAINT leib_sync_status_chk         CHECK (sync_status IN (
+                                                'pending', 'synced', 'drift', 'error', 'disabled')),
+    CONSTRAINT leib_subject_nonempty        CHECK (btrim(subject_id) <> ''),
+    CONSTRAINT leib_org_alias_nonempty      CHECK (btrim(org_alias) <> ''),
+    CONSTRAINT leib_realm_key_nonempty      CHECK (btrim(realm_key) <> ''),
+    CONSTRAINT leib_sync_retry_chk          CHECK (sync_retry_count >= 0),
+    CONSTRAINT leib_audit_pair_chk          CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE INDEX IF NOT EXISTS leib_legal_entity_idx
+    ON master.legal_entity_identity_binding (tenant_id, legal_entity_id);
+CREATE INDEX IF NOT EXISTS leib_sync_pidx
+    ON master.legal_entity_identity_binding (tenant_id, sync_status)
+    WHERE sync_status IN ('pending', 'drift', 'error');
+
+COMMENT ON TABLE master.legal_entity_identity_binding IS
+    'ARCHETYPE=B;SCOPE=T. IAM / IdP organisation to legal entity binding. '
+    'One row per (legal_entity, provider). Supports multiple IdP providers '
+    '(Keycloak, Azure AD, Okta, Google, SAML, OIDC). '
+    'X-Org header: tenant_code--legal_entity_code. '
+    'Mirrors principal_identity_binding pattern — no user-specific fields. '
+    'sync_status tracks IdP sync health only, not business lifecycle.';
+COMMENT ON COLUMN master.legal_entity_identity_binding.subject_id IS
+    'IdP organisation UUID / org ID. Unique per (provider, realm). Provider-neutral naming.';
+COMMENT ON COLUMN master.legal_entity_identity_binding.org_alias IS
+    'Organisation alias from the IdP (e.g. athyper--ATHQ-LE). Unique per (provider, realm).';
+COMMENT ON COLUMN master.legal_entity_identity_binding.sync_status IS
+    'IdP sync health: pending | synced | drift | error | disabled. '
+    'Not a business lifecycle — master.legal_entity.status governs business state.';

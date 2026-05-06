@@ -1,16 +1,12 @@
 /**
- * Journal Routes — read-model endpoints for JE list and posting trace,
- * plus workflow submission hook.
+ * Journal Routes.
  *
- * GET   /finance/journals                         — paginated JE list with filters
- * GET   /finance/journals/:jeId/posting-trace     — full debit/credit GL posting trace
- * POST  /finance/journals/:jeId/submit            — submit JE for approval (creates
- *                                                   workflow_request if a definition
- *                                                   matches; otherwise signals direct
- *                                                   posting is allowed)
- * POST  /finance/journals                         — create manual journal entry (balanced lines)
- * POST  /finance/journals/:jeId/reverse           — create mirror reversal of a posted JE
- * PATCH /finance/journals/:jeId                   — update a draft (status=created) JE
+ * GET   /finance/journals
+ * GET   /finance/journals/:jeId/posting-trace
+ * POST  /finance/journals/:jeId/submit
+ * POST  /finance/journals
+ * POST  /finance/journals/:jeId/reverse
+ * PATCH /finance/journals/:jeId
  */
 
 import type { RequestHandler, Router } from "express";
@@ -31,26 +27,352 @@ import {
 } from "@athyper/svc-shared";
 import { randomUUID } from "node:crypto";
 import { WorkflowEngine } from "../../workflow/engine.js";
+import { ApproverResolverService } from "../../workflow/approver-resolver.service.js";
 import { PolicyEngine } from "../../policy/engine.js";
 
-// ── Route factory ──────────────────────────────────────────────────────────────
+type AnyDb = Kysely<any>;
+
+const DEFAULT_AUTO_JE_TEMPLATE_CODE = "je_auto_post";
+
+type ManualJournalLineInput = {
+  gl_account_code?: unknown;
+  debit?: unknown;
+  credit?: unknown;
+  item_text?: unknown;
+  description?: unknown;
+  cost_center_id?: unknown;
+  profit_center_id?: unknown;
+  project_id?: unknown;
+  site_id?: unknown;
+  party_type?: unknown;
+  party_id?: unknown;
+  subledger_type?: unknown;
+  reference?: unknown;
+};
+
+type ManualJournalLineReferenceInput = {
+  ref_type: string;
+  ref_doc_type: string;
+  ref_doc_id: string;
+  ref_doc_line_id: string | null;
+  ref_doc_number: string | null;
+  ref_doc_label: string | null;
+  ref_doc_line_label: string | null;
+};
+
+function asNumber(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeCurrency(value: unknown): string {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+function lineDescription(line: ManualJournalLineInput): string | null {
+  const value = line.description ?? line.item_text;
+  return value == null ? null : String(value);
+}
+
+function parseLineReference(value: unknown): ManualJournalLineReferenceInput | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  const refType = String(row["ref_type"] ?? "").trim();
+  const refDocType = String(row["ref_doc_type"] ?? "").trim();
+  const refDocId = String(row["ref_doc_id"] ?? "").trim();
+  const refDocLineId = row["ref_doc_line_id"] == null ? null : String(row["ref_doc_line_id"]).trim();
+  if (!refType || !refDocType || !isUuid(refDocId)) return null;
+  if (refDocLineId && !isUuid(refDocLineId)) return null;
+  return {
+    ref_type:           refType,
+    ref_doc_type:       refDocType,
+    ref_doc_id:         refDocId,
+    ref_doc_line_id:    refDocLineId || null,
+    ref_doc_number:     row["ref_doc_number"] == null ? null : String(row["ref_doc_number"]).trim() || null,
+    ref_doc_label:      row["ref_doc_label"] == null ? null : String(row["ref_doc_label"]).trim() || null,
+    ref_doc_line_label: row["ref_doc_line_label"] == null ? null : String(row["ref_doc_line_label"]).trim() || null,
+  };
+}
+
+async function resolveManualBook(db: AnyDb, tenantId: string, companyCodeId: string): Promise<string | null> {
+  const row = await db
+    .selectFrom("master.company_code_book_assignment as ba")
+    .innerJoin("master.ledger_book as lb", (join) =>
+      join.onRef("lb.id", "=", "ba.book_id")
+        .onRef("lb.tenant_id", "=", "ba.tenant_id"),
+    )
+    .select(["ba.book_id as bookId"])
+    .where("ba.tenant_id", "=", tenantId)
+    .where("ba.company_code_id", "=", companyCodeId)
+    .where("ba.status", "=", "active")
+    .where("lb.status", "=", "active")
+    .where("lb.category", "=", "statutory")
+    .where("lb.is_manual_je_allowed", "=", true)
+    .orderBy("ba.priority", "asc")
+    .executeTakeFirst() as { bookId: string } | undefined;
+
+  return row?.bookId ?? null;
+}
+
+async function resolveFiscalPeriod(
+  db: AnyDb,
+  tenantId: string,
+  companyCodeId: string,
+  fiscalYear: number,
+  periodNumber: number,
+): Promise<{ id: string; fiscalYear: number; periodNumber: number } | null> {
+  const row = await db
+    .selectFrom("master.fiscal_period as fp")
+    .select([
+      "fp.id",
+      "fp.fiscal_year as fiscalYear",
+      "fp.period_number as periodNumber",
+    ])
+    .where("fp.tenant_id", "=", tenantId)
+    .where("fp.company_code_id", "=", companyCodeId)
+    .where("fp.fiscal_year", "=", fiscalYear)
+    .where("fp.period_number", "=", periodNumber)
+    .executeTakeFirst() as { id: string; fiscalYear: number; periodNumber: number } | undefined;
+
+  return row ?? null;
+}
+
+async function resolveFiscalPeriodByDate(
+  db: AnyDb,
+  tenantId: string,
+  companyCodeId: string,
+  postingDate: string,
+): Promise<{ id: string; fiscalYear: number; periodNumber: number } | null> {
+  const row = await db
+    .selectFrom("master.fiscal_period as fp")
+    .select([
+      "fp.id",
+      "fp.fiscal_year as fiscalYear",
+      "fp.period_number as periodNumber",
+    ])
+    .where("fp.tenant_id", "=", tenantId)
+    .where("fp.company_code_id", "=", companyCodeId)
+    .where("fp.start_date", "<=", postingDate)
+    .where("fp.end_date", ">=", postingDate)
+    .orderBy("fp.start_date", "desc")
+    .executeTakeFirst() as { id: string; fiscalYear: number; periodNumber: number } | undefined;
+
+  return row ?? null;
+}
+
+async function nextJeNumber(db: AnyDb, tenantId: string, companyCodeId: string, fiscalYear: number): Promise<string> {
+  const countRow = await db
+    .selectFrom("document.journal_entry as je")
+    .select(db.fn.countAll().as("cnt"))
+    .where("je.tenant_id", "=", tenantId)
+    .where("je.company_code_id", "=", companyCodeId)
+    .where("je.fiscal_year", "=", fiscalYear)
+    .executeTakeFirst() as { cnt: string | number } | undefined;
+
+  const seq = parseInt(String(countRow?.cnt ?? "0"), 10) + 1;
+  return `JE-${fiscalYear}-${String(seq).padStart(5, "0")}`;
+}
+
+async function resolveGlAccounts(
+  db: AnyDb,
+  tenantId: string,
+  lines: ManualJournalLineInput[],
+): Promise<Map<string, string>> {
+  const accountCodes = [...new Set(lines.map((l) => String(l.gl_account_code ?? "").trim()).filter(Boolean))];
+  if (lines.some((line) => !String(line.gl_account_code ?? "").trim())) {
+    throw Object.assign(new Error("Every journal line must have a GL account code"), { code: "ACCOUNT_REQUIRED" });
+  }
+
+  const accounts = await db
+    .selectFrom("master.gl_account as ga")
+    .select(["ga.id", "ga.code"])
+    .where("ga.tenant_id", "=", tenantId)
+    .where("ga.code", "in", accountCodes)
+    .execute() as Array<{ id: string; code: string }>;
+
+  const accountMap = new Map(accounts.map((a) => [a.code, a.id]));
+  for (const code of accountCodes) {
+    if (!accountMap.has(code)) {
+      throw Object.assign(new Error(`GL account '${code}' not found`), { code: "ACCOUNT_NOT_FOUND" });
+    }
+  }
+  return accountMap;
+}
+
+function validateLines(lines: ManualJournalLineInput[]): { totalDebit: number; totalCredit: number } {
+  if (!Array.isArray(lines) || lines.length < 2) {
+    throw Object.assign(new Error("At least 2 journal lines are required"), { code: "INVALID_LINES" });
+  }
+
+  let totalDebit = 0;
+  let totalCredit = 0;
+  for (const line of lines) {
+    const debit = asNumber(line.debit);
+    const credit = asNumber(line.credit);
+    if (debit < 0 || credit < 0 || (debit > 0 && credit > 0) || (debit === 0 && credit === 0)) {
+      throw Object.assign(
+        new Error("Each journal line must have exactly one positive debit or credit amount"),
+        { code: "INVALID_LINE_POLARITY" },
+      );
+    }
+    totalDebit += debit;
+    totalCredit += credit;
+  }
+
+  if (Math.abs(totalDebit - totalCredit) > 0.001) {
+    throw Object.assign(
+      new Error(`Journal entry is unbalanced: debit ${totalDebit.toFixed(2)} != credit ${totalCredit.toFixed(2)}`),
+      { code: "UNBALANCED" },
+    );
+  }
+  if (totalDebit <= 0) {
+    throw Object.assign(new Error("Journal entry must have non-zero amounts"), { code: "ZERO_AMOUNT" });
+  }
+
+  return { totalDebit, totalCredit };
+}
+
+async function insertJournalLineReference(
+  trx: AnyDb,
+  params: {
+    tenantId: string;
+    journalLineId: string;
+    actorId: string;
+    currencyCode: string;
+    baseAmount: number;
+    reference: ManualJournalLineReferenceInput | null;
+    lineDescription: string | null;
+  },
+): Promise<void> {
+  if (!params.reference) return;
+
+  await trx
+    .insertInto("document.journal_line_reference" as never)
+    .values({
+      id:                 randomUUID(),
+      tenant_id:          params.tenantId,
+      journal_line_id:    params.journalLineId,
+      ref_type:           params.reference.ref_type,
+      ref_doc_type:       params.reference.ref_doc_type,
+      ref_doc_id:         params.reference.ref_doc_id,
+      ref_doc_line_id:    params.reference.ref_doc_line_id,
+      ref_doc_number:     params.reference.ref_doc_number ?? params.reference.ref_doc_label,
+      allocated_amount:   Math.abs(params.baseAmount).toFixed(4),
+      currency_code:      params.currencyCode,
+      base_amount:        Math.abs(params.baseAmount).toFixed(4),
+      description:        params.lineDescription,
+      metadata:           {
+        ref_doc_label:      params.reference.ref_doc_label,
+        ref_doc_line_label: params.reference.ref_doc_line_label,
+      },
+      created_by:        params.actorId,
+    } as never)
+    .execute();
+}
+
+async function getJournalLineTotals(
+  db: AnyDb,
+  tenantId: string,
+  journalEntryId: string,
+): Promise<{ lineCount: number; totalDebit: number; totalCredit: number }> {
+  const row = await db
+    .selectFrom("document.journal_line as jl")
+    .select([
+      sql<number>`COUNT(*)::int`.as("lineCount"),
+      sql<string>`COALESCE(SUM(jl.base_debit), 0)`.as("totalDebit"),
+      sql<string>`COALESCE(SUM(jl.base_credit), 0)`.as("totalCredit"),
+    ])
+    .where("jl.tenant_id", "=", tenantId)
+    .where("jl.journal_entry_id", "=", journalEntryId)
+    .executeTakeFirst() as { lineCount?: number | string; totalDebit?: number | string; totalCredit?: number | string } | undefined;
+
+  return {
+    lineCount:   Number(row?.lineCount ?? 0),
+    totalDebit:  Number(row?.totalDebit ?? 0),
+    totalCredit: Number(row?.totalCredit ?? 0),
+  };
+}
+
+function sendValidationError(res: Parameters<RequestHandler>[1], err: unknown): boolean {
+  const e = err as Error & { code?: string };
+  if (!e.code) return false;
+  const status = e.code === "ACCOUNT_NOT_FOUND" || e.code === "ACCOUNT_REQUIRED" ? 400 : 422;
+  res.status(status).json({ error: e.code, message: e.message });
+  return true;
+}
+
+async function autoApproveAndPostJournalEntry(
+  db: AnyDb,
+  tenantId: string,
+  journalEntryId: string,
+  actorId: string,
+): Promise<Record<string, unknown>> {
+  return db.transaction().execute(async (trx) => {
+    const approved = await (trx.updateTable("document.journal_entry") as any)
+      .set({ status: "approved", updated_by: actorId })
+      .where("id", "=", journalEntryId)
+      .where("tenant_id", "=", tenantId)
+      .where("status", "=", "created")
+      .returning(["id", "je_number", "status"] as never)
+      .executeTakeFirst() as Record<string, unknown> | undefined;
+
+    if (!approved) {
+      throw Object.assign(
+        new Error("Journal entry could not be auto-approved from its current status."),
+        { code: "AUTO_APPROVE_FAILED" },
+      );
+    }
+
+    const posted = await (trx.updateTable("document.journal_entry") as any)
+      .set({ status: "posted", posted_by: actorId, updated_by: actorId })
+      .where("id", "=", journalEntryId)
+      .where("tenant_id", "=", tenantId)
+      .where("status", "=", "approved")
+      .returningAll()
+      .executeTakeFirst() as Record<string, unknown> | undefined;
+
+    if (!posted) {
+      throw Object.assign(
+        new Error("Journal entry could not be auto-posted after approval."),
+        { code: "AUTO_POST_FAILED" },
+      );
+    }
+
+    await emitOutboxEvent(trx, {
+      tenantId,
+      topic: "search",
+      eventType: "journal_entry.updated",
+      entityType: "journal_entry",
+      entityId: journalEntryId,
+      actorId,
+      payload: { status: "posted" },
+    });
+
+    return posted;
+  });
+}
 
 export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger } = deps;
+  const approverResolver = new ApproverResolverService({
+    db,
+    logger: logger
+      ? {
+          warn: (event, fields) => {
+            if (logger.info) logger.info(event, fields);
+            else logger.error(event, fields);
+          },
+          error: (event, fields) => logger.error(event, fields),
+        }
+      : undefined,
+  });
 
-  // ── GET /finance/journals ───────────────────────────────────────────────────
-  // Paginated journal entry list.
-  // Query params (in addition to standard scope params):
-  //   status        — JE status filter (created|posted|reversed|voided)
-  //   source_doc_type — e.g. MANUAL, AP, AR
-  //   search        — free-text search on je_number or description
-  //   limit         — page size (default 50)
-  //   offset        — row offset (default 0)
   router.get("/finance/journals", (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+
+      const xOrg = (req.headers["x-org"] as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.json({ items: [], total: 0 }); return; }
@@ -62,11 +384,11 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
       if (companies.length === 0) { res.json({ items: [], total: 0 }); return; }
       const companyIds = companies.map((c) => c.company_code_id);
 
-      const status        = (req.query["status"]          as string | undefined) ?? null;
-      const sourceDocType = (req.query["source_doc_type"] as string | undefined) ?? null;
-      const search        = (req.query["search"]          as string | undefined) ?? null;
-      const limit         = Math.min(parseInt(String(req.query["limit"]  ?? "50"),  10), 200);
-      const offset        = Math.max(parseInt(String(req.query["offset"] ?? "0"),   10), 0);
+      const status = (req.query["status"] as string | undefined) ?? null;
+      const sourceDocType = (req.query["source_doc_type"] as string | undefined)?.toLowerCase() ?? null;
+      const search = (req.query["search"] as string | undefined) ?? null;
+      const limit = Math.min(parseInt(String(req.query["limit"] ?? "50"), 10), 200);
+      const offset = Math.max(parseInt(String(req.query["offset"] ?? "0"), 10), 0);
 
       let q = db
         .selectFrom("document.journal_entry as je")
@@ -76,47 +398,34 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
           "je.description",
           "je.status",
           "je.source_doc_type as sourceDocType",
-          "je.source_doc_ref  as sourceDocRef",
-          "je.posting_date    as postingDate",
-          "je.fiscal_year     as fiscalYear",
-          "je.period_number   as periodNumber",
-          "je.currency_code   as currencyCode",
-          "je.total_debit     as totalDebit",
-          "je.total_credit    as totalCredit",
-          "je.posted_at       as postedAt",
-          "je.line_count      as lineCount",
+          "je.source_doc_id as sourceDocId",
+          "je.posting_date as postingDate",
+          "je.fiscal_year as fiscalYear",
+          "je.period_number as periodNumber",
+          "je.transaction_currency as currencyCode",
+          "je.total_debit as totalDebit",
+          "je.total_credit as totalCredit",
+          "je.posted_at as postedAt",
+          "je.line_count as lineCount",
         ])
-        .where("je.tenant_id",        "=", tenantId)
-        .where("je.company_code_id",  "in", companyIds)
-        .where("je.fiscal_year",      "=", parsed.fiscalYear);
+        .where("je.tenant_id", "=", tenantId)
+        .where("je.company_code_id", "in", companyIds)
+        .where("je.fiscal_year", "=", parsed.fiscalYear);
 
-      if (parsed.period !== null) {
-        q = q.where("je.period_number", "=", parsed.period) as typeof q;
-      }
-      if (parsed.bookId) {
-        q = q.where("je.book_id", "=", parsed.bookId) as typeof q;
-      }
-      if (status) {
-        q = q.where("je.status", "=", status) as typeof q;
-      }
-      if (sourceDocType) {
-        q = q.where("je.source_doc_type", "=", sourceDocType) as typeof q;
-      }
+      if (parsed.period !== null) q = q.where("je.period_number", "=", parsed.period) as typeof q;
+      if (parsed.bookId) q = q.where("je.book_id", "=", parsed.bookId) as typeof q;
+      if (status) q = q.where("je.status", "=", status) as typeof q;
+      if (sourceDocType) q = q.where("je.source_doc_type", "=", sourceDocType) as typeof q;
       if (search) {
         q = q.where((eb) =>
           eb.or([
-            eb("je.je_number",   "like", `%${search}%`),
+            eb("je.je_number", "like", `%${search}%`),
             eb("je.description", "like", `%${search}%`),
-          ])
+          ]),
         ) as typeof q;
       }
 
-      // Total count
-      const countQ = (q as typeof q).clearSelect().select(db.fn.countAll().as("cnt"));
-      const countRow = await countQ.executeTakeFirst() as { cnt: string | number } | undefined;
-      const total = parseInt(String(countRow?.cnt ?? "0"), 10);
-
-      // Paged rows
+      const countRow = await q.clearSelect().select(db.fn.countAll().as("cnt")).executeTakeFirst() as { cnt: string | number } | undefined;
       const rows = await q
         .orderBy("je.posting_date", "desc")
         .orderBy("je.je_number", "desc")
@@ -124,165 +433,502 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         .offset(offset)
         .execute() as Array<Record<string, unknown>>;
 
-      const items = rows.map((r) => ({
-        id:            r["id"],
-        jeNumber:      r["jeNumber"],
-        description:   r["description"] ?? null,
-        status:        r["status"],
-        sourceDocType: r["sourceDocType"] ?? null,
-        sourceDocRef:  r["sourceDocRef"]  ?? null,
-        postingDate:   r["postingDate"]   ?? null,
-        fiscalYear:    r["fiscalYear"],
-        periodNumber:  r["periodNumber"],
-        currencyCode:  r["currencyCode"],
-        totalDebit:    parseFloat(String(r["totalDebit"]  ?? "0")),
-        totalCredit:   parseFloat(String(r["totalCredit"] ?? "0")),
-        postedAt:      r["postedAt"]      ?? null,
-        lineCount:     Number(r["lineCount"] ?? 0),
-      }));
-
-      res.json({ items, total, limit, offset });
-    } catch (err) { logger?.error("finance_journals_error", { err: String(err) }); next(err); }
+      res.json({
+        items: rows.map((r) => ({
+          id: r["id"],
+          jeNumber: r["jeNumber"],
+          description: r["description"] ?? null,
+          status: r["status"],
+          sourceDocType: r["sourceDocType"] ?? null,
+          sourceDocId: r["sourceDocId"] ?? null,
+          postingDate: r["postingDate"] ?? null,
+          fiscalYear: r["fiscalYear"],
+          periodNumber: r["periodNumber"],
+          currencyCode: r["currencyCode"],
+          totalDebit: parseFloat(String(r["totalDebit"] ?? "0")),
+          totalCredit: parseFloat(String(r["totalCredit"] ?? "0")),
+          postedAt: r["postedAt"] ?? null,
+          lineCount: Number(r["lineCount"] ?? 0),
+        })),
+        total: parseInt(String(countRow?.cnt ?? "0"), 10),
+        limit,
+        offset,
+      });
+    } catch (err) {
+      logger?.error("finance_journals_error", { err: String(err) });
+      next(err);
+    }
   }) as RequestHandler);
 
-  // ── GET /finance/journals/:jeId/posting-trace ───────────────────────────────
-  // Full GL posting trace for a single journal entry.
-  // Returns the JE header + all debit/credit lines with dimension labels.
   router.get("/finance/journals/:jeId/posting-trace", (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const xOrg   = (req.headers["x-org"]   as string) ?? "";
-      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+
+      const { xOrg, xRealm } = extractOrgHeaders(req);
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+      const jeId = (req.params["jeId"] as string | undefined)?.trim();
+      if (!tenantId || !jeId || !isUuid(jeId)) {
+        res.status(404).json({ error: "NOT_FOUND" });
+        return;
+      }
 
-      const { jeId } = req.params as { jeId: string };
-      if (!isUuid(jeId)) { res.status(404).json({ error: `Journal entry ${jeId} not found` }); return; }
-
-      // JE header
       const je = await db
         .selectFrom("document.journal_entry as je")
         .select([
           "je.id",
-          "je.je_number     as jeNumber",
+          "je.je_number as jeNumber",
           "je.description",
           "je.status",
           "je.source_doc_type as sourceDocType",
-          "je.source_doc_ref  as sourceDocRef",
-          "je.posting_date    as postingDate",
-          "je.fiscal_year     as fiscalYear",
-          "je.period_number   as periodNumber",
-          "je.currency_code   as currencyCode",
-          "je.total_debit     as totalDebit",
-          "je.total_credit    as totalCredit",
-          "je.posted_at       as postedAt",
-          "je.reversed_by     as reversedBy",
-          "je.reversal_of     as reversalOf",
-          "je.narration",
+          "je.source_doc_id as sourceDocId",
+          "je.posting_date as postingDate",
+          "je.fiscal_year as fiscalYear",
+          "je.period_number as periodNumber",
+          "je.transaction_currency as currencyCode",
+          "je.total_debit as totalDebit",
+          "je.total_credit as totalCredit",
+          "je.posted_at as postedAt",
+          "je.reversed_by_id as reversedBy",
+          "je.reversal_of_id as reversalOf",
         ])
-        .where("je.id",        "=", jeId)
+        .where("je.id", "=", jeId)
         .where("je.tenant_id", "=", tenantId)
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
-      if (!je) { res.status(404).json({ error: `Journal entry ${jeId} not found` }); return; }
+      if (!je) { res.status(404).json({ error: "JOURNAL_NOT_FOUND" }); return; }
 
-      // Posting lines with account + dimension labels
       const lines = await db
         .selectFrom("document.journal_line as jl")
-        .innerJoin("master.gl_account as ga", "ga.id", "jl.gl_account_id")
-        .leftJoin("master.cost_center as cc",    "cc.id",  "jl.cost_center_id")
-        .leftJoin("master.profit_center as pc",  "pc.id",  "jl.profit_center_id")
-        .leftJoin("master.project as pj",        "pj.id",  "jl.project_id")
+        .innerJoin("master.gl_account as ga", (join) =>
+          join.onRef("ga.id", "=", "jl.gl_account_id")
+            .onRef("ga.tenant_id", "=", "jl.tenant_id"),
+        )
+        .leftJoin("master.cost_center as cc", (join) =>
+          join.onRef("cc.id", "=", "jl.cost_center_id")
+            .onRef("cc.tenant_id", "=", "jl.tenant_id"),
+        )
+        .leftJoin("master.profit_center as pc", (join) =>
+          join.onRef("pc.id", "=", "jl.profit_center_id")
+            .onRef("pc.tenant_id", "=", "jl.tenant_id"),
+        )
+        .leftJoin("master.project as pj", (join) =>
+          join.onRef("pj.id", "=", "jl.project_id")
+            .onRef("pj.tenant_id", "=", "jl.tenant_id"),
+        )
         .select([
           "jl.id",
-          "jl.line_number    as lineNumber",
-          "ga.code           as accountCode",
-          "ga.name           as accountName",
-          "ga.account_class  as accountClass",
-          "jl.base_debit     as debitAmount",
-          "jl.base_credit    as creditAmount",
-          "jl.txn_debit      as txnDebit",
-          "jl.txn_credit     as txnCredit",
-          "jl.txn_currency   as txnCurrency",
-          "cc.code           as costCenterCode",
-          "cc.name           as costCenterName",
-          "pc.code           as profitCenterCode",
-          "pc.name           as profitCenterName",
-          "pj.code           as projectCode",
-          "pj.name           as projectName",
-          "jl.assignment     as assignment",
-          "jl.item_text      as itemText",
+          "jl.line_no as lineNumber",
+          "ga.code as accountCode",
+          "ga.name as accountName",
+          "ga.account_class as accountClass",
+          "jl.base_debit as debitAmount",
+          "jl.base_credit as creditAmount",
+          "jl.transaction_debit as txnDebit",
+          "jl.transaction_credit as txnCredit",
+          "jl.transaction_currency as txnCurrency",
+          "cc.code as costCenterCode",
+          "cc.name as costCenterName",
+          "pc.code as profitCenterCode",
+          "pc.name as profitCenterName",
+          "pj.code as projectCode",
+          "pj.name as projectName",
+          "jl.description",
         ])
         .where("jl.journal_entry_id", "=", jeId)
-        .where("jl.tenant_id",        "=", tenantId)
-        .orderBy("jl.line_number",    "asc")
+        .where("jl.tenant_id", "=", tenantId)
+        .orderBy("jl.line_no", "asc")
         .execute() as Array<Record<string, unknown>>;
-
-      const traceLines = lines.map((l) => ({
-        id:               l["id"],
-        lineNumber:       Number(l["lineNumber"]),
-        accountCode:      l["accountCode"],
-        accountName:      l["accountName"],
-        accountClass:     l["accountClass"],
-        debitAmount:      parseFloat(String(l["debitAmount"]  ?? "0")),
-        creditAmount:     parseFloat(String(l["creditAmount"] ?? "0")),
-        txnDebit:         l["txnDebit"]   != null ? parseFloat(String(l["txnDebit"]))  : null,
-        txnCredit:        l["txnCredit"]  != null ? parseFloat(String(l["txnCredit"])) : null,
-        txnCurrency:      l["txnCurrency"] ?? null,
-        costCenterCode:   l["costCenterCode"]   ?? null,
-        costCenterName:   l["costCenterName"]   ?? null,
-        profitCenterCode: l["profitCenterCode"] ?? null,
-        profitCenterName: l["profitCenterName"] ?? null,
-        projectCode:      l["projectCode"] ?? null,
-        projectName:      l["projectName"] ?? null,
-        assignment:       l["assignment"]  ?? null,
-        itemText:         l["itemText"]    ?? null,
-      }));
 
       res.json({
         je: {
-          id:            je["id"],
-          jeNumber:      je["jeNumber"],
-          description:   je["description"]  ?? null,
-          narration:     je["narration"]     ?? null,
-          status:        je["status"],
+          id: je["id"],
+          jeNumber: je["jeNumber"],
+          description: je["description"] ?? null,
+          status: je["status"],
           sourceDocType: je["sourceDocType"] ?? null,
-          sourceDocRef:  je["sourceDocRef"]  ?? null,
-          postingDate:   je["postingDate"]   ?? null,
-          fiscalYear:    je["fiscalYear"],
-          periodNumber:  je["periodNumber"],
-          currencyCode:  je["currencyCode"],
-          totalDebit:    parseFloat(String(je["totalDebit"]  ?? "0")),
-          totalCredit:   parseFloat(String(je["totalCredit"] ?? "0")),
-          postedAt:      je["postedAt"]      ?? null,
-          reversedBy:    je["reversedBy"]    ?? null,
-          reversalOf:    je["reversalOf"]    ?? null,
+          sourceDocId: je["sourceDocId"] ?? null,
+          postingDate: je["postingDate"] ?? null,
+          fiscalYear: je["fiscalYear"],
+          periodNumber: je["periodNumber"],
+          currencyCode: je["currencyCode"],
+          totalDebit: parseFloat(String(je["totalDebit"] ?? "0")),
+          totalCredit: parseFloat(String(je["totalCredit"] ?? "0")),
+          postedAt: je["postedAt"] ?? null,
+          reversedBy: je["reversedBy"] ?? null,
+          reversalOf: je["reversalOf"] ?? null,
         },
-        lines: traceLines,
+        lines: lines.map((l) => ({
+          id: l["id"],
+          lineNumber: Number(l["lineNumber"]),
+          accountCode: l["accountCode"],
+          accountName: l["accountName"],
+          accountClass: l["accountClass"],
+          debitAmount: parseFloat(String(l["debitAmount"] ?? "0")),
+          creditAmount: parseFloat(String(l["creditAmount"] ?? "0")),
+          txnDebit: parseFloat(String(l["txnDebit"] ?? "0")),
+          txnCredit: parseFloat(String(l["txnCredit"] ?? "0")),
+          txnCurrency: l["txnCurrency"],
+          costCenterCode: l["costCenterCode"] ?? null,
+          costCenterName: l["costCenterName"] ?? null,
+          profitCenterCode: l["profitCenterCode"] ?? null,
+          profitCenterName: l["profitCenterName"] ?? null,
+          projectCode: l["projectCode"] ?? null,
+          projectName: l["projectName"] ?? null,
+          description: l["description"] ?? null,
+        })),
       });
-    } catch (err) { logger?.error("finance_posting_trace_error", { err: String(err) }); next(err); }
+    } catch (err) {
+      logger?.error("finance_posting_trace_error", { err: String(err) });
+      next(err);
+    }
   }) as RequestHandler);
 
-  // ── POST /finance/journals/:jeId/submit ──────────────────────────────────────
-  //
-  // Phase 2 — workflow gating integration.
-  //
-  // Evaluates control.workflow_definition rules for entity_type='journal_entry'
-  // scoped to the JE's tenant + company_code_id + legal_entity_id.
-  //
-  // Outcomes:
-  //   workflow required  → creates document.workflow_request (idempotent),
-  //                        returns 202 { workflowRequestId, status, canPostDirectly: false }
-  //   no workflow needed → returns 200 { workflowRequestId: null, canPostDirectly: true }
-  //
-  // After a 202 response the caller should poll or listen for workflow completion
-  // before attempting to POST the JE (via the documents transition endpoint).
-  // The DB trigger trg_je_workflow_gate will block posting while the request
-  // is still pending or rejected.
-  //
-  // Idempotent: calling submit on a JE that already has a pending workflow_request
-  // returns the existing request_id with status 200.
+  router.post("/finance/journals", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "TENANT_NOT_FOUND" }); return; }
+
+      const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId);
+      const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
+      const body = req.body as Record<string, unknown>;
+
+      const companyCode = String(body["company_code"] ?? "").trim();
+      const fiscalYear = Number(body["fiscal_year"]);
+      const periodNumber = Number(body["period_number"]);
+      const postingDate = String(body["posting_date"] ?? "").trim();
+      const documentDate = String(body["document_date"] ?? postingDate).trim();
+      const currencyCode = normalizeCurrency(body["currency_code"]);
+      const description = body["description"] != null ? String(body["description"]) : null;
+      const typedLines = body["lines"] as ManualJournalLineInput[];
+
+      if (!companyCode || !fiscalYear || !periodNumber || !postingDate || !currencyCode) {
+        res.status(400).json({
+          error: "MISSING_REQUIRED_FIELDS",
+          message: "company_code, fiscal_year, period_number, posting_date, currency_code are required",
+        });
+        return;
+      }
+
+      const { totalDebit } = validateLines(typedLines);
+
+      const company = await db
+        .selectFrom("master.company_code as cc")
+        .select(["cc.id", "cc.functional_currency as baseCurrency"])
+        .where("cc.tenant_id", "=", tenantId)
+        .where("cc.code", "=", companyCode)
+        .executeTakeFirst() as { id: string; baseCurrency: string } | undefined;
+
+      if (!company) {
+        res.status(400).json({ error: "COMPANY_NOT_FOUND", message: `Company code '${companyCode}' not found` });
+        return;
+      }
+
+      const bookId = await resolveManualBook(db, tenantId, company.id);
+      if (!bookId) {
+        res.status(422).json({ error: "NO_LEDGER_BOOK", message: "No active statutory manual JE ledger book is assigned to this company" });
+        return;
+      }
+
+      const period = await resolveFiscalPeriod(db, tenantId, company.id, fiscalYear, periodNumber);
+      if (!period) {
+        res.status(400).json({ error: "PERIOD_NOT_FOUND", message: `Fiscal period ${fiscalYear}/${periodNumber} not found for company '${companyCode}'` });
+        return;
+      }
+
+      const exchangeRate = currencyCode === company.baseCurrency
+        ? 1
+        : Number(body["exchange_rate"]);
+      if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
+        res.status(400).json({
+          error: "EXCHANGE_RATE_REQUIRED",
+          message: "exchange_rate is required and must be positive when transaction currency differs from company base currency",
+        });
+        return;
+      }
+
+      const accountMap = await resolveGlAccounts(db, tenantId, typedLines);
+      const jeId = randomUUID();
+      const jeNumber = await nextJeNumber(db, tenantId, company.id, fiscalYear);
+
+      await db.transaction().execute(async (trx) => {
+        await trx
+          .insertInto("document.journal_entry" as never)
+          .values({
+            id: jeId,
+            tenant_id: tenantId,
+            je_number: jeNumber,
+            company_code_id: company.id,
+            book_id: bookId,
+            fiscal_period_id: period.id,
+            fiscal_year: period.fiscalYear,
+            period_number: period.periodNumber,
+            document_date: documentDate,
+            posting_date: postingDate,
+            source_doc_type: "manual",
+            transaction_currency: currencyCode,
+            base_currency: company.baseCurrency,
+            description,
+            status: "draft",
+            total_debit: "0",
+            total_credit: "0",
+            line_count: 0,
+            created_by: actorId,
+          } as never)
+          .execute();
+
+        for (let i = 0; i < typedLines.length; i++) {
+          const line = typedLines[i]!;
+          const debit = asNumber(line.debit);
+          const credit = asNumber(line.credit);
+          const lineId = randomUUID();
+          const descriptionText = lineDescription(line);
+          await trx
+            .insertInto("document.journal_line" as never)
+            .values({
+              id: lineId,
+              tenant_id: tenantId,
+              journal_entry_id: jeId,
+              line_no: i + 1,
+              gl_account_id: accountMap.get(String(line.gl_account_code ?? "").trim())!,
+              transaction_currency: currencyCode,
+              transaction_debit: debit.toFixed(4),
+              transaction_credit: credit.toFixed(4),
+              base_currency: company.baseCurrency,
+              base_debit: (debit * exchangeRate).toFixed(4),
+              base_credit: (credit * exchangeRate).toFixed(4),
+              exchange_rate: currencyCode === company.baseCurrency ? null : exchangeRate.toFixed(10),
+              cost_center_id: line.cost_center_id ?? null,
+              profit_center_id: line.profit_center_id ?? null,
+              project_id: line.project_id ?? null,
+              site_id: line.site_id ?? null,
+              party_type: line.party_type ?? null,
+              party_id: line.party_id ?? null,
+              subledger_type: line.subledger_type ?? null,
+              description: descriptionText,
+              created_by: actorId,
+            } as never)
+            .execute();
+
+          await insertJournalLineReference(trx, {
+            tenantId,
+            journalLineId: lineId,
+            actorId,
+            currencyCode,
+            baseAmount: Math.max(debit, credit) * exchangeRate,
+            reference: parseLineReference(line.reference),
+            lineDescription: descriptionText,
+          });
+        }
+
+        await (trx.updateTable("document.journal_entry") as any)
+          .set({ status: "created", updated_by: actorId })
+          .where("id", "=", jeId)
+          .where("tenant_id", "=", tenantId)
+          .execute();
+
+        await emitOutboxEvent(trx, {
+          tenantId,
+          topic: "search",
+          eventType: "journal_entry.created",
+          entityType: "journal_entry",
+          entityId: jeId,
+          actorId,
+        });
+      });
+
+      logger?.info?.("finance_journals_created", { jeId, jeNumber, tenantId });
+      res.status(201).json({ journal_entry_id: jeId, je_number: jeNumber, status: "created", total_debit: totalDebit });
+    } catch (err) {
+      if (sendValidationError(res, err)) return;
+      logger?.error("finance_journals_create_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+  router.patch("/finance/journals/:jeId", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const jeId = (req.params["jeId"] as string | undefined)?.trim();
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId || !jeId || !isUuid(jeId)) {
+        res.status(400).json({ error: "INVALID_ID", message: "jeId must be a UUID" });
+        return;
+      }
+
+      const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId);
+      const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
+
+      const jeRow = await db
+        .selectFrom("document.journal_entry as je")
+        .select([
+          "je.id",
+          "je.je_number as jeNumber",
+          "je.status",
+          "je.company_code_id as companyCodeId",
+          "je.transaction_currency as transactionCurrency",
+          "je.base_currency as baseCurrency",
+        ])
+        .where("je.id", "=", jeId)
+        .where("je.tenant_id", "=", tenantId)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      if (!jeRow) { res.status(404).json({ error: "JOURNAL_NOT_FOUND" }); return; }
+      const editableStatuses = new Set(["draft", "created"]);
+      const currentStatus = String(jeRow["status"] ?? "");
+      if (!editableStatuses.has(currentStatus)) {
+        res.status(409).json({
+          error: "INVALID_JE_STATUS",
+          message: `Only draft or ready journal entries can be edited (current: '${currentStatus}')`,
+          current_status: currentStatus,
+        });
+        return;
+      }
+
+      const body = req.body as Record<string, unknown>;
+      const headerUpdates: Record<string, unknown> = { updated_by: actorId };
+      if (body["description"] !== undefined) headerUpdates["description"] = body["description"] == null ? null : String(body["description"]);
+      if (body["document_date"] !== undefined) headerUpdates["document_date"] = String(body["document_date"]);
+
+      if (body["posting_date"] !== undefined) {
+        const postingDate = String(body["posting_date"]);
+        const period = await resolveFiscalPeriodByDate(db, tenantId, String(jeRow["companyCodeId"]), postingDate);
+        if (!period) {
+          res.status(400).json({ error: "PERIOD_NOT_FOUND", message: `No fiscal period found for posting_date ${postingDate}` });
+          return;
+        }
+        headerUpdates["posting_date"] = postingDate;
+        headerUpdates["fiscal_period_id"] = period.id;
+        headerUpdates["fiscal_year"] = period.fiscalYear;
+        headerUpdates["period_number"] = period.periodNumber;
+      }
+
+      const newLines = body["lines"];
+      let typedLines: ManualJournalLineInput[] = [];
+      let accountMap: Map<string, string> | null = null;
+      const currencyCode = String(jeRow["transactionCurrency"]);
+      const baseCurrency = String(jeRow["baseCurrency"]);
+      const exchangeRate = currencyCode === baseCurrency ? 1 : Number(body["exchange_rate"]);
+
+      if (Array.isArray(newLines)) {
+        typedLines = newLines as ManualJournalLineInput[];
+        validateLines(typedLines);
+        if ((!Number.isFinite(exchangeRate) || exchangeRate <= 0) && currencyCode !== baseCurrency) {
+          res.status(400).json({ error: "EXCHANGE_RATE_REQUIRED", message: "exchange_rate is required when currencies differ" });
+          return;
+        }
+        accountMap = await resolveGlAccounts(db, tenantId, typedLines);
+      }
+
+      await db.transaction().execute(async (trx) => {
+        await (trx.updateTable("document.journal_entry") as any)
+          .set(headerUpdates)
+          .where("id", "=", jeId)
+          .where("tenant_id", "=", tenantId)
+          .execute();
+
+        if (accountMap) {
+          if (currentStatus === "created") {
+            await (trx.updateTable("document.journal_entry") as any)
+              .set({ status: "draft", updated_by: actorId })
+              .where("id", "=", jeId)
+              .where("tenant_id", "=", tenantId)
+              .execute();
+          }
+
+          await sql`
+            DELETE FROM document.journal_line_reference
+             WHERE tenant_id = ${tenantId}
+               AND journal_line_id IN (
+                 SELECT id
+                   FROM document.journal_line
+                  WHERE tenant_id = ${tenantId}
+                    AND journal_entry_id = ${jeId}
+               )
+          `.execute(trx);
+
+          await (trx.deleteFrom("document.journal_line") as any)
+            .where("journal_entry_id", "=", jeId)
+            .where("tenant_id", "=", tenantId)
+            .execute();
+
+          for (let i = 0; i < typedLines.length; i++) {
+            const line = typedLines[i]!;
+            const debit = asNumber(line.debit);
+            const credit = asNumber(line.credit);
+            const lineId = randomUUID();
+            const descriptionText = lineDescription(line);
+            await trx
+              .insertInto("document.journal_line" as never)
+              .values({
+                id: lineId,
+                tenant_id: tenantId,
+                journal_entry_id: jeId,
+                line_no: i + 1,
+                gl_account_id: accountMap.get(String(line.gl_account_code ?? "").trim())!,
+                transaction_currency: currencyCode,
+                transaction_debit: debit.toFixed(4),
+                transaction_credit: credit.toFixed(4),
+                base_currency: baseCurrency,
+                base_debit: (debit * exchangeRate).toFixed(4),
+                base_credit: (credit * exchangeRate).toFixed(4),
+                exchange_rate: currencyCode === baseCurrency ? null : exchangeRate.toFixed(10),
+                cost_center_id: line.cost_center_id ?? null,
+                profit_center_id: line.profit_center_id ?? null,
+                project_id: line.project_id ?? null,
+                site_id: line.site_id ?? null,
+                party_type: line.party_type ?? null,
+                party_id: line.party_id ?? null,
+                subledger_type: line.subledger_type ?? null,
+                description: descriptionText,
+                created_by: actorId,
+              } as never)
+              .execute();
+
+            await insertJournalLineReference(trx, {
+              tenantId,
+              journalLineId: lineId,
+              actorId,
+              currencyCode,
+              baseAmount: Math.max(debit, credit) * exchangeRate,
+              reference: parseLineReference(line.reference),
+              lineDescription: descriptionText,
+            });
+          }
+
+          if (currentStatus === "created") {
+            await (trx.updateTable("document.journal_entry") as any)
+              .set({ status: "created", updated_by: actorId })
+              .where("id", "=", jeId)
+              .where("tenant_id", "=", tenantId)
+              .execute();
+          }
+        }
+
+        await emitOutboxEvent(trx, {
+          tenantId,
+          topic: "search",
+          eventType: "journal_entry.updated",
+          entityType: "journal_entry",
+          entityId: jeId,
+          actorId,
+        });
+      });
+
+      res.json({ journal_entry_id: jeId, je_number: String(jeRow["jeNumber"]), status: currentStatus });
+    } catch (err) {
+      if (sendValidationError(res, err)) return;
+      logger?.error("finance_journal_update_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
 
   router.post("/finance/journals/:jeId/submit", (async (req, res, next) => {
     try {
@@ -290,27 +936,20 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
       if (!claims) return;
 
       const jeId = (req.params["jeId"] as string | undefined)?.trim();
-      if (!jeId || !isUuid(jeId)) {
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId || !jeId || !isUuid(jeId)) {
         res.status(400).json({ error: "INVALID_ID", message: "jeId must be a UUID" });
         return;
       }
 
-      const { xOrg, xRealm } = extractOrgHeaders(req);
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(404).json({ error: "TENANT_NOT_FOUND" });
-        return;
-      }
-
-      const sub = claims["sub"] as string ?? "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId);
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "no principal bound to this session" });
         return;
       }
 
-      // Load JE — must exist and belong to this tenant
-      const jeRow = await db
+      const je = await db
         .selectFrom("document.journal_entry as je")
         .select([
           "je.id",
@@ -322,6 +961,7 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
           "je.period_number as periodNumber",
           "je.total_debit as totalDebit",
           "je.total_credit as totalCredit",
+          "je.line_count as lineCount",
           "je.transaction_currency as transactionCurrency",
           "je.source_doc_type as sourceDocType",
           "je.posting_date as postingDate",
@@ -331,149 +971,158 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         ])
         .where("je.id", "=", jeId)
         .where("je.tenant_id", "=", tenantId)
-        .executeTakeFirst();
+        .executeTakeFirst() as Record<string, unknown> | undefined;
 
-      if (!jeRow) {
-        res.status(404).json({ error: "JOURNAL_NOT_FOUND", message: `JE '${jeId}' not found` });
-        return;
-      }
-
-      const je = jeRow as Record<string, unknown>;
-
-      // Only JEs in 'created' status are eligible for submission
-      if (je.status !== "created") {
+      if (!je) { res.status(404).json({ error: "JOURNAL_NOT_FOUND" }); return; }
+      const currentStatus = String(je["status"] ?? "");
+      if (currentStatus !== "created" && currentStatus !== "draft") {
         res.status(409).json({
           error: "INVALID_JE_STATUS",
-          message: `Journal entry must be in 'created' status to submit for approval (current: '${je.status}')`,
-          current_status: je.status,
+          message: `Journal entry must be in draft or ready status to submit (current: '${currentStatus}')`,
+          current_status: currentStatus,
         });
         return;
       }
 
-      // Resolve legal_entity_id from the company code — needed for sub-tenant
-      // scoping in JSONLogic conditions on the workflow definition.
+      if (currentStatus === "draft") {
+        const lineTotals = await getJournalLineTotals(db, tenantId, jeId);
+        if (lineTotals.lineCount < 2) {
+          res.status(422).json({
+            error: "INVALID_LINES",
+            message: "At least 2 journal lines are required before submitting.",
+          });
+          return;
+        }
+        if (lineTotals.totalDebit <= 0 || Math.abs(lineTotals.totalDebit - lineTotals.totalCredit) > 0.005) {
+          res.status(422).json({
+            error: "UNBALANCED",
+            message: `Journal entry must be balanced before submitting. Debit ${lineTotals.totalDebit.toFixed(2)} != Credit ${lineTotals.totalCredit.toFixed(2)}.`,
+          });
+          return;
+        }
+
+        await (db.updateTable("document.journal_entry" as never) as any)
+          .set({
+            status:            "created",
+            status_changed_at: new Date(),
+            status_changed_by: principalId,
+            updated_by:        principalId,
+          } as never)
+          .where("id" as never, "=", jeId)
+          .where("tenant_id" as never, "=", tenantId)
+          .execute();
+        je["status"] = "created";
+        je["totalDebit"] = lineTotals.totalDebit;
+        je["totalCredit"] = lineTotals.totalCredit;
+        je["lineCount"] = lineTotals.lineCount;
+      }
+
       const ccRow = await db
         .selectFrom("master.company_code as cc")
         .select(["cc.legal_entity_id as legalEntityId"])
-        .where("cc.id", "=", je.companyCodeId as string)
-        .executeTakeFirst();
+        .where("cc.id", "=", je["companyCodeId"] as string)
+        .where("cc.tenant_id", "=", tenantId)
+        .executeTakeFirst() as { legalEntityId?: string } | undefined;
 
-      const legalEntityId = (ccRow as Record<string, unknown> | undefined)?.legalEntityId as string | undefined;
-
-      const wfEngine  = new WorkflowEngine({ db, logger });
-      const polEngine = new PolicyEngine({ db, logger });
-
-      // Build the evaluation payload — all JE fields that workflow definition
-      // rules might reference in their JSONLogic conditions.
       const evaluationPayload: Record<string, unknown> = {
-        je_id:              jeId,
-        je_number:          je.jeNumber,
-        status:             je.status,
-        company_code_id:    je.companyCodeId,
-        book_id:            je.bookId,
-        fiscal_year:        je.fiscalYear,
-        period_number:      je.periodNumber,
-        total_debit:        parseFloat(String(je.totalDebit  ?? "0")),
-        total_credit:       parseFloat(String(je.totalCredit ?? "0")),
-        transaction_currency: je.transactionCurrency,
-        source_doc_type:    je.sourceDocType,
-        posting_date:       je.postingDate,
-        description:        je.description ?? null,
-        prior_period_flag:  Boolean(je.priorPeriodFlag),
-        is_reversal:        Boolean(je.isReversal),
+        je_id: jeId,
+        je_number: je["jeNumber"],
+        status: je["status"],
+        company_code_id: je["companyCodeId"],
+        book_id: je["bookId"],
+        fiscal_year: je["fiscalYear"],
+        period_number: je["periodNumber"],
+        total_debit: parseFloat(String(je["totalDebit"] ?? "0")),
+        total_credit: parseFloat(String(je["totalCredit"] ?? "0")),
+        transaction_currency: je["transactionCurrency"],
+        source_doc_type: je["sourceDocType"],
+        posting_date: je["postingDate"],
+        description: je["description"] ?? null,
+        prior_period_flag: Boolean(je["priorPeriodFlag"]),
+        is_reversal: Boolean(je["isReversal"]),
       };
 
-      // ── Phase 5: Policy gate ──────────────────────────────────────────────
-      // Evaluate the Policy & Rules Engine before the workflow gate.
-      // deny          → block submission immediately (403)
-      // require_workflow → force workflow and pass overrideApprovers + slaHours
-      // warn          → proceed but surface advisory in response
-      // allow / none  → proceed normally
-      const polResult = await polEngine.evaluate({
+      const wfEngine = new WorkflowEngine({ db, logger, approverResolver });
+      const polEngine = new PolicyEngine({ db, logger });
+      const policy = await polEngine.evaluate({
         tenantId,
-        entityType:    "journal_entry",
-        entityId:      jeId,
-        payload:       evaluationPayload,
-        companyCodeId: je.companyCodeId as string | undefined,
-        legalEntityId,
-        requestedBy:   principalId,
+        entityType: "journal_entry",
+        entityId: jeId,
+        payload: evaluationPayload,
+        companyCodeId: je["companyCodeId"] as string | undefined,
+        legalEntityId: ccRow?.legalEntityId,
+        requestedBy: principalId,
       });
 
-      if (polResult.action === "deny") {
+      if (policy.action === "deny") {
         res.status(403).json({
-          error:       "POLICY_DENIED",
-          message:     polResult.winning?.explanation
-            ?? "Journal entry submission blocked by policy rule.",
-          policyAction: polResult.action,
-          policyScore:  polResult.winning?.score,
+          error: "POLICY_DENIED",
+          message: policy.winning?.explanation ?? "Journal entry submission blocked by policy rule.",
+          policyAction: policy.action,
+          policyScore: policy.winning?.score,
         });
         return;
       }
 
-      const policyForcesWorkflow  = polResult.action === "require_workflow";
-      const policyOverrideApprovers = policyForcesWorkflow && polResult.winning?.approvers
-        ? (polResult.winning.approvers as Array<{ type: string; value: string }>)
-        : undefined;
-      const policyWarn = polResult.action === "warn" ? polResult.winning : undefined;
-
-      // ── Workflow gate ─────────────────────────────────────────────────────
       const orgPayload = {
         ...evaluationPayload,
         tenant_id: tenantId,
-        ...(je.companyCodeId ? { company_code_id: je.companyCodeId } : {}),
-        ...(legalEntityId    ? { legal_entity_id: legalEntityId }    : {}),
+        company_code_id: je["companyCodeId"],
+        ...(ccRow?.legalEntityId ? { legal_entity_id: ccRow.legalEntityId } : {}),
       };
+      const wfCheck = await wfEngine.shouldRequireWorkflow("journal_entry", tenantId, orgPayload);
+      const policyForcesWorkflow = policy.action === "require_workflow";
+      const usesDefaultAutoWorkflow = wfCheck.templateCode === DEFAULT_AUTO_JE_TEMPLATE_CODE;
+      const shouldAutoApproveAndPost = !policyForcesWorkflow && (!wfCheck.required || usesDefaultAutoWorkflow);
 
-      const wfCheck = await wfEngine.shouldRequireWorkflow(
-        "journal_entry",
-        tenantId,
-        orgPayload,
-      );
+      if (shouldAutoApproveAndPost) {
+        const posted = await autoApproveAndPostJournalEntry(db, tenantId, jeId, principalId);
 
-      const needsWorkflow = wfCheck.required || policyForcesWorkflow;
-
-      if (!needsWorkflow) {
-        // No workflow required — posting can proceed directly
         res.status(200).json({
           workflowRequestId: null,
-          canPostDirectly:   true,
-          policyAction:      polResult.action,
-          ...(policyWarn ? {
-            warning:    policyWarn.explanation ?? "Advisory: policy flagged this entry.",
-            policyScore: policyWarn.score,
-          } : {}),
-          message: policyWarn
-            ? "No approval workflow configured, but policy advisory applies."
-            : "No approval workflow is configured for this journal entry.",
+          canPostDirectly: true,
+          autoApproved: true,
+          autoPosted: true,
+          status: "posted",
+          record: posted,
+          policyAction: policy.action,
+          workflowTemplateCode: wfCheck.templateCode ?? null,
+          message: usesDefaultAutoWorkflow
+            ? "Journal entry auto-approved and posted by the default workflow."
+            : "No approval workflow is configured; journal entry was auto-approved and posted.",
         });
         return;
       }
 
-      // Create (or return existing) workflow request, using policy overrides when available
       const result = await wfEngine.createRequest({
         tenantId,
-        entityType:       "journal_entry",
-        entityId:         jeId,
-        payload:          evaluationPayload,
-        companyCodeId:    je.companyCodeId as string | undefined,
-        legalEntityId,
-        requestedBy:      principalId,
-        overrideApprovers: policyOverrideApprovers,
+        entityType: "journal_entry",
+        entityId: jeId,
+        payload: evaluationPayload,
+        companyCodeId: je["companyCodeId"] as string | undefined,
+        legalEntityId: ccRow?.legalEntityId,
+        requestedBy: principalId,
+        overrideApprovers: policyForcesWorkflow && policy.winning?.approvers
+          ? policy.winning.approvers as Array<{ type: string; value: string }>
+          : undefined,
       });
+
+      await (db.updateTable("document.journal_entry" as never) as any)
+        .set({ status: "pending_approval", updated_by: principalId } as never)
+        .where("id" as never, "=", jeId)
+        .where("tenant_id" as never, "=", tenantId)
+        .execute();
 
       res.status(result.isExisting ? 200 : 202).json({
         workflowRequestId: result.id,
-        status:            result.status,
-        canPostDirectly:   false,
-        isExisting:        result.isExisting,
-        policyAction:      polResult.action,
-        ...(policyWarn ? {
-          warning:    policyWarn.explanation ?? "Advisory: policy flagged this entry.",
-          policyScore: policyWarn.score,
-        } : {}),
+        status: "pending_approval",
+        workflowStatus: result.status,
+        canPostDirectly: false,
+        isExisting: result.isExisting,
+        policyAction: policy.action,
         message: result.isExisting
           ? "An approval workflow is already in progress for this journal entry."
-          : "Journal entry submitted for approval. Posting will be allowed once the workflow is approved.",
+          : "Journal entry submitted for approval.",
       });
     } catch (err) {
       logger?.error("finance_je_submit_error", { err: String(err) });
@@ -481,625 +1130,197 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
     }
   }) as RequestHandler);
 
-  // ── POST /finance/journals ──────────────────────────────────────────────────
-  // Create a manual journal entry with balanced debit/credit lines.
-  //
-  // Body:
-  //   company_code   — master.company_code.code (e.g. "AUKA")
-  //   fiscal_year    — integer (e.g. 2026)
-  //   period_number  — integer 1-16
-  //   posting_date   — ISO date string
-  //   currency_code  — e.g. "USD"
-  //   description?   — optional header description
-  //   lines[]        — minimum 2:
-  //     gl_account_code  — master.gl_account.code
-  //     debit?           — debit amount (0 if absent)
-  //     credit?          — credit amount (0 if absent)
-  //     item_text?       — line-level text
-  //
-  // Validates: debits === credits (within 0.001 tolerance).
-  // Auto-generates je_number as "JE-{YYYY}-{sequence}".
-  // Returns 201 { journal_entry_id, je_number, status }.
-
-  router.post("/finance/journals", (async (req, res, next) => {
-    try {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
-
-      const { xOrg, xRealm } = extractOrgHeaders(req);
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "TENANT_NOT_FOUND" });
-        return;
-      }
-
-      const sub = claims["sub"] as string ?? "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
-
-      const body = req.body as Record<string, unknown>;
-
-      const companyCode  = String(body["company_code"]  ?? "").trim();
-      const fiscalYear   = Number(body["fiscal_year"]);
-      const periodNumber = Number(body["period_number"]);
-      const postingDate  = String(body["posting_date"]  ?? "").trim();
-      const currencyCode = String(body["currency_code"] ?? "").trim();
-      const description  = body["description"] != null ? String(body["description"]) : null;
-      const lines        = body["lines"];
-
-      if (!companyCode || !fiscalYear || !periodNumber || !postingDate || !currencyCode) {
-        res.status(400).json({ error: "MISSING_REQUIRED_FIELDS",
-          message: "company_code, fiscal_year, period_number, posting_date, currency_code are required" });
-        return;
-      }
-
-      if (!Array.isArray(lines) || lines.length < 2) {
-        res.status(400).json({ error: "INVALID_LINES", message: "At least 2 journal lines are required" });
-        return;
-      }
-
-      const typedLines = lines as Array<{
-        gl_account_code: unknown;
-        debit?: unknown;
-        credit?: unknown;
-        item_text?: unknown;
-      }>;
-
-      // Validate balance
-      let totalDebit = 0;
-      let totalCredit = 0;
-      for (const l of typedLines) {
-        totalDebit  += Number(l.debit  ?? 0);
-        totalCredit += Number(l.credit ?? 0);
-      }
-      if (Math.abs(totalDebit - totalCredit) > 0.001) {
-        res.status(400).json({
-          error: "UNBALANCED",
-          message: `Journal entry is unbalanced: debit ${totalDebit.toFixed(2)} ≠ credit ${totalCredit.toFixed(2)}`,
-        });
-        return;
-      }
-      if (totalDebit <= 0) {
-        res.status(400).json({ error: "ZERO_AMOUNT", message: "Journal entry must have non-zero amounts" });
-        return;
-      }
-
-      // Resolve company
-      const company = await db
-        .selectFrom("master.company_code as cc")
-        .select(["cc.id"])
-        .where("cc.tenant_id", "=", tenantId)
-        .where("cc.code",      "=", companyCode)
-        .executeTakeFirst() as { id: string } | undefined;
-
-      if (!company) {
-        res.status(400).json({ error: "COMPANY_NOT_FOUND", message: `Company code '${companyCode}' not found` });
-        return;
-      }
-
-      // Validate period exists (no FK needed; just confirm it's a real open period)
-      const period = await db
-        .selectFrom("master.fiscal_period as fp")
-        .select(["fp.id", "fp.status"])
-        .where("fp.tenant_id",       "=", tenantId)
-        .where("fp.company_code_id", "=", company.id)
-        .where("fp.fiscal_year",     "=", fiscalYear)
-        .where("fp.period_number",   "=", periodNumber)
-        .executeTakeFirst() as { id: string; status: string } | undefined;
-
-      if (!period) {
-        res.status(400).json({ error: "PERIOD_NOT_FOUND",
-          message: `Fiscal period ${fiscalYear}/${periodNumber} not found for company '${companyCode}'` });
-        return;
-      }
-
-      // Resolve GL accounts
-      const accountCodes = [...new Set(typedLines.map((l) => String(l.gl_account_code ?? "")))];
-      const accounts = await db
-        .selectFrom("master.gl_account as ga")
-        .select(["ga.id", "ga.code"])
-        .where("ga.tenant_id",       "=", tenantId)
-        .where("ga.code",            "in", accountCodes)
-        .execute() as Array<{ id: string; code: string }>;
-
-      const accountMap = new Map(accounts.map((a) => [a.code, a.id]));
-      for (const l of typedLines) {
-        const code = String(l.gl_account_code ?? "");
-        if (!accountMap.has(code)) {
-          res.status(400).json({ error: "ACCOUNT_NOT_FOUND", message: `GL account '${code}' not found` });
-          return;
-        }
-      }
-
-      // Auto-generate je_number: JE-{YYYY}-{padded-seq}
-      const countRow = await db
-        .selectFrom("document.journal_entry as je")
-        .select(db.fn.countAll().as("cnt"))
-        .where("je.tenant_id",  "=", tenantId)
-        .where("je.fiscal_year", "=", fiscalYear)
-        .executeTakeFirst() as { cnt: string | number } | undefined;
-      const seq = parseInt(String(countRow?.cnt ?? "0"), 10) + 1;
-      const jeNumber = `JE-${fiscalYear}-${String(seq).padStart(5, "0")}`;
-
-      const jeId = randomUUID();
-
-      // Insert atomically
-      await db.transaction().execute(async (trx) => {
-        await trx
-          .insertInto("document.journal_entry" as never)
-          .values({
-            id:                   jeId,
-            tenant_id:            tenantId,
-            je_number:            jeNumber,
-            company_code_id:      company.id,
-            fiscal_year:          fiscalYear,
-            period_number:        periodNumber,
-            posting_date:         postingDate,
-            currency_code:        currencyCode,
-            transaction_currency: currencyCode,
-            description:          description,
-            status:               "created",
-            source_doc_type:      "MANUAL",
-            total_debit:          totalDebit.toFixed(4),
-            total_credit:         totalCredit.toFixed(4),
-            line_count:           typedLines.length,
-            prior_period_flag:    false,
-            is_reversal:          false,
-            created_at:           sql`now()`,
-            updated_at:           sql`now()`,
-            ...(principalId ? { created_by: principalId } : {}),
-          } as never)
-          .execute();
-
-        for (let i = 0; i < typedLines.length; i++) {
-          const l = typedLines[i]!;
-          const glAccountId = accountMap.get(String(l.gl_account_code ?? ""))!;
-          const debit  = Number(l.debit  ?? 0);
-          const credit = Number(l.credit ?? 0);
-
-          await trx
-            .insertInto("document.journal_line" as never)
-            .values({
-              id:               randomUUID(),
-              tenant_id:        tenantId,
-              journal_entry_id: jeId,
-              line_number:      i + 1,
-              gl_account_id:    glAccountId,
-              base_debit:       debit.toFixed(4),
-              base_credit:      credit.toFixed(4),
-              txn_debit:        debit.toFixed(4),
-              txn_credit:       credit.toFixed(4),
-              txn_currency:     currencyCode,
-              item_text:        l.item_text != null ? String(l.item_text) : null,
-            } as never)
-            .execute();
-        }
-
-        // Emit search topic inside the same transaction — atomic with the
-        // JE+lines write. The dedicated /finance/journals endpoint bypasses
-        // the generic documents.route.ts, so emission has to happen here too.
-        await emitOutboxEvent(trx, {
-          tenantId,
-          topic:      "search",
-          eventType:  "journal_entry.created",
-          entityType: "journal_entry",
-          entityId:   jeId,
-          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
-        });
-      });
-
-      logger?.info?.("finance_journals_created", { jeId, jeNumber, tenantId });
-      res.status(201).json({ journal_entry_id: jeId, je_number: jeNumber, status: "created" });
-    } catch (err) {
-      logger?.error("finance_journals_create_error", { err: String(err) });
-      next(err);
-    }
-  }) as RequestHandler);
-
-  // ── POST /finance/journals/:jeId/reverse ────────────────────────────────────
-  // Create a mirror reversal of a posted journal entry.
-  //
-  // The reversal JE is created in "posted" status immediately (reversals are
-  // accounting system actions — they do not require separate approval).
-  // The original JE is updated to status="reversed", reversed_by=<newJeId>.
-  // The reversal JE carries reversal_of=<originalJeId> and is_reversal=true.
-  //
-  // Body (optional):
-  //   posting_date?  — reversal posting date (defaults to today)
-  //   description?   — override description (defaults to "Reversal of {jeNumber}")
-  //
-  // Errors:
-  //   404 JOURNAL_NOT_FOUND  — JE not found or wrong tenant
-  //   409 ALREADY_REVERSED   — JE is already reversed
-  //   409 INVALID_JE_STATUS  — JE is not in 'posted' status
   router.post("/finance/journals/:jeId/reverse", (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
 
       const jeId = (req.params["jeId"] as string | undefined)?.trim();
-      if (!jeId || !isUuid(jeId)) {
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId || !jeId || !isUuid(jeId)) {
         res.status(400).json({ error: "INVALID_ID", message: "jeId must be a UUID" });
         return;
       }
 
-      const { xOrg, xRealm } = extractOrgHeaders(req);
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(404).json({ error: "TENANT_NOT_FOUND" });
-        return;
-      }
+      const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId);
+      const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
+      const body = req.body as Record<string, unknown>;
 
-      const sub = claims["sub"] as string ?? "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
-
-      // Load source JE
-      const jeRow = await db
+      const source = await db
         .selectFrom("document.journal_entry as je")
         .select([
           "je.id",
-          "je.je_number     as jeNumber",
+          "je.je_number as jeNumber",
           "je.status",
           "je.company_code_id as companyCodeId",
-          "je.book_id       as bookId",
-          "je.fiscal_year   as fiscalYear",
-          "je.period_number as periodNumber",
-          "je.currency_code as currencyCode",
-          "je.description",
-          "je.reversed_by   as reversedBy",
+          "je.book_id as bookId",
+          "je.transaction_currency as transactionCurrency",
+          "je.base_currency as baseCurrency",
+          "je.reversed_by_id as reversedBy",
         ])
-        .where("je.id",        "=", jeId)
+        .where("je.id", "=", jeId)
         .where("je.tenant_id", "=", tenantId)
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
-      if (!jeRow) {
-        res.status(404).json({ error: "JOURNAL_NOT_FOUND", message: `JE '${jeId}' not found` });
+      if (!source) { res.status(404).json({ error: "JOURNAL_NOT_FOUND" }); return; }
+      if (source["status"] !== "posted") {
+        res.status(409).json({ error: "INVALID_JE_STATUS", message: `Only posted journal entries can be reversed (current: '${source["status"]}')` });
+        return;
+      }
+      if (source["reversedBy"]) {
+        res.status(409).json({ error: "ALREADY_REVERSED", reversed_by: source["reversedBy"] });
         return;
       }
 
-      if (jeRow["status"] !== "posted") {
-        res.status(409).json({
-          error: "INVALID_JE_STATUS",
-          message: `Only posted journal entries can be reversed (current: '${jeRow["status"]}')`,
-          current_status: jeRow["status"],
-        });
-        return;
-      }
-
-      if (jeRow["reversedBy"]) {
-        res.status(409).json({
-          error: "ALREADY_REVERSED",
-          message: `Journal entry '${jeRow["jeNumber"]}' has already been reversed`,
-          reversed_by: jeRow["reversedBy"],
-        });
-        return;
-      }
-
-      // Load source lines
       const sourceLines = await db
         .selectFrom("document.journal_line as jl")
         .select([
-          "jl.gl_account_id    as glAccountId",
-          "jl.line_number      as lineNumber",
-          "jl.base_debit       as baseDebit",
-          "jl.base_credit      as baseCredit",
-          "jl.txn_debit        as txnDebit",
-          "jl.txn_credit       as txnCredit",
-          "jl.txn_currency     as txnCurrency",
-          "jl.cost_center_id   as costCenterId",
+          "jl.line_no as lineNo",
+          "jl.gl_account_id as glAccountId",
+          "jl.transaction_currency as transactionCurrency",
+          "jl.transaction_debit as transactionDebit",
+          "jl.transaction_credit as transactionCredit",
+          "jl.base_currency as baseCurrency",
+          "jl.base_debit as baseDebit",
+          "jl.base_credit as baseCredit",
+          "jl.exchange_rate as exchangeRate",
+          "jl.cost_center_id as costCenterId",
           "jl.profit_center_id as profitCenterId",
-          "jl.project_id       as projectId",
-          "jl.assignment       as assignment",
-          "jl.item_text        as itemText",
+          "jl.project_id as projectId",
+          "jl.site_id as siteId",
+          "jl.party_type as partyType",
+          "jl.party_id as partyId",
+          "jl.subledger_type as subledgerType",
+          "jl.description",
+          "jl.source_doc_line_id as sourceDocLineId",
         ])
         .where("jl.journal_entry_id", "=", jeId)
-        .where("jl.tenant_id",        "=", tenantId)
-        .orderBy("jl.line_number",    "asc")
+        .where("jl.tenant_id", "=", tenantId)
+        .orderBy("jl.line_no", "asc")
         .execute() as Array<Record<string, unknown>>;
 
-      if (sourceLines.length === 0) {
+      if (sourceLines.length < 2) {
         res.status(422).json({ error: "NO_LINES", message: "Source JE has no lines to reverse" });
         return;
       }
 
-      const body        = req.body as Record<string, unknown>;
-      const today       = new Date().toISOString().slice(0, 10);
-      const postingDate = body["posting_date"] ? String(body["posting_date"]) : today;
-      const description = body["description"]
-        ? String(body["description"])
-        : `Reversal of ${String(jeRow["jeNumber"])}`;
+      const postingDate = body["posting_date"] ? String(body["posting_date"]) : new Date().toISOString().slice(0, 10);
+      const period = await resolveFiscalPeriodByDate(db, tenantId, String(source["companyCodeId"]), postingDate);
+      if (!period) {
+        res.status(400).json({ error: "PERIOD_NOT_FOUND", message: `No fiscal period found for reversal date ${postingDate}` });
+        return;
+      }
 
-      const revJeNumber = `REV-${String(jeRow["jeNumber"])}`;
-      const revJeId     = randomUUID();
-
-      const totalDebit  = sourceLines.reduce((s, l) => s + parseFloat(String(l["baseDebit"]  ?? "0")), 0);
-      const totalCredit = sourceLines.reduce((s, l) => s + parseFloat(String(l["baseCredit"] ?? "0")), 0);
+      const revJeId = randomUUID();
+      const revJeNumber = await nextJeNumber(db, tenantId, String(source["companyCodeId"]), period.fiscalYear);
+      const description = body["description"] ? String(body["description"]) : `Reversal of ${String(source["jeNumber"])}`;
 
       await db.transaction().execute(async (trx) => {
-        // Insert reversal JE — posted immediately (system-generated, no workflow)
         await trx
           .insertInto("document.journal_entry" as never)
           .values({
-            id:                   revJeId,
-            tenant_id:            tenantId,
-            je_number:            revJeNumber,
-            company_code_id:      jeRow["companyCodeId"],
-            book_id:              jeRow["bookId"] ?? null,
-            fiscal_year:          jeRow["fiscalYear"],
-            period_number:        jeRow["periodNumber"],
-            posting_date:         postingDate,
-            currency_code:        jeRow["currencyCode"],
-            transaction_currency: jeRow["currencyCode"],
-            description:          description,
-            status:               "posted",
-            source_doc_type:      "REVERSAL",
-            total_debit:          totalCredit.toFixed(4),   // swapped: original credit → reversal debit
-            total_credit:         totalDebit.toFixed(4),    // swapped: original debit → reversal credit
-            line_count:           sourceLines.length,
-            prior_period_flag:    false,
-            is_reversal:          true,
-            reversal_of:          jeId,
-            posted_at:            sql`now()`,
-            created_at:           sql`now()`,
-            updated_at:           sql`now()`,
-            ...(principalId ? { created_by: principalId, posted_by: principalId } : {}),
+            id: revJeId,
+            tenant_id: tenantId,
+            je_number: revJeNumber,
+            company_code_id: source["companyCodeId"],
+            book_id: source["bookId"],
+            fiscal_period_id: period.id,
+            fiscal_year: period.fiscalYear,
+            period_number: period.periodNumber,
+            document_date: postingDate,
+            posting_date: postingDate,
+            source_doc_type: "reversal",
+            source_doc_id: jeId,
+            transaction_currency: source["transactionCurrency"],
+            base_currency: source["baseCurrency"],
+            description,
+            is_reversal: true,
+            reversal_of_id: jeId,
+            status: "draft",
+            total_debit: "0",
+            total_credit: "0",
+            line_count: 0,
+            created_by: actorId,
           } as never)
           .execute();
 
-        // Insert reversed lines (swap debit ↔ credit)
-        for (let i = 0; i < sourceLines.length; i++) {
-          const l = sourceLines[i]!;
+        for (const line of sourceLines) {
           await trx
             .insertInto("document.journal_line" as never)
             .values({
-              id:               randomUUID(),
-              tenant_id:        tenantId,
+              id: randomUUID(),
+              tenant_id: tenantId,
               journal_entry_id: revJeId,
-              line_number:      Number(l["lineNumber"]),
-              gl_account_id:    l["glAccountId"],
-              base_debit:       parseFloat(String(l["baseCredit"] ?? "0")).toFixed(4),
-              base_credit:      parseFloat(String(l["baseDebit"]  ?? "0")).toFixed(4),
-              txn_debit:        parseFloat(String(l["txnCredit"]  ?? "0")).toFixed(4),
-              txn_credit:       parseFloat(String(l["txnDebit"]   ?? "0")).toFixed(4),
-              txn_currency:     l["txnCurrency"] ?? jeRow["currencyCode"],
-              cost_center_id:   l["costCenterId"]   ?? null,
-              profit_center_id: l["profitCenterId"] ?? null,
-              project_id:       l["projectId"]      ?? null,
-              assignment:       l["assignment"]      ?? null,
-              item_text:        l["itemText"]        ?? null,
+              line_no: line["lineNo"],
+              gl_account_id: line["glAccountId"],
+              transaction_currency: line["transactionCurrency"],
+              transaction_debit: String(line["transactionCredit"] ?? "0"),
+              transaction_credit: String(line["transactionDebit"] ?? "0"),
+              base_currency: line["baseCurrency"],
+              base_debit: String(line["baseCredit"] ?? "0"),
+              base_credit: String(line["baseDebit"] ?? "0"),
+              exchange_rate: line["exchangeRate"] ?? null,
+              cost_center_id: line["costCenterId"] ?? null,
+              profit_center_id: line["profitCenterId"] ?? null,
+              project_id: line["projectId"] ?? null,
+              site_id: line["siteId"] ?? null,
+              party_type: line["partyType"] ?? null,
+              party_id: line["partyId"] ?? null,
+              subledger_type: line["subledgerType"] ?? null,
+              description: line["description"] ? `Reversal - ${String(line["description"])}` : description,
+              source_doc_line_id: line["sourceDocLineId"] ?? null,
+              created_by: actorId,
             } as never)
             .execute();
         }
 
-        // Mark original as reversed
-        await (trx as any)
-          .updateTable("document.journal_entry")
-          .set({
-            status:      "reversed",
-            reversed_by: revJeId,
-            updated_at:  sql`now()`,
-          })
-          .where("id",        "=", jeId)
+        await (trx.updateTable("document.journal_entry") as any)
+          .set({ status: "created", updated_by: actorId })
+          .where("id", "=", revJeId)
           .where("tenant_id", "=", tenantId)
           .execute();
 
-        // Emit two search events inside the trx — atomic with the writes.
-        // The reversal JE is new; the original JE status changed to "reversed".
-        await emitOutboxEvent(trx, {
-          tenantId,
-          topic:      "search",
-          eventType:  "journal_entry.created",
-          entityType: "journal_entry",
-          entityId:   revJeId,
-          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
-          payload:    { reversal_of: jeId },
-        });
-        await emitOutboxEvent(trx, {
-          tenantId,
-          topic:      "search",
-          eventType:  "journal_entry.updated",
-          entityType: "journal_entry",
-          entityId:   jeId,
-          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
-          payload:    { status: "reversed", reversed_by: revJeId },
-        });
-      });
+        await (trx.updateTable("document.journal_entry") as any)
+          .set({ status: "posted", posted_by: actorId, updated_by: actorId })
+          .where("id", "=", revJeId)
+          .where("tenant_id", "=", tenantId)
+          .execute();
 
-      logger?.info?.("finance_journal_reversed", {
-        original_je_id:  jeId,
-        original_number: jeRow["jeNumber"],
-        reversal_je_id:  revJeId,
-        reversal_number: revJeNumber,
-        tenantId,
+        await (trx.updateTable("document.journal_entry") as any)
+          .set({ status: "reversed", reversed_by_id: revJeId, updated_by: actorId })
+          .where("id", "=", jeId)
+          .where("tenant_id", "=", tenantId)
+          .execute();
+
+        await emitOutboxEvent(trx, {
+          tenantId,
+          topic: "search",
+          eventType: "journal_entry.created",
+          entityType: "journal_entry",
+          entityId: revJeId,
+          actorId,
+          payload: { reversal_of_id: jeId },
+        });
+        await emitOutboxEvent(trx, {
+          tenantId,
+          topic: "search",
+          eventType: "journal_entry.updated",
+          entityType: "journal_entry",
+          entityId: jeId,
+          actorId,
+          payload: { status: "reversed", reversed_by_id: revJeId },
+        });
       });
 
       res.status(201).json({
         reversal_journal_entry_id: revJeId,
-        je_number:                 revJeNumber,
-        status:                    "posted",
-        reversal_of:               jeId,
+        je_number: revJeNumber,
+        status: "posted",
+        reversal_of: jeId,
       });
     } catch (err) {
       logger?.error("finance_journal_reverse_error", { err: String(err) });
-      next(err);
-    }
-  }) as RequestHandler);
-
-  // ── PATCH /finance/journals/:jeId ───────────────────────────────────────────
-  // Update a draft journal entry (status = 'created' only).
-  //
-  // Body (all optional):
-  //   description?  — header description
-  //   posting_date? — ISO date string
-  //   lines?[]      — full replacement of all lines (minimum 2, must be balanced)
-  //     gl_account_code — master.gl_account.code
-  //     debit?          — debit amount
-  //     credit?         — credit amount
-  //     item_text?      — line-level text
-  //
-  // Returns 200 { journal_entry_id, je_number, status }.
-  router.patch("/finance/journals/:jeId", (async (req, res, next) => {
-    try {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
-
-      const jeId = (req.params["jeId"] as string | undefined)?.trim();
-      if (!jeId || !isUuid(jeId)) {
-        res.status(400).json({ error: "INVALID_ID", message: "jeId must be a UUID" });
-        return;
-      }
-
-      const { xOrg, xRealm } = extractOrgHeaders(req);
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(404).json({ error: "TENANT_NOT_FOUND" });
-        return;
-      }
-
-      const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
-
-      const jeRow = await db
-        .selectFrom("document.journal_entry as je")
-        .select([
-          "je.id",
-          "je.je_number     as jeNumber",
-          "je.status",
-          "je.currency_code as currencyCode",
-        ])
-        .where("je.id",        "=", jeId)
-        .where("je.tenant_id", "=", tenantId)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
-
-      if (!jeRow) {
-        res.status(404).json({ error: "JOURNAL_NOT_FOUND", message: `JE '${jeId}' not found` });
-        return;
-      }
-
-      if (jeRow["status"] !== "created") {
-        res.status(409).json({
-          error: "INVALID_JE_STATUS",
-          message: `Only draft journal entries can be edited (current: '${jeRow["status"]}')`,
-          current_status: jeRow["status"],
-        });
-        return;
-      }
-
-      const body = req.body as Record<string, unknown>;
-      const headerUpdates: Record<string, unknown> = { updated_at: sql`now()` };
-
-      if (body["description"] !== undefined) {
-        headerUpdates["description"] = body["description"] != null ? String(body["description"]) : null;
-      }
-      if (body["posting_date"] !== undefined) {
-        headerUpdates["posting_date"] = String(body["posting_date"]);
-      }
-
-      const newLines = body["lines"];
-      let accountMap: Map<string, string> | null = null;
-      let typedLines: Array<{ gl_account_code: unknown; debit?: unknown; credit?: unknown; item_text?: unknown }> = [];
-
-      if (Array.isArray(newLines)) {
-        if (newLines.length < 2) {
-          res.status(400).json({ error: "INVALID_LINES", message: "At least 2 journal lines are required" });
-          return;
-        }
-
-        typedLines = newLines as typeof typedLines;
-        let totalDebit  = 0;
-        let totalCredit = 0;
-        for (const l of typedLines) {
-          totalDebit  += Number(l.debit  ?? 0);
-          totalCredit += Number(l.credit ?? 0);
-        }
-
-        if (Math.abs(totalDebit - totalCredit) > 0.001) {
-          res.status(400).json({
-            error: "UNBALANCED",
-            message: `Journal entry is unbalanced: debit ${totalDebit.toFixed(2)} ≠ credit ${totalCredit.toFixed(2)}`,
-          });
-          return;
-        }
-        if (totalDebit <= 0) {
-          res.status(400).json({ error: "ZERO_AMOUNT", message: "Journal entry must have non-zero amounts" });
-          return;
-        }
-
-        const accountCodes = [...new Set(typedLines.map((l) => String(l.gl_account_code ?? "")))];
-        const accounts = await db
-          .selectFrom("master.gl_account as ga")
-          .select(["ga.id", "ga.code"])
-          .where("ga.tenant_id", "=", tenantId)
-          .where("ga.code",      "in", accountCodes)
-          .execute() as Array<{ id: string; code: string }>;
-
-        accountMap = new Map(accounts.map((a) => [a.code, a.id]));
-        for (const l of typedLines) {
-          const code = String(l.gl_account_code ?? "");
-          if (!accountMap.has(code)) {
-            res.status(400).json({ error: "ACCOUNT_NOT_FOUND", message: `GL account '${code}' not found` });
-            return;
-          }
-        }
-
-        headerUpdates["total_debit"]  = totalDebit.toFixed(4);
-        headerUpdates["total_credit"] = totalCredit.toFixed(4);
-        headerUpdates["line_count"]   = typedLines.length;
-      }
-
-      await db.transaction().execute(async (trx) => {
-        await (trx as any)
-          .updateTable("document.journal_entry")
-          .set(headerUpdates)
-          .where("id",        "=", jeId)
-          .where("tenant_id", "=", tenantId)
-          .execute();
-
-        if (Array.isArray(newLines) && accountMap) {
-          await (trx as any)
-            .deleteFrom("document.journal_line")
-            .where("journal_entry_id", "=", jeId)
-            .where("tenant_id",        "=", tenantId)
-            .execute();
-
-          for (let i = 0; i < typedLines.length; i++) {
-            const l = typedLines[i]!;
-            const glAccountId = accountMap.get(String(l.gl_account_code ?? ""))!;
-            const debit  = Number(l.debit  ?? 0);
-            const credit = Number(l.credit ?? 0);
-
-            await trx
-              .insertInto("document.journal_line" as never)
-              .values({
-                id:               randomUUID(),
-                tenant_id:        tenantId,
-                journal_entry_id: jeId,
-                line_number:      i + 1,
-                gl_account_id:    glAccountId,
-                base_debit:       debit.toFixed(4),
-                base_credit:      credit.toFixed(4),
-                txn_debit:        debit.toFixed(4),
-                txn_credit:       credit.toFixed(4),
-                txn_currency:     String(jeRow["currencyCode"]),
-                item_text:        l.item_text != null ? String(l.item_text) : null,
-              } as never)
-              .execute();
-          }
-        }
-
-        await emitOutboxEvent(trx, {
-          tenantId,
-          topic:      "search",
-          eventType:  "journal_entry.updated",
-          entityType: "journal_entry",
-          entityId:   jeId,
-          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
-        });
-      });
-
-      logger?.info?.("finance_journal_updated", { jeId, jeNumber: jeRow["jeNumber"], tenantId });
-      res.json({ journal_entry_id: jeId, je_number: String(jeRow["jeNumber"]), status: "created" });
-    } catch (err) {
-      logger?.error("finance_journal_update_error", { err: String(err) });
       next(err);
     }
   }) as RequestHandler);

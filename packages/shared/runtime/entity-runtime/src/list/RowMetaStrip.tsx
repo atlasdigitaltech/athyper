@@ -20,6 +20,8 @@ export interface RowMetaStripProps {
   commentHasOpen:     boolean;
   onBookmarkToggle:   (recordId: string) => void;
   bookmarkPending?:   boolean;
+  /** Business code used for the detail-page URL (e.g. AUKA-SITE-HQ). Falls back to row.id. */
+  recordNavId?:       string;
 }
 
 export function RowMetaStrip({
@@ -31,6 +33,7 @@ export function RowMetaStrip({
   commentHasOpen,
   onBookmarkToggle,
   bookmarkPending = false,
+  recordNavId,
 }: RowMetaStripProps) {
   const router     = useRouter();
   const recordId   = String(row.id ?? "");
@@ -51,7 +54,7 @@ export function RowMetaStrip({
       <CommentCountBadge
         total={commentCount}
         hasOpen={commentHasOpen}
-        onClick={() => router.push(`/app/${entityCode}/${recordId}#comments`)}
+        onClick={() => router.push(`/app/${entityCode}/${encodeURIComponent(recordNavId ?? recordId)}#comments`)}
       />
 
       <AttachmentCountBadge count={attachCount} />

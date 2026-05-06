@@ -4,7 +4,7 @@
  * MasterDetailPage — generic detail shell for master entities (detail_profile="rich").
  * All layout decisions live in SQL (display_config.master_config). Zero per-entity TSX.
  *
- * Tab renderers: overview | fields | child | composite | comments | attachments | activity | blank | summary_cards_with_drawer
+ * Tab renderers: overview | fields | child | composite | comments | attachments | activity | blank | summary_cards_with_drawer | contacts_channel_accordion | addresses_accordion
  * Platform panels: Comments / Attachments / Activity as icon buttons in the tab bar (Sheet slide-ins).
  */
 
@@ -12,14 +12,17 @@ import { useState, useMemo, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUpdateEntity } from "@athyper/query";
-import { MessageSquare, Paperclip, Clock, Plus, AlertCircle, Lock, Search, SlidersHorizontal } from "lucide-react";
+import { MessageSquare, Paperclip, Clock, Plus, AlertCircle, Search, SlidersHorizontal } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
-  Button, Card, CardContent, Label, Skeleton,
+  Button, Card, CardContent, CardHeader, CardTitle, Label, Skeleton,
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@athyper/ui/primitives";
-import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
+import type {
+  CompiledEntity, EntityField, EntityOperation,
+  VisibilityCondition, CompletenessCheck,
+} from "@athyper/api-contracts/metadata";
 import { EntityHeader } from "../header";
 import type { PlatformPanelIcon } from "../header/atoms/EntityTabBar";
 import { AttachmentsPanel, AuditMetaCard, CommentsPanel, EntityContextDrawer, EventsPanel } from "../panels";
@@ -27,7 +30,7 @@ import type { HeaderTab } from "../header/types";
 import { buildMasterHeaderModel, formatValue } from "../header/builders/buildMasterHeaderModel";
 import { titleCase } from "@athyper/runtime-shared/core";
 import {
-  resolveDetailConfig,
+  resolveFormConfig,
   resolveMasterConfig,
   resolveTabs,
   type MasterConfig,
@@ -39,6 +42,8 @@ import { CommentList } from "@athyper/collaboration-ui/comments";
 import { useOperationDispatch } from "../actions/useOperationDispatch";
 import { EntityForm, type EntityFormHandle } from "../form/EntityForm";
 import { ChildSummaryCardsPanel, type ViewOnlyReason } from "./ChildSummaryCardsPanel";
+import { ContactsChannelPanel } from "./ContactsChannelPanel";
+import { AddressesPanel } from "./AddressesPanel";
 
 // ── Public props ──────────────────────────────────────────────────────────────
 
@@ -54,11 +59,15 @@ export interface MasterDetailPageProps {
 
 // ── KPI mini-card ─────────────────────────────────────────────────────────────
 
+const DETAIL_FIELD_LABEL_CLASS = "text-xs font-medium leading-normal text-muted-foreground";
+const DETAIL_FIELD_VALUE_CLASS = "text-sm leading-snug text-foreground";
+const DETAIL_ITEM_TITLE_CLASS = "text-sm font-semibold leading-snug text-foreground";
+
 function KpiCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-muted/40 px-4 py-3 border border-border/50">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
-      <p className="text-sm font-semibold text-foreground leading-snug truncate">{value}</p>
+    <div className="rounded-lg border border-border/50 bg-muted/40 px-4 py-3">
+      <p className={DETAIL_FIELD_LABEL_CLASS}>{label}</p>
+      <p className={cn("mt-1 truncate", DETAIL_FIELD_VALUE_CLASS)}>{value}</p>
     </div>
   );
 }
@@ -68,14 +77,22 @@ function KpiCard({ label, value }: { label: string; value: string }) {
 function OverviewRenderer({
   entity,
   data,
+  recordUuid,
   config,
+  sections,
   childTabs,
+  editMode,
+  viewOnlyReason,
   onTabChange,
 }: {
   entity:      CompiledEntity;
   data:        Record<string, unknown>;
+  recordUuid:  string;
   config:      MasterConfig;
+  sections:    MasterTabSection[];
   childTabs:   MasterTab[];
+  editMode:    boolean;
+  viewOnlyReason: ViewOnlyReason | null;
   onTabChange: (id: string) => void;
 }) {
   const kpiItems = (config.header_facts ?? []).slice(0, 4).map((fieldName) => {
@@ -89,6 +106,15 @@ function OverviewRenderer({
 
   return (
     <div className="space-y-4">
+      {/* Completeness strip — driven entirely by master_config.completeness_checks */}
+      {(config.completeness_checks?.length ?? 0) > 0 && (
+        <CompletenessStrip
+          checks={config.completeness_checks!}
+          recordUuid={recordUuid}
+          record={{ data }}
+          onTabChange={onTabChange}
+        />
+      )}
       {kpiItems.length > 0 && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {kpiItems.map((item) => (
@@ -101,7 +127,7 @@ function OverviewRenderer({
           {childTabs.slice(0, 6).map((tab) => (
             <div key={tab.id} className="rounded-lg border border-border bg-card px-4 py-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">{tab.label}</span>
+                <span className={DETAIL_ITEM_TITLE_CLASS}>{tab.label}</span>
                 <button
                   type="button"
                   onClick={() => onTabChange(tab.id)}
@@ -119,49 +145,101 @@ function OverviewRenderer({
           ))}
         </div>
       )}
+      {sections.length > 0 && (
+        <div className="space-y-4">
+          {sections.map((section) => {
+            const content = (() => {
+              if (section.type === "fields") {
+                return (
+                  <FieldsRenderer
+                    entity={entity}
+                    data={data}
+                    displayFieldNames={section.display_fields}
+                  />
+                );
+              }
+
+              if (section.type === "child" && section.entity_code) {
+                return (
+                  <ChildEntityPanel
+                    tab={{
+                      id:                section.id,
+                      label:             section.label,
+                      renderer:          "child",
+                      entity_code:       section.entity_code,
+                      display_fields:    section.display_fields,
+                      add_href_template: section.add_href_template,
+                      add_label:         section.add_label,
+                      owner_type_filter: section.owner_type_filter,
+                      party_type_filter: section.party_type_filter,
+                      through_entity:    section.through_entity,
+                      empty_title:       section.empty_title,
+                      empty_description: section.empty_description,
+                    }}
+                    recordUuid={resolveParentId(section.parent_id_field, recordUuid, data)}
+                    editMode={editMode}
+                    viewOnlyReason={viewOnlyReason}
+                  />
+                );
+              }
+
+              if (section.type === "child_list" && section.entity_code) {
+                return (
+                  <ChildListSection
+                    section={section}
+                    recordUuid={resolveParentId(section.parent_id_field, recordUuid, data)}
+                    editMode={editMode}
+                    viewOnlyReason={viewOnlyReason}
+                  />
+                );
+              }
+
+              return <EmptyState title={section.label} description="Section not yet configured." />;
+            })();
+
+            return (
+              <section key={section.id} className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className={DETAIL_ITEM_TITLE_CLASS}>{section.label}</h3>
+                </div>
+                {content}
+              </section>
+            );
+          })}
+        </div>
+      )}
     </div>
-  );
-}
-
-// ── View-only chip — only shown when editing is actually blocked ──────────────
-// Never shown in normal view mode when Edit is available.
-
-function ViewOnlyChip({ reason }: { reason: ViewOnlyReason }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-muted-foreground select-none cursor-default">
-          <Lock className="h-3 w-3 shrink-0" />
-          {reason.label}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent side="right" className="max-w-56">{reason.tooltip}</TooltipContent>
-    </Tooltip>
   );
 }
 
 // ── Fields renderer — view mode (read-only field grid) ────────────────────────
 
-const SKIP_FIELD_NAMES = new Set(["code", "name", "status"]);
+const VIEW_SKIP_FIELD_NAMES = new Set(["code", "name", "status"]);
+const EDIT_SKIP_FIELD_NAMES = new Set(["code", "status"]);
 
 function FieldsRenderer({
   entity,
   data,
-  viewOnlyReason,
+  displayFieldNames,
 }: {
-  entity:         CompiledEntity;
-  data:           Record<string, unknown>;
-  viewOnlyReason: ViewOnlyReason | null;
+  entity:              CompiledEntity;
+  data:                Record<string, unknown>;
+  displayFieldNames?:  string[];
 }) {
   const { field_groups, fields } = entity;
 
   const displayFields = fields
     .filter((f) =>
-      !SKIP_FIELD_NAMES.has(f.name) &&
+      !VIEW_SKIP_FIELD_NAMES.has(f.name) &&
       f.origin !== "system" &&
-      f.data_type !== "lifecycle_state",
+      f.data_type !== "lifecycle_state" &&
+      (displayFieldNames ? displayFieldNames.includes(f.name) : true),
     )
-    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    .sort((a, b) =>
+      displayFieldNames
+        ? (displayFieldNames.indexOf(a.name) - displayFieldNames.indexOf(b.name))
+        : (a.sort_order ?? 0) - (b.sort_order ?? 0),
+    );
 
   if (displayFields.length === 0) {
     return (
@@ -171,12 +249,6 @@ function FieldsRenderer({
       />
     );
   }
-
-  const chipNode = viewOnlyReason ? (
-    <div className="flex items-center">
-      <ViewOnlyChip reason={viewOnlyReason} />
-    </div>
-  ) : null;
 
   if (field_groups.length > 0) {
     const sections = field_groups
@@ -193,11 +265,10 @@ function FieldsRenderer({
 
     return (
       <div className="space-y-3">
-        {chipNode}
         {sections.map(({ group, fields: gFields }) => (
           <Card key={group.group_key}>
             <CardContent className="pt-5">
-              <h4 className="mb-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <h4 className={cn("mb-4", DETAIL_ITEM_TITLE_CLASS)}>
                 {group.label}
               </h4>
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
@@ -233,7 +304,6 @@ function FieldsRenderer({
 
   return (
     <div className="space-y-3">
-      {chipNode}
       <Card>
         <CardContent className="pt-5">
           <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
@@ -255,10 +325,10 @@ function FieldCell({ field, value }: { field: EntityField; value: unknown }) {
   const Renderer = resolveFieldRenderer(field);
   return (
     <div>
-      <dt className="mb-1 text-xs font-medium leading-normal text-muted-foreground">
+      <dt className={cn("mb-1", DETAIL_FIELD_LABEL_CLASS)}>
         {field.label ?? field.name}
       </dt>
-      <dd className="text-sm leading-snug text-foreground">
+      <dd className={DETAIL_FIELD_VALUE_CLASS}>
         <Renderer value={value} field={field} mode="view" />
       </dd>
     </div>
@@ -286,7 +356,7 @@ function InlineEditSection({
         !f.is_readonly &&
         f.origin !== "system" &&
         f.data_type !== "lifecycle_state" &&
-        !SKIP_FIELD_NAMES.has(f.name) &&
+        !EDIT_SKIP_FIELD_NAMES.has(f.name) &&
         (displayFieldNames ? displayFieldNames.includes(f.name) : true),
     )
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
@@ -338,7 +408,7 @@ function InlineEditSection({
     <div className="space-y-5">
       {grouped.map(({ group, fields: gFields }) => (
         <div key={group.group_key}>
-          <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <h4 className={cn("mb-3", DETAIL_ITEM_TITLE_CLASS)}>
             {group.label}
           </h4>
           {renderGrid(gFields)}
@@ -353,6 +423,42 @@ function InlineEditSection({
 
 // List endpoint returns flat rows (all columns at top level, not nested under "data").
 type ChildRecord = Record<string, unknown>;
+
+function resolveParentId(
+  parentIdField: string | undefined,
+  recordUuid:    string,
+  data:          Record<string, unknown>,
+): string {
+  if (parentIdField) {
+    const val = data[parentIdField];
+    if (typeof val === "string" && val) return val;
+  }
+  return recordUuid;
+}
+
+function childScopeKey(tab: Pick<MasterTab, "owner_type_filter" | "party_type_filter" | "through_entity">): string {
+  return [
+    tab.owner_type_filter ? `owner:${tab.owner_type_filter}` : "",
+    tab.party_type_filter ? `party:${tab.party_type_filter}` : "",
+    tab.through_entity    ? `via:${tab.through_entity}`      : "",
+  ].filter(Boolean).join("|");
+}
+
+function buildChildRecordsUrl(entityCode: string, parentId: string, tab: MasterTab): string {
+  const params = new URLSearchParams({ parent_id: parentId });
+  if (tab.owner_type_filter) params.set("owner_type_filter", tab.owner_type_filter);
+  if (tab.party_type_filter) params.set("party_type_filter", tab.party_type_filter);
+  if (tab.through_entity)    params.set("through_entity",    tab.through_entity);
+  return `/api/relay/api/records/${encodeURIComponent(entityCode)}?${params.toString()}`;
+}
+
+function applyScopeFilters(data: Record<string, unknown>, tab: MasterTab): Record<string, unknown> {
+  return {
+    ...data,
+    ...(tab.owner_type_filter ? { owner_type: tab.owner_type_filter } : {}),
+    ...(tab.party_type_filter ? { party_type: tab.party_type_filter } : {}),
+  };
+}
 
 function ChildEntityPanel({
   tab,
@@ -376,15 +482,12 @@ function ChildEntityPanel({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const formRef = useRef<EntityFormHandle>(null);
 
-  const childQueryKey = ["child-entity", entityCode, recordUuid] as const;
+  const childQueryKey = ["child-entity", entityCode, recordUuid, childScopeKey(tab)] as const;
 
   const { data, isLoading, isError } = useQuery<{ data: ChildRecord[] }>({
     queryKey: childQueryKey,
     queryFn: async ({ signal }) => {
-      const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(entityCode)}?parent_id=${encodeURIComponent(recordUuid)}`,
-        { signal },
-      );
+      const res = await fetch(buildChildRecordsUrl(entityCode, recordUuid, tab), { signal });
       if (!res.ok) return { data: [] };
       return res.json() as Promise<{ data: ChildRecord[] }>;
     },
@@ -396,9 +499,10 @@ function ChildEntityPanel({
       // Step 1: create the primary entity record.
       // Two-step tabs omit parent_id — the primary entity (e.g. bank_account) has no parent FK.
       // Single-step tabs inject parent_id so records.route sets the physical FK column.
+      const scopedFormData = applyScopeFilters(formData, tab);
       const primaryBody = linkEntityCode
-        ? { data: formData }
-        : { data: { ...formData, parent_id: recordUuid } };
+        ? { data: scopedFormData }
+        : { data: { ...scopedFormData, parent_id: recordUuid } };
 
       const res = await fetch(`/api/relay/api/records/${encodeURIComponent(createEntityCode)}`, {
         method:  "POST",
@@ -442,7 +546,7 @@ function ChildEntityPanel({
 
   const records       = data?.data ?? [];
   const displayFields = tab.display_fields ?? [];
-  const canAdd        = editMode && !!tab.add_href_template;
+  const canAdd        = editMode && !viewOnlyReason && !!tab.add_href_template;
 
   return (
     <>
@@ -454,7 +558,6 @@ function ChildEntityPanel({
               ? "Loading…"
               : `${records.length} record${records.length !== 1 ? "s" : ""}`}
           </p>
-          {!canAdd && viewOnlyReason && <ViewOnlyChip reason={viewOnlyReason} />}
         </div>
         {canAdd && (
           <Button
@@ -503,11 +606,11 @@ function ChildEntityPanel({
             return (
               <div key={recId} className="flex items-start gap-4 bg-card px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground truncate">
+                  <p className={cn("truncate", DETAIL_ITEM_TITLE_CLASS)}>
                     {primary || recId.slice(0, 8) + "…"}
                   </p>
                   {secondary && (
-                    <p className="mt-0.5 text-xs text-muted-foreground truncate">{secondary}</p>
+                    <p className="mt-0.5 truncate text-sm text-muted-foreground">{secondary}</p>
                   )}
                 </div>
               </div>
@@ -576,7 +679,21 @@ function CompositeRenderer({
   editFormData?:   Record<string, unknown>;
   onFieldChange?:  (name: string, value: unknown) => void;
 }) {
+  // Resolve which sections pass their visibility conditions.
+  // Gated sections default to visible while the check is in-flight so the nav
+  // doesn't flicker. After load, sections with no matching child records are
+  // removed from the nav and their content is suppressed.
+  const { map: visMap, loading: visLoading } = useVisibilityMap(sections, recordUuid);
+  const visibleSections = sections.filter((s) => visMap[s.id] !== false);
+
   const [activeSection, setActiveSection] = useState(sections[0]?.id ?? "");
+
+  // When visibility resolves and the active section is gated-out, move to the
+  // first visible section to avoid rendering a hidden content area.
+  const firstVisibleId = visibleSections[0]?.id ?? "";
+  const effectiveActive = visibleSections.some((s) => s.id === activeSection)
+    ? activeSection
+    : firstVisibleId;
 
   if (sections.length === 0) {
     return <EmptyState title="No sections configured" description="Add composite_sections to the tab config." />;
@@ -584,36 +701,41 @@ function CompositeRenderer({
 
   return (
     <div className="flex gap-6">
-      {/* Left section nav */}
+      {/* Left section nav — only shows sections whose visibility resolved to true */}
       <nav className="w-36 shrink-0 space-y-0.5 pt-0.5">
-        {viewOnlyReason && (
-          <div className="mb-3">
-            <ViewOnlyChip reason={viewOnlyReason} />
+        {visLoading && visibleSections.length === 0 ? (
+          <div className="space-y-1">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-9 w-full rounded-md" />)}
           </div>
+        ) : (
+          visibleSections.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setActiveSection(s.id)}
+              className={cn(
+                "w-full text-left px-3 py-2 text-sm rounded-md transition-colors",
+                effectiveActive === s.id
+                  ? "bg-accent text-accent-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted",
+              )}
+            >
+              {s.label}
+            </button>
+          ))
         )}
-        {sections.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => setActiveSection(s.id)}
-            className={cn(
-              "w-full text-left px-3 py-2 text-sm rounded-md transition-colors",
-              activeSection === s.id
-                ? "bg-accent text-accent-foreground font-medium"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted",
-            )}
-          >
-            {s.label}
-          </button>
-        ))}
       </nav>
 
-      {/* Section content — chip already rendered in the nav column */}
+      {/* Section content */}
       <div className="flex-1 min-w-0">
-        {sections.map((s) => (
-          <div key={s.id} className={s.id === activeSection ? "" : "hidden"}>
-            {s.type === "fields" ? (
-              editMode && editFormData && onFieldChange ? (
+        {sections.map((s) => {
+          // Hide sections not in visibleSections or not the active one.
+          if (visMap[s.id] === false) return null;
+          const isActive = s.id === effectiveActive;
+
+          const content = (() => {
+            if (s.type === "fields") {
+              return editMode && editFormData && onFieldChange ? (
                 <InlineEditSection
                   entity={entity}
                   formData={editFormData}
@@ -621,30 +743,59 @@ function CompositeRenderer({
                   displayFieldNames={s.display_fields}
                 />
               ) : (
-                <FieldsRenderer entity={entity} data={data} viewOnlyReason={null} />
-              )
-            ) : s.type === "child" && s.entity_code ? (
-              <ChildEntityPanel
-                tab={{
-                  id:                s.id,
-                  label:             s.label,
-                  renderer:          "child",
-                  entity_code:       s.entity_code,
-                  display_fields:    s.display_fields,
-                  add_href_template: s.add_href_template,
-                  add_label:         s.add_label,
-                  empty_title:       s.empty_title,
-                  empty_description: s.empty_description,
-                }}
-                recordUuid={recordUuid}
-                editMode={editMode}
-                viewOnlyReason={null}
-              />
-            ) : (
-              <EmptyState title={s.label} description="Section not yet configured." />
-            )}
-          </div>
-        ))}
+                <FieldsRenderer
+                  entity={entity}
+                  data={data}
+                  displayFieldNames={s.display_fields}
+                />
+              );
+            }
+
+            if (s.type === "child" && s.entity_code) {
+              return (
+                <ChildEntityPanel
+                  tab={{
+                    id:                s.id,
+                    label:             s.label,
+                    renderer:          "child",
+                    entity_code:       s.entity_code,
+                    display_fields:    s.display_fields,
+                    add_href_template: s.add_href_template,
+                    add_label:         s.add_label,
+                    owner_type_filter: s.owner_type_filter,
+                    party_type_filter: s.party_type_filter,
+                    through_entity:    s.through_entity,
+                    empty_title:       s.empty_title,
+                    empty_description: s.empty_description,
+                  }}
+                  recordUuid={resolveParentId(s.parent_id_field, recordUuid, data)}
+                  editMode={editMode}
+                  viewOnlyReason={viewOnlyReason}
+                />
+              );
+            }
+
+            // child_list — delegated to ChildSummaryCardsPanel via ChildListSection.
+            if (s.type === "child_list" && s.entity_code) {
+              return (
+                <ChildListSection
+                  section={s}
+                  recordUuid={resolveParentId(s.parent_id_field, recordUuid, data)}
+                  editMode={editMode}
+                  viewOnlyReason={viewOnlyReason}
+                />
+              );
+            }
+
+            return <EmptyState title={s.label} description="Section not yet configured." />;
+          })();
+
+          return (
+            <div key={s.id} className={isActive ? "" : "hidden"}>
+              {content}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -668,6 +819,276 @@ function EmptyState({
       {description && (
         <p className="text-xs text-muted-foreground/60 max-w-xs">{description}</p>
       )}
+    </div>
+  );
+}
+
+// ── Visibility gate — hides a section when a child entity has no records ──────
+//
+// Evaluated client-side via a single lightweight fetch (?limit=1).
+// While loading: renders a skeleton so nav layout stays stable.
+// After load with zero records: returns null (section + nav pill both hidden
+// by the parent CompositeRenderer which checks the visibility map).
+
+function useVisibilityMap(
+  sections: MasterTabSection[],
+  recordUuid: string,
+): { map: Record<string, boolean>; loading: boolean } {
+  const gatedSections = useMemo(
+    () => sections.filter((s) => s.visibility_condition),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sections.map((s) => s.id + (s.visibility_condition?.entity_code ?? "")).join(",")],
+  );
+
+  const { data, isPending } = useQuery<Record<string, boolean>>({
+    queryKey: [
+      "vis-map",
+      recordUuid,
+      gatedSections.map((s) => `${s.id}:${s.visibility_condition!.entity_code}`).join(","),
+    ],
+    queryFn: async ({ signal }) => {
+      const results = await Promise.all(
+        gatedSections.map(async (s) => {
+          const cond = s.visibility_condition!;
+          const params = new URLSearchParams({ parent_id: recordUuid, limit: "1" });
+          if (cond.owner_type_filter) params.set("owner_type_filter", cond.owner_type_filter);
+          if (cond.party_type_filter) params.set("party_type_filter", cond.party_type_filter);
+          const res = await fetch(
+            `/api/relay/api/records/${encodeURIComponent(cond.entity_code)}?${params}`,
+            { signal },
+          );
+          if (!res.ok) return [s.id, false] as const;
+          const json = await res.json() as { data: unknown[] };
+          return [s.id, (json.data?.length ?? 0) > 0] as const;
+        }),
+      );
+      return Object.fromEntries(results);
+    },
+    enabled: gatedSections.length > 0,
+    staleTime: 60_000,
+  });
+
+  const map: Record<string, boolean> = {};
+  for (const s of sections) {
+    if (!s.visibility_condition) {
+      map[s.id] = true;
+    } else {
+      // Default true while loading so nav pills don't flicker out then back in.
+      map[s.id] = isPending ? true : (data?.[s.id] ?? false);
+    }
+  }
+  return { map, loading: isPending && gatedSections.length > 0 };
+}
+
+// ── Child-list section — card list for child entity inside a composite tab ────
+//
+// Converts a MasterTabSection (type=child_list) to the MasterTab shape that
+// ChildSummaryCardsPanel expects, then delegates entirely to that component.
+// add_href_template is passed through for direct child-list sections. Through
+// sections can omit it when creation needs a more specific parent context.
+
+function ChildListSection({
+  section,
+  recordUuid,
+  editMode,
+  viewOnlyReason,
+}: {
+  section:        MasterTabSection;
+  recordUuid:     string;
+  editMode:       boolean;
+  viewOnlyReason: ViewOnlyReason | null;
+}) {
+  const tabShape: MasterTab = {
+    id:                  section.id,
+    label:               section.label,
+    renderer:            "summary_cards_with_drawer",
+    entity_code:         section.entity_code,
+    display_fields:      section.display_fields,
+    add_href_template:   section.add_href_template,
+    add_label:           section.add_label,
+    owner_type_filter:   section.owner_type_filter,
+    party_type_filter:   section.party_type_filter,
+    through_entity:      section.through_entity,
+    empty_title:         section.empty_title,
+    empty_description:   section.empty_description,
+    config:              section.config,
+  };
+
+  return (
+    <ChildSummaryCardsPanel
+      tab={tabShape}
+      recordUuid={recordUuid}
+      editMode={editMode}
+      viewOnlyReason={viewOnlyReason}
+    />
+  );
+}
+
+// ── Completeness strip — meta-driven, max 3 items, severity-ordered ───────────
+//
+// Reads master_config.completeness_checks. For checks with role_gate,
+// fetches the role entity once (shared query). For child_field_expiry and
+// child_any_match, fetches child entity records in a single batched query.
+// Only field_null requires no network call. child_missing is accepted in the
+// schema but skipped until the address entity is registered.
+//
+// CSS: uses semantic tokens only — text-destructive / text-warning / text-info.
+
+const SEVERITY_ORDER = { blocking: 0, warning: 1, info: 2 } as const;
+
+function CompletenessStrip({
+  checks,
+  recordUuid,
+  record,
+  onTabChange,
+}: {
+  checks:      CompletenessCheck[];
+  recordUuid:  string;
+  record:      { data: Record<string, unknown> };
+  onTabChange: (id: string) => void;
+}) {
+  const needsCustomer = checks.some((c) => c.role_gate === "customer");
+  const needsSupplier = checks.some((c) => c.role_gate === "supplier");
+
+  const childEntities = useMemo(
+    () => [...new Set(checks.filter((c) => c.child_entity).map((c) => c.child_entity!))],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [checks.map((c) => c.key).join(",")],
+  );
+
+  const { data: customerData } = useQuery<{ data: unknown[] }>({
+    queryKey: ["completeness-role", "customer", recordUuid],
+    queryFn:  async ({ signal }) => {
+      const res = await fetch(`/api/relay/api/records/customer?parent_id=${recordUuid}&limit=1`, { signal });
+      return res.ok ? (res.json() as Promise<{ data: unknown[] }>) : { data: [] };
+    },
+    enabled:   needsCustomer,
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: supplierData } = useQuery<{ data: unknown[] }>({
+    queryKey: ["completeness-role", "supplier", recordUuid],
+    queryFn:  async ({ signal }) => {
+      const res = await fetch(`/api/relay/api/records/supplier?parent_id=${recordUuid}&limit=1`, { signal });
+      return res.ok ? (res.json() as Promise<{ data: unknown[] }>) : { data: [] };
+    },
+    enabled:   needsSupplier,
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: childRecordMap } = useQuery<Record<string, Record<string, unknown>[]>>({
+    queryKey: ["completeness-children", recordUuid, childEntities.join(",")],
+    queryFn:  async ({ signal }) => {
+      const pairs = await Promise.all(
+        childEntities.map(async (code) => {
+          const res = await fetch(
+            `/api/relay/api/records/${encodeURIComponent(code)}?parent_id=${recordUuid}`,
+            { signal },
+          );
+          if (!res.ok) return [code, []] as const;
+          const json = await res.json() as { data: Record<string, unknown>[] };
+          return [code, json.data ?? []] as const;
+        }),
+      );
+      return Object.fromEntries(pairs);
+    },
+    enabled:   childEntities.length > 0,
+    staleTime: 60_000,
+  });
+
+  const customerExists = (customerData?.data?.length ?? 0) > 0;
+  const supplierExists = (supplierData?.data?.length ?? 0) > 0;
+
+  const items = checks
+    .filter((c) => {
+      if (c.role_gate === "customer" && !customerExists) return false;
+      if (c.role_gate === "supplier" && !supplierExists) return false;
+      return true;
+    })
+    .flatMap((c): Array<{ key: string; message: string; tabTarget?: string; severity: "blocking" | "warning" | "info" }> => {
+      // ── field_null: no network call, just inspect parent record data ──────
+      if (c.check_type === "field_null") {
+        const field = c.check_config?.["field"] as string | undefined;
+        if (!field) return [];
+        const val = record.data[field];
+        if (val !== null && val !== undefined && val !== "") return [];
+        return [{ key: c.key, message: c.message, tabTarget: c.tab_target, severity: c.severity }];
+      }
+
+      // ── child_field_expiry: surface the earliest expiring record ─────────
+      if (c.check_type === "child_field_expiry" && c.child_entity) {
+        const recs       = childRecordMap?.[c.child_entity] ?? [];
+        const field      = (c.check_config?.["field"] as string | undefined) ?? "effective_until";
+        const threshold  = c.check_config?.["threshold_days"] as number | undefined ?? 90;
+        const cutoff     = new Date();
+        cutoff.setDate(cutoff.getDate() + threshold);
+        const now        = new Date();
+        const expiring   = recs.filter((r) => {
+          const d = r[field] ? new Date(String(r[field])) : null;
+          return d && d >= now && d <= cutoff;
+        });
+        if (!expiring.length) return [];
+        const earliest = expiring.reduce((a, b) =>
+          new Date(String(a[field])) < new Date(String(b[field])) ? a : b,
+        );
+        const dateStr = new Date(String(earliest[field])).toLocaleDateString("en-GB", {
+          day: "numeric", month: "short",
+        });
+        return [{
+          key:       c.key,
+          message:   c.message.replace("{date}", dateStr),
+          tabTarget: c.tab_target,
+          severity:  c.severity,
+        }];
+      }
+
+      // ── child_any_match: fire if any record matches a field/values filter ─
+      if (c.check_type === "child_any_match" && c.child_entity) {
+        const recs   = childRecordMap?.[c.child_entity] ?? [];
+        const field  = c.check_config?.["field"]  as string   | undefined;
+        const values = c.check_config?.["values"] as string[] | undefined;
+        if (!field || !values?.length) return [];
+        const match = recs.some((r) => values.includes(String(r[field] ?? "")));
+        if (!match) return [];
+        return [{ key: c.key, message: c.message, tabTarget: c.tab_target, severity: c.severity }];
+      }
+
+      // child_missing — deferred until address entity is registered.
+      return [];
+    })
+    .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 2) - (SEVERITY_ORDER[b.severity] ?? 2))
+    .slice(0, 3);
+
+  if (!items.length) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-lg border border-border bg-muted/30 px-4 py-2.5">
+      {items.map((item, i) => (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => item.tabTarget && onTabChange(item.tabTarget)}
+          className={cn(
+            "flex items-center gap-1.5 text-xs",
+            item.severity === "blocking" ? "text-destructive" :
+            item.severity === "warning"  ? "text-warning"     : "text-muted-foreground",
+            item.tabTarget ? "cursor-pointer hover:underline" : "cursor-default",
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+              item.severity === "blocking" ? "bg-destructive" :
+              item.severity === "warning"  ? "bg-warning"     : "bg-muted-foreground",
+            )}
+          />
+          {item.message}
+          {i < items.length - 1 && (
+            <span aria-hidden className="ml-3 text-border">·</span>
+          )}
+        </button>
+      ))}
     </div>
   );
 }
@@ -753,11 +1174,11 @@ export function MasterDetailPage({
   const hasPlatformAttachments = (config.platform_panels ?? []).includes("attachments");
 
   const commentsCountQuery = useQuery<{ data: unknown[]; hasMore: boolean }>({
-    queryKey: ["collab-comments", entity.entity_code, recordId],
+    queryKey: ["collab-comments", entity.entity_code, record.id],
     queryFn: async ({ signal }) => {
       const params = new URLSearchParams({
         entityType: entity.entity_code,
-        entityId:   recordId,
+        entityId:   record.id,
         limit:      "200",
       });
       const res = await fetch(`/api/collab/comments?${params}`, { signal, cache: "no-store" });
@@ -769,10 +1190,10 @@ export function MasterDetailPage({
   });
 
   const attachmentsCountQuery = useQuery<{ size_bytes: number; status?: string; visibility?: string }[]>({
-    queryKey: ["attachments", entity.entity_code, recordId],
+    queryKey: ["attachments", entity.entity_code, record.id],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/api/documents/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/attachments`,
+        `/api/relay/api/documents/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/attachments`,
         { signal },
       );
       if (!res.ok) return [];
@@ -856,7 +1277,7 @@ export function MasterDetailPage({
                   !f.is_readonly &&
                   f.origin !== "system" &&
                   f.data_type !== "lifecycle_state" &&
-                  !SKIP_FIELD_NAMES.has(f.name),
+                  !EDIT_SKIP_FIELD_NAMES.has(f.name),
               )
               .map((f) => f.name),
           );
@@ -918,8 +1339,12 @@ export function MasterDetailPage({
               <OverviewRenderer
                 entity={entity}
                 data={data}
+                recordUuid={record.id}
                 config={config}
+                sections={activeTabDef.composite_sections ?? []}
                 childTabs={childTabs}
+                editMode={editMode}
+                viewOnlyReason={viewOnlyReason}
                 onTabChange={setActiveTab}
               />
             </CardContent>
@@ -944,9 +1369,10 @@ export function MasterDetailPage({
             onChange={() => setIsDirty(true)}
             submitting={updateMutation.isPending}
             hideActions
+            noFrame
           />
         ) : (
-          <FieldsRenderer entity={entity} data={data} viewOnlyReason={viewOnlyReason} />
+          <FieldsRenderer entity={entity} data={data} />
         );
 
       case "composite":
@@ -975,7 +1401,7 @@ export function MasterDetailPage({
             <CardContent className="pt-5">
               <ChildEntityPanel
                 tab={activeTabDef}
-                recordUuid={record.id}
+                recordUuid={resolveParentId(activeTabDef.parent_id_field, record.id, data)}
                 editMode={editMode}
                 viewOnlyReason={viewOnlyReason}
               />
@@ -991,7 +1417,7 @@ export function MasterDetailPage({
             <CardContent className="pt-5">
               <ChildSummaryCardsPanel
                 tab={activeTabDef}
-                recordUuid={record.id}
+                recordUuid={resolveParentId(activeTabDef.parent_id_field, record.id, data)}
                 editMode={editMode}
                 viewOnlyReason={viewOnlyReason}
               />
@@ -1001,11 +1427,41 @@ export function MasterDetailPage({
           <EmptyState title="Child entity not configured" description="Set entity_code in the tab config." />
         );
 
+      case "contacts_channel_accordion":
+        return activeTabDef.entity_code ? (
+          <Card>
+            <CardContent className="pt-5">
+              <ContactsChannelPanel
+                tab={activeTabDef}
+                recordUuid={record.id}
+                editMode={editMode}
+                viewOnlyReason={viewOnlyReason}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState title="Contact entity not configured" description="Set entity_code in the tab config." />
+        );
+
+      case "addresses_accordion":
+        return (
+          <Card>
+            <CardContent className="pt-5">
+              <AddressesPanel
+                tab={activeTabDef}
+                recordUuid={record.id}
+                editMode={editMode}
+                viewOnlyReason={viewOnlyReason}
+              />
+            </CardContent>
+          </Card>
+        );
+
       case "comments":
         return (
           <Card>
             <CardContent className="pt-5">
-              <CommentsPanel entityCode={entity.entity_code} recordId={recordId} />
+              <CommentsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
             </CardContent>
           </Card>
         );
@@ -1014,7 +1470,7 @@ export function MasterDetailPage({
         return (
           <Card>
             <CardContent className="pt-5">
-              <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
+              <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
             </CardContent>
           </Card>
         );
@@ -1131,13 +1587,14 @@ export function MasterDetailPage({
             <CommentsPanel
               entityCode={entity.entity_code}
               recordId={recordId}
+              recordUuid={record.id}
               onCountChange={setPanelCount}
               searchOpen={commentSearchOpen}
               showFilters={commentFiltersOn}
             />
           )}
           {activePanel === "attachments" && (
-            <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} />
+            <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
           )}
           {activePanel === "activity" && (
             <>
@@ -1178,9 +1635,9 @@ export function SimpleDetailPage({
   const router         = useRouter();
   const updateMutation = useUpdateEntity(entityCode, recordId);
   const opDispatch     = useOperationDispatch({ entityCode, recordId, recordUuid: record.id });
-  const data           = record.data as Record<string, unknown>;
-  const detailConfig   = resolveDetailConfig(entity);
-  const masterConfig   = resolveMasterConfig(entity);
+  const data         = record.data as Record<string, unknown>;
+  const masterConfig = resolveMasterConfig(entity);
+  const formConfig   = resolveFormConfig(entity);
   // Single Overview tab — all fields displayed together
   const headerTabs: HeaderTab[] = [{ id: "__overview", label: "Overview" }];
 
@@ -1194,9 +1651,9 @@ export function SimpleDetailPage({
   const hasPlatformAttachments = (masterConfig.platform_panels ?? []).includes("attachments");
 
   const commentsCountQuery = useQuery<{ data: unknown[]; hasMore: boolean }>({
-    queryKey: ["collab-comments", entity.entity_code, recordId],
+    queryKey: ["collab-comments", entity.entity_code, record.id],
     queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ entityType: entity.entity_code, entityId: recordId, limit: "200" });
+      const params = new URLSearchParams({ entityType: entity.entity_code, entityId: record.id, limit: "200" });
       const res = await fetch(`/api/collab/comments?${params}`, { signal, cache: "no-store" });
       if (!res.ok) return { data: [], hasMore: false };
       return res.json() as Promise<{ data: unknown[]; hasMore: boolean }>;
@@ -1205,10 +1662,10 @@ export function SimpleDetailPage({
     enabled: hasPlatformComments,
   });
   const attachmentsCountQuery = useQuery<{ size_bytes: number; status?: string; visibility?: string }[]>({
-    queryKey: ["attachments", entity.entity_code, recordId],
+    queryKey: ["attachments", entity.entity_code, record.id],
     queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/relay/api/documents/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}/attachments`,
+        `/api/relay/api/documents/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/attachments`,
         { signal },
       );
       if (!res.ok) return [];
@@ -1328,12 +1785,6 @@ export function SimpleDetailPage({
     void opDispatch.dispatch(id, operations ?? []);
   }
 
-  // All fields: header fields + every section field in one flat grid
-  const allFields = [
-    ...detailConfig.headerFields,
-    ...detailConfig.sections.flatMap((s) => s.fields),
-  ];
-
   return (
     <>
       <EntityHeader
@@ -1364,29 +1815,39 @@ export function SimpleDetailPage({
             onChange={() => setIsDirty(true)}
             submitting={updateMutation.isPending}
             hideActions
+            noFrame
           />
         ) : (
-          activeTab === "__overview" && (
-            <Card>
-              <CardContent className="pt-5">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-                  {allFields.map((field) => {
-                    const Renderer = resolveFieldRenderer(field);
-                    return (
-                      <div key={field.name}>
-                        <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
-                          {field.label ?? field.name}
-                        </dt>
-                        <dd className="text-sm font-normal text-foreground leading-snug">
-                          <Renderer value={data[field.name]} field={field} mode="view" />
-                        </dd>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )
+          activeTab === "__overview" && formConfig.sections.map((section) => {
+            return (
+              <Card key={section.group.group_key}>
+                <CardHeader>
+                  <CardTitle className="text-base">{section.group.label}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {section.fields.map((field) => {
+                      const Renderer = resolveFieldRenderer(field);
+                      return (
+                        <div key={field.name} className="space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground leading-normal">
+                            {field.label ?? field.name}
+                          </p>
+                          <div className="text-sm text-foreground leading-snug">
+                            <Renderer
+                              value={data[field.name] ?? data[field.column_name ?? ""]}
+                              field={field}
+                              mode="view"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
 
@@ -1402,8 +1863,8 @@ export function SimpleDetailPage({
         typeLabel={masterConfig.type_label}
       >
         <div className="px-6 py-5">
-          {activePanel === "comments"    && <CommentsPanel    entityCode={entityCode} recordId={recordId} />}
-          {activePanel === "attachments" && <AttachmentsPanel entityCode={entityCode} recordId={recordId} />}
+          {activePanel === "comments"    && <CommentsPanel    entityCode={entityCode} recordId={recordId} recordUuid={record.id} />}
+          {activePanel === "attachments" && <AttachmentsPanel entityCode={entityCode} recordId={recordId} recordUuid={record.id} />}
           {activePanel === "activity" && (
             <>
               <AuditMetaCard

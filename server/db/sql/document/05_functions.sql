@@ -1719,7 +1719,8 @@ BEGIN
             - COALESCE(discount_amount, 0)
         ), 0)                                      AS subtotal_net,
         COALESCE(SUM(tax_amount), 0)               AS tax_amount,
-        COALESCE(SUM(withholding_tax_amount), 0)   AS withholding_tax_amount
+        COALESCE(SUM(withholding_tax_amount), 0)   AS withholding_tax_amount,
+        COALESCE(SUM(retention_amount), 0)         AS retention_amount
     INTO v_row
     FROM document.purchase_invoice_line
     WHERE purchase_invoice_id = p_invoice_id;
@@ -1729,23 +1730,24 @@ BEGIN
            subtotal_amount        = v_row.subtotal_amount,
            tax_amount             = v_row.tax_amount,
            withholding_tax_amount = v_row.withholding_tax_amount,
+           retention_amount       = v_row.retention_amount,
            -- total = subtotal (after line discounts) + tax + freight + misc − header discount
-           total_amount           = GREATEST(
-               v_row.subtotal_net
+           -- No GREATEST clamping: credit notes (is_credit_note=true) may legitimately
+           -- produce a negative total; pi_amount_chk enforces total_amount >= 0 OR is_credit_note.
+           total_amount           = v_row.subtotal_net
                + v_row.tax_amount
                + COALESCE((SELECT freight_amount FROM document.purchase_invoice WHERE id = p_invoice_id), 0)
                + COALESCE((SELECT misc_charges_amount FROM document.purchase_invoice WHERE id = p_invoice_id), 0)
                - COALESCE((SELECT discount_amount FROM document.purchase_invoice WHERE id = p_invoice_id), 0),
-               0
-           ),
            updated_at             = now()
      WHERE id = p_invoice_id;
 END;
 $$;
 
 COMMENT ON FUNCTION document.fn_refresh_purchase_invoice_totals(uuid) IS
-    'Recomputes line_count, subtotal_amount, tax_amount, withholding_tax_amount, total_amount '
-    'on purchase_invoice from its child lines. Called by trg_pil_sync_header trigger.';
+    'Recomputes line_count, subtotal_amount, tax_amount, withholding_tax_amount, '
+    'retention_amount, and total_amount on purchase_invoice from its child lines. '
+    'Called by trg_pil_sync_header trigger.';
 
 
 -- ── trg_pi_before_insert ────────────────────────────────────────────────────
@@ -1891,5 +1893,400 @@ BEGIN
     END IF;
 
     RETURN NEW;
+END;
+$$;
+
+
+-- ============================================================================
+-- Journal Entry hardening overrides
+-- ============================================================================
+-- These CREATE OR REPLACE definitions intentionally appear after the original
+-- JE functions so the latest business-control contract wins without disturbing
+-- unrelated document functions in this dirty worktree.
+
+CREATE OR REPLACE FUNCTION document.trg_journal_line_sync_from_header()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$
+DECLARE
+    v_je  document.journal_entry%ROWTYPE;
+BEGIN
+    SELECT *
+      INTO STRICT v_je
+      FROM document.journal_entry je
+     WHERE je.id = NEW.journal_entry_id
+       AND je.tenant_id = NEW.tenant_id;
+
+    NEW.company_code_id       := v_je.company_code_id;
+    NEW.book_id               := v_je.book_id;
+    NEW.fiscal_period_id      := v_je.fiscal_period_id;
+    NEW.fiscal_year           := v_je.fiscal_year;
+    NEW.period_number         := v_je.period_number;
+    NEW.posting_date          := v_je.posting_date;
+    NEW.base_currency         := v_je.base_currency;
+    NEW.transaction_currency  := COALESCE(NEW.transaction_currency, v_je.transaction_currency);
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_je_sync_fiscal_period()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$
+DECLARE
+    v_fiscal_year    smallint;
+    v_period_number  smallint;
+BEGIN
+    IF TG_OP = 'INSERT' OR NEW.fiscal_period_id IS DISTINCT FROM OLD.fiscal_period_id THEN
+        SELECT fp.fiscal_year, fp.period_number
+          INTO STRICT v_fiscal_year, v_period_number
+          FROM master.fiscal_period fp
+         WHERE fp.id = NEW.fiscal_period_id
+           AND fp.tenant_id = NEW.tenant_id;
+
+        NEW.fiscal_year   := v_fiscal_year;
+        NEW.period_number := v_period_number;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_je_sync_base_currency()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$
+DECLARE
+    v_currency text;
+BEGIN
+    IF TG_OP = 'INSERT' OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id THEN
+        SELECT cc.functional_currency
+          INTO STRICT v_currency
+          FROM master.company_code cc
+         WHERE cc.id = NEW.company_code_id
+           AND cc.tenant_id = NEW.tenant_id;
+
+        NEW.base_currency := v_currency;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_je_status_insert_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$
+BEGIN
+    IF NEW.status <> 'draft' THEN
+        RAISE EXCEPTION
+            'journal_entry %: insert must start in draft; use lifecycle transitions for %',
+            NEW.je_number, NEW.status
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_je_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$
+DECLARE
+    v_allowed text[];
+BEGIN
+    IF OLD.status NOT IN ('pending_approval', 'approved', 'posted', 'reversed') THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'reversed' THEN
+        RAISE EXCEPTION 'journal_entry %: reversed JE is fully immutable',
+            OLD.je_number USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.status = 'posted' AND NEW.status <> 'reversed' THEN
+        RAISE EXCEPTION 'journal_entry %: posted JE can only transition to reversed (attempted: %)',
+            OLD.je_number, NEW.status USING ERRCODE = 'check_violation';
+    END IF;
+
+    v_allowed := ARRAY[
+        'status', 'is_active',
+        'status_changed_at', 'status_changed_by',
+        'updated_at', 'updated_by'
+    ];
+
+    IF OLD.status = 'approved' AND NEW.status = 'posted' THEN
+        v_allowed := v_allowed || ARRAY['posted_at', 'posted_by'];
+    ELSIF OLD.status = 'posted' AND NEW.status = 'reversed' THEN
+        v_allowed := v_allowed || ARRAY['reversed_by_id'];
+    END IF;
+
+    IF (to_jsonb(NEW) - v_allowed) IS DISTINCT FROM (to_jsonb(OLD) - v_allowed) THEN
+        RAISE EXCEPTION
+            'journal_entry %: accounting fields are immutable once status is %',
+            OLD.je_number, OLD.status
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_jl_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$
+DECLARE
+    v_je_status text;
+BEGIN
+    SELECT status INTO v_je_status
+    FROM document.journal_entry
+    WHERE id = COALESCE(NEW.journal_entry_id, OLD.journal_entry_id)
+      AND tenant_id = COALESCE(NEW.tenant_id, OLD.tenant_id);
+
+    IF v_je_status IN ('pending_approval', 'approved', 'posted', 'reversed') THEN
+        IF TG_OP = 'UPDATE' THEN
+            RAISE EXCEPTION 'journal_line: cannot modify line of a % journal_entry',
+                v_je_status USING ERRCODE = 'check_violation';
+        ELSIF TG_OP = 'DELETE' THEN
+            RAISE EXCEPTION 'journal_line: cannot delete line of a % journal_entry',
+                v_je_status USING ERRCODE = 'check_violation';
+        ELSIF TG_OP = 'INSERT' THEN
+            RAISE EXCEPTION 'journal_line: cannot add line to a % journal_entry',
+                v_je_status USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_je_status_transition_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$
+DECLARE
+    v_sum_debit  numeric(18,4);
+    v_sum_credit numeric(18,4);
+    v_count      smallint;
+    v_manual     boolean;
+BEGIN
+    IF NEW.status = OLD.status THEN RETURN NEW; END IF;
+
+    v_manual := NEW.source_doc_type = 'manual' AND NEW.is_reversal = false;
+
+    IF NOT (
+        (OLD.status = 'draft'            AND NEW.status = 'created')
+     OR (OLD.status = 'created'          AND NEW.status = 'pending_approval')
+     OR (OLD.status = 'created'          AND NEW.status = 'approved')
+     OR (OLD.status = 'pending_approval' AND NEW.status = 'approved')
+     OR (OLD.status = 'pending_approval' AND NEW.status = 'rejected')
+     OR (OLD.status = 'pending_approval' AND NEW.status = 'created')
+     OR (OLD.status = 'rejected'         AND NEW.status = 'created')
+     OR (OLD.status = 'created'          AND NEW.status = 'draft')
+     OR (OLD.status = 'approved'         AND NEW.status = 'posted')
+     OR (OLD.status = 'created'          AND NEW.status = 'posted')
+     OR (OLD.status = 'posted'           AND NEW.status = 'reversed')
+    ) THEN
+        RAISE EXCEPTION 'journal_entry %: invalid status transition % -> %',
+            NEW.je_number, OLD.status, NEW.status
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.status = 'created' AND NEW.status = 'posted' AND v_manual THEN
+        RAISE EXCEPTION
+            'journal_entry %: manual entries must be approved before posting',
+            NEW.je_number
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status IN ('created', 'pending_approval', 'approved', 'posted') THEN
+        SELECT COALESCE(SUM(base_debit), 0),
+               COALESCE(SUM(base_credit), 0),
+               COUNT(*)::smallint
+        INTO   v_sum_debit, v_sum_credit, v_count
+        FROM   document.journal_line
+        WHERE  journal_entry_id = NEW.id
+          AND  tenant_id = NEW.tenant_id;
+
+        IF v_count < 2 THEN
+            RAISE EXCEPTION 'journal_entry %: at least two lines are required',
+                NEW.je_number USING ERRCODE = 'check_violation';
+        END IF;
+
+        IF ABS(v_sum_debit - v_sum_credit) > 0.005 THEN
+            RAISE EXCEPTION 'journal_entry %: debits (%) != credits (%)',
+                NEW.je_number, v_sum_debit, v_sum_credit
+                USING ERRCODE = 'check_violation';
+        END IF;
+
+        NEW.total_debit  := v_sum_debit;
+        NEW.total_credit := v_sum_credit;
+        NEW.line_count   := v_count;
+    END IF;
+
+    IF NEW.status = 'posted' THEN
+        NEW.posted_at := COALESCE(NEW.posted_at, now());
+        NEW.posted_by := COALESCE(
+            NEW.posted_by,
+            nullif(current_setting('app.current_principal_id', true), '')::uuid,
+            NEW.updated_by,
+            OLD.updated_by,
+            NEW.created_by
+        );
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_jl_validate_posting_controls_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, master, pg_catalog
+AS $$
+DECLARE
+  v_ctrl       record;
+  v_je_source  text;
+BEGIN
+  SELECT cga.posting_allowed,
+         cga.blocked_for_manual,
+         cga.blocked_for_auto
+    INTO v_ctrl
+    FROM master.company_code_gl_account cga
+   WHERE cga.tenant_id       = NEW.tenant_id
+     AND cga.company_code_id = NEW.company_code_id
+     AND cga.gl_account_id   = NEW.gl_account_id
+   LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN NEW;
+  END IF;
+
+  IF NOT v_ctrl.posting_allowed THEN
+    RAISE EXCEPTION
+      'ACCOUNT_POSTING_BLOCKED: GL account % is blocked for posting in company %.',
+      NEW.gl_account_id, NEW.company_code_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT lower(je.source_doc_type)
+    INTO v_je_source
+    FROM document.journal_entry je
+   WHERE je.id        = NEW.journal_entry_id
+     AND je.tenant_id = NEW.tenant_id
+   LIMIT 1;
+
+  IF v_ctrl.blocked_for_manual AND v_je_source = 'manual' THEN
+    RAISE EXCEPTION
+      'ACCOUNT_BLOCKED_MANUAL: GL account % is blocked for manual posting in company %.',
+      NEW.gl_account_id, NEW.company_code_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  IF v_ctrl.blocked_for_auto AND COALESCE(v_je_source, '') <> 'manual' THEN
+    RAISE EXCEPTION
+      'ACCOUNT_BLOCKED_AUTO: GL account % is blocked for automatic posting in company %.',
+      NEW.gl_account_id, NEW.company_code_id
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_je_workflow_gate_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, pg_catalog
+AS $$
+DECLARE
+  v_blocking_status  text;
+BEGIN
+  SELECT wr.status
+    INTO v_blocking_status
+    FROM document.workflow_request wr
+   WHERE wr.tenant_id   = NEW.tenant_id
+     AND wr.entity_type = 'journal_entry'
+     AND wr.entity_id   = NEW.id::text
+     AND wr.status IN ('pending', 'rejected', 'escalated')
+   ORDER BY CASE wr.status WHEN 'rejected' THEN 1 WHEN 'escalated' THEN 2 ELSE 3 END
+   LIMIT 1;
+
+  IF FOUND THEN
+    RAISE EXCEPTION
+      'WORKFLOW_GATE: journal_entry % cannot be posted because workflow status is %.',
+      NEW.je_number, v_blocking_status
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_je_period_gate_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, master, governance, pg_catalog
+AS $$
+DECLARE
+  v_fp_status   text;
+  v_bps_status  text;
+  v_gate_year   smallint;
+  v_gate_period smallint;
+BEGIN
+  IF TG_OP = 'UPDATE' AND OLD.status = 'posted' AND NEW.status = 'reversed' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT fp.status, fp.fiscal_year, fp.period_number
+    INTO v_fp_status, v_gate_year, v_gate_period
+    FROM master.fiscal_period fp
+   WHERE fp.tenant_id       = NEW.tenant_id
+     AND fp.company_code_id = NEW.company_code_id
+     AND fp.id              = NEW.fiscal_period_id
+   LIMIT 1;
+
+  IF v_fp_status IN ('hard_close', 'future') THEN
+    RAISE EXCEPTION
+      'PERIOD_NOT_OPEN: Fiscal period %/% for company % has status "%".',
+      COALESCE(v_gate_year, NEW.fiscal_year), COALESCE(v_gate_period, NEW.period_number), NEW.company_code_id, v_fp_status
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT bps.status
+    INTO v_bps_status
+    FROM governance.book_period_status bps
+   WHERE bps.tenant_id       = NEW.tenant_id
+     AND bps.company_code_id = NEW.company_code_id
+     AND bps.book_id         = NEW.book_id
+     AND bps.fiscal_year     = COALESCE(v_gate_year, NEW.fiscal_year)
+     AND bps.period_number   = COALESCE(v_gate_period, NEW.period_number)
+   LIMIT 1;
+
+  v_bps_status := COALESCE(v_bps_status, 'future');
+
+  IF v_bps_status IN ('hard_close', 'future') THEN
+    RAISE EXCEPTION
+      'BOOK_PERIOD_NOT_OPEN: Book period %/% for company %/book % has status "%".',
+      COALESCE(v_gate_year, NEW.fiscal_year), COALESCE(v_gate_period, NEW.period_number), NEW.company_code_id, NEW.book_id, v_bps_status
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_jlr_append_only_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$
+DECLARE
+    v_je_status text;
+BEGIN
+    SELECT je.status
+      INTO v_je_status
+      FROM document.journal_line jl
+      JOIN document.journal_entry je
+        ON je.tenant_id = jl.tenant_id
+       AND je.id = jl.journal_entry_id
+     WHERE jl.tenant_id = OLD.tenant_id
+       AND jl.id = OLD.journal_line_id;
+
+    IF v_je_status IN ('draft', 'created') THEN
+        IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+        RETURN NEW;
+    END IF;
+
+    RAISE EXCEPTION
+        'journal_line_reference is append-only after journal entry submission; create a compensating reference instead'
+        USING ERRCODE = 'check_violation';
 END;
 $$;

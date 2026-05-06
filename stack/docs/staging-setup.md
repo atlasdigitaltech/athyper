@@ -1346,6 +1346,110 @@ ls -lan /opt/stack/athyper/data/memorycache
 
 ---
 
+## Phase 16.1 — Object Storage Bucket Initialisation
+
+**EXECUTE ON:** SERVER  
+**AS:** athyper
+
+> **This step is automatic on a clean start — but requires explicit verification.**
+>
+> `objectstorage-init` is a one-shot sidecar that runs immediately after MinIO becomes
+> healthy. It creates all four required buckets, configures scoped IAM service accounts
+> (staging/production only), and applies object lifecycle (ILM) rules. It has
+> `restart: "no"` — if it exits with an error it will **not** retry automatically.
+> You must verify it succeeded and re-run it manually if it did not.
+
+### Required Buckets
+
+| Variable | Bucket Name | Used by |
+|---|---|---|
+| `S3_BUCKET` | `athyper-staging` (or as set in secrets/.env) | API — attachments, content, imports |
+| `BACKUP_S3_BUCKET` | `athyper-backups` | Database backup worker |
+| `TEMPO_S3_BUCKET` | `athyper-tempo-traces` | Grafana Tempo distributed traces |
+| `LOKI_S3_BUCKET` | `athyper-loki-logs` | Grafana Loki log storage |
+
+### Step 1 — Confirm the init container ran and exited 0
+
+```bash
+# Check exit status — must be "Exited (0)"
+docker ps -a --filter name=objectstorage-init --format 'table {{.Names}}\t{{.Status}}'
+
+# Tail the init log for the four bucket creation lines
+docker logs athyper-objectstorage-init-1 2>&1 | tail -20
+```
+
+Expected output includes lines like:
+
+```text
+[objectstorage-init] connecting to MinIO (http://objectstorage:9000) for staging...
+[objectstorage-init] buckets ready: athyper-staging, athyper-backups, athyper-tempo-traces, athyper-loki-logs
+[objectstorage-init] policies created
+[objectstorage-init] users ready
+[objectstorage-init] policies attached
+[objectstorage-init] ILM lifecycle rules configured
+[objectstorage-init] provisioning complete
+```
+
+### Step 2 — Run the verification script
+
+```bash
+bash /opt/products/athyper/stack/scripts/setup/verify-objectstorage.sh \
+  /opt/products/athyper/stack/env/.env \
+  /opt/stack/athyper/secrets/.env
+```
+
+All four `[2/4] Buckets` lines must show `OK`. All four `[4/4] Scoped service accounts`
+lines must show `OK` for staging/production.
+
+### Recovery — if init failed or buckets are missing
+
+The init container is idempotent — safe to force-recreate at any time.
+
+```bash
+# Identify which compose files are active (copy from the up.sh --env-file invocation)
+cd /opt/products/athyper
+
+# Force-recreate only the init container (MinIO must already be healthy)
+bash stack/scripts/stack-profile/up.sh objectstorage
+```
+
+> `up.sh objectstorage` targets the `objectstorage` compose profile, which includes both
+> `objectstorage` and `objectstorage-init`. Docker Compose will recreate the init container
+> if it previously exited (even with exit 0).
+
+If `up.sh` is not available or the init container still fails, create the buckets and
+service accounts manually:
+
+```bash
+# Run mc directly — MinIO must be healthy on the edge network
+SECRETS=/opt/stack/athyper/secrets/.env
+S3_KEY=$(grep ^S3_ACCESS_KEY "$SECRETS" | cut -d= -f2)
+S3_SEC=$(grep ^S3_SECRET_KEY "$SECRETS" | cut -d= -f2)
+S3_BKT=$(grep ^S3_BUCKET     "$SECRETS" | cut -d= -f2)
+
+docker run --rm \
+  -e MC_CONFIG_DIR=/tmp/.mc \
+  --network athyper-edge \
+  --entrypoint /bin/sh \
+  minio/mc:RELEASE.2025-08-13T08-35-41Z \
+  -c "
+    mc alias set storage http://objectstorage:9000 \"$S3_KEY\" \"$S3_SEC\"
+    mc mb --ignore-existing storage/$S3_BKT
+    mc mb --ignore-existing storage/athyper-backups
+    mc mb --ignore-existing storage/athyper-tempo-traces
+    mc mb --ignore-existing storage/athyper-loki-logs
+    mc ls storage
+  "
+```
+
+> **Scoped service accounts** (APP, BACKUP, TEMPO, LOKI IAM policies + users) are only
+> created by `objectstorage-init` — they cannot be recreated by the manual `mc mb` command
+> above. If accounts are missing, force-recreate the init container via `up.sh objectstorage`.
+
+Re-run `verify-objectstorage.sh` after recovery to confirm all checks pass.
+
+---
+
 ## Phase 17 — Database Seed
 
 **EXECUTE ON:** SERVER  
@@ -1574,7 +1678,8 @@ cd /opt/products/athyper
 bash /opt/products/athyper/stack/scripts/smoke-staging.sh                # 8 health check groups
 bash /opt/products/athyper/stack/scripts/setup/verify-objectstorage.sh \
   /opt/products/athyper/stack/env/.env \
-  /opt/stack/athyper/secrets/.env                                        # MinIO buckets + accounts
+  /opt/stack/athyper/secrets/.env        # [2/4] all 4 buckets OK + [4/4] all 4 scoped accounts OK
+                                         # On failure → see Phase 16.1 Recovery
 bash /opt/products/athyper/stack/scripts/setup/verify-port-hardening.sh # no exposed DB/Redis ports
 
 docker ps --format 'table {{.Names}}\t{{.Status}}'
@@ -2266,6 +2371,8 @@ Do not declare staging ready until every item below is checked.
 ```text
 [ ] memorycache returns PONG.
 [ ] objectstorage /minio/health/live returns HTTP 200.
+[ ] objectstorage-init exited 0 — all 4 buckets created and all 4 scoped accounts provisioned (Phase 16.1).
+[ ] verify-objectstorage.sh passes — [2/4] buckets OK and [4/4] scoped accounts OK.
 [ ] DB and both PgBouncer pools (6432, 6433) are pg_isready.
 [ ] IAM OIDC endpoint returns valid JSON.
 [ ] API /livez and /readyz return HTTP 200.

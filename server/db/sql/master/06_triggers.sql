@@ -1205,6 +1205,22 @@ CREATE TRIGGER trg_ba_conflict_lookup
 -- =============================================================================
 
 -- =============================================================================
+-- §BP0  master.business_partner (§BP1 — commercial identity root)
+-- =============================================================================
+
+DROP TRIGGER IF EXISTS trg_bp_updated_at ON master.business_partner;
+CREATE TRIGGER trg_bp_updated_at BEFORE UPDATE ON master.business_partner
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_bp_status_changed ON master.business_partner;
+CREATE TRIGGER trg_bp_status_changed BEFORE UPDATE ON master.business_partner
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+-- partner_category uses an inline CHECK constraint — no lookup trigger needed.
+-- registration_country_code / tax_residence_country_code validated by FK to shared.country.
+
+
+-- =============================================================================
 -- §P1  master.customer
 -- =============================================================================
 
@@ -1429,10 +1445,10 @@ DROP TRIGGER IF EXISTS trg_ccp_status_changed ON master.company_code_customer_pr
 CREATE TRIGGER trg_ccp_status_changed BEFORE UPDATE ON master.company_code_customer_profile
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
+-- trg_ccp_payment_terms_lookup removed: deprecated payment_terms text column gone from BP-first rewrite.
+-- payment_term_id FK (→ master.payment_term) enforces validity declaratively.
+
 DROP TRIGGER IF EXISTS trg_ccp_payment_terms_lookup ON master.company_code_customer_profile;
-CREATE TRIGGER trg_ccp_payment_terms_lookup
-    BEFORE INSERT OR UPDATE OF payment_terms ON master.company_code_customer_profile
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.party_payment_terms', 'payment_terms');
 
 DROP TRIGGER IF EXISTS trg_ccp_credit_rating_lookup ON master.company_code_customer_profile;
 CREATE TRIGGER trg_ccp_credit_rating_lookup
@@ -1452,15 +1468,12 @@ DROP TRIGGER IF EXISTS trg_scp_status_changed ON master.company_code_supplier_pr
 CREATE TRIGGER trg_scp_status_changed BEFORE UPDATE ON master.company_code_supplier_profile
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_scp_payment_terms_lookup ON master.company_code_supplier_profile;
-CREATE TRIGGER trg_scp_payment_terms_lookup
-    BEFORE INSERT OR UPDATE OF payment_terms ON master.company_code_supplier_profile
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.party_payment_terms', 'payment_terms');
+-- trg_scp_payment_terms_lookup + trg_scp_payment_method_lookup removed:
+-- deprecated payment_terms text + payment_method text columns gone in BP-first rewrite.
+-- payment_term_id and payment_method_id FKs enforce validity declaratively.
 
+DROP TRIGGER IF EXISTS trg_scp_payment_terms_lookup ON master.company_code_supplier_profile;
 DROP TRIGGER IF EXISTS trg_scp_payment_method_lookup ON master.company_code_supplier_profile;
-CREATE TRIGGER trg_scp_payment_method_lookup
-    BEFORE INSERT OR UPDATE OF payment_method ON master.company_code_supplier_profile
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.supplier_payment_method', 'payment_method');
 
 
 -- =============================================================================
@@ -1891,19 +1904,10 @@ CREATE TRIGGER trg_tp_normalize_weekend_days
     BEFORE INSERT OR UPDATE OF weekend_days ON master.tenant_profile
     FOR EACH ROW EXECUTE FUNCTION master.trg_normalize_weekend_days();
 
--- ── customer.tax_id_type lookup validation ─────────────────────────────────
+-- tax_id_type moved to master.business_partner (via party_identifier scheme in BP-first rewrite).
+-- Triggers for customer.tax_id_type and supplier.tax_id_type removed; DROP guards kept for safety.
 DROP TRIGGER IF EXISTS trg_cust_tax_id_type_lookup ON master.customer;
-CREATE TRIGGER trg_cust_tax_id_type_lookup
-    BEFORE INSERT OR UPDATE OF tax_id_type ON master.customer
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'master.tax_id_type', 'tax_id_type');
-
--- ── supplier.tax_id_type lookup validation ─────────────────────────────────
 DROP TRIGGER IF EXISTS trg_supp_tax_id_type_lookup ON master.supplier;
-CREATE TRIGGER trg_supp_tax_id_type_lookup
-    BEFORE INSERT OR UPDATE OF tax_id_type ON master.supplier
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns(
-        'master.tax_id_type', 'tax_id_type');
 
 -- ── company_code_customer_profile: statement_cycle_code lookup validation ───────
 DROP TRIGGER IF EXISTS trg_ccp_statement_cycle_lookup ON master.company_code_customer_profile;
@@ -2943,3 +2947,538 @@ COMMENT ON TRIGGER trg_freeze_keycloak_profile_columns ON master.principal_profi
     'Phase 2 IAM: no-op while app.iam_profile_kc_frozen is unset/false. '
     'Becomes a write guard once the GUC is set to ''true''. '
     'See fn_migrate_principal_identity_bindings() for activation instructions.';
+
+
+-- =============================================================================
+-- §PQ  Party qualification + IAM binding + network link triggers
+--      (01i_tables_party_master.sql)
+-- =============================================================================
+
+-- ── master.supplier_qualification ────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_sq_updated_at ON master.supplier_qualification;
+CREATE TRIGGER trg_sq_updated_at BEFORE UPDATE ON master.supplier_qualification
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- ── master.customer_qualification ────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_cq_updated_at ON master.customer_qualification;
+CREATE TRIGGER trg_cq_updated_at BEFORE UPDATE ON master.customer_qualification
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- ── master.business_partner_network_link ─────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_bpnl_updated_at ON master.business_partner_network_link;
+CREATE TRIGGER trg_bpnl_updated_at BEFORE UPDATE ON master.business_partner_network_link
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- ── master.legal_entity_identity_binding ─────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_leib_updated_at ON master.legal_entity_identity_binding;
+CREATE TRIGGER trg_leib_updated_at BEFORE UPDATE ON master.legal_entity_identity_binding
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- =============================================================================
+-- §CCSX  Supplier company-code extension triggers
+--        (01h_tables_business_partner.sql — §BP6 / §BP7 / §BP8)
+-- =============================================================================
+
+-- ── master.company_code_supplier_spend_policy ────────────────────────────────
+DROP TRIGGER IF EXISTS trg_csspo_updated_at ON master.company_code_supplier_spend_policy;
+CREATE TRIGGER trg_csspo_updated_at BEFORE UPDATE ON master.company_code_supplier_spend_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_csspo_status_changed ON master.company_code_supplier_spend_policy;
+CREATE TRIGGER trg_csspo_status_changed BEFORE UPDATE ON master.company_code_supplier_spend_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+-- ── master.company_code_supplier_intent_policy ───────────────────────────────
+DROP TRIGGER IF EXISTS trg_csip_updated_at ON master.company_code_supplier_intent_policy;
+CREATE TRIGGER trg_csip_updated_at BEFORE UPDATE ON master.company_code_supplier_intent_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_csip_status_changed ON master.company_code_supplier_intent_policy;
+CREATE TRIGGER trg_csip_status_changed BEFORE UPDATE ON master.company_code_supplier_intent_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+-- ── master.company_code_supplier_posting_override ────────────────────────────
+DROP TRIGGER IF EXISTS trg_cspo_updated_at ON master.company_code_supplier_posting_override;
+CREATE TRIGGER trg_cspo_updated_at BEFORE UPDATE ON master.company_code_supplier_posting_override
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_cspo_status_changed ON master.company_code_supplier_posting_override;
+CREATE TRIGGER trg_cspo_status_changed BEFORE UPDATE ON master.company_code_supplier_posting_override
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- ── master.legal_entity_business_partner_link ────────────────────────────────
+DROP TRIGGER IF EXISTS trg_lebpl_updated_at ON master.legal_entity_business_partner_link;
+CREATE TRIGGER trg_lebpl_updated_at BEFORE UPDATE ON master.legal_entity_business_partner_link
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_lebpl_status_changed ON master.legal_entity_business_partner_link;
+CREATE TRIGGER trg_lebpl_status_changed BEFORE UPDATE ON master.legal_entity_business_partner_link
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+-- Guard: when relationship_type = 'self_bp', the linked BP must have partner_category = 'internal'.
+CREATE OR REPLACE FUNCTION master.trg_lebpl_self_bp_guard_fn()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    v_category text;
+BEGIN
+    IF NEW.relationship_type = 'self_bp' THEN
+        SELECT partner_category INTO v_category
+        FROM master.business_partner
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.business_partner_id;
+
+        IF v_category IS DISTINCT FROM 'internal' THEN
+            RAISE EXCEPTION
+                'legal_entity_business_partner_link: self_bp requires partner_category = ''internal'', got ''%'' for business_partner_id=%',
+                v_category, NEW.business_partner_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_lebpl_self_bp_guard ON master.legal_entity_business_partner_link;
+CREATE TRIGGER trg_lebpl_self_bp_guard
+    BEFORE INSERT OR UPDATE OF relationship_type, business_partner_id
+    ON master.legal_entity_business_partner_link
+    FOR EACH ROW EXECUTE FUNCTION master.trg_lebpl_self_bp_guard_fn();
+
+
+-- ── master.intercompany_trading_pair ─────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_ictp_updated_at ON master.intercompany_trading_pair;
+CREATE TRIGGER trg_ictp_updated_at BEFORE UPDATE ON master.intercompany_trading_pair
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_ictp_status_changed ON master.intercompany_trading_pair;
+CREATE TRIGGER trg_ictp_status_changed BEFORE UPDATE ON master.intercompany_trading_pair
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+-- Guard: both company codes in a trading pair must have is_intercompany_enabled = true.
+CREATE OR REPLACE FUNCTION master.trg_ictp_ic_enabled_guard_fn()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    v_src_enabled  boolean;
+    v_cpty_enabled boolean;
+BEGIN
+    SELECT is_intercompany_enabled INTO v_src_enabled
+    FROM master.company_code
+    WHERE tenant_id = NEW.tenant_id AND id = NEW.source_company_code_id;
+
+    SELECT is_intercompany_enabled INTO v_cpty_enabled
+    FROM master.company_code
+    WHERE tenant_id = NEW.tenant_id AND id = NEW.counterparty_company_code_id;
+
+    IF NOT COALESCE(v_src_enabled, false) THEN
+        RAISE EXCEPTION
+            'intercompany_trading_pair: source company code % does not have is_intercompany_enabled = true',
+            NEW.source_company_code_id
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    IF NOT COALESCE(v_cpty_enabled, false) THEN
+        RAISE EXCEPTION
+            'intercompany_trading_pair: counterparty company code % does not have is_intercompany_enabled = true',
+            NEW.counterparty_company_code_id
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_ictp_ic_enabled_guard ON master.intercompany_trading_pair;
+CREATE TRIGGER trg_ictp_ic_enabled_guard
+    BEFORE INSERT OR UPDATE OF source_company_code_id, counterparty_company_code_id
+    ON master.intercompany_trading_pair
+    FOR EACH ROW EXECUTE FUNCTION master.trg_ictp_ic_enabled_guard_fn();
+
+
+-- ============================================================================
+-- §RK  master.party_risk_* — triggers (01j_tables_party_risk.sql)
+-- ============================================================================
+
+-- ── updated_at maintenance ────────────────────────────────────────────────────
+-- party_risk_review_event is fully immutable (no updated_at column); excluded.
+
+DROP TRIGGER IF EXISTS trg_pre_updated_at  ON master.party_risk_evidence;
+CREATE TRIGGER trg_pre_updated_at  BEFORE UPDATE ON master.party_risk_evidence
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_pra_updated_at  ON master.party_risk_assessment;
+CREATE TRIGGER trg_pra_updated_at  BEFORE UPDATE ON master.party_risk_assessment
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_prds_updated_at ON master.party_risk_dimension_score;
+CREATE TRIGGER trg_prds_updated_at BEFORE UPDATE ON master.party_risk_dimension_score
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_prd_updated_at  ON master.party_risk_driver;
+-- party_risk_driver has no updated_at column; only created_at — skip.
+
+DROP TRIGGER IF EXISTS trg_prm_updated_at  ON master.party_risk_mitigation;
+CREATE TRIGGER trg_prm_updated_at  BEFORE UPDATE ON master.party_risk_mitigation
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+
+-- ── immutability: party_risk_evidence core identity / source / classification ─
+-- Evidence is append-only. Once a row is inserted the fields that identify
+-- WHAT was received, FROM WHOM, ABOUT WHOM, and WHEN it arrived are locked.
+-- Allowed changes: status, normalized_payload, tags, summary, title,
+--   valid_until (expiry extension), superseded_by, confidence_score,
+--   updated_at, updated_by.
+
+CREATE OR REPLACE FUNCTION master.trg_pre_core_immutable_fn()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+BEGIN
+    IF (
+        OLD.tenant_id           IS DISTINCT FROM NEW.tenant_id           OR
+        OLD.subject_type        IS DISTINCT FROM NEW.subject_type        OR
+        OLD.subject_id          IS DISTINCT FROM NEW.subject_id          OR
+        OLD.business_partner_id IS DISTINCT FROM NEW.business_partner_id OR
+        OLD.source_code         IS DISTINCT FROM NEW.source_code         OR
+        OLD.source_reference    IS DISTINCT FROM NEW.source_reference    OR
+        OLD.evidence_type       IS DISTINCT FROM NEW.evidence_type       OR
+        OLD.evidence_date       IS DISTINCT FROM NEW.evidence_date       OR
+        OLD.received_at         IS DISTINCT FROM NEW.received_at         OR
+        OLD.valid_from          IS DISTINCT FROM NEW.valid_from          OR
+        OLD.ingested_by         IS DISTINCT FROM NEW.ingested_by         OR
+        OLD.ingested_via        IS DISTINCT FROM NEW.ingested_via        OR
+        OLD.created_at          IS DISTINCT FROM NEW.created_at          OR
+        OLD.created_by          IS DISTINCT FROM NEW.created_by
+    ) THEN
+        RAISE EXCEPTION
+            'party_risk_evidence: identity, source, and classification columns are '
+            'immutable after insert. Immutable: tenant_id, subject_*, '
+            'business_partner_id, source_code, source_reference, evidence_type, '
+            'evidence_date, received_at, valid_from, ingested_by/via, created_at/by. '
+            'Allowed: status, normalized_payload, confidence_score, tags, summary, '
+            'title, valid_until, superseded_by, updated_at/by.'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    RETURN NEW;
+END $$;
+
+COMMENT ON FUNCTION master.trg_pre_core_immutable_fn() IS
+    'Core immutability guard for party_risk_evidence. '
+    'Immutable after insert: all identity, source, and classification fields. '
+    'raw_payload has a dedicated guard (trg_pre_raw_payload_immutable). '
+    'Mutable: status transitions, normalized_payload re-processing, tags, '
+    'summary/title corrections, valid_until extension, superseded_by linkage.';
+
+DROP TRIGGER IF EXISTS trg_pre_core_immutable ON master.party_risk_evidence;
+CREATE TRIGGER trg_pre_core_immutable
+    BEFORE UPDATE ON master.party_risk_evidence
+    FOR EACH ROW EXECUTE FUNCTION master.trg_pre_core_immutable_fn();
+
+
+-- ── immutability: party_risk_evidence.raw_payload ────────────────────────────
+-- raw_payload is the verbatim provider response and must never change after
+-- the first non-null write. normalized_payload, status, tags, and audit
+-- columns may be updated freely.
+
+CREATE OR REPLACE FUNCTION master.trg_pre_raw_payload_immutable_fn()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+BEGIN
+    IF OLD.raw_payload IS NOT NULL
+       AND OLD.raw_payload IS DISTINCT FROM NEW.raw_payload THEN
+        RAISE EXCEPTION
+            'party_risk_evidence: raw_payload is immutable once written. '
+            'Update normalized_payload for re-processed interpretations.'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    RETURN NEW;
+END $$;
+
+COMMENT ON FUNCTION master.trg_pre_raw_payload_immutable_fn() IS
+    'Blocks changes to raw_payload after it is first set. '
+    'Allowed: normalized_payload, status, tags, updated_at/by, valid_until, summary. '
+    'Blocked: raw_payload (exact provider response must be preserved as received).';
+
+DROP TRIGGER IF EXISTS trg_pre_raw_payload_immutable ON master.party_risk_evidence;
+CREATE TRIGGER trg_pre_raw_payload_immutable
+    BEFORE UPDATE OF raw_payload ON master.party_risk_evidence
+    FOR EACH ROW EXECUTE FUNCTION master.trg_pre_raw_payload_immutable_fn();
+
+
+-- ── immutability: party_risk_review_event — no updates permitted ──────────────
+
+CREATE OR REPLACE FUNCTION master.trg_prre_no_update_fn()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+BEGIN
+    RAISE EXCEPTION
+        'party_risk_review_event: rows are immutable after insert. '
+        'The review event log is an append-only audit trail.'
+        USING ERRCODE = 'object_not_in_prerequisite_state';
+    RETURN NULL;
+END $$;
+
+COMMENT ON FUNCTION master.trg_prre_no_update_fn() IS
+    'Blocks all UPDATE operations on party_risk_review_event. '
+    'The table is an append-only audit trail — correct errors by inserting '
+    'a new event with a correction note, not by modifying existing rows.';
+
+DROP TRIGGER IF EXISTS trg_prre_no_update ON master.party_risk_review_event;
+CREATE TRIGGER trg_prre_no_update
+    BEFORE UPDATE ON master.party_risk_review_event
+    FOR EACH ROW EXECUTE FUNCTION master.trg_prre_no_update_fn();
+
+
+-- ── subject binding validation ────────────────────────────────────────────────
+-- DB-enforced proof that subject_id + business_partner_id are consistent:
+--   business_partner → subject_id = business_partner_id (same row)
+--   supplier         → supplier.business_partner_id = evidence.business_partner_id
+--   customer         → customer.business_partner_id = evidence.business_partner_id
+-- project_engagement subjects are validated at application layer (no FK table here).
+
+CREATE OR REPLACE FUNCTION master.trg_risk_subject_binding_fn()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+DECLARE
+    v_bp_id uuid;
+BEGIN
+    IF NEW.subject_type = 'business_partner' THEN
+        IF NEW.subject_id <> NEW.business_partner_id THEN
+            RAISE EXCEPTION
+                'risk subject binding: subject_type=business_partner requires '
+                'subject_id = business_partner_id (got % vs %)',
+                NEW.subject_id, NEW.business_partner_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+
+    ELSIF NEW.subject_type = 'supplier' THEN
+        SELECT business_partner_id INTO v_bp_id
+        FROM master.supplier
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.subject_id;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION
+                'risk subject binding: supplier % not found for tenant %',
+                NEW.subject_id, NEW.tenant_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+        IF v_bp_id <> NEW.business_partner_id THEN
+            RAISE EXCEPTION
+                'risk subject binding: supplier %.business_partner_id = % '
+                'does not match provided business_partner_id %',
+                NEW.subject_id, v_bp_id, NEW.business_partner_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+
+    ELSIF NEW.subject_type = 'customer' THEN
+        SELECT business_partner_id INTO v_bp_id
+        FROM master.customer
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.subject_id;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION
+                'risk subject binding: customer % not found for tenant %',
+                NEW.subject_id, NEW.tenant_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+        IF v_bp_id <> NEW.business_partner_id THEN
+            RAISE EXCEPTION
+                'risk subject binding: customer %.business_partner_id = % '
+                'does not match provided business_partner_id %',
+                NEW.subject_id, v_bp_id, NEW.business_partner_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+    -- project_engagement: validated at application layer.
+
+    RETURN NEW;
+END $$;
+
+COMMENT ON FUNCTION master.trg_risk_subject_binding_fn() IS
+    'Validates that subject_id + business_partner_id are consistent for '
+    'business_partner, supplier, and customer subject types. '
+    'business_partner: subject_id must equal business_partner_id. '
+    'supplier/customer: looks up the role row and checks its business_partner_id FK. '
+    'project_engagement: validated at application layer (no direct table here).';
+
+DROP TRIGGER IF EXISTS trg_pre_subject_binding ON master.party_risk_evidence;
+CREATE TRIGGER trg_pre_subject_binding
+    BEFORE INSERT OR UPDATE OF subject_type, subject_id, business_partner_id
+    ON master.party_risk_evidence
+    FOR EACH ROW EXECUTE FUNCTION master.trg_risk_subject_binding_fn();
+
+DROP TRIGGER IF EXISTS trg_pra_subject_binding ON master.party_risk_assessment;
+CREATE TRIGGER trg_pra_subject_binding
+    BEFORE INSERT OR UPDATE OF subject_type, subject_id, business_partner_id
+    ON master.party_risk_assessment
+    FOR EACH ROW EXECUTE FUNCTION master.trg_risk_subject_binding_fn();
+
+
+-- ── qualification snapshot sync ───────────────────────────────────────────────
+-- When a supplier_role assessment is approved, denormalize risk_band into
+-- supplier_qualification.risk_tier so AP screens can read it without joining
+-- back through the full risk stack.
+-- Only supplier_role context is synced here; customer credit_status has
+-- independent business semantics and is managed by the credit workflow.
+
+CREATE OR REPLACE FUNCTION master.trg_pra_sync_qualification_fn()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+BEGIN
+    -- Guard: pra_approved_band_chk prevents approved+unknown at the DB level,
+    -- but NULLIF is kept here as a defensive fallback so the sync never writes
+    -- a value that violates supplier_qualification.sq_risk_tier_chk.
+    IF NEW.status = 'approved' AND NEW.assessment_context = 'supplier_role' THEN
+        UPDATE master.supplier_qualification
+        SET
+            risk_tier        = NULLIF(NEW.risk_band, 'unknown'),
+            next_review_date = NEW.next_review_at,
+            last_review_date = COALESCE(NEW.approved_at::date, CURRENT_DATE),
+            updated_at       = now(),
+            updated_by       = COALESCE(NEW.approved_by, NEW.assessed_by)
+        WHERE tenant_id   = NEW.tenant_id
+          AND supplier_id = NEW.subject_id;
+    END IF;
+    RETURN NEW;
+END $$;
+
+COMMENT ON FUNCTION master.trg_pra_sync_qualification_fn() IS
+    'Denormalizes approved supplier_role risk_band into '
+    'supplier_qualification.risk_tier + next_review_date + last_review_date. '
+    'Fires on INSERT and on UPDATE OF status, risk_band, next_review_at, approved_at, approved_by. '
+    'NULLIF maps unknown → NULL defensively (pra_approved_band_chk should prevent it reaching here). '
+    'Customer qualification credit_status is NOT synced — managed by the credit review workflow.';
+
+DROP TRIGGER IF EXISTS trg_pra_sync_qualification ON master.party_risk_assessment;
+-- Fire on status change AND on any field that feeds the qualification snapshot,
+-- so an approved assessment updated via manual override stays in sync.
+CREATE TRIGGER trg_pra_sync_qualification
+    AFTER INSERT OR UPDATE OF status, risk_band, next_review_at, approved_at, approved_by
+    ON master.party_risk_assessment
+    FOR EACH ROW
+    WHEN (NEW.status = 'approved' AND NEW.assessment_context = 'supplier_role')
+    EXECUTE FUNCTION master.trg_pra_sync_qualification_fn();
+
+
+-- ── approved assessment structural immutability guard ─────────────────────────
+-- Once an assessment is approved, its identity and scoring columns are locked.
+-- Changes to risk_band (manual overrides), notes, next_review_at, and lifecycle
+-- columns (status, approved_at/by, superseded_by, updated_at/by) are still allowed.
+
+CREATE OR REPLACE FUNCTION master.trg_pra_approved_immutable_fn()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+BEGIN
+    IF OLD.status = 'approved' THEN
+
+        -- Block structural identity / scoring columns.
+        IF (
+            OLD.subject_type         IS DISTINCT FROM NEW.subject_type         OR
+            OLD.subject_id           IS DISTINCT FROM NEW.subject_id           OR
+            OLD.business_partner_id  IS DISTINCT FROM NEW.business_partner_id  OR
+            OLD.assessment_context   IS DISTINCT FROM NEW.assessment_context   OR
+            OLD.model_code           IS DISTINCT FROM NEW.model_code           OR
+            OLD.model_version        IS DISTINCT FROM NEW.model_version        OR
+            OLD.overall_score        IS DISTINCT FROM NEW.overall_score
+        ) THEN
+            RAISE EXCEPTION
+                'party_risk_assessment: structural columns are immutable once status=approved. '
+                'Blocked: subject_type, subject_id, business_partner_id, assessment_context, '
+                'model_code, model_version, overall_score. '
+                'To change scoring, create a new assessment and supersede this one.'
+                USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+
+        -- If risk_band changes on an approved assessment, it must be a declared
+        -- manual override: is_override=true and override_reason set.
+        IF OLD.risk_band IS DISTINCT FROM NEW.risk_band THEN
+            IF NOT NEW.is_override OR NEW.override_reason IS NULL THEN
+                RAISE EXCEPTION
+                    'party_risk_assessment: changing risk_band on an approved assessment '
+                    'requires is_override=true and a non-null override_reason. '
+                    'Set is_override=true, provide override_reason, and set override_score '
+                    'to document the basis for the manual band change.'
+                    USING ERRCODE = 'object_not_in_prerequisite_state';
+            END IF;
+        END IF;
+
+    END IF;
+    RETURN NEW;
+END $$;
+
+COMMENT ON FUNCTION master.trg_pra_approved_immutable_fn() IS
+    'Two-part guard on approved party_risk_assessment rows. '
+    'Part 1 — structural lock: blocks changes to subject_type, subject_id, '
+    'business_partner_id, assessment_context, model_code, model_version, overall_score. '
+    'Part 2 — override gate: if risk_band changes while status=approved, '
+    'is_override must be true and override_reason must be non-null. '
+    'Mutable without restriction: notes, next_review_at, review_frequency, '
+    'status, approved_at/by, assessed_at/by, superseded_by, updated_at/by.';
+
+DROP TRIGGER IF EXISTS trg_pra_approved_immutable ON master.party_risk_assessment;
+CREATE TRIGGER trg_pra_approved_immutable
+    BEFORE UPDATE ON master.party_risk_assessment
+    FOR EACH ROW EXECUTE FUNCTION master.trg_pra_approved_immutable_fn();
+
+
+-- ── driver child-consistency: dimension_score_id must belong to same assessment ──
+-- Composite FK (tenant_id, dimension_score_id) prevents cross-tenant refs,
+-- but cannot enforce cross-assessment consistency. This trigger does.
+
+CREATE OR REPLACE FUNCTION master.trg_prd_child_consistency_fn()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+DECLARE
+    v_score_assessment_id   uuid;
+    v_assessment_bp_id      uuid;
+    v_evidence_bp_id        uuid;
+BEGIN
+    -- Check 1: dimension_score_id must belong to the same assessment.
+    IF NEW.dimension_score_id IS NOT NULL THEN
+        SELECT assessment_id INTO v_score_assessment_id
+        FROM master.party_risk_dimension_score
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.dimension_score_id;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION
+                'party_risk_driver: dimension_score_id % not found for tenant %',
+                NEW.dimension_score_id, NEW.tenant_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+
+        IF v_score_assessment_id <> NEW.assessment_id THEN
+            RAISE EXCEPTION
+                'party_risk_driver: dimension_score % belongs to assessment % '
+                'but driver references assessment %',
+                NEW.dimension_score_id, v_score_assessment_id, NEW.assessment_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    -- Check 2: evidence_id (when set) must belong to the same business partner
+    -- as the assessment. Cross-BP evidence attachment is not allowed.
+    IF NEW.evidence_id IS NOT NULL THEN
+        SELECT business_partner_id INTO v_assessment_bp_id
+        FROM master.party_risk_assessment
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.assessment_id;
+
+        SELECT business_partner_id INTO v_evidence_bp_id
+        FROM master.party_risk_evidence
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.evidence_id;
+
+        IF v_evidence_bp_id IS NULL OR v_evidence_bp_id <> v_assessment_bp_id THEN
+            RAISE EXCEPTION
+                'party_risk_driver: evidence % has business_partner_id % '
+                'which does not match assessment % business_partner_id %',
+                NEW.evidence_id, v_evidence_bp_id,
+                NEW.assessment_id, v_assessment_bp_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END $$;
+
+COMMENT ON FUNCTION master.trg_prd_child_consistency_fn() IS
+    'Two-check consistency guard for party_risk_driver children. '
+    'Check 1: dimension_score_id (when set) must belong to the same assessment_id. '
+    'Check 2: evidence_id (when set) must have the same business_partner_id '
+    'as the assessment — prevents cross-BP evidence attachment. '
+    'Composite FKs handle tenant isolation; this trigger handles cross-record '
+    'consistency within the same tenant.';
+
+DROP TRIGGER IF EXISTS trg_prd_child_consistency ON master.party_risk_driver;
+CREATE TRIGGER trg_prd_child_consistency
+    BEFORE INSERT OR UPDATE OF dimension_score_id, assessment_id, evidence_id
+    ON master.party_risk_driver
+    FOR EACH ROW EXECUTE FUNCTION master.trg_prd_child_consistency_fn();

@@ -25,8 +25,14 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { cn } from "@athyper/theme/utils";
 import { AlertCircle, Search } from "lucide-react";
 import type { FlowFieldBinding as FlowFieldBindingType } from "@athyper/api-contracts/documents";
-import { DatePicker } from "@athyper/ui/composites";
-import { EntityPicker, type EntityPickerOption } from "@athyper/runtime-shared/entity-search";
+import { DatePicker, AsyncCombobox } from "@athyper/ui/composites";
+import {
+  EntityPicker,
+  entityRowToPickerOption,
+  resolveEntityPickerOptionConfig,
+  type EntityPickerOption,
+  type EntityPickerOptionConfig,
+} from "@athyper/runtime-shared/entity-search";
 import { DerivedChip } from "./DerivedChip";
 import { canOverride } from "./useFlowEngine";
 
@@ -83,14 +89,20 @@ function MoneyInput({
 /** Field name → entity code for relay search. Falls back to strip-_id convention. */
 const INLINE_SEARCH_ENTITY_MAP: Record<string, string> = {
   company_code_id: "company_code",
+  book_id:         "ledger_book",
+  ledger_book_id:  "ledger_book",
   supplier_id:     "supplier",
   vendor_id:       "supplier",
   commitment_id:   "purchase_order",
   contract_id:     "contract",
   party_id:        "supplier",
+  gl_account_id:   "gl_account",
   cost_center_id:  "cost_center",
+  profit_center_id:"profit_center",
   project_id:      "project",
+  site_id:         "site",
   asset_class_id:  "asset_class",
+  fiscal_period_id:"fiscal_period",
 };
 
 const COMPANY_CODE_SCOPED = new Set(["cost_center", "profit_center", "project", "site"]);
@@ -101,19 +113,56 @@ function resolveSearchEntity(fieldName: string): string | null {
   return null;
 }
 
-function getRowLabel(row: Record<string, unknown>): string {
-  const keys = Object.keys(row);
-  const nameKey = keys.find((k) => k !== "id" && k.endsWith("_name"));
-  if (nameKey && row[nameKey]) return String(row[nameKey]);
-  if (row.name) return String(row.name);
-  const codeKey = keys.find((k) => k !== "id" && k.endsWith("_code") && k !== "currency_code");
-  if (codeKey && row[codeKey]) return String(row[codeKey]);
-  if (row.code) return String(row.code);
-  return String(row.id ?? "").slice(0, 8);
+function ledgerBookMatches(row: Record<string, unknown>, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return ["code", "name", "description"].some((key) =>
+    String(row[key] ?? "").toLowerCase().includes(q),
+  );
+}
+
+async function searchCompanyLedgerBooks(
+  companyCodeId: string,
+  query: string,
+  optionConfig?: EntityPickerOptionConfig,
+): Promise<EntityPickerOption[]> {
+  const filters = encodeURIComponent(JSON.stringify({ company_code_id: companyCodeId, status: "active" }));
+  const assignmentRes = await fetch(
+    `/api/relay/api/records/company_code_book_assignment?filters=${filters}&page_size=50`,
+  );
+  if (!assignmentRes.ok) return [];
+  const assignmentBody = await assignmentRes.json() as { data?: Record<string, unknown>[] };
+  const bookIds = [
+    ...new Set(
+      (assignmentBody.data ?? [])
+        .sort((a, b) => Number(a["priority"] ?? 0) - Number(b["priority"] ?? 0))
+        .map((row) => row["book_id"])
+        .filter((v): v is string => typeof v === "string" && v.length > 0),
+    ),
+  ];
+  if (bookIds.length === 0) return [];
+
+  const rows = await Promise.all(
+    bookIds.map((bookId) =>
+      fetch(`/api/relay/api/records/ledger_book/${encodeURIComponent(bookId)}`)
+        .then((r) => (r.ok ? (r.json() as Promise<{ data?: Record<string, unknown> }>) : null))
+        .then((body) => body?.data ?? null)
+        .catch(() => null),
+    ),
+  );
+
+  return rows
+    .filter((row): row is Record<string, unknown> => Boolean(row))
+    .filter((row) => (row["status"] == null || row["status"] === "active"))
+    .filter((row) => row["is_manual_je_allowed"] !== false)
+    .filter((row) => row["category"] == null || row["category"] === "statutory")
+    .filter((row) => ledgerBookMatches(row, query))
+    .map((row) => entityRowToPickerOption(row, "ledger_book", optionConfig));
 }
 
 function FlowInlineRefPicker({
   fieldName,
+  referenceConfig,
   value,
   onChange,
   onDisplayLabel,
@@ -124,6 +173,7 @@ function FlowInlineRefPicker({
   draftCtx,
 }: {
   fieldName: string;
+  referenceConfig?: Record<string, unknown> | null;
   value: unknown;
   onChange: (v: unknown) => void;
   /** Persist a resolved display label into engine state so it survives step navigation. */
@@ -136,7 +186,14 @@ function FlowInlineRefPicker({
   /** Current wizard draft — used to scope dimension searches by company_code_id. */
   draftCtx?: Record<string, unknown>;
 }) {
-  const entityCode = resolveSearchEntity(fieldName);
+  const targetEntity = typeof referenceConfig?.["target_entity"] === "string"
+    ? referenceConfig["target_entity"]
+    : null;
+  const entityCode = targetEntity || resolveSearchEntity(fieldName);
+  const optionConfig = useMemo(
+    () => resolveEntityPickerOptionConfig(referenceConfig),
+    [referenceConfig],
+  );
   const [pickerLabel, setPickerLabel] = useState<string | null>(null);
   const labelCache = useRef<Map<string, string>>(new Map());
 
@@ -156,7 +213,7 @@ function FlowInlineRefPicker({
       .then((r) => (r.ok ? (r.json() as Promise<{ data?: Record<string, unknown> }>) : null))
       .then((body) => {
         if (cancelled || !body?.data) return;
-        const label = getRowLabel(body.data);
+        const label = entityRowToPickerOption(body.data, entityCode, optionConfig).label;
         labelCache.current.set(uuid, label);
         setPickerLabel(label);
         onDisplayLabel?.(label);
@@ -171,6 +228,15 @@ function FlowInlineRefPicker({
     async (query: string): Promise<EntityPickerOption[]> => {
       if (!entityCode) return [];
       try {
+        if (entityCode === "ledger_book") {
+          const ccId = draftCtxRef.current?.["company_code_id"];
+          if (typeof ccId === "string" && ccId) {
+            const assigned = await searchCompanyLedgerBooks(ccId, query, optionConfig);
+            assigned.forEach((opt) => labelCache.current.set(opt.value, opt.label));
+            if (assigned.length > 0 || !query.trim()) return assigned;
+          }
+        }
+
         const params = new URLSearchParams({ q: query, limit: "20" });
 
         if (COMPANY_CODE_SCOPED.has(entityCode)) {
@@ -183,18 +249,14 @@ function FlowInlineRefPicker({
         const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}?${params}`);
         if (!res.ok) return [];
         const body = await res.json() as { data?: Record<string, unknown>[] };
-        const results = (body.data ?? []).map((row) => ({
-          value: String(row["id"] ?? ""),
-          label: getRowLabel(row),
-          description: row["code"] ? String(row["code"]) : undefined,
-        }));
+        const results = (body.data ?? []).map((row) => entityRowToPickerOption(row, entityCode, optionConfig));
         results.forEach((opt) => labelCache.current.set(opt.value, opt.label));
         return results;
       } catch {
         return [];
       }
     },
-    [entityCode],
+    [entityCode, optionConfig],
   );
 
   const handleChange = useCallback(
@@ -238,6 +300,15 @@ function FlowInlineRefPicker({
       displayLabel={effectiveDisplayLabel}
       onChange={handleChange}
       search={searchFn}
+      getOptionHref={
+        optionConfig?.showViewAction === false
+          ? undefined
+          : (option) => {
+              const recordId = option.recordId ?? option.value;
+              return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`;
+            }
+      }
+      optionConfig={optionConfig}
       loadOnOpen
       placeholder={placeholder ?? "Search…"}
       disabled={disabled}
@@ -410,6 +481,62 @@ function BaseInput({
 // display_tier: "primary" = always visible, "advanced" = behind "More types…"
 interface FieldOption { code: string; name: string; display_tier?: "primary" | "advanced" }
 
+interface LookupValue {
+  code: string;
+  name: string;
+  status?: string;
+  sort_order?: number;
+}
+
+interface CountryRow {
+  code: string;
+  name: string;
+  calling_code?: string | null;
+  phone_trunk_prefix?: string | null;
+  phone_national_pattern?: string | null;
+  phone_example?: string | null;
+  has_postal_codes?: boolean;
+  postal_code_label?: string | null;
+  postal_code_example?: string | null;
+  region_label?: string | null;
+}
+
+interface StateRegionRow {
+  code: string;
+  name: string;
+  country_code: string;
+  category?: string | null;
+}
+
+interface CurrencyRow {
+  code: string;
+  name: string;
+  symbol?: string | null;
+  status?: string | null;
+}
+
+interface CertificationTypeRow {
+  id: string;
+  code: string;
+  name: string;
+  issuing_body?: string | null;
+  category?: string | null;
+  status?: string | null;
+}
+
+const ENUM_DOMAIN_BY_FIELD: Record<string, string> = {
+  address_type: "master.address_type",
+  contact_role: "master.contact_role",
+  channel_type: "master.contact_link_channel_type",
+  purpose: "master.contact_link_purpose",
+  supplier_type: "master.supplier_type",
+  customer_type: "master.customer_type",
+  legal_form: "master.legal_form",
+  partner_category: "master.business_partner_category",
+  employee_count_band: "master.employee_count_band",
+  annual_revenue_band: "master.annual_revenue_band",
+};
+
 const PROVISIONAL_OPTIONS: Record<string, FieldOption[]> = {
   invoice_type: [
     { code: "standard",          name: "Standard",          display_tier: "primary"  },
@@ -443,7 +570,566 @@ const PROVISIONAL_OPTIONS: Record<string, FieldOption[]> = {
     { code: "exclusive", name: "Exclusive", display_tier: "primary" },
     { code: "no_tax",    name: "No Tax",    display_tier: "primary" },
   ],
+  anticipated_risk_tier: [
+    { code: "low",      name: "Low"      },
+    { code: "medium",   name: "Medium"   },
+    { code: "elevated", name: "Elevated" },
+    { code: "high",     name: "High"     },
+    { code: "critical", name: "Critical" },
+  ],
 };
+
+const DEFAULT_FIELD_PLACEHOLDERS: Record<string, string> = {
+  scheme: "Select identifier type",
+  value: "Enter the identifier exactly as issued",
+  issuing_authority: "e.g. Tax authority, registry, GS1, GLEIF",
+  tax_number: "e.g. national tax ID or TIN",
+  state_tax_number: "e.g. state tax registration number",
+  sales_tax_number: "e.g. sales tax registration number",
+  service_tax_number: "e.g. service tax registration number",
+  regional_tax_number: "e.g. regional tax registration number",
+  vat_number: "e.g. VAT, GST, or SST registration number",
+  tax_clearance_number: "e.g. clearance certificate reference",
+  global_location_number: "13-digit GS1 GLN",
+  certification_type_id: "Select certification type",
+  custom_name: "Enter custom certification name",
+  certificate_number: "Enter certificate number",
+  certified_by: "e.g. ISO, SIRIM, TUV, BSI",
+  certified_location: "e.g. country, site, plant, or business unit",
+  additional_info: "Scope, remarks, or special conditions",
+  member_name: "Legal name of shareholder, UBO, director, or signatory",
+  company_name: "Company represented by this member",
+  business_title: "e.g. Director, CFO, Authorized Signatory",
+  ownership_pct: "0 to 100",
+  voting_pct: "0 to 100",
+  beneficial_ownership_pct: "0 to 100",
+  authority_scope: "e.g. bank signatory, contract approval, tax filing",
+  authority_limit_amount: "Maximum authorized amount",
+  source_of_wealth: "Brief source of wealth or funds",
+  bank_name: "Enter bank name",
+  account_number: "Enter IBAN or local account number",
+  account_holder_name: "Name as held by the bank",
+};
+
+function placeholderForField(fieldName: string, explicit?: string | null): string | undefined {
+  return explicit ?? DEFAULT_FIELD_PLACEHOLDERS[fieldName];
+}
+
+function useLookupValues(domainCode: string | null): { values: LookupValue[]; loading: boolean } {
+  const [values, setValues] = useState<LookupValue[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!domainCode) {
+      setValues([]);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoading(true);
+    void fetch(`/api/relay/api/metadata/lookups/${encodeURIComponent(domainCode)}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ values?: LookupValue[] }> : { values: [] }))
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        const active = (body.values ?? [])
+          .filter((v) => (v.status ?? "active") === "active")
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name));
+        setValues(active);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setValues([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [domainCode]);
+
+  return { values, loading };
+}
+
+function LookupSelectInput({
+  domainCode,
+  value,
+  onChange,
+  disabled,
+  error,
+  excludeCodes = [],
+}: {
+  domainCode: string;
+  value: unknown;
+  onChange: (v: unknown) => void;
+  disabled?: boolean;
+  error?: string;
+  excludeCodes?: string[];
+}) {
+  const { values, loading } = useLookupValues(domainCode);
+  const [query, setQuery] = useState("");
+  const visibleValues = excludeCodes.length > 0
+    ? values.filter((opt) => !excludeCodes.includes(opt.code))
+    : values;
+  const q = query.trim().toLowerCase();
+  const filteredValues = q
+    ? visibleValues.filter((opt) =>
+        opt.code.toLowerCase().includes(q) || opt.name.toLowerCase().includes(q),
+      )
+    : visibleValues;
+  const selected = values.find((opt) => opt.code === String(value ?? ""));
+
+  return (
+    <AsyncCombobox
+      value={typeof value === "string" && value ? value : null}
+      displayLabel={selected?.name ?? null}
+      options={filteredValues.map((opt) => ({ value: opt.code, label: opt.name, description: opt.code }))}
+      loading={loading}
+      onQueryChange={setQuery}
+      onOpen={() => setQuery("")}
+      onChange={(v) => onChange(v)}
+      placeholder="Select..."
+      searchPlaceholder="Search..."
+      disabled={disabled || loading || !domainCode}
+      error={error}
+    />
+  );
+}
+
+function StaticSelectInput({
+  value,
+  options,
+  onChange,
+  disabled,
+  error,
+}: {
+  value: unknown;
+  options: FieldOption[];
+  onChange: (v: unknown) => void;
+  disabled?: boolean;
+  error?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const filteredOptions = q
+    ? options.filter((opt) => opt.code.toLowerCase().includes(q) || opt.name.toLowerCase().includes(q))
+    : options;
+  const selected = options.find((opt) => opt.code === String(value ?? ""));
+
+  return (
+    <AsyncCombobox
+      value={typeof value === "string" && value ? value : null}
+      displayLabel={selected?.name ?? null}
+      options={filteredOptions.map((opt) => ({ value: opt.code, label: opt.name, description: opt.code }))}
+      onQueryChange={setQuery}
+      onOpen={() => setQuery("")}
+      onChange={(v) => onChange(v)}
+      placeholder="Select..."
+      searchPlaceholder="Search..."
+      disabled={disabled}
+      error={error}
+    />
+  );
+}
+
+function CountrySelectInput({
+  value,
+  onChange,
+  disabled,
+  error,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  disabled?: boolean;
+  error?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [countries, setCountries] = useState<CountryRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    void fetch("/api/relay/api/platform/ref/countries?limit=300", {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ data?: CountryRow[] }> : { data: [] }))
+      .then((body) => {
+        if (!controller.signal.aborted) setCountries(body.data ?? []);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCountries([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  const q = query.toLowerCase();
+  const filtered = q
+    ? countries.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
+    : countries;
+  const options = filtered.map((c) => ({ value: c.code, label: c.name, description: c.code }));
+  const displayLabel = countries.find((c) => c.code === String(value ?? ""))?.name ?? null;
+
+  return (
+    <AsyncCombobox
+      value={typeof value === "string" && value ? value : null}
+      displayLabel={displayLabel}
+      options={options}
+      loading={loading}
+      onQueryChange={setQuery}
+      onOpen={() => setQuery("")}
+      onChange={(v) => onChange(v)}
+      placeholder="Select country..."
+      searchPlaceholder="Search countries..."
+      disabled={disabled}
+      error={error}
+    />
+  );
+}
+
+function StateRegionSelectInput({
+  value,
+  onChange,
+  disabled,
+  error,
+  draftCtx,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  disabled?: boolean;
+  error?: string;
+  draftCtx?: Record<string, unknown>;
+}) {
+  const countryCode = typeof draftCtx?.["country_code"] === "string"
+    ? String(draftCtx["country_code"]).toUpperCase()
+    : "";
+  const [query, setQuery] = useState("");
+  const [regions, setRegions] = useState<StateRegionRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!countryCode) {
+      setRegions([]);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const params = new URLSearchParams({ country: countryCode, limit: "200" });
+    if (query.trim()) params.set("search", query.trim());
+
+    setLoading(true);
+    void fetch(`/api/relay/api/platform/ref/state-regions?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ data?: StateRegionRow[] }> : { data: [] }))
+      .then((body) => {
+        if (!controller.signal.aborted) setRegions(body.data ?? []);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setRegions([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [countryCode, query]);
+
+  const selected = regions.find((r) => r.code === String(value ?? "") || r.name === String(value ?? ""));
+  const options = regions.map((r) => ({ value: r.code, label: r.name, description: r.code }));
+
+  return (
+    <AsyncCombobox
+      value={typeof value === "string" && value ? value : null}
+      displayLabel={selected?.name ?? null}
+      options={options}
+      loading={loading}
+      onQueryChange={setQuery}
+      onOpen={() => setQuery("")}
+      onChange={(v) => onChange(v)}
+      placeholder={countryCode ? "Select state/region..." : "Select country first"}
+      searchPlaceholder="Search state or region..."
+      disabled={disabled || !countryCode}
+      error={error}
+    />
+  );
+}
+
+function PostalCodeInput({
+  value,
+  onChange,
+  disabled,
+  error,
+  draftCtx,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  disabled?: boolean;
+  error?: string;
+  draftCtx?: Record<string, unknown>;
+}) {
+  const countryCode = typeof draftCtx?.["country_code"] === "string"
+    ? String(draftCtx["country_code"]).toUpperCase()
+    : "";
+  const [country, setCountry] = useState<CountryRow | null>(null);
+
+  useEffect(() => {
+    if (!countryCode) {
+      setCountry(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    void fetch(`/api/relay/api/platform/ref/countries?search=${encodeURIComponent(countryCode)}&limit=20`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ data?: CountryRow[] }> : { data: [] }))
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        const exact = (body.data ?? []).find((c) => c.code === countryCode) ?? null;
+        setCountry(exact);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCountry(null);
+      });
+    return () => controller.abort();
+  }, [countryCode]);
+
+  const label = country?.postal_code_label ?? "Postal code";
+  const example = country?.postal_code_example ? `Example: ${country.postal_code_example}` : undefined;
+  const countryHasNoPostalCode = country?.has_postal_codes === false;
+
+  return (
+    <BaseInput
+      value={countryHasNoPostalCode ? "" : value}
+      onChange={onChange}
+      disabled={disabled || countryHasNoPostalCode}
+      placeholder={countryHasNoPostalCode ? "Not used for selected country" : example ?? label}
+      error={error}
+    />
+  );
+}
+
+function CountryAwarePhoneInput({
+  value,
+  onChange,
+  disabled,
+  error,
+  draftCtx,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  disabled?: boolean;
+  error?: string;
+  draftCtx?: Record<string, unknown>;
+}) {
+  const countryCode = [
+    draftCtx?.["country_code"],
+    draftCtx?.["registration_country_code"],
+    draftCtx?.["tax_residence_country_code"],
+  ].find((v) => typeof v === "string" && v.trim()) as string | undefined;
+  const normalizedCountryCode = countryCode ? countryCode.toUpperCase() : "";
+  const [country, setCountry] = useState<CountryRow | null>(null);
+
+  useEffect(() => {
+    if (!normalizedCountryCode) {
+      setCountry(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    void fetch(`/api/relay/api/platform/ref/countries?search=${encodeURIComponent(normalizedCountryCode)}&limit=20`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ data?: CountryRow[] }> : { data: [] }))
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        const exact = (body.data ?? []).find((c) => c.code === normalizedCountryCode) ?? null;
+        setCountry(exact);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCountry(null);
+      });
+    return () => controller.abort();
+  }, [normalizedCountryCode]);
+
+  const placeholder = country?.phone_example
+    ? `Example: ${country.phone_example}`
+    : country?.calling_code
+      ? `+${country.calling_code} ...`
+      : "+...";
+
+  return (
+    <BaseInput
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      placeholder={placeholder}
+      error={error}
+    />
+  );
+}
+
+function CurrencySelectInput({
+  value,
+  onChange,
+  disabled,
+  error,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  disabled?: boolean;
+  error?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [currencies, setCurrencies] = useState<CurrencyRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ limit: "50", status: "active" });
+    if (query.trim()) params.set("search", query.trim());
+
+    setLoading(true);
+    void fetch(`/api/relay/api/platform/ref/currencies?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ data?: CurrencyRow[] }> : { data: [] }))
+      .then((body) => {
+        if (!controller.signal.aborted) setCurrencies(body.data ?? []);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCurrencies([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [query]);
+
+  const currentCode = typeof value === "string" ? value.trim().toUpperCase() : "";
+  const selected = currencies.find((c) => c.code === currentCode);
+  const options = currencies.map((c) => ({
+    value: c.code,
+    label: `${c.code} - ${c.name}`,
+    description: c.symbol ?? undefined,
+  }));
+
+  return (
+    <AsyncCombobox
+      value={currentCode || null}
+      displayLabel={selected ? `${selected.code} - ${selected.name}` : (currentCode || null)}
+      options={options}
+      loading={loading}
+      onQueryChange={setQuery}
+      onOpen={() => setQuery("")}
+      onChange={(v) => onChange(v ? v.toUpperCase() : null)}
+      placeholder="Select currency..."
+      searchPlaceholder="Search currencies..."
+      disabled={disabled}
+      error={error}
+    />
+  );
+}
+
+function CertificationTypeSelectInput({
+  value,
+  onChange,
+  disabled,
+  error,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  disabled?: boolean;
+  error?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [types, setTypes] = useState<CertificationTypeRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ limit: "50", active: "true" });
+    if (query.trim()) params.set("search", query.trim());
+
+    setLoading(true);
+    void fetch(`/api/relay/api/platform/ref/certification-types?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ data?: CertificationTypeRow[] }> : { data: [] }))
+      .then((body) => {
+        if (!controller.signal.aborted) setTypes(body.data ?? []);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setTypes([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [query]);
+
+  const selected = types.find((type) => type.id === String(value ?? ""));
+  const selectedId = typeof value === "string" && value ? value : null;
+
+  useEffect(() => {
+    if (!selectedId || selected) return;
+    const controller = new AbortController();
+    void fetch(`/api/relay/api/platform/ref/certification-types?id=${encodeURIComponent(selectedId)}&limit=1`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ data?: CertificationTypeRow[] }> : { data: [] }))
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        const row = body.data?.[0];
+        if (row) setTypes((prev) => prev.some((type) => type.id === row.id) ? prev : [row, ...prev]);
+      })
+      .catch(() => null);
+    return () => controller.abort();
+  }, [selectedId, selected]);
+
+  const options = types.map((type) => ({
+    value: type.id,
+    label: type.name,
+    description: [type.code, type.issuing_body, type.category].filter(Boolean).join(" - ") || undefined,
+  }));
+
+  return (
+    <AsyncCombobox
+      value={typeof value === "string" && value ? value : null}
+      displayLabel={selected?.name ?? null}
+      options={options}
+      loading={loading}
+      onQueryChange={setQuery}
+      onOpen={() => setQuery("")}
+      onChange={(v) => onChange(v)}
+      placeholder="Select certification type..."
+      searchPlaceholder="Search certification types..."
+      disabled={disabled}
+      error={error}
+    />
+  );
+}
+
+function isCountryField(fieldName: string, uiVariant: string | null | undefined): boolean {
+  return uiVariant === "country" || fieldName === "country_code" || fieldName.endsWith("_country_code");
+}
+
+function isStateRegionField(fieldName: string): boolean {
+  return fieldName === "region" || fieldName === "state_region" || fieldName === "state_region_code";
+}
+
+function isPhoneField(fieldName: string, uiVariant: string | null | undefined): boolean {
+  return uiVariant === "phone" || fieldName.endsWith("_phone") || fieldName.endsWith("_fax");
+}
+
+function isEmailField(fieldName: string, uiVariant: string | null | undefined): boolean {
+  return uiVariant === "email" || fieldName.endsWith("_email") || fieldName === "email";
+}
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -500,28 +1186,61 @@ export function FlowFieldBinding({
   // editable / required
   const isDisabled = false;
   const options = PROVISIONAL_OPTIONS[field_name];
+  const enumDomainCode = binding.enum_domain_code ?? ENUM_DOMAIN_BY_FIELD[field_name] ?? null;
+  const enumExcludeCodes = field_name === "contact_role" ? ["primary"] : [];
+  const handleValueChange = derivation_mode === "derived_overrideable" ? onOverride : onChange;
+  const placeholder = placeholderForField(field_name, binding.placeholder);
 
   return (
     <div className={colSpanClass(binding.span)}>
       <FieldLabel label={field_label} required={mode === "required"} helpText={help_text ?? undefined} />
       <div className="mt-1">
         {ui_variant === "money_big" ? (
-          <MoneyInput value={value} onChange={onChange} disabled={isDisabled} error={error} />
+          <MoneyInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} />
+        ) : field_name === "certification_type_id" ? (
+          <CertificationTypeSelectInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} />
         ) : ui_variant === "inline_search" ? (
-          <FlowInlineRefPicker fieldName={field_name} value={value} onChange={onChange} onDisplayLabel={onDisplayLabel} externalDisplayLabel={displayLabel} draftCtx={draftCtx} placeholder={binding.placeholder ?? undefined} disabled={isDisabled} error={error} />
-        ) : ui_variant === "radio_cards" && options ? (
-          <RadioCards value={value} options={options} onChange={onChange} disabled={isDisabled} />
-        ) : ui_variant === "segmented" && options ? (
-          <SegmentedControl value={value} options={options} onChange={onChange} disabled={isDisabled} />
-        ) : data_type === "text_long" || field_name === "notes" || field_name === "hold_reason" ? (
-          <TextareaInput value={value} onChange={onChange} disabled={isDisabled} placeholder={binding.placeholder ?? undefined} />
-        ) : data_type === "date" ? (
-          <DatePicker
-            value={value != null ? String(value) : null}
-            onChange={(v) => onChange(v)}
+          <FlowInlineRefPicker
+            fieldName={field_name}
+            referenceConfig={binding.reference_config ?? null}
+            value={value}
+            onChange={handleValueChange}
+            onDisplayLabel={onDisplayLabel}
+            externalDisplayLabel={displayLabel}
+            draftCtx={draftCtx}
+            placeholder={placeholder}
             disabled={isDisabled}
             error={error}
           />
+        ) : isCountryField(field_name, ui_variant) ? (
+          <CountrySelectInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} />
+        ) : isStateRegionField(field_name) ? (
+          <StateRegionSelectInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} draftCtx={draftCtx} />
+        ) : ui_variant === "currency" ? (
+          <CurrencySelectInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} />
+        ) : enumDomainCode && (ui_variant === "select" || data_type === "enum") ? (
+          <LookupSelectInput domainCode={enumDomainCode} value={value} onChange={handleValueChange} disabled={isDisabled} error={error} excludeCodes={enumExcludeCodes} />
+        ) : ui_variant === "radio_cards" && options ? (
+          <RadioCards value={value} options={options} onChange={handleValueChange} disabled={isDisabled} />
+        ) : ui_variant === "segmented" && options ? (
+          <SegmentedControl value={value} options={options} onChange={handleValueChange} disabled={isDisabled} />
+        ) : ui_variant === "select" && options ? (
+          <StaticSelectInput value={value} options={options} onChange={handleValueChange} disabled={isDisabled} error={error} />
+        ) : data_type === "text_long" || field_name === "notes" || field_name === "hold_reason" ? (
+          <TextareaInput value={value} onChange={handleValueChange} disabled={isDisabled} placeholder={placeholder} />
+        ) : data_type === "date" ? (
+          <DatePicker
+            value={value != null ? String(value) : null}
+            onChange={(v) => handleValueChange(v)}
+            disabled={isDisabled}
+            error={error}
+          />
+        ) : field_name === "postal_code" ? (
+          <PostalCodeInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} draftCtx={draftCtx} />
+        ) : isPhoneField(field_name, ui_variant) ? (
+          <CountryAwarePhoneInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} draftCtx={draftCtx} />
+        ) : isEmailField(field_name, ui_variant) ? (
+          <BaseInput value={value} onChange={handleValueChange} type="email" disabled={isDisabled} placeholder={placeholder} error={error} />
         ) : data_type === "boolean" || field_name === "is_on_hold" ? (
           <div className="flex items-center gap-2">
             <input
@@ -529,7 +1248,7 @@ export function FlowFieldBinding({
               type="checkbox"
               className="h-4 w-4 rounded border-border text-primary focus:ring-primary/40"
               checked={Boolean(value)}
-              onChange={(e) => onChange(e.target.checked)}
+              onChange={(e) => handleValueChange(e.target.checked)}
               disabled={isDisabled}
             />
             <label htmlFor={`field-${field_name}`} className="text-sm text-foreground">
@@ -537,7 +1256,7 @@ export function FlowFieldBinding({
             </label>
           </div>
         ) : (
-          <BaseInput value={value} onChange={onChange} disabled={isDisabled} placeholder={binding.placeholder ?? undefined} error={error} />
+          <BaseInput value={value} onChange={handleValueChange} disabled={isDisabled} placeholder={placeholder} error={error} />
         )}
       </div>
       {error && (

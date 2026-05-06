@@ -20,7 +20,20 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { X, Search, ChevronDown, ChevronRight, Clock, Heart, BookmarkPlus, Bookmark } from "lucide-react";
+import {
+  X,
+  Search,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Heart,
+  BookmarkPlus,
+  Bookmark,
+  FileText,
+  Building2,
+  ShieldCheck,
+  Filter,
+} from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Button } from "@athyper/ui/primitives";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
@@ -117,6 +130,81 @@ function semanticGroupKey(f: EntityField): string {
     if (g.test(f)) return g.key;
   }
   return "__general";
+}
+
+type FieldFilterMeta = NonNullable<EntityField["filter_config"]>;
+type MetadataQuickFilter = {
+  key: string;
+  label: string;
+  icon?: string;
+  field?: string;
+  value?: unknown;
+  op?: string;
+  sort_order?: number;
+};
+type MetadataFilterSection = {
+  key: string;
+  label: string;
+  sort_order?: number;
+};
+type QuickPrimitive = string | number | boolean;
+
+function fieldFilterMeta(field: EntityField): FieldFilterMeta | null {
+  if (field.filter_config) return field.filter_config;
+  const filter = field.ui_hint?.["filter"];
+  return filter && typeof filter === "object" ? filter as FieldFilterMeta : null;
+}
+
+function fieldSectionKey(field: EntityField): string | null {
+  return fieldFilterMeta(field)?.section_key ?? null;
+}
+
+function fieldSectionLabel(field: EntityField): string | null {
+  return fieldFilterMeta(field)?.section_label ?? null;
+}
+
+function fieldSectionOrder(field: EntityField): number {
+  return fieldFilterMeta(field)?.section_order ?? 999;
+}
+
+function fieldQuickOrder(field: EntityField): number {
+  return fieldFilterMeta(field)?.quick_order ?? field.sort_order;
+}
+
+function buildQuickEntry(filter: MetadataQuickFilter): { key: string; entry: FilterEntry } {
+  const key = filter.field ?? filter.key;
+  const raw = filter.value ?? true;
+  if (filter.op === "is_null" || filter.op === "is_not_null") {
+    return { key, entry: { op: filter.op } };
+  }
+  if (filter.op === "ilike") {
+    return { key, entry: { op: "ilike", value: String(raw) } };
+  }
+  if (filter.op === "gt" || filter.op === "lt" || filter.op === "gte" || filter.op === "lte") {
+    return { key, entry: { op: filter.op, value: raw as string | number } };
+  }
+  if (filter.op === "not_in") {
+    return { key, entry: { op: "not_in", value: Array.isArray(raw) ? raw as QuickPrimitive[] : [raw as QuickPrimitive] } };
+  }
+  const op = filter.op === "in" ? "in" : "eq";
+  return { key, entry: { op, value: Array.isArray(raw) ? raw as QuickPrimitive[] : [raw as QuickPrimitive] } };
+}
+
+function quickFilterActive(draft: EntityListFilters, filter: MetadataQuickFilter): boolean {
+  const { key, entry } = buildQuickEntry(filter);
+  const current = (draft as Record<string, unknown>)[key];
+  return JSON.stringify(current) === JSON.stringify(entry);
+}
+
+function QuickFilterIcon({ filter, active }: { filter: MetadataQuickFilter; active: boolean }) {
+  const cls = cn("h-3 w-3 shrink-0", active && "fill-current");
+  if (filter.key === "__bookmarked") return <Heart className={cls} />;
+  if (filter.key === "__created_by") return <FileText className="h-3 w-3 shrink-0" />;
+  if (filter.key.includes("internal")) return <ShieldCheck className="h-3 w-3 shrink-0" />;
+  if (filter.key.includes("organization") || filter.field === "partner_category") {
+    return <Building2 className="h-3 w-3 shrink-0" />;
+  }
+  return <Filter className="h-3 w-3 shrink-0" />;
 }
 
 // ── Search highlight ─────────────────────────────────────────────────────────
@@ -278,6 +366,31 @@ export function FilterDrawer({
       .sort((a, b) => a.sort_order - b.sort_order),
   [entity.fields]);
 
+  const metadataFilterBar = entity.display_config.filter_bar;
+  const metadataSections = useMemo<MetadataFilterSection[]>(
+    () => [...(metadataFilterBar?.sections ?? [])].sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)),
+    [metadataFilterBar?.sections],
+  );
+
+  const metadataQuickFilters = useMemo<MetadataQuickFilter[]>(() => {
+    const configured = metadataFilterBar?.quick_filters ?? [];
+
+    const defaults: MetadataQuickFilter[] = [
+      { key: "__bookmarked", label: "Starred by me", value: true, sort_order: 10 },
+      { key: "__created_by", label: "My documents", value: "me", sort_order: 20 },
+    ];
+
+    const seen = new Set<string>();
+    return [...configured, ...defaults]
+      .filter((filter) => {
+        const key = filter.key;
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
+  }, [metadataFilterBar?.quick_filters]);
+
   // Search: flat filtered list; idle: null (show groups)
   const searchResults = useMemo((): typeof filterableFields | null => {
     const q = filterSearch.trim().toLowerCase();
@@ -292,6 +405,41 @@ export function FilterDrawer({
   // A field counts as "metadata-grouped" only when it has a group_key that
   // resolves to a known FieldGroup on the entity.
   const groups = useMemo(() => {
+    if (metadataSections.length > 0 || filterableFields.some((f) => fieldSectionKey(f))) {
+      const sectionMap = new Map<string, { key: string; label: string; order: number; fields: typeof filterableFields }>();
+
+      for (const section of metadataSections) {
+        sectionMap.set(section.key, {
+          key: section.key,
+          label: section.label,
+          order: section.sort_order ?? 999,
+          fields: [],
+        });
+      }
+
+      for (const field of filterableFields) {
+        const key = fieldSectionKey(field) ?? "__general";
+        const label = fieldSectionLabel(field)
+          ?? metadataSections.find((section) => section.key === key)?.label
+          ?? (key === "__general" ? "General" : key.replace(/_/g, " "));
+        const order = metadataSections.find((section) => section.key === key)?.sort_order
+          ?? fieldSectionOrder(field);
+        if (!sectionMap.has(key)) {
+          sectionMap.set(key, { key, label, order, fields: [] });
+        }
+        sectionMap.get(key)!.fields.push(field);
+      }
+
+      return [...sectionMap.values()]
+        .filter((section) => section.fields.length > 0)
+        .sort((a, b) => a.order - b.order)
+        .map(({ key, label, fields }) => ({
+          key,
+          label,
+          fields: fields.sort((a, b) => a.sort_order - b.sort_order),
+        }));
+    }
+
     const metaGroups = [...entity.field_groups].sort((a, b) => a.sort_order - b.sort_order);
     const metaGroupedFields = filterableFields.filter(
       (f) => f.group_key && metaGroups.some((g) => g.group_key === f.group_key),
@@ -329,7 +477,7 @@ export function FilterDrawer({
       result.push({ key: "__general", label: "General", fields: general });
     }
     return result;
-  }, [entity.field_groups, filterableFields]);
+  }, [entity.field_groups, filterableFields, metadataSections]);
 
   // Collapse state: all expanded by default
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -355,7 +503,10 @@ export function FilterDrawer({
     const label    = field.label ?? field.name;
 
     return (
-      <div className={cn("rounded-md px-2 py-2", hasValue && "bg-primary/4 ring-1 ring-primary/20")}>
+      <div className={cn(
+        "rounded-md border border-transparent px-2.5 py-2 transition-colors",
+        hasValue ? "border-primary/20 bg-primary/4" : "hover:border-border hover:bg-muted/20",
+      )}>
         <div className="flex items-center justify-between mb-1.5">
           <p className={cn(
             "text-2xs font-semibold uppercase tracking-wide",
@@ -539,34 +690,47 @@ export function FilterDrawer({
         <div className="flex-1 overflow-y-auto">
 
           {/* Starred by me — virtual filter toggle (S1.A) */}
-          {!filterSearch && (
-            <div className="border-b px-4 py-2.5">
-              <button
-                onClick={() => {
-                  const current = (draft as Record<string, unknown>)["__bookmarked"];
-                  if (current) {
-                    const next = { ...draft } as Record<string, unknown>;
-                    delete next["__bookmarked"];
-                    setDraft(next as EntityListFilters);
-                  } else {
-                    setDraft((prev) => ({ ...prev, __bookmarked: { op: "eq", value: [true] } } as EntityListFilters));
-                  }
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
-                  (draft as Record<string, unknown>)["__bookmarked"]
-                    ? "bg-primary/8 text-primary ring-1 ring-primary/20"
-                    : "hover:bg-muted/60 text-muted-foreground hover:text-foreground",
+          {!filterSearch && metadataQuickFilters.length > 0 && (
+            <div className="border-b bg-muted/15 px-4 py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+                  Search filters
+                </span>
+                {draftCount > 0 && (
+                  <span className="text-2xs text-muted-foreground">
+                    {draftCount} selected
+                  </span>
                 )}
-              >
-                <Heart
-                  className={cn(
-                    "h-3.5 w-3.5 shrink-0",
-                    !!(draft as Record<string, unknown>)["__bookmarked"] && "fill-current",
-                  )}
-                />
-                <span className="font-medium">Starred by me</span>
-              </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {metadataQuickFilters.map((filter) => {
+                  const active = quickFilterActive(draft, filter);
+                  return (
+                    <button
+                      key={filter.key}
+                      onClick={() => {
+                        const { key, entry } = buildQuickEntry(filter);
+                        const next = { ...draft } as Record<string, unknown>;
+                        if (quickFilterActive(draft, filter)) {
+                          delete next[key];
+                          setDraft(next as EntityListFilters);
+                          return;
+                        }
+                        setDraft({ ...draft, [key]: entry });
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs font-medium transition-colors",
+                        active
+                          ? "border-primary/40 bg-primary/8 text-primary"
+                          : "border-border text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground",
+                      )}
+                    >
+                      <QuickFilterIcon filter={filter} active={active} />
+                      {filter.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -707,7 +871,12 @@ export function FilterDrawer({
         {/* ── Footer ── */}
         <div className="border-t px-4 py-3 space-y-2 shrink-0">
           <div className="flex items-center gap-2">
-            <Button size="sm" className="flex-1 h-8 text-xs" onClick={apply} disabled={!isDirty}>
+            <Button
+              size="sm"
+              className="h-8 flex-1 text-xs disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
+              onClick={apply}
+              disabled={!isDirty}
+            >
               Apply
             </Button>
             <Button
@@ -721,10 +890,10 @@ export function FilterDrawer({
               Reset
             </Button>
             <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={discard}>
-              Discard
+              Cancel
             </Button>
           </div>
-          <p className="text-2xs text-muted-foreground/50">⌘↵ apply · Esc discard</p>
+          <p className="text-2xs text-muted-foreground/50">Ctrl+Enter apply. Esc cancel</p>
         </div>
       </div>
     </>

@@ -1,6 +1,6 @@
 -- LookupDomain/master/supplier_tax_classification.sql
 -- Lookup domain + values for: master.supplier_tax_classification
--- Used by: master.supplier_tax_profile.tax_classification
+-- Used by: master.party_tax_profile.tax_classification
 -- Idempotent: WHERE NOT EXISTS guards
 
 INSERT INTO control.lookup_domain

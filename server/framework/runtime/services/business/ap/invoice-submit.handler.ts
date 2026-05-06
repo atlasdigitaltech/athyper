@@ -30,6 +30,7 @@
 
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import { matchInvoice } from "./invoice-match.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -232,6 +233,13 @@ export async function handleSubmitForApproval(
     const lineCount = Number(invoice["line_count"] ?? 0);
     if (lineCount === 0) {
       return { status: 422, body: { error: "NO_LINES", message: "Invoice must have at least one line before submitting" } };
+    }
+
+    // Auto-resolve match_status for non-PO invoices (sets match_status = 'unmatched').
+    // PO-based invoices are matched at post time; non-PO invoices have no PO to match against.
+    const invoiceSource = String(invoice["invoice_source"] ?? "");
+    if (invoiceSource === "non_po" || invoiceSource === "one_time_vendor") {
+      await matchInvoice(trx, tenantId, invoiceId, principalId, logger);
     }
 
     const now = new Date();

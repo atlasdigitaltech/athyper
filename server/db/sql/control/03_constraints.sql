@@ -61,12 +61,12 @@ END $$;
 -- mfa_config.method_type — CHECK removed, trigger-based validation in 09_triggers.
 ALTER TABLE control.mfa_config DROP CONSTRAINT IF EXISTS mfa_config_method_type_chk;
 
--- Migrate keycloak_sync_status to shared.keycloak_sync_status_d domain.
+-- Type column to shared.idp_sync_status_d (canonical name; keycloak_sync_status_d is an alias).
 -- Drops the inline CHECK, re-types the column, then re-adds the tighter 4-value
 -- CHECK (mfa credentials never use 'disabled' — that state belongs to auth bindings).
 ALTER TABLE control.mfa_config DROP CONSTRAINT IF EXISTS mfa_config_sync_status_chk;
 ALTER TABLE control.mfa_config
-    ALTER COLUMN keycloak_sync_status TYPE shared.keycloak_sync_status_d
+    ALTER COLUMN keycloak_sync_status TYPE shared.idp_sync_status_d
     USING keycloak_sync_status::text;
 DO $$ BEGIN
     ALTER TABLE control.mfa_config

@@ -131,3 +131,76 @@ DROP TRIGGER IF EXISTS trg_ap_status_changed ON master.accounting_profile;
 CREATE TRIGGER trg_ap_status_changed
     BEFORE UPDATE ON master.accounting_profile
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+
+-- ── Entity metadata ─────────────────────────────────────────────────────────
+-- The AP module is installed after the base entity-engine pass, so register the
+-- metadata needed by reference displays and runtime search here.
+INSERT INTO control.entity (
+    module_id, name, entity_short, entity_code,
+    entity_class, ownership_model, kind, backing_type,
+    governance_level, security_tier, mutability,
+    table_schema, table_name,
+    label_singular, label_plural, icon_key, color_token,
+    numbering_active, feature_flags, status, created_by)
+SELECT
+    (SELECT id FROM shared.module WHERE code = 'ACC'),
+    'accounting_profile', 'ACCP', 'accounting_profile',
+    'MASTER', 'system', 'ent', 'table',
+    'full', 'tenant_critical', 'controlled',
+    'master', 'accounting_profile',
+    'Accounting Profile', 'Accounting Profiles', 'layers', 'blue',
+    false, '{}'::jsonb, 'ACTIVE', '00000000-0000-0000-0000-000000000000'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM control.entity
+    WHERE table_schema = 'master'
+      AND table_name = 'accounting_profile'
+      AND tenant_id IS NULL
+);
+
+INSERT INTO control.entity_version (
+    entity_id, tenant_id, version_no, status, label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE', 'Initial version', 'structural', now(),
+       '00000000-0000-0000-0000-000000000000'
+FROM control.entity e
+WHERE e.entity_code = 'accounting_profile' AND e.tenant_id IS NULL
+ON CONFLICT (entity_id, version_no) DO NOTHING;
+
+INSERT INTO control.entity_field (
+    entity_version_id, name, column_name, label, data_type, ui_type,
+    cardinality, origin, is_required, is_filterable, is_sortable, is_searchable,
+    is_read_only, sort_order, created_by)
+SELECT ev.id,
+       f.name, f.column_name, f.label, f.data_type, f.ui_type,
+       f.cardinality, f.origin, f.is_required, f.is_filterable, f.is_sortable, f.is_searchable,
+       f.is_read_only, f.sort_order,
+       '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+CROSS JOIN (VALUES
+    ('id',             'id',             'ID',              'uuid',            'hidden',   'one',         'system',   true,  false, false, false, true,   10),
+    ('tenant_id',      'tenant_id',      'Tenant',          'uuid',            'hidden',   'one',         'system',   true,  true,  false, false, true,   20),
+    ('code',           'code',           'Code',            'string',          'text',     'one',         'standard', true,  true,  true,  true,  false,  30),
+    ('name',           'name',           'Name',            'string',          'text',     'one',         'standard', true,  true,  true,  true,  false,  40),
+    ('description',    'description',    'Description',     'text',            'textarea', 'zero_or_one', 'standard', false, false, false, true,  false,  50),
+    ('direction',      'direction',      'Direction',       'string',          'select',   'one',         'standard', true,  true,  true,  false, false,  60),
+    ('subledger_type', 'subledger_type', 'Subledger Type',  'string',          'select',   'one',         'standard', true,  true,  true,  false, false,  70),
+    ('domain_hint',    'domain_hint',    'Domain',          'string',          'text',     'zero_or_one', 'standard', false, true,  true,  false, false,  80),
+    ('status',         'status',         'Status',          'lifecycle_state', 'select',   'one',         'standard', true,  true,  true,  false, false,  90)
+) AS f(name, column_name, label, data_type, ui_type, cardinality, origin,
+       is_required, is_filterable, is_sortable, is_searchable, is_read_only, sort_order)
+WHERE e.entity_code = 'accounting_profile' AND e.tenant_id IS NULL AND ev.version_no = 1
+ON CONFLICT DO NOTHING;
+
+UPDATE control.entity
+SET display_config = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
+        'detail_renderer',    'master',
+        'list_columns',       jsonb_build_array('code','name','direction','subledger_type','status'),
+        'default_sort_field', 'name',
+        'default_sort_order', 'asc',
+        'code_field',         'code',
+        'title_field',        'name'
+    ),
+    natural_key_fields = ARRAY['code']
+WHERE entity_code = 'accounting_profile' AND tenant_id IS NULL;

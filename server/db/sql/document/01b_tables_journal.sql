@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS document.journal_entry (
 
     -- Lifecycle
     status           text         NOT NULL DEFAULT 'draft',
-    is_active        boolean      GENERATED ALWAYS AS (status IN ('draft', 'created', 'posted')) STORED,
+    is_active        boolean      GENERATED ALWAYS AS (status IN ('draft', 'created', 'pending_approval', 'approved', 'posted')) STORED,
     status_changed_at timestamptz,
     status_changed_by uuid,
 
@@ -100,10 +100,19 @@ CREATE TABLE IF NOT EXISTS document.journal_entry (
     CONSTRAINT journal_entry_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT journal_entry_tenant_number_uq
         UNIQUE (tenant_id, company_code_id, je_number),
+    CONSTRAINT je_status_chk CHECK (
+        status IN ('draft', 'created', 'pending_approval', 'approved', 'rejected', 'posted', 'reversed')
+    ),
+    CONSTRAINT je_amount_nonneg_chk CHECK (total_debit >= 0 AND total_credit >= 0),
+    CONSTRAINT je_line_count_nonneg_chk CHECK (line_count >= 0),
     CONSTRAINT je_balanced_chk CHECK (total_debit = total_credit),
     CONSTRAINT je_doc_date_chk CHECK (document_date <= posting_date),
     CONSTRAINT je_auto_reverse_chk CHECK (NOT is_auto_reverse OR auto_reverse_date IS NOT NULL),
     CONSTRAINT je_no_self_ref CHECK (reversal_of_id IS DISTINCT FROM id),
+    CONSTRAINT je_reversal_link_chk CHECK (NOT is_reversal OR reversal_of_id IS NOT NULL),
+    CONSTRAINT je_posted_audit_chk CHECK (
+        status <> 'posted' OR (posted_at IS NOT NULL AND posted_by IS NOT NULL)
+    ),
     CONSTRAINT je_prior_period_chk CHECK (
         NOT prior_period_flag
         OR (original_period_year IS NOT NULL AND original_period_number IS NOT NULL)
@@ -199,7 +208,9 @@ CREATE TABLE IF NOT EXISTS document.journal_line (
     updated_by       uuid,
 
     CONSTRAINT journal_line_pkey PRIMARY KEY (id),
+    CONSTRAINT journal_line_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT journal_line_je_line_uq UNIQUE (tenant_id, journal_entry_id, line_no),
+    CONSTRAINT jl_line_no_pos_chk CHECK (line_no > 0),
     CONSTRAINT jl_txn_nonneg_chk CHECK (transaction_debit >= 0 AND transaction_credit >= 0),
     CONSTRAINT jl_txn_polarity_chk CHECK (
         (transaction_debit > 0 AND transaction_credit = 0)
@@ -216,6 +227,9 @@ CREATE TABLE IF NOT EXISTS document.journal_line (
     ),
     CONSTRAINT jl_fx_rate_chk CHECK (
         transaction_currency = base_currency OR exchange_rate IS NOT NULL
+    ),
+    CONSTRAINT jl_fx_rate_positive_chk CHECK (
+        exchange_rate IS NULL OR exchange_rate > 0
     ),
     CONSTRAINT jl_party_chk CHECK (
         (party_type IS NULL AND party_id IS NULL)

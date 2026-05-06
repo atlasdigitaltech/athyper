@@ -14,12 +14,13 @@
 
 import { forwardRef, useId, useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { ChevronDown, Loader2, X } from "lucide-react";
+import { ChevronDown, ExternalLink, Loader2, X } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 
 export interface ComboboxOption {
   value: string;
   label: string;
+  code?: string;
   description?: string;
 }
 
@@ -36,6 +37,9 @@ export interface AsyncComboboxProps {
   onQueryChange?: (query: string) => void;
   /** Called when the popover opens — use for loadOnOpen pre-fetch patterns. */
   onOpen?: () => void;
+  /** Optional per-row action link, for example opening a referenced entity record. */
+  getOptionHref?: (option: ComboboxOption) => string | null | undefined;
+  optionActionLabel?: string;
   placeholder?: string;
   searchPlaceholder?: string;
   disabled?: boolean;
@@ -55,6 +59,8 @@ export const AsyncCombobox = forwardRef<HTMLDivElement, AsyncComboboxProps>(
       loading = false,
       onQueryChange,
       onOpen,
+      getOptionHref,
+      optionActionLabel = "View record",
       placeholder = "Select…",
       searchPlaceholder = "Type to search…",
       disabled,
@@ -184,22 +190,51 @@ export const AsyncCombobox = forwardRef<HTMLDivElement, AsyncComboboxProps>(
                     {query.length > 0 ? "No results found" : "Type to search"}
                   </p>
                 ) : (
-                  options.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleSelect(option)}
-                      className={cn(
-                        "flex w-full flex-col rounded-sm px-2 py-1.5 text-left hover:bg-accent hover:text-accent-foreground",
-                        value === option.value && "bg-accent/50",
-                      )}
-                    >
-                      <span className="text-sm">{option.label}</span>
-                      {option.description && (
-                        <span className="text-xs text-muted-foreground">{option.description}</span>
-                      )}
-                    </button>
-                  ))
+                  options.map((option) => {
+                    const optionHref = getOptionHref?.(option);
+                    const hasMeta = !!(option.code || option.description);
+
+                    return (
+                      <div
+                        key={option.value}
+                        className={cn(
+                          "group flex w-full items-stretch rounded-sm hover:bg-accent hover:text-accent-foreground",
+                          value === option.value && "bg-accent/50",
+                        )}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleSelect(option)}
+                          className="min-w-0 flex-1 px-2 py-1.5 text-left"
+                        >
+                          <span className="block truncate text-sm">{option.label}</span>
+                          {hasMeta && (
+                            <span className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                              {option.code && (
+                                <span className="shrink-0 font-mono">{option.code}</span>
+                              )}
+                              {option.description && (
+                                <span className="min-w-0 truncate">{option.description}</span>
+                              )}
+                            </span>
+                          )}
+                        </button>
+                        {optionHref && (
+                          <a
+                            href={optionHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title={optionActionLabel}
+                            aria-label={`${optionActionLabel}: ${option.label}`}
+                            className="flex w-8 shrink-0 items-center justify-center rounded-sm text-muted-foreground opacity-70 transition hover:bg-background/70 hover:text-foreground hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <ExternalLink className="size-3.5" />
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </Popover.Content>

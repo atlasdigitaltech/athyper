@@ -277,7 +277,10 @@ FROM (VALUES
             (v_ev,'region',            'region',            'Region/State',    'string', 'text',  'one','standard',false,true,  true,  true, 150,v_su),
             (v_ev,'postal_code',       'postal_code',       'Postal Code',     'string', 'text',  'one','standard',false,true,  true,  true, 160,v_su),
             (v_ev,'country_code',      'country_code',      'Country',         'string', 'text',  'one','standard',false,true,  true,  false,170,v_su),
-            (v_ev,'formatted_address', 'formatted_address', 'Full Address',    'string', 'text',  'one','system',  false,false, false, true, 180,v_su)
+            (v_ev,'formatted_address', 'formatted_address', 'Full Address',    'string', 'text',  'one','system',  false,false, false, true, 180,v_su),
+            (v_ev,'address_email',     'address_email',     'Address Email',   'string', 'email', 'one','standard',false,false, false, true, 190,v_su),
+            (v_ev,'address_phone',     'address_phone',     'Address Phone',   'string', 'phone', 'one','standard',false,false, false, true, 200,v_su),
+            (v_ev,'address_fax',       'address_fax',       'Address Fax',     'string', 'phone', 'one','standard',false,false, false, true, 210,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)

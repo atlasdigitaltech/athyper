@@ -48,6 +48,16 @@ export function resolveFieldRenderer(field: EntityField): ComponentType<FieldRen
     if (byUiType) return byUiType;
   }
 
+  // 1b. Legacy metadata may keep data_type="uuid" while carrying reference
+  // config. Treat those as references so view/edit modes resolve labels.
+  if (
+    field.reference_config?.target_entity ||
+    (typeof field.validation_rules?.["ref_entity"] === "string" && field.validation_rules["ref_entity"])
+  ) {
+    const byReference = registry.get("reference");
+    if (byReference) return byReference;
+  }
+
   // 2. Try data_type
   const byDataType = registry.get(field.data_type);
   if (byDataType) return byDataType;

@@ -103,6 +103,7 @@ const MODULE_CREATE_ACTIONS: Partial<Record<string, CreateAction[]>> = {
   ACC: [
     { label: "New Journal Entry", href: "/app/journal/new", moduleCode: "ACC", keywords: ["journal", "entry", "je", "posting", "debit", "credit"] },
     { label: "New Purchase Invoice", href: "/app/purchase_invoice/new", moduleCode: "ACC", keywords: ["purchase", "invoice", "ap", "payable", "supplier invoice"] },
+    { label: "New Business Partner", href: "/app/business_partner/new", moduleCode: "ACC", keywords: ["business partner", "bp", "customer", "supplier", "partner"] },
   ],
   AP: [
     { label: "New Purchase Invoice", href: "/app/purchase_invoice/new", moduleCode: "AP", keywords: ["purchase", "invoice", "ap", "payable", "vendor", "supplier invoice", "pi"] },
@@ -118,9 +119,10 @@ const MODULE_CREATE_ACTIONS: Partial<Record<string, CreateAction[]>> = {
   BUY: [
     { label: "New Requisition", href: "/app/requisition/new", moduleCode: "BUY", keywords: ["pr", "requisition", "request"] },
     { label: "New Purchase Order", href: "/app/purchase_order/new", moduleCode: "BUY", keywords: ["po", "purchase", "order", "buy"] },
+    { label: "New Business Partner", href: "/app/business_partner/new?mode=supplier", moduleCode: "BUY", keywords: ["supplier", "vendor", "business partner", "bp"] },
   ],
   SRM: [
-    { label: "New Supplier", href: "/app/supplier/new", moduleCode: "SRM", keywords: ["supplier", "vendor", "srm", "new supplier"] },
+    { label: "New Supplier BP", href: "/app/business_partner/new?mode=supplier", moduleCode: "SRM", keywords: ["supplier", "vendor", "srm", "new supplier", "business partner"] },
     { label: "New Supplier Evaluation", href: "/app/supplier_eval/new", moduleCode: "SRM", keywords: ["evaluation", "assess", "qualify", "approve supplier"] },
   ],
   SOURCE: [
@@ -158,6 +160,7 @@ interface NavPage {
 
 const MODULE_PAGES_NAV: Partial<Record<string, NavPage[]>> = {
   ACC: [
+    { label: "Business Partners", href: "/app/business_partner", keywords: ["business partner", "bp", "supplier", "customer", "master"] },
     { label: "GL Workbench", href: "/finance/gl", keywords: ["gl", "general ledger", "workbench", "journals", "ledger entries"] },
     { label: "Chart of Accounts", href: "/finance/coa", keywords: ["coa", "chart", "accounts", "account tree", "account structure"] },
     { label: "Trial Balance", href: "/finance/views/trial-balance", keywords: ["trial balance", "tb", "debit credit summary"] },

@@ -1,20 +1,32 @@
--- 100_master/005_supplier_tax_profile.sql
--- Purpose: Register master.supplier_tax_profile as supplier_tax_profile entity.
+-- 100_master/005_business_partner_tax_profile.sql
+-- Purpose: Register master.business_partner_tax_profile as business_partner_tax_profile entity.
 -- Idempotent: WHERE NOT EXISTS / ON CONFLICT DO NOTHING
 -- Field naming rules:
 --   ef_id_suffix_chk  : name ending _id → must be uuid/reference/uuid[]; use _number for tax IDs
 --   ef_bool_naming_chk: booleans must start with is_/has_/can_/allow_/enable_
 
--- ── 0. Normalize prior seeding: vendor_tax_profile → supplier_tax_profile → party_tax_profile ──
+-- ── 0. Normalize prior vendor/supplier seeding to BP ownership ───────────────
 UPDATE control.entity
-SET name = 'supplier_tax_profile', entity_code = 'supplier_tax_profile', entity_short = 'STP'
-WHERE table_schema = 'master' AND table_name IN ('supplier_tax_profile','party_tax_profile')
-  AND entity_code = 'vendor_tax_profile' AND tenant_id IS NULL;
+SET name = 'business_partner_tax_profile',
+    entity_code = 'business_partner_tax_profile',
+    entity_short = 'BPTP',
+    table_name = 'party_tax_profile',
+    feature_flags = COALESCE(feature_flags, '{}'::jsonb)
+        || '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner","pii_bearing":true}'::jsonb
+WHERE table_schema = 'master'
+  AND table_name IN ('supplier_tax_profile','business_partner_tax_profile','party_tax_profile')
+  AND entity_code IN ('vendor_tax_profile', 'supplier_tax_profile')
+  AND tenant_id IS NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM control.entity existing
+      WHERE existing.entity_code = 'business_partner_tax_profile'
+        AND existing.tenant_id IS NULL
+  );
 
 UPDATE control.entity
 SET table_name = 'party_tax_profile'
-WHERE table_schema = 'master' AND table_name = 'supplier_tax_profile'
-  AND entity_code = 'supplier_tax_profile' AND tenant_id IS NULL;
+WHERE table_schema = 'master' AND table_name = 'business_partner_tax_profile'
+  AND entity_code = 'business_partner_tax_profile' AND tenant_id IS NULL;
 
 -- ── 1. control.entity ────────────────────────────────────────────────────────
 INSERT INTO control.entity (
@@ -27,20 +39,26 @@ INSERT INTO control.entity (
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
-    'supplier_tax_profile', 'STP', 'supplier_tax_profile',
+    'business_partner_tax_profile', 'BPTP', 'business_partner_tax_profile',
     'MASTER', 'system', 'ent', 'table',
     'standard', 'restricted', 'controlled',
     'master', 'party_tax_profile',
-    'Tax Profile', 'Tax Profiles', 'receipt-tax', 'orange',
+    'Business Partner Tax Profile', 'Business Partner Tax Profiles', 'receipt-tax', 'orange',
     false,
     '{}'::jsonb,
-    '{"parent_entity":"supplier","parent_fk":"owner_id","parent_scope":"owner_type=supplier","pii_bearing":true}'::jsonb,
+    '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner","pii_bearing":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
     WHERE table_schema = 'master' AND table_name = 'party_tax_profile'
-      AND entity_code = 'supplier_tax_profile' AND tenant_id IS NULL
+      AND entity_code = 'business_partner_tax_profile' AND tenant_id IS NULL
 );
+
+UPDATE control.entity
+SET feature_flags = COALESCE(feature_flags, '{}'::jsonb)
+    || '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner","pii_bearing":true}'::jsonb
+WHERE entity_code = 'business_partner_tax_profile'
+  AND tenant_id IS NULL;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
@@ -48,7 +66,7 @@ INSERT INTO control.entity_version (
 SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
        '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
-WHERE  e.entity_code = 'supplier_tax_profile' AND e.tenant_id IS NULL
+WHERE  e.entity_code = 'business_partner_tax_profile' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
 
 -- ── 3. control.entity_field ──────────────────────────────────────────────────
@@ -77,25 +95,36 @@ CROSS JOIN (VALUES
     ('regional_tax_number',       'regional_tax_id',          'Regional Tax ID',          'text',            'zero_or_one',  NULL::text,                                 false, false, NULL::jsonb,                              80),
     ('vat_number',                'vat_id',                   'VAT ID',                   'text',            'zero_or_one',  NULL::text,                                 false, true,  NULL::jsonb,                              90),
     ('is_vat_registered',         'vat_registered',           'VAT Registered',           'boolean',         'one',          NULL::text,                                 true,  true,  NULL::jsonb,                             100),
+    ('vat_registration_doc_id',    'vat_registration_doc_id',  'VAT Registration Document','uuid',            'zero_or_one',  NULL::text,                                 false, false, NULL::jsonb,                             105),
     ('has_tax_clearance',         'has_tax_clearance',        'Tax Clearance',            'boolean',         'one',          NULL::text,                                 true,  true,  NULL::jsonb,                             110),
     ('tax_clearance_number',      'tax_clearance_number',     'Tax Clearance Number',     'text',            'zero_or_one',  NULL::text,                                 false, false, NULL::jsonb,                             120),
+    ('tax_clearance_doc_id',       'tax_clearance_doc_id',     'Tax Clearance Document',   'uuid',            'zero_or_one',  NULL::text,                                 false, false, NULL::jsonb,                             125),
     ('tax_clearance_expiry_date', 'tax_clearance_expiry_date','Clearance Expiry Date',    'date',            'zero_or_one',  NULL::text,                                 false, true,  NULL::jsonb,                             130),
     ('global_location_number',    'global_location_number',   'Global Location Number',   'text',            'zero_or_one',  NULL::text,                                 false, false, '{"pattern":"^\\d{13}$"}'::jsonb,        140),
-    ('status',                    'status',                   'Status',                   'lifecycle_state', 'one',          NULL::text,                                 true,  true,  NULL::jsonb,                             150)
+    ('penalty_information',        'penalty_information',      'Penalty Information',      'text',            'zero_or_one',  NULL::text,                                 false, false, NULL::jsonb,                             160),
+    ('discount_information',       'discount_information',     'Discount Information',     'text',            'zero_or_one',  NULL::text,                                 false, false, NULL::jsonb,                             170),
+    ('status',                    'status',                   'Status',                   'lifecycle_state', 'one',          NULL::text,                                 true,  true,  NULL::jsonb,                             200)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
        is_required, is_filterable, validation, sort_order)
-WHERE e.entity_code = 'supplier_tax_profile' AND e.table_name = 'party_tax_profile'
+WHERE e.entity_code = 'business_partner_tax_profile' AND e.table_name = 'party_tax_profile'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
 -- ── 4. display_config + natural_key_fields ───────────────────────────────────
 UPDATE control.entity
-SET display_config        = jsonb_build_object(
+SET display_config        = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
         'detail_renderer',    'master',
-        'list_columns',       '["country_code","tax_classification","is_vat_registered","has_tax_clearance","status"]'::jsonb,
+        'list_columns',       '["country_code","tax_classification","taxation_type","vat_number","tax_clearance_expiry_date","status"]'::jsonb,
+        'drawer_groups',      jsonb_build_array(
+            jsonb_build_object('label','Tax Position',      'fields',jsonb_build_array('country_code','tax_classification','taxation_type','global_location_number')),
+            jsonb_build_object('label','Tax Identifiers',   'fields',jsonb_build_array('tax_number','state_tax_number','sales_tax_number','service_tax_number','regional_tax_number','vat_number')),
+            jsonb_build_object('label','VAT / GST',         'fields',jsonb_build_array('is_vat_registered','vat_number','vat_registration_doc_id')),
+            jsonb_build_object('label','Tax Clearance',     'fields',jsonb_build_array('has_tax_clearance','tax_clearance_number','tax_clearance_expiry_date','tax_clearance_doc_id')),
+            jsonb_build_object('label','Notes',             'fields',jsonb_build_array('penalty_information','discount_information')),
+            jsonb_build_object('label','Technical',         'collapsed',true, 'fields',jsonb_build_array('created_at','updated_at','status_changed_at','metadata'))
+        ),
         'default_sort_field', 'country_code',
         'default_sort_order', 'asc'
     ),
     natural_key_fields    = ARRAY['country_code']
-WHERE entity_code = 'supplier_tax_profile' AND tenant_id IS NULL
-  AND display_config = '{}'::jsonb;
+WHERE entity_code = 'business_partner_tax_profile' AND tenant_id IS NULL;

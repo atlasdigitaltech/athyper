@@ -222,7 +222,7 @@ function DetailLine({ dl }: { dl: DiffLine }) {
 
 // ── Audit panel ───────────────────────────────────────────────────────────────
 
-function AuditPanel({ entry }: { entry: ActivityEntry }) {
+function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAuditLog?: (eventId: string) => void }) {
   const d          = entry.detail as Record<string, unknown> | null;
   const before     = d?.before as Record<string, unknown> | null;
   const after      = d?.after  as Record<string, unknown> | null;
@@ -335,6 +335,7 @@ function AuditPanel({ entry }: { entry: ActivityEntry }) {
         </button>
         <button
           type="button"
+          onClick={() => onOpenAuditLog?.(entry.id)}
           className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-[11px] text-foreground transition-colors hover:bg-muted"
         >
           <ExternalLink className="size-3" />Open in audit log
@@ -361,11 +362,13 @@ function ActivityRow({
   isLast,
   isExpanded,
   onToggleExpand,
+  onOpenAuditLog,
 }: {
-  entry:           ActivityEntry;
-  isLast:          boolean;
-  isExpanded:      boolean;
-  onToggleExpand:  () => void;
+  entry:            ActivityEntry;
+  isLast:           boolean;
+  isExpanded:       boolean;
+  onToggleExpand:   () => void;
+  onOpenAuditLog?:  (eventId: string) => void;
 }) {
   const time   = formatTime(entry.created_at);
   const actor  = entry.actor_name ?? "System";
@@ -423,7 +426,7 @@ function ActivityRow({
 
       {isExpanded && (
         <div className={cn(!isLast && "border-b border-border")}>
-          <AuditPanel entry={entry} />
+          <AuditPanel entry={entry} onOpenAuditLog={onOpenAuditLog} />
         </div>
       )}
     </>
@@ -433,8 +436,9 @@ function ActivityRow({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export interface ActivityFeedProps {
-  entries?:   ActivityEntry[];
-  className?: string;
+  entries?:         ActivityEntry[];
+  className?:       string;
+  onOpenAuditLog?:  (eventId: string) => void;
 }
 
 const CHIPS: Array<{ key: FilterMode; label: string }> = [
@@ -451,7 +455,7 @@ const SORT_OPTIONS: Array<{ key: SortMode; label: string }> = [
   { key: "oldest", label: "Oldest first" },
 ];
 
-export function ActivityFeed({ entries = [], className }: ActivityFeedProps) {
+export function ActivityFeed({ entries = [], className, onOpenAuditLog }: ActivityFeedProps) {
   const [search,      setSearch]      = useState("");
   const [filter,      setFilter]      = useState<FilterMode>("all");
   const [sort,        setSort]        = useState<SortMode>("newest");
@@ -642,6 +646,7 @@ export function ActivityFeed({ entries = [], className }: ActivityFeedProps) {
                 isLast={idx === group.entries.length - 1}
                 isExpanded={expandedIds.has(entry.id)}
                 onToggleExpand={() => toggleExpand(entry.id)}
+                onOpenAuditLog={onOpenAuditLog}
               />
             ))}
           </div>

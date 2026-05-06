@@ -929,6 +929,8 @@ function PreviewModal({ att, onClose }: { att: Attachment; onClose: () => void }
 export interface AttachmentsPanelProps {
   entityCode: string;
   recordId:   string;
+  /** UUID of the record — required for master entities whose recordId is a string code. */
+  recordUuid?: string;
 }
 
 // ── File row ──────────────────────────────────────────────────────────────────
@@ -1258,7 +1260,7 @@ function SummaryHeader({ attachments }: { attachments: Attachment[] }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export function AttachmentsPanel({ entityCode, recordId }: AttachmentsPanelProps) {
+export function AttachmentsPanel({ entityCode, recordId, recordUuid }: AttachmentsPanelProps) {
   const queryClient    = useQueryClient();
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
@@ -1300,8 +1302,9 @@ export function AttachmentsPanel({ entityCode, recordId }: AttachmentsPanelProps
   const [sort,     setSort]     = useState<SortOption>("date-desc");
   const [category, setCategory] = useState<FileCategory>("all");
 
-  const apiBase    = `/api/relay/api/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/attachments`;
-  const folderBase = `/api/relay/api/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/folders`;
+  const apiId      = recordUuid ?? recordId;
+  const apiBase    = `/api/relay/api/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(apiId)}/attachments`;
+  const folderBase = `/api/relay/api/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(apiId)}/folders`;
 
   // ── Cleanup ────────────────────────────────────────────────────────────────
 
@@ -1312,7 +1315,7 @@ export function AttachmentsPanel({ entityCode, recordId }: AttachmentsPanelProps
   // ── Queries ────────────────────────────────────────────────────────────────
 
   const { data: attachments = [], isLoading: loadingFiles } = useQuery<Attachment[]>({
-    queryKey: ["attachments", entityCode, recordId],
+    queryKey: ["attachments", entityCode, apiId],
     queryFn:  async ({ signal }) => {
       const res = await fetch(apiBase, { signal });
       return res.ok ? (res.json() as Promise<Attachment[]>) : [];
@@ -1321,7 +1324,7 @@ export function AttachmentsPanel({ entityCode, recordId }: AttachmentsPanelProps
   });
 
   const { data: folders = [], isLoading: loadingFolders } = useQuery<AttachmentFolder[]>({
-    queryKey: ["attachment-folders", entityCode, recordId],
+    queryKey: ["attachment-folders", entityCode, apiId],
     queryFn:  async ({ signal }) => {
       const res = await fetch(folderBase, { signal });
       return res.ok ? (res.json() as Promise<AttachmentFolder[]>) : [];
@@ -1330,9 +1333,9 @@ export function AttachmentsPanel({ entityCode, recordId }: AttachmentsPanelProps
   });
 
   const refresh = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["attachments",        entityCode, recordId] });
-    void queryClient.invalidateQueries({ queryKey: ["attachment-folders", entityCode, recordId] });
-  }, [queryClient, entityCode, recordId]);
+    void queryClient.invalidateQueries({ queryKey: ["attachments",        entityCode, apiId] });
+    void queryClient.invalidateQueries({ queryKey: ["attachment-folders", entityCode, apiId] });
+  }, [queryClient, entityCode, apiId]);
 
   // ── Selection helpers ──────────────────────────────────────────────────────
 

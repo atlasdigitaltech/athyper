@@ -33,5 +33,12 @@ export function EventsPanel({ entityCode, recordId, recordUuid }: EventsPanelPro
     );
   }
 
-  return <ActivityFeed entries={data?.data ?? []} />;
+  return (
+    <ActivityFeed
+      entries={data?.data ?? []}
+      onOpenAuditLog={(eventId) => {
+        window.open(`/audit/events?entityType=${encodeURIComponent(entityCode)}&eventId=${encodeURIComponent(eventId)}`, "_blank");
+      }}
+    />
+  );
 }

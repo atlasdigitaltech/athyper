@@ -121,10 +121,22 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'customer_id',     'customer_id',     'Customer',           'uuid','reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'company_code_id', 'company_code_id', 'Company Code',       'uuid','reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'ar_account_id',   'ar_gl_account_id','AR Account',         'uuid','reference','one','standard',false,true,  false, false,130,v_su),
-            (v_ev,'credit_limit_local','credit_limit',  'Credit Limit (Local)','money','money','one','standard',false,true,true,false,140,v_su)
+            (v_ev,'customer_id',                   'customer_id',                   'Customer',            'uuid',   'reference','one','standard',true, true,  false, false,110,v_su),
+            (v_ev,'company_code_id',               'company_code_id',               'Company Code',        'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
+            (v_ev,'credit_limit',                  'credit_limit',                  'Credit Limit',        'money',  'money',    'one','standard',false,true,  true,  false,130,v_su),
+            (v_ev,'credit_limit_currency_code',    'credit_limit_currency_code',    'Credit Currency',     'string', 'text',     'one','standard',false,true,  false, false,140,v_su),
+            (v_ev,'credit_rating',                 'credit_rating',                 'Credit Rating',       'string', 'text',     'one','standard',false,true,  true,  false,150,v_su),
+            (v_ev,'is_blocked',                    'is_blocked',                    'Blocked',             'boolean','toggle',   'one','standard',false,true,  true,  false,160,v_su),
+            (v_ev,'block_reason',                  'block_reason',                  'Block Reason',        'string', 'text',     'one','standard',false,false, false, false,170,v_su),
+            (v_ev,'default_accounting_profile_id', 'default_accounting_profile_id', 'Accounting Profile',  'uuid',   'reference','one','standard',false,true,  false, false,180,v_su),
+            (v_ev,'tax_group_id',                  'tax_group_id',                  'Tax Group',           'uuid',   'reference','one','standard',false,true,  false, false,190,v_su),
+            (v_ev,'default_receipt_method_id',     'default_receipt_method_id',     'Receipt Method',      'uuid',   'reference','one','standard',false,true,  false, false,200,v_su),
+            (v_ev,'default_dimension_set_id',      'default_dimension_set_id',      'Dimension Set',       'uuid',   'reference','one','standard',false,true,  false, false,210,v_su),
+            (v_ev,'payment_term_id',               'payment_term_id',               'Payment Terms',       'uuid',   'reference','one','standard',false,true,  false, false,220,v_su),
+            (v_ev,'currency_code',                 'currency_code',                 'Currency',            'string', 'text',     'one','standard',false,true,  false, false,230,v_su),
+            (v_ev,'statement_cycle_code',          'statement_cycle_code',          'Statement Cycle',     'string', 'text',     'one','standard',false,true,  false, false,240,v_su),
+            (v_ev,'dunning_policy_id',             'dunning_policy_id',             'Dunning Policy',      'uuid',   'reference','one','standard',false,true,  false, false,250,v_su),
+            (v_ev,'status',                        'status',                        'Status',              'lifecycle_state','select','one','standard',true,true,true,false,260,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -146,10 +158,20 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'supplier_id',     'supplier_id',      'Supplier',       'uuid','reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'company_code_id', 'company_code_id',  'Company Code',   'uuid','reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'ap_account_id',   'ap_gl_account_id', 'AP Account',     'uuid','reference','one','standard',false,true,  false, false,130,v_su),
-            (v_ev,'payment_method_id','payment_method_id','Payment Method', 'uuid','reference','one','standard',false,true, false, false,140,v_su)
+            (v_ev,'supplier_id',                      'supplier_id',                      'Supplier',             'uuid',   'reference','one','standard',true, true,  false, false,110,v_su),
+            (v_ev,'company_code_id',                  'company_code_id',                  'Company Code',         'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
+            (v_ev,'is_blocked',                       'is_blocked',                       'Blocked',              'boolean','toggle',   'one','standard',false,true,  true,  false,130,v_su),
+            (v_ev,'block_reason',                     'block_reason',                     'Block Reason',         'string', 'text',     'one','standard',false,false, false, false,140,v_su),
+            (v_ev,'currency_code',                    'currency_code',                    'Currency',             'string', 'text',     'one','standard',false,true,  false, false,150,v_su),
+            (v_ev,'default_accounting_profile_id',    'default_accounting_profile_id',    'Accounting Profile',   'uuid',   'reference','one','standard',false,true,  false, false,160,v_su),
+            (v_ev,'payment_term_id',                  'payment_term_id',                  'Payment Terms',        'uuid',   'reference','one','standard',false,true,  false, false,170,v_su),
+            (v_ev,'payment_method_id',                'payment_method_id',                'Payment Method',       'uuid',   'reference','one','standard',false,true,  false, false,180,v_su),
+            (v_ev,'preferred_remittance_bank_link_id','preferred_remittance_bank_link_id','Remittance Bank',      'uuid',   'reference','one','standard',false,true,  false, false,190,v_su),
+            (v_ev,'tax_group_id',                     'tax_group_id',                     'Tax Group',            'uuid',   'reference','one','standard',false,true,  false, false,200,v_su),
+            (v_ev,'default_wht_tax_group_id',         'default_wht_tax_group_id',         'Default WHT Group',    'uuid',   'reference','one','standard',false,true,  false, false,210,v_su),
+            (v_ev,'default_dimension_set_id',         'default_dimension_set_id',         'Dimension Set',        'uuid',   'reference','one','standard',false,true,  false, false,220,v_su),
+            (v_ev,'invoice_hold_policy_id',           'invoice_hold_policy_id',           'Invoice Hold Policy',  'uuid',   'reference','one','standard',false,true,  false, false,230,v_su),
+            (v_ev,'status',                           'status',                           'Status',               'lifecycle_state','select','one','standard',true,true,true,false,240,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)

@@ -46,7 +46,12 @@ export function EntityDetailPage({
   const { data: record,     isLoading: recordLoading } = useEntityDetail(entityCode, recordId);
   const { data: operations }                            = useEntityOperations(entityCode);
 
-  const canEdit = operations === undefined
+  // canEdit: false when the entity is flagged is_readonly (managed via dedicated intake flows).
+  // Otherwise: true when no operations are configured (no metadata-level restriction),
+  // or when an enabled edit/update NAVIGATE op exists.
+  const isEntityReadOnly = entity?.feature_flags?.is_readonly === true;
+  const canEdit = !isEntityReadOnly && (
+    !operations || operations.length === 0
     || operations.some(
         op => op.is_enabled &&
               (
@@ -59,7 +64,8 @@ export function EntityDetailPage({
                   )
                 )
               ),
-      );
+      )
+  );
   const effectiveEditMode = editMode && canEdit;
 
   if (metaLoading || recordLoading || !entity) {

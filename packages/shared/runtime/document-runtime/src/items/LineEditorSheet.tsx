@@ -106,6 +106,11 @@ function blankRow(cc: string, nextNo: number): SplitRow {
 
 function uid(): string { return Math.random().toString(36).slice(2, 10); }
 function lineUrl(e: string, r: string, l: string) { return `/api/records/${encodeURIComponent(e)}/${encodeURIComponent(r)}/lines/${encodeURIComponent(l)}`; }
+function apLineUrl(e: string, r: string, l: string) {
+  return e.replace(/-/g, "_") === "purchase_invoice"
+    ? `/api/finance/ap/invoices/${encodeURIComponent(r)}/lines/${encodeURIComponent(l)}`
+    : lineUrl(e, r, l);
+}
 function distUrl(e: string, r: string, l: string, d?: string) { const base = `${lineUrl(e, r, l)}/distributions`; return d ? `${base}/${encodeURIComponent(d)}` : base; }
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
@@ -461,22 +466,47 @@ function GlAccountSearch({ value, onChange, companyCodeId, className }: {
   );
 }
 
-// ── Tax type search combobox ──────────────────────────────────────────────────
+// ── Tax group search combobox ─────────────────────────────────────────────────
 // categoryFilter: "INDIRECT" | "SURCHARGE" | "WITHHOLDING" | "CUSTOMS_DUTY"
 // Pass undefined to search all categories.
 
-function TaxTypeSearch({ value, onChange, categoryFilter, placeholder }: {
-  value: string; onChange: (code: string) => void;
+interface TaxGroupOption {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  rate_value?: string | null;
+  tax_type_code?: string | null;
+}
+
+function TaxGroupSearch({ valueId, displayValue, onChange, categoryFilter, placeholder }: {
+  valueId: string; displayValue: string;
+  onChange: (id: string, code: string, row?: TaxGroupOption | null) => void;
   categoryFilter?: string; placeholder?: string;
 }) {
-  const [q,       setQ]       = useState(value);
-  const [results, setResults] = useState<{ id: string; code: string; name: string; category: string }[]>([]);
+  const [q,       setQ]       = useState(displayValue);
+  const [results, setResults] = useState<TaxGroupOption[]>([]);
   const [open,    setOpen]    = useState(false);
   const [busy,    setBusy]    = useState(false);
   const ref   = useRef<HTMLDivElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setQ(value); }, [value]);
+  useEffect(() => { setQ(displayValue); }, [displayValue]);
+  useEffect(() => {
+    if (!valueId || displayValue) return;
+    let cancelled = false;
+    const params = new URLSearchParams({ id: valueId, limit: "1" });
+    if (categoryFilter) params.set("category", categoryFilter);
+    void fetch(`/api/relay/api/finance/tax-groups/search?${params.toString()}`)
+      .then((r) => r.ok ? r.json() as Promise<{ data?: TaxGroupOption[] }> : null)
+      .then((d) => {
+        if (cancelled) return;
+        const row = d?.data?.[0];
+        if (row) setQ(row.code);
+      })
+      .catch(() => { /* ignore label resolution failures */ });
+    return () => { cancelled = true; };
+  }, [valueId, displayValue, categoryFilter]);
   useEffect(() => {
     if (!open) return;
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
@@ -484,35 +514,36 @@ function TaxTypeSearch({ value, onChange, categoryFilter, placeholder }: {
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
-  function search(v: string) {
+  function search(v: string, clearSelection = true) {
     setQ(v);
+    if (clearSelection) onChange("", "", null);
     if (timer.current) clearTimeout(timer.current);
     setOpen(true);
     timer.current = setTimeout(async () => {
       setBusy(true);
       try {
-        const params = new URLSearchParams({ page_size: "10" });
+        const params = new URLSearchParams({ limit: "10" });
         if (v.trim()) params.set("q", v.trim());
-        if (categoryFilter) params.set("filters", JSON.stringify({ category: categoryFilter }));
-        const r = await fetch(`/api/relay/api/records/tax_type?${params.toString()}`);
+        if (categoryFilter) params.set("category", categoryFilter);
+        const r = await fetch(`/api/relay/api/finance/tax-groups/search?${params.toString()}`);
         if (r.ok) {
-          const d = await r.json() as { data?: { id: string; code: string; name: string; category: string }[] };
+          const d = await r.json() as { data?: TaxGroupOption[] };
           setResults(d.data ?? []);
         }
       } finally { setBusy(false); }
     }, 250);
   }
 
-  function pick(row: { code: string }) {
+  function pick(row: TaxGroupOption) {
     setQ(row.code); setResults([]); setOpen(false);
-    onChange(row.code);
+    onChange(row.id, row.code, row);
   }
 
   return (
     <div className="relative" ref={ref}>
       <input value={q}
         onChange={(e) => search(e.target.value)}
-        onFocus={() => { if (!open) search(q); }}
+        onFocus={() => { if (!open) search(q, false); }}
         placeholder={placeholder}
         className="w-full h-9 px-3 text-sm font-mono border border-border/60 rounded-lg bg-transparent focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-transparent transition-colors placeholder:text-muted-foreground/40"
       />
@@ -527,6 +558,9 @@ function TaxTypeSearch({ value, onChange, categoryFilter, placeholder }: {
                       >
                         <span className="font-mono font-medium text-foreground shrink-0">{row.code}</span>
                         <span className="text-muted-foreground truncate">{row.name}</span>
+                        {row.rate_value != null && (
+                          <span className="ml-auto text-muted-foreground/70 shrink-0">{Number(row.rate_value).toFixed(2)}%</span>
+                        )}
                       </button>
                     ))}
                   </div>}
@@ -1217,15 +1251,24 @@ function TaxTab({ line, currencyCode, entityCode, recordId, onSaved }: {
   line: DocumentLine; currencyCode: string; entityCode: string; recordId: string; onSaved?: (patch: Partial<DocumentLine>) => void;
 }) {
   const netAmt   = (Number(line.quantity) || 0) * (Number(line.unit_price) || 0) || Number(line.line_amount) || 0;
+  const lineAny = line as unknown as Record<string, unknown>;
   const lineData = (line.data as Record<string, unknown> | null) ?? {};
-  const [taxCode, setTaxCode] = useState(line.tax_code               ?? "");
+  const [taxGroupId, setTaxGroupId] = useState(String(lineAny.tax_group_id ?? ""));
+  const [taxCode, setTaxCode] = useState(String(lineAny.tax_group_code ?? lineData.tax_group_code ?? line.tax_code ?? ""));
   const [taxAmt,  setTaxAmt]  = useState(line.tax_amount             != null ? String(line.tax_amount)             : "");
-  const [whtCode, setWhtCode] = useState(String(lineData.wht_code    ?? ""));
+  const [whtGroupId, setWhtGroupId] = useState(String(lineAny.withholding_tax_group_id ?? ""));
+  const [whtCode, setWhtCode] = useState(String(lineAny.withholding_tax_group_code ?? lineData.wht_group_code ?? lineData.wht_code ?? ""));
   const [whtAmt,  setWhtAmt]  = useState(line.withholding_tax_amount != null ? String(line.withholding_tax_amount) : "");
   const [saving,  setSaving]  = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   function mark<T>(setter: (v: T) => void) { return (v: T) => { setter(v); setDirty(true); }; }
+  function selectTaxGroup(id: string, code: string) {
+    setTaxGroupId(id); setTaxCode(code); setDirty(true);
+  }
+  function selectWhtGroup(id: string, code: string) {
+    setWhtGroupId(id); setWhtCode(code); setDirty(true);
+  }
   const taxAmtNum = Number(taxAmt) || 0; const whtAmtNum = Number(whtAmt) || 0;
   const waterfallRows = useMemo((): WaterfallRow[] => {
     if (taxAmtNum === 0 && whtAmtNum === 0) return [];
@@ -1239,11 +1282,29 @@ function TaxTab({ line, currencyCode, entityCode, recordId, onSaved }: {
     setSaving(true);
     setSaveError(null);
     try {
-      const patch: Partial<DocumentLine> = { tax_code: taxCode || null, tax_amount: taxAmtNum > 0 ? taxAmtNum : null, withholding_tax_amount: whtAmtNum > 0 ? whtAmtNum : null };
-      const res = await relayMutate(lineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify(patch) });
+      const patch: Record<string, unknown> = {
+        tax_group_id: taxGroupId || null,
+        withholding_tax_group_id: whtGroupId || null,
+        tax_code: taxCode || null,
+        tax_amount: taxAmtNum > 0 ? taxAmtNum : null,
+        withholding_tax_amount: whtAmtNum > 0 ? whtAmtNum : null,
+      };
+      const res = await relayMutate(apLineUrl(entityCode, recordId, line.id), { method: "PATCH", body: JSON.stringify(patch) });
       if (res.ok) {
+        const body = await res.json().catch(() => null) as unknown;
+        const bodyObj = body && typeof body === "object" ? body as Record<string, unknown> : null;
+        const lineObj = bodyObj?.line && typeof bodyObj.line === "object" ? bodyObj.line as Record<string, unknown> : null;
+        const updated = lineObj ?? bodyObj;
+        const nextTax = updated && updated["tax_amount"] != null ? Number(updated["tax_amount"]) : taxAmtNum;
+        const nextWht = updated && updated["withholding_tax_amount"] != null ? Number(updated["withholding_tax_amount"]) : whtAmtNum;
+        setTaxAmt(nextTax ? String(nextTax) : "");
+        setWhtAmt(nextWht ? String(nextWht) : "");
         setDirty(false);
-        onSaved?.(patch);
+        onSaved?.({
+          tax_code: taxCode || null,
+          tax_amount: nextTax || null,
+          withholding_tax_amount: nextWht || null,
+        });
       } else {
         const body = await res.json().catch(() => ({})) as { error?: string };
         setSaveError(body.error ?? `Save failed (${res.status})`);
@@ -1258,7 +1319,7 @@ function TaxTab({ line, currencyCode, entityCode, recordId, onSaved }: {
         <div className="px-3 py-2 bg-muted/30 border-b border-border/40"><span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Output tax</span></div>
         <div className="px-3 py-3 grid grid-cols-2 gap-3">
           <Field label="Tax code">
-            <TaxTypeSearch value={taxCode} categoryFilter="INDIRECT" placeholder="Search tax code…" onChange={mark(setTaxCode)} />
+            <TaxGroupSearch valueId={taxGroupId} displayValue={taxCode} categoryFilter="INDIRECT" placeholder="Search tax code…" onChange={selectTaxGroup} />
           </Field>
           <Field label="Tax amount"><Input type="number" value={taxAmt} onChange={mark(setTaxAmt)} placeholder="0.00" className="text-right" /></Field>
         </div>
@@ -1267,7 +1328,7 @@ function TaxTab({ line, currencyCode, entityCode, recordId, onSaved }: {
         <div className="px-3 py-2 bg-muted/30 border-b border-border/40"><span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Withholding tax</span></div>
         <div className="px-3 py-3 grid grid-cols-2 gap-3">
           <Field label="WHT code">
-            <TaxTypeSearch value={whtCode} categoryFilter="WITHHOLDING" placeholder="Search WHT code…" onChange={mark(setWhtCode)} />
+            <TaxGroupSearch valueId={whtGroupId} displayValue={whtCode} categoryFilter="WITHHOLDING" placeholder="Search WHT code…" onChange={selectWhtGroup} />
           </Field>
           <Field label="WHT amount"><Input type="number" value={whtAmt} onChange={mark(setWhtAmt)} placeholder="0.00" className="text-right" /></Field>
         </div>

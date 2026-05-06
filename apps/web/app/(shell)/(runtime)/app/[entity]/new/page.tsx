@@ -21,13 +21,20 @@
  */
 
 import { use, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { EntityForm } from "@athyper/entity-runtime/form";
+import {
+  EntityIntakeLauncher,
+  normalizeModes,
+  type EntityIntakeMode,
+} from "@athyper/entity-runtime/intake";
 import { useCreateEntity, useEntityFlow, useCompiledEntity } from "@athyper/query";
 import { FlowWizard, FlowWizardSkeleton } from "@athyper/document-runtime/intake";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
+import EntityModeFlow from "../../_components/EntityModeFlow";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
+import type { EntityCreateRedirect } from "@athyper/api-contracts/metadata";
 
 export default function AppEntityNewRoute({
   params,
@@ -35,9 +42,12 @@ export default function AppEntityNewRoute({
   params: Promise<{ entity: string }>;
 }) {
   const { entity } = use(params);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const createMutation = useCreateEntity(entity);
+  const requestedMode = searchParams.get("mode") ?? searchParams.get("role");
+  const businessPartnerId = searchParams.get("bp");
 
   // ── Source-document pre-population ─────────────────────────────────────────
   // ?invoice=<uuid> — when navigating from an AP invoice's "Propose Payment" action.
@@ -62,15 +72,22 @@ export default function AppEntityNewRoute({
   // Build initialValues from the source document when present.
   // Unrecognised keys are silently ignored by the flow engine.
   const initialValues = useMemo<Record<string, unknown> | undefined>(() => {
-    if (!sourceInvoice) return undefined;
-    return {
-      supplier_id:       sourceInvoice["supplier_id"]                                  ?? undefined,
-      currency_code:     sourceInvoice["currency_code"]                                ?? undefined,
-      payment_amount:    sourceInvoice["payable_amount"] ?? sourceInvoice["total_amount"] ?? undefined,
-      payment_direction: "OUTBOUND",
-      source_invoice_id: sourceInvoiceId,
-    };
-  }, [sourceInvoice, sourceInvoiceId]);
+    const values: Record<string, unknown> = {};
+
+    if (sourceInvoice) {
+      values.supplier_id = sourceInvoice["supplier_id"] ?? undefined;
+      values.currency_code = sourceInvoice["currency_code"] ?? undefined;
+      values.payment_amount = sourceInvoice["payable_amount"] ?? sourceInvoice["total_amount"] ?? undefined;
+      values.payment_direction = "OUTBOUND";
+      values.source_invoice_id = sourceInvoiceId;
+    }
+
+    if (requestedMode === "extension" && businessPartnerId) {
+      values.code = businessPartnerId;
+    }
+
+    return Object.keys(values).length > 0 ? values : undefined;
+  }, [businessPartnerId, requestedMode, sourceInvoice, sourceInvoiceId]);
 
   // Default flow (is_default=true, trigger=new)
   const { data: defaultBundle, isLoading: flowLoading } = useEntityFlow(entity, "new");
@@ -79,10 +96,31 @@ export default function AppEntityNewRoute({
   // The entity's display_config carries an array of alternate flow codes.
   // We eagerly fetch all alternate bundles so their labels are available before
   // the user interacts with the switcher.
-  const { data: compiledEntity } = useCompiledEntity(entity);
+  const { data: compiledEntity, isLoading: metaLoading } = useCompiledEntity(entity);
+  const createRedirectHref = useMemo(
+    () => resolveCreateRedirect(
+      compiledEntity?.display_config.create_redirect as EntityCreateRedirect | undefined,
+      entity,
+      searchParams,
+    ),
+    [compiledEntity?.display_config.create_redirect, entity, searchParams],
+  );
   const alternateFlowCodes = useMemo(
     () => (compiledEntity?.display_config?.alternate_flows ?? []) as string[],
     [compiledEntity],
+  );
+  const intakeModes = useMemo(
+    () => normalizeModes(compiledEntity?.display_config.intake_modes as EntityIntakeMode[] | undefined),
+    [compiledEntity?.display_config.intake_modes],
+  );
+  const activeIntakeMode = requestedMode
+    ? intakeModes.find((mode) => mode.code === requestedMode)
+    : undefined;
+  const intakeRoleModeCodes = useMemo(
+    () => intakeModes
+      .filter((mode) => mode.persistence_mode?.endsWith("_intake"))
+      .map((mode) => mode.code),
+    [intakeModes],
   );
 
   const { data: alternateBundles = [], isLoading: alternatesLoading } = useQuery({
@@ -142,6 +180,7 @@ export default function AppEntityNewRoute({
 
   // Guard — all hooks above; safe to return early from here
   const { guardLoading, denied } = useSubrouteGuard(entity, "hasEdit");
+  if (createRedirectHref) redirect(createRedirectHref);
   if (guardLoading) return <GuardSkeleton />;
   if (denied) return <FeatureUnavailablePage entityCode={entity} />;
 
@@ -157,6 +196,7 @@ export default function AppEntityNewRoute({
 
   // Loading state — wait for default flow + alternates (if any) + source invoice
   if (
+    metaLoading ||
     flowLoading ||
     (needsAlternates && alternatesLoading) ||
     (!!sourceInvoiceId && invoiceLoading)
@@ -165,6 +205,33 @@ export default function AppEntityNewRoute({
   }
 
   // Intent screen — shown before the wizard when the entity has alternate flows
+  if (activeIntakeMode) {
+    return (
+      <EntityModeFlow
+        mode={activeIntakeMode}
+        hostEntityCode={entity}
+        hostEntityLabel={formatEntityLabel(entity)}
+        initialValues={initialValues}
+        roleModeCodes={intakeRoleModeCodes}
+      />
+    );
+  }
+
+  if (intakeModes.length > 0) {
+    const label = formatEntityLabel(entity);
+    return (
+      <EntityIntakeLauncher
+        entityCode={entity}
+        title={`${label} Management`}
+        description={`Create and extend ${label.toLowerCase()} records`}
+        modes={intakeModes}
+        listHref={`/app/${entity}`}
+        listLabel={`View ${label}s`}
+        baseNewHref={`/app/${entity}/new`}
+      />
+    );
+  }
+
   if (needsIntentScreen && defaultBundle) {
     const options = [
       { code: null as null, bundle: defaultBundle },
@@ -229,4 +296,45 @@ export default function AppEntityNewRoute({
       submitting={createMutation.isPending}
     />
   );
+}
+
+function formatEntityLabel(entityCode: string): string {
+  return entityCode
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function resolveCreateRedirect(
+  createRedirect: EntityCreateRedirect | undefined,
+  entityCode: string,
+  searchParams: { toString(): string },
+): string | undefined {
+  if (!createRedirect) return undefined;
+
+  const template = createRedirect.href_template.trim();
+  if (!template) return undefined;
+
+  const templatedHref = template
+    .replaceAll("{entity_code}", encodeURIComponent(entityCode))
+    .replaceAll("{entity}", encodeURIComponent(entityCode));
+  const queryIndex = templatedHref.indexOf("?");
+  const targetPath = queryIndex >= 0 ? templatedHref.slice(0, queryIndex) : templatedHref;
+  const targetQuery = queryIndex >= 0 ? templatedHref.slice(queryIndex + 1) : "";
+
+  if (!targetPath.startsWith("/") || targetPath.startsWith("//")) return undefined;
+
+  const mergedParams = new URLSearchParams(
+    createRedirect.preserve_query === false ? "" : searchParams.toString(),
+  );
+  const targetParams = new URLSearchParams(targetQuery);
+  targetParams.forEach((value, key) => mergedParams.set(key, value));
+
+  const mergedQuery = mergedParams.toString();
+  const resolvedHref = mergedQuery ? `${targetPath}?${mergedQuery}` : targetPath;
+  const currentQuery = searchParams.toString();
+  const currentHref = `/app/${encodeURIComponent(entityCode)}/new${currentQuery ? `?${currentQuery}` : ""}`;
+
+  return resolvedHref === currentHref ? undefined : resolvedHref;
 }

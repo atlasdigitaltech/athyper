@@ -18,9 +18,9 @@
 --     Roles:  All shared.role entries whose code starts with 'admin-'
 --     Scope:  same as above
 --
--- Tenant-level groups: 14 tenants × 2 = 28 groups
+-- Tenant-level groups: 1 tenant × 2 = 2 groups
 -- CC-level groups (athyper only): 17 CCs × 2 = 34 groups
--- Total: 62 groups
+-- Total: 36 groups
 --
 -- ── Idempotency ─────────────────────────────────────────────────────────────
 -- Step 0 TRUNCATES auth_group (CASCADE → auth_group_role, auth_group_member).
@@ -84,52 +84,13 @@ BEGIN
     SELECT t.id, v.grp_code, v.grp_name, v.grp_desc, true, false, v_su
     FROM (VALUES
         -- athyper
-        ('athyper',     'ATHYPER-OWNER',     'Athyper Group Owner',          'Full operational control for Athyper Group. Assigned all owner-* roles.'),
-        ('athyper',     'ATHYPER-ADMIN',     'Athyper Group Administrator',  'Administrative access for Athyper Group. Assigned all admin-* roles.'),
-        -- demo_ca
-        ('demo_ca',     'DEMO_CA-OWNER',     'Demo Canada Owner',            'Full operational control for Demo Canada.'),
-        ('demo_ca',     'DEMO_CA-ADMIN',     'Demo Canada Administrator',    'Administrative access for Demo Canada.'),
-        -- demo_ch
-        ('demo_ch',     'DEMO_CH-OWNER',     'Demo Switzerland Owner',       'Full operational control for Demo Switzerland.'),
-        ('demo_ch',     'DEMO_CH-ADMIN',     'Demo Switzerland Administrator','Administrative access for Demo Switzerland.'),
-        -- demo_de
-        ('demo_de',     'DEMO_DE-OWNER',     'Demo Germany Owner',           'Full operational control for Demo Germany.'),
-        ('demo_de',     'DEMO_DE-ADMIN',     'Demo Germany Administrator',   'Administrative access for Demo Germany.'),
-        -- demo_fr
-        ('demo_fr',     'DEMO_FR-OWNER',     'Demo France Owner',            'Full operational control for Demo France.'),
-        ('demo_fr',     'DEMO_FR-ADMIN',     'Demo France Administrator',    'Administrative access for Demo France.'),
-        -- demo_in
-        ('demo_in',     'DEMO_IN-OWNER',     'Demo India Owner',             'Full operational control for Demo India.'),
-        ('demo_in',     'DEMO_IN-ADMIN',     'Demo India Administrator',     'Administrative access for Demo India.'),
-        -- demo_my
-        ('demo_my',     'DEMO_MY-OWNER',     'Demo Malaysia Owner',          'Full operational control for Demo Malaysia.'),
-        ('demo_my',     'DEMO_MY-ADMIN',     'Demo Malaysia Administrator',  'Administrative access for Demo Malaysia.'),
-        -- demo_qa
-        ('demo_qa',     'DEMO_QA-OWNER',     'Demo Qatar Owner',             'Full operational control for Demo Qatar.'),
-        ('demo_qa',     'DEMO_QA-ADMIN',     'Demo Qatar Administrator',     'Administrative access for Demo Qatar.'),
-        -- demo_sa
-        ('demo_sa',     'DEMO_SA-OWNER',     'Demo Saudi Arabia Owner',      'Full operational control for Demo Saudi Arabia.'),
-        ('demo_sa',     'DEMO_SA-ADMIN',     'Demo Saudi Arabia Administrator','Administrative access for Demo Saudi Arabia.'),
-        -- demo_us
-        ('demo_us',     'DEMO_US-OWNER',     'Demo United States Owner',     'Full operational control for Demo United States.'),
-        ('demo_us',     'DEMO_US-ADMIN',     'Demo United States Administrator','Administrative access for Demo United States.'),
-        -- athyper-hq1
-        ('athyper-hq1', 'ATHYPER_HQ1-OWNER', 'Athyper HQ 1 Owner',          'Full operational control for Athyper HQ 1.'),
-        ('athyper-hq1', 'ATHYPER_HQ1-ADMIN', 'Athyper HQ 1 Administrator',  'Administrative access for Athyper HQ 1.'),
-        -- pepsi
-        ('pepsi',       'PEPSI-OWNER',       'Pepsi Owner',                  'Full operational control for Pepsi.'),
-        ('pepsi',       'PEPSI-ADMIN',       'Pepsi Administrator',          'Administrative access for Pepsi.'),
-        -- coke
-        ('coke',        'COKE-OWNER',        'Coke Owner',                   'Full operational control for Coke.'),
-        ('coke',        'COKE-ADMIN',        'Coke Administrator',           'Administrative access for Coke.'),
-        -- maaza
-        ('maaza',       'MAAZA-OWNER',       'Maaza Owner',                  'Full operational control for Maaza.'),
-        ('maaza',       'MAAZA-ADMIN',       'Maaza Administrator',          'Administrative access for Maaza.')
+        ('athyper', 'ATHYPER-OWNER', 'Athyper Group Owner',         'Full operational control for Athyper Group. Assigned all owner-* roles.'),
+        ('athyper', 'ATHYPER-ADMIN', 'Athyper Group Administrator', 'Administrative access for Athyper Group. Assigned all admin-* roles.')
     ) AS v(tenant_code, grp_code, grp_name, grp_desc)
     JOIN master.tenant t ON t.code = v.tenant_code AND t.realm_key = 'athyper'
     ON CONFLICT (tenant_id, code) DO NOTHING;
 
-    RAISE NOTICE '[001_demo_rbac] Step 1 complete — 28 tenant-level groups created';
+    RAISE NOTICE '[001_demo_rbac] Step 1 complete — 2 tenant-level groups created';
 
     -- ── Step 2: Create CC-level OWNER + ADMIN groups for athyper (17 × 2) ───
 
@@ -305,7 +266,7 @@ BEGIN
         JOIN master.auth_group pg ON pg.id = gr.group_id WHERE pg.code LIKE '%-ADMIN';
 
     RAISE NOTICE '[001_demo_rbac] Verification:';
-    RAISE NOTICE '  Total groups:              %   (expected 62)', v_groups;
+    RAISE NOTICE '  Total groups:              %   (expected 36)', v_groups;
     RAISE NOTICE '  OWNER group role links:    %', v_agr_owner;
     RAISE NOTICE '  ADMIN group role links:    %', v_agr_admin;
 END $verify$;

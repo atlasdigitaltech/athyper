@@ -1,12 +1,18 @@
--- 100_master/003_supplier_identifier.sql
--- Purpose: Register master.party_identifier as supplier_identifier child entity.
+-- 100_master/003_business_partner_identifier.sql
+-- Purpose: Register master.party_identifier as business_partner_identifier child entity.
 -- Idempotent: WHERE NOT EXISTS / ON CONFLICT DO NOTHING
 
--- ── 0. Normalize any prior seeding as 'vendor_identifier' ────────────────────
+-- ── 0. Normalize any prior vendor/supplier seeding to BP ownership ───────────
 UPDATE control.entity
-SET name = 'supplier_identifier', entity_code = 'supplier_identifier', entity_short = 'SPI'
+SET name = 'business_partner_identifier', entity_code = 'business_partner_identifier', entity_short = 'BPI'
 WHERE table_schema = 'master' AND table_name = 'party_identifier'
-  AND entity_code = 'vendor_identifier' AND tenant_id IS NULL;
+  AND entity_code IN ('vendor_identifier', 'supplier_identifier')
+  AND tenant_id IS NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM control.entity existing
+      WHERE existing.entity_code = 'business_partner_identifier'
+        AND existing.tenant_id IS NULL
+  );
 
 -- ── 1. control.entity ────────────────────────────────────────────────────────
 INSERT INTO control.entity (
@@ -19,20 +25,28 @@ INSERT INTO control.entity (
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
-    'supplier_identifier', 'SPI', 'supplier_identifier',
+    'business_partner_identifier', 'BPI', 'business_partner_identifier',
     'MASTER', 'system', 'ent', 'table',
     'standard', 'business', 'controlled',
     'master', 'party_identifier',
-    'Supplier Identifier', 'Supplier Identifiers', 'fingerprint', 'slate',
+    'Business Partner Identifier', 'Business Partner Identifiers', 'fingerprint', 'slate',
     false,
     '{}'::jsonb,
-    '{"parent_entity":"supplier","parent_fk":"owner_id","parent_scope":"owner_type=supplier"}'::jsonb,
+    '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
     WHERE table_schema = 'master' AND table_name = 'party_identifier'
-      AND entity_code = 'supplier_identifier' AND tenant_id IS NULL
+      AND entity_code = 'business_partner_identifier' AND tenant_id IS NULL
 );
+
+-- Repair existing installs that were previously registered as BP-owned identifiers.
+-- Business Partner is the canonical owner for external identifiers.
+UPDATE control.entity
+SET feature_flags = COALESCE(feature_flags, '{}'::jsonb)
+    || '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner"}'::jsonb
+WHERE entity_code = 'business_partner_identifier'
+  AND tenant_id IS NULL;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
@@ -40,7 +54,7 @@ INSERT INTO control.entity_version (
 SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
        '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
-WHERE  e.entity_code = 'supplier_identifier' AND e.tenant_id IS NULL
+WHERE  e.entity_code = 'business_partner_identifier' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
 
 -- ── 3. control.entity_field ──────────────────────────────────────────────────
@@ -67,17 +81,21 @@ CROSS JOIN (VALUES
     ('status',              'status',               'Status',               'lifecycle_state',  'one',          NULL::text,                             true,  true,  NULL::jsonb,                80)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
        is_required, is_filterable, validation, sort_order)
-WHERE e.entity_code = 'supplier_identifier' AND e.tenant_id IS NULL AND ev.version_no = 1
+WHERE e.entity_code = 'business_partner_identifier' AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
 -- ── 4. display_config + natural_key_fields ───────────────────────────────────
 UPDATE control.entity
-SET display_config        = jsonb_build_object(
+SET display_config        = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
         'detail_renderer',    'master',
-        'list_columns',       '["scheme","value","is_primary","is_verified","valid_until","status"]'::jsonb,
+        'list_columns',       '["scheme","value","valid_until","status"]'::jsonb,
+        'drawer_groups',      jsonb_build_array(
+            jsonb_build_object('label','Identifier', 'fields',jsonb_build_array('scheme','value','issuing_authority')),
+            jsonb_build_object('label','Validity',   'fields',jsonb_build_array('issued_at','valid_until','is_primary','is_verified','status')),
+            jsonb_build_object('label','Technical',  'collapsed',true, 'fields',jsonb_build_array('id','created_at','metadata'))
+        ),
         'default_sort_field', 'scheme',
         'default_sort_order', 'asc'
     ),
     natural_key_fields    = ARRAY['scheme', 'value']
-WHERE entity_code = 'supplier_identifier' AND tenant_id IS NULL
-  AND display_config = '{}'::jsonb;
+WHERE entity_code = 'business_partner_identifier' AND tenant_id IS NULL;

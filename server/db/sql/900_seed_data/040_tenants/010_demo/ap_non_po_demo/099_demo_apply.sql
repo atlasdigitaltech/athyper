@@ -46,13 +46,13 @@ BEGIN
 
     -- ── Verify demo prerequisites ──────────────────────────────────────────
     SELECT count(*) INTO v_vendor_cnt FROM master.supplier
-     WHERE tenant_id = v_tenant_id AND code = 'ACME-CONSULT-US';
+     WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US';
 
     SELECT count(*) INTO v_scp_cnt FROM master.company_code_supplier_profile scp
       JOIN master.supplier s ON s.id = scp.supplier_id
      WHERE scp.tenant_id = v_tenant_id
        AND scp.company_code_id = v_cc_id
-       AND s.code = 'ACME-CONSULT-US';
+       AND s.supplier_code = 'ACME-CONSULT-US';
 
     SELECT count(*) INTO v_pm_cnt FROM master.payment_method
      WHERE tenant_id = v_tenant_id AND code = 'WIRE-USD';

@@ -43,10 +43,13 @@ export interface CompositeFlowWizardProps {
   onSubmit: () => Promise<void>;
   onCancel?: () => void;
   submitting?: boolean;
+  primaryActionDisabled?: boolean;
   entityLabel?: string;
   entityCode?: string;
   /** Slot for the Review step content (DuplicateCheckBanner + acknowledgement). */
   reviewSlot?: React.ReactNode;
+  /** Optional per-step content rendered below the step sections. */
+  stepSlots?: Record<string, React.ReactNode>;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -62,6 +65,8 @@ export function CompositeFlowWizard({
   entityLabel,
   entityCode,
   reviewSlot,
+  primaryActionDisabled = false,
+  stepSlots,
 }: CompositeFlowWizardProps) {
   const {
     state,
@@ -127,6 +132,12 @@ export function CompositeFlowWizard({
                 {currentStep.sections.length === 0 && (
                   <p className="text-sm text-muted-foreground italic">No fields in this step.</p>
                 )}
+
+                {stepSlots?.[currentStep.step_key] && (
+                  <div className="pt-1">
+                    {stepSlots[currentStep.step_key]}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -162,7 +173,7 @@ export function CompositeFlowWizard({
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={submitting}
+                    disabled={submitting || primaryActionDisabled}
                     className={cn(
                       "flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold",
                       "bg-primary text-primary-foreground",
@@ -180,7 +191,7 @@ export function CompositeFlowWizard({
                   <button
                     type="button"
                     onClick={goNext}
-                    disabled={!canAdvance || submitting}
+                    disabled={!canAdvance || submitting || primaryActionDisabled}
                     className={cn(
                       "flex items-center gap-1.5 rounded-md px-5 py-2 text-sm font-semibold",
                       "bg-primary text-primary-foreground",
@@ -322,6 +333,7 @@ function SectionRenderer({
         minRows={section.section_type === "singleton" ? 0 : (section.min_rows ?? 0)}
         maxRows={section.section_type === "singleton" ? 1 : section.max_rows ?? undefined}
         defaultRow={section.default_row ?? {}}
+        parentDraft={flatFields}
         permissionCode={section.permission_code ?? null}
         userPermissions={userPermissions}
         restrictedViewOnly={section.restricted_view_only ?? false}

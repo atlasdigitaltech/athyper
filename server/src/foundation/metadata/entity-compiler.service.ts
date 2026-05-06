@@ -98,14 +98,15 @@ interface EntityFieldRow {
   is_sortable: boolean;
   is_filterable: boolean;
   sort_order: number;
-  default_value: string | null;
-  validation_rules: string | null;
+  default_value: unknown | null;
+  validation: unknown | null;
+  validation_rules?: unknown | null;
   ref_entity: string | null;
   ref_column: string | null;
   ref_display_field: string | null;
-  metadata: string | null;
-  read_permission: string | null;
-  write_permission: string | null;
+  metadata: unknown | null;
+  read_permission?: unknown | null;
+  write_permission?: unknown | null;
 }
 
 interface ClassProfileRow {
@@ -113,6 +114,31 @@ interface ClassProfileRow {
 }
 
 const CACHE_TTL_MS = 5 * 60_000;
+
+function coerceJson(value: unknown): unknown {
+  if (value == null) return null;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+}
+
+function coerceRecord(value: unknown): Record<string, unknown> | null {
+  const parsed = coerceJson(value);
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown>
+    : null;
+}
+
+function coerceStringArray(value: unknown): string[] | null {
+  const parsed = coerceJson(value);
+  return Array.isArray(parsed) && parsed.every((item) => typeof item === "string")
+    ? parsed
+    : null;
+}
 
 // ── EntityCompilerService ─────────────────────────────────────────────────────
 
@@ -143,7 +169,7 @@ export class EntityCompilerService {
     if (!compiled) return null;
 
     this.cache.set(key, { compiled, fetchedAt: now });
-    void this.writeSnapshot(compiled);
+    await this.writeSnapshot(compiled);
     return compiled;
   }
 
@@ -162,7 +188,12 @@ export class EntityCompilerService {
         .execute() as Array<{ name: string }>;
 
       for (const row of rows) {
-        await this.compile(String(row.name));
+        try {
+          await this.compile(String(row.name));
+        } catch {
+          // Best-effort startup warm-up: one malformed entity must not prevent
+          // the remaining entities from getting snapshot rows.
+        }
       }
     } catch { /* best-effort */ }
   }
@@ -250,14 +281,14 @@ export class EntityCompilerService {
       isSortable:      f.is_sortable,
       isFilterable:    f.is_filterable,
       sortOrder:       f.sort_order,
-      defaultValue:    f.default_value ? JSON.parse(f.default_value) : null,
-      validation:      f.validation_rules ? JSON.parse(f.validation_rules) as Record<string, unknown> : null,
+      defaultValue:    coerceJson(f.default_value),
+      validation:      coerceRecord(f.validation_rules ?? f.validation),
       refEntity:       f.ref_entity,
       refColumn:       f.ref_column,
       refDisplayField: f.ref_display_field,
-      metadata:        f.metadata ? JSON.parse(f.metadata) as Record<string, unknown> : null,
-      readPermission:  f.read_permission ? JSON.parse(f.read_permission) as string[] : null,
-      writePermission: f.write_permission ? JSON.parse(f.write_permission) as string[] : null,
+      metadata:        coerceRecord(f.metadata),
+      readPermission:  coerceStringArray(f.read_permission),
+      writePermission: coerceStringArray(f.write_permission),
     }));
 
     return {

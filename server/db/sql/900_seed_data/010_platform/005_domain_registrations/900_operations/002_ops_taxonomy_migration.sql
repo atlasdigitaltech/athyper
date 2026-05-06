@@ -52,6 +52,29 @@ JOIN (VALUES
 ) AS v(code, name, cat, so) ON c.code = v.cat
 ON CONFLICT (code) DO NOTHING;
 
+-- Business Partner identity is editable in-place; role and company-code growth
+-- remains handled by the dedicated Extend flow.
+INSERT INTO control.entity_operation
+    (tenant_id, entity_name, permission_code, surface, placement,
+     handler_type, handler_target, is_record_required, sort_order, icon_override, created_by)
+VALUES
+    (NULL, 'business_partner', 'edit', 'DETAIL', 'PRIMARY', 'NAVIGATE',
+     '/app/business_partner/{id}?mode=edit', true, 10, 'edit', v_su)
+ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
+
+UPDATE control.entity_operation
+SET surface            = 'DETAIL',
+    placement          = 'PRIMARY',
+    handler_type       = 'NAVIGATE',
+    handler_target     = '/app/business_partner/{id}?mode=edit',
+    is_record_required = true,
+    sort_order         = 10,
+    icon_override      = 'edit',
+    is_enabled         = true
+WHERE tenant_id IS NULL
+  AND entity_name = 'business_partner'
+  AND permission_code = 'edit';
+
 -- Document lifecycle permissions
 INSERT INTO shared.permission
     (code, name, category_id, scope_type, risk_level, is_plan_restricted, sort_order, created_by)

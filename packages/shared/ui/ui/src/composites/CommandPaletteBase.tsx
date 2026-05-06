@@ -133,7 +133,6 @@ export function CommandPaletteBase({
 
           <Command
             className="flex flex-col"
-            shouldFilter={search === undefined}
           >
             {/* ── Header: search input + tab bar ────────────── */}
             <div className="flex items-center gap-2 border-b px-3 py-2.5">

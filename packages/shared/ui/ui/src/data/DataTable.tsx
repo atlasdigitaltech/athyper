@@ -133,7 +133,17 @@ export function DataTable<TData>({
   // Controlled sort when sortingState + onSortingChange are provided (server-side sort)
   const isServerSort = sortingState !== undefined && onSortingChange !== undefined;
   const sorting    = isServerSort ? sortingState : internalSorting;
-  const setSorting = isServerSort ? onSortingChange : setInternalSorting;
+  // TanStack Table may pass either a SortingState array or a functional updater.
+  // Resolve the updater before forwarding to the prop callback so callers always
+  // receive a plain SortingState array (not a function).
+  const setSorting = isServerSort
+    ? (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+        const next = typeof updaterOrValue === "function"
+          ? updaterOrValue(sortingState!)
+          : updaterOrValue;
+        onSortingChange!(next);
+      }
+    : setInternalSorting;
 
   // Server-side pagination when all three pagination props are provided
   const isServerPage = totalCount !== undefined && currentPage !== undefined && totalPages !== undefined && onPageChange !== undefined;

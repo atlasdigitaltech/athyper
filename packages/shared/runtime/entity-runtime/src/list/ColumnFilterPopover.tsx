@@ -28,6 +28,8 @@ export interface ColumnFilterPopoverProps {
   /** Called with the resolved entry when user confirms. Caller writes to URL. */
   onApply:     (entry: FilterEntry | undefined) => void;
   onClose:     () => void;
+  /** When provided the popover is portaled to document.body; use fixed positioning coords. */
+  anchorStyle?: React.CSSProperties;
 }
 
 export function ColumnFilterPopover({
@@ -36,6 +38,7 @@ export function ColumnFilterPopover({
   facetValues,
   onApply,
   onClose,
+  anchorStyle,
 }: ColumnFilterPopoverProps) {
   const [draft, setDraft] = useState<FilterEntry | undefined>(entry);
   const ref = useRef<HTMLDivElement>(null);
@@ -69,9 +72,11 @@ export function ColumnFilterPopover({
     <div
       ref={ref}
       className={cn(
-        "absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-input bg-popover p-3 shadow-lg",
+        "z-50 w-64 rounded-lg border border-input bg-popover p-3 shadow-lg",
         "animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 duration-100",
+        anchorStyle ? "" : "absolute left-0 top-full mt-1",
       )}
+      style={anchorStyle}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Field label + clear */}

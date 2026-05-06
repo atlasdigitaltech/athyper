@@ -20,7 +20,15 @@ FROM (VALUES
     ('reversal',         'Reversal',         'document.je_source_doc_type', 'Reversal of a prior entry',             110),
     ('correction',       'Correction',       'document.je_source_doc_type', 'Correction of a prior entry',           120),
     ('year_end_close',   'Year End Close',   'document.je_source_doc_type', 'Year-end closing entry',                130),
-    ('opening_balance',  'Opening Balance',  'document.je_source_doc_type', 'Opening balance carry-forward entry',   140)
+    ('opening_balance',  'Opening Balance',  'document.je_source_doc_type', 'Opening balance carry-forward entry',   140),
+    ('receipt',          'Receipt',          'document.je_source_doc_type', 'Originated from a customer receipt or receipt adjustment', 150),
+    ('sales_invoice',    'Sales Invoice',    'document.je_source_doc_type', 'Originated from a sales invoice',       160),
+    ('payroll',          'Payroll',          'document.je_source_doc_type', 'Originated from salary or payroll processing', 170),
+    ('travel_expense',   'Travel Expense',   'document.je_source_doc_type', 'Originated from travel expense processing', 180),
+    ('advance',          'Advance',          'document.je_source_doc_type', 'Originated from employee, customer, or vendor advance processing', 190),
+    ('retention',        'Retention',        'document.je_source_doc_type', 'Originated from retention accrual or release', 200),
+    ('tax_engine',       'Tax Engine',       'document.je_source_doc_type', 'Originated from VAT, WHT, or tax adjustment processing', 210),
+    ('import',           'Import',           'document.je_source_doc_type', 'Imported journal entry',                220)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

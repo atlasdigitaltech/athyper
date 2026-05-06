@@ -119,7 +119,15 @@ WHERE table_schema = 'document' AND table_name = 'purchase_invoice_line'
   AND tenant_id IS NULL
   AND display_config = '{}'::jsonb;
 
--- ── 5. Module → PROC (Procurement) ───────────────────────────────────────────
+-- ── 5. Natural key — line_no is the business key within a parent invoice ─────
+UPDATE control.entity
+SET natural_key_fields = ARRAY['line_no']
+WHERE table_schema    = 'document'
+  AND table_name      = 'purchase_invoice_line'
+  AND tenant_id       IS NULL
+  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
+
+-- ── 6. Module → PROC (Procurement) ───────────────────────────────────────────
 -- Inner-join style: no-op if PROC does not exist yet.
 UPDATE control.entity e
 SET    module_id = m.id

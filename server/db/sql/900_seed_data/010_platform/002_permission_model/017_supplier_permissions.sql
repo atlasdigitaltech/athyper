@@ -43,3 +43,22 @@ JOIN (VALUES
     ('supplier.qualification.admin', 'Administer Qualification', 'special', 'record', 'critical', false, 10)
 ) AS v(code, name, cat, st, rl, pr, so) ON c.code = v.cat
 ON CONFLICT (code) DO NOTHING;
+
+-- Supplier intake submit/write grants.
+-- These permissions only unlock create-time intake sections; verify/admin/restricted
+-- supplier permissions remain separate and are intentionally not granted here.
+WITH grants AS (
+    SELECT p.id AS pid, pm.id AS permid
+    FROM   shared.persona p
+    CROSS JOIN shared.permission pm
+    WHERE  p.code IN ('requester', 'agent', 'manager', 'owner', 'admin')
+    AND    pm.code IN (
+        'supplier.tax.submit',
+        'supplier.banking.submit',
+        'supplier.governance.write'
+    )
+)
+INSERT INTO shared.persona_permission (persona_id, permission_id, is_granted, created_by)
+SELECT pid, permid, true, '00000000-0000-0000-0000-000000000000'::uuid
+FROM   grants
+ON CONFLICT (persona_id, permission_id) DO UPDATE SET is_granted = true;

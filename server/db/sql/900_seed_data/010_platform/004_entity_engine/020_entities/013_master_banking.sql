@@ -1,5 +1,5 @@
 -- 020_entities/013_master_banking.sql
--- Entities 87–91: Banking & Payments
+-- Entities 87â€“91: Banking & Payments
 -- Depends on: shared.module rows (PAY)
 
 DO $$
@@ -9,7 +9,7 @@ DECLARE
 BEGIN
     SELECT id::text INTO v_pay FROM shared.module WHERE code = 'PAY';
 
-    -- ── 87. bank_party ───────────────────────────────────────────────────────
+    -- â”€â”€ 87. bank_party â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     INSERT INTO control.entity (
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
@@ -21,7 +21,7 @@ BEGIN
         false, '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
-    -- ── 88. bank_account ─────────────────────────────────────────────────────
+    -- â”€â”€ 88. bank_account â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     INSERT INTO control.entity (
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
@@ -33,7 +33,7 @@ BEGIN
         false, '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
-    -- ── 89. bank_account_link ────────────────────────────────────────────────
+    -- â”€â”€ 89. bank_account_link â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     INSERT INTO control.entity (
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
@@ -45,21 +45,21 @@ BEGIN
         false, '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
-    -- ── 89b. supplier_bank_account (view entity) ─────────────────────────────
-    -- Read-only view entity used by the supplier Banking tab.
-    -- parent_fk "supplier_id" enables ?parent_id= filtering in records.route.
+    -- â”€â”€ 89b. business_partner_bank_account (view entity) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    -- Read-only view entity used by the Business Partner Banking tab.
+    -- parent_fk "business_partner_id" enables ?parent_id= filtering in records.route.
     INSERT INTO control.entity (
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
         numbering_active, feature_flags, status, created_by)
-    VALUES (v_pay, 'supplier_bank_account', 'SBKACC', 'supplier_bank_account', 'RELATION', 'system', 'ent', 'table',
-        'full', 'tenant_critical', 'controlled', 'master', 'v_supplier_bank_account',
-        'Supplier Bank Account', 'Supplier Bank Accounts', 'credit-card', 'blue',
-        false, '{"parent_fk":"supplier_id"}'::jsonb, 'ACTIVE', v_su)
+    VALUES (v_pay, 'business_partner_bank_account', 'BPBKACC', 'business_partner_bank_account', 'RELATION', 'system', 'ent', 'table',
+        'full', 'tenant_critical', 'controlled', 'master', 'v_business_partner_bank_account',
+        'Business Partner Bank Account', 'Business Partner Bank Accounts', 'credit-card', 'blue',
+        false, '{"parent_entity":"business_partner","parent_fk":"business_partner_id"}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
-    -- ── 90. bank_account_house_config ────────────────────────────────────────
+    -- â”€â”€ 90. bank_account_house_config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     INSERT INTO control.entity (
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
@@ -71,7 +71,7 @@ BEGIN
         false, '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
-    -- ── 91. payment_method ───────────────────────────────────────────────────
+    -- â”€â”€ 91. payment_method â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     INSERT INTO control.entity (
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
@@ -85,7 +85,7 @@ BEGIN
 
 END $$;
 
--- ── supplier_bank_account: entity_version ────────────────────────────────────
+-- â”€â”€ business_partner_bank_account: entity_version â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- Explicit version needed: 025_entity_versions may have run before this entity
 -- was added, leaving it without an EFFECTIVE version.
 INSERT INTO control.entity_version (
@@ -93,10 +93,10 @@ INSERT INTO control.entity_version (
 SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
        '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
-WHERE  e.entity_code = 'supplier_bank_account' AND e.tenant_id IS NULL
+WHERE  e.entity_code = 'business_partner_bank_account' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
 
--- ── supplier_bank_account: entity_field ─────────────────────────────────────
+-- â”€â”€ business_partner_bank_account: entity_field â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- View columns exposed for display, filtering, and schema introspection.
 INSERT INTO control.entity_field (
     entity_version_id, name, column_name, label, data_type,
@@ -125,17 +125,22 @@ CROSS JOIN (VALUES
     ('bic_override',        'bic_override',        'BIC / SWIFT',    'text',    'zero_or_one', NULL::text, false, false, NULL::jsonb, 120)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
        is_required, is_filterable, validation, sort_order)
-WHERE e.entity_code = 'supplier_bank_account' AND e.tenant_id IS NULL AND ev.version_no = 1
+WHERE e.entity_code = 'business_partner_bank_account' AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
--- ── supplier_bank_account: display_config + natural_key_fields ───────────────
+-- â”€â”€ business_partner_bank_account: display_config + natural_key_fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 UPDATE control.entity
-SET display_config        = jsonb_build_object(
+SET display_config        = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
         'detail_renderer',    'master',
-        'list_columns',       '["bank_name","account_number","currency_code","account_id_type","is_primary","is_verified"]'::jsonb,
+        'list_columns',       '["bank_name","currency_code","account_number","is_primary","is_verified"]'::jsonb,
+        'drawer_groups',      jsonb_build_array(
+            jsonb_build_object('label','Account',            'fields',jsonb_build_array('bank_name','account_holder_name','account_number','currency_code')),
+            jsonb_build_object('label','Purpose & Standing', 'fields',jsonb_build_array('purpose','is_primary','is_verified')),
+            jsonb_build_object('label','Validity',           'fields',jsonb_build_array('effective_from','effective_until')),
+            jsonb_build_object('label','Technical',          'collapsed',true, 'fields',jsonb_build_array('id','bank_account_id','created_at','metadata'))
+        ),
         'default_sort_field', 'is_primary',
         'default_sort_order', 'desc'
     ),
     natural_key_fields    = ARRAY['id']
-WHERE entity_code = 'supplier_bank_account' AND tenant_id IS NULL
-  AND display_config = '{}'::jsonb;
+WHERE entity_code = 'business_partner_bank_account' AND tenant_id IS NULL;

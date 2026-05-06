@@ -98,6 +98,7 @@ WHERE ef.entity_version_id = ev.id
 UPDATE control.entity
 SET display_config = jsonb_build_object(
     'detail_renderer',    'document',
+    'lines_renderer',     'journal',
     'title_field',        'document_no',
     'list_columns',       '["document_no","status","entry_date","fiscal_period","currency_code","total_debit","total_credit"]'::jsonb,
     'default_sort_field', 'entry_date',
@@ -153,3 +154,437 @@ WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'document' AND e.table_name = 'journal_entry'
   AND e.tenant_id IS NULL AND ev.version_no = 1
   AND ef.name IN ('document_no', 'entry_date', 'fiscal_period', 'currency_code', 'source_type');
+
+
+-- ============================================================================
+-- Journal Entry metadata hardening
+-- ============================================================================
+-- Comprehensive header/line field definitions. These rows are intentionally
+-- metadata-level controls: DB still owns accounting invariants.
+
+DO $$
+DECLARE
+    v_su uuid := '00000000-0000-0000-0000-000000000000';
+BEGIN
+
+UPDATE control.entity
+   SET feature_flags = jsonb_build_object(
+       'is_approvable', true,
+       'document_category', 'general_ledger',
+       'allow_on_behalf_of', false,
+       'has_lines', true,
+       'auto_number', true,
+       'has_attachments', true,
+       'comments_enabled', true,
+       'event_history', true,
+       'version_control', true,
+       'posting_trace', true,
+       'line_references', true
+   ),
+   display_config = jsonb_build_object(
+       'detail_renderer', 'document',
+       'lines_renderer',  'journal',
+       'title_field', 'document_no',
+       'subtitle_field', 'description',
+       'list_columns', '["document_no","status","company_code_id","posting_date","period_number","transaction_currency","total_debit","total_credit"]'::jsonb,
+       'default_sort_field', 'posting_date',
+       'default_sort_order', 'desc',
+       'action_groups', jsonb_build_object(
+           'draft',            jsonb_build_object('primary','["edit","submit"]'::jsonb),
+           'created',          jsonb_build_object('primary','["edit","submit"]'::jsonb),
+           'pending_approval', jsonb_build_object('primary','["approve","deny"]'::jsonb),
+           'approved',         jsonb_build_object('primary','["post"]'::jsonb),
+           'posted',           jsonb_build_object('primary','["reverse"]'::jsonb, 'output','["posting_trace"]'::jsonb),
+           'rejected',         jsonb_build_object('primary','["amend"]'::jsonb),
+           'reversed',         jsonb_build_object('output','["posting_trace"]'::jsonb)
+       ),
+       'document_header', jsonb_build_object(
+           'number_field', 'document_no',
+           'status_field', 'status',
+           'type_label', 'JOURNAL ENTRY',
+           'total_label', 'TOTAL',
+           'amount_field', 'total_debit',
+           'currency_field', 'transaction_currency',
+           'date_field', 'posting_date',
+           'title_field', 'description',
+           'lifecycle_stages', jsonb_build_array(
+               jsonb_build_object('key','draft',            'label','Draft'),
+               jsonb_build_object('key','created',          'label','Ready'),
+               jsonb_build_object('key','pending_approval', 'label','Submitted'),
+               jsonb_build_object('key','approved',         'label','Approved'),
+               jsonb_build_object('key','posted',           'label','Posted'),
+               jsonb_build_object('key','reversed',         'label','Reversed')
+           )
+       ),
+       'journal_editor', jsonb_build_object(
+           'mode', 'draft_workspace',
+           'line_reference_strategy', 'optional_per_line',
+           'reference_model', 'journal_line_reference',
+           'submit_requires_min_lines', 2,
+           'submit_requires_balance', true,
+           'reference_targets', jsonb_build_array(
+               jsonb_build_object(
+                   'key','purchase_invoice',
+                   'label','Invoice',
+                   'entity','purchase_invoice',
+                   'ref_doc_type','purchase_invoice',
+                   'default_ref_type','invoice_adjustment',
+                   'line_selection',true,
+                   'display_fields','["invoice_number","document_no","code","name"]'::jsonb,
+                   'search_fields','["invoice_number","document_no","supplier_invoice_number","description"]'::jsonb
+               ),
+               jsonb_build_object(
+                   'key','payment_entry',
+                   'label','Receipt / Payment',
+                   'entity','payment_entry',
+                   'ref_doc_type','payment_entry',
+                   'default_ref_type','receipt_adjustment',
+                   'line_selection',true,
+                   'display_fields','["payment_number","document_no","code","name"]'::jsonb,
+                   'search_fields','["payment_number","document_no","description"]'::jsonb
+               ),
+               jsonb_build_object(
+                   'key','journal_entry',
+                   'label','Journal Entry',
+                   'entity','journal_entry',
+                   'ref_doc_type','journal_entry',
+                   'default_ref_type','manual_adjustment',
+                   'line_selection',true,
+                   'display_fields','["je_number","document_no","description"]'::jsonb,
+                   'search_fields','["je_number","document_no","description"]'::jsonb
+               )
+           )
+       )
+   ),
+   natural_key_fields = ARRAY['document_no']
+ WHERE table_schema = 'document'
+   AND table_name = 'journal_entry'
+   AND tenant_id IS NULL;
+
+INSERT INTO control.entity (
+    module_id, name, entity_short, entity_code,
+    entity_class, ownership_model, kind, backing_type,
+    governance_level, security_tier, mutability,
+    table_schema, table_name,
+    label_singular, label_plural, icon_key, color_token,
+    numbering_active, feature_flags,
+    status, created_by)
+SELECT
+    (SELECT id FROM shared.module WHERE code = 'ACC'),
+    'journal_line', 'JL', 'journal_line',
+    'DOCUMENT_RELATION', 'system', 'ent', 'table',
+    'full', 'tenant_critical', 'controlled',
+    'document', 'journal_line',
+    'Journal Line', 'Journal Lines', 'list', 'slate',
+    false,
+    '{"parent_entity":"journal_entry","parent_fk":"journal_entry_id","line_editor":true,"posting_controlled":true,"dimension_controlled":true}'::jsonb,
+    'ACTIVE', v_su
+WHERE NOT EXISTS (
+    SELECT 1 FROM control.entity
+     WHERE table_schema = 'document' AND table_name = 'journal_line'
+       AND tenant_id IS NULL
+);
+
+INSERT INTO control.entity_version (entity_id, tenant_id, version_no, status, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE', now(), v_su
+FROM control.entity e
+WHERE e.table_schema = 'document' AND e.table_name = 'journal_line'
+  AND e.tenant_id IS NULL
+ON CONFLICT (entity_id, version_no) DO NOTHING;
+
+WITH defs AS (
+    SELECT * FROM (VALUES
+      ('document_no','je_number','JE Number','Number assigned by the JE numbering policy.','text','text','one',NULL::text,NULL::jsonb,true,true,true,true,false,false,true,false,false,'{"max_length":50}'::jsonb,'{"source":"numbering_policy"}'::jsonb,'{"group_key":"identity","badge":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft"]}'::jsonb,NULL::jsonb,10),
+      ('status','status','Status','Lifecycle state of the journal entry.','lifecycle_state','status','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,20),
+      ('company_code_id','company_code_id','Company Code','Company whose ledger is affected.','reference','entity_chooser','one',NULL::text,'{"target_entity":"company_code","target_field":"id","display_field":"code"}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"company_code"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,30),
+      ('book_id','book_id','Ledger Book','Ledger book used for posting.','reference','entity_chooser','one',NULL::text,'{"target_entity":"ledger_book","target_field":"id","display_field":"code"}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"ledger_book"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.default_manual_ledger_book"}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","is_manual_je_allowed":true}}'::jsonb,40),
+      ('document_date','document_date','Document Date','Business document date.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
+      ('posting_date','posting_date','Posting Date','GL posting date that drives fiscal period and FX.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,NULL::jsonb,'{"source":"today"}'::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,60),
+      ('fiscal_period_id','fiscal_period_id','Fiscal Period','Fiscal period resolved from posting date.','reference','entity_chooser','one',NULL::text,'{"target_entity":"fiscal_period","target_field":"id","display_field":"period_number"}'::jsonb,true,true,false,true,true,false,true,true,false,'{"ref_entity":"fiscal_period"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"fiscal.period_from_posting_date"}'::jsonb,'{"search_fields":["fiscal_year","period_number"],"filters":{"status":["open","soft_close"]}}'::jsonb,70),
+      ('fiscal_year','fiscal_year','Fiscal Year','Resolved fiscal year.','integer','number','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,NULL::jsonb,NULL::jsonb,'{"group_key":"posting","summary":true}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,80),
+      ('period_number','period_number','Period','Resolved fiscal period number.','integer','number','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"min":1,"max":16}'::jsonb,NULL::jsonb,'{"group_key":"posting","summary":true}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,90),
+      ('source_type','source_doc_type','Source Type','Source document category.','enum','select','one','document.je_source_doc_type',NULL::jsonb,true,true,false,true,true,false,false,false,false,NULL::jsonb,'"manual"'::jsonb,'{"group_key":"source"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"default_locked":true}'::jsonb,NULL::jsonb,100),
+      ('source_doc_id','source_doc_id','Source Document','Source document id for system-generated JEs.','uuid','hidden','zero_or_one',NULL::text,NULL::jsonb,false,false,false,false,false,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"source"}'::jsonb,'{"!=":[{"var":"source_type"},"manual"]}'::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,110),
+      ('transaction_currency','transaction_currency','Transaction Currency','Currency used on JE lines.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,false,false,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.base_currency"}'::jsonb,'{"endpoint":"/api/platform/ref/currencies","search_fields":["code","name"]}'::jsonb,120),
+      ('base_currency','base_currency','Base Currency','Company functional currency; derived from company code.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"company_code.base_currency"}'::jsonb,NULL::jsonb,130),
+      ('total_debit','total_debit','Total Debit','Cached total from lines.','decimal','money','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"total"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,140),
+      ('total_credit','total_credit','Total Credit','Cached total from lines.','decimal','money','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"total"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,150),
+      ('line_count','line_count','Line Count','Number of JE lines.','integer','number','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"meta"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,160),
+      ('description','description','Description','Header narration.','text','textarea','zero_or_one',NULL::text,NULL::jsonb,false,false,true,false,false,false,false,false,false,'{"max_length":500}'::jsonb,NULL::jsonb,'{"group_key":"narrative","span":3}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,170),
+      ('is_auto_reverse','is_auto_reverse','Auto Reverse','Create a scheduled reversal after posting.','boolean','checkbox','one',NULL::text,NULL::jsonb,false,true,false,false,true,false,false,false,false,NULL::jsonb,'false'::jsonb,'{"group_key":"reversal"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,180),
+      ('auto_reverse_date','auto_reverse_date','Auto Reverse Date','Posting date for the scheduled reversal.','date','date','zero_or_one',NULL::text,NULL::jsonb,false,true,false,true,false,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"reversal"}'::jsonb,'{"==":[{"var":"is_auto_reverse"},true]}'::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,190),
+      ('is_prior_period','prior_period_flag','Prior Period','Marks a prior-period adjustment.','boolean','checkbox','one',NULL::text,NULL::jsonb,false,true,false,false,true,false,false,false,false,NULL::jsonb,'false'::jsonb,'{"group_key":"controls"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,200),
+      ('original_period_year','original_period_year','Original Year','Original fiscal year for prior-period adjustments.','integer','number','zero_or_one',NULL::text,NULL::jsonb,false,true,false,true,false,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"controls"}'::jsonb,'{"==":[{"var":"is_prior_period"},true]}'::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,210),
+      ('original_period_number','original_period_number','Original Period','Original period for prior-period adjustments.','integer','number','zero_or_one',NULL::text,NULL::jsonb,false,true,false,true,false,false,false,false,false,'{"min":1,"max":16}'::jsonb,NULL::jsonb,'{"group_key":"controls"}'::jsonb,'{"==":[{"var":"is_prior_period"},true]}'::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,220),
+      ('close_override_id','close_override_id','Close Override','Approval/override allowing a closed-period adjustment.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"close_override","target_field":"id","display_field":"code"}'::jsonb,false,false,false,false,false,false,false,false,false,'{"ref_entity":"close_override"}'::jsonb,NULL::jsonb,'{"group_key":"controls","chooser":"inline_search"}'::jsonb,'{"==":[{"var":"is_prior_period"},true]}'::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,230),
+      ('reversal_of_id','reversal_of_id','Reversal Of','Original JE reversed by this entry.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"journal_entry","target_field":"id","display_field":"je_number"}'::jsonb,false,true,false,true,false,false,true,false,false,'{"ref_entity":"journal_entry"}'::jsonb,NULL::jsonb,'{"group_key":"reversal","chooser":"inline_search"}'::jsonb,'{"==":[{"var":"is_reversal"},true]}'::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,240),
+      ('reversed_by_id','reversed_by_id','Reversed By','Reversal JE linked to this posted entry.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"journal_entry","target_field":"id","display_field":"je_number"}'::jsonb,false,true,false,true,false,false,true,false,false,'{"ref_entity":"journal_entry"}'::jsonb,NULL::jsonb,'{"group_key":"reversal","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,250),
+      ('posted_at','posted_at','Posted At','Timestamp when the JE was posted.','timestamptz','datetime','zero_or_one',NULL::text,NULL::jsonb,false,true,false,true,false,false,true,true,false,NULL::jsonb,NULL::jsonb,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,260),
+      ('posted_by','posted_by','Posted By','Principal who posted the JE.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"principal","target_field":"id","display_field":"display_name"}'::jsonb,false,true,false,false,false,false,true,true,false,'{"ref_entity":"principal"}'::jsonb,NULL::jsonb,'{"group_key":"audit","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,270),
+      ('tags','tags','Tags','Classification tags.','jsonb','tags','zero_or_one',NULL::text,NULL::jsonb,false,true,true,false,true,false,false,false,false,NULL::jsonb,'[]'::jsonb,'{"group_key":"narrative"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,280),
+      ('metadata','metadata','Metadata','System and integration metadata.','jsonb','json','zero_or_one',NULL::text,NULL::jsonb,false,false,false,false,false,false,true,false,false,NULL::jsonb,'{}'::jsonb,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,290)
+    ) AS x(name,column_name,label,description,data_type,ui_type,cardinality,enum_domain_code,reference_config,is_required,is_filterable,is_searchable,is_sortable,is_groupable,is_aggregatable,is_read_only,is_computed,is_write_once,validation,default_value,ui_hint,visibility,editability,lookup_config,sort_order)
+)
+INSERT INTO control.entity_field (
+    entity_version_id, name, column_name, label, description, data_type, ui_type,
+    cardinality, origin, enum_domain_code, reference_config,
+    is_required, is_filterable, is_searchable, is_sortable, is_groupable,
+    is_aggregatable, is_read_only, is_computed, is_write_once, compute_mode, compute_expr,
+    validation, default_value, ui_hint, visibility, editability, lookup_config,
+    sort_order, created_by)
+SELECT ev.id, d.name, d.column_name, d.label, d.description, d.data_type, d.ui_type,
+       d.cardinality, 'standard', d.enum_domain_code, d.reference_config,
+       d.is_required, d.is_filterable, d.is_searchable, d.is_sortable, d.is_groupable,
+       d.is_aggregatable, d.is_read_only, d.is_computed, d.is_write_once,
+       CASE WHEN d.is_computed THEN 'database' ELSE NULL END,
+       CASE WHEN d.is_computed THEN jsonb_build_object('source', 'db_trigger') ELSE NULL END,
+       d.validation, d.default_value, d.ui_hint, d.visibility, d.editability, d.lookup_config,
+       d.sort_order, v_su
+FROM defs d
+JOIN control.entity e ON e.entity_code = 'journal_entry' AND e.tenant_id IS NULL
+JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
+ON CONFLICT DO NOTHING;
+
+WITH defs AS (
+    SELECT * FROM (VALUES
+      ('document_no','je_number','JE Number','Number assigned by the JE numbering policy.','text','text','one',NULL::text,NULL::jsonb,true,true,true,true,false,false,true,false,false,'{"max_length":50}'::jsonb,'{"source":"numbering_policy"}'::jsonb,'{"group_key":"identity","badge":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft"]}'::jsonb,NULL::jsonb,10),
+      ('status','status','Status','Lifecycle state of the journal entry.','lifecycle_state','status','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,20),
+      ('company_code_id','company_code_id','Company Code','Company whose ledger is affected.','reference','entity_chooser','one',NULL::text,'{"target_entity":"company_code","target_field":"id","display_field":"code"}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"company_code"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,30),
+      ('book_id','book_id','Ledger Book','Ledger book used for posting.','reference','entity_chooser','one',NULL::text,'{"target_entity":"ledger_book","target_field":"id","display_field":"code"}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"ledger_book"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.default_manual_ledger_book"}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","is_manual_je_allowed":true}}'::jsonb,40),
+      ('document_date','document_date','Document Date','Business document date.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
+      ('posting_date','posting_date','Posting Date','GL posting date that drives fiscal period and FX.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,NULL::jsonb,'{"source":"today"}'::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,60),
+      ('fiscal_period_id','fiscal_period_id','Fiscal Period','Fiscal period resolved from posting date.','reference','entity_chooser','one',NULL::text,'{"target_entity":"fiscal_period","target_field":"id","display_field":"period_number"}'::jsonb,true,true,false,true,true,false,true,true,false,'{"ref_entity":"fiscal_period"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"fiscal.period_from_posting_date"}'::jsonb,'{"search_fields":["fiscal_year","period_number"],"filters":{"status":["open","soft_close"]}}'::jsonb,70),
+      ('fiscal_year','fiscal_year','Fiscal Year','Resolved fiscal year.','integer','number','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,NULL::jsonb,NULL::jsonb,'{"group_key":"posting","summary":true}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,80),
+      ('period_number','period_number','Period','Resolved fiscal period number.','integer','number','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"min":1,"max":16}'::jsonb,NULL::jsonb,'{"group_key":"posting","summary":true}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,90),
+      ('source_type','source_doc_type','Source Type','Source document category.','enum','select','one','document.je_source_doc_type',NULL::jsonb,true,true,false,true,true,false,false,false,false,NULL::jsonb,'"manual"'::jsonb,'{"group_key":"source"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"default_locked":true}'::jsonb,NULL::jsonb,100),
+      ('transaction_currency','transaction_currency','Transaction Currency','Currency used on JE lines.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,false,false,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.base_currency"}'::jsonb,'{"endpoint":"/api/platform/ref/currencies","search_fields":["code","name"]}'::jsonb,120),
+      ('base_currency','base_currency','Base Currency','Company functional currency; derived from company code.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"company_code.base_currency"}'::jsonb,NULL::jsonb,130),
+      ('total_debit','total_debit','Total Debit','Cached total from lines.','decimal','money','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"total"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,140),
+      ('total_credit','total_credit','Total Credit','Cached total from lines.','decimal','money','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"total"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,150),
+      ('description','description','Description','Header narration.','text','textarea','zero_or_one',NULL::text,NULL::jsonb,false,false,true,false,false,false,false,false,false,'{"max_length":500}'::jsonb,NULL::jsonb,'{"group_key":"narrative","span":3}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,170)
+    ) AS x(name,column_name,label,description,data_type,ui_type,cardinality,enum_domain_code,reference_config,is_required,is_filterable,is_searchable,is_sortable,is_groupable,is_aggregatable,is_read_only,is_computed,is_write_once,validation,default_value,ui_hint,visibility,editability,lookup_config,sort_order)
+)
+UPDATE control.entity_field ef
+   SET column_name = d.column_name,
+       label = d.label,
+       description = d.description,
+       data_type = d.data_type,
+       ui_type = d.ui_type,
+       cardinality = d.cardinality,
+       origin = 'standard',
+       enum_domain_code = d.enum_domain_code,
+       reference_config = d.reference_config,
+       is_required = d.is_required,
+       is_filterable = d.is_filterable,
+       is_searchable = d.is_searchable,
+       is_sortable = d.is_sortable,
+       is_groupable = d.is_groupable,
+       is_aggregatable = d.is_aggregatable,
+       is_read_only = d.is_read_only,
+       is_computed = d.is_computed,
+       is_write_once = d.is_write_once,
+       compute_mode = CASE WHEN d.is_computed THEN 'database' ELSE NULL END,
+       compute_expr = CASE WHEN d.is_computed THEN jsonb_build_object('source', 'db_trigger') ELSE NULL END,
+       validation = d.validation,
+       default_value = d.default_value,
+       ui_hint = d.ui_hint,
+       visibility = d.visibility,
+       editability = d.editability,
+       lookup_config = d.lookup_config,
+       sort_order = d.sort_order,
+       updated_at = now(),
+       updated_by = v_su
+FROM defs d
+JOIN control.entity e ON e.entity_code = 'journal_entry' AND e.tenant_id IS NULL
+JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
+WHERE ef.entity_version_id = ev.id
+  AND ef.name = d.name;
+
+UPDATE control.entity_field ef
+   SET is_active = false,
+       is_deprecated = true,
+       is_required = false,
+       is_filterable = false,
+       is_searchable = false,
+       is_sortable = false,
+       visibility = jsonb_build_object('deprecated_alias_for',
+           CASE ef.name
+             WHEN 'entry_date' THEN 'posting_date'
+             WHEN 'fiscal_period' THEN 'period_number'
+             WHEN 'currency_code' THEN 'transaction_currency'
+           END),
+       editability = '{"editable_in":[]}'::jsonb,
+       updated_at = now(),
+       updated_by = v_su
+FROM control.entity e
+JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
+WHERE ef.entity_version_id = ev.id
+  AND e.entity_code = 'journal_entry'
+  AND e.tenant_id IS NULL
+  AND ef.name IN ('entry_date', 'fiscal_period', 'currency_code');
+
+WITH defs AS (
+    SELECT * FROM (VALUES
+      ('journal_entry_id','journal_entry_id','Journal Entry','Parent journal entry.','reference','hidden','one',NULL::text,'{"target_entity":"journal_entry","target_field":"id","display_field":"je_number"}'::jsonb,true,false,false,true,false,false,true,false,false,'{"ref_entity":"journal_entry"}'::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,5),
+      ('line_no','line_no','Line No.','Sequential line number within the JE.','integer','number','one',NULL::text,NULL::jsonb,true,false,false,true,false,false,false,false,false,'{"min":1}'::jsonb,NULL::jsonb,'{"group_key":"identity","width":"xs"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,10),
+      ('gl_account_id','gl_account_id','GL Account','Account to debit or credit.','reference','entity_chooser','one',NULL::text,'{"target_entity":"gl_account","target_field":"id","display_field":"code"}'::jsonb,true,true,true,true,true,false,false,false,false,'{"ref_entity":"gl_account"}'::jsonb,NULL::jsonb,'{"group_key":"account","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","posting_allowed":true}}'::jsonb,20),
+      ('transaction_currency','transaction_currency','Currency','Line transaction currency.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,false,false,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"amounts","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"default":"header.transaction_currency"}'::jsonb,NULL::jsonb,30),
+      ('transaction_debit','transaction_debit','Debit','Debit amount in transaction currency.','decimal','money','one',NULL::text,NULL::jsonb,false,false,false,true,false,true,false,false,false,'{"min":0,"exclusive_with":"transaction_credit"}'::jsonb,'0'::jsonb,'{"group_key":"amounts","summary_role":"addition"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,40),
+      ('transaction_credit','transaction_credit','Credit','Credit amount in transaction currency.','decimal','money','one',NULL::text,NULL::jsonb,false,false,false,true,false,true,false,false,false,'{"min":0,"exclusive_with":"transaction_debit"}'::jsonb,'0'::jsonb,'{"group_key":"amounts","summary_role":"deduction"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
+      ('base_currency','base_currency','Base Currency','Company functional currency.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"base_amounts"}'::jsonb,NULL::jsonb,'{"editable_in":[],"default":"header.base_currency"}'::jsonb,NULL::jsonb,60),
+      ('base_debit','base_debit','Base Debit','Debit amount in base currency.','decimal','money','one',NULL::text,NULL::jsonb,false,false,false,true,false,true,false,false,false,'{"min":0}'::jsonb,'0'::jsonb,'{"group_key":"base_amounts"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"transaction_debit * exchange_rate"}'::jsonb,NULL::jsonb,70),
+      ('base_credit','base_credit','Base Credit','Credit amount in base currency.','decimal','money','one',NULL::text,NULL::jsonb,false,false,false,true,false,true,false,false,false,'{"min":0}'::jsonb,'0'::jsonb,'{"group_key":"base_amounts"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"transaction_credit * exchange_rate"}'::jsonb,NULL::jsonb,80),
+      ('exchange_rate','exchange_rate','Exchange Rate','FX rate from transaction to base currency.','decimal','number','zero_or_one',NULL::text,NULL::jsonb,false,false,false,false,false,false,false,false,false,'{"min":0,"required_when":{"!=":[{"var":"transaction_currency"},{"var":"base_currency"}]}}'::jsonb,NULL::jsonb,'{"group_key":"base_amounts"}'::jsonb,'{"!=":[{"var":"transaction_currency"},{"var":"base_currency"}]}'::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,90),
+      ('cost_center_id','cost_center_id','Cost Center','Cost center dimension.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"cost_center","target_field":"id","display_field":"code"}'::jsonb,false,true,false,true,true,false,false,false,false,'{"ref_entity":"cost_center"}'::jsonb,NULL::jsonb,'{"group_key":"dimensions","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,100),
+      ('profit_center_id','profit_center_id','Profit Center','Profit center dimension.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"profit_center","target_field":"id","display_field":"code"}'::jsonb,false,true,false,true,true,false,false,false,false,'{"ref_entity":"profit_center"}'::jsonb,NULL::jsonb,'{"group_key":"dimensions","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,110),
+      ('project_id','project_id','Project','Project dimension.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"project","target_field":"id","display_field":"code"}'::jsonb,false,true,false,true,true,false,false,false,false,'{"ref_entity":"project"}'::jsonb,NULL::jsonb,'{"group_key":"dimensions","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,120),
+      ('site_id','site_id','Site','Site dimension.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"site","target_field":"id","display_field":"code"}'::jsonb,false,true,false,true,true,false,false,false,false,'{"ref_entity":"site"}'::jsonb,NULL::jsonb,'{"group_key":"dimensions","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,130),
+      ('party_type','party_type','Party Type','Counterparty type.','enum','select','zero_or_one','document.jl_party_type',NULL::jsonb,false,true,false,false,true,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"party"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,140),
+      ('party_id','party_id','Party','Counterparty reference; target depends on party type.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"polymorphic_party","target_field":"id","display_field":"name"}'::jsonb,false,true,true,false,true,false,false,false,false,'{"ref_entity":"polymorphic_party"}'::jsonb,NULL::jsonb,'{"group_key":"party","chooser":"inline_search"}'::jsonb,'{"var":"party_type"}'::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"polymorphic_by":"party_type","targets":{"customer":"customer","supplier":"supplier","employee":"employee","company_code":"company_code","principal":"principal"}}'::jsonb,150),
+      ('subledger_type','subledger_type','Subledger','Subledger classification.','enum','select','zero_or_one','document.jl_subledger_type',NULL::jsonb,false,true,false,false,true,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"party"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,160),
+      ('description','description','Line Text','Line-level narration.','text','textarea','zero_or_one',NULL::text,NULL::jsonb,false,false,true,false,false,false,false,false,false,'{"max_length":500}'::jsonb,NULL::jsonb,'{"group_key":"narrative","span":3}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,170),
+      ('source_doc_line_id','source_doc_line_id','Source Line','Source document line id for generated entries.','uuid','hidden','zero_or_one',NULL::text,NULL::jsonb,false,false,false,false,false,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"source"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,180),
+      ('tags','tags','Tags','Line tags.','jsonb','tags','zero_or_one',NULL::text,NULL::jsonb,false,true,true,false,true,false,false,false,false,NULL::jsonb,'[]'::jsonb,'{"group_key":"narrative"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,190),
+      ('metadata','metadata','Metadata','System metadata.','jsonb','json','zero_or_one',NULL::text,NULL::jsonb,false,false,false,false,false,false,true,false,false,NULL::jsonb,'{}'::jsonb,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,200)
+    ) AS x(name,column_name,label,description,data_type,ui_type,cardinality,enum_domain_code,reference_config,is_required,is_filterable,is_searchable,is_sortable,is_groupable,is_aggregatable,is_read_only,is_computed,is_write_once,validation,default_value,ui_hint,visibility,editability,lookup_config,sort_order)
+)
+INSERT INTO control.entity_field (
+    entity_version_id, name, column_name, label, description, data_type, ui_type,
+    cardinality, origin, enum_domain_code, reference_config,
+    is_required, is_filterable, is_searchable, is_sortable, is_groupable,
+    is_aggregatable, is_read_only, is_computed, is_write_once, compute_mode, compute_expr,
+    validation, default_value, ui_hint, visibility, editability, lookup_config,
+    sort_order, created_by)
+SELECT ev.id, d.name, d.column_name, d.label, d.description, d.data_type, d.ui_type,
+       d.cardinality, 'standard', d.enum_domain_code, d.reference_config,
+       d.is_required, d.is_filterable, d.is_searchable, d.is_sortable, d.is_groupable,
+       d.is_aggregatable, d.is_read_only, d.is_computed, d.is_write_once,
+       CASE WHEN d.is_computed THEN 'database' ELSE NULL END,
+       CASE WHEN d.is_computed THEN jsonb_build_object('source', 'db_trigger') ELSE NULL END,
+       d.validation, d.default_value, d.ui_hint, d.visibility, d.editability, d.lookup_config,
+       d.sort_order, v_su
+FROM defs d
+JOIN control.entity e ON e.entity_code = 'journal_line' AND e.tenant_id IS NULL
+JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
+ON CONFLICT DO NOTHING;
+
+UPDATE control.entity
+   SET display_config = jsonb_build_object(
+       'detail_renderer', 'line',
+       'title_field', 'line_no',
+       'subtitle_field', 'description',
+       'list_columns', '["line_no","gl_account_id","description","references","transaction_debit","transaction_credit","cost_center_id","party_id"]'::jsonb,
+       'default_sort_field', 'line_no',
+       'default_sort_order', 'asc',
+       'reference_model', 'journal_line_reference'
+   ),
+   natural_key_fields = ARRAY['line_no']
+ WHERE table_schema = 'document'
+   AND table_name = 'journal_line'
+   AND tenant_id IS NULL;
+
+INSERT INTO control.entity (
+    module_id, name, entity_short, entity_code,
+    entity_class, ownership_model, kind, backing_type,
+    governance_level, security_tier, mutability,
+    table_schema, table_name,
+    label_singular, label_plural, icon_key, color_token,
+    numbering_active, feature_flags,
+    status, created_by)
+SELECT
+    (SELECT id FROM shared.module WHERE code = 'ACC'),
+    'journal_line_reference', 'JLR', 'journal_line_reference',
+    'DOCUMENT_RELATION', 'system', 'ent', 'table',
+    'full', 'tenant_critical', 'controlled',
+    'document', 'journal_line_reference',
+    'Journal Line Reference', 'Journal Line References', 'link', 'slate',
+    false,
+    '{"parent_entity":"journal_line","parent_fk":"journal_line_id","append_only_after_submission":true,"reference_picker":true}'::jsonb,
+    'ACTIVE', v_su
+WHERE NOT EXISTS (
+    SELECT 1 FROM control.entity
+     WHERE table_schema = 'document' AND table_name = 'journal_line_reference'
+       AND tenant_id IS NULL
+);
+
+INSERT INTO control.entity_version (entity_id, tenant_id, version_no, status, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE', now(), v_su
+FROM control.entity e
+WHERE e.table_schema = 'document' AND e.table_name = 'journal_line_reference'
+  AND e.tenant_id IS NULL
+ON CONFLICT (entity_id, version_no) DO NOTHING;
+
+WITH defs AS (
+    SELECT * FROM (VALUES
+      ('journal_line_id','journal_line_id','Journal Line','Parent journal line.','reference','hidden','one',NULL::text,'{"target_entity":"journal_line","target_field":"id","display_field":"line_no"}'::jsonb,true,false,false,true,false,false,true,false,false,'{"ref_entity":"journal_line"}'::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,10),
+      ('ref_type','ref_type','Reference Type','Business reason for the reference.','enum','select','one','document.jlr_ref_type',NULL::jsonb,true,true,false,true,true,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"reference","required":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,20),
+      ('ref_doc_type','ref_doc_type','Document Type','Referenced document category.','enum','select','one','document.jlr_ref_doc_type',NULL::jsonb,true,true,false,true,true,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"reference","required":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,30),
+      ('ref_doc_id','ref_doc_id','Document','Referenced document id.','uuid','entity_chooser','one',NULL::text,'{"polymorphic_by":"ref_doc_type","target_field":"id"}'::jsonb,true,true,false,true,true,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"reference","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"polymorphic_by":"ref_doc_type","targets":{"purchase_invoice":"purchase_invoice","payment_entry":"payment_entry","journal_entry":"journal_entry"}}'::jsonb,40),
+      ('ref_doc_line_id','ref_doc_line_id','Document Line','Optional referenced source line.','uuid','entity_chooser','zero_or_one',NULL::text,'{"polymorphic_line_by":"ref_doc_type","target_field":"id"}'::jsonb,false,true,false,true,true,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"reference","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
+      ('ref_doc_number','ref_doc_number','Document Number','Display number cached at selection time.','text','text','zero_or_one',NULL::text,NULL::jsonb,false,true,true,true,false,false,false,false,false,'{"max_length":120}'::jsonb,NULL::jsonb,'{"group_key":"reference","badge":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,60),
+      ('allocated_amount','allocated_amount','Allocated Amount','Amount connected to the referenced document.','decimal','money','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,false,false,false,'{"min":0,"exclusive_min":true}'::jsonb,NULL::jsonb,'{"group_key":"amounts"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"abs(journal_line.base_amount)"}'::jsonb,NULL::jsonb,70),
+      ('currency_code','currency_code','Currency','Reference currency.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,false,false,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"amounts"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"default":"header.transaction_currency"}'::jsonb,NULL::jsonb,80),
+      ('base_amount','base_amount','Base Amount','Base currency amount.','decimal','money','zero_or_one',NULL::text,NULL::jsonb,false,false,false,true,false,true,false,false,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"allocated_amount * exchange_rate"}'::jsonb,NULL::jsonb,90),
+      ('is_full_settlement','is_full_settlement','Full Settlement','Marks whether the reference fully settles the source.','boolean','checkbox','one',NULL::text,NULL::jsonb,false,true,false,true,true,false,false,false,false,NULL::jsonb,'false'::jsonb,'{"group_key":"settlement"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,100),
+      ('settlement_date','settlement_date','Settlement Date','Date of settlement/application.','date','date','zero_or_one',NULL::text,NULL::jsonb,false,true,false,true,false,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"settlement"}'::jsonb,'{"==":[{"var":"is_full_settlement"},true]}'::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,110),
+      ('description','description','Description','Reference narration.','text','textarea','zero_or_one',NULL::text,NULL::jsonb,false,false,true,false,false,false,false,false,false,'{"max_length":500}'::jsonb,NULL::jsonb,'{"group_key":"narrative","span":3}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,120),
+      ('metadata','metadata','Metadata','Cached labels and integration metadata.','jsonb','json','zero_or_one',NULL::text,NULL::jsonb,false,false,false,false,false,false,true,false,false,NULL::jsonb,'{}'::jsonb,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,130)
+    ) AS x(name,column_name,label,description,data_type,ui_type,cardinality,enum_domain_code,reference_config,is_required,is_filterable,is_searchable,is_sortable,is_groupable,is_aggregatable,is_read_only,is_computed,is_write_once,validation,default_value,ui_hint,visibility,editability,lookup_config,sort_order)
+)
+INSERT INTO control.entity_field (
+    entity_version_id, name, column_name, label, description, data_type, ui_type,
+    cardinality, origin, enum_domain_code, reference_config,
+    is_required, is_filterable, is_searchable, is_sortable, is_groupable,
+    is_aggregatable, is_read_only, is_computed, is_write_once, compute_mode, compute_expr,
+    validation, default_value, ui_hint, visibility, editability, lookup_config,
+    sort_order, created_by)
+SELECT ev.id, d.name, d.column_name, d.label, d.description, d.data_type, d.ui_type,
+       d.cardinality, 'standard', d.enum_domain_code, d.reference_config,
+       d.is_required, d.is_filterable, d.is_searchable, d.is_sortable, d.is_groupable,
+       d.is_aggregatable, d.is_read_only, d.is_computed, d.is_write_once,
+       CASE WHEN d.is_computed THEN 'database' ELSE NULL END,
+       CASE WHEN d.is_computed THEN jsonb_build_object('source', 'db_trigger') ELSE NULL END,
+       d.validation, d.default_value, d.ui_hint, d.visibility, d.editability, d.lookup_config,
+       d.sort_order, v_su
+FROM defs d
+JOIN control.entity e ON e.entity_code = 'journal_line_reference' AND e.tenant_id IS NULL
+JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
+ON CONFLICT DO NOTHING;
+
+UPDATE control.entity
+   SET display_config = jsonb_build_object(
+       'detail_renderer', 'line_reference',
+       'title_field', 'ref_doc_number',
+       'subtitle_field', 'description',
+       'list_columns', '["ref_type","ref_doc_type","ref_doc_number","allocated_amount","currency_code"]'::jsonb,
+       'default_sort_field', 'created_at',
+       'default_sort_order', 'asc'
+   ),
+   natural_key_fields = ARRAY['journal_line_id','ref_doc_type','ref_doc_id']
+ WHERE table_schema = 'document'
+   AND table_name = 'journal_line_reference'
+   AND tenant_id IS NULL;
+
+INSERT INTO control.entity_relation
+    (entity_version_id, name, relation_kind, target_entity, fk_field, on_delete, ui_behavior, created_by)
+SELECT ev.id, r.name, r.kind, r.target_entity, r.fk_field, r.on_delete, r.ui_behavior, v_su
+FROM (VALUES
+    ('journal_entry','lines','has_many','journal_line','journal_entry_id','cascade','{"surface":"lines_tab","min_rows":2,"line_editor":true}'::jsonb),
+    ('journal_entry','company_code','belongs_to','company_code','company_code_id','restrict','{"chooser":"inline_search"}'::jsonb),
+    ('journal_entry','ledger_book','belongs_to','ledger_book','book_id','restrict','{"chooser":"inline_search"}'::jsonb),
+    ('journal_entry','fiscal_period','belongs_to','fiscal_period','fiscal_period_id','restrict','{"chooser":"inline_search"}'::jsonb),
+    ('journal_entry','reversal_of','belongs_to','journal_entry','reversal_of_id','set_null','{"readonly":true}'::jsonb),
+    ('journal_line','journal_entry','belongs_to','journal_entry','journal_entry_id','cascade','{"parent":true}'::jsonb),
+    ('journal_line','references','has_many','journal_line_reference','journal_line_id','cascade','{"surface":"line_reference","optional":true,"editor":"reference_picker"}'::jsonb),
+    ('journal_line','gl_account','belongs_to','gl_account','gl_account_id','restrict','{"chooser":"inline_search"}'::jsonb),
+    ('journal_line','cost_center','belongs_to','cost_center','cost_center_id','set_null','{"chooser":"inline_search"}'::jsonb),
+    ('journal_line','profit_center','belongs_to','profit_center','profit_center_id','set_null','{"chooser":"inline_search"}'::jsonb),
+    ('journal_line','project','belongs_to','project','project_id','set_null','{"chooser":"inline_search"}'::jsonb),
+    ('journal_line','site','belongs_to','site','site_id','set_null','{"chooser":"inline_search"}'::jsonb),
+    ('journal_line_reference','journal_line','belongs_to','journal_line','journal_line_id','cascade','{"parent":true,"append_only_after_submission":true}'::jsonb)
+) AS r(entity_code, name, kind, target_entity, fk_field, on_delete, ui_behavior)
+JOIN control.entity e ON e.entity_code = r.entity_code AND e.tenant_id IS NULL
+JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
+ON CONFLICT (entity_version_id, name) DO NOTHING;
+
+END $$;

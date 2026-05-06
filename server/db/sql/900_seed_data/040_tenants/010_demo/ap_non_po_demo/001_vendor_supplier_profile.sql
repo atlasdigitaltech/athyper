@@ -10,8 +10,11 @@ DECLARE
     v_tenant_id      uuid;
     v_cc_id          uuid;
     v_sys            uuid := '00000000-0000-0000-0000-000000000000';
+    v_bp_id          uuid;
     v_vendor_id      uuid;
     v_scp_id         uuid;
+    v_bp_addr_id     uuid;
+    v_bp_cp_id       uuid;
     v_apc_std_id     uuid;
     v_acct_prof_id   uuid;
     v_pm_wire_id     uuid;
@@ -38,22 +41,37 @@ BEGIN
         RAISE EXCEPTION 'Company code AUIC not found in tenant athyper';
     END IF;
 
-    -- ── 1. Vendor record ────────────────────────────────────────────────────
-    INSERT INTO master.supplier (
+    -- ── 1a. Business partner (identity root) ───────────────────────────────
+    INSERT INTO master.business_partner (
         tenant_id, code, name, legal_name,
-        supplier_type, registration_country_code,
+        partner_category, registration_country_code,
         status, created_by
     )
     SELECT v_tenant_id, 'ACME-CONSULT-US', 'Acme Consulting LLC',
            'Acme Consulting Limited Liability Company',
-           'vendor', 'US', 'active', v_sys
+           'organization', 'US', 'active', v_sys
     WHERE NOT EXISTS (
-        SELECT 1 FROM master.supplier
+        SELECT 1 FROM master.business_partner
          WHERE tenant_id = v_tenant_id AND code = 'ACME-CONSULT-US'
     );
 
-    SELECT id INTO v_vendor_id FROM master.supplier
+    SELECT id INTO v_bp_id FROM master.business_partner
      WHERE tenant_id = v_tenant_id AND code = 'ACME-CONSULT-US';
+
+    -- ── 1b. Supplier role (thin AP record) ─────────────────────────────────
+    INSERT INTO master.supplier (
+        tenant_id, business_partner_id, supplier_code,
+        supplier_type, status, created_by
+    )
+    SELECT v_tenant_id, v_bp_id, 'ACME-CONSULT-US',
+           'vendor', 'active', v_sys
+    WHERE NOT EXISTS (
+        SELECT 1 FROM master.supplier
+         WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US'
+    );
+
+    SELECT id INTO v_vendor_id FROM master.supplier
+     WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US';
 
     -- ── 2. Tax jurisdiction (US federal) ────────────────────────────────────
     SELECT id INTO v_jur_id FROM master.tax_jurisdiction
@@ -236,7 +254,7 @@ BEGIN
     IF v_scp_id IS NULL THEN
         INSERT INTO master.company_code_supplier_profile (
             tenant_id, supplier_id, company_code_id,
-            payment_terms, payment_term_id, currency_code,
+            payment_term_id, currency_code,
             default_accounting_profile_id,
             payment_method_id,
             preferred_remittance_bank_link_id,
@@ -245,7 +263,7 @@ BEGIN
             is_blocked, status, created_by
         ) VALUES (
             v_tenant_id, v_vendor_id, v_cc_id,
-            'net_30', v_pt_net30_id, 'USD',
+            v_pt_net30_id, 'USD',
             v_acct_prof_id,
             v_pm_wire_id,
             NULL,
@@ -259,6 +277,77 @@ BEGIN
            SET payment_term_id = COALESCE(payment_term_id, v_pt_net30_id)
          WHERE id = v_scp_id
            AND payment_term_id IS NULL;
+    END IF;
+
+    -- ── 9. Address at BP level ────────────────────────────────────────────────
+    -- Create a single canonical address for ACME-CONSULT-US and link it to the
+    -- business_partner as 'legal' + 'default'. fn_resolve_party_address will
+    -- fall through to these BP links when no supplier-role address is present.
+    SELECT id INTO v_bp_addr_id FROM master.address
+     WHERE tenant_id = v_tenant_id AND code = 'addr-acme-nyc-hq';
+    IF v_bp_addr_id IS NULL THEN
+        INSERT INTO master.address (
+            tenant_id, code, name, address_type,
+            attention_line,
+            line1, city, region, postal_code, country_code,
+            formatted_address,
+            metadata, status, created_by
+        ) VALUES (
+            v_tenant_id, 'addr-acme-nyc-hq',
+            'Acme Consulting LLC — New York HQ',
+            'commercial',
+            'Attn: Accounts Payable',
+            '350 Fifth Avenue, Suite 4810',
+            'New York', 'NY', '10118', 'US',
+            '350 Fifth Avenue, Suite 4810, New York, NY 10118, USA',
+            '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb,
+            'active', v_sys
+        ) RETURNING id INTO v_bp_addr_id;
+    END IF;
+
+    INSERT INTO master.address_link (
+        tenant_id, owner_type, owner_id, address_id, purpose,
+        is_primary, effective_from, metadata, created_by
+    ) VALUES
+    (v_tenant_id, 'business_partner', v_bp_id, v_bp_addr_id, 'legal',
+     true, CURRENT_DATE, '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, v_sys),
+    (v_tenant_id, 'business_partner', v_bp_id, v_bp_addr_id, 'default',
+     true, CURRENT_DATE, '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, v_sys)
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+
+    -- ── 10. Contact at BP level ───────────────────────────────────────────────
+    INSERT INTO master.party_contact_person (
+        tenant_id, party_type, party_id,
+        company_code_id, contact_name, business_title,
+        is_primary, metadata, status, created_by
+    )
+    SELECT v_tenant_id, 'business_partner', v_bp_id,
+           NULL, 'Jane Doe', 'AP Contact',
+           true,
+           '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, 'active', v_sys
+    WHERE NOT EXISTS (
+        SELECT 1 FROM master.party_contact_person
+         WHERE tenant_id = v_tenant_id AND party_type = 'business_partner'
+           AND party_id = v_bp_id AND contact_name = 'Jane Doe'
+    )
+    RETURNING id INTO v_bp_cp_id;
+
+    IF v_bp_cp_id IS NOT NULL THEN
+        INSERT INTO master.contact_link (
+            tenant_id, owner_type, owner_id,
+            channel_type, value, purpose,
+            is_primary, is_verified, verified_at,
+            metadata, status, created_by
+        ) VALUES
+        (v_tenant_id, 'business_partner', v_bp_id,
+         'email', 'ap@acmeconsulting.com', 'notification',
+         true, true, now(),
+         '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, 'active', v_sys),
+        (v_tenant_id, 'business_partner', v_bp_id,
+         'phone', '+12125551234', 'notification',
+         true, true, now(),
+         '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, 'active', v_sys)
+        ON CONFLICT DO NOTHING;
     END IF;
 
     RAISE NOTICE 'demo/001: vendor ACME-CONSULT-US + profile for AUIC set up';

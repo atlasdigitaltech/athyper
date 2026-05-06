@@ -103,7 +103,9 @@ export function EntityHeader({
     : undefined;
   const nonXlFacts = model.facts?.filter((f) => !f.xl) ?? [];
 
-  const actionsSlot = <EntityActionBar actions={model.actions} onAction={onAction} />;
+  const actionsSlot       = <EntityActionBar actions={model.actions} onAction={onAction} />;
+  // compact variant for mobile row 1: primary actions + ⋯ icon overflow
+  const mobileActionsSlot = <EntityActionBar actions={model.actions} onAction={onAction} compact />;
 
   // Pinned: sticky strip — P1 + ext + compact P3 + P5 only
   if (isPinned) {
@@ -114,7 +116,7 @@ export function EntityHeader({
         className,
       )}>
         {editMode && <div className="h-[2px] bg-primary/70" />}
-        <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} amountSummary={amountSummary} editMode={editMode} />
+        <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} mobileActionsSlot={mobileActionsSlot} amountSummary={amountSummary} editMode={editMode} />
         {extensionSlot && (
           <div className="border-t border-border/60 px-4 py-2 sm:px-5 lg:px-[22px]">
             {extensionSlot}
@@ -148,7 +150,7 @@ export function EntityHeader({
     )}>
       {editMode && <div className="h-[2px] bg-primary/70" />}
       {/* P1 — always visible */}
-      <EntityIdentityBar identity={model.identity} onBack={onBack} actionsSlot={actionsSlot} amountSummary={amountSummary} editMode={editMode} />
+      <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} mobileActionsSlot={mobileActionsSlot} amountSummary={amountSummary} editMode={editMode} />
 
       {/* Extension slot — always visible when present */}
       {extensionSlot && (
@@ -169,16 +171,6 @@ export function EntityHeader({
         <EntityFactRail facts={nonXlFacts} mode={mode} />
       )}
 
-      {/* P3 + P4 — expanded only: full status dimensions + progress timeline */}
-      {isExpanded && ((model.statuses?.length ?? 0) > 0 || !!model.progress) && (
-        <EntityProgressRow
-          progress={model.progress}
-          statuses={model.statuses}
-          railExpanded={rail.expanded}
-          onToggleRail={rail.toggle}
-        />
-      )}
-
       {/* Audit meta — expanded only */}
       {isExpanded && model.audit && <AuditBar audit={model.audit} />}
 
@@ -191,6 +183,16 @@ export function EntityHeader({
           platformIcons={platformIcons}
           onPlatformIconClick={onPlatformIconClick}
           activePlatformIcon={activePlatformIcon}
+        />
+      )}
+
+      {/* P3 + P4 — workflow/progress below tabs; expanded only; collapsible */}
+      {isExpanded && ((model.statuses?.length ?? 0) > 0 || !!model.progress) && (
+        <EntityProgressRow
+          progress={model.progress}
+          statuses={model.statuses}
+          railExpanded={rail.expanded}
+          onToggleRail={rail.toggle}
         />
       )}
     </div>

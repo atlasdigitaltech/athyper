@@ -16,12 +16,8 @@
 --   CC-level:       bb002000-0000-0000-0000-{seq:012x}  (01..22, 34 users)
 --
 -- Tenant mapping (seq → tenant code):
---   01-02  athyper         09-0a  demo_fr        11-12  demo_sa
---   03-04  demo_ca         0b-0c  demo_in        13-14  demo_us
---   05-06  demo_ch         0d-0e  demo_my        15-16  athyper-hq1
---   07-08  demo_de         0f-10  demo_qa        17-18  pepsi
---   (odd=OWNER, even=ADMIN)                      19-1a  coke
---                                                1b-1c  maaza
+--   01-02  athyper
+--   (odd=OWNER, even=ADMIN)
 --
 -- athyper CC mapping (seq → CC code):
 --   01-02 ACFB  03-04 ADPM  05-06 AITM  07-08 AJED  09-0a AMRE
@@ -49,32 +45,6 @@ BEGIN
           -- Tenant-level UUIDs
           'bb001000-0000-0000-0000-000000000001'::uuid,
           'bb001000-0000-0000-0000-000000000002'::uuid,
-          'bb001000-0000-0000-0000-000000000003'::uuid,
-          'bb001000-0000-0000-0000-000000000004'::uuid,
-          'bb001000-0000-0000-0000-000000000005'::uuid,
-          'bb001000-0000-0000-0000-000000000006'::uuid,
-          'bb001000-0000-0000-0000-000000000007'::uuid,
-          'bb001000-0000-0000-0000-000000000008'::uuid,
-          'bb001000-0000-0000-0000-000000000009'::uuid,
-          'bb001000-0000-0000-0000-00000000000a'::uuid,
-          'bb001000-0000-0000-0000-00000000000b'::uuid,
-          'bb001000-0000-0000-0000-00000000000c'::uuid,
-          'bb001000-0000-0000-0000-00000000000d'::uuid,
-          'bb001000-0000-0000-0000-00000000000e'::uuid,
-          'bb001000-0000-0000-0000-00000000000f'::uuid,
-          'bb001000-0000-0000-0000-000000000010'::uuid,
-          'bb001000-0000-0000-0000-000000000011'::uuid,
-          'bb001000-0000-0000-0000-000000000012'::uuid,
-          'bb001000-0000-0000-0000-000000000013'::uuid,
-          'bb001000-0000-0000-0000-000000000014'::uuid,
-          'bb001000-0000-0000-0000-000000000015'::uuid,
-          'bb001000-0000-0000-0000-000000000016'::uuid,
-          'bb001000-0000-0000-0000-000000000017'::uuid,
-          'bb001000-0000-0000-0000-000000000018'::uuid,
-          'bb001000-0000-0000-0000-000000000019'::uuid,
-          'bb001000-0000-0000-0000-00000000001a'::uuid,
-          'bb001000-0000-0000-0000-00000000001b'::uuid,
-          'bb001000-0000-0000-0000-00000000001c'::uuid,
           -- CC-level UUIDs
           'bb002000-0000-0000-0000-000000000001'::uuid,
           'bb002000-0000-0000-0000-000000000002'::uuid,
@@ -125,34 +95,8 @@ BEGIN
     SELECT v.id, t.id, v.code, v.name,
            'user', false, false, 'internal', 'active', v_su
     FROM (VALUES
-        ('bb001000-0000-0000-0000-000000000001'::uuid, 'athyper',     'athyper.OWNER',     'Athyper Group Owner'),
-        ('bb001000-0000-0000-0000-000000000002'::uuid, 'athyper',     'athyper.ADMIN',     'Athyper Group Admin'),
-        ('bb001000-0000-0000-0000-000000000003'::uuid, 'demo_ca',     'demo_ca.OWNER',     'Demo Canada Owner'),
-        ('bb001000-0000-0000-0000-000000000004'::uuid, 'demo_ca',     'demo_ca.ADMIN',     'Demo Canada Admin'),
-        ('bb001000-0000-0000-0000-000000000005'::uuid, 'demo_ch',     'demo_ch.OWNER',     'Demo Switzerland Owner'),
-        ('bb001000-0000-0000-0000-000000000006'::uuid, 'demo_ch',     'demo_ch.ADMIN',     'Demo Switzerland Admin'),
-        ('bb001000-0000-0000-0000-000000000007'::uuid, 'demo_de',     'demo_de.OWNER',     'Demo Germany Owner'),
-        ('bb001000-0000-0000-0000-000000000008'::uuid, 'demo_de',     'demo_de.ADMIN',     'Demo Germany Admin'),
-        ('bb001000-0000-0000-0000-000000000009'::uuid, 'demo_fr',     'demo_fr.OWNER',     'Demo France Owner'),
-        ('bb001000-0000-0000-0000-00000000000a'::uuid, 'demo_fr',     'demo_fr.ADMIN',     'Demo France Admin'),
-        ('bb001000-0000-0000-0000-00000000000b'::uuid, 'demo_in',     'demo_in.OWNER',     'Demo India Owner'),
-        ('bb001000-0000-0000-0000-00000000000c'::uuid, 'demo_in',     'demo_in.ADMIN',     'Demo India Admin'),
-        ('bb001000-0000-0000-0000-00000000000d'::uuid, 'demo_my',     'demo_my.OWNER',     'Demo Malaysia Owner'),
-        ('bb001000-0000-0000-0000-00000000000e'::uuid, 'demo_my',     'demo_my.ADMIN',     'Demo Malaysia Admin'),
-        ('bb001000-0000-0000-0000-00000000000f'::uuid, 'demo_qa',     'demo_qa.OWNER',     'Demo Qatar Owner'),
-        ('bb001000-0000-0000-0000-000000000010'::uuid, 'demo_qa',     'demo_qa.ADMIN',     'Demo Qatar Admin'),
-        ('bb001000-0000-0000-0000-000000000011'::uuid, 'demo_sa',     'demo_sa.OWNER',     'Demo Saudi Arabia Owner'),
-        ('bb001000-0000-0000-0000-000000000012'::uuid, 'demo_sa',     'demo_sa.ADMIN',     'Demo Saudi Arabia Admin'),
-        ('bb001000-0000-0000-0000-000000000013'::uuid, 'demo_us',     'demo_us.OWNER',     'Demo United States Owner'),
-        ('bb001000-0000-0000-0000-000000000014'::uuid, 'demo_us',     'demo_us.ADMIN',     'Demo United States Admin'),
-        ('bb001000-0000-0000-0000-000000000015'::uuid, 'athyper-hq1', 'athyper-hq1.OWNER', 'Athyper HQ 1 Owner'),
-        ('bb001000-0000-0000-0000-000000000016'::uuid, 'athyper-hq1', 'athyper-hq1.ADMIN', 'Athyper HQ 1 Admin'),
-        ('bb001000-0000-0000-0000-000000000017'::uuid, 'pepsi',       'pepsi.OWNER',       'Pepsi Owner'),
-        ('bb001000-0000-0000-0000-000000000018'::uuid, 'pepsi',       'pepsi.ADMIN',       'Pepsi Admin'),
-        ('bb001000-0000-0000-0000-000000000019'::uuid, 'coke',        'coke.OWNER',        'Coke Owner'),
-        ('bb001000-0000-0000-0000-00000000001a'::uuid, 'coke',        'coke.ADMIN',        'Coke Admin'),
-        ('bb001000-0000-0000-0000-00000000001b'::uuid, 'maaza',       'maaza.OWNER',       'Maaza Owner'),
-        ('bb001000-0000-0000-0000-00000000001c'::uuid, 'maaza',       'maaza.ADMIN',       'Maaza Admin')
+        ('bb001000-0000-0000-0000-000000000001'::uuid, 'athyper', 'athyper.OWNER', 'Athyper Group Owner'),
+        ('bb001000-0000-0000-0000-000000000002'::uuid, 'athyper', 'athyper.ADMIN', 'Athyper Group Admin')
     ) AS v(id, tenant_code, code, name)
     JOIN master.tenant t ON t.code = v.tenant_code AND t.realm_key = 'athyper'
     ON CONFLICT (tenant_id, code) DO NOTHING;
@@ -240,32 +184,6 @@ BEGIN
     WHERE p.id IN (
         'bb001000-0000-0000-0000-000000000001'::uuid,
         'bb001000-0000-0000-0000-000000000002'::uuid,
-        'bb001000-0000-0000-0000-000000000003'::uuid,
-        'bb001000-0000-0000-0000-000000000004'::uuid,
-        'bb001000-0000-0000-0000-000000000005'::uuid,
-        'bb001000-0000-0000-0000-000000000006'::uuid,
-        'bb001000-0000-0000-0000-000000000007'::uuid,
-        'bb001000-0000-0000-0000-000000000008'::uuid,
-        'bb001000-0000-0000-0000-000000000009'::uuid,
-        'bb001000-0000-0000-0000-00000000000a'::uuid,
-        'bb001000-0000-0000-0000-00000000000b'::uuid,
-        'bb001000-0000-0000-0000-00000000000c'::uuid,
-        'bb001000-0000-0000-0000-00000000000d'::uuid,
-        'bb001000-0000-0000-0000-00000000000e'::uuid,
-        'bb001000-0000-0000-0000-00000000000f'::uuid,
-        'bb001000-0000-0000-0000-000000000010'::uuid,
-        'bb001000-0000-0000-0000-000000000011'::uuid,
-        'bb001000-0000-0000-0000-000000000012'::uuid,
-        'bb001000-0000-0000-0000-000000000013'::uuid,
-        'bb001000-0000-0000-0000-000000000014'::uuid,
-        'bb001000-0000-0000-0000-000000000015'::uuid,
-        'bb001000-0000-0000-0000-000000000016'::uuid,
-        'bb001000-0000-0000-0000-000000000017'::uuid,
-        'bb001000-0000-0000-0000-000000000018'::uuid,
-        'bb001000-0000-0000-0000-000000000019'::uuid,
-        'bb001000-0000-0000-0000-00000000001a'::uuid,
-        'bb001000-0000-0000-0000-00000000001b'::uuid,
-        'bb001000-0000-0000-0000-00000000001c'::uuid,
         'bb002000-0000-0000-0000-000000000001'::uuid,
         'bb002000-0000-0000-0000-000000000002'::uuid,
         'bb002000-0000-0000-0000-000000000003'::uuid,
@@ -328,32 +246,6 @@ BEGIN
     WHERE p.id IN (
         'bb001000-0000-0000-0000-000000000001'::uuid,
         'bb001000-0000-0000-0000-000000000002'::uuid,
-        'bb001000-0000-0000-0000-000000000003'::uuid,
-        'bb001000-0000-0000-0000-000000000004'::uuid,
-        'bb001000-0000-0000-0000-000000000005'::uuid,
-        'bb001000-0000-0000-0000-000000000006'::uuid,
-        'bb001000-0000-0000-0000-000000000007'::uuid,
-        'bb001000-0000-0000-0000-000000000008'::uuid,
-        'bb001000-0000-0000-0000-000000000009'::uuid,
-        'bb001000-0000-0000-0000-00000000000a'::uuid,
-        'bb001000-0000-0000-0000-00000000000b'::uuid,
-        'bb001000-0000-0000-0000-00000000000c'::uuid,
-        'bb001000-0000-0000-0000-00000000000d'::uuid,
-        'bb001000-0000-0000-0000-00000000000e'::uuid,
-        'bb001000-0000-0000-0000-00000000000f'::uuid,
-        'bb001000-0000-0000-0000-000000000010'::uuid,
-        'bb001000-0000-0000-0000-000000000011'::uuid,
-        'bb001000-0000-0000-0000-000000000012'::uuid,
-        'bb001000-0000-0000-0000-000000000013'::uuid,
-        'bb001000-0000-0000-0000-000000000014'::uuid,
-        'bb001000-0000-0000-0000-000000000015'::uuid,
-        'bb001000-0000-0000-0000-000000000016'::uuid,
-        'bb001000-0000-0000-0000-000000000017'::uuid,
-        'bb001000-0000-0000-0000-000000000018'::uuid,
-        'bb001000-0000-0000-0000-000000000019'::uuid,
-        'bb001000-0000-0000-0000-00000000001a'::uuid,
-        'bb001000-0000-0000-0000-00000000001b'::uuid,
-        'bb001000-0000-0000-0000-00000000001c'::uuid,
         'bb002000-0000-0000-0000-000000000001'::uuid,
         'bb002000-0000-0000-0000-000000000002'::uuid,
         'bb002000-0000-0000-0000-000000000003'::uuid,
@@ -392,6 +284,6 @@ BEGIN
     AND p.principal_source = 'internal'
     ON CONFLICT (tenant_id, principal_id, provider_code) DO NOTHING;
 
-    RAISE NOTICE '[003_principal_users] 62 principal users seeded (28 tenant-level + 34 CC-level)';
+    RAISE NOTICE '[003_principal_users] 36 principal users seeded (2 tenant-level + 34 CC-level)';
 
 END $principal_users$;

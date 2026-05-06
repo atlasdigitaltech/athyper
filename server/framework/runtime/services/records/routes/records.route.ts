@@ -17,7 +17,7 @@
  * via control.entity_field, so the form can use logical field names.
  */
 
-import type { RequestHandler, Router } from "express";
+import type { RequestHandler, Response, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import {
@@ -27,10 +27,22 @@ import {
   resolvePrincipalIdOrNull,
   resolvePrincipalIdWithJit,
   resolveFieldMap,
+  resolveArrayColumns,
+  coerceArrayFields,
   emitOutboxEvent,
+  mapPostgresBusinessError,
 } from "@athyper/svc-shared";
 import { applyFieldSecurityMask } from "../../policy/field-security.middleware.js";
 import { createCompanyCodeScopeService } from "../../../../../src/foundation/iam/company-code-scope.service.js";
+import {
+  acquireLock,
+  verifyLock,
+  renewLock,
+  releaseLock,
+  forceReleaseLock,
+  getLockStatus,
+  resolveConcurrencyPolicy,
+} from "@athyper/svc-shared";
 
 export interface RecordsRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,11 +59,12 @@ export interface RecordsRouteDeps {
 // ── Entity table resolver ─────────────────────────────────────────────────────
 
 interface EntityTableInfo {
-  table_schema:       string;
-  table_name:         string;
-  natural_key_fields: string[];
-  entity_class:       string;
-  feature_flags:      Record<string, unknown>;
+  table_schema:        string;
+  table_name:          string;
+  natural_key_fields:  string[];
+  entity_class:        string;
+  feature_flags:       Record<string, unknown>;
+  concurrency_policy:  Record<string, unknown>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,23 +73,85 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
   const name = entityCode.replace(/-/g, "_");
   const row = await db
     .selectFrom("control.entity as e")
-    .select(["e.table_schema", "e.table_name", "e.natural_key_fields", "e.entity_class", "e.feature_flags"])
+    .select(["e.table_schema", "e.table_name", "e.natural_key_fields", "e.entity_class", "e.feature_flags", "e.concurrency_policy"] as never[])
     .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
-    .executeTakeFirst();
+    .executeTakeFirst() as Record<string, unknown> | undefined;
   if (!row) return null;
   return {
-    table_schema:       String(row.table_schema),
-    table_name:         String(row.table_name),
-    natural_key_fields: Array.isArray(row.natural_key_fields) ? (row.natural_key_fields as string[]) : [],
-    entity_class:       String(row.entity_class ?? ""),
-    feature_flags:      (row.feature_flags && typeof row.feature_flags === "object") ? (row.feature_flags as Record<string, unknown>) : {},
+    table_schema:        String(row["table_schema"]),
+    table_name:          String(row["table_name"]),
+    natural_key_fields:  Array.isArray(row["natural_key_fields"]) ? (row["natural_key_fields"] as string[]) : [],
+    entity_class:        String(row["entity_class"] ?? ""),
+    feature_flags:       (row["feature_flags"]      && typeof row["feature_flags"]      === "object") ? (row["feature_flags"]      as Record<string, unknown>) : {},
+    concurrency_policy:  (row["concurrency_policy"] && typeof row["concurrency_policy"] === "object") ? (row["concurrency_policy"] as Record<string, unknown>) : {},
   };
 }
 
 // ── Business-key / UUID dual resolver ────────────────────────────────────────
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isCertificationBackingTable(table: EntityTableInfo): boolean {
+  return table.table_schema === "master" && table.table_name === "certification";
+}
+
+// Adds display-only values from the existing certification_type table. These are
+// virtual API fields, not DDL columns.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function enrichCertificationTypeDisplayFields(
+  db: Kysely<any>,
+  rows: Record<string, unknown>[],
+): Promise<Record<string, unknown>[]> {
+  const typeIds = Array.from(new Set(
+    rows
+      .map((row) => row["certification_type_id"])
+      .filter((id): id is string => typeof id === "string" && UUID_RE.test(id)),
+  ));
+
+  if (typeIds.length === 0) {
+    return rows.map((row) => ({
+      ...row,
+      certification_display_name: row["custom_name"] ?? null,
+      certification_type_name:    null,
+      certification_type_code:    null,
+      certification_category:     null,
+      certification_issuing_body: null,
+    }));
+  }
+
+  const typeRows = await db
+    .selectFrom("master.certification_type as ct" as never)
+    .select([
+      "ct.id",
+      "ct.code",
+      "ct.name",
+      "ct.category",
+      "ct.issuing_body",
+    ] as never[])
+    .where("ct.id" as never, "in", typeIds as never)
+    .execute() as Record<string, unknown>[];
+
+  const typeById = new Map<string, Record<string, unknown>>();
+  for (const typeRow of typeRows) {
+    if (typeof typeRow["id"] === "string") typeById.set(typeRow["id"], typeRow);
+  }
+
+  return rows.map((row) => {
+    const typeId = row["certification_type_id"];
+    const typeRow = typeof typeId === "string" ? typeById.get(typeId) : undefined;
+    const typeName = typeRow?.["name"] ?? null;
+
+    return {
+      ...row,
+      certification_display_name: typeName ?? row["custom_name"] ?? null,
+      certification_type_name:    typeName,
+      certification_type_code:    typeRow?.["code"] ?? null,
+      certification_category:     typeRow?.["category"] ?? null,
+      certification_issuing_body: typeRow?.["issuing_body"] ?? null,
+    };
+  });
+}
 
 /**
  * Resolve a record row by either UUID (globally unique, no tenant scope) or
@@ -333,22 +408,31 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         ? req.query["group"].trim()
         : null;
 
-      const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+      // ── Index table redirect ─────────────────────────────────────────────────
+      // If feature_flags.list_entity_code is set, list queries run against the
+      // denormalized index table (e.g. supplier_app_index) instead of the thin
+      // role table.  Identity + role fields are co-located in the index for fast
+      // list/search.  The canonical table is still used for detail GET and writes.
+      const listEntityCode = table.feature_flags["list_entity_code"] as string | undefined;
+      const listTable      = listEntityCode ? (await resolveEntityTable(db, listEntityCode) ?? table) : table;
+      let   fullTable      = `${listTable.table_schema}.${listTable.table_name}` as `${string}.${string}`;
+      const listCode       = listTable !== table ? listEntityCode! : entityCode;
 
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
 
-      const fieldMap = await resolveFieldMap(db, entityCode);
+      let fieldMap = await resolveFieldMap(db, listCode);
 
       // ── F5: resolve field metadata + display_config for sort fallback ────────
-      const [fieldMeta, entityVersionRow] = await Promise.all([
+      // Uses listCode so that fieldMeta columns + sort defaults match the index table.
+      let [fieldMeta, entityVersionRow, physicalColumns] = await Promise.all([
         db
           .selectFrom("control.entity_field as ef")
           .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
           .innerJoin("control.entity as e",          "e.id",  "ev.entity_id")
           .select(["ef.name", "ef.column_name", "ef.is_computed", "ef.is_searchable", "ef.data_type"])
-          .where("e.name",       "=",  entityCode)
+          .where("e.name",       "=",  listCode)
           .where("e.tenant_id",  "is", null)
           .where("ev.status",    "=",  "EFFECTIVE")
           .where("ef.is_active", "=",  true)
@@ -357,13 +441,22 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           .selectFrom("control.entity_version as ev")
           .innerJoin("control.entity as e", "e.id", "ev.entity_id")
           .select(["e.display_config"])
-          .where("e.name",      "=", entityCode)
+          .where("e.name",      "=", listCode)
           .where("e.tenant_id", "is", null)
           .where("ev.status",   "=", "EFFECTIVE")
           .executeTakeFirst() as Promise<{ display_config: Record<string, unknown> | null } | undefined>,
+        db
+          .selectFrom("information_schema.columns as c")
+          .select(["c.column_name"])
+          .where("c.table_schema", "=", listTable.table_schema)
+          .where("c.table_name", "=", listTable.table_name)
+          .execute() as Promise<{ column_name: string }[]>,
       ]);
 
       const computedFieldNames = new Set(fieldMeta.filter((f) => f.is_computed).map((f) => f.name));
+      const metadataColumnNames = new Set(fieldMeta.map((f) => f.column_name));
+      const physicalColumnNames = new Set(physicalColumns.map((f) => f.column_name));
+      const queryableColumnNames = physicalColumnNames.size > 0 ? physicalColumnNames : metadataColumnNames;
 
       // Reject attempts to filter/sort on computed fields
       const computedFilterKeys = Object.keys(sigilFilters).filter((f) => computedFieldNames.has(f));
@@ -385,10 +478,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Group counts query — parallel COUNT(*) GROUP BY when ?group= is provided.
       // Validated: field must exist in fieldMap and must not be computed.
       const groupCol = groupParam && !computedFieldNames.has(groupParam)
-        ? (fieldMap.get(groupParam) ?? (new Set(fieldMeta.map((f) => f.column_name)).has(groupParam) ? groupParam : null))
+        ? (fieldMap.get(groupParam) ?? (metadataColumnNames.has(groupParam) ? groupParam : null))
         : null;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let groupCountQuery: any = groupCol
+      let groupCountQuery: any = groupCol && queryableColumnNames.has(groupCol)
         ? db.selectFrom(fullTable).select([
             sql.raw(`COALESCE("${groupCol}"::text, '__null__') AS group_value`) as never,
             db.fn.countAll<string>().as("count"),
@@ -405,21 +498,114 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // ?parent_id=<uuid> narrows results to records belonging to that parent.
       // Uses feature_flags.parent_fk to resolve the physical FK column.
       // feature_flags.parent_scope ("col=val") adds any extra discriminator.
-      const parentIdParam = typeof req.query["parent_id"] === "string" ? req.query["parent_id"] : null;
-      const parentFkCol   = typeof table.feature_flags["parent_fk"] === "string" ? table.feature_flags["parent_fk"] : null;
+      // Virtual quick filters are configured in entity.display_config.filter_bar.
+      // Handle generic __ keys here, then remove them before normal field filters.
+      const virtualFilterKeys = Object.keys(sigilFilters).filter((field) => field.startsWith("__"));
+      if (virtualFilterKeys.length > 0) {
+        const sub = typeof claims.sub === "string" ? claims.sub : "";
+        const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+        if (sigilFilters["__bookmarked"]) {
+          if (tenantId && principalId) {
+            const recordIdRef = sql.ref(`${listTable.table_name}.id`);
+            const bookmarkedPredicate = sql<boolean>`exists (
+              select 1
+              from master.record_bookmark rb
+              where rb.tenant_id = ${tenantId}::uuid
+                and rb.principal_id = ${principalId}::uuid
+                and rb.entity_code = ${entityCode}
+                and rb.record_id = ${recordIdRef}
+            )`;
+            listQuery = listQuery.where(bookmarkedPredicate as never);
+            countQuery = countQuery.where(bookmarkedPredicate as never);
+            if (groupCountQuery) groupCountQuery = groupCountQuery.where(bookmarkedPredicate as never);
+          } else {
+            listQuery = listQuery.where(sql<boolean>`false` as never);
+            countQuery = countQuery.where(sql<boolean>`false` as never);
+            if (groupCountQuery) groupCountQuery = groupCountQuery.where(sql<boolean>`false` as never);
+          }
+          delete sigilFilters["__bookmarked"];
+        }
+
+        if (sigilFilters["__created_by"]) {
+          const createdByCol = fieldMap.get("created_by") ?? "created_by";
+          if (createdByCol && principalId) {
+            listQuery = listQuery.where(createdByCol as never, "=" as never, principalId as never);
+            countQuery = countQuery.where(createdByCol as never, "=" as never, principalId as never);
+            if (groupCountQuery) groupCountQuery = groupCountQuery.where(createdByCol as never, "=" as never, principalId as never);
+          } else {
+            listQuery = listQuery.where(sql<boolean>`false` as never);
+            countQuery = countQuery.where(sql<boolean>`false` as never);
+            if (groupCountQuery) groupCountQuery = groupCountQuery.where(sql<boolean>`false` as never);
+          }
+          delete sigilFilters["__created_by"];
+        }
+      }
+
+      const parentIdParam     = typeof req.query["parent_id"]     === "string" ? req.query["parent_id"]     : null;
+      const parentFkCol       = typeof table.feature_flags["parent_fk"] === "string" ? table.feature_flags["parent_fk"] : null;
+      const throughEntityCode = typeof req.query["through_entity"] === "string" ? req.query["through_entity"] : null;
+
       if (parentIdParam && parentFkCol) {
-        listQuery  = listQuery.where(parentFkCol  as never, "=", parentIdParam as never);
-        countQuery = countQuery.where(parentFkCol as never, "=", parentIdParam as never);
-        if (groupCountQuery) groupCountQuery = groupCountQuery.where(parentFkCol as never, "=", parentIdParam as never);
-        const scopeStr = typeof table.feature_flags["parent_scope"] === "string" ? table.feature_flags["parent_scope"] : null;
-        if (scopeStr) {
-          const eqIdx = scopeStr.indexOf("=");
-          if (eqIdx > 0) {
-            const scopeCol = scopeStr.slice(0, eqIdx);
-            const scopeVal = scopeStr.slice(eqIdx + 1);
-            listQuery  = listQuery.where(scopeCol  as never, "=", scopeVal as never);
-            countQuery = countQuery.where(scopeCol as never, "=", scopeVal as never);
-            if (groupCountQuery) groupCountQuery = groupCountQuery.where(scopeCol as never, "=", scopeVal as never);
+        if (throughEntityCode) {
+          // ── Two-hop: child.parentFkCol IN (SELECT id FROM throughTable WHERE throughParentFk = parentId) ──
+          // All metadata (through table schema/name, through parent FK) is resolved from
+          // control.entity at runtime — nothing entity-specific is hardcoded here.
+          const throughMeta = await db
+            .selectFrom("control.entity as e")
+            .select(["e.table_schema", "e.table_name", "e.feature_flags"])
+            .where("e.entity_code", "=", throughEntityCode)
+            .where("e.tenant_id",   "is", null)
+            .executeTakeFirst() as { table_schema: string; table_name: string; feature_flags: Record<string, unknown> } | undefined;
+
+          if (throughMeta) {
+            const throughParentFk = typeof throughMeta.feature_flags["parent_fk"] === "string"
+              ? throughMeta.feature_flags["parent_fk"] : null;
+            if (throughParentFk) {
+              const throughTable = `${throughMeta.table_schema}.${throughMeta.table_name}`;
+              const inPredicate = tenantId
+                ? sql<boolean>`${sql.ref(parentFkCol)} IN (SELECT id FROM ${sql.raw(throughTable)} WHERE ${sql.raw(throughParentFk)} = ${parentIdParam}::uuid AND tenant_id = ${tenantId}::uuid)`
+                : sql<boolean>`${sql.ref(parentFkCol)} IN (SELECT id FROM ${sql.raw(throughTable)} WHERE ${sql.raw(throughParentFk)} = ${parentIdParam}::uuid)`;
+              listQuery  = listQuery.where(inPredicate  as never);
+              countQuery = countQuery.where(inPredicate as never);
+              if (groupCountQuery) groupCountQuery = groupCountQuery.where(inPredicate as never);
+            }
+          }
+
+          // Apply the entity's own parent_scope (e.g. owner_type=supplier) — driven by
+          // the entity registry, never overridden when using through_entity.
+          const scopeStr = typeof table.feature_flags["parent_scope"] === "string" ? table.feature_flags["parent_scope"] : null;
+          if (scopeStr) {
+            const eqIdx = scopeStr.indexOf("=");
+            if (eqIdx > 0) {
+              const scopeCol = scopeStr.slice(0, eqIdx);
+              const scopeVal = scopeStr.slice(eqIdx + 1);
+              listQuery  = listQuery.where(scopeCol  as never, "=", scopeVal as never);
+              countQuery = countQuery.where(scopeCol as never, "=", scopeVal as never);
+              if (groupCountQuery) groupCountQuery = groupCountQuery.where(scopeCol as never, "=", scopeVal as never);
+            }
+          }
+        } else {
+          // ── Direct parent filter — existing logic unchanged ────────────────────
+          listQuery  = listQuery.where(parentFkCol  as never, "=", parentIdParam as never);
+          countQuery = countQuery.where(parentFkCol as never, "=", parentIdParam as never);
+          if (groupCountQuery) groupCountQuery = groupCountQuery.where(parentFkCol as never, "=", parentIdParam as never);
+          const scopeStr = typeof table.feature_flags["parent_scope"] === "string" ? table.feature_flags["parent_scope"] : null;
+          if (scopeStr) {
+            const eqIdx = scopeStr.indexOf("=");
+            if (eqIdx > 0) {
+              const scopeCol = scopeStr.slice(0, eqIdx);
+              // Allow caller to override the entity's default parent_scope value via
+              // ?{col}_filter=X (e.g. ?owner_type_filter=business_partner).  This lets
+              // polymorphic tables (party_identifier, party_contact_person) be queried
+              // from Business Partner or Customer pages without a separate entity registration.
+              const overrideKey = `${scopeCol}_filter`;
+              const scopeVal = (typeof req.query[overrideKey] === "string" ? req.query[overrideKey] : null)
+                ?? scopeStr.slice(eqIdx + 1);
+              listQuery  = listQuery.where(scopeCol  as never, "=", scopeVal as never);
+              countQuery = countQuery.where(scopeCol as never, "=", scopeVal as never);
+              if (groupCountQuery) groupCountQuery = groupCountQuery.where(scopeCol as never, "=", scopeVal as never);
+            }
           }
         }
       }
@@ -472,7 +658,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       for (const [fieldName, op] of Object.entries(sigilFilters)) {
         if (fieldName.startsWith("_")) continue;
-        const col = (fieldMap.get(fieldName) ?? fieldName) as never;
+        const colName = fieldMap.get(fieldName) ?? fieldName;
+        if (!queryableColumnNames.has(colName)) continue;
+        const col = colName as never;
         listQuery  = applyOp(listQuery,  col, op);
         countQuery = applyOp(countQuery, col, op);
         if (groupCountQuery) groupCountQuery = applyOp(groupCountQuery, col, op);
@@ -481,7 +669,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // ── Legacy JSON filters (backward compat) ─────────────────────────────────
       for (const [fieldName, value] of Object.entries(legacyFilters)) {
         if (value === undefined || value === null || fieldName.startsWith("_")) continue;
-        const col = (fieldMap.get(fieldName) ?? fieldName) as never;
+        const colName = fieldMap.get(fieldName) ?? fieldName;
+        if (!queryableColumnNames.has(colName)) continue;
+        const col = colName as never;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const applyLegacy = (q: any) => {
           if (Array.isArray(value) && value.length > 0) return q.where(col, "in", value as never);
@@ -498,7 +688,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // return empty results with a reasons flag rather than silently returning all rows.
       const reasons: Record<string, boolean> = {};
       if (searchTerm) {
-        const searchableCols = fieldMeta.filter((f) => f.is_searchable).map((f) => f.column_name);
+        const searchableCols = fieldMeta
+          .filter((f) => f.is_searchable && queryableColumnNames.has(f.column_name))
+          .map((f) => f.column_name);
         if (searchableCols.length > 0) {
           const pattern = `%${searchTerm}%` as never;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -522,8 +714,19 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       }
 
       // ── Sort + F2 id tie-breaker ───────────────────────────────────────────────
-      if (sortEntries.length > 0) {
-        for (const { fieldName, dir, nulls } of sortEntries) {
+      const columnNames = queryableColumnNames;
+      const fieldNames  = new Set(fieldMeta.map((f) => f.name));
+
+      // Filter requested sort entries to columns that actually exist on the table.
+      // Stale URL params (e.g. sort=name:asc on a thin BP-role table) are silently
+      // dropped so the fallback sort logic below kicks in instead of a SQL error.
+      const validSortEntries = sortEntries.filter(({ fieldName }) => {
+        const col = fieldMap.get(fieldName) ?? fieldName;
+        return columnNames.has(col);
+      });
+
+      if (validSortEntries.length > 0) {
+        for (const { fieldName, dir, nulls } of validSortEntries) {
           const col = fieldMap.get(fieldName) ?? fieldName;
           const nullsClause = nulls === "first" ? "NULLS FIRST" : "NULLS LAST";
           listQuery = listQuery.orderBy(sql.raw(`"${col}" ${dir.toUpperCase()} ${nullsClause}`) as never);
@@ -538,22 +741,19 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           ? displayConfig.default_sort_dir
           : "desc";
 
-        const columnNames = new Set(fieldMeta.map((f) => f.column_name));
-        const fieldNames  = new Set(fieldMeta.map((f) => f.name));
-
         // Resolve: metadata field → created_at → natural key (code/name) → skip (id covers it)
         const resolveDefaultSortCol = (): { col: string; dir: string } | null => {
           if (metaSortField) {
             const col = fieldMap.get(metaSortField) ?? (columnNames.has(metaSortField) ? metaSortField : null);
-            if (col) return { col, dir: metaSortDir };
+            if (col && columnNames.has(col)) return { col, dir: metaSortDir };
           }
-          if (columnNames.has("created_at") || fieldNames.has("created_at")) {
+          if (columnNames.has("created_at") || (fieldNames.has("created_at") && columnNames.has(fieldMap.get("created_at") ?? "created_at"))) {
             return { col: fieldMap.get("created_at") ?? "created_at", dir: "desc" };
           }
           for (const natural of ["code", "name", "number"]) {
             if (fieldNames.has(natural)) {
               const col = fieldMap.get(natural) ?? natural;
-              return { col, dir: "asc" };
+              if (columnNames.has(col)) return { col, dir: "asc" };
             }
           }
           return null;
@@ -587,6 +787,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         }
         return out;
       });
+      const responseRows = isCertificationBackingTable(listTable)
+        ? await enrichCertificationTypeDisplayFields(db, remappedRows)
+        : remappedRows;
 
       // ── Facets with budget (F7: scoped to the same filtered context) ─────────
       // Budget: 20-field cap, 200-value cardinality cap per field, 2s hard timeout.
@@ -607,11 +810,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           (facetsParam === "all" && (dt === "string" || dt === "text"));
 
         const eligibleFieldMeta = fieldMeta
-          .filter((f) => isFacetEligible(f.data_type))
+          .filter((f) => isFacetEligible(f.data_type) && !f.is_computed && columnNames.has(f.column_name))
           .slice(0, FACET_FIELD_CAP);
 
         const wasFieldCapped = fieldMeta.filter(
-          (f) => isFacetEligible(f.data_type),
+          (f) => isFacetEligible(f.data_type) && !f.is_computed && columnNames.has(f.column_name),
         ).length > FACET_FIELD_CAP;
 
         const facetWork = Promise.all(
@@ -671,7 +874,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         : undefined;
 
       const responseBody: Record<string, unknown> = {
-        data: remappedRows,
+        data: responseRows,
         pagination: {
           total,
           page,
@@ -741,6 +944,61 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         data[fieldName] = val;
       }
 
+      // ── BP identity merge ────────────────────────────────────────────────────
+      // When identity_via = 'business_partner', the role table (supplier/customer)
+      // holds only commercial fields.  Fetch the linked BP record and merge
+      // identity fields (name, legal_name, country, etc.) into data so the detail
+      // header can display them without a second client-side request.
+      // Role fields (supplier_code, status, etc.) take precedence — BP fields only
+      // fill keys that are absent from the role row.
+      if (table.feature_flags["identity_via"] === "business_partner") {
+        const bpId = row["business_partner_id"] as string | undefined;
+        if (bpId) {
+          const bpRow = await db
+            .selectFrom("master.business_partner as bp")
+            .selectAll("bp")
+            .where("bp.id" as never, "=", bpId as never)
+            .executeTakeFirst() as Record<string, unknown> | undefined;
+          if (bpRow) {
+            const BP_MERGE_FIELDS = [
+              "code", "name", "display_name", "legal_name", "legal_form",
+              "registration_no", "registration_country_code", "tax_residence_country_code",
+              "partner_category", "website_url", "description", "long_description",
+              "external_ref", "aliases", "tags",
+              "business_types", "founded_year", "employee_count_band", "annual_revenue_band",
+            ] as const;
+            for (const f of BP_MERGE_FIELDS) {
+              if (bpRow[f] !== undefined && data[f] === undefined) {
+                data[f] = bpRow[f];
+              }
+            }
+            // Always expose bp_code regardless of field collision
+            data["business_partner_code"] = bpRow["code"];
+          }
+        }
+
+        // Qualification merge — surfaces key approval/risk fields for header status strip
+        // without a separate client-side request.  Fields are merged only if absent from
+        // the role row so role-level overrides always win.
+        if (entityCode === "supplier" && typeof row.id === "string") {
+          const qualRow = await db
+            .selectFrom("master.supplier_qualification as sq" as never)
+            .select(["sq.is_approved_supplier", "sq.is_blocked", "sq.risk_tier", "sq.onboarding_status"] as never[])
+            .where("sq.supplier_id" as never, "=", row.id as never)
+            .executeTakeFirst() as Record<string, unknown> | undefined;
+          if (qualRow) {
+            const QUAL_MERGE = ["is_approved_supplier", "is_blocked", "risk_tier", "onboarding_status"] as const;
+            for (const f of QUAL_MERGE) {
+              if (qualRow[f] !== undefined && data[f] === undefined) data[f] = qualRow[f];
+            }
+          }
+        }
+      }
+
+      const responseData = isCertificationBackingTable(table)
+        ? (await enrichCertificationTypeDisplayFields(db, [data]))[0] ?? data
+        : data;
+
       const detailBody: Record<string, unknown> = {
         id:               row.id,
         entity_code:      entityCode,
@@ -753,7 +1011,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         updated_by:       row.updated_by ?? null,
         status_changed_at: row.status_changed_at ?? null,
         status_changed_by: row.status_changed_by ?? null,
-        data,
+        data:             responseData,
       };
 
       // Apply field-security masking using tenantId from the fetched row
@@ -794,6 +1052,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           mappedData[columnName] = value;
         }
       }
+      coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
 
       // Inject parent FK when entity is a child (feature_flags.parent_fk + parent_scope).
       // The caller passes parent_id in body.data; we resolve the physical FK column from
@@ -806,7 +1065,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         if (scopeStr) {
           const eqIdx = scopeStr.indexOf("=");
           if (eqIdx > 0) {
-            mappedData[scopeStr.slice(0, eqIdx)] = scopeStr.slice(eqIdx + 1);
+            const scopeCol = scopeStr.slice(0, eqIdx);
+            // Only apply entity default if the caller did not already supply the
+            // discriminator column (e.g. form pre-fills owner_type=business_partner
+            // from the add_href_template URL param for polymorphic child entities).
+            if (mappedData[scopeCol] === undefined) {
+              mappedData[scopeCol] = scopeStr.slice(eqIdx + 1);
+            }
           }
         }
       }
@@ -1068,26 +1333,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             )
           `.execute(db);
 
-          // Recalculate invoice paid_amount / outstanding_amount / status
-          await sql`
-            WITH alloc_sum AS (
-              SELECT COALESCE(SUM(allocated_amount), 0) AS total_paid
-                FROM document.payment_entry_allocation
-               WHERE purchase_invoice_id = ${peSourceInvoiceId}
-                 AND tenant_id = ${tenantId}
-            )
-            UPDATE document.purchase_invoice pi
-               SET paid_amount        = a.total_paid,
-                   outstanding_amount = GREATEST(0, COALESCE(pi.payable_amount, pi.total_amount) - a.total_paid),
-                   status             = CASE
-                     WHEN a.total_paid >= COALESCE(pi.payable_amount, pi.total_amount) THEN 'fully_paid'
-                     WHEN a.total_paid > 0 THEN 'partially_paid'
-                     ELSE pi.status
-                   END
-              FROM alloc_sum a
-             WHERE pi.id        = ${peSourceInvoiceId}
-               AND pi.tenant_id = ${tenantId}
-          `.execute(db);
+          // Invoice paid_amount/status is intentionally NOT updated here.
+          // The allocation row creates the invoice↔payment link for a draft payment.
+          // Invoice status only changes after the payment is successfully posted
+          // (handlePostPayment in payment-posting.service.ts calls resolveInvoicePaymentStatus
+          //  inside the same posting transaction, from posted/non-voided allocations only).
         } catch (allocErr) {
           logger?.warn("pe_allocation_create_failed", {
             paymentId: String((row as Record<string, unknown>)["id"]),
@@ -1121,7 +1371,16 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       res.status(201).json(row);
     } catch (err) {
-      logger?.error("records_create_error", { err: String(err) });
+      const businessError = mapPostgresBusinessError(err);
+      if (businessError) {
+        logger?.warn("records_create_business_error", {
+          err: businessError.code,
+          message: businessError.message,
+          details: businessError.details,
+        });
+      } else {
+        logger?.error("records_create_error", { err: String(err) });
+      }
       next(err);
     }
   };
@@ -1159,15 +1418,18 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         "id", "tenant_id",
         "created_at", "created_by",
         "is_active", "is_deleted",
+        "row_version",   // incremented by trigger; must never be written by API
       ]);
       const fieldMap = await resolveFieldMap(db, entityCode);
-      const body = req.body as { data?: Record<string, unknown> };
+      // lock_token and expected_row_version are top-level concurrency fields alongside data
+      const body = req.body as { data?: Record<string, unknown>; lock_token?: string; expected_row_version?: number };
       const inputData = body.data ?? {};
       const mappedData: Record<string, unknown> = {};
       for (const [fieldName, value] of Object.entries(inputData)) {
         const columnName = fieldMap.get(fieldName);
         if (columnName && !IMMUTABLE_COLS.has(columnName)) mappedData[columnName] = value;
       }
+      coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
 
       // Resolve UUID from business key when caller passes a canonical key
       const physicalId = UUID_RE.test(id)
@@ -1180,6 +1442,65 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+
+      // ── Concurrency guard (lease_plus_version) ──────────────────────────────
+      const policy = resolveConcurrencyPolicy(table.concurrency_policy);
+      if (policy.strategy === "lease_plus_version") {
+        const lockToken        = typeof body["lock_token"]         === "string" ? body["lock_token"]         : null;
+        const expectedVersion  = typeof body["expected_row_version"] === "number" ? body["expected_row_version"] : null;
+
+        if (policy.rollout === "enforced" || (policy.rollout === "optional" && lockToken !== null)) {
+          if (!lockToken || !principalId) {
+            res.status(423).json({ error: "LOCK_REQUIRED", message: "lock_token is required to edit this document" });
+            return;
+          }
+          const lockCheck = await verifyLock(db, { tenantId, entityName: entityCode, recordId: physicalId, lockedBy: principalId, lockToken });
+          if (!lockCheck.valid) {
+            const status = lockCheck.reason === "expired" ? 410 : 423;
+            res.status(status).json({ error: lockCheck.reason === "expired" ? "LOCK_EXPIRED" : "LOCK_INVALID", reason: lockCheck.reason });
+            return;
+          }
+          if (expectedVersion === null) {
+            res.status(400).json({ error: "VERSION_REQUIRED", message: "expected_row_version is required when lock_token is provided" });
+            return;
+          }
+        }
+
+        if (policy.rollout === "observe" && lockToken) {
+          const lockCheck = await verifyLock(db, { tenantId, entityName: entityCode, recordId: physicalId, lockedBy: principalId ?? "", lockToken });
+          if (!lockCheck.valid) {
+            logger?.warn("records_lock_observe_invalid", { entity: entityCode, id: physicalId, reason: lockCheck.reason });
+          }
+        }
+
+        // Bind expectedVersion into the WHERE clause (null = skip version check)
+        if (expectedVersion !== null) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const versionRow = await (db.selectFrom(fullTable) as any)
+            .select(["row_version"])
+            .where("id", "=", physicalId)
+            .where("tenant_id", "=", tenantId)
+            .executeTakeFirst() as { row_version: number } | undefined;
+
+          if (!versionRow) {
+            res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+            return;
+          }
+          if (versionRow.row_version !== expectedVersion) {
+            res.status(409).json({ error: "VERSION_CONFLICT", message: "Document was modified by another user. Reload and try again.", current_version: versionRow.row_version });
+            return;
+          }
+        }
+      }
+      // ── end concurrency guard ───────────────────────────────────────────────
+
+      // Fetch current state for before/after diff in activity log
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const oldRow = (await (db.selectFrom(fullTable) as any)
+        .selectAll()
+        .where("id", "=", physicalId)
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst()) as Record<string, unknown> | undefined;
 
       mappedData.updated_by = principalId ?? undefined;
       mappedData.updated_at = new Date().toISOString();
@@ -1213,7 +1534,17 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         });
       }
 
-      void logActivityRecord(tenantId, entityCode, physicalId, "document.updated", principalId ?? SYSTEM_PRINCIPAL_UUID, { fields: Object.keys(inputData) });
+      const diffBefore: Record<string, unknown> = {};
+      const diffAfter: Record<string, unknown>  = {};
+      for (const [fieldName, newValue] of Object.entries(inputData)) {
+        const colName  = fieldMap.get(fieldName) ?? fieldName;
+        const oldValue = oldRow?.[colName] ?? null;
+        if (String(oldValue ?? "") !== String(newValue ?? "")) {
+          diffBefore[fieldName] = oldValue;
+          diffAfter[fieldName]  = newValue;
+        }
+      }
+      void logActivityRecord(tenantId, entityCode, physicalId, "document.updated", principalId ?? SYSTEM_PRINCIPAL_UUID, { before: diffBefore, after: diffAfter });
 
       res.json(row);
     } catch (err) {
@@ -1269,9 +1600,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const mappedData: Record<string, unknown> = {};
       for (const [fieldName, value] of Object.entries(inputData)) {
         const columnName = fieldMap.get(fieldName) ?? fieldName;
-        if (["id", "tenant_id", "created_by", "created_at"].includes(columnName)) continue;
+        if (["id", "tenant_id", "created_by", "created_at", "row_version"].includes(columnName)) continue;
         mappedData[columnName] = value;
       }
+      coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
 
       mappedData.updated_by = principalId ?? undefined;
       mappedData.updated_at = new Date().toISOString();
@@ -1286,6 +1618,47 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
         return;
       }
+
+      // ── Concurrency guard (lease_plus_version) ──────────────────────────────
+      const patchPolicy = resolveConcurrencyPolicy(table.concurrency_policy);
+      if (patchPolicy.strategy === "lease_plus_version") {
+        const lockToken       = typeof body["lock_token"]          === "string" ? body["lock_token"]          : null;
+        const expectedVersion = typeof body["expected_row_version"] === "number" ? body["expected_row_version"] : null;
+
+        if (patchPolicy.rollout === "enforced" || (patchPolicy.rollout === "optional" && lockToken !== null)) {
+          if (!lockToken || !principalId) {
+            res.status(423).json({ error: "LOCK_REQUIRED", message: "lock_token is required to edit this document" });
+            return;
+          }
+          const lockCheck = await verifyLock(db, { tenantId, entityName: entityCode, recordId: physicalId, lockedBy: principalId, lockToken });
+          if (!lockCheck.valid) {
+            const httpStatus = lockCheck.reason === "expired" ? 410 : 423;
+            res.status(httpStatus).json({ error: lockCheck.reason === "expired" ? "LOCK_EXPIRED" : "LOCK_INVALID", reason: lockCheck.reason });
+            return;
+          }
+          if (expectedVersion !== null) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const versionRow = await (db.selectFrom(fullTable) as any)
+              .select(["row_version"])
+              .where("id", "=", physicalId)
+              .where("tenant_id", "=", tenantId)
+              .executeTakeFirst() as { row_version: number } | undefined;
+            if (versionRow && versionRow.row_version !== expectedVersion) {
+              res.status(409).json({ error: "VERSION_CONFLICT", message: "Document was modified by another user. Reload and try again.", current_version: versionRow.row_version });
+              return;
+            }
+          }
+        }
+      }
+      // ── end concurrency guard ───────────────────────────────────────────────
+
+      // Fetch current state for before/after diff in activity log
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const oldRow = (await (db.selectFrom(fullTable) as any)
+        .selectAll()
+        .where("id", "=", physicalId)
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst()) as Record<string, unknown> | undefined;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const row = await (db.updateTable(fullTable) as any)
@@ -1316,7 +1689,17 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         });
       }
 
-      void logActivityRecord(tenantId, entityCode, physicalId, "document.updated", principalId ?? SYSTEM_PRINCIPAL_UUID, { fields: Object.keys(inputData) });
+      const diffBefore: Record<string, unknown> = {};
+      const diffAfter: Record<string, unknown>  = {};
+      for (const [fieldName, newValue] of Object.entries(inputData)) {
+        const colName  = fieldMap.get(fieldName) ?? fieldName;
+        const oldValue = oldRow?.[colName] ?? null;
+        if (String(oldValue ?? "") !== String(newValue ?? "")) {
+          diffBefore[fieldName] = oldValue;
+          diffAfter[fieldName]  = newValue;
+        }
+      }
+      void logActivityRecord(tenantId, entityCode, physicalId, "document.updated", principalId ?? SYSTEM_PRINCIPAL_UUID, { before: diffBefore, after: diffAfter });
 
       res.json(row);
     } catch (err) {
@@ -1751,6 +2134,26 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
   // ── Helpers shared by line mutation handlers ─────────────────────────────────
 
+  function rejectNonConventionalLineMutation(res: Response, entityCode: string): boolean {
+    if (entityCode === "journal_entry") {
+      res.status(422).json({
+        error: "UNSUPPORTED_LINE_MUTATION",
+        message: "Journal Entry lines use document.journal_line and require a GL account plus debit or credit amounts. Use the journal editor flow or /api/finance/journals instead.",
+      });
+      return true;
+    }
+
+    if (entityCode === "payment_entry") {
+      res.status(422).json({
+        error: "UNSUPPORTED_LINE_MUTATION",
+        message: "Payment Entry allocation lines are derived from payment allocation data and cannot be changed through the generic records line endpoint.",
+      });
+      return true;
+    }
+
+    return false;
+  }
+
   /** Maps a DocumentLine-shaped request body to the DB column set for the line table. */
   function lineBodyToDb(
     body: Record<string, unknown>,
@@ -1767,6 +2170,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     if (body["quantity"]      !== undefined)   row["quantity"]       = body["quantity"]    ?? 1;
     if (body["unit_price"]    !== undefined)   row["unit_price"]     = body["unit_price"]  ?? 0;
     if (body["line_amount"]   !== undefined)   row["gross_amount"]   = body["line_amount"] ?? 0;
+    if (body["tax_group_id"]  !== undefined)   row["tax_group_id"]    = body["tax_group_id"] ?? null;
+    if (body["withholding_tax_group_id"] !== undefined) row["withholding_tax_group_id"] = body["withholding_tax_group_id"] ?? null;
     if (body["tax_amount"]    !== undefined)   row["tax_amount"]     = body["tax_amount"]  ?? 0;
     if (body["withholding_tax_amount"] !== undefined) row["withholding_tax_amount"] = body["withholding_tax_amount"] ?? 0;
     if (body["discount_pct"]  !== undefined)   row["discount_pct"]   = body["discount_pct"]  ?? 0;
@@ -1823,6 +2228,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const xOrg    = (req.headers["x-org"]   as string) ?? "";
       const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      if (rejectNonConventionalLineMutation(res, entityCode)) return;
 
       const linesTable = `${table.table_schema}.${table.table_name}_line` as `${string}.${string}`;
       const fkCol      = `${table.table_name}_id`;
@@ -1888,6 +2295,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
 
+      if (rejectNonConventionalLineMutation(res, entityCode)) return;
+
       const linesTable = `${table.table_schema}.${table.table_name}_line` as `${string}.${string}`;
       const fkCol      = `${table.table_name}_id`;
 
@@ -1941,6 +2350,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const xOrg    = (req.headers["x-org"]   as string) ?? "";
       const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      if (rejectNonConventionalLineMutation(res, entityCode)) return;
 
       const linesTable = `${table.table_schema}.${table.table_name}_line` as `${string}.${string}`;
       const fkCol      = `${table.table_name}_id`;
@@ -2222,6 +2633,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             transaction_currency: string | null;
             subledger_type: string | null; party_type: string | null; party_id: string | null;
             cost_center_id: string | null; profit_center_id: string | null; project_id: string | null;
+            references: unknown;
           }>`
             SELECT jl.id, jl.line_no,
                    jl.gl_account_id,
@@ -2232,11 +2644,38 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
                    jl.base_debit,         jl.base_credit,
                    jl.transaction_currency,
                    jl.subledger_type, jl.party_type, jl.party_id,
-                   jl.cost_center_id, jl.profit_center_id, jl.project_id
+                   jl.cost_center_id, jl.profit_center_id, jl.project_id,
+                   COALESCE(
+                     jsonb_agg(
+                       jsonb_build_object(
+                         'id', jlr.id,
+                         'ref_type', jlr.ref_type,
+                         'ref_doc_type', jlr.ref_doc_type,
+                         'ref_doc_id', jlr.ref_doc_id,
+                         'ref_doc_line_id', jlr.ref_doc_line_id,
+                         'ref_doc_number', jlr.ref_doc_number,
+                         'ref_doc_label', jlr.metadata->>'ref_doc_label',
+                         'ref_doc_line_label', jlr.metadata->>'ref_doc_line_label',
+                         'allocated_amount', jlr.allocated_amount,
+                         'currency_code', jlr.currency_code,
+                         'description', jlr.description
+                       )
+                       ORDER BY jlr.created_at, jlr.id
+                     ) FILTER (WHERE jlr.id IS NOT NULL),
+                     '[]'::jsonb
+                   ) AS references
               FROM document.journal_line jl
               LEFT JOIN master.gl_account ga ON ga.id = jl.gl_account_id
+              LEFT JOIN document.journal_line_reference jlr
+                     ON jlr.tenant_id = jl.tenant_id
+                    AND jlr.journal_line_id = jl.id
              WHERE jl.journal_entry_id = ${id}
                AND jl.tenant_id = ${tenantId}
+             GROUP BY jl.id, jl.line_no, jl.gl_account_id, ga.code, ga.name,
+                      jl.description, jl.transaction_debit, jl.transaction_credit,
+                      jl.base_debit, jl.base_credit, jl.transaction_currency,
+                      jl.subledger_type, jl.party_type, jl.party_id,
+                      jl.cost_center_id, jl.profit_center_id, jl.project_id
              ORDER BY jl.line_no
           `.execute(db);
 
@@ -2263,6 +2702,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
               subledger_type:     r.subledger_type,
               party_type:         r.party_type,
               party_id:           r.party_id,
+              references:         r.references,
               is_debit:           Number(r.transaction_debit) > 0,
             },
           }));
@@ -2464,6 +2904,187 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     }
   };
 
+  // ── POST /:entity/:id/lock — acquire edit-session lock ───────────────────────
+  const acquireLockHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const recordId   = req.params["id"] as string;
+      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) { res.status(404).json({ error: "ENTITY_NOT_FOUND" }); return; }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      if (!principalId) { res.status(403).json({ error: "FORBIDDEN" }); return; }
+
+      const body      = (req.body ?? {}) as Record<string, unknown>;
+      const sessionId = typeof body["session_id"] === "string" ? body["session_id"] : undefined;
+
+      const policy    = resolveConcurrencyPolicy(table.concurrency_policy);
+      const ttl       = policy.lockTtlSeconds;
+
+      const result = await acquireLock(db, { tenantId, entityName: entityCode, recordId, lockedBy: principalId, sessionId, ttlSeconds: ttl });
+
+      if (!result.acquired) {
+        res.status(423).json({ error: "LOCKED", locked_by: result.lockedBy, is_locked_by_self: result.isLockedBySelf, expires_at: result.expiresAt });
+        return;
+      }
+
+      // Fetch current row_version so client can store it alongside the lock token
+      const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rec = await (db.selectFrom(fullTable) as any)
+        .select(["row_version"])
+        .where("id", "=", recordId)
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst() as { row_version?: number } | undefined;
+
+      res.json({ ok: true, lock_token: result.lockToken, expires_at: result.expiresAt, row_version: rec?.row_version ?? null });
+    } catch (err) {
+      logger?.error("records_lock_acquire_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /:entity/:id/lock — read current lock state ──────────────────────────
+  const getLockHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const recordId   = req.params["id"] as string;
+      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const status = await getLockStatus(db, { tenantId, entityName: entityCode, recordId });
+      res.json(status);
+    } catch (err) {
+      logger?.error("records_lock_get_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── PUT /:entity/:id/lock/heartbeat — renew lock TTL ────────────────────────
+  const renewLockHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const recordId   = req.params["id"] as string;
+      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      if (!principalId) { res.status(403).json({ error: "FORBIDDEN" }); return; }
+
+      const body      = (req.body ?? {}) as Record<string, unknown>;
+      const lockToken = typeof body["lock_token"] === "string" ? body["lock_token"] : "";
+      if (!lockToken) { res.status(400).json({ error: "MISSING_LOCK_TOKEN" }); return; }
+
+      const result = await renewLock(db, { tenantId, entityName: entityCode, recordId, lockedBy: principalId, lockToken });
+      if (!result.renewed) {
+        const status = result.reason === "expired" ? 410 : 423;
+        res.status(status).json({ error: result.reason === "expired" ? "LOCK_EXPIRED" : "LOCK_INVALID", reason: result.reason });
+        return;
+      }
+      res.json({ ok: true, expires_at: result.expiresAt });
+    } catch (err) {
+      logger?.error("records_lock_renew_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── DELETE /:entity/:id/lock — release lock ──────────────────────────────────
+  const releaseLockHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const recordId   = req.params["id"] as string;
+      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      if (!principalId) { res.status(403).json({ error: "FORBIDDEN" }); return; }
+
+      const body      = (req.body ?? {}) as Record<string, unknown>;
+      const lockToken = typeof body["lock_token"] === "string" ? body["lock_token"] : "";
+      if (!lockToken) { res.status(400).json({ error: "MISSING_LOCK_TOKEN" }); return; }
+
+      await releaseLock(db, { tenantId, entityName: entityCode, recordId, lockedBy: principalId, lockToken });
+      res.status(204).end();
+    } catch (err) {
+      logger?.error("records_lock_release_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── DELETE /:entity/:id/lock/force — admin force-release ─────────────────────
+  const forceReleaseLockHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const recordId   = req.params["id"] as string;
+      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      // Permission gate — caller must have records.lock.force_release
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const hasPerm = await db
+        .selectFrom("master.principal_permission as pp" as never)
+        .select("pp.id" as never)
+        .where("pp.principal_id" as never, "=", principalId as never)
+        .where("pp.permission_code" as never, "=", "records.lock.force_release" as never)
+        .where("pp.tenant_id" as never, "=", tenantId as never)
+        .executeTakeFirst()
+        .catch(() => null);
+
+      if (!hasPerm) {
+        res.status(403).json({ error: "FORBIDDEN", message: "records.lock.force_release permission required" });
+        return;
+      }
+
+      await forceReleaseLock(db, { tenantId, entityName: entityCode, recordId });
+      res.status(204).end();
+    } catch (err) {
+      logger?.error("records_lock_force_release_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   router.get("/records/:entity", listHandler);
   router.get("/records/:entity/_debug", debugHandler);
   // Sub-resource routes must be registered before /:id to avoid shadowing
@@ -2489,6 +3110,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   router.get("/records/:entity/:id/integration-events", subResourceStub("integration-events"));
   router.get("/records/:entity/:id/quality",            subResourceStub("quality"));
   router.get("/records/:entity/:id/reports",            subResourceStub("reports"));
+  // Lock routes — must be registered before /:id to avoid shadowing
+  router.post("/records/:entity/:id/lock",            acquireLockHandler);
+  router.get("/records/:entity/:id/lock",             getLockHandler);
+  router.put("/records/:entity/:id/lock/heartbeat",   renewLockHandler);
+  router.delete("/records/:entity/:id/lock/force",    forceReleaseLockHandler);
+  router.delete("/records/:entity/:id/lock",          releaseLockHandler);
+
   router.get("/records/:entity/:id", getHandler);
   router.post("/records/:entity", createHandler);
   router.put("/records/:entity/:id", updateHandler);

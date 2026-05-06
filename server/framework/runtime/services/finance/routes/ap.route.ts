@@ -29,20 +29,19 @@ import {
   parseScopeParams,
   resolveCompanyIds,
 } from "./finance.route.js";
-import { verifyBearer, resolveTenantId, isUuid, resolvePrincipalIdOrNull, extractOrgHeaders } from "@athyper/svc-shared";
+import { verifyBearer, resolveTenantId, isUuid, resolvePrincipalIdOrNull, extractOrgHeaders, verifyLock } from "@athyper/svc-shared";
 import { randomUUID } from "node:crypto";
 import { handleCreateApInvoice } from "../../business/ap/invoice-create.handler.js";
 import { handleAddInvoiceLine, handleUpdateInvoiceLine, handleDeleteInvoiceLine } from "../../business/ap/invoice-lines.handler.js";
 import { handlePostPayment, handleSubmitPayment, handleVoidPayment } from "../../business/ap/payment-posting.service.js";
 import { resolveLineClassification } from "../../business/procurement-intake/IntentResolutionService.js";
 import { suggestSpendCategories } from "../../business/procurement-intake/SpendCategorySuggestService.js";
+import { extractInvoiceDraft } from "../../business/ap/invoice-extraction.service.js";
 
 // ── Payment status resolution ─────────────────────────────────────────────────
-// Recomputes paid_amount, outstanding_amount, and status after any allocation
-// is added or removed. Counts ALL allocations regardless of payment status so
-// that a draft payment immediately reflects on the invoice.  If the payable
-// amount is zero (no invoice found) the function returns silently.
-//
+// Recomputes paid_amount and status from posted non-voided allocations only.
+// Draft/approved payments do not affect invoice settlement — only posted payments count.
+// outstanding_amount is GENERATED ALWAYS AS STORED; not written here.
 // Call this inside the same transaction that mutates payment_entry_allocation.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,15 +59,19 @@ async function resolveInvoicePaymentStatus(trx: Kysely<any>, tenantId: string, i
   const payable = parseFloat(String(inv.payable_amount ?? inv.total_amount ?? "0"));
   if (payable <= 0) return;
 
+  // Sum only from posted non-voided payments; draft allocations are not settled
   const sumResult = await sql<{ total: string }>`
     SELECT COALESCE(SUM(pea.allocated_amount), 0) AS total
-    FROM   document.payment_entry_allocation pea
-    WHERE  pea.tenant_id           = ${tenantId}
-      AND  pea.purchase_invoice_id = ${invoiceId}
+      FROM document.payment_entry_allocation pea
+      JOIN document.payment_entry            pe  ON pe.id = pea.payment_entry_id
+                                               AND pe.tenant_id = pea.tenant_id
+     WHERE pea.tenant_id           = ${tenantId}
+       AND pea.purchase_invoice_id = ${invoiceId}
+       AND pe.status               = 'posted'
+       AND pe.is_voided            = false
   `.execute(trx);
 
-  const paid        = parseFloat(String(sumResult.rows[0]?.total ?? "0"));
-  const outstanding = Math.max(0, payable - paid);
+  const paid = parseFloat(String(sumResult.rows[0]?.total ?? "0"));
 
   let newStatus = inv.status;
   if (paid >= payable) {
@@ -81,10 +84,9 @@ async function resolveInvoicePaymentStatus(trx: Kysely<any>, tenantId: string, i
 
   await sql`
     UPDATE document.purchase_invoice
-       SET paid_amount        = ${paid.toFixed(4)}::numeric,
-           outstanding_amount = ${outstanding.toFixed(4)}::numeric,
-           status             = ${newStatus},
-           updated_at         = now()
+       SET paid_amount = ${paid.toFixed(4)}::numeric,
+           status      = ${newStatus},
+           updated_at  = now()
      WHERE id = ${invoiceId} AND tenant_id = ${tenantId}
   `.execute(trx);
 }
@@ -397,7 +399,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
             tenant_id:          tenantId,
             company_code_id:    invoice["companyCodeId"],
             payment_number:     paymentNumber,
-            payment_type:       "STANDARD",
+            payment_type:       "standard",
             payment_direction:  "OUTBOUND",
             supplier_id:        invoice["supplierId"] ?? null,
             supplier_name:      invoice["supplierName"] ?? "Unknown Supplier",
@@ -447,8 +449,10 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
           } as never)
           .execute();
 
-        // Recompute invoice paid/outstanding/status after allocation
-        await resolveInvoicePaymentStatus(trx as unknown as Kysely<Record<string, unknown>>, tenantId, invoiceId);
+        // Invoice paid_amount/status is intentionally NOT updated here.
+        // A draft payment allocation creates the invoice↔payment link but must not
+        // change invoice status — the invoice is only marked paid after the payment
+        // is posted (handlePostPayment calls resolveInvoicePaymentStatus after posting).
       });
 
       logger?.info?.("finance_ap_payment_created", {
@@ -997,6 +1001,34 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
 
       const body   = (req.body ?? {}) as Record<string, unknown>;
       const now    = new Date();
+
+      // ── Concurrency guard: lease_plus_version (optional rollout) ─────────────
+      // purchase_invoice uses optional rollout: enforced only when client sends lock_token.
+      const lockToken       = typeof body["lock_token"]          === "string" ? body["lock_token"]          : null;
+      const expectedVersion = typeof body["expected_row_version"] === "number" ? body["expected_row_version"] : null;
+
+      if (lockToken && principalId) {
+        const lockCheck = await verifyLock(db, { tenantId, entityName: "purchase_invoice", recordId: invoiceId, lockedBy: principalId, lockToken });
+        if (!lockCheck.valid) {
+          const httpStatus = lockCheck.reason === "expired" ? 410 : 423;
+          res.status(httpStatus).json({ error: lockCheck.reason === "expired" ? "LOCK_EXPIRED" : "LOCK_INVALID", reason: lockCheck.reason });
+          return;
+        }
+        if (expectedVersion !== null) {
+          const vRow = await db
+            .selectFrom("document.purchase_invoice as pi" as never)
+            .select("pi.row_version" as never)
+            .where("pi.id" as never,        "=" as never, invoiceId as never)
+            .where("pi.tenant_id" as never, "=" as never, tenantId  as never)
+            .executeTakeFirst() as { row_version: number } | undefined;
+          if (vRow && vRow.row_version !== expectedVersion) {
+            res.status(409).json({ error: "VERSION_CONFLICT", message: "Document was modified by another user. Reload and try again.", current_version: vRow.row_version });
+            return;
+          }
+        }
+      }
+      // ── end concurrency guard ─────────────────────────────────────────────────
+
       const ALLOWED = [
         "description",
         "supplier_invoice_number", "supplier_invoice_date",
@@ -1116,9 +1148,14 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const invoiceId = String(req.params["id"]  ?? "");
       const lineId    = String(req.params["lid"] ?? "");
       if (!isUuid(invoiceId) || !isUuid(lineId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const lockToken = typeof (req.body as Record<string, unknown>)?.["lock_token"] === "string"
+        ? (req.body as Record<string, unknown>)["lock_token"] as string
+        : undefined;
 
       const { status, body: respBody } = await handleDeleteInvoiceLine(
-        db, tenantId, invoiceId, lineId, logger,
+        db, tenantId, invoiceId, lineId, principalId, lockToken, logger,
       );
       res.status(status).json(respBody);
     } catch (err) {
@@ -1266,6 +1303,52 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       res.status(result.status).json(result.body);
     } catch (err) { logger?.error("finance_ap_payment_void_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
+
+
+  // ── POST /api/finance/ap/invoices/extract ─────────────────────────────────
+  // AI-assisted invoice extraction: reads an already-uploaded attachment from
+  // the AI inference log and maps it to a draft invoice payload.
+  // ceiling=assist: NEVER creates the invoice — always returns a draft for user confirmation.
+  //
+  // Body (JSON): { attachment_id: string, company_code_id: string, invoice_source?: string }
+  //
+  // invoice_source stays a business-origin field (defaults to 'non_po').
+  // The AI channel is stored in the returned payload as _intake_channel='ai_extracted',
+  // which the caller should persist in purchase_invoice.metadata.intake_channel.
+  router.post("/finance/ap/invoices/extract", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId) ?? "";
+
+      const body = req.body as {
+        attachment_id?:  string;
+        company_code_id?: string;
+        invoice_source?: string;
+      };
+
+      if (!isUuid(body.attachment_id ?? "")) {
+        res.status(400).json({ error: "MISSING_FIELD", message: "attachment_id (UUID) is required" }); return;
+      }
+      if (!isUuid(body.company_code_id ?? "")) {
+        res.status(400).json({ error: "MISSING_FIELD", message: "company_code_id (UUID) is required" }); return;
+      }
+
+      const result = await extractInvoiceDraft(db, {
+        tenantId,
+        companyCodeId: body.company_code_id!,
+        attachmentId:  body.attachment_id!,
+        principalId,
+        invoiceSource: body.invoice_source,
+      });
+
+      res.json(result);
+    } catch (err) { logger?.error("finance_ap_extract_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
 
   return router;
 }

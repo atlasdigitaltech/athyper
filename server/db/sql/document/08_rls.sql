@@ -232,3 +232,98 @@ CREATE POLICY tenant_read   ON document.wht_certificate FOR SELECT USING     (te
 CREATE POLICY tenant_insert ON document.wht_certificate FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON document.wht_certificate FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_write   ON document.wht_certificate FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── document.party_advance_balance ───────────────────────────────────────────
+-- Phase 2: per-supplier advance/retention balance. Tenant-isolated read+write.
+-- No delete policy: rows are only zeroed by balance mutations, never deleted.
+ALTER TABLE document.party_advance_balance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.party_advance_balance FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read   ON document.party_advance_balance;
+DROP POLICY IF EXISTS tenant_insert ON document.party_advance_balance;
+DROP POLICY IF EXISTS tenant_update ON document.party_advance_balance;
+DROP POLICY IF EXISTS admin_read    ON document.party_advance_balance;
+DROP POLICY IF EXISTS admin_write   ON document.party_advance_balance;
+CREATE POLICY tenant_read   ON document.party_advance_balance FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.party_advance_balance FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.party_advance_balance FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.party_advance_balance FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.party_advance_balance FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ── document.invoice_tax_snapshot ────────────────────────────────────────────
+-- Phase 3: frozen tax determination at posting time. Append-only — no UPDATE or DELETE.
+ALTER TABLE document.invoice_tax_snapshot ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.invoice_tax_snapshot FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.invoice_tax_snapshot;
+DROP POLICY IF EXISTS tenant_insert ON document.invoice_tax_snapshot;
+DROP POLICY IF EXISTS admin_read    ON document.invoice_tax_snapshot;
+DROP POLICY IF EXISTS admin_write   ON document.invoice_tax_snapshot;
+CREATE POLICY tenant_read   ON document.invoice_tax_snapshot FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.invoice_tax_snapshot FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.invoice_tax_snapshot FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.invoice_tax_snapshot FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ============================================================================
+-- Phase 5: Bank Statement Import & Reconciliation — RLS
+-- ============================================================================
+
+-- ── document.bank_statement ──────────────────────────────────────────────────
+-- Mutable: status transitions (imported→matching→signed_off→archived) require UPDATE.
+ALTER TABLE document.bank_statement ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.bank_statement FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.bank_statement;
+DROP POLICY IF EXISTS tenant_insert ON document.bank_statement;
+DROP POLICY IF EXISTS tenant_update ON document.bank_statement;
+DROP POLICY IF EXISTS admin_read    ON document.bank_statement;
+DROP POLICY IF EXISTS admin_write   ON document.bank_statement;
+CREATE POLICY tenant_read   ON document.bank_statement FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.bank_statement FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.bank_statement FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.bank_statement FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.bank_statement FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- ── document.bank_statement_line ─────────────────────────────────────────────
+-- Mutable: recon_status and recon_case_id are updated by the matching engine.
+ALTER TABLE document.bank_statement_line ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.bank_statement_line FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.bank_statement_line;
+DROP POLICY IF EXISTS tenant_insert ON document.bank_statement_line;
+DROP POLICY IF EXISTS tenant_update ON document.bank_statement_line;
+DROP POLICY IF EXISTS admin_read    ON document.bank_statement_line;
+DROP POLICY IF EXISTS admin_write   ON document.bank_statement_line;
+CREATE POLICY tenant_read   ON document.bank_statement_line FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.bank_statement_line FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.bank_statement_line FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.bank_statement_line FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.bank_statement_line FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- ── document.bank_recon_case ─────────────────────────────────────────────────
+-- Mutable: status transitions, sign_off_je_id, matched_at/signed_off_at updated throughout lifecycle.
+ALTER TABLE document.bank_recon_case ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.bank_recon_case FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.bank_recon_case;
+DROP POLICY IF EXISTS tenant_insert ON document.bank_recon_case;
+DROP POLICY IF EXISTS tenant_update ON document.bank_recon_case;
+DROP POLICY IF EXISTS admin_read    ON document.bank_recon_case;
+DROP POLICY IF EXISTS admin_write   ON document.bank_recon_case;
+CREATE POLICY tenant_read   ON document.bank_recon_case FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.bank_recon_case FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.bank_recon_case FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.bank_recon_case FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.bank_recon_case FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- ── document.bank_recon_case_line ────────────────────────────────────────────
+-- Append-only: matching lines are never updated or deleted. Void the case to undo.
+ALTER TABLE document.bank_recon_case_line ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.bank_recon_case_line FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.bank_recon_case_line;
+DROP POLICY IF EXISTS tenant_insert ON document.bank_recon_case_line;
+DROP POLICY IF EXISTS admin_read    ON document.bank_recon_case_line;
+DROP POLICY IF EXISTS admin_write   ON document.bank_recon_case_line;
+CREATE POLICY tenant_read   ON document.bank_recon_case_line FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.bank_recon_case_line FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.bank_recon_case_line FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.bank_recon_case_line FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

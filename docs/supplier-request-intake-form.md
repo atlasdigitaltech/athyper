@@ -13,10 +13,10 @@ Use a stepper, not one long page. The intake is dense and has restricted data, s
 | Step | Purpose | Tables |
 | --- | --- | --- |
 | Identity | Supplier legal/business identity and primary external IDs | `master.supplier`, `master.party_identifier` |
-| Geographic Coverage | Where the supplier can ship, serve, or operate | `master.supplier_service_coverage` |
+| Geographic Coverage | Where the supplier can ship, serve, or operate | `master.party_service_coverage` with `party_type='business_partner'` |
 | Tax & Compliance | Jurisdictional tax profile and onboarding/KYC state | `master.party_tax_profile`, `master.supplier_qualification` |
 | Contacts | Named supplier contacts only; channels stay in contact link tables | `master.party_contact_person` |
-| Banking | Remittance accounts captured through write tables | `master.bank_account`, `master.bank_account_link`, viewed by `master.v_supplier_bank_account` |
+| Banking | Remittance accounts captured through write tables | `master.bank_account`, `master.bank_account_link`, viewed by `master.v_business_partner_bank_account` |
 | Governance | UBOs, directors, shareholders, signatories | `master.party_governance_relation` |
 | Review | Completeness, restricted-data warning, duplicate checks, submit | all above |
 
@@ -66,7 +66,7 @@ Behavior:
 - Require tax `country_code`, `is_vat_registered`, `has_tax_clearance`, and `status`.
 - Show `vat_number` when VAT registered.
 - Show clearance number and expiry when tax clearance is present.
-- Default qualification to `onboarding_status=pending`, `is_approved_supplier=false`, `is_preferred_supplier=false`, `is_blocked=false`, `sanctions_status=pending`, `aml_kyc_status=pending`, `status=active`.
+- Default qualification to `onboarding_status=pending`, `is_approved_supplier=false`, `is_preferred_supplier=false`, `is_blocked=false`, `sanctions_status=not_checked`, `aml_kyc_status=not_started`, `risk_tier=low`, `status=active`.
 - Keep `profile_completeness_pct` system-derived.
 
 ### 4. Contacts
@@ -89,8 +89,8 @@ Display and review fields:
 
 Persistence:
 
-- Read from `master.v_supplier_bank_account`.
-- Write by creating `master.bank_account`, then `master.bank_account_link` with `owner_type='supplier'`, `owner_id=<supplier_id>`, purpose/default flags, and effective dates.
+- Read from `master.v_business_partner_bank_account`; `master.v_supplier_bank_account` is only a temporary compatibility view.
+- Write by creating `master.bank_account`, then `master.bank_account_link` with `owner_type='business_partner'`, `owner_id=<business_partner_id>`, purpose/default flags, and effective dates.
 
 Behavior:
 
@@ -129,22 +129,23 @@ Recommended payload:
 
 Recommended transaction order:
 
-1. Insert `master.supplier`; capture `supplier_id`.
-2. Insert `party_identifier` rows with `owner_type='supplier'`, `owner_id=supplier_id`.
-3. Insert `supplier_service_coverage` rows with `supplier_id`.
-4. Insert `party_tax_profile` rows with `owner_type='supplier'`, `owner_id=supplier_id`.
-5. Insert `supplier_qualification` singleton with `supplier_id`.
-6. Insert `party_contact_person` rows with `party_type='supplier'`, `party_id=supplier_id`.
-7. Insert `certification` rows with `owner_type='supplier'`, `owner_id=supplier_id` when included.
-8. Insert governance rows with `party_type='supplier'`, `party_id=supplier_id`.
-9. For each bank account, insert `bank_account`, then `bank_account_link` with supplier ownership.
+1. Insert `master.business_partner`; capture `business_partner_id`.
+2. Insert `master.supplier`; capture `supplier_id`.
+3. Insert `party_identifier` rows with `owner_type='business_partner'`, `owner_id=business_partner_id`.
+4. Insert `party_service_coverage` rows with `party_type='business_partner'`, `party_id=business_partner_id`.
+5. Insert `party_tax_profile` rows with `owner_type='business_partner'`, `owner_id=business_partner_id`.
+6. Insert `supplier_qualification` singleton with `supplier_id`.
+7. Insert `party_contact_person` rows with `party_type='business_partner'`, `party_id=business_partner_id`.
+8. Insert `certification` rows with `owner_type='business_partner'`, `owner_id=business_partner_id` when included.
+9. Insert governance rows with `party_type='business_partner'`, `party_id=business_partner_id`.
+10. For each bank account, insert `bank_account`, then `bank_account_link` with BP ownership.
 
 All rows should share the resolved tenant, creator, and request correlation id. If any restricted section fails validation, the whole transaction should roll back.
 
 ## Security
 
 - Treat tax profiles and governance as restricted/PII-bearing sections.
-- Banking should be editable only by users with supplier banking permission; the `supplier_bank_account` entity remains read-only because it is a view.
+- Banking should be editable only by users with BP/supplier banking permission; the `business_partner_bank_account` entity remains read-only because it is a view.
 - Mask account numbers after entry except for the last few digits.
 - Record section-level audit events for tax, governance, and banking changes.
 

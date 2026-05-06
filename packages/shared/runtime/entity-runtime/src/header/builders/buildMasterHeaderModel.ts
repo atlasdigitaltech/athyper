@@ -7,8 +7,8 @@
 
 import { adminStatusIntent } from "@athyper/theme/domain-intents";
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
-import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
-import type { EntityHeaderModel, HeaderAction, HeaderFact, HeaderTab } from "../types";
+import type { CompiledEntity, EntityField, EntityOperation, StatusDimensionConfig } from "@athyper/api-contracts/metadata";
+import type { EntityHeaderModel, HeaderAction, HeaderFact, HeaderStatusDimension, HeaderTab } from "../types";
 import { titleCase, fmtDateTime } from "@athyper/runtime-shared/core";
 
 // ── Placement map: entity_operation.placement → HeaderAction.placement ────────
@@ -129,6 +129,8 @@ export interface MasterHeaderConfig {
   classification_field?: string;
   /** Field names to render as P2 KPI facts in the header (rich profile only). */
   header_facts?:         string[];
+  /** Secondary boolean status dimensions for the P3 header strip. */
+  status_dimensions?:    StatusDimensionConfig[];
 }
 
 // ── Main builder ──────────────────────────────────────────────────────────────
@@ -196,6 +198,30 @@ export function buildMasterHeaderModel(
     }));
   }
 
+  // Status dimensions — resolve from current entity OR from any cross-entity field that
+  // has been merged into data by the backend (e.g. supplier_qualification fields merged
+  // into the supplier detail response).
+  let statuses: HeaderStatusDimension[] | undefined;
+  if (!editMode && config.status_dimensions && config.status_dimensions.length > 0) {
+    const resolved: HeaderStatusDimension[] = [];
+    for (const dim of config.status_dimensions) {
+      const ownEntity = dim.source_entity === entity.entity_code || dim.source_entity === entity.entity_name;
+      if (!ownEntity && !(dim.source_field in data)) {
+        continue;
+      }
+      const rawVal = data[dim.source_field];
+      if (rawVal === undefined || rawVal === null) continue;
+      const boolVal = typeof rawVal === "boolean" ? rawVal : rawVal === "true" || rawVal === 1;
+      resolved.push({
+        id:     dim.id,
+        label:  dim.label,
+        value:  boolVal ? dim.true_label : dim.false_label,
+        intent: (boolVal ? dim.true_intent : dim.false_intent) as SemanticIntent,
+      });
+    }
+    if (resolved.length > 0) statuses = resolved;
+  }
+
   return {
     identity: {
       typeLabel,
@@ -209,7 +235,8 @@ export function buildMasterHeaderModel(
         : { label: titleCase(statusVal), intent: statusIntent },
     },
     actions,
-    facts: editMode ? undefined : buildFactsRail(entity, data, config.header_facts),
+    facts:    editMode ? undefined : buildFactsRail(entity, data, config.header_facts),
+    statuses,
     tabs,
   };
 }

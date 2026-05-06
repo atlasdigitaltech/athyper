@@ -155,6 +155,39 @@ function getStatusValue(row: Record<string, unknown>): string {
   return String(row.status ?? row.record_status ?? row.state ?? "");
 }
 
+function normalizeNavValue(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  return undefined;
+}
+
+function uniqueFieldNames(names: unknown[]): string[] {
+  const seen = new Set<string>();
+  const fields: string[] = [];
+  for (const name of names) {
+    if (typeof name !== "string") continue;
+    const field = name.trim();
+    if (!field || seen.has(field)) continue;
+    seen.add(field);
+    fields.push(field);
+  }
+  return fields;
+}
+
+function resolveRecordNavId(row: Record<string, unknown>, fieldNames: string[]): string | undefined {
+  for (const fieldName of fieldNames) {
+    const value = normalizeNavValue(row[fieldName]);
+    if (value) return value;
+  }
+  return normalizeNavValue(row.id);
+}
+
 // ── Compact card grid ─────────────────────────────────────────────────────────
 
 const COMPACT_DENSITY = {
@@ -300,7 +333,7 @@ function OrganizeControl({
 }: OrganizeControlProps) {
   const anyOrganize = hasActiveFilters || sortCount > 0 || !!groupField || visibleColumns > 0;
 
-  const seg = "relative flex items-center justify-center gap-1 px-2 py-1.5 text-xs transition-colors";
+  const seg = "relative flex items-center justify-center gap-1 px-1.5 py-1.5 sm:px-2 text-xs transition-colors";
   const segCls = (name: "filter" | "sort" | "group" | "columns", dataActive: boolean) =>
     cn(seg,
       activeDrawer === name
@@ -312,7 +345,7 @@ function OrganizeControl({
 
   return (
     <div className="flex h-8 items-center rounded-md border border-input bg-background shadow-sm overflow-hidden [&>*+*]:border-l [&>*+*]:border-input">
-      <span className="select-none px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
+      <span className="hidden sm:inline select-none px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
         Organize
       </span>
 
@@ -1092,12 +1125,13 @@ function RowActionMenu({
 }) {
   const [open, setOpen]       = useState(false);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const recordId = String(row.id ?? "");
 
   // Record-required DETAIL operations that make sense in a row context
   const rowOps = resolveActionsForSurface(operations, "DETAIL").filter(
-    (a) => a.requiresRecord && a.handlerType !== "NAVIGATE",
+    (a) => a.requiresRecord,
   );
 
   if (rowOps.length === 0) return null;
@@ -1105,6 +1139,18 @@ function RowActionMenu({
   const dispatch = async (action: ReturnType<typeof resolveActionsForSurface>[number]) => {
     setOpen(false);
     if (!recordId) return;
+
+    if (action.handlerType === "NAVIGATE" && action.handlerTarget) {
+      router.push(
+        action.handlerTarget
+          .replace("{entityCode}", entityCode)
+          .replace("{id}", recordId),
+      );
+      return;
+    }
+
+    if (action.handlerType === "INLINE") return;
+
     setLoading(true);
     try {
       const code = action.permissionCode.split(".").pop() ?? action.permissionCode;
@@ -1335,7 +1381,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const fieldLabelMap = useMemo(
     () =>
       entity
-        ? Object.fromEntries(resolveListConfig(entity).columns.map((f) => [f.name, f.label ?? f.name]))
+        ? Object.fromEntries(entity.fields.map((f) => [f.name, f.label ?? f.name]))
         : {},
     [entity],
   );
@@ -1516,6 +1562,17 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const listConfig   = resolveListConfig(entity);
   const titleKey     = listConfig.columns[0]?.name ?? "name";
   const hasGroupable = !!findKanbanGroupField(entity);
+  const navFieldNames = uniqueFieldNames([
+    entity.display_config.code_field,
+    entity.display_config.document_header?.number_field,
+    entity.display_config.title_field,
+    titleKey,
+    "document_no",
+    "document_number",
+    "number",
+    "code",
+    "name",
+  ]);
 
   // Status field resolver from presentation config (for compact view badges)
   const statusResolverName = presentationConfig?.columns.find(
@@ -1613,9 +1670,14 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
         }];
       });
 
+  const getRecordHref = (row: Record<string, unknown>) => {
+    const navId = resolveRecordNavId(row, navFieldNames);
+    return navId ? `/app/${entityCode}/${encodeURIComponent(navId)}` : undefined;
+  };
+
   const handleRowClick = (row: Record<string, unknown>) => {
-    const id = row.id as string;
-    if (id) router.push(`/app/${entityCode}/${id}`);
+    const href = getRecordHref(row);
+    if (href) router.push(href);
   };
 
   // Determine which saved view tab is "active" based on URL state
@@ -1669,14 +1731,30 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       header={
         <PageHeader
           title={entity.entity_name}
+          primaryActions={
+            <>
+              {operations ? (
+                <ActionBar
+                  operations={operations.filter((op) => !op.permission_code.toLowerCase().includes("export"))}
+                  surface="LIST"
+                  entityCode={entityCode}
+                />
+              ) : null}
+              <ListSettingsMenu
+                entityCode={entityCode}
+                mode={viewMode}
+                density={state.density}
+              />
+            </>
+          }
           actions={
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <SearchInput
                 placeholder={`Search ${entity.entity_name}…`}
                 value={state.search ?? ""}
                 onSearch={setSearch}
                 loading={dataLoading && !!state.search && state.searchMode !== "client"}
-                className="w-48 sm:w-64"
+                className="w-28 sm:w-44 lg:w-64"
                 onKeyDown={(e: React.KeyboardEvent) => {
                   if (e.key === "Escape") setSearch("");
                 }}
@@ -1719,20 +1797,6 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                 availableModes={displayConfig?.view_modes?.map(
                   (m) => B5_TO_LEGACY_MODE[m] ?? (m as ViewMode),
                 )}
-              />
-
-              {operations ? (
-                <ActionBar
-                  operations={operations.filter((op) => !op.permission_code.toLowerCase().includes("export"))}
-                  surface="LIST"
-                  entityCode={entityCode}
-                />
-              ) : null}
-
-              <ListSettingsMenu
-                entityCode={entityCode}
-                mode={viewMode}
-                density={state.density}
               />
 
               {(hasActiveQuery || isModified) && (
@@ -1998,8 +2062,9 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               totalPages={serverTotalPgs}
               onPageChange={setPage}
               rowActions={(row) => {
-                const r   = row as Record<string, unknown>;
-                const rid = String(r.id ?? "");
+                const r      = row as Record<string, unknown>;
+                const rid    = String(r.id ?? "");
+                const navId  = resolveRecordNavId(r, navFieldNames);
                 return (
                   <RowMetaStrip
                     row={r}
@@ -2010,6 +2075,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                     commentHasOpen={commentCountMap[rid]?.hasOpen ?? false}
                     onBookmarkToggle={toggleBookmark}
                     bookmarkPending={bookmarkPending}
+                    recordNavId={navId && navId !== rid ? navId : undefined}
                   />
                 );
               }}
@@ -2110,7 +2176,8 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             <button
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted transition-colors"
               onClick={() => {
-                window.open(`/app/${entityCode}/${String(rowCtxMenu.row.id ?? "")}`, "_blank", "noopener,noreferrer");
+                const href = getRecordHref(rowCtxMenu.row);
+                if (href) window.open(href, "_blank", "noopener,noreferrer");
                 setRowCtxMenu(null);
               }}
             >
@@ -2120,7 +2187,8 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             <button
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted transition-colors"
               onClick={() => {
-                window.open(`/app/${entityCode}/${String(rowCtxMenu.row.id ?? "")}`, "_blank", "noopener,noreferrer,width=1280,height=800");
+                const href = getRecordHref(rowCtxMenu.row);
+                if (href) window.open(href, "_blank", "noopener,noreferrer,width=1280,height=800");
                 setRowCtxMenu(null);
               }}
             >

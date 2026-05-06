@@ -109,16 +109,29 @@ function normalizeFeatureFlags(raw: Record<string, unknown>): Record<string, unk
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapField(row: Record<string, any>) {
   // reference_config: prefer the jsonb column, fall back to validation->ref_entity
-  let referenceConfig: { target_entity: string; target_field?: string; display_field?: string } | null = null;
+  let referenceConfig: Record<string, unknown> | null = null;
   if (row.reference_config && typeof row.reference_config === "object") {
+    const rawConfig = row.reference_config as Record<string, unknown>;
     referenceConfig = {
-      target_entity: row.reference_config.target_entity ?? row.reference_config.ref_entity ?? "",
-      target_field: row.reference_config.target_field,
-      display_field: row.reference_config.display_field,
+      ...rawConfig,
+      target_entity: rawConfig["target_entity"] ?? rawConfig["ref_entity"] ?? "",
+      target_field: rawConfig["target_field"],
+      display_field: rawConfig["display_field"],
     };
   } else if (row.validation && typeof row.validation === "object" && row.validation.ref_entity) {
-    referenceConfig = { target_entity: row.validation.ref_entity as string };
+    referenceConfig = {
+      target_entity: row.validation.ref_entity as string,
+      target_field: row.validation.target_field,
+      display_field: row.validation.display_field,
+    };
   }
+
+  const uiHint = row.ui_hint && typeof row.ui_hint === "object"
+    ? row.ui_hint as Record<string, unknown>
+    : null;
+  const filterConfig = uiHint?.["filter"] && typeof uiHint["filter"] === "object"
+    ? uiHint["filter"] as Record<string, unknown>
+    : null;
 
   return {
     id: row.id as string,
@@ -149,6 +162,8 @@ function mapField(row: Record<string, any>) {
     reference_config: referenceConfig,
     sort_order: Number(row.sort_order ?? 0),
     group_key: (row.ui_hint?.group_key ?? null) as string | null,
+    ui_hint: uiHint,
+    filter_config: filterConfig,
     i18n_key: (row.ui_hint?.i18n_key ?? null) as string | null,
   };
 }
@@ -305,6 +320,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         default_sort_order: (dbDisplayConfig["default_sort_order"] ?? undefined) as "asc" | "desc" | undefined,
         list_columns:       (dbDisplayConfig["list_columns"] ?? undefined) as string[] | undefined,
         search_fields:      (dbDisplayConfig["search_fields"] ?? undefined) as string[] | undefined,
+        filter_bar:         (dbDisplayConfig["filter_bar"] ?? undefined) as Record<string, unknown> | undefined,
         detail_renderer:    (dbDisplayConfig["detail_renderer"] ?? undefined) as string | undefined,
         detail_profile:     (dbDisplayConfig["detail_profile"] ?? undefined) as string | undefined,
         document_header:    (dbDisplayConfig["document_header"] ?? undefined) as Record<string, unknown> | undefined,
@@ -318,6 +334,10 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         view_modes:         (dbDisplayConfig["view_modes"] ?? undefined) as string[] | undefined,
         status_field_names: (dbDisplayConfig["status_field_names"] ?? undefined) as string[] | undefined,
         alternate_flows:    (dbDisplayConfig["alternate_flows"] ?? undefined) as string[] | undefined,
+        intake_modes:       Array.isArray(dbDisplayConfig["intake_modes"])
+          ? (dbDisplayConfig["intake_modes"] as Record<string, unknown>[])
+          : undefined,
+        create_redirect:    (dbDisplayConfig["create_redirect"] ?? undefined) as Record<string, unknown> | undefined,
         action_groups:      (dbDisplayConfig["action_groups"] ?? undefined) as Record<string, unknown> | undefined,
         status_resolver:    (dbDisplayConfig["status_resolver"] ?? undefined) as string | undefined,
       };
@@ -332,7 +352,8 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // Include display_config in hash so changes to document_header or
       // detail_renderer bust the Redis descriptor cache automatically.
       const displayConfigHash = simpleHash(JSON.stringify(dbDisplayConfig));
-      const compiledHash = simpleHash(`${versionHash}-${fields.length}-${displayConfigHash}`);
+      const fieldsHash = simpleHash(JSON.stringify(fields));
+      const compiledHash = simpleHash(`${versionHash}-${fieldsHash}-${displayConfigHash}`);
 
       const payload = {
         entity_id: entityRow.id as string,

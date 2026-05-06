@@ -34,6 +34,8 @@ export const QUEUE_NAME = {
   TIKA_EXTRACT:    "jobs-tika-extract",
   /** PostgreSQL backup — pg_dump | gzip → object storage; schedule driven by control.cron_schedule */
   BACKUP:          "jobs-backup",
+  /** Stale edit-session lock cleanup — DELETE control.record_edit_lock WHERE expires_at < now() */
+  STALE_LOCK:      "jobs-stale-lock",
 } as const;
 
 export type QueueName = (typeof QUEUE_NAME)[keyof typeof QUEUE_NAME];
@@ -43,7 +45,9 @@ export type QueueName = (typeof QUEUE_NAME)[keyof typeof QUEUE_NAME];
 
 export const JOB_NAME = {
   /** sweep jobs: scan DB and self-enqueue action jobs */
-  SWEEP:           "sweep",
+  SWEEP:                "sweep",
+  /** stale-lock sweep: delete expired control.record_edit_lock rows */
+  STALE_LOCK_SWEEP:     "stale-lock-sweep",
   /** lifecycle timer: execute one timer action */
   FIRE:            "fire",
   /** notification: dispatch one message */
@@ -109,6 +113,7 @@ export const SCHEDULER_ID = {
   ENDPOINT_HEALTH_SWEEP:       "sched:endpoint-health-sweep",
   TIKA_EXTRACT_SWEEP:          "sched:tika-extract-sweep",
   OUTBOX_PURGE:                "sched:outbox-purge",
+  STALE_LOCK_SWEEP:            "sched:stale-lock-sweep",
 } as const;
 
 // ─── Job payload types ────────────────────────────────────────────────────────
@@ -287,4 +292,5 @@ export const DEFAULT_INTERVALS = {
   ENDPOINT_HEALTH_SWEEP_MS:        300_000,      // 5 min  — endpoint health probe cadence per task spec
   TIKA_EXTRACT_SWEEP_MS:           600_000,      // 10 min — catches rows missed by the inline enqueue (upload race, worker restarts, backfill)
   OUTBOX_PURGE_SWEEP_MS:           3_600_000,    // 1 h    — housekeeping; deletes completed rows older than retention (function default 7d)
+  STALE_LOCK_SWEEP_MS:             300_000,      // 5 min  — evicts expired edit-session locks; matches default lock TTL
 } as const;

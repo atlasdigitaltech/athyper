@@ -11,9 +11,9 @@
 --   master.supplier                         (30 writable cols)
 --   master.bank_account                     (supplier remittance bank)
 --   master.bank_account_link                (supplier → bank)
---   master.company_code_supplier_profile    (all cols incl. deprecated)
+--   master.company_code_supplier_profile    (all current cols)
 --   master.party_identifier × 2             (DUNS + LEI for supplier)
---   master.supplier_service_coverage        (UAE country-level)
+--   BP coverage/capability is handled by Business Network, not BP master data
 --   master.party_tax_profile (supplier)     (UAE / AE)
 --   master.certification_type × 2           (iso-9001, iso-27001)
 --   master.certification (supplier)         (ISO 9001)
@@ -69,14 +69,18 @@ DECLARE
     v_ct_iso27001 uuid;
 
     -- Supplier
+    v_sup_bp_id  uuid;
     v_sup_id     uuid;
     v_sup_ba_id  uuid;
     v_sup_bal_id uuid;
     v_sup_cp_id  uuid;
+    v_sup_addr_id uuid;
 
     -- Customer
+    v_cus_bp_id  uuid;
     v_cus_id     uuid;
     v_cus_cp_id  uuid;
+    v_cus_addr_id uuid;
 BEGIN
 
     -- ── Resolve tenant + company code ──────────────────────────────────────
@@ -334,17 +338,15 @@ BEGIN
     -- §2  SUPPLIER — Gulf Construction Materials LLC
     -- ══════════════════════════════════════════════════════════════════════
 
-    -- §2a  master.supplier  (all 30 writable columns)
-    INSERT INTO master.supplier (
+    -- §2a  master.business_partner (identity root for GCM)
+    INSERT INTO master.business_partner (
         tenant_id,
         code,                  name,
         display_name,          legal_name,
-        supplier_type,
-        tax_id,                tax_id_type,         tax_country_code,
+        partner_category,
         description,
         registration_no,       registration_country_code,
         website_url,           external_ref,
-        parent_supplier_id,
         long_description,
         aliases,               business_types,
         legal_form,            founded_year,
@@ -356,16 +358,14 @@ BEGIN
     )
     SELECT
         v_tenant_id,
-        'SUP-ATHQ-GCM-001',
+        'GCM-001',
         'Gulf Construction Materials LLC',
         'GCM',
         'Gulf Construction Materials Limited Liability Company',
-        'vendor',
-        '100123456000001',     'vat',               'AE',
+        'organization',
         'Premium supplier of construction aggregates, steel rebar, and ready-mix concrete across the UAE.',
         '1234567890',          'AE',
         'https://www.gcm-uae.com',  'ERP-SUP-GCM-0001',
-        NULL,
         'Gulf Construction Materials LLC is a UAE-incorporated supplier established in 2008, '
         'operating from Dubai Investment Park. Certified to ISO 9001:2015. '
         'Product range: aggregates, steel rebar, ready-mix concrete, blockwork materials.',
@@ -382,12 +382,27 @@ BEGIN
         'active',
         v_sys
     WHERE NOT EXISTS (
+        SELECT 1 FROM master.business_partner
+         WHERE tenant_id = v_tenant_id AND code = 'GCM-001'
+    );
+
+    SELECT id INTO v_sup_bp_id FROM master.business_partner
+     WHERE tenant_id = v_tenant_id AND code = 'GCM-001';
+
+    -- §2a-ii  master.supplier (thin AP role record)
+    INSERT INTO master.supplier (
+        tenant_id, business_partner_id, supplier_code,
+        supplier_type, status, created_by
+    )
+    SELECT v_tenant_id, v_sup_bp_id, 'SUP-ATHQ-GCM-001',
+           'vendor', 'active', v_sys
+    WHERE NOT EXISTS (
         SELECT 1 FROM master.supplier
-         WHERE tenant_id = v_tenant_id AND code = 'SUP-ATHQ-GCM-001'
+         WHERE tenant_id = v_tenant_id AND supplier_code = 'SUP-ATHQ-GCM-001'
     );
 
     SELECT id INTO v_sup_id FROM master.supplier
-     WHERE tenant_id = v_tenant_id AND code = 'SUP-ATHQ-GCM-001';
+     WHERE tenant_id = v_tenant_id AND supplier_code = 'SUP-ATHQ-GCM-001';
 
     -- §2b  Bank account (supplier's ADCB AED account for remittance)
     SELECT id INTO v_sup_ba_id FROM master.bank_account
@@ -434,41 +449,25 @@ BEGIN
         ) RETURNING id INTO v_sup_bal_id;
     END IF;
 
-    -- §2c  master.company_code_supplier_profile (all writable columns)
+    -- §2c  master.company_code_supplier_profile
     INSERT INTO master.company_code_supplier_profile (
-        tenant_id,              supplier_id,                  company_code_id,
-        -- deprecated text cols (kept for migration period)
-        payment_terms,          payment_method,
-        ap_gl_account_id,       withholding_tax_code,
-        -- deprecated inline banking (kept for migration period)
-        bank_account_name,      bank_account_number,
-        bank_swift_code,        bank_country_code,
-        -- phase-2 FK cols
+        tenant_id,              supplier_id,           company_code_id,
         payment_term_id,        payment_method_id,
         currency_code,
         default_accounting_profile_id,
         preferred_remittance_bank_link_id,
         tax_group_id,           default_wht_tax_group_id,
-        -- future anchors
-        settlement_profile_id,  supplier_reconciliation_profile_id,
         default_dimension_set_id, invoice_hold_policy_id,
-        -- block
         is_blocked,             block_reason,
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id,            v_sup_id,                     v_cc_id,
-        'net_30',               'wire',
-        NULL,                   'wht_5_svc',
-        'Gulf Construction Materials LLC',
-        'AE180330000001234567890',
-        'ADCBAEAA',             'AE',
+        v_tenant_id,            v_sup_id,              v_cc_id,
         v_pt_net30,             v_pm_wire_id,
         'AED',
         v_acct_ap_id,
         v_sup_bal_id,
         v_tg_vat_id,            v_tg_wht_id,
-        NULL,                   NULL,
         NULL,                   NULL,
         false,                  NULL,
         jsonb_build_object(
@@ -490,15 +489,15 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'supplier', v_sup_id,
+        v_tenant_id, 'business_partner', v_sup_bp_id,
         'duns', '123456789',
         'Dun & Bradstreet', '2020-03-15'::date, NULL,
         true, now(), true,
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_identifier
-         WHERE tenant_id = v_tenant_id AND owner_type = 'supplier'
-           AND owner_id = v_sup_id AND scheme = 'duns'
+         WHERE tenant_id = v_tenant_id AND owner_type = 'business_partner'
+           AND owner_id = v_sup_bp_id AND scheme = 'duns'
     );
 
     INSERT INTO master.party_identifier (
@@ -509,35 +508,15 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'supplier', v_sup_id,
+        v_tenant_id, 'business_partner', v_sup_bp_id,
         'lei', '5493001KJTIIGC8Y1R12',
         'GLEIF', '2021-06-01'::date, '2026-06-01'::date,
         true, now(), false,
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_identifier
-         WHERE tenant_id = v_tenant_id AND owner_type = 'supplier'
-           AND owner_id = v_sup_id AND scheme = 'lei'
-    );
-
-    -- §2e  Supplier service coverage (UAE, country-level)
-    INSERT INTO master.supplier_service_coverage (
-        tenant_id, supplier_id,
-        coverage_level, continent_code, country_code,
-        region_name, city_name, address_id,
-        coverage_type, notes,
-        metadata, status, created_by
-    )
-    SELECT
-        v_tenant_id, v_sup_id,
-        'country', 'AS', 'AE',
-        NULL, NULL, NULL,
-        'both',
-        'Primary operating territory — all seven emirates.',
-        '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
-    WHERE NOT EXISTS (
-        SELECT 1 FROM master.supplier_service_coverage
-         WHERE tenant_id = v_tenant_id AND supplier_id = v_sup_id AND country_code = 'AE'
+         WHERE tenant_id = v_tenant_id AND owner_type = 'business_partner'
+           AND owner_id = v_sup_bp_id AND scheme = 'lei'
     );
 
     -- §2f  Party tax profile (UAE)
@@ -556,7 +535,7 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'supplier', v_sup_id,
+        v_tenant_id, 'business_partner', v_sup_bp_id,
         'AE',
         'Late payment: 2% per month on overdue amounts after 30 days.',
         'Early payment discount: 1% discount if settled within 10 days.',
@@ -571,8 +550,7 @@ BEGIN
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_tax_profile
-         WHERE tenant_id = v_tenant_id AND owner_type = 'supplier'
-           AND owner_id = v_sup_id AND country_code = 'AE'
+         WHERE tenant_id = v_tenant_id AND owner_type = 'business_partner' AND owner_id = v_sup_bp_id AND country_code = 'AE'
     );
 
     -- §2g  Certification (ISO 9001:2015)
@@ -586,7 +564,7 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'supplier', v_sup_id,
+        v_tenant_id, 'business_partner', v_sup_bp_id,
         v_ct_iso9001,             NULL,
         'ISO9001-UAE-GCM-2022-0047',
         'Bureau Veritas Certification',
@@ -597,12 +575,13 @@ BEGIN
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.certification
-         WHERE tenant_id = v_tenant_id AND owner_type = 'supplier'
-           AND owner_id = v_sup_id AND certification_type_id = v_ct_iso9001
+         WHERE tenant_id = v_tenant_id AND owner_type = 'business_partner'
+           AND owner_id = v_sup_bp_id AND certification_type_id = v_ct_iso9001
     );
 
     -- §2h  Contact person — Procurement Director
-    --      (email/phone/address now live in contact_link; inline cols were dropped in 01i)
+    --      Stored at business_partner level (canonical identity layer).
+    --      Role-specific contact overrides (AP/remittance) can be added at supplier level later.
     INSERT INTO master.party_contact_person (
         tenant_id, party_type, party_id,
         company_code_id,
@@ -611,15 +590,15 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'supplier', v_sup_id,
+        v_tenant_id, 'business_partner', v_sup_bp_id,
         NULL,
         'Ahmed Al Rashidi',  'Procurement Director',
         true,
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_contact_person
-         WHERE tenant_id = v_tenant_id AND party_type = 'supplier'
-           AND party_id = v_sup_id AND contact_name = 'Ahmed Al Rashidi'
+         WHERE tenant_id = v_tenant_id AND party_type = 'business_partner'
+           AND party_id = v_sup_bp_id AND contact_name = 'Ahmed Al Rashidi'
     )
     RETURNING id INTO v_sup_cp_id;
 
@@ -630,22 +609,24 @@ BEGIN
         ) VALUES (v_tenant_id, v_sup_cp_id, 'bid_proposal_manager', v_sys)
         ON CONFLICT (tenant_id, party_contact_person_id, role_code) DO NOTHING;
 
-        -- Email + phone attached to the supplier entity
-        -- (owner_type='party_contact_person' not yet registered in master.owner_type)
+        -- Email + phone anchored at business_partner — shared across all roles.
+        -- Use purpose='notification' for general reachability;
+        -- AP-specific billing contact can be added at supplier level as an override.
         INSERT INTO master.contact_link (
             tenant_id, owner_type, owner_id,
             channel_type, value, purpose,
             is_primary, is_verified, verified_at,
             metadata, status, created_by
         ) VALUES
-        (v_tenant_id, 'supplier', v_sup_id,
-         'email', 'ahmed.alrashidi@gcm-uae.com', 'billing',
+        (v_tenant_id, 'business_partner', v_sup_bp_id,
+         'email', 'ahmed.alrashidi@gcm-uae.com', 'notification',
          true, true, now(),
          '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys),
-        (v_tenant_id, 'supplier', v_sup_id,
+        (v_tenant_id, 'business_partner', v_sup_bp_id,
          'phone', '+97148001234', 'notification',
          true, true, now(),
-         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys);
+         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys)
+        ON CONFLICT DO NOTHING;
     END IF;
 
     -- §2i  Governance relations: director + UBO
@@ -658,7 +639,7 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'supplier', v_sup_id,
+        v_tenant_id, 'business_partner', v_sup_bp_id,
         'director',
         'Khalid Mohammed Al-Mansoori',            'individual',
         NULL,           'Chief Executive Officer',
@@ -668,8 +649,8 @@ BEGIN
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_governance_relation
-         WHERE tenant_id = v_tenant_id AND party_type = 'supplier'
-           AND party_id = v_sup_id AND relation_type = 'director'
+         WHERE tenant_id = v_tenant_id AND party_type = 'business_partner'
+           AND party_id = v_sup_bp_id AND relation_type = 'director'
            AND member_name = 'Khalid Mohammed Al-Mansoori'
     );
 
@@ -682,7 +663,7 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'supplier', v_sup_id,
+        v_tenant_id, 'business_partner', v_sup_bp_id,
         'ubo',
         'Gulf Investments Holding LLC',           'company',
         'Gulf Investments Holding LLC',
@@ -693,8 +674,8 @@ BEGIN
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_governance_relation
-         WHERE tenant_id = v_tenant_id AND party_type = 'supplier'
-           AND party_id = v_sup_id AND relation_type = 'ubo'
+         WHERE tenant_id = v_tenant_id AND party_type = 'business_partner'
+           AND party_id = v_sup_bp_id AND relation_type = 'ubo'
            AND member_name = 'Gulf Investments Holding LLC'
     );
 
@@ -739,23 +720,74 @@ BEGIN
          WHERE tenant_id = v_tenant_id AND supplier_id = v_sup_id
     );
 
+    -- §2k  Address — Dubai Investment Park (GCM HQ)
+    --      Create one canonical address row and share it across:
+    --        BP as 'legal' + 'default'   (source of truth for identity)
+    --        Supplier as 'remittance'          (optional operational override, same physical address)
+    SELECT id INTO v_sup_addr_id FROM master.address
+     WHERE tenant_id = v_tenant_id AND code = 'addr-gcm-dip-hq';
+    IF v_sup_addr_id IS NULL THEN
+        INSERT INTO master.address (
+            tenant_id, code, name, address_type,
+            attention_line,
+            line1, line2, city, region, postal_code, country_code,
+            formatted_address,
+            metadata, status, created_by
+        ) VALUES (
+            v_tenant_id, 'addr-gcm-dip-hq',
+            'Gulf Construction Materials — Dubai Investment Park',
+            'commercial',
+            'Attn: Accounts Payable',
+            'Plot 597-963, Dubai Investment Park 1', 'Building 4, 3rd Floor',
+            'Dubai', 'Dubai', '211832', 'AE',
+            'Building 4, 3rd Floor, Plot 597-963, Dubai Investment Park 1, Dubai 211832, UAE',
+            '{"_seed":{"pack":"001_athq_party_master","version":"1.0.0"}}'::jsonb,
+            'active', v_sys
+        ) RETURNING id INTO v_sup_addr_id;
+    END IF;
+
+    -- Link to BP: 'legal' is the canonical legal address; 'default' ensures
+    -- fn_resolve_address falls through cleanly when no specific purpose is requested.
+    INSERT INTO master.address_link (
+        tenant_id, owner_type, owner_id, address_id, purpose,
+        is_primary, effective_from, metadata, created_by
+    ) VALUES
+    (v_tenant_id, 'business_partner', v_sup_bp_id, v_sup_addr_id, 'legal',
+     true, '2008-01-01'::date,
+     '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys),
+    (v_tenant_id, 'business_partner', v_sup_bp_id, v_sup_addr_id, 'default',
+     true, '2008-01-01'::date,
+     '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys)
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+
+    -- Link same address to supplier as 'remittance' (AP operational purpose).
+    -- fn_resolve_party_address will fall back to BP 'legal' if this is absent,
+    -- but seeding it explicitly makes the AP purpose discoverable.
+    INSERT INTO master.address_link (
+        tenant_id, owner_type, owner_id, address_id, purpose,
+        is_primary, effective_from, metadata, created_by
+    ) VALUES (
+        v_tenant_id, 'business_partner', v_sup_bp_id, v_sup_addr_id, 'remittance',
+        true, '2008-01-01'::date,
+        '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys
+    )
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+
     RAISE NOTICE '[001_athq_party_master] Supplier SUP-ATHQ-GCM-001 seeded (id=%)', v_sup_id;
 
     -- ══════════════════════════════════════════════════════════════════════
     -- §3  CUSTOMER — Emirates Property Group LLC
     -- ══════════════════════════════════════════════════════════════════════
 
-    -- §3a  master.customer  (all 30 writable columns)
-    INSERT INTO master.customer (
+    -- §3a  master.business_partner (identity root for EPG)
+    INSERT INTO master.business_partner (
         tenant_id,
         code,                  name,
         display_name,          legal_name,
-        customer_type,
-        tax_id,                tax_id_type,         tax_country_code,
+        partner_category,
         description,
         registration_no,       registration_country_code,
         website_url,           external_ref,
-        parent_customer_id,
         long_description,
         aliases,               business_types,
         legal_form,            founded_year,
@@ -767,16 +799,14 @@ BEGIN
     )
     SELECT
         v_tenant_id,
-        'CUS-ATHQ-EPG-001',
+        'EPG-001',
         'Emirates Property Group LLC',
         'EPG',
         'Emirates Property Group Limited Liability Company',
-        'corporate',
-        '100987654000001',     'vat',               'AE',
+        'organization',
         'Large-scale real estate developer and asset manager across the UAE and GCC.',
         '9876543210',          'AE',
         'https://www.epg-uae.com',  'CRM-CUS-EPG-0001',
-        NULL,
         'Emirates Property Group LLC is a UAE-incorporated real estate developer founded in 2005. '
         'Major projects include Emirates City Tower (Dubai) and Abu Dhabi Pearl Residences. '
         'Significant buyer of construction materials under multi-year framework agreements.',
@@ -793,19 +823,31 @@ BEGIN
         'active',
         v_sys
     WHERE NOT EXISTS (
+        SELECT 1 FROM master.business_partner
+         WHERE tenant_id = v_tenant_id AND code = 'EPG-001'
+    );
+
+    SELECT id INTO v_cus_bp_id FROM master.business_partner
+     WHERE tenant_id = v_tenant_id AND code = 'EPG-001';
+
+    -- §3a-ii  master.customer (thin AR role record)
+    INSERT INTO master.customer (
+        tenant_id, business_partner_id, customer_code,
+        customer_type, is_key_account, status, created_by
+    )
+    SELECT v_tenant_id, v_cus_bp_id, 'CUS-ATHQ-EPG-001',
+           'corporate', true, 'active', v_sys
+    WHERE NOT EXISTS (
         SELECT 1 FROM master.customer
-         WHERE tenant_id = v_tenant_id AND code = 'CUS-ATHQ-EPG-001'
+         WHERE tenant_id = v_tenant_id AND customer_code = 'CUS-ATHQ-EPG-001'
     );
 
     SELECT id INTO v_cus_id FROM master.customer
-     WHERE tenant_id = v_tenant_id AND code = 'CUS-ATHQ-EPG-001';
+     WHERE tenant_id = v_tenant_id AND customer_code = 'CUS-ATHQ-EPG-001';
 
-    -- §3b  master.company_code_customer_profile (all writable columns)
+    -- §3b  master.company_code_customer_profile
     INSERT INTO master.company_code_customer_profile (
-        tenant_id,              customer_id,                  company_code_id,
-        -- deprecated text
-        payment_terms,          ar_gl_account_id,
-        -- extended AR settings
+        tenant_id,              customer_id,           company_code_id,
         currency_code,
         credit_limit,           credit_limit_currency_code,
         credit_rating,
@@ -818,8 +860,7 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id,            v_cus_id,                     v_cc_id,
-        'net_60',               NULL,
+        v_tenant_id,            v_cus_id,              v_cc_id,
         'AED',
         5000000.0000,           'AED',
         'a',
@@ -848,51 +889,20 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'customer', v_cus_id,
+        v_tenant_id, 'business_partner', v_cus_bp_id,
         'duns', '987654321',
         'Dun & Bradstreet', '2018-05-01'::date, NULL,
         true, now(), true,
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_identifier
-         WHERE tenant_id = v_tenant_id AND owner_type = 'customer'
-           AND owner_id = v_cus_id AND scheme = 'duns'
+         WHERE tenant_id = v_tenant_id AND owner_type = 'business_partner'
+           AND owner_id = v_cus_bp_id AND scheme = 'duns'
     );
 
     -- §3d  Party tax profile (UAE)
-    INSERT INTO master.party_tax_profile (
-        tenant_id, owner_type, owner_id,
-        country_code,
-        penalty_information,      discount_information,
-        global_location_number,
-        tax_classification,       taxation_type,
-        tax_id,                   state_tax_id,
-        sales_tax_id,             service_tax_id,
-        regional_tax_id,          vat_id,
-        vat_registered,           vat_registration_doc_id,
-        has_tax_clearance,        tax_clearance_number,
-        tax_clearance_doc_id,     tax_clearance_expiry_date,
-        metadata, status, created_by
-    )
-    SELECT
-        v_tenant_id, 'customer', v_cus_id,
-        'AE',
-        'Interest charged at 1.5% per month on amounts overdue beyond 60 days.',
-        NULL,
-        '6289876543210',
-        'company',                'standard',
-        '100987654000001',        NULL,
-        NULL,                     NULL,
-        NULL,                     '100987654000001',
-        true,                     NULL,
-        true,                     'TCN-AE-2025-EPG-001',
-        NULL,                     '2026-03-31'::date,
-        '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
-    WHERE NOT EXISTS (
-        SELECT 1 FROM master.party_tax_profile
-         WHERE tenant_id = v_tenant_id AND owner_type = 'customer'
-           AND owner_id = v_cus_id AND country_code = 'AE'
-    );
+    --       Customer tax profile is resolved through the BP-owned party tax table;
+    --       Customer-role tax data is BP-owned in master.party_tax_profile.)
 
     -- §3e  Certification (ISO 27001)
     INSERT INTO master.certification (
@@ -905,7 +915,7 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'customer', v_cus_id,
+        v_tenant_id, 'business_partner', v_cus_bp_id,
         v_ct_iso27001,            NULL,
         'ISO27001-UAE-EPG-2023-0112',
         'KPMG Advisory LLC',
@@ -916,12 +926,13 @@ BEGIN
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.certification
-         WHERE tenant_id = v_tenant_id AND owner_type = 'customer'
-           AND owner_id = v_cus_id AND certification_type_id = v_ct_iso27001
+         WHERE tenant_id = v_tenant_id AND owner_type = 'business_partner'
+           AND owner_id = v_cus_bp_id AND certification_type_id = v_ct_iso27001
     );
 
     -- §3f  Contact person — CFO / Finance contact
-    --      (email/phone now live in contact_link; inline cols were dropped in 01i)
+    --      Stored at business_partner level (canonical identity layer).
+    --      Role-specific contact overrides (AR/collections) can be added at customer level later.
     INSERT INTO master.party_contact_person (
         tenant_id, party_type, party_id,
         company_code_id,
@@ -930,15 +941,15 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'customer', v_cus_id,
+        v_tenant_id, 'business_partner', v_cus_bp_id,
         NULL,
         'Fatima Al-Zarooni',  'Chief Financial Officer',
         true,
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_contact_person
-         WHERE tenant_id = v_tenant_id AND party_type = 'customer'
-           AND party_id = v_cus_id AND contact_name = 'Fatima Al-Zarooni'
+         WHERE tenant_id = v_tenant_id AND party_type = 'business_partner'
+           AND party_id = v_cus_bp_id AND contact_name = 'Fatima Al-Zarooni'
     )
     RETURNING id INTO v_cus_cp_id;
 
@@ -949,22 +960,23 @@ BEGIN
         ) VALUES (v_tenant_id, v_cus_cp_id, 'finance_manager', v_sys)
         ON CONFLICT (tenant_id, party_contact_person_id, role_code) DO NOTHING;
 
-        -- Email + phone attached to the customer entity
-        -- (owner_type='party_contact_person' not yet registered in master.owner_type)
+        -- Email + phone anchored at business_partner — shared across all roles.
+        -- AR-specific billing/collections contact can be added at customer level as an override.
         INSERT INTO master.contact_link (
             tenant_id, owner_type, owner_id,
             channel_type, value, purpose,
             is_primary, is_verified, verified_at,
             metadata, status, created_by
         ) VALUES
-        (v_tenant_id, 'customer', v_cus_id,
-         'email', 'fatima.alzarooni@epg-uae.com', 'billing',
+        (v_tenant_id, 'business_partner', v_cus_bp_id,
+         'email', 'fatima.alzarooni@epg-uae.com', 'notification',
          true, true, now(),
          '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys),
-        (v_tenant_id, 'customer', v_cus_id,
-         'phone', '+97126543210', 'support',
+        (v_tenant_id, 'business_partner', v_cus_bp_id,
+         'phone', '+97126543210', 'notification',
          true, true, now(),
-         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys);
+         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys)
+        ON CONFLICT DO NOTHING;
     END IF;
 
     -- §3g  Governance: director + UBO
@@ -977,7 +989,7 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'customer', v_cus_id,
+        v_tenant_id, 'business_partner', v_cus_bp_id,
         'director',
         'Salem Hamdan Al-Mazrouei',               'individual',
         NULL,           'Chief Executive Officer',
@@ -987,8 +999,8 @@ BEGIN
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_governance_relation
-         WHERE tenant_id = v_tenant_id AND party_type = 'customer'
-           AND party_id = v_cus_id AND relation_type = 'director'
+         WHERE tenant_id = v_tenant_id AND party_type = 'business_partner'
+           AND party_id = v_cus_bp_id AND relation_type = 'director'
            AND member_name = 'Salem Hamdan Al-Mazrouei'
     );
 
@@ -1001,7 +1013,7 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        v_tenant_id, 'customer', v_cus_id,
+        v_tenant_id, 'business_partner', v_cus_bp_id,
         'ubo',
         'Emirates Development Holdings LLC',      'company',
         'Emirates Development Holdings LLC',
@@ -1012,8 +1024,8 @@ BEGIN
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.party_governance_relation
-         WHERE tenant_id = v_tenant_id AND party_type = 'customer'
-           AND party_id = v_cus_id AND relation_type = 'ubo'
+         WHERE tenant_id = v_tenant_id AND party_type = 'business_partner'
+           AND party_id = v_cus_bp_id AND relation_type = 'ubo'
            AND member_name = 'Emirates Development Holdings LLC'
     );
 
@@ -1055,6 +1067,58 @@ BEGIN
         SELECT 1 FROM master.customer_qualification
          WHERE tenant_id = v_tenant_id AND customer_id = v_cus_id
     );
+
+    -- §3i  Address — Abu Dhabi Corniche (EPG HQ)
+    --      Create one canonical address row and share it across:
+    --        BP as 'legal' + 'default'   (source of truth for identity)
+    --        Customer as 'billing'             (optional AR operational override, same physical address)
+    SELECT id INTO v_cus_addr_id FROM master.address
+     WHERE tenant_id = v_tenant_id AND code = 'addr-epg-auh-hq';
+    IF v_cus_addr_id IS NULL THEN
+        INSERT INTO master.address (
+            tenant_id, code, name, address_type,
+            attention_line,
+            line1, line2, city, region, postal_code, country_code,
+            formatted_address,
+            metadata, status, created_by
+        ) VALUES (
+            v_tenant_id, 'addr-epg-auh-hq',
+            'Emirates Property Group — Abu Dhabi HQ',
+            'commercial',
+            'Attn: Finance Department',
+            'Al Muroor Road, Corniche Area', 'Al Mamoura Building A, 12th Floor',
+            'Abu Dhabi', 'Abu Dhabi', '5648', 'AE',
+            'Al Mamoura Building A, 12th Floor, Al Muroor Road, Corniche Area, Abu Dhabi 5648, UAE',
+            '{"_seed":{"pack":"001_athq_party_master","version":"1.0.0"}}'::jsonb,
+            'active', v_sys
+        ) RETURNING id INTO v_cus_addr_id;
+    END IF;
+
+    -- Link to BP: 'legal' + 'default'
+    INSERT INTO master.address_link (
+        tenant_id, owner_type, owner_id, address_id, purpose,
+        is_primary, effective_from, metadata, created_by
+    ) VALUES
+    (v_tenant_id, 'business_partner', v_cus_bp_id, v_cus_addr_id, 'legal',
+     true, '2005-01-01'::date,
+     '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys),
+    (v_tenant_id, 'business_partner', v_cus_bp_id, v_cus_addr_id, 'default',
+     true, '2005-01-01'::date,
+     '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys)
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+
+    -- Link same address to customer as 'billing' (AR operational purpose).
+    -- fn_resolve_party_address will fall back to BP 'legal' if this is absent,
+    -- but seeding it explicitly makes the AR billing purpose discoverable.
+    INSERT INTO master.address_link (
+        tenant_id, owner_type, owner_id, address_id, purpose,
+        is_primary, effective_from, metadata, created_by
+    ) VALUES (
+        v_tenant_id, 'business_partner', v_cus_bp_id, v_cus_addr_id, 'billing',
+        true, '2005-01-01'::date,
+        '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys
+    )
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
     RAISE NOTICE '[001_athq_party_master] Customer CUS-ATHQ-EPG-001 seeded (id=%)', v_cus_id;
     RAISE NOTICE '[001_athq_party_master] Done — 1 supplier + 1 customer seeded for ATHQ (athyper tenant).';

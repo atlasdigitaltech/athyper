@@ -4,7 +4,7 @@
  * Controlled vocabulary for child-record badges and alert strips.
  * All child-record renderers (summary_cards_with_drawer) must source badges
  * from this set so that Active, Primary, Verified, Expired are visually
- * consistent across Banking, Tax, Certifications, Coverage, Governance, and
+ * consistent across Banking, Tax, Certifications, Governance, and
  * future master-detail surfaces.
  *
  * Maps BadgeKind → the existing Badge CVA variant names so no new CSS

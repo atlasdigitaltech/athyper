@@ -5,8 +5,16 @@
  *
  * Creates a new purchase_invoice in the appropriate initial status:
  *   - invoice_source = 'po_based' | 'contract_based' → status = 'proforma'
- *     (supplier_invoice_number deferred; promoted via promote_proforma flow)
+ *     (supplier_invoice_number/date deferred; promoted via promote_proforma flow)
  *   - invoice_source = 'non_po' | 'one_time_vendor'  → status = 'draft'
+ *     (supplier_invoice_number, supplier_invoice_date, tax_mode required)
+ *
+ * Effective DDL (01f_tables_invoice_streamlining.sql):
+ *   - invoice_type: standard | credit_note | debit_note | advance |
+ *                   retention_release | self_billed | final  (7 values; proforma/down_payment removed)
+ *   - supplier_invoice_number / supplier_invoice_date: nullable but required by
+ *     pi_supplier_invoice_number_req / pi_supplier_invoice_date_req CHECK for status <> 'proforma'
+ *   - tax_mode: required by pi_tax_mode_req CHECK for status <> 'proforma'
  *
  * Idempotency: checks document.command_log before INSERT.
  * Number generation: uses master.fn_next_document_number via DB trigger.
@@ -19,18 +27,28 @@ import { sql } from "kysely";
 type AnyDb = Kysely<Record<string, any>>;
 
 export interface CreateInvoiceBody {
-  invoice_source:       string;
-  invoice_type?:        string;
-  company_code_id:      string;
-  supplier_id?:         string;
-  commitment_id?:       string;
-  document_date?:       string;
-  currency_code:        string;
-  payment_term_id?:     string;
-  payment_method_id?:   string;
-  notes?:               string;
-  tags?:                string[];
-  idempotency_key?:     string;
+  invoice_source:           string;
+  invoice_type?:            string;
+  company_code_id:          string;
+  supplier_id?:             string;
+  commitment_id?:           string;
+  // Required for non_po / one_time_vendor; null/absent for po_based / contract_based (proforma)
+  supplier_invoice_number?: string;
+  supplier_invoice_date?:   string;
+  // Date fields
+  document_date?:           string;
+  posting_date?:            string;
+  received_date?:           string;
+  // Tax mode — required for non-proforma invoices
+  tax_mode?:                string;   // inclusive | exclusive | no_tax
+  tax_mode_source?:         string;   // supplier_profile | tax_group | company_default | user_override
+  // Payment
+  currency_code:            string;
+  payment_term_id?:         string;
+  payment_method_id?:       string;
+  notes?:                   string;
+  tags?:                    string[];
+  idempotency_key?:         string;
 }
 
 interface HandlerResult {
@@ -39,8 +57,18 @@ interface HandlerResult {
 }
 
 const VALID_SOURCES = new Set(["po_based", "contract_based", "non_po", "one_time_vendor"]);
-const VALID_TYPES   = new Set(["standard", "credit_note", "debit_note", "advance",
-                                "retention_release", "self_billed", "final", "proforma"]);
+
+// Effective post-streamlining vocabulary — proforma and down_payment removed
+const VALID_TYPES = new Set([
+  "standard", "credit_note", "debit_note", "advance",
+  "retention_release", "self_billed", "final",
+]);
+
+const VALID_TAX_MODES = new Set(["inclusive", "exclusive", "no_tax"]);
+
+const VALID_TAX_MODE_SOURCES = new Set([
+  "supplier_profile", "tax_group", "company_default", "user_override", "cannot_infer",
+]);
 
 export async function handleCreateApInvoice(
   db:          AnyDb,
@@ -50,7 +78,7 @@ export async function handleCreateApInvoice(
   logger?:     { info?(e: string, f?: Record<string, unknown>): void; error?(e: string, f?: Record<string, unknown>): void },
 ): Promise<HandlerResult> {
 
-  // ── Input validation ──────────────────────────────────────────────────────
+  // ── Source / type validation ───────────────────────────────────────────────
   if (!body.invoice_source || !VALID_SOURCES.has(body.invoice_source)) {
     return { status: 400, body: { error: "VALIDATION_ERROR", message: "invoice_source must be one of: po_based, contract_based, non_po, one_time_vendor" } };
   }
@@ -60,14 +88,35 @@ export async function handleCreateApInvoice(
   if (!body.currency_code || body.currency_code.trim().length !== 3) {
     return { status: 400, body: { error: "VALIDATION_ERROR", message: "currency_code must be a 3-character ISO code" } };
   }
-  if ((body.invoice_source === "po_based" || body.invoice_source === "contract_based") && !body.commitment_id) {
+
+  const isPOBased = body.invoice_source === "po_based" || body.invoice_source === "contract_based";
+
+  if (isPOBased && !body.commitment_id) {
     return { status: 400, body: { error: "VALIDATION_ERROR", message: "commitment_id is required for po_based and contract_based invoices" } };
   }
-  if ((body.invoice_source === "po_based" || body.invoice_source === "contract_based") && !body.supplier_id) {
+  if (isPOBased && !body.supplier_id) {
     return { status: 400, body: { error: "VALIDATION_ERROR", message: "supplier_id is required for po_based and contract_based invoices" } };
   }
   if (body.invoice_type && !VALID_TYPES.has(body.invoice_type)) {
-    return { status: 400, body: { error: "VALIDATION_ERROR", message: `invoice_type '${body.invoice_type}' is not valid` } };
+    return { status: 400, body: { error: "VALIDATION_ERROR", message: `invoice_type '${body.invoice_type}' is not valid. Must be one of: ${[...VALID_TYPES].join(", ")}` } };
+  }
+
+  // Non-PO invoices must carry supplier invoice identity and tax mode at create time
+  // (DDL CHECK constraints pi_supplier_invoice_number_req, pi_supplier_invoice_date_req, pi_tax_mode_req
+  //  only exempt proforma status — draft invoices must satisfy them)
+  if (!isPOBased) {
+    if (!body.supplier_invoice_number?.trim()) {
+      return { status: 400, body: { error: "VALIDATION_ERROR", message: "supplier_invoice_number is required for non_po and one_time_vendor invoices" } };
+    }
+    if (!body.supplier_invoice_date) {
+      return { status: 400, body: { error: "VALIDATION_ERROR", message: "supplier_invoice_date is required for non_po and one_time_vendor invoices" } };
+    }
+    if (!body.tax_mode || !VALID_TAX_MODES.has(body.tax_mode)) {
+      return { status: 400, body: { error: "VALIDATION_ERROR", message: "tax_mode is required for non_po and one_time_vendor invoices; must be: inclusive, exclusive, or no_tax" } };
+    }
+    if (body.tax_mode_source && !VALID_TAX_MODE_SOURCES.has(body.tax_mode_source)) {
+      return { status: 400, body: { error: "VALIDATION_ERROR", message: `tax_mode_source must be one of: ${[...VALID_TAX_MODE_SOURCES].join(", ")}` } };
+    }
   }
 
   // ── Idempotency check ─────────────────────────────────────────────────────
@@ -90,7 +139,6 @@ export async function handleCreateApInvoice(
       }
     }
 
-    // Insert processing record
     await db.insertInto("document.command_log")
       .values({
         tenant_id:       tenantId,
@@ -104,8 +152,13 @@ export async function handleCreateApInvoice(
   }
 
   try {
-    // ── Resolve fiscal period for the posting date ─────────────────────────
-    const postingDate = body.document_date ? new Date(body.document_date) : new Date();
+    // ── Resolve fiscal period ─────────────────────────────────────────────
+    const postingDate = body.posting_date
+      ? new Date(body.posting_date)
+      : body.document_date
+      ? new Date(body.document_date)
+      : new Date();
+
     const fpResult = await sql<{ fiscal_year: number; period_number: number }>`
       SELECT fiscal_year, period_number
       FROM   master.fiscal_period
@@ -122,11 +175,9 @@ export async function handleCreateApInvoice(
       return { status: 422, body: { error: "NO_OPEN_PERIOD", message: "No open fiscal period found for the document date" } };
     }
 
-    // ── Resolve base currency from company ─────────────────────────────────
-    // Accepts either a UUID (company_code.id) or a string code (company_code.code)
-    // so the frontend can pass scope.scopeId directly without a separate lookup.
+    // ── Resolve company ───────────────────────────────────────────────────
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const isUUID = UUID_RE.test(body.company_code_id);
+    const isUUID  = UUID_RE.test(body.company_code_id);
     const companyRow = await db
       .selectFrom("master.company_code as c")
       .select(["c.id", "c.base_currency_code"])
@@ -137,42 +188,55 @@ export async function handleCreateApInvoice(
     if (!companyRow) {
       return { status: 404, body: { error: "COMPANY_NOT_FOUND", message: "company_code_id not found" } };
     }
-    // Normalise to UUID so all downstream inserts use the PK
     const resolvedCompanyId = companyRow.id;
-    const company = companyRow;
 
-    // ── Determine initial status ───────────────────────────────────────────
-    const isPOBased = body.invoice_source === "po_based" || body.invoice_source === "contract_based";
+    // ── Derive dates ──────────────────────────────────────────────────────
+    const now          = new Date();
+    const documentDate = body.document_date  ? new Date(body.document_date)  : now;
+    const resolvedPostingDate  = body.posting_date   ? new Date(body.posting_date)  : documentDate;
+    const resolvedReceivedDate = body.received_date  ? new Date(body.received_date) : now;
+    const supplierInvoiceDate  = !isPOBased && body.supplier_invoice_date
+      ? new Date(body.supplier_invoice_date)
+      : null;
+
+    // ── INSERT ────────────────────────────────────────────────────────────
     const initialStatus = isPOBased ? "proforma" : "draft";
 
-    // ── INSERT ─────────────────────────────────────────────────────────────
-    const now = new Date();
     const insertValues: Record<string, unknown> = {
-      tenant_id:          tenantId,
-      company_code_id:    resolvedCompanyId,
-      invoice_source:     body.invoice_source,
-      invoice_type:       body.invoice_type ?? "standard",
-      supplier_id:        body.supplier_id ?? null,
-      commitment_id:      body.commitment_id ?? null,
-      // invoice_number auto-generated by trg_pi_before_insert
-      invoice_number:     "",
-      // supplier_invoice_number nullable for proforma (status-aware CHECK)
-      supplier_invoice_number: isPOBased ? "" : "",
-      supplier_invoice_date:   isPOBased ? now : now,
-      document_date:      body.document_date ? new Date(body.document_date) : now,
-      posting_date:       body.document_date ? new Date(body.document_date) : now,
-      received_date:      now,
-      currency_code:      body.currency_code.trim().toUpperCase(),
-      base_currency_code: company.base_currency_code,
-      exchange_rate:      null,
-      fiscal_year:        fp.fiscal_year,
-      period_number:      fp.period_number,
-      payment_term_id:    body.payment_term_id ?? null,
-      payment_method_id:  body.payment_method_id ?? null,
-      notes:              body.notes ?? null,
-      tags:               JSON.stringify(body.tags ?? []),
-      status:             initialStatus,
-      created_by:         principalId ?? "00000000-0000-0000-0000-000000000000",
+      tenant_id:               tenantId,
+      company_code_id:         resolvedCompanyId,
+      invoice_source:          body.invoice_source,
+      invoice_type:            body.invoice_type ?? "standard",
+      // In AP: both credit_note (supplier credit memo) and debit_note (buyer debit memo to
+      // supplier) reduce AP liability and use inverted JE sign at posting time.
+      is_credit_note:          body.invoice_type === "credit_note" || body.invoice_type === "debit_note",
+      // Non-PO invoices have no commitment to match against; set match_type immediately
+      // so matchInvoice() and the posting pre-flight always find a consistent value.
+      match_type:              isPOBased ? undefined : "no_match",
+      supplier_id:             body.supplier_id ?? null,
+      commitment_id:           body.commitment_id ?? null,
+      // invoice_number set by trg_pi_before_insert — empty string satisfies NOT NULL until trigger fires
+      invoice_number:          "",
+      // Proforma defers these; non-PO must supply them (validated above)
+      supplier_invoice_number: isPOBased ? null : body.supplier_invoice_number!.trim(),
+      supplier_invoice_date:   supplierInvoiceDate,
+      document_date:           documentDate,
+      posting_date:            resolvedPostingDate,
+      received_date:           resolvedReceivedDate,
+      currency_code:           body.currency_code.trim().toUpperCase(),
+      base_currency_code:      companyRow.base_currency_code,
+      exchange_rate:           null,
+      fiscal_year:             fp.fiscal_year,
+      period_number:           fp.period_number,
+      payment_term_id:         body.payment_term_id  ?? null,
+      payment_method_id:       body.payment_method_id ?? null,
+      // tax_mode required for non-proforma; proforma defers (status-aware CHECK allows NULL)
+      tax_mode:                isPOBased ? null : body.tax_mode,
+      tax_mode_source:         isPOBased ? null : (body.tax_mode_source ?? "user_override"),
+      notes:                   body.notes ?? null,
+      tags:                    JSON.stringify(body.tags ?? []),
+      status:                  initialStatus,
+      created_by:              principalId ?? "00000000-0000-0000-0000-000000000000",
     };
 
     const inserted = await db
@@ -189,7 +253,6 @@ export async function handleCreateApInvoice(
       record:         inserted,
     };
 
-    // ── Update idempotency log ────────────────────────────────────────────
     if (iKey) {
       await db.updateTable("document.command_log")
         .set({ status: "done", result: JSON.stringify(result), completed_at: now })

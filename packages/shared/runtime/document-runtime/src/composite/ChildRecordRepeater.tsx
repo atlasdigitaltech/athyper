@@ -35,6 +35,8 @@ export interface ChildRecordRepeaterProps {
   onChange: (rows: Record<string, unknown>[]) => void;
   /** Validation errors keyed `${rowIndex}__${fieldName}`. */
   rowErrors?: Record<string, string>;
+  /** Parent wizard draft, merged into row context for country-aware controls. */
+  parentDraft?: Record<string, unknown>;
   /** Minimum number of rows that must exist (remove disabled at limit). */
   minRows?: number;
   /** Maximum number of rows (add disabled at limit). */
@@ -64,6 +66,7 @@ export function ChildRecordRepeater({
   rows,
   onChange,
   rowErrors = {},
+  parentDraft = {},
   minRows = 0,
   maxRows,
   defaultRow = {},
@@ -87,7 +90,11 @@ export function ChildRecordRepeater({
   const canRemove = !isReadOnly && rows.length > minRows;
 
   function handleAddRow() {
-    const newRow = { ...defaultRow };
+    const hasPrimaryFlag = fields.some((field) => field.field_name === "is_primary");
+    const newRow = {
+      ...defaultRow,
+      ...(hasPrimaryFlag && rows.length === 0 ? { is_primary: true } : {}),
+    };
     const newRows = [...rows, newRow];
     onChange(newRows);
     // Auto-expand the new row
@@ -105,9 +112,26 @@ export function ChildRecordRepeater({
   }
 
   function handleFieldChange(rowIdx: number, fieldName: string, value: unknown) {
-    const newRows = rows.map((r, i) =>
-      i === rowIdx ? { ...r, [fieldName]: value } : r,
-    );
+    const newRows = rows.map((r, i) => {
+      const next = i === rowIdx ? { ...r, [fieldName]: value } : { ...r };
+
+      if (fieldName === "is_primary" && value === true && i !== rowIdx) {
+        next["is_primary"] = false;
+      }
+
+      if (fieldName === "country_code" && i === rowIdx) {
+        next["region"] = null;
+        next["state_region"] = null;
+        next["state_region_code"] = null;
+      }
+
+      if (fieldName === "contact_role" && value === "primary" && i === rowIdx) {
+        next["contact_role"] = "general";
+        next["is_primary"] = true;
+      }
+
+      return next;
+    });
     onChange(newRows);
   }
 
@@ -120,7 +144,9 @@ export function ChildRecordRepeater({
     });
   }
 
-  const sortedFields = [...fields].sort((a, b) => a.sort_order - b.sort_order);
+  const sortedFields = fields
+    .filter((field) => field.field_name !== "status" && field.data_type !== "lifecycle_state")
+    .sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <div className="space-y-2">
@@ -251,7 +277,7 @@ export function ChildRecordRepeater({
                         error={rowErrors[errKey]}
                         userPermissions={isReadOnly ? [] : userPermissions}
                         isOverridden={false}
-                        draftCtx={row}
+                        draftCtx={{ ...parentDraft, ...row }}
                         onChange={(v) => handleFieldChange(rowIdx, fieldSpec.field_name, v)}
                         onOverride={(v) => handleFieldChange(rowIdx, fieldSpec.field_name, v)}
                         onReset={() => handleFieldChange(rowIdx, fieldSpec.field_name, undefined)}
@@ -266,8 +292,8 @@ export function ChildRecordRepeater({
       })}
 
       {/* Section-level errors */}
-      {rowErrors[`${sectionKey}__min`] && (
-        <p className="text-xs text-destructive">{rowErrors[`${sectionKey}__min`]}</p>
+      {(rowErrors[`${sectionKey}__min`] || rowErrors["min"]) && (
+        <p className="text-xs text-destructive">{rowErrors[`${sectionKey}__min`] ?? rowErrors["min"]}</p>
       )}
     </div>
   );
@@ -294,4 +320,3 @@ function getRowLabel(
   if (firstField) return String(row[firstField.field_name]);
   return `Row ${rowIdx + 1}`;
 }
-

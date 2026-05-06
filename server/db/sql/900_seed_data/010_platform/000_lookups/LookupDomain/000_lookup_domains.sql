@@ -174,6 +174,12 @@ VALUES
      'master', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
+    ('master.contact_role',
+     'Contact Role',
+     'Functional role of a party_contact_person. Determines routing for AP/AR, legal, logistics, and escalation workflows.',
+     'master', true, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
     ('master.address_purpose',
      'Address / Contact Purpose',
      'Business purpose vocabulary for address_link.purpose. Conceptually overlaps with '
@@ -444,6 +450,15 @@ VALUES
     ('master.company_code_book_assignment_conflict',
      'Book assignment conflict resolution',
      'Strategy when multiple book assignments overlap for the same entity.',
+     'master', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    -- ── Party: Business Partner ─────────────────────────────────────────────
+
+    ('master.business_partner_category',
+     'Business partner category',
+     'Top-level classification of a business partner: organization, individual, government, internal. '
+     'Mirrors the CHECK constraint on master.business_partner.partner_category.',
      'master', false, 'active',
      '00000000-0000-0000-0000-000000000000'),
 

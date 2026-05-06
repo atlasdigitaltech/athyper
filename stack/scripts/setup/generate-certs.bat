@@ -12,8 +12,8 @@ REM Generates a wildcard TLS certificate for local dev using mkcert.
 REM SANs covered:
 REM   *.athyper.local, neon.athyper.local, gateway.athyper.local,
 REM   api.athyper.local, iam.athyper.local, objectstorage.athyper.local
-REM Output: ATHYPER_CONFIG_ROOT\gateway\certs\athyper.tls.local.{crt,key}
-REM         (read from stack\env\.env; defaults to D:\Stack\athyper\config)
+REM Output: ATHYPER_SECRETS_ROOT\gateway\certs\athyper.tls.local.{crt,key}
+REM         (read from stack\env\.env; defaults to D:\Stack\athyper\secrets)
 REM
 REM Requires: mkcert (winget install FiloSottile.mkcert)
 REM   https://github.com/FiloSottile/mkcert
@@ -35,8 +35,9 @@ popd >nul
 
 set "ENV_FILE=%STACK_DIR%\env\.env"
 
-REM Read ATHYPER_CONFIG_ROOT from stack\env\.env
+REM Read ATHYPER_CONFIG_ROOT + ATHYPER_SECRETS_ROOT from stack\env\.env
 set "_CR_FROM_ENV="
+set "_SR_FROM_ENV="
 if exist "%ENV_FILE%" (
   for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
     set "K=%%A"
@@ -46,7 +47,8 @@ if exist "%ENV_FILE%" (
       set "V=!V:"=!"
       for /f "tokens=1 delims=#" %%C in ("!V!") do set "V=%%C"
       for /f "tokens=* delims= " %%V in ("!V!") do set "V=%%V"
-      if /I "!K!"=="ATHYPER_CONFIG_ROOT" if "!_CR_FROM_ENV!"=="" set "_CR_FROM_ENV=!V!"
+      if /I "!K!"=="ATHYPER_CONFIG_ROOT"  if "!_CR_FROM_ENV!"=="" set "_CR_FROM_ENV=!V!"
+      if /I "!K!"=="ATHYPER_SECRETS_ROOT" if "!_SR_FROM_ENV!"=="" set "_SR_FROM_ENV=!V!"
     )
   )
 )
@@ -56,7 +58,12 @@ if not "!_CR_FROM_ENV!"==""        (set "ATHYPER_CONFIG_ROOT=!_CR_FROM_ENV!" & g
 set "ATHYPER_CONFIG_ROOT=%STACK_DIR%\config"
 :gc_skip_cr
 
-set "CERT_DIR=!ATHYPER_CONFIG_ROOT!\gateway\certs"
+if not "!ATHYPER_SECRETS_ROOT!"=="" goto :gc_skip_sr
+if not "!_SR_FROM_ENV!"==""         (set "ATHYPER_SECRETS_ROOT=!_SR_FROM_ENV!" & goto :gc_skip_sr)
+set "ATHYPER_SECRETS_ROOT=%STACK_DIR%\secrets"
+:gc_skip_sr
+
+set "CERT_DIR=!ATHYPER_SECRETS_ROOT!\gateway\certs"
 
 REM Ensure mkcert.exe exists (NOT this script)
 where mkcert.exe >nul 2>&1
@@ -67,8 +74,9 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo ATHYPER_CONFIG_ROOT = !ATHYPER_CONFIG_ROOT!
-echo CERT_DIR            = !CERT_DIR!
+echo ATHYPER_CONFIG_ROOT  = !ATHYPER_CONFIG_ROOT!
+echo ATHYPER_SECRETS_ROOT = !ATHYPER_SECRETS_ROOT!
+echo CERT_DIR             = !CERT_DIR!
 echo.
 
 REM Create cert directory

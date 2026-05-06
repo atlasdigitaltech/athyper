@@ -18,7 +18,7 @@
  */
 
 import React from "react";
-import { ChevronLeft, ChevronRight, Send } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent, Skeleton } from "@athyper/ui/primitives";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
@@ -58,6 +58,7 @@ export function FlowWizard({
   headerAction,
 }: FlowWizardProps) {
   const engine = useFlowEngine(bundle, userPermissions, userCtx, initialValues);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
   const {
     state,
     visibleFields,
@@ -75,7 +76,13 @@ export function FlowWizard({
 
   const chipFields  = visibleFields.filter((f) => f.mode === "chip");
   const gridFields  = visibleFields.filter((f) => f.mode !== "chip");
-  const currencyCode = String(state.draft.currency_code ?? state.draft.base_currency_code ?? "");
+  const currencyCode = String(
+    state.draft.currency_code ??
+    state.draft.transaction_currency ??
+    state.draft.base_currency_code ??
+    state.draft.base_currency ??
+    "",
+  );
   // Defer summary panel until step 2+ so step 1 doesn't show a column of zeros.
   const showSummary = summaryLines.length > 0 && state.currentStepIndex > 0;
 
@@ -88,7 +95,12 @@ export function FlowWizard({
 
   async function handleSubmit() {
     if (!validateStep()) return;
-    await onSubmit(state.draft);
+    setSubmitError(null);
+    try {
+      await onSubmit(state.draft);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Submit failed. Please try again.");
+    }
   }
 
   return (
@@ -99,6 +111,16 @@ export function FlowWizard({
         onBack={onCancel}
         extensionSlot={headerAction}
       />
+
+      {submitError && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{submitError}</span>
+        </div>
+      )}
 
       {/* Region 2: content card */}
       <div className="rounded-xl border border-border bg-card p-4">

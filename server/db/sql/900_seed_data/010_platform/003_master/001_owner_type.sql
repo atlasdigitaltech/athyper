@@ -34,8 +34,28 @@ VALUES
 
 -- ── Category: party ──────────────────────────────────────────────────────────
 
+('business_partner', 'Business Partner',
+ 'Commercial identity root. Customer and Supplier roles point to this entity.',
+ 'party', 19,
+ 'master', 'business_partner', 'id',
+ true, true,
+ ARRAY['billing', 'legal', 'hq', 'mailing', 'default'],
+ ARRAY['billing', 'support', 'notification'],
+ true, false, 'active',
+ '00000000-0000-0000-0000-000000000000'),
+
+('business_partner_contact_person', 'Business Partner Contact Person',
+ 'Named contact person for a business partner. Used as contact_link owner_type for channels.',
+ 'party', 19,
+ 'master', 'party_contact_person', 'id',
+ false, true,
+ ARRAY[]::text[],
+ ARRAY['work', 'mobile', 'email', 'phone', 'notification', 'default'],
+ true, false, 'active',
+ '00000000-0000-0000-0000-000000000000'),
+
 ('customer', 'Customer',
- 'External customer entity.',
+ 'AR role for a business partner within a tenant.',
  'party', 20,
  'master', 'customer', 'id',
  true, true,
@@ -45,7 +65,7 @@ VALUES
  '00000000-0000-0000-0000-000000000000'),
 
 ('supplier', 'Supplier',
- 'External supplier / vendor entity.',
+ 'AP role for a business partner within a tenant.',
  'party', 21,
  'master', 'supplier', 'id',
  true, true,
@@ -93,7 +113,7 @@ VALUES
  'structure', 33,
  'master', 'company_code', 'id',
  true, true,
- ARRAY['registered', 'billing', 'tax', 'regulatory', 'mailing', 'default'],
+ ARRAY['legal', 'billing', 'tax', 'regulatory', 'mailing', 'default'],
  ARRAY['billing', 'tax', 'notification'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
@@ -156,7 +176,7 @@ INSERT INTO master.owner_type (
     'master', 'bank_party', 'id',
     true, 'tenant_id',
     true, 'party',
-    ARRAY['default', 'registered', 'branch'],
+    ARRAY['default', 'legal', 'branch'],
     ARRAY['default', 'operations', 'swift'],
     'active', '00000000-0000-0000-0000-000000000000'
 )

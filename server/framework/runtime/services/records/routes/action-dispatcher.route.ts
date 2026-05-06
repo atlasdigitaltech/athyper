@@ -46,6 +46,7 @@ import { handlePromoteProforma } from "../../business/ap/promote-proforma.handle
 import { handleSubmitForApproval } from "../../business/ap/invoice-submit.handler.js";
 import { handlePostInvoice }      from "../../business/ap/invoice-posting.service.js";
 import { handleReverseInvoice }   from "../../business/ap/invoice-posting.service.js";
+import { matchInvoice }           from "../../business/ap/invoice-match.service.js";
 import {
   handlePostPayment,
   handleSubmitPayment,
@@ -315,16 +316,27 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           return;
         }
 
+        if (entityCode === "journal_entry" && targetStatus === "posted" && !principalId) {
+          res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "no principal bound to this session" });
+          return;
+        }
+
+        const transitionPatch: Record<string, unknown> = {
+          status:            targetStatus,
+          status_changed_at: now,
+          status_changed_by: principalId,
+          updated_at:        now,
+          updated_by:        principalId,
+          ...(remarks ? { notes: remarks } : {}),
+        };
+        if (entityCode === "journal_entry" && targetStatus === "posted") {
+          transitionPatch["posted_at"] = now;
+          transitionPatch["posted_by"] = principalId;
+        }
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updated = await (db.updateTable(fullTable) as any)
-          .set({
-            status:            targetStatus,
-            status_changed_at: now,
-            status_changed_by: principalId,
-            updated_at:        now,
-            updated_by:        principalId,
-            ...(remarks ? { notes: remarks } : {}),
-          })
+          .set(transitionPatch)
           .where("id",        "=", recordId)
           .where("tenant_id", "=", tenantId)
           .where("status",    "=", currentStatus) // optimistic lock
@@ -441,6 +453,21 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
             logger?.info("action_dispatch_reverse_invoice", { entity: entityCode, tenantId, recordId });
           }
           res.status(status).json(respBody);
+          return;
+        }
+
+        if (flowCode === "run_matching") {
+          const result = await matchInvoice(db, tenantId, recordId, principalId, logger);
+          logger?.info("action_dispatch_run_matching", { entity: entityCode, tenantId, recordId, matchStatus: result.invoiceStatus });
+          // invoiceStatus "no_match" = non-PO invoice; DB match_status column = "unmatched".
+          const dbMatchStatus = result.invoiceStatus === "no_match" ? "unmatched" : result.invoiceStatus;
+          res.json({
+            ok:           true,
+            match_type:   result.invoiceStatus === "no_match" ? "no_match" : null,
+            match_status: dbMatchStatus,
+            line_results: result.lineResults,
+            exceptions:   result.exceptions,
+          });
           return;
         }
 

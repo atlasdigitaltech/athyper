@@ -23,13 +23,17 @@
 //   tsx db/seed/migrate.ts                   # Run all three stages (default)
 //   tsx db/seed/migrate.ts --all             # Same as default
 //   tsx db/seed/migrate.ts --ddl-only        # Stage 1 only (DDL)
-//   tsx db/seed/migrate.ts --system-only     # Stage 2 only (010_platform seed; DDL must exist)
+//   tsx db/seed/migrate.ts --system-only     # Stages 1+2 (DDL + 010_platform seed; DDL idempotent)
 //   tsx db/seed/migrate.ts --no-demo         # Stages 1+2 (DDL + system, no demo/tenant data)
 //   tsx db/seed/migrate.ts --demo-only       # Stages 1+2+3 (all; checksum tracking skips done files)
 //   tsx db/seed/migrate.ts --reset           # Drop all schemas then re-run all stages
 //   tsx db/seed/migrate.ts --drop-only       # Drop all schemas only (no re-seed)
 //   tsx db/seed/migrate.ts --status          # Show status of all SQL files
 //   tsx db/seed/migrate.ts --force           # Re-run even if checksum unchanged
+//   tsx db/seed/migrate.ts --invalidate=<key> # Clear tracking row(s) matching <key>
+//                                             # then run normally (re-executes cleared files)
+//                                             # Use when a dev reset dropped tables but left
+//                                             # schema_provisions rows intact.
 //   tsx db/seed/migrate.ts --stage=1         # Low-level: explicit stage number(s)
 //   tsx db/seed/migrate.ts --stage=1 --stage=2  # Multiple stages
 //
@@ -115,7 +119,7 @@ function collectSqlFiles(dir: string): string[] {
       const fullPath = join(current, entry.name);
       if (entry.isDirectory()) {
         if (!entry.name.startsWith("_")) walk(fullPath);
-      } else if (entry.isFile() && entry.name.endsWith(".sql") && !entry.name.startsWith("verify")) {
+      } else if (entry.isFile() && entry.name.endsWith(".sql") && !entry.name.startsWith("verify") && !entry.name.startsWith("_")) {
         results.push(fullPath);
       }
     }
@@ -489,13 +493,56 @@ async function runPhases(
 
         log({ msg: "migrate_success", file: file.key, durationMs });
       } catch (err) {
+        const errStr = String(err);
+
+        // Stale-tracking auto-recovery: if any file fails because a relation
+        // doesn't exist, the 01_tables tracking row for that schema is stale —
+        // tables were dropped (e.g. via a dev reset script) after the last
+        // successful run, so checksums matched and the file was silently skipped.
+        // This affects both constraints files (03_constraints.sql) and seed files
+        // when the constraints file was also skipped (checksum unchanged).
+        // Strategy: extract the missing schema from the error message, clear all
+        // 01* tracking rows for that schema, and let the next run recreate them.
+        if (errStr.toLowerCase().includes("does not exist")) {
+          // Parse schema from PostgreSQL error: relation "schema.table" does not exist
+          const relationMatch = errStr.match(/"([a-z_]+)\.[a-z_]+"/i);
+          const missingSchema = relationMatch?.[1] ?? file.relPath.split("/")[0] ?? "";
+          const KNOWN_SCHEMAS = new Set([
+            "shared", "master", "control", "document",
+            "ledger", "log", "event", "governance", "snapshot", "aggregate",
+          ]);
+          if (missingSchema && KNOWN_SCHEMAS.has(missingSchema)) {
+            try {
+              const cleared = await client.query<{ file_name: string }>(
+                `DELETE FROM public.schema_provisions
+                 WHERE file_name LIKE $1
+                 RETURNING file_name`,
+                [`${missingSchema}/01%`],
+              );
+              if (cleared.rows.length > 0) {
+                for (const row of cleared.rows) {
+                  log({ msg: "migrate_stale_cleared", file: row.file_name });
+                }
+                log({
+                  msg: "migrate_recovery_hint",
+                  schema: missingSchema,
+                  cleared: cleared.rows.length,
+                  message: `Cleared stale table-file tracking for schema "${missingSchema}". Re-run migrate to recreate the missing tables and retry.`,
+                });
+              }
+            } catch {
+              // recovery cleanup is best-effort; original error takes precedence
+            }
+          }
+        }
+
         logError({
           msg: "migrate_failed",
           phase: file.phase,
           file: file.key,
-          error: String(err),
+          error: errStr,
         });
-        throw new Error(`Migration failed at ${file.key}: ${String(err)}`);
+        throw new Error(`Migration failed at ${file.key}: ${errStr}`);
       }
     }
 
@@ -551,6 +598,41 @@ async function runReset(connectionString: string): Promise<void> {
     await client.query("DROP TABLE IF EXISTS public.migrations CASCADE");
 
     log({ msg: "reset_complete" });
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Delete schema_provisions rows whose file_name contains the given substring.
+ * Used to recover from inconsistent state where a file was marked executed but
+ * its DB objects no longer exist (e.g. after running a dev reset script).
+ *
+ * Usage:  tsx migrate.ts --invalidate=master/01j_tables_party_risk
+ *         tsx migrate.ts --invalidate=master/01j   (matches all files with that prefix)
+ */
+async function runInvalidate(
+  connectionString: string,
+  pattern: string,
+): Promise<void> {
+  const client = new Client({ connectionString });
+  try {
+    await client.connect();
+    await ensureTrackingTable(client);
+    const result = await client.query<{ file_name: string }>(
+      `DELETE FROM public.schema_provisions
+       WHERE file_name LIKE $1
+       RETURNING file_name`,
+      [`%${pattern}%`],
+    );
+    if (result.rows.length === 0) {
+      log({ msg: "invalidate_noop", pattern, reason: "no matching rows" });
+    } else {
+      for (const row of result.rows) {
+        log({ msg: "invalidate_removed", file: row.file_name });
+      }
+      log({ msg: "invalidate_complete", removed: result.rows.length });
+    }
   } finally {
     await client.end();
   }
@@ -643,6 +725,13 @@ async function main(): Promise<void> {
   const dropOnly = args.includes("--drop-only");
   const status = args.includes("--status");
 
+  // --invalidate=<substring>  Remove matching schema_provisions rows so the
+  // next run re-executes those files. Solves the stale-tracking/missing-table
+  // inconsistency that occurs after running a dev reset script.
+  // Example: tsx migrate.ts --invalidate=master/01j_tables_party_risk
+  const invalidateArg = args.find((a) => a.startsWith("--invalidate="));
+  const invalidateKey = invalidateArg ? invalidateArg.split("=").slice(1).join("=") : null;
+
   // High-level convenience flags (all idempotent via checksum tracking)
   const ddlOnly    = args.includes("--ddl-only");     // Stage 1 only
   const systemOnly = args.includes("--system-only");  // Stage 2 only (DDL must exist)
@@ -671,6 +760,11 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (invalidateKey) {
+      await runInvalidate(connectionString, invalidateKey);
+      // Fall through so the normal run immediately re-executes the invalidated files.
+    }
+
     if (reset) {
       await runReset(connectionString);
       // After reset, always fall through to re-run all stages from scratch
@@ -681,7 +775,9 @@ async function main(): Promise<void> {
     if (ddlOnly) {
       phases = [1];
     } else if (systemOnly) {
-      phases = [2];
+      // Always include Phase 1 — DDL is idempotent (checksum tracking skips done files)
+      // and must precede Phase 2 to guarantee all tables exist (e.g. after a dev reset).
+      phases = [1, 2];
     } else if (noDemo) {
       phases = [1, 2];
     } else if (demoOnly || runAll) {

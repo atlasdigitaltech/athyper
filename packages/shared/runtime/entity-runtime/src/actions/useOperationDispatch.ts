@@ -29,6 +29,7 @@ import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { EntityOperation } from "@athyper/api-contracts/metadata";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
+import { queryKeys } from "@athyper/api-contracts/query-keys";
 
 function getCsrfToken(): string {
   const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
@@ -62,6 +63,13 @@ function extractFlowCode(handlerTarget: string | null | undefined): string | nul
   return m?.[1] ?? null;
 }
 
+function getRecordStatus(body: Record<string, unknown>): string | null {
+  const record = body["record"];
+  if (!record || typeof record !== "object") return null;
+  const status = (record as Record<string, unknown>)["status"];
+  return typeof status === "string" ? status : null;
+}
+
 export function useOperationDispatch({
   entityCode,
   recordId,
@@ -74,6 +82,42 @@ export function useOperationDispatch({
   const [activeBundle, setActiveBundle]   = useState<FlowBundle | null>(null);
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [isModalOpen,  setIsModalOpen]    = useState(false);
+
+  const applyStatusToDetailCache = useCallback((status: string | null) => {
+    if (!status) return;
+    qc.setQueryData(
+      queryKeys.entityDetail.byId(entityCode, recordId),
+      (current: unknown) => {
+        if (!current || typeof current !== "object") return current;
+        const record = current as { status?: string; data?: Record<string, unknown> };
+        return {
+          ...record,
+          status,
+          data: {
+            ...(record.data ?? {}),
+            status,
+          },
+        };
+      },
+    );
+  }, [entityCode, recordId, qc]);
+
+  const refreshRecordQueries = useCallback(async () => {
+    const detailKey = queryKeys.entityDetail.byId(entityCode, recordId);
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: detailKey }),
+      recordUuid && recordUuid !== recordId
+        ? qc.invalidateQueries({ queryKey: queryKeys.entityDetail.byId(entityCode, recordUuid) })
+        : Promise.resolve(),
+      qc.invalidateQueries({ queryKey: queryKeys.entityList.byType(entityCode) }),
+      qc.invalidateQueries({ queryKey: queryKeys.workflowInbox.all }),
+      qc.invalidateQueries({ queryKey: queryKeys.workflowInbox.count }),
+      qc.invalidateQueries({ queryKey: ["record-workflow", entityCode, recordId] }),
+      qc.invalidateQueries({ queryKey: ["record-approvals", entityCode, recordId] }),
+      qc.invalidateQueries({ queryKey: ["activity", entityCode] }),
+    ]);
+    await qc.refetchQueries({ queryKey: detailKey, exact: true });
+  }, [entityCode, recordId, recordUuid, qc]);
 
   const closeModal = useCallback(() => {
     if (isSubmitting) return;
@@ -135,16 +179,15 @@ export function useOperationDispatch({
             const msg = typeof body["message"] === "string" ? body["message"] : `Action failed (${res.status})`;
             throw new Error(msg);
           }
-          await qc.invalidateQueries({
-            queryKey: ["record", entityCode, recordId],
-            exact: false,
-          });
+          const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+          applyStatusToDetailCache(getRecordStatus(body));
+          await refreshRecordQueries();
         } finally {
           setIsSubmitting(false);
         }
       })();
     },
-    [entityCode, recordId, recordUuid, userPermissions, qc],
+    [entityCode, recordId, recordUuid, userPermissions, applyStatusToDetailCache, refreshRecordQueries],
   );
 
   const submitModal = useCallback(
@@ -166,11 +209,9 @@ export function useOperationDispatch({
           const msg = typeof body["message"] === "string" ? body["message"] : `Operation failed (${res.status})`;
           throw new Error(msg);
         }
-        // Invalidate the record so the detail page refetches the promoted record
-        await qc.invalidateQueries({
-          queryKey: ["record", entityCode, recordId],
-          exact: false,
-        });
+        const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+        applyStatusToDetailCache(getRecordStatus(body));
+        await refreshRecordQueries();
         setIsModalOpen(false);
         setActiveOpCode(null);
         setActiveBundle(null);
@@ -178,7 +219,7 @@ export function useOperationDispatch({
         setIsSubmitting(false);
       }
     },
-    [activeOpCode, entityCode, recordId, qc],
+    [activeOpCode, entityCode, recordId, recordUuid, applyStatusToDetailCache, refreshRecordQueries],
   );
 
   return {

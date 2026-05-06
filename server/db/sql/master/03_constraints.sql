@@ -6,6 +6,60 @@
 --              003d_master_payment_terms.sql, 003f_master_cms.sql
 -- ============================================================================
 
+-- ── Pre-flight orphan guard ──────────────────────────────────────────────────
+-- master.business_partner / customer / supplier are rebuilt destructively
+-- (DROP TABLE CASCADE) in 01h_tables_business_partner.sql.  Tables outside
+-- that file are created with CREATE TABLE IF NOT EXISTS, so their rows survive
+-- the rebuild with stale FK references.  NULL / DELETE those orphans here
+-- before the FK constraints below are re-applied, otherwise they fail.
+DO $guard$ BEGIN
+    -- app index tables — whole row is meaningless without the role row
+    DELETE FROM master.supplier_app_index
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = master.supplier_app_index.id);
+    DELETE FROM master.customer_app_index
+        WHERE NOT EXISTS (SELECT 1 FROM master.customer c WHERE c.id = master.customer_app_index.id);
+
+    -- qualification tables — cascade-eligible, delete orphaned qualification rows
+    DELETE FROM master.supplier_qualification
+        WHERE supplier_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.tenant_id = master.supplier_qualification.tenant_id AND s.id = master.supplier_qualification.supplier_id);
+    DELETE FROM master.customer_qualification
+        WHERE customer_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM master.customer c WHERE c.tenant_id = master.customer_qualification.tenant_id AND c.id = master.customer_qualification.customer_id);
+
+    -- network link table — delete orphaned BP links
+    DELETE FROM master.business_partner_network_link
+        WHERE business_partner_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM master.business_partner bp WHERE bp.tenant_id = master.business_partner_network_link.tenant_id AND bp.id = master.business_partner_network_link.business_partner_id);
+
+    -- LE-BP link table — delete orphaned rows where the BP no longer exists
+    DELETE FROM master.legal_entity_business_partner_link
+        WHERE business_partner_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM master.business_partner bp
+                           WHERE bp.tenant_id = master.legal_entity_business_partner_link.tenant_id
+                             AND bp.id = master.legal_entity_business_partner_link.business_partner_id);
+
+    -- intercompany_trading_pair — null out FK refs to dropped supplier/customer profiles
+    IF EXISTS (SELECT 1 FROM information_schema.tables
+               WHERE table_schema = 'master' AND table_name = 'intercompany_trading_pair') THEN
+        UPDATE master.intercompany_trading_pair SET counterparty_supplier_profile_id = NULL
+            WHERE counterparty_supplier_profile_id IS NOT NULL
+              AND NOT EXISTS (SELECT 1 FROM master.company_code_supplier_profile p
+                               WHERE p.tenant_id = master.intercompany_trading_pair.tenant_id
+                                 AND p.id = master.intercompany_trading_pair.counterparty_supplier_profile_id);
+        UPDATE master.intercompany_trading_pair SET mirror_customer_profile_id = NULL
+            WHERE mirror_customer_profile_id IS NOT NULL
+              AND NOT EXISTS (SELECT 1 FROM master.company_code_customer_profile p
+                               WHERE p.tenant_id = master.intercompany_trading_pair.tenant_id
+                                 AND p.id = master.intercompany_trading_pair.mirror_customer_profile_id);
+    END IF;
+
+    -- asset table — nullable vendor_id, NULL it out rather than deleting the asset
+    UPDATE master.asset SET vendor_id = NULL
+        WHERE vendor_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.tenant_id = master.asset.tenant_id AND s.id = master.asset.vendor_id);
+END $guard$;
+
 -- 06_constraints/003a_master_identity.sql
 -- Depends on: 04_tables/003a_master_identity.sql
 -- FK constraints (Part A): identity, RBAC, collaboration, and document/branding.
@@ -1380,58 +1434,69 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- shared.* code-based FKs (currency, uom) stay as-is — they are global singletons.
 -- =============================================================================
 
--- ── master.customer (pure tenant master — no company-specific columns) ─────
+-- ── master.business_partner (§BP1 — commercial identity root) ──────────────
+ALTER TABLE master.business_partner DROP CONSTRAINT IF EXISTS bpart_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.business_partner ADD CONSTRAINT bpart_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.business_partner ADD CONSTRAINT bpart_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.business_partner ADD CONSTRAINT bpart_parent_fk
+    FOREIGN KEY (tenant_id, parent_business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.business_partner ADD CONSTRAINT bpart_reg_country_fk
+    FOREIGN KEY (registration_country_code) REFERENCES shared.country (code);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.business_partner ADD CONSTRAINT bpart_tax_country_fk
+    FOREIGN KEY (tax_residence_country_code) REFERENCES shared.country (code);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.customer (§BP2 — thin AR role, identity lives on business_partner) ─
 ALTER TABLE master.customer DROP CONSTRAINT IF EXISTS cust_tenant_fk;
 DO $$ BEGIN ALTER TABLE master.customer ADD CONSTRAINT cust_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.customer ADD CONSTRAINT cust_bp_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.customer ADD CONSTRAINT cust_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
--- customer new FKs (profile extension)
-CREATE UNIQUE INDEX IF NOT EXISTS customer_external_ref_uidx
-    ON master.customer (tenant_id, external_ref)
-    WHERE external_ref IS NOT NULL;
-
-DO $$ BEGIN ALTER TABLE master.customer ADD CONSTRAINT customer_parent_fk
-    FOREIGN KEY (tenant_id, parent_customer_id)
-    REFERENCES master.customer (tenant_id, id) ON DELETE SET NULL;
+DO $$ BEGIN ALTER TABLE master.customer ADD CONSTRAINT cust_account_manager_fk
+    FOREIGN KEY (tenant_id, account_manager_id)
+    REFERENCES master.employee (tenant_id, id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN ALTER TABLE master.customer ADD CONSTRAINT customer_reg_country_fk
-    FOREIGN KEY (registration_country_code) REFERENCES shared.country (code);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.customer ADD CONSTRAINT customer_tax_country_fk
-    FOREIGN KEY (tax_country_code) REFERENCES shared.country (code);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
--- ── master.supplier (pure tenant master — no company-specific columns) ─────
+-- ── master.supplier (§BP3 — thin AP role, identity lives on business_partner) ─
 ALTER TABLE master.supplier DROP CONSTRAINT IF EXISTS supp_tenant_fk;
 DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_bp_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
--- supplier new FKs (profile extension)
-CREATE UNIQUE INDEX IF NOT EXISTS supplier_external_ref_uidx
-    ON master.supplier (tenant_id, external_ref)
-    WHERE external_ref IS NOT NULL;
-
-DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supplier_parent_fk
-    FOREIGN KEY (tenant_id, parent_supplier_id)
-    REFERENCES master.supplier (tenant_id, id) ON DELETE SET NULL;
+DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_account_manager_fk
+    FOREIGN KEY (tenant_id, account_manager_id)
+    REFERENCES master.employee (tenant_id, id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supplier_reg_country_fk
-    FOREIGN KEY (registration_country_code) REFERENCES shared.country (code);
+DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_spend_category_fk
+    FOREIGN KEY (tenant_id, spend_category_id)
+    REFERENCES master.item_category (tenant_id, id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supplier_tax_country_fk
-    FOREIGN KEY (tax_country_code) REFERENCES shared.country (code);
+DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_payment_term_fk
+    FOREIGN KEY (tenant_id, payment_term_id)
+    REFERENCES master.payment_term (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_payment_method_fk
+    FOREIGN KEY (tenant_id, payment_method_id)
+    REFERENCES master.payment_method (tenant_id, id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── master.employee ────────────────────────────────────────────────────────
@@ -1574,13 +1639,13 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- validated by fn_trg_cc_validate_code() trigger, not a declarative FK.
 -- owner_id FK is polymorphic, validated by fn_trg_cc_validate_owner() trigger.
 
--- ── master.company_code_customer_profile ────────────────────────────────────────
+-- ── master.company_code_customer_profile (§BP4 — per-CC AR settings) ──────────
 ALTER TABLE master.company_code_customer_profile DROP CONSTRAINT IF EXISTS ccp_tenant_fk;
 DO $$ BEGIN ALTER TABLE master.company_code_customer_profile ADD CONSTRAINT ccp_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code_customer_profile ADD CONSTRAINT ccp_customer_fk
-    FOREIGN KEY (tenant_id, customer_id) REFERENCES master.customer (tenant_id, id);
+    FOREIGN KEY (tenant_id, customer_id) REFERENCES master.customer (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code_customer_profile ADD CONSTRAINT ccp_company_fk
     FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code (tenant_id, id);
@@ -1588,9 +1653,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code_customer_profile ADD CONSTRAINT ccp_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code_customer_profile ADD CONSTRAINT ccp_ar_gl_fk
-    FOREIGN KEY (tenant_id, ar_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- ccp_ar_gl_fk removed: ar_gl_account_id column dropped (H12 — use default_accounting_profile_id)
 DO $$ BEGIN ALTER TABLE master.company_code_customer_profile ADD CONSTRAINT ccp_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -1623,22 +1686,19 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- dunning_policy_id: FUTURE ANCHOR — no FK target yet.
 
--- ── master.company_code_supplier_profile ────────────────────────────────────────
+-- ── master.company_code_supplier_profile (§BP5 — per-CC AP settings) ──────────
 ALTER TABLE master.company_code_supplier_profile DROP CONSTRAINT IF EXISTS scp_tenant_fk;
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_supplier_fk
-    FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier (tenant_id, id);
+    FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_company_fk
     FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_ap_gl_fk
-    FOREIGN KEY (tenant_id, ap_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
@@ -1679,9 +1739,57 @@ DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_
     REFERENCES master.dimension_set (tenant_id, id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- settlement_profile_id: FUTURE ANCHOR — no FK target yet.
--- supplier_reconciliation_profile_id: FUTURE ANCHOR — no FK target yet.
 -- invoice_hold_policy_id: FUTURE ANCHOR — no FK target yet.
+
+-- company_code_supplier_spend_policy (supplier extension child)
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_spend_policy ADD CONSTRAINT csspo_profile_fk
+    FOREIGN KEY (tenant_id, supplier_profile_id)
+    REFERENCES master.company_code_supplier_profile (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_spend_policy ADD CONSTRAINT csspo_category_fk
+    FOREIGN KEY (tenant_id, spend_category_id)
+    REFERENCES master.spend_category (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_spend_policy ADD CONSTRAINT csspo_max_po_currency_fk
+    FOREIGN KEY (max_po_currency_code)
+    REFERENCES shared.currency (code);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_spend_policy ADD CONSTRAINT csspo_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- company_code_supplier_intent_policy (supplier extension child)
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_intent_policy ADD CONSTRAINT csip_profile_fk
+    FOREIGN KEY (tenant_id, supplier_profile_id)
+    REFERENCES master.company_code_supplier_profile (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_intent_policy ADD CONSTRAINT csip_intent_fk
+    FOREIGN KEY (tenant_id, business_intent_id)
+    REFERENCES master.business_intent (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_intent_policy ADD CONSTRAINT csip_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- company_code_supplier_posting_override (supplier extension child)
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_posting_override ADD CONSTRAINT cspo_profile_fk
+    FOREIGN KEY (tenant_id, supplier_profile_id)
+    REFERENCES master.company_code_supplier_profile (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_posting_override ADD CONSTRAINT cspo_gl_account_fk
+    FOREIGN KEY (tenant_id, gl_account_id)
+    REFERENCES master.gl_account (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.company_code_supplier_posting_override ADD CONSTRAINT cspo_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 -- ── master.principal_identity_binding ──────────────────────────────────────────
@@ -2348,22 +2456,13 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 
--- ============================================================================
--- §SCP  master.company_code_supplier_profile → payment_term (added column from Part E)
--- ============================================================================
-
--- scp.payment_term_id → master.payment_term (tenant-scoped)
+-- ── scp.payment_term_id → master.payment_term ────────────────────────────────
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_payment_term_fk
     FOREIGN KEY (tenant_id, payment_term_id)
     REFERENCES master.payment_term (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-
--- ============================================================================
--- §CCP  master.company_code_customer_profile → payment_term (added column from Part E)
--- ============================================================================
-
--- ccp.payment_term_id → master.payment_term (tenant-scoped)
+-- ── ccp.payment_term_id → master.payment_term ────────────────────────────────
 DO $$ BEGIN ALTER TABLE master.company_code_customer_profile ADD CONSTRAINT ccp_payment_term_fk
     FOREIGN KEY (tenant_id, payment_term_id)
     REFERENCES master.payment_term (tenant_id, id);
@@ -2450,54 +2549,17 @@ DO $$ BEGIN ALTER TABLE master.content_item_access_grant ADD CONSTRAINT ciag_cre
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- ── Schema evolution alterations ─────────────────────────────────────────────
-
--- Rename supplier_qualification.is_preferred → is_preferred_supplier.
--- DDL (01i_tables_party_master.sql) already uses the new name; this handles
--- existing databases where the column was created under the old name.
-DO $$ BEGIN
-    ALTER TABLE master.supplier_qualification
-        RENAME COLUMN is_preferred TO is_preferred_supplier;
-EXCEPTION WHEN undefined_column THEN NULL; END $$;
-
--- Add risk_rating and is_key_account to master.customer.
--- These columns are registered in the entity field registry (008_fields_partners.sql)
--- but were omitted from the original CREATE TABLE.
-DO $$ BEGIN
-    ALTER TABLE master.customer ADD COLUMN risk_rating text;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TABLE master.customer ADD COLUMN is_key_account boolean NOT NULL DEFAULT false;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-
 -- =============================================================================
--- §EF-ALIGN  Entity-field registry alignment — ADD COLUMN for fields registered
---            in control.entity_field that were absent from the CREATE TABLE DDL.
---            All statements are idempotent (EXCEPTION WHEN duplicate_column).
+-- §EF-ALIGN  Columns not yet in CREATE TABLE DDL — add idempotently.
+--            BP-first rewrite: customer/supplier/legal_entity columns are now
+--            in their base DDL (01h_tables_business_partner.sql, 01b_tables_finance.sql).
 -- =============================================================================
-
--- ── master.supplier — party-level AP defaults ─────────────────────────────────
-DO $$ BEGIN ALTER TABLE master.supplier ADD COLUMN account_manager_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.supplier ADD COLUMN payment_term_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.supplier ADD COLUMN payment_method_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.supplier ADD COLUMN spend_category_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-
--- ── master.customer — party-level AR defaults ─────────────────────────────────
-DO $$ BEGIN ALTER TABLE master.customer ADD COLUMN account_manager_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.customer ADD COLUMN payment_term_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.customer ADD COLUMN credit_limit numeric(18,4);
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.customer ADD COLUMN credit_currency_id uuid;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
 -- ── master.company_code — accounting boundary extensions ──────────────────────
+-- local_currency_id, accounting_currency_id, chart_of_account_id, company_code_type
+-- are not yet in the CREATE TABLE DDL; added here idempotently.
+-- NOTE: timezone_code is in the CREATE TABLE as of BP-first rewrite — DO NOT add
+-- a second `timezone` column here.
 DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN local_currency_id uuid;
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN accounting_currency_id uuid;
@@ -2505,8 +2567,6 @@ EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN chart_of_account_id uuid;
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN company_code_type text;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code ADD COLUMN timezone text;
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
 -- ── master.gl_account — posting controls and typing ───────────────────────────
@@ -2519,12 +2579,6 @@ EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.gl_account ADD COLUMN posting_level text;
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
--- ── master.legal_entity — statutory profile ───────────────────────────────────
-DO $$ BEGIN ALTER TABLE master.legal_entity ADD COLUMN registration_no text;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.legal_entity ADD COLUMN is_publicly_listed boolean NOT NULL DEFAULT false;
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-
 -- ── master.chart_of_account — structural metadata ────────────────────────────
 DO $$ BEGIN ALTER TABLE master.chart_of_account ADD COLUMN base_currency_id uuid;
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
@@ -2532,3 +2586,273 @@ DO $$ BEGIN ALTER TABLE master.chart_of_account ADD COLUMN account_level_count s
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.chart_of_account ADD COLUMN is_default boolean NOT NULL DEFAULT false;
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+
+-- =============================================================================
+-- §PQ  Party qualification tables + IAM binding + network link
+--      (01i_tables_party_master.sql)
+-- =============================================================================
+
+-- ── master.supplier_qualification (§PQ1) ─────────────────────────────────────
+ALTER TABLE master.supplier_qualification DROP CONSTRAINT IF EXISTS sq_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.supplier_qualification ADD CONSTRAINT sq_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.supplier_qualification ADD CONSTRAINT sq_supplier_fk
+    FOREIGN KEY (tenant_id, supplier_id)
+    REFERENCES master.supplier (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.supplier_qualification ADD CONSTRAINT sq_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.customer_qualification (§PQ2) ─────────────────────────────────────
+ALTER TABLE master.customer_qualification DROP CONSTRAINT IF EXISTS cq_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.customer_qualification ADD CONSTRAINT cq_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.customer_qualification ADD CONSTRAINT cq_customer_fk
+    FOREIGN KEY (tenant_id, customer_id)
+    REFERENCES master.customer (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.customer_qualification ADD CONSTRAINT cq_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.business_partner_network_link (§PQ3) ───────────────────────────────
+ALTER TABLE master.business_partner_network_link DROP CONSTRAINT IF EXISTS bpnl_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.business_partner_network_link ADD CONSTRAINT bpnl_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.business_partner_network_link ADD CONSTRAINT bpnl_bp_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.business_partner_network_link ADD CONSTRAINT bpnl_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.legal_entity_identity_binding (§PQ4) ───────────────────────────────
+-- BP 360 governance relation soft links.
+ALTER TABLE master.party_governance_relation DROP CONSTRAINT IF EXISTS pgr_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.party_governance_relation ADD CONSTRAINT pgr_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.party_governance_relation ADD CONSTRAINT pgr_member_bp_fk
+    FOREIGN KEY (tenant_id, member_business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.party_governance_relation ADD CONSTRAINT pgr_evidence_attachment_fk
+    FOREIGN KEY (evidence_attachment_id)
+    REFERENCES master.attachment (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.party_governance_relation ADD CONSTRAINT pgr_reviewed_by_fk
+    FOREIGN KEY (reviewed_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.party_governance_relation ADD CONSTRAINT pgr_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.legal_entity_identity_binding DROP CONSTRAINT IF EXISTS leib_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.legal_entity_identity_binding ADD CONSTRAINT leib_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.legal_entity_identity_binding ADD CONSTRAINT leib_legal_entity_fk
+    FOREIGN KEY (tenant_id, legal_entity_id)
+    REFERENCES master.legal_entity (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.legal_entity_identity_binding ADD CONSTRAINT leib_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.legal_entity_business_partner_link (§F99) ──────────────────────────
+ALTER TABLE master.legal_entity_business_partner_link DROP CONSTRAINT IF EXISTS lebpl_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.legal_entity_business_partner_link ADD CONSTRAINT lebpl_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.legal_entity_business_partner_link DROP CONSTRAINT IF EXISTS lebpl_legal_entity_fk;
+DO $$ BEGIN ALTER TABLE master.legal_entity_business_partner_link ADD CONSTRAINT lebpl_legal_entity_fk
+    FOREIGN KEY (tenant_id, legal_entity_id)
+    REFERENCES master.legal_entity (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- FK to business_partner added here (loaded after 01h which drops/recreates business_partner)
+ALTER TABLE master.legal_entity_business_partner_link DROP CONSTRAINT IF EXISTS lebpl_business_partner_fk;
+DO $$ BEGIN ALTER TABLE master.legal_entity_business_partner_link ADD CONSTRAINT lebpl_business_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.legal_entity_business_partner_link ADD CONSTRAINT lebpl_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.intercompany_trading_pair (§IC1) ───────────────────────────────────
+ALTER TABLE master.intercompany_trading_pair DROP CONSTRAINT IF EXISTS ictp_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.intercompany_trading_pair ADD CONSTRAINT ictp_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.intercompany_trading_pair DROP CONSTRAINT IF EXISTS ictp_source_cc_fk;
+DO $$ BEGIN ALTER TABLE master.intercompany_trading_pair ADD CONSTRAINT ictp_source_cc_fk
+    FOREIGN KEY (tenant_id, source_company_code_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.intercompany_trading_pair DROP CONSTRAINT IF EXISTS ictp_counterparty_cc_fk;
+DO $$ BEGIN ALTER TABLE master.intercompany_trading_pair ADD CONSTRAINT ictp_counterparty_cc_fk
+    FOREIGN KEY (tenant_id, counterparty_company_code_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.intercompany_trading_pair DROP CONSTRAINT IF EXISTS ictp_sup_profile_fk;
+DO $$ BEGIN ALTER TABLE master.intercompany_trading_pair ADD CONSTRAINT ictp_sup_profile_fk
+    FOREIGN KEY (tenant_id, counterparty_supplier_profile_id)
+    REFERENCES master.company_code_supplier_profile (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.intercompany_trading_pair DROP CONSTRAINT IF EXISTS ictp_cust_profile_fk;
+DO $$ BEGIN ALTER TABLE master.intercompany_trading_pair ADD CONSTRAINT ictp_cust_profile_fk
+    FOREIGN KEY (tenant_id, mirror_customer_profile_id)
+    REFERENCES master.company_code_customer_profile (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.intercompany_trading_pair ADD CONSTRAINT ictp_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- §RK  master.risk_* — party risk platform FKs (01j_tables_party_risk.sql)
+-- ============================================================================
+
+-- ── master.tenant_risk_source_config ─────────────────────────────────────────
+ALTER TABLE master.tenant_risk_source_config DROP CONSTRAINT IF EXISTS trsc_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.tenant_risk_source_config ADD CONSTRAINT trsc_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.tenant_risk_source_config DROP CONSTRAINT IF EXISTS trsc_source_fk;
+DO $$ BEGIN ALTER TABLE master.tenant_risk_source_config ADD CONSTRAINT trsc_source_fk
+    FOREIGN KEY (source_code) REFERENCES master.risk_source (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.tenant_risk_source_config ADD CONSTRAINT trsc_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.risk_model_dimension ───────────────────────────────────────────────
+ALTER TABLE master.risk_model_dimension DROP CONSTRAINT IF EXISTS rmd_model_fk;
+DO $$ BEGIN ALTER TABLE master.risk_model_dimension ADD CONSTRAINT rmd_model_fk
+    FOREIGN KEY (model_code, model_version)
+    REFERENCES master.risk_model (code, version) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.risk_model_dimension DROP CONSTRAINT IF EXISTS rmd_dimension_fk;
+DO $$ BEGIN ALTER TABLE master.risk_model_dimension ADD CONSTRAINT rmd_dimension_fk
+    FOREIGN KEY (dimension_code) REFERENCES master.risk_dimension (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.risk_driver_registry ───────────────────────────────────────────────
+ALTER TABLE master.risk_driver_registry DROP CONSTRAINT IF EXISTS rdr_dimension_fk;
+DO $$ BEGIN ALTER TABLE master.risk_driver_registry ADD CONSTRAINT rdr_dimension_fk
+    FOREIGN KEY (default_dimension_code) REFERENCES master.risk_dimension (code) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.party_risk_evidence ────────────────────────────────────────────────
+ALTER TABLE master.party_risk_evidence DROP CONSTRAINT IF EXISTS pre_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_evidence ADD CONSTRAINT pre_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_evidence DROP CONSTRAINT IF EXISTS pre_bp_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_evidence ADD CONSTRAINT pre_bp_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_evidence DROP CONSTRAINT IF EXISTS pre_source_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_evidence ADD CONSTRAINT pre_source_fk
+    FOREIGN KEY (source_code) REFERENCES master.risk_source (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_evidence DROP CONSTRAINT IF EXISTS pre_superseded_by_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_evidence ADD CONSTRAINT pre_superseded_by_fk
+    FOREIGN KEY (tenant_id, superseded_by) REFERENCES master.party_risk_evidence (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.party_risk_evidence ADD CONSTRAINT pre_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.party_risk_assessment ──────────────────────────────────────────────
+ALTER TABLE master.party_risk_assessment DROP CONSTRAINT IF EXISTS pra_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_assessment ADD CONSTRAINT pra_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_assessment DROP CONSTRAINT IF EXISTS pra_bp_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_assessment ADD CONSTRAINT pra_bp_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_assessment DROP CONSTRAINT IF EXISTS pra_model_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_assessment ADD CONSTRAINT pra_model_fk
+    FOREIGN KEY (model_code, model_version)
+    REFERENCES master.risk_model (code, version) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_assessment DROP CONSTRAINT IF EXISTS pra_superseded_by_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_assessment ADD CONSTRAINT pra_superseded_by_fk
+    FOREIGN KEY (tenant_id, superseded_by) REFERENCES master.party_risk_assessment (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.party_risk_assessment ADD CONSTRAINT pra_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.party_risk_dimension_score ────────────────────────────────────────
+ALTER TABLE master.party_risk_dimension_score DROP CONSTRAINT IF EXISTS prds_assessment_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_dimension_score ADD CONSTRAINT prds_assessment_fk
+    FOREIGN KEY (tenant_id, assessment_id)
+    REFERENCES master.party_risk_assessment (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_dimension_score DROP CONSTRAINT IF EXISTS prds_dimension_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_dimension_score ADD CONSTRAINT prds_dimension_fk
+    FOREIGN KEY (dimension_code) REFERENCES master.risk_dimension (code) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.party_risk_driver ──────────────────────────────────────────────────
+ALTER TABLE master.party_risk_driver DROP CONSTRAINT IF EXISTS prd_assessment_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_driver ADD CONSTRAINT prd_assessment_fk
+    FOREIGN KEY (tenant_id, assessment_id)
+    REFERENCES master.party_risk_assessment (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_driver DROP CONSTRAINT IF EXISTS prd_dimension_score_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_driver ADD CONSTRAINT prd_dimension_score_fk
+    FOREIGN KEY (tenant_id, dimension_score_id)
+    REFERENCES master.party_risk_dimension_score (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_driver DROP CONSTRAINT IF EXISTS prd_evidence_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_driver ADD CONSTRAINT prd_evidence_fk
+    FOREIGN KEY (tenant_id, evidence_id)
+    REFERENCES master.party_risk_evidence (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_driver DROP CONSTRAINT IF EXISTS prd_driver_code_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_driver ADD CONSTRAINT prd_driver_code_fk
+    FOREIGN KEY (driver_code) REFERENCES master.risk_driver_registry (code) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.party_risk_mitigation ──────────────────────────────────────────────
+ALTER TABLE master.party_risk_mitigation DROP CONSTRAINT IF EXISTS prm_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_mitigation ADD CONSTRAINT prm_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_mitigation DROP CONSTRAINT IF EXISTS prm_bp_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_mitigation ADD CONSTRAINT prm_bp_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_mitigation DROP CONSTRAINT IF EXISTS prm_assessment_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_mitigation ADD CONSTRAINT prm_assessment_fk
+    FOREIGN KEY (tenant_id, assessment_id)
+    REFERENCES master.party_risk_assessment (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE master.party_risk_mitigation DROP CONSTRAINT IF EXISTS prm_driver_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_mitigation ADD CONSTRAINT prm_driver_fk
+    FOREIGN KEY (tenant_id, driver_id)
+    REFERENCES master.party_risk_driver (tenant_id, id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.party_risk_mitigation ADD CONSTRAINT prm_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── master.party_risk_review_event ────────────────────────────────────────────
+ALTER TABLE master.party_risk_review_event DROP CONSTRAINT IF EXISTS prre_assessment_fk;
+DO $$ BEGIN ALTER TABLE master.party_risk_review_event ADD CONSTRAINT prre_assessment_fk
+    FOREIGN KEY (tenant_id, assessment_id)
+    REFERENCES master.party_risk_assessment (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

@@ -77,6 +77,7 @@ ON CONFLICT DO NOTHING;
 UPDATE control.entity
 SET display_config = jsonb_build_object(
     'detail_renderer',    'document',
+    'lines_renderer',     'payment',
     'title_field',        'document_no',
     'subtitle_field',     'supplier_id',
     'list_columns',       '["document_no","status","payment_type","payment_direction","document_date","payment_amount","currency_code"]'::jsonb,

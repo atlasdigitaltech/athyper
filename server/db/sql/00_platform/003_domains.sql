@@ -81,10 +81,18 @@ COMMENT ON DOMAIN shared.provenance_d IS
   'Tracks the origin and verification status of crosswalk mappings.';
 
 
--- shared.keycloak_sync_status_d — IdP/Keycloak synchronisation health
--- Superset of all valid sync states across mfa_config, principal_profile (deprecated),
--- and principal_identity_binding. Values are protocol-defined — not business-extensible.
+-- shared.idp_sync_status_d — IdP synchronisation health
+-- Superset of all valid sync states across mfa_config, principal_identity_binding.
+-- Values are protocol-defined — not business-extensible.
 -- mfa_config restricts to the 4-value base set via an additional column CHECK.
+DO $$ BEGIN
+    CREATE DOMAIN shared.idp_sync_status_d AS TEXT
+        CONSTRAINT idp_sync_status_check
+        CHECK (VALUE IN ('pending', 'synced', 'drift', 'error', 'disabled'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Backward-compat alias: create old domain name pointing to new one for any in-flight objects.
 DO $$ BEGIN
     CREATE DOMAIN shared.keycloak_sync_status_d AS TEXT
         CONSTRAINT keycloak_sync_status_check
@@ -92,8 +100,9 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-COMMENT ON DOMAIN shared.keycloak_sync_status_d IS
-  'Keycloak/IdP sync health: pending | synced | drift | error | disabled. '
+COMMENT ON DOMAIN shared.idp_sync_status_d IS
+  'IdP sync health: pending | synced | drift | error | disabled. '
   'Protocol-defined enum — not extensible by tenants. '
   'Used by master.principal_identity_binding (all 5 values) and '
-  'control.mfa_config (base 4 values; disabled not applicable to MFA credentials).';
+  'control.mfa_config (base 4 values; disabled not applicable to MFA credentials). '
+  'Replaces deprecated shared.keycloak_sync_status_d (alias kept for migration safety).';

@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, MoreHorizontal } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Button } from "@athyper/ui/primitives";
 import {
@@ -25,6 +25,11 @@ export interface EntityActionBarProps {
   actions: HeaderAction[];
   /** Called after action.onSelect() fires. Use for cross-cutting concerns (telemetry, logging). */
   onAction?: (id: string) => void;
+  /**
+   * When true: renders only primary actions + a single "⋯" icon dropdown containing
+   * all secondary/overflow/danger items. Used for the mobile header row.
+   */
+  compact?: boolean;
   className?: string;
 }
 
@@ -123,10 +128,12 @@ function OverflowItem({
   action,
   destructive = false,
   onAction,
+  className,
 }: {
-  action:      HeaderAction;
+  action:       HeaderAction;
   destructive?: boolean;
-  onAction?:   (id: string) => void;
+  onAction?:    (id: string) => void;
+  className?:   string;
 }) {
   const Icon = action.icon ? getActionIcon(action.icon) : null;
   return (
@@ -134,7 +141,10 @@ function OverflowItem({
       key={action.id}
       disabled={action.disabled || action.pending}
       onClick={() => { action.onSelect?.(); onAction?.(action.id); }}
-      className={destructive ? "text-xs gap-2 text-destructive focus:text-destructive" : "text-xs gap-2"}
+      className={cn(
+        destructive ? "text-xs gap-2 text-destructive focus:text-destructive" : "text-xs gap-2",
+        className,
+      )}
     >
       {Icon && <Icon className={`h-3.5 w-3.5 ${destructive ? "" : "text-muted-foreground"}`} />}
       {action.label}
@@ -184,30 +194,77 @@ function OverflowGroups({
 
 // ── Main bar ──────────────────────────────────────────────────────────────
 
-export function EntityActionBar({ actions, onAction, className }: EntityActionBarProps) {
+export function EntityActionBar({ actions, onAction, compact = false, className }: EntityActionBarProps) {
   const sorted = [...actions].sort((a, b) => a.order - b.order);
   const primary   = sorted.filter(a => a.placement === "primary");
   const secondary = sorted.filter(a => a.placement === "secondary");
   const overflow  = sorted.filter(a => a.placement === "overflow");
   const danger    = sorted.filter(a => a.placement === "danger");
-  const inMenu    = [...overflow, ...danger];
 
   if (sorted.length === 0) return null;
+
+  // compact mode: all non-primary items go into a single ⋯ icon dropdown.
+  // Used for the mobile identity bar row — keeps row 1 tight.
+  if (compact) {
+    const moreItems = [...secondary, ...overflow, ...danger];
+    return (
+      <div className={cn("flex items-center gap-1.5 shrink-0", className)}>
+        {primary.map(a => <ActionButton key={a.id} action={a} onAction={onAction} />)}
+        {moreItems.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 w-8 px-0 flex items-center justify-center shrink-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[168px]">
+              <OverflowGroups overflow={[...secondary, ...overflow]} danger={danger} onAction={onAction} />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    );
+  }
+
+  // Default mode: secondary buttons visible on desktop (md+), hidden on tablet/mobile.
+  // On tablet/mobile they move into the More dropdown instead.
+  const hasOverflowOrDanger = overflow.length > 0 || danger.length > 0;
+  const showMore = secondary.length > 0 || hasOverflowOrDanger;
+  // When there are only secondary items (no overflow/danger), the More button is
+  // redundant on desktop because the secondary buttons are already visible there.
+  const moreHiddenOnDesktop = !hasOverflowOrDanger && secondary.length > 0;
 
   return (
     <div className={cn("flex items-center gap-1.5 flex-wrap", className)}>
       {primary.map(a => <ActionButton key={a.id} action={a} onAction={onAction} />)}
-      {secondary.map(a => <SecondaryButton key={a.id} action={a} onAction={onAction} />)}
 
-      {inMenu.length > 0 && (
+      {/* Secondary: visible on desktop, hidden on tablet/mobile */}
+      {secondary.map(a => (
+        <span key={a.id} className="hidden md:inline-flex">
+          <SecondaryButton action={a} onAction={onAction} />
+        </span>
+      ))}
+
+      {showMore && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 px-2.5 gap-1 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("h-8 px-2.5 gap-1 text-xs", moreHiddenOnDesktop && "md:hidden")}
+            >
               More
               <ChevronDown className="h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[168px]">
+            {/* Secondary items: only visible in dropdown on tablet/mobile (< md) */}
+            {secondary.length > 0 && secondary.map(a => (
+              <OverflowItem key={a.id} action={a} onAction={onAction} className="md:hidden" />
+            ))}
+            {secondary.length > 0 && hasOverflowOrDanger && (
+              <DropdownMenuSeparator className="md:hidden" />
+            )}
             <OverflowGroups overflow={overflow} danger={danger} onAction={onAction} />
           </DropdownMenuContent>
         </DropdownMenu>

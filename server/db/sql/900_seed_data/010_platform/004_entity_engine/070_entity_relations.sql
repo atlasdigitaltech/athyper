@@ -93,9 +93,21 @@ BEGIN
         ('customer', 'tenant',               'belongs_to', 'tenant',                'tenant_id',   'restrict'),
         ('customer', 'company_profiles',     'has_many',   'company_code_customer_profile','customer_id','cascade'),
 
-        -- ── Business partners: vendor ─────────────────────────────────────────
-        ('vendor', 'tenant',               'belongs_to', 'tenant',                      'tenant_id',   'restrict'),
-        ('vendor', 'company_profiles',     'has_many',   'company_code_supplier_profile','supplier_id', 'cascade'),
+        -- ── Business partners: supplier ──────────────────────────────────────
+        ('supplier', 'tenant',               'belongs_to', 'tenant',                      'tenant_id',   'restrict'),
+        ('supplier', 'company_profiles',     'has_many',   'company_code_supplier_profile','supplier_id', 'cascade'),
+
+        -- ── Business partners: company_code_supplier_profile ─────────────────
+        ('company_code_supplier_profile', 'supplier',          'belongs_to', 'supplier',                              'supplier_id',        'restrict'),
+        ('company_code_supplier_profile', 'company_code',      'belongs_to', 'company_code',                          'company_code_id',    'restrict'),
+        ('company_code_supplier_profile', 'spend_policies',    'has_many',   'company_code_supplier_spend_policy',    'supplier_profile_id','cascade'),
+        ('company_code_supplier_profile', 'intent_policies',   'has_many',   'company_code_supplier_intent_policy',   'supplier_profile_id','cascade'),
+        ('company_code_supplier_profile', 'posting_overrides', 'has_many',   'company_code_supplier_posting_override','supplier_profile_id','cascade'),
+
+        -- ── Business partners: supplier profile child extensions ──────────────
+        ('company_code_supplier_spend_policy',    'supplier_profile','belongs_to','company_code_supplier_profile','supplier_profile_id','restrict'),
+        ('company_code_supplier_intent_policy',   'supplier_profile','belongs_to','company_code_supplier_profile','supplier_profile_id','restrict'),
+        ('company_code_supplier_posting_override','supplier_profile','belongs_to','company_code_supplier_profile','supplier_profile_id','restrict'),
 
         -- ── Business partners: employee ───────────────────────────────────────
         ('employee', 'tenant',               'belongs_to', 'tenant',                'tenant_id',   'restrict'),

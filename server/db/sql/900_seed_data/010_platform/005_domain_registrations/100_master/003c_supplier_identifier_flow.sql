@@ -1,6 +1,6 @@
 -- =============================================================================
--- 100_master/003c_supplier_identifier_flow.sql
--- New-record flow for supplier_identifier — single-step, no approval.
+-- 100_master/003c_business_partner_identifier_flow.sql
+-- New-record flow for business_partner_identifier -- single-step, no approval.
 --
 -- Fields:
 --   scheme           → enum_select  (required)
@@ -29,34 +29,64 @@ BEGIN
   SELECT ev.id INTO v_ev_id
     FROM control.entity_version ev
     JOIN control.entity e ON e.id = ev.entity_id
-   WHERE e.entity_code = 'supplier_identifier'
+   WHERE e.entity_code = 'business_partner_identifier'
      AND e.tenant_id IS NULL AND ev.version_no = 1;
 
   IF v_ev_id IS NULL THEN
-    RAISE NOTICE 'supplier_identifier v1 not found — new flow seed skipped';
+    RAISE NOTICE 'business_partner_identifier v1 not found -- new flow seed skipped';
     RETURN;
   END IF;
 
   -- ── 1. Flow header ──────────────────────────────────────────────────────────
-  INSERT INTO control.entity_flow (
-    tenant_id, entity_version_id, flow_code, label, description, icon_key,
-    trigger_context, is_default, config, version_no, status, effective_from, created_by)
-  SELECT
-    NULL, v_ev_id, 'new_supplier_identifier',
-    'Add Identifier',
-    'Record an official identifier (tax ID, DUNS, VAT, etc.) for this supplier.',
-    'fingerprint',
-    'new', true,
-    '{"layout":"single_step","submit_label":"Save Identifier","auto_approve":true}'::jsonb,
-    1, 'active', now(), v_su
-  WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity_flow
-     WHERE entity_version_id = v_ev_id
-       AND flow_code = 'new_supplier_identifier' AND tenant_id IS NULL);
-
-  SELECT id INTO v_flow_id FROM control.entity_flow
+  SELECT id INTO v_flow_id
+    FROM control.entity_flow
    WHERE entity_version_id = v_ev_id
-     AND flow_code = 'new_supplier_identifier' AND tenant_id IS NULL;
+     AND tenant_id IS NULL
+     AND flow_code = 'new_business_partner_identifier'
+   ORDER BY version_no DESC
+   LIMIT 1;
+
+  IF v_flow_id IS NULL THEN
+    SELECT id INTO v_flow_id
+      FROM control.entity_flow
+     WHERE entity_version_id = v_ev_id
+       AND tenant_id IS NULL
+       AND trigger_context = 'new'
+       AND is_default = true
+       AND status = 'active'
+     ORDER BY created_at
+     LIMIT 1;
+  END IF;
+
+  IF v_flow_id IS NULL THEN
+    INSERT INTO control.entity_flow (
+      tenant_id, entity_version_id, flow_code, label, description, icon_key,
+      trigger_context, is_default, config, version_no, status, effective_from, created_by)
+    VALUES (
+      NULL, v_ev_id, 'new_business_partner_identifier',
+      'Add Identifier',
+      'Record an official identifier (tax ID, DUNS, VAT, etc.) for this business partner.',
+      'fingerprint',
+      'new', true,
+      '{"layout":"single_step","submit_label":"Save Identifier","auto_approve":true}'::jsonb,
+      1, 'active', now(), v_su)
+    RETURNING id INTO v_flow_id;
+  ELSE
+    UPDATE control.entity_flow
+       SET flow_code      = 'new_business_partner_identifier',
+           label          = 'Add Identifier',
+           description    = 'Record an official identifier (tax ID, DUNS, VAT, etc.) for this business partner.',
+           icon_key       = 'fingerprint',
+           trigger_context= 'new',
+           is_default     = true,
+           config         = '{"layout":"single_step","submit_label":"Save Identifier","auto_approve":true}'::jsonb,
+           version_no     = 1,
+           status         = 'active',
+           effective_from = COALESCE(effective_from, now()),
+           updated_at     = now(),
+           updated_by     = v_su
+     WHERE id = v_flow_id;
+  END IF;
 
   -- ── 2. Single step ──────────────────────────────────────────────────────────
   INSERT INTO control.entity_flow_step
@@ -94,12 +124,12 @@ BEGIN
     ('issuing_authority',  'editable', 'manual', NULL,          NULL,        NULL,      'Government body or agency that issued this ID.',     30),
     ('issued_at',          'editable', 'manual', NULL,          NULL,        NULL,      'Date this identifier was issued.',                   40),
     ('valid_until',        'editable', 'manual', NULL,          NULL,        NULL,      'Expiry date of this identifier, if applicable.',     50),
-    ('is_primary',         'required', 'manual', 'toggle',      NULL,        NULL,      'Mark as the primary identifier for this supplier.',  60),
+    ('is_primary',         'required', 'manual', 'toggle',      NULL,        NULL,      'Mark as the primary identifier for this business partner.',  60),
     ('is_verified',        'required', 'manual', 'toggle',      'const:false',NULL,     'Has this identifier been independently verified?',   70),
     ('status',             'hidden',   'manual', NULL,          'const:ACTIVE', NULL,   NULL,                                                 80)
   ) AS v(fn, mode, dm, uv, ds, sr, ht, so)
      ON ef.name = v.fn AND ef.entity_version_id = v_ev_id;
 
-  RAISE NOTICE 'supplier_identifier new flow seeded: flow_id=%, step_id=%', v_flow_id, v_step_id;
+  RAISE NOTICE 'business_partner_identifier new flow seeded: flow_id=%, step_id=%', v_flow_id, v_step_id;
 
 END $$;

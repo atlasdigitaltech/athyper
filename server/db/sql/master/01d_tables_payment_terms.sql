@@ -348,13 +348,5 @@ COMMENT ON TABLE master.payment_term_discount_tier IS
     'ARCHETYPE=C;SCOPE=T. Early-payment discount tiers. Settlement-time only — not an invoice deduction.';
 
 
--- ============================================================================
-
--- PART E — SUPPLIER/CUSTOMER PROFILE ADDITIONS
--- ============================================================================
-
-ALTER TABLE master.company_code_supplier_profile
-    ADD COLUMN IF NOT EXISTS payment_term_id uuid;
-
-ALTER TABLE master.company_code_customer_profile
-    ADD COLUMN IF NOT EXISTS payment_term_id uuid;
+-- payment_term_id on company_code_supplier_profile and company_code_customer_profile
+-- is now part of their CREATE TABLE DDL in 01h_tables_business_partner.sql.
