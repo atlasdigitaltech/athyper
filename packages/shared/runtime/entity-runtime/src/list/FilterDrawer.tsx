@@ -216,7 +216,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="rounded-sm bg-yellow-100 text-yellow-900 dark:bg-yellow-900/40 dark:text-yellow-100">
+      <mark className="rounded-sm bg-warning/20 text-foreground">
         {text.slice(idx, idx + query.length)}
       </mark>
       {text.slice(idx + query.length)}
@@ -570,7 +570,7 @@ export function FilterDrawer({
               </span>
             )}
             {isDirty && (
-              <span className="text-2xs text-amber-600 dark:text-amber-400 font-medium">
+              <span className="text-2xs text-warning font-medium">
                 {draftCount > activeCount ? `+${draftCount - activeCount}` : "modified"}
               </span>
             )}
@@ -669,7 +669,7 @@ export function FilterDrawer({
 
         {/* Facet status banner */}
         {facetStatus && facetStatus !== "complete" && (
-          <div className="border-b bg-amber-50 dark:bg-amber-950/20 px-4 py-2 text-xs text-amber-700 dark:text-amber-400 shrink-0 flex items-center gap-2">
+          <div className="border-b bg-warning/10 px-4 py-2 text-xs text-foreground shrink-0 flex items-center gap-2">
             <span className="flex-1">
               {facetStatus === "timeout"
                 ? "Counts unavailable — filter load timed out"
@@ -678,7 +678,7 @@ export function FilterDrawer({
             {facetStatus !== "timeout" && onRequestAllFacets && facetScope !== "all" && (
               <button
                 onClick={onRequestAllFacets}
-                className="shrink-0 font-medium underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200 transition-colors whitespace-nowrap"
+                className="shrink-0 font-medium underline underline-offset-2 hover:text-warning transition-colors whitespace-nowrap"
               >
                 Load all
               </button>

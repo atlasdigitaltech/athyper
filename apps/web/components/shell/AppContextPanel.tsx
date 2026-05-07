@@ -25,7 +25,7 @@ export interface AppContextPanelProps {
   activeWorkspaceKey: string | null;
   onClose?: () => void;
   inboxCount?: number;
-  /** Workbench accent hex forwarded from AppShellLayout. */
+  /** Workbench accent CSS color forwarded from AppShellLayout. */
   accentColor?: string;
 }
 

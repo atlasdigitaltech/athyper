@@ -378,7 +378,7 @@ export function EntityIdentityBar({
                   >
                     <span className="w-[90px] shrink-0 truncate text-xs text-muted-foreground">{item.label}</span>
                     {contextCopied === item.key ? (
-                      <span className="flex items-center gap-1 text-xs text-green-500">
+                      <span className="flex items-center gap-1 text-xs text-success">
                         <Check className="h-3 w-3" />Copied!
                       </span>
                     ) : (

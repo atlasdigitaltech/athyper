@@ -564,7 +564,7 @@ function ListSettingsMenu({ entityCode, mode, density }: ListSettingsMenuProps) 
 
           <button onClick={saveAsDefault} disabled={saving} className={cn(row, "pt-2.5 disabled:opacity-50")}>
             {saved
-              ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+              ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
               : saving
               ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
               : <Save className="h-3.5 w-3.5 shrink-0" />}
@@ -2050,8 +2050,8 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               no fields on this entity are marked is_searchable */}
           {!!state.search && !dataLoading && allRows.length === 0 &&
             !!(listData as { reasons?: Record<string, unknown> } | undefined)?.reasons?.search_unsupported && (
-            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            <div className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0 text-warning" />
               Search is not configured for this entity — no fields are marked as searchable.
               Use the <strong>Filter</strong> button to narrow results by specific fields.
             </div>
@@ -2230,7 +2230,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                     >
                       <span className="w-[90px] shrink-0 truncate text-xs text-muted-foreground">{item.label}</span>
                       {ctxCopied === item.key ? (
-                        <span className="flex items-center gap-1 text-xs text-green-500">
+                        <span className="flex items-center gap-1 text-xs text-success">
                           <Check className="h-3 w-3" />Copied!
                         </span>
                       ) : (

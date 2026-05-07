@@ -1,0 +1,58 @@
+/*
+ * Generated from typography.ts.
+ * Run `pnpm --filter @athyper/theme run typography:generate` after changing tokens.
+ */
+
+:root {
+  --doc-number-size: 0.8125rem;
+  --doc-number-line-height: 1.2;
+  --doc-number-weight: 600;
+  --doc-number-tracking: -0.01em;
+
+  --doc-subtitle-size: 0.6875rem;
+  --doc-subtitle-line-height: 1.4;
+  --doc-subtitle-weight: 400;
+
+  --doc-badge-size: 0.6875rem;
+  --doc-badge-line-height: 1;
+  --doc-badge-weight: 600;
+
+  --doc-field-label-size: 0.5625rem;
+  --doc-field-label-line-height: 1;
+  --doc-field-label-weight: 600;
+  --doc-field-label-tracking: 0.10em;
+
+  --doc-field-value-size: 0.75rem;
+  --doc-field-value-line-height: 1.2;
+  --doc-field-value-weight: 600;
+
+  --doc-amount-size: 0.75rem;
+  --doc-amount-line-height: 1.2;
+  --doc-amount-weight: 700;
+  --doc-amount-tracking: -0.005em;
+
+  --doc-support-size: 0.625rem;
+  --doc-support-line-height: 1.4;
+  --doc-support-weight: 400;
+
+  --doc-action-size: 0.71875rem;
+  --doc-action-line-height: 1;
+  --doc-action-weight: 600;
+}
+
+@layer utilities {
+  .text-doc-label {
+    font-size: var(--doc-field-label-size);
+    line-height: var(--doc-field-label-line-height);
+  }
+
+  .text-doc-support {
+    font-size: var(--doc-support-size);
+    line-height: var(--doc-support-line-height);
+  }
+
+  .text-doc-subtitle {
+    font-size: var(--doc-subtitle-size);
+    line-height: var(--doc-subtitle-line-height);
+  }
+}

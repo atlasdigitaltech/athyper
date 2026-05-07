@@ -2,7 +2,7 @@
  * @athyper/theme — Theme Variable Contract
  *
  * Canonical list of CSS custom properties every theme preset must define.
- * Derived from the union of all 10 shipped presets, audited for completeness.
+ * Derived from the union of all 11 shipped presets, audited for completeness.
  *
  * VERSIONED CONTRACT:
  *   This is public platform surface area. Once tenants upload custom presets,
@@ -145,6 +145,15 @@ export const REQUIRED_THEME_VARIABLES: readonly (keyof ThemeVariableContract)[] 
   // Layout (1)
   "--radius",
 ] as const;
+
+/**
+ * Required variables that intentionally inherit from the light block in dark mode.
+ * These still must exist on every preset root, but a .dark block does not need to
+ * redeclare layout values unless the preset wants a different dark-mode shape.
+ */
+export const DARK_MODE_INHERITED_THEME_VARIABLES = [
+  "--radius",
+] as const satisfies readonly (keyof ThemeVariableContract)[];
 
 /**
  * Optional variables that presets may define but are not required.

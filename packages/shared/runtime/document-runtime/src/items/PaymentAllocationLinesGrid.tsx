@@ -28,7 +28,7 @@ function DeductionCell({ value }: { value: unknown }) {
   const n = Number(value);
   if (!n) return <span className="text-muted-foreground/30 text-right">—</span>;
   return (
-    <span className="tabular-nums text-amber-600 dark:text-amber-400 text-right">
+    <span className="tabular-nums text-warning text-right">
       ({fmtAmt(n)})
     </span>
   );
@@ -168,13 +168,13 @@ export function PaymentAllocationLinesGrid({
         {hasDeductions && totalDiscount > 0 && (
           <span>
             <span className="text-muted-foreground mr-1.5">Discount</span>
-            <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">({fmtAmt(totalDiscount)})</span>
+            <span className="font-semibold tabular-nums text-warning">({fmtAmt(totalDiscount)})</span>
           </span>
         )}
         {hasDeductions && totalWht > 0 && (
           <span>
             <span className="text-muted-foreground mr-1.5">WHT</span>
-            <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">({fmtAmt(totalWht)})</span>
+            <span className="font-semibold tabular-nums text-warning">({fmtAmt(totalWht)})</span>
           </span>
         )}
         <span className="ml-auto">

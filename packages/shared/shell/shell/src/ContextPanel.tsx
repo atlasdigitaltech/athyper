@@ -76,7 +76,7 @@ export interface ContextPanelProps {
   /** True when showing Platform modules (accent tint). */
   isPlatform?: boolean;
   /**
-   * Workbench accent hex (e.g. "#0d9668").
+   * Workbench accent CSS color.
    * Drives the active-module left bar and page active dot.
    */
   accentColor?: string;
@@ -107,6 +107,10 @@ interface ModuleItemProps {
   accentColor?: string;
 }
 
+function tintColor(color: string, percent: number): string {
+  return `color-mix(in oklab, ${color} ${percent}%, transparent)`;
+}
+
 function ModuleItem({
   mod,
   active,
@@ -127,7 +131,7 @@ function ModuleItem({
         )}
         style={
           active && !isPlatform && accentColor
-            ? { backgroundColor: accentColor + "18", color: accentColor }
+            ? { backgroundColor: tintColor(accentColor, 10), color: accentColor }
             : undefined
         }
       >
@@ -223,7 +227,7 @@ export function ContextPanel({
         )}
         style={
           !isPlatform && accentColor
-            ? { borderBottomColor: accentColor + "30" }
+            ? { borderBottomColor: tintColor(accentColor, 18) }
             : undefined
         }
       >

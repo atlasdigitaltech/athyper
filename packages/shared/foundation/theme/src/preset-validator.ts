@@ -5,7 +5,7 @@
  * Used in two contexts:
  *
  *   1. CI: `pnpm --filter @athyper/theme validate-presets`
- *      Checks all 10 shipped presets against the contract.
+ *      Checks all shipped presets against the contract.
  *
  *   2. Runtime: when a tenant uploads a custom preset CSS file,
  *      call validatePresetCSS() to verify completeness before saving.
@@ -16,6 +16,7 @@ import {
   THEME_CONTRACT_VERSION,
   REQUIRED_THEME_VARIABLES,
   OPTIONAL_THEME_VARIABLES,
+  DARK_MODE_INHERITED_THEME_VARIABLES,
 } from "./theme-contract";
 
 export interface PresetValidationResult {
@@ -24,7 +25,7 @@ export interface PresetValidationResult {
   contractVersion: number;
   /** Variables required but not found in the light-mode CSS block */
   missingLight: string[];
-  /** Variables required but not found in the .dark block */
+  /** Variables required but not found in the .dark block and not inherited */
   missingDark: string[];
   /** Variables found in CSS but not in the contract (informational) */
   extraVariables: string[];
@@ -69,6 +70,7 @@ export function validatePresetCSS(css: string, presetName: string): PresetValida
 
   const required = new Set(REQUIRED_THEME_VARIABLES);
   const optional = new Set<string>(OPTIONAL_THEME_VARIABLES);
+  const darkInherited = new Set<string>(DARK_MODE_INHERITED_THEME_VARIABLES);
 
   const missingLight: string[] = [];
   for (const v of required) {
@@ -78,6 +80,7 @@ export function validatePresetCSS(css: string, presetName: string): PresetValida
   const missingDark: string[] = [];
   if (dark.length > 0) {
     for (const v of required) {
+      if (darkInherited.has(v)) continue;
       if (!darkVars.has(v)) missingDark.push(v);
     }
   }

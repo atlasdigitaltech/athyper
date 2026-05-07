@@ -520,7 +520,7 @@ function RecentRow({
     >
       {/* Pin / clock indicator */}
       {item.pinned ? (
-        <Pin className="size-4 shrink-0 text-amber-500" />
+        <Pin className="size-4 shrink-0 text-warning" />
       ) : (
         <Clock className="size-4 shrink-0 text-muted-foreground" />
       )}

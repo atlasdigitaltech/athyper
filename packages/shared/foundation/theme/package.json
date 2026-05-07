@@ -10,6 +10,7 @@
     "./base.css": "./src/base.css",
     "./presets/*.css": "./src/presets/*.css",
     "./tailwind-preset": "./src/tailwind-preset.ts",
+    "./typography": "./src/typography.ts",
     "./semantic-colors": "./src/semanticColors.ts",
     "./utils": "./src/utils.ts",
     "./contracts": "./src/theme-contract.ts",
@@ -19,6 +20,7 @@
     "./record-badge": "./src/recordBadge.ts"
   },
   "scripts": {
+    "typography:generate": "tsx src/typography.generate.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "validate-presets": "tsx src/preset-validator.cli.ts --check-shipped"

@@ -83,6 +83,21 @@ export type { PresetValidationResult } from "./preset-validator";
 // Utilities
 export { cn } from "./utils";
 
-// Typography scale
-export { t } from "./typography";
-export type { TypographyToken } from "./typography";
+// Typography
+export {
+  documentTypography,
+  fontFamilies,
+  renderTypographyCss,
+  semanticTypography,
+  t,
+  tailwindDocumentFontSize,
+  tailwindFontFamilies,
+  tailwindFontSize,
+  typeScale,
+} from "./typography";
+export type {
+  DocumentTypeTokenName,
+  FontFamilyToken,
+  TypeScaleTokenName,
+  TypographyToken,
+} from "./typography";

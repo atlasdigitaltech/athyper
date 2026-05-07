@@ -244,7 +244,9 @@ export function ExcelView({
       isLastPinned,
       leftOffset: stickyOffsets.get(fieldName),
       // Visual separator after the last pinned column — stronger shadow than data cols
-      separatorShadow: isLastPinned ? "shadow-[2px_0_0_0_hsl(var(--primary)/0.25)]" : "",
+      separatorShadow: isLastPinned
+        ? "shadow-[2px_0_0_0_color-mix(in_oklab,var(--primary)_25%,transparent)]"
+        : "",
     };
   };
 

@@ -21,7 +21,7 @@ export interface AppNavRailProps {
   activeWorkspaceKey: string | null;
   onWorkspaceChange: (key: string | null) => void;
   inboxCount?: number;
-  /** Workbench accent hex forwarded from AppShellLayout. */
+  /** Workbench accent CSS color forwarded from AppShellLayout. */
   accentColor?: string;
 }
 

@@ -251,7 +251,7 @@ export function DataTable<TData>({
                     className={cn(
                       headerH,
                       "px-3 text-left align-middle font-medium text-muted-foreground",
-                      pinStyle && "border-r shadow-[1px_0_0_0_hsl(var(--border))]",
+                      pinStyle && "border-r shadow-[1px_0_0_0_var(--border)]",
                       (header.column.columnDef.meta as { filtered?: boolean } | undefined)?.filtered && "bg-primary/5",
                     )}
                     style={{ width: header.getSize() !== 150 ? header.getSize() : undefined, ...pinStyle }}
@@ -316,7 +316,7 @@ export function DataTable<TData>({
                         className={cn(
                           cellPad,
                           "align-middle",
-                          cPin && "border-r shadow-[1px_0_0_0_hsl(var(--border))]",
+                          cPin && "border-r shadow-[1px_0_0_0_var(--border)]",
                         )}
                         style={cPin}
                       >

@@ -123,9 +123,9 @@ function statusIcon(item: SectionCompletionReport): {
   }
   switch (item.status) {
     case "complete":
-      return { Icon: CheckCircle2, colorClass: "text-emerald-500" };
+      return { Icon: CheckCircle2, colorClass: "text-success" };
     case "partial":
-      return { Icon: AlertCircle, colorClass: "text-amber-500" };
+      return { Icon: AlertCircle, colorClass: "text-warning" };
     case "optional_empty":
       return { Icon: Circle, colorClass: "text-muted-foreground" };
     case "empty":

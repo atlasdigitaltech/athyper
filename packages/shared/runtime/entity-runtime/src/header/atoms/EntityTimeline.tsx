@@ -66,7 +66,7 @@ export function EntityTimeline({ progress, className }: EntityTimelineProps) {
                 )}
                 <div className={cn(
                   "w-[11px] h-[11px] rounded-full relative z-[1]",
-                  isActive ? "bg-card border-2 border-foreground shadow-[0_0_0_3px_hsl(var(--foreground)/0.07)]"
+                  isActive ? "bg-card border-2 border-foreground shadow-[0_0_0_3px_color-mix(in_oklab,var(--foreground)_7%,transparent)]"
                   : isPast  ? "bg-foreground border-[1.5px] border-foreground"
                   :            "bg-card border-[1.5px] border-border",
                 )}>

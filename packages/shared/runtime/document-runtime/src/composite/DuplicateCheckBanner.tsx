@@ -154,7 +154,7 @@ export function DuplicateCheckBanner({
           <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
         )}
         {!loading && result && result.notices.length === 0 && (
-          <span className="text-xs font-medium text-emerald-600">No duplicates found</span>
+          <span className="text-xs font-medium text-success">No duplicates found</span>
         )}
       </div>
 
@@ -195,7 +195,7 @@ function MatchList({
 }) {
   const borderColor =
     intent === "destructive" ? "border-destructive/40 bg-destructive/5"
-      : intent === "warning" ? "border-amber-400/40 bg-amber-50/50 dark:bg-amber-950/20"
+      : intent === "warning" ? "border-warning/40 bg-warning/10"
         : "border-border bg-muted/30";
 
   return (

@@ -50,7 +50,7 @@ export interface NavRailProps {
   /** Unread notification count shown on the Inbox icon. */
   inboxCount?: number;
   /**
-   * Workbench accent hex (e.g. "#0d9668").
+   * Workbench accent CSS color.
    * Used for the active left-bar indicator. Falls back to `bg-sidebar-primary`.
    */
   accentColor?: string;
@@ -66,7 +66,7 @@ interface RailIconProps {
   badge?: number;
   /** Platform icon gets a distinct accent tint instead of the primary color. */
   isPlatform?: boolean;
-  /** Workbench accent hex for the active left-bar indicator. */
+  /** Workbench accent CSS color for the active left-bar indicator. */
   accentColor?: string;
   /** When provided, renders as <a> so the browser natively offers "Open in new tab" on right-click. */
   href?: string;
