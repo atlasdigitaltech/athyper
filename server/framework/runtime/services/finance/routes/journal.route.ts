@@ -138,7 +138,7 @@ async function resolveFiscalPeriod(
   return row ?? null;
 }
 
-async function resolveFiscalPeriodByDate(
+export async function resolveFiscalPeriodByDate(
   db: AnyDb,
   tenantId: string,
   companyCodeId: string,
@@ -161,7 +161,7 @@ async function resolveFiscalPeriodByDate(
   return row ?? null;
 }
 
-async function nextJeNumber(db: AnyDb, tenantId: string, companyCodeId: string, fiscalYear: number): Promise<string> {
+export async function nextJeNumber(db: AnyDb, tenantId: string, companyCodeId: string, fiscalYear: number): Promise<string> {
   const countRow = await db
     .selectFrom("document.journal_entry as je")
     .select(db.fn.countAll().as("cnt"))
@@ -172,6 +172,209 @@ async function nextJeNumber(db: AnyDb, tenantId: string, companyCodeId: string, 
 
   const seq = parseInt(String(countRow?.cnt ?? "0"), 10) + 1;
   return `JE-${fiscalYear}-${String(seq).padStart(5, "0")}`;
+}
+
+// Reusable journal-entry reverse logic. Used by both the dedicated route
+// (POST /finance/journals/:jeId/reverse) and the generic action dispatcher
+// (POST /api/records/journal_entry/:id/action/reverse_document). Centralised
+// here so the dispatcher's naive copy/reverse path doesn't violate accounting
+// invariants (je_number uniqueness, debit/credit swap, status transitions).
+//
+// Caller is responsible for auth + tenant/principal resolution. This function
+// does NOT verify bearer or extract org headers.
+//
+// Returns { status, body } so the caller can shape the HTTP response.
+//
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LoggerLike = { error?: (m: string, x?: any) => void } | undefined;
+
+export async function handleReverseJournalEntry(
+  db: AnyDb,
+  tenantId: string,
+  jeId: string,
+  actorId: string,
+  body: Record<string, unknown>,
+  logger?: LoggerLike,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  try {
+    const source = await db
+      .selectFrom("document.journal_entry as je")
+      .select([
+        "je.id",
+        "je.je_number as jeNumber",
+        "je.status",
+        "je.company_code_id as companyCodeId",
+        "je.book_id as bookId",
+        "je.transaction_currency as transactionCurrency",
+        "je.base_currency as baseCurrency",
+        "je.reversed_by_id as reversedBy",
+      ])
+      .where("je.id", "=", jeId)
+      .where("je.tenant_id", "=", tenantId)
+      .executeTakeFirst() as Record<string, unknown> | undefined;
+
+    if (!source) return { status: 404, body: { error: "JOURNAL_NOT_FOUND" } };
+    if (source["status"] !== "posted") {
+      return { status: 409, body: { error: "INVALID_JE_STATUS", message: `Only posted journal entries can be reversed (current: '${source["status"]}')` } };
+    }
+    if (source["reversedBy"]) {
+      return { status: 409, body: { error: "ALREADY_REVERSED", reversed_by: source["reversedBy"] } };
+    }
+
+    const sourceLines = await db
+      .selectFrom("document.journal_line as jl")
+      .select([
+        "jl.line_no as lineNo",
+        "jl.gl_account_id as glAccountId",
+        "jl.transaction_currency as transactionCurrency",
+        "jl.transaction_debit as transactionDebit",
+        "jl.transaction_credit as transactionCredit",
+        "jl.base_currency as baseCurrency",
+        "jl.base_debit as baseDebit",
+        "jl.base_credit as baseCredit",
+        "jl.exchange_rate as exchangeRate",
+        "jl.cost_center_id as costCenterId",
+        "jl.profit_center_id as profitCenterId",
+        "jl.project_id as projectId",
+        "jl.site_id as siteId",
+        "jl.party_type as partyType",
+        "jl.party_id as partyId",
+        "jl.subledger_type as subledgerType",
+        "jl.description",
+        "jl.source_doc_line_id as sourceDocLineId",
+      ])
+      .where("jl.journal_entry_id", "=", jeId)
+      .where("jl.tenant_id", "=", tenantId)
+      .orderBy("jl.line_no", "asc")
+      .execute() as Array<Record<string, unknown>>;
+
+    if (sourceLines.length < 2) {
+      return { status: 422, body: { error: "NO_LINES", message: "Source JE has no lines to reverse" } };
+    }
+
+    const postingDate = body["posting_date"] ? String(body["posting_date"]) : new Date().toISOString().slice(0, 10);
+    const period = await resolveFiscalPeriodByDate(db, tenantId, String(source["companyCodeId"]), postingDate);
+    if (!period) {
+      return { status: 400, body: { error: "PERIOD_NOT_FOUND", message: `No fiscal period found for reversal date ${postingDate}` } };
+    }
+
+    const revJeId = randomUUID();
+    const revJeNumber = await nextJeNumber(db, tenantId, String(source["companyCodeId"]), period.fiscalYear);
+    const description = body["description"] ? String(body["description"]) : `Reversal of ${String(source["jeNumber"])}`;
+
+    await db.transaction().execute(async (trx) => {
+      await trx
+        .insertInto("document.journal_entry" as never)
+        .values({
+          id: revJeId,
+          tenant_id: tenantId,
+          je_number: revJeNumber,
+          company_code_id: source["companyCodeId"],
+          book_id: source["bookId"],
+          fiscal_period_id: period.id,
+          fiscal_year: period.fiscalYear,
+          period_number: period.periodNumber,
+          document_date: postingDate,
+          posting_date: postingDate,
+          source_doc_type: "reversal",
+          source_doc_id: jeId,
+          transaction_currency: source["transactionCurrency"],
+          base_currency: source["baseCurrency"],
+          description,
+          is_reversal: true,
+          reversal_of_id: jeId,
+          status: "draft",
+          total_debit: "0",
+          total_credit: "0",
+          line_count: 0,
+          created_by: actorId,
+        } as never)
+        .execute();
+
+      for (const line of sourceLines) {
+        await trx
+          .insertInto("document.journal_line" as never)
+          .values({
+            id: randomUUID(),
+            tenant_id: tenantId,
+            journal_entry_id: revJeId,
+            line_no: line["lineNo"],
+            gl_account_id: line["glAccountId"],
+            transaction_currency: line["transactionCurrency"],
+            transaction_debit: String(line["transactionCredit"] ?? "0"),
+            transaction_credit: String(line["transactionDebit"] ?? "0"),
+            base_currency: line["baseCurrency"],
+            base_debit: String(line["baseCredit"] ?? "0"),
+            base_credit: String(line["baseDebit"] ?? "0"),
+            exchange_rate: line["exchangeRate"] ?? null,
+            cost_center_id: line["costCenterId"] ?? null,
+            profit_center_id: line["profitCenterId"] ?? null,
+            project_id: line["projectId"] ?? null,
+            site_id: line["siteId"] ?? null,
+            party_type: line["partyType"] ?? null,
+            party_id: line["partyId"] ?? null,
+            subledger_type: line["subledgerType"] ?? null,
+            description: line["description"] ? `Reversal - ${String(line["description"])}` : description,
+            source_doc_line_id: line["sourceDocLineId"] ?? null,
+            created_by: actorId,
+          } as never)
+          .execute();
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (trx.updateTable("document.journal_entry") as any)
+        .set({ status: "created", updated_by: actorId })
+        .where("id", "=", revJeId)
+        .where("tenant_id", "=", tenantId)
+        .execute();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (trx.updateTable("document.journal_entry") as any)
+        .set({ status: "posted", posted_by: actorId, updated_by: actorId })
+        .where("id", "=", revJeId)
+        .where("tenant_id", "=", tenantId)
+        .execute();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (trx.updateTable("document.journal_entry") as any)
+        .set({ status: "reversed", reversed_by_id: revJeId, updated_by: actorId })
+        .where("id", "=", jeId)
+        .where("tenant_id", "=", tenantId)
+        .execute();
+
+      await emitOutboxEvent(trx, {
+        tenantId,
+        topic: "search",
+        eventType: "journal_entry.created",
+        entityType: "journal_entry",
+        entityId: revJeId,
+        actorId,
+        payload: { reversal_of_id: jeId },
+      });
+      await emitOutboxEvent(trx, {
+        tenantId,
+        topic: "search",
+        eventType: "journal_entry.updated",
+        entityType: "journal_entry",
+        entityId: jeId,
+        actorId,
+        payload: { status: "reversed", reversed_by_id: revJeId },
+      });
+    });
+
+    return {
+      status: 201,
+      body: {
+        reversal_journal_entry_id: revJeId,
+        je_number: revJeNumber,
+        status: "posted",
+        reversal_of: jeId,
+      },
+    };
+  } catch (err) {
+    logger?.error?.("finance_journal_reverse_error", { err: String(err) });
+    throw err;
+  }
 }
 
 async function resolveGlAccounts(
@@ -1308,180 +1511,10 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
 
       const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId);
       const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
-      const body = req.body as Record<string, unknown>;
+      const body = (req.body ?? {}) as Record<string, unknown>;
 
-      const source = await db
-        .selectFrom("document.journal_entry as je")
-        .select([
-          "je.id",
-          "je.je_number as jeNumber",
-          "je.status",
-          "je.company_code_id as companyCodeId",
-          "je.book_id as bookId",
-          "je.transaction_currency as transactionCurrency",
-          "je.base_currency as baseCurrency",
-          "je.reversed_by_id as reversedBy",
-        ])
-        .where("je.id", "=", jeId)
-        .where("je.tenant_id", "=", tenantId)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
-
-      if (!source) { res.status(404).json({ error: "JOURNAL_NOT_FOUND" }); return; }
-      if (source["status"] !== "posted") {
-        res.status(409).json({ error: "INVALID_JE_STATUS", message: `Only posted journal entries can be reversed (current: '${source["status"]}')` });
-        return;
-      }
-      if (source["reversedBy"]) {
-        res.status(409).json({ error: "ALREADY_REVERSED", reversed_by: source["reversedBy"] });
-        return;
-      }
-
-      const sourceLines = await db
-        .selectFrom("document.journal_line as jl")
-        .select([
-          "jl.line_no as lineNo",
-          "jl.gl_account_id as glAccountId",
-          "jl.transaction_currency as transactionCurrency",
-          "jl.transaction_debit as transactionDebit",
-          "jl.transaction_credit as transactionCredit",
-          "jl.base_currency as baseCurrency",
-          "jl.base_debit as baseDebit",
-          "jl.base_credit as baseCredit",
-          "jl.exchange_rate as exchangeRate",
-          "jl.cost_center_id as costCenterId",
-          "jl.profit_center_id as profitCenterId",
-          "jl.project_id as projectId",
-          "jl.site_id as siteId",
-          "jl.party_type as partyType",
-          "jl.party_id as partyId",
-          "jl.subledger_type as subledgerType",
-          "jl.description",
-          "jl.source_doc_line_id as sourceDocLineId",
-        ])
-        .where("jl.journal_entry_id", "=", jeId)
-        .where("jl.tenant_id", "=", tenantId)
-        .orderBy("jl.line_no", "asc")
-        .execute() as Array<Record<string, unknown>>;
-
-      if (sourceLines.length < 2) {
-        res.status(422).json({ error: "NO_LINES", message: "Source JE has no lines to reverse" });
-        return;
-      }
-
-      const postingDate = body["posting_date"] ? String(body["posting_date"]) : new Date().toISOString().slice(0, 10);
-      const period = await resolveFiscalPeriodByDate(db, tenantId, String(source["companyCodeId"]), postingDate);
-      if (!period) {
-        res.status(400).json({ error: "PERIOD_NOT_FOUND", message: `No fiscal period found for reversal date ${postingDate}` });
-        return;
-      }
-
-      const revJeId = randomUUID();
-      const revJeNumber = await nextJeNumber(db, tenantId, String(source["companyCodeId"]), period.fiscalYear);
-      const description = body["description"] ? String(body["description"]) : `Reversal of ${String(source["jeNumber"])}`;
-
-      await db.transaction().execute(async (trx) => {
-        await trx
-          .insertInto("document.journal_entry" as never)
-          .values({
-            id: revJeId,
-            tenant_id: tenantId,
-            je_number: revJeNumber,
-            company_code_id: source["companyCodeId"],
-            book_id: source["bookId"],
-            fiscal_period_id: period.id,
-            fiscal_year: period.fiscalYear,
-            period_number: period.periodNumber,
-            document_date: postingDate,
-            posting_date: postingDate,
-            source_doc_type: "reversal",
-            source_doc_id: jeId,
-            transaction_currency: source["transactionCurrency"],
-            base_currency: source["baseCurrency"],
-            description,
-            is_reversal: true,
-            reversal_of_id: jeId,
-            status: "draft",
-            total_debit: "0",
-            total_credit: "0",
-            line_count: 0,
-            created_by: actorId,
-          } as never)
-          .execute();
-
-        for (const line of sourceLines) {
-          await trx
-            .insertInto("document.journal_line" as never)
-            .values({
-              id: randomUUID(),
-              tenant_id: tenantId,
-              journal_entry_id: revJeId,
-              line_no: line["lineNo"],
-              gl_account_id: line["glAccountId"],
-              transaction_currency: line["transactionCurrency"],
-              transaction_debit: String(line["transactionCredit"] ?? "0"),
-              transaction_credit: String(line["transactionDebit"] ?? "0"),
-              base_currency: line["baseCurrency"],
-              base_debit: String(line["baseCredit"] ?? "0"),
-              base_credit: String(line["baseDebit"] ?? "0"),
-              exchange_rate: line["exchangeRate"] ?? null,
-              cost_center_id: line["costCenterId"] ?? null,
-              profit_center_id: line["profitCenterId"] ?? null,
-              project_id: line["projectId"] ?? null,
-              site_id: line["siteId"] ?? null,
-              party_type: line["partyType"] ?? null,
-              party_id: line["partyId"] ?? null,
-              subledger_type: line["subledgerType"] ?? null,
-              description: line["description"] ? `Reversal - ${String(line["description"])}` : description,
-              source_doc_line_id: line["sourceDocLineId"] ?? null,
-              created_by: actorId,
-            } as never)
-            .execute();
-        }
-
-        await (trx.updateTable("document.journal_entry") as any)
-          .set({ status: "created", updated_by: actorId })
-          .where("id", "=", revJeId)
-          .where("tenant_id", "=", tenantId)
-          .execute();
-
-        await (trx.updateTable("document.journal_entry") as any)
-          .set({ status: "posted", posted_by: actorId, updated_by: actorId })
-          .where("id", "=", revJeId)
-          .where("tenant_id", "=", tenantId)
-          .execute();
-
-        await (trx.updateTable("document.journal_entry") as any)
-          .set({ status: "reversed", reversed_by_id: revJeId, updated_by: actorId })
-          .where("id", "=", jeId)
-          .where("tenant_id", "=", tenantId)
-          .execute();
-
-        await emitOutboxEvent(trx, {
-          tenantId,
-          topic: "search",
-          eventType: "journal_entry.created",
-          entityType: "journal_entry",
-          entityId: revJeId,
-          actorId,
-          payload: { reversal_of_id: jeId },
-        });
-        await emitOutboxEvent(trx, {
-          tenantId,
-          topic: "search",
-          eventType: "journal_entry.updated",
-          entityType: "journal_entry",
-          entityId: jeId,
-          actorId,
-          payload: { status: "reversed", reversed_by_id: revJeId },
-        });
-      });
-
-      res.status(201).json({
-        reversal_journal_entry_id: revJeId,
-        je_number: revJeNumber,
-        status: "posted",
-        reversal_of: jeId,
-      });
+      const result = await handleReverseJournalEntry(db, tenantId, jeId, actorId, body, logger);
+      res.status(result.status).json(result.body);
     } catch (err) {
       logger?.error("finance_journal_reverse_error", { err: String(err) });
       next(err);

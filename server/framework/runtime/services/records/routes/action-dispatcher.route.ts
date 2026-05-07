@@ -41,6 +41,7 @@ import {
   resolveTenantId,
   resolvePrincipalIdOrNull,
   extractOrgHeaders,
+  SYSTEM_PRINCIPAL_UUID,
 } from "@athyper/svc-shared";
 import { handlePromoteProforma } from "../../business/ap/promote-proforma.handler.js";
 import { handleSubmitForApproval } from "../../business/ap/invoice-submit.handler.js";
@@ -52,9 +53,39 @@ import {
   handleSubmitPayment,
   handleVoidPayment,
 } from "../../business/ap/payment-posting.service.js";
+import { handleReverseJournalEntry } from "../../finance/routes/journal.route.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
+
+// Cache of generated columns per (schema, table). Generated columns
+// (`GENERATED ALWAYS AS … STORED`) cannot accept user-supplied values on
+// INSERT — Postgres rejects with `cannot insert a non-DEFAULT value into
+// column "<name>"`. We need to skip these when cloning a record for
+// copy/reverse. DDL is static at runtime, so a process-lifetime cache is safe.
+const GENERATED_COLS_CACHE = new Map<string, Set<string>>();
+
+async function getGeneratedColumns(
+  db: AnyDb,
+  schema: string,
+  table: string,
+): Promise<Set<string>> {
+  const key = `${schema}.${table}`;
+  const cached = GENERATED_COLS_CACHE.get(key);
+  if (cached) return cached;
+
+  const rows = await db
+    .selectFrom("information_schema.columns" as never)
+    .select(["column_name"] as never[])
+    .where("table_schema" as never, "=", schema as never)
+    .where("table_name" as never, "=", table as never)
+    .where("is_generated" as never, "=", "ALWAYS" as never)
+    .execute() as Array<{ column_name: string }>;
+
+  const set = new Set(rows.map((r) => r.column_name));
+  GENERATED_COLS_CACHE.set(key, set);
+  return set;
+}
 
 // ─── Deps ─────────────────────────────────────────────────────────────────────
 
@@ -296,6 +327,24 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
         }
       }
 
+      // ── Dispatch: journal_entry reverse (full accounting reversal) ────────────
+      // The generic copy/reverse path below would just clone the header row,
+      // which isn't a valid accounting reversal: je_number must be regenerated,
+      // lines must be cloned with debit/credit swapped, the source must be
+      // marked status='reversed', and reversed_by_id wired up. Delegate to the
+      // dedicated finance handler that does all of that inside one transaction.
+      if (entityCode === "journal_entry" && (target === "reverse" || target === "reverse_document")) {
+        const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
+        const { status, body: respBody } = await handleReverseJournalEntry(
+          db, tenantId, recordId, actorId, body, logger,
+        );
+        if (status >= 200 && status < 300) {
+          logger?.info("action_dispatch_reverse_journal_entry", { tenantId, recordId });
+        }
+        res.status(status).json(respBody);
+        return;
+      }
+
       // ── Dispatch: status transition ───────────────────────────────────────────
       const targetStatus = TARGET_STATUS[target];
       if (targetStatus) {
@@ -380,15 +429,23 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           "deleted_at", "deleted_by",
         ]);
 
+        // Generated columns (e.g. is_active, net_amount) reject any value on
+        // INSERT — discover and skip them per-table at runtime.
+        const generatedCols = await getGeneratedColumns(
+          db, entityRow.table_schema as string, entityRow.table_name as string,
+        );
+
         const copyData: Record<string, unknown> = {};
         for (const [col, val] of Object.entries(record)) {
-          if (!EXCLUDE_COLS.has(col)) {
+          if (!EXCLUDE_COLS.has(col) && !generatedCols.has(col)) {
             copyData[col] = val;
           }
         }
 
-        // Reset to DRAFT state
-        copyData["status"]     = "DRAFT";
+        // Reset to draft state. Lifecycle status values are stored lowercase
+        // (e.g. 'draft', 'posted'); DB triggers like document.trg_je_status_insert_guard
+        // enforce that any new row starts in 'draft' (not 'DRAFT').
+        copyData["status"]     = "draft";
         copyData["tenant_id"]  = tenantId;
         copyData["created_by"] = principalId;
 
