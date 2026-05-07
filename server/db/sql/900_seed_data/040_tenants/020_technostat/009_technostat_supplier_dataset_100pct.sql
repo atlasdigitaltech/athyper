@@ -32,6 +32,58 @@ BEGIN
     RAISE EXCEPTION 'Technostat tenant not found';
   END IF;
 
+  -- Seed demo onboarding supplier (SUP-MOTRM3B8) if not yet present.
+  -- This supplier is deliberately kept at status=onboarding so that spend-policy
+  -- logic in this file correctly produces blocked/pending/restricted rows for it.
+  INSERT INTO master.business_partner (
+    tenant_id, code, name, display_name, legal_name,
+    partner_category, description,
+    registration_no, registration_country_code,
+    aliases, business_types, legal_form,
+    tags, metadata, status, created_by
+  )
+  SELECT v_tenant_id,
+    'BP-MOTRM3B8',
+    'Test Tech Solutions LLC',
+    'Test Tech',
+    'Test Tech Solutions Limited Liability Company',
+    'organization',
+    'Demo onboarding hardware vendor for restricted procurement workflow.',
+    'CR-DEMO-MOTRM3B8', 'SA',
+    ARRAY['Test Tech', 'TestTech'],
+    ARRAY['technology', 'hardware'],
+    'limited_liability',
+    '["demo", "onboarding", "ksa"]'::jsonb,
+    jsonb_build_object(
+      '_seed', jsonb_build_object('pack', 'technostat_supplier_100pct')
+    ),
+    'active', v_system_user_id
+  WHERE NOT EXISTS (
+    SELECT 1 FROM master.business_partner
+     WHERE tenant_id = v_tenant_id AND code = 'BP-MOTRM3B8'
+  );
+
+  INSERT INTO master.supplier (
+    tenant_id, business_partner_id, supplier_code, supplier_type,
+    is_payment_ready,
+    metadata, status, created_by
+  )
+  SELECT v_tenant_id,
+    bp.id,
+    'SUP-MOTRM3B8', 'service',
+    false,
+    jsonb_build_object(
+      '_seed', jsonb_build_object('pack', 'technostat_supplier_100pct')
+    ),
+    'onboarding', v_system_user_id
+  FROM master.business_partner bp
+  WHERE bp.tenant_id = v_tenant_id
+    AND bp.code = 'BP-MOTRM3B8'
+    AND NOT EXISTS (
+      SELECT 1 FROM master.supplier
+       WHERE tenant_id = v_tenant_id AND supplier_code = 'SUP-MOTRM3B8'
+    );
+
   CREATE TEMP TABLE tmp_technostat_supplier_category (
     supplier_code text NOT NULL,
     spend_category_code text NOT NULL,
