@@ -50,6 +50,7 @@ BEGIN
       'summary', jsonb_build_object(
         'fields', jsonb_build_array('total_amount','tax_amount','withholding_tax_amount',
                                     'advance_deduction_amount','retention_amount','payable_amount'),
+        'line_collection', 'lines',
         'collapse_zero_adjustments', true,
         'running_totals', jsonb_build_array('gross','tax','wht','deductions','payable')),
       'input_modes', jsonb_build_array('form','scan','from_commitment','import'),
@@ -72,6 +73,7 @@ BEGIN
        'summary', jsonb_build_object(
          'fields', jsonb_build_array('total_amount','tax_amount','withholding_tax_amount',
                                      'advance_deduction_amount','retention_amount','payable_amount'),
+         'line_collection', 'lines',
          'collapse_zero_adjustments', true,
          'running_totals', jsonb_build_array('gross','tax','wht','deductions','payable')),
        'input_modes', jsonb_build_array('form','scan','from_commitment','import'),
@@ -97,8 +99,8 @@ BEGIN
    '{"required_fields":["company_code_id","invoice_type","invoice_source","supplier_id","supplier_invoice_number","supplier_invoice_date","posting_date","received_date"]}'::jsonb,
    'summary_side', v_su),
   (NULL, v_flow_id, 'commercial', 'Commercial', 'receipt',      20,
-   '{"required_fields":["total_amount","tax_mode"]}'::jsonb,
-   'summary_side', v_su),
+   '{"required_fields":["tax_mode"],"required_sections":["lines"],"min_rows":{"lines":1}}'::jsonb,
+   'line_editor', v_su),
   (NULL, v_flow_id, 'review',     'Review',     'check-circle', 30,
    '{"required_fields":[]}'::jsonb,
    'summary_side', v_su)
@@ -109,7 +111,8 @@ BEGIN
      SET advance_rule = '{"required_fields":["company_code_id","invoice_type","invoice_source","supplier_id","supplier_invoice_number","supplier_invoice_date","posting_date","received_date"]}'::jsonb
    WHERE flow_id = v_flow_id AND step_key = 'identify';
   UPDATE control.entity_flow_step
-     SET advance_rule = '{"required_fields":["total_amount","tax_mode"]}'::jsonb
+     SET advance_rule = '{"required_fields":["tax_mode"],"required_sections":["lines"],"min_rows":{"lines":1}}'::jsonb,
+         layout_hint = 'line_editor'
    WHERE flow_id = v_flow_id AND step_key = 'commercial';
   UPDATE control.entity_flow_step
      SET advance_rule = '{"required_fields":[]}'::jsonb
@@ -128,29 +131,49 @@ BEGIN
   -- The trg_flow_field_validate_section trigger enforces this ordering.
   INSERT INTO control.entity_flow_section
     (tenant_id, flow_step_id, section_key, label, description, sort_order,
-     collapse_default, visible_when, reveal_behavior, created_by)
+     collapse_default, visible_when, reveal_behavior,
+     section_type, entity_code, payload_key, field_codes, min_rows, default_row,
+     created_by)
   VALUES
+  (NULL, v_step_2, 'lines',           'Invoice Lines',
+   'Goods, services, freight, and miscellaneous invoice lines.',
+   5, false, NULL, 'auto_expand',
+   'repeater', 'purchase_invoice_line', 'lines',
+   '["item_description","procurement_type","uom_code","quantity","unit_price","gross_amount","tax_amount","withholding_tax_amount","spend_category_id","business_intent_id","cost_center_id","profit_center_id","project_id","site_id"]'::jsonb,
+   1,
+   '{"procurement_type":"services","uom_code":"EA","quantity":1}'::jsonb,
+   v_su),
   (NULL, v_step_2, 'amount_basis',    'Amount Basis',
    'Invoice Total, tax interpretation, and derived amounts.',
-   10, false, NULL, 'honor_default', v_su),
+   10, false, NULL, 'honor_default',
+   'fields', NULL, NULL, NULL, NULL, NULL, v_su),
   (NULL, v_step_2, 'settlement_terms','Settlement Terms',
    'Payment terms, baseline date, and computed due date.',
-   20, false, NULL, 'honor_default', v_su),
+   20, false, NULL, 'honor_default',
+   'fields', NULL, NULL, NULL, NULL, NULL, v_su),
   (NULL, v_step_2, 'adjustments',     'Adjustments',
    'Discounts, additional charges, withholding tax, advance recovery, and retention.',
-   30, true, NULL, 'honor_default', v_su),
+   30, true, NULL, 'honor_default',
+   'fields', NULL, NULL, NULL, NULL, NULL, v_su),
   (NULL, v_step_2, 'fx',              'Foreign Exchange',
    NULL,
    40, true,
    '{"!=":[{"var":"currency_code"},{"var":"base_currency_code"}]}'::jsonb,
-   'auto_expand', v_su)
+   'auto_expand',
+   'fields', NULL, NULL, NULL, NULL, NULL, v_su)
   ON CONFLICT (flow_step_id, section_key) DO UPDATE SET
     label          = EXCLUDED.label,
     description    = EXCLUDED.description,
     sort_order     = EXCLUDED.sort_order,
     collapse_default = EXCLUDED.collapse_default,
     visible_when   = EXCLUDED.visible_when,
-    reveal_behavior = EXCLUDED.reveal_behavior;
+    reveal_behavior = EXCLUDED.reveal_behavior,
+    section_type    = EXCLUDED.section_type,
+    entity_code     = EXCLUDED.entity_code,
+    payload_key     = EXCLUDED.payload_key,
+    field_codes     = EXCLUDED.field_codes,
+    min_rows        = EXCLUDED.min_rows,
+    default_row     = EXCLUDED.default_row;
 
   -- ── 5. Step 1: Identify ────────────────────────────────────────────────────
   -- 15 field bindings; no sections on this step.
@@ -247,9 +270,9 @@ BEGIN
       NULL, 'vendor.default_currency(supplier_id)', 'ap.override_currency',
       NULL, 'chip', 1, 'standard', 'amount_basis', NULL, 5),
 
-    ('total_amount',            'required',     'derived_overrideable',
+    ('total_amount',            'summary_only', 'derived_locked',
       NULL, NULL,
-      NULL, 'line_summary.total_from_commitment(commitment_id)', 'ap.override_total',
+      NULL, 'lines.sum(gross_amount)', NULL,
       'total', 'money_big', 2, 'prominent', 'amount_basis',
       'Invoice Total — what the vendor''s document shows. For PO/contract sources, derived from commitment lines (override with permission). For Non-PO/One-Time, enter directly.',
       10),
@@ -261,16 +284,16 @@ BEGIN
       'How tax_amount relates to Invoice Total. Inclusive = tax within total; Exclusive = tax added on top; No Tax = exempt or zero-rated.',
       20),
 
-    ('tax_amount',              'editable',     'derived_overrideable',
+    ('tax_amount',              'summary_only', 'derived_locked',
       NULL, NULL,
-      'const:0', 'tax.compute(total_amount, tax_mode, tax_group_id, lines)', 'ap.override_tax_amount',
+      NULL, 'lines.sum(tax_amount)', NULL,
       'addition', 'money_big', 1, 'standard', 'amount_basis',
       'Computed by the tax engine. Locked to 0 when Tax Mode is No Tax.',
       30),
 
     ('net_amount',              'summary_only', 'derived_locked',
       NULL, NULL,
-      NULL, 'compute.net_from_total_and_tax(total_amount, tax_mode, tax_amount)', NULL,
+      NULL, 'lines.sum(line_amount)', NULL,
       'subtotal', 'money_big', 1, 'compact', 'amount_basis',
       'Pre-tax net amount. Inclusive: Total ÷ (1+rate); Exclusive: Total.',
       35),

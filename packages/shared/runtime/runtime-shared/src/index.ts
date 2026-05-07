@@ -17,3 +17,4 @@ export * from "./core";
 export * from "./client";
 export * from "./entity-search";
 export * from "./renderer-registry";
+export * from "./validation";

@@ -160,9 +160,15 @@ function mapField(row: Record<string, any>) {
       : null,
     enum_domain_code: (row.enum_domain_code ?? null) as string | null,
     reference_config: referenceConfig,
+    money_config: (row.money_config && typeof row.money_config === "object")
+      ? row.money_config as Record<string, unknown>
+      : null,
     sort_order: Number(row.sort_order ?? 0),
     group_key: (row.ui_hint?.group_key ?? null) as string | null,
     ui_hint: uiHint,
+    lookup_config: (row.lookup_config && typeof row.lookup_config === "object")
+      ? row.lookup_config as Record<string, unknown>
+      : null,
     filter_config: filterConfig,
     i18n_key: (row.ui_hint?.i18n_key ?? null) as string | null,
   };
@@ -324,6 +330,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         detail_renderer:    (dbDisplayConfig["detail_renderer"] ?? undefined) as string | undefined,
         detail_profile:     (dbDisplayConfig["detail_profile"] ?? undefined) as string | undefined,
         document_header:    (dbDisplayConfig["document_header"] ?? undefined) as Record<string, unknown> | undefined,
+        journal_editor:     (dbDisplayConfig["journal_editor"] ?? undefined) as Record<string, unknown> | undefined,
         master_config:      masterConfigValue,
         // Lines section — null = entity has no line items; string = registered renderer key.
         // "lines_renderer" in check preserves explicit null (no lines) vs. absent (also no lines).

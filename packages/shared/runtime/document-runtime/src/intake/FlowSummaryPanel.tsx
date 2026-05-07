@@ -1,56 +1,58 @@
 "use client";
 
 /**
- * FlowSummaryPanel — sticky right-side panel showing running totals and key
+ * FlowSummaryPanel - sticky right-side panel showing running totals and key
  * derived fields during the intake wizard.
- *
- * Renders two sections:
- *   1. Amount waterfall — fields with summary_role in
- *      [subtotal, addition, deduction, total]
- *   2. Meta chips — fields with summary_role='meta' (currency, match_type,
- *      payment_term, fiscal_year, period_number)
  */
 
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent } from "@athyper/ui/primitives";
-import type { SummaryLine } from "./useFlowEngine";
+import { fmtMoney, fmtMoneyNumber } from "@athyper/runtime-shared/core";
+import type { SummaryBalance, SummaryLine } from "./useFlowEngine";
 
 const AMOUNT_ROLES = new Set(["subtotal", "addition", "deduction", "total"]);
 const ROLE_INTENT: Record<string, string> = {
-  total:    "text-foreground font-bold",
-  subtotal: "text-foreground font-medium",
-  addition: "text-success",
-  deduction:"text-destructive",
+  total:     "text-foreground font-bold",
+  subtotal:  "text-foreground font-medium",
+  addition:  "text-success",
+  deduction: "text-destructive",
 };
 const ROLE_PREFIX: Record<string, string> = {
   addition:  "+",
-  deduction: "−",
+  deduction: "-",
 };
 
-function fmt(v: unknown): string {
-  const n = Number(v);
-  if (isNaN(n)) return String(v ?? "—");
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
+function fmtNumber(v: unknown, minorUnits = 2): string {
+  return fmtMoneyNumber(v, { minorUnits }) ?? String(v ?? "--");
+}
+
+function fmtSummaryAmount(line: SummaryLine, fallbackCurrencyCode: string): string {
+  const currencyCode = line.currency_code ?? fallbackCurrencyCode;
+  return fmtMoney(line.value, {
+    currencyCode,
+    currencyCodePosition: line.currency_code_position ?? "prefix",
+    minorUnits: line.minor_units,
+    fallbackMinorUnits: line.fallback_minor_units ?? 2,
+  }) ?? fmtNumber(line.value, line.fallback_minor_units ?? 2);
 }
 
 export interface FlowSummaryPanelProps {
   lines: SummaryLine[];
+  balance?: SummaryBalance | null;
   currencyCode?: string;
   className?: string;
 }
 
 export function FlowSummaryPanel({
   lines,
+  balance,
   currencyCode = "",
   className,
 }: FlowSummaryPanelProps) {
   const amountLines = lines.filter((l) => AMOUNT_ROLES.has(l.summary_role));
   const metaLines = lines.filter((l) => l.summary_role === "meta");
 
-  const hasContent = amountLines.length > 0 || metaLines.length > 0;
+  const hasContent = amountLines.length > 0 || metaLines.length > 0 || Boolean(balance);
   if (!hasContent) return null;
 
   return (
@@ -60,7 +62,6 @@ export function FlowSummaryPanel({
           Summary
         </h3>
 
-        {/* Amount waterfall */}
         {amountLines.length > 0 && (
           <div className="space-y-2">
             {amountLines.map((line) => (
@@ -85,24 +86,37 @@ export function FlowSummaryPanel({
                 </span>
                 <span className={cn(
                   "text-sm tabular-nums shrink-0",
-                  // Only apply semantic colour when the amount is non-zero
                   Number(line.value) === 0
                     ? "text-muted-foreground/50"
                     : (ROLE_INTENT[line.summary_role] ?? "text-foreground"),
                 )}>
-                  {fmt(line.value)}
-                  {currencyCode && (
-                    <span className="ml-1 text-2xs text-muted-foreground font-mono">
-                      {currencyCode}
-                    </span>
-                  )}
+                  {fmtSummaryAmount(line, currencyCode)}
                 </span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Meta chips */}
+        {balance && (
+          <div className="flex items-baseline justify-between gap-2 border-t pt-2">
+            <span className="text-xs font-semibold text-foreground">
+              {balance.label}
+            </span>
+            <span className={cn(
+              "text-sm tabular-nums font-semibold shrink-0",
+              balance.status === "balanced" && "text-success",
+              balance.status === "imbalanced" && "text-destructive",
+              balance.status === "none" && "text-muted-foreground",
+            )}>
+              {balance.status === "none"
+                ? "No lines"
+                : balance.status === "balanced"
+                  ? "Balanced"
+                  : `Imbalance: ${fmtMoney(balance.difference, { currencyCode, currencyCodePosition: "prefix" }) ?? fmtNumber(balance.difference)}`}
+            </span>
+          </div>
+        )}
+
         {metaLines.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {metaLines.map((line) => (
@@ -111,13 +125,17 @@ export function FlowSummaryPanel({
                 className={cn(
                   "flex items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5",
                   line.is_override && "border-warning/40 bg-warning/5",
+                  line.is_missing && "border-warning/40 bg-warning/5",
                 )}
               >
                 <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {line.label}
                 </span>
-                <span className="text-2xs font-medium text-foreground">
-                  {line.displayValue ?? "—"}
+                <span className={cn(
+                  "text-2xs font-medium",
+                  line.is_missing ? "text-warning" : "text-foreground",
+                )}>
+                  {line.displayValue ?? "--"}
                 </span>
               </div>
             ))}

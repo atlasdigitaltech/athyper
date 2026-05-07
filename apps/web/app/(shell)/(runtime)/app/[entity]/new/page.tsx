@@ -31,6 +31,7 @@ import {
 } from "@athyper/entity-runtime/intake";
 import { useCreateEntity, useEntityFlow, useCompiledEntity } from "@athyper/query";
 import { FlowWizard, FlowWizardSkeleton } from "@athyper/document-runtime/intake";
+import { bffFetch } from "@/lib/bff-fetch";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
 import EntityModeFlow from "../../_components/EntityModeFlow";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
@@ -46,6 +47,8 @@ export default function AppEntityNewRoute({
   const router = useRouter();
   const searchParams = useSearchParams();
   const createMutation = useCreateEntity(entity);
+  const [journalSubmitting, setJournalSubmitting] = useState(false);
+  const [purchaseInvoiceSubmitting, setPurchaseInvoiceSubmitting] = useState(false);
   const requestedMode = searchParams.get("mode") ?? searchParams.get("role");
   const businessPartnerId = searchParams.get("bp");
 
@@ -185,8 +188,30 @@ export default function AppEntityNewRoute({
   if (denied) return <FeatureUnavailablePage entityCode={entity} />;
 
   async function handleSubmit(data: Record<string, unknown>) {
-    const created = await createMutation.mutateAsync(data);
-    const id = (created as Record<string, unknown>).id as string | undefined;
+    let created: unknown;
+    if (entity === "journal_entry") {
+      setJournalSubmitting(true);
+      try {
+        created = await createJournalEntryFromIntake(data);
+      } finally {
+        setJournalSubmitting(false);
+      }
+    } else if (entity === "purchase_invoice") {
+      setPurchaseInvoiceSubmitting(true);
+      try {
+        const { lines: _lines, ...headerData } = data;
+        created = await createMutation.mutateAsync(headerData);
+        const createdRecord = created as Record<string, unknown>;
+        const invoiceId = (createdRecord.id ?? createdRecord.purchase_invoice_id) as string | undefined;
+        await createPurchaseInvoiceLinesFromIntake(invoiceId, data);
+      } finally {
+        setPurchaseInvoiceSubmitting(false);
+      }
+    } else {
+      created = await createMutation.mutateAsync(data);
+    }
+    const createdRecord = created as Record<string, unknown>;
+    const id = (createdRecord.id ?? createdRecord.journal_entry_id) as string | undefined;
     // Brief pause — backend needs ~500ms after the POST before the record is
     // reliably served by GET (Traefik upstream timing). Without this the detail
     // page fires immediately and gets 502s on the main record + lines + distributions.
@@ -282,7 +307,13 @@ export default function AppEntityNewRoute({
         onSubmit={handleSubmit}
         entityCode={entity}
         onCancel={() => router.push(`/app/${entity}`)}
-        submitting={createMutation.isPending}
+        submitting={
+          entity === "journal_entry"
+            ? journalSubmitting
+            : entity === "purchase_invoice"
+              ? purchaseInvoiceSubmitting || createMutation.isPending
+              : createMutation.isPending
+        }
       />
     );
   }
@@ -298,12 +329,155 @@ export default function AppEntityNewRoute({
   );
 }
 
+function looksLikeUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function requiredString(value: unknown, label: string): string {
+  const text = String(value ?? "").trim();
+  if (!text) throw new Error(`${label} is required`);
+  return text;
+}
+
+function requiredNumber(value: unknown, label: string): number {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) throw new Error(`${label} is required`);
+  return numberValue;
+}
+
+async function resolveCompanyCodeForJournal(data: Record<string, unknown>): Promise<string> {
+  const directCode = String(data["company_code"] ?? "").trim();
+  if (directCode && !looksLikeUuid(directCode)) return directCode;
+
+  const directId = String(data["company_code_id"] ?? "").trim();
+  const companyValue = requiredString(directId || directCode, "Company Code");
+  if (!looksLikeUuid(companyValue)) return companyValue;
+
+  const res = await fetch(`/api/relay/api/records/company_code/${encodeURIComponent(companyValue)}`);
+  if (!res.ok) throw new Error("Company Code could not be resolved");
+  const body = await res.json() as { data?: Record<string, unknown> };
+  const row = body.data ?? {};
+  const code = String(row["code"] ?? row["company_code"] ?? "").trim();
+  if (!code) throw new Error("Company Code could not be resolved");
+  return code;
+}
+
+async function createJournalEntryFromIntake(data: Record<string, unknown>) {
+  const lines = Array.isArray(data["lines"]) ? data["lines"] : [];
+  if (lines.length < 2) throw new Error("At least 2 journal lines are required");
+
+  const postingDate = requiredString(data["posting_date"], "Posting Date");
+  const postingDateValue = new Date(postingDate);
+  const hasValidPostingDate = Number.isFinite(postingDateValue.getTime());
+
+  const body: Record<string, unknown> = {
+    company_code: await resolveCompanyCodeForJournal(data),
+    fiscal_year: data["fiscal_year"] == null || data["fiscal_year"] === ""
+      ? (hasValidPostingDate ? postingDateValue.getFullYear() : undefined)
+      : requiredNumber(data["fiscal_year"], "Fiscal Year"),
+    period_number: data["period_number"] == null || data["period_number"] === ""
+      ? (hasValidPostingDate ? postingDateValue.getMonth() + 1 : undefined)
+      : requiredNumber(data["period_number"], "Period"),
+    posting_date: postingDate,
+    document_date: String(data["document_date"] ?? "").trim() || postingDate,
+    currency_code: requiredString(
+      data["transaction_currency"] ??
+      data["currency_code"] ??
+      data["base_currency_code"] ??
+      data["base_currency"],
+      "Transaction Currency",
+    ),
+    description: data["description"] ?? null,
+    lines,
+  };
+
+  if (data["exchange_rate"] != null && data["exchange_rate"] !== "") {
+    body["exchange_rate"] = data["exchange_rate"];
+  }
+
+  return bffFetch("/api/finance/journals", {
+    method: "POST",
+    body,
+  });
+}
+
 function formatEntityLabel(entityCode: string): string {
   return entityCode
     .split("_")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+type PurchaseInvoiceLineInput = {
+  item_description?: unknown;
+  description?: unknown;
+  procurement_type?: unknown;
+  uom_code?: unknown;
+  quantity?: unknown;
+  unit_price?: unknown;
+  price_unit?: unknown;
+  spend_category_id?: unknown;
+  business_intent_id?: unknown;
+  cost_center_id?: unknown;
+  profit_center_id?: unknown;
+  project_id?: unknown;
+  site_id?: unknown;
+};
+
+function invoiceLineText(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function invoiceLineNumber(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function normalizePurchaseInvoiceLine(line: PurchaseInvoiceLineInput, headerData: Record<string, unknown>): Record<string, unknown> {
+  const itemDescription = invoiceLineText(line.item_description ?? line.description);
+  const quantity = invoiceLineNumber(line.quantity, 1);
+  const unitPrice = invoiceLineNumber(line.unit_price, 0);
+  const procurementType = invoiceLineText(line.procurement_type) || "services";
+  const uomCode = invoiceLineText(line.uom_code).toUpperCase() || "EA";
+
+  return {
+    item_description: itemDescription,
+    procurement_type: procurementType,
+    uom_code: uomCode,
+    quantity,
+    unit_price: unitPrice,
+    price_unit: invoiceLineNumber(line.price_unit, 1) || 1,
+    spend_category_id: invoiceLineText(line.spend_category_id) || null,
+    business_intent_id: invoiceLineText(line.business_intent_id) || null,
+    cost_center_id: invoiceLineText(line.cost_center_id ?? headerData["cost_center_id"]) || null,
+    profit_center_id: invoiceLineText(line.profit_center_id ?? headerData["profit_center_id"]) || null,
+    project_id: invoiceLineText(line.project_id ?? headerData["project_id"]) || null,
+    site_id: invoiceLineText(line.site_id ?? headerData["site_id"]) || null,
+  };
+}
+
+async function createPurchaseInvoiceLinesFromIntake(invoiceId: string | undefined, data: Record<string, unknown>) {
+  if (!invoiceId) throw new Error("Purchase Invoice id is missing.");
+  const lines = Array.isArray(data["lines"]) ? data["lines"] as PurchaseInvoiceLineInput[] : [];
+  if (lines.length === 0) throw new Error("At least 1 invoice line is required.");
+
+  for (const line of lines) {
+    const body = normalizePurchaseInvoiceLine(line, data);
+    if (!invoiceLineText(body["item_description"])) {
+      throw new Error("Description is required on every invoice line.");
+    }
+    if (invoiceLineNumber(body["quantity"]) <= 0) {
+      throw new Error("Quantity must be greater than zero on every invoice line.");
+    }
+    if (invoiceLineNumber(body["unit_price"]) < 0) {
+      throw new Error("Unit Price must be zero or greater on every invoice line.");
+    }
+    await bffFetch(`/api/finance/ap/invoices/${encodeURIComponent(invoiceId)}/lines`, {
+      method: "POST",
+      body,
+    });
+  }
 }
 
 function resolveCreateRedirect(

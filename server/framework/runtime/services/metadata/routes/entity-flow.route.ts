@@ -196,6 +196,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           "ef.enum_domain_code",
           "ef.ui_type",
           "ef.reference_config",
+          "ef.money_config",
           "ef.validation",
           "ef.lookup_config",
         ])
@@ -262,7 +263,9 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
               "ef.cardinality",
               sql<string | null>`ef.ui_type`.as("ui_variant"),
               "ef.reference_config",
+              "ef.money_config",
               "ef.validation",
+              "ef.visibility",
               "ef.lookup_config",
               "ef.sort_order",
               "ef.is_required",
@@ -334,6 +337,12 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             data_type: f.data_type as string,
             enum_domain_code: (f.enum_domain_code ?? null) as string | null,
             reference_config: normalizeReferenceConfig(f),
+            money_config: f.money_config && typeof f.money_config === "object"
+              ? f.money_config as Record<string, unknown>
+              : null,
+            validation_rules: (f.validation && typeof f.validation === "object" && !f.validation.ref_entity
+              ? f.validation as Record<string, unknown>
+              : null),
             lookup_config: (f.lookup_config && typeof f.lookup_config === "object"
               ? f.lookup_config as Record<string, unknown>
               : null),
@@ -389,6 +398,13 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
               childFields = selectedChildFields.map((cf) => ({
                 ...cf,
                 reference_config: normalizeReferenceConfig(cf),
+                money_config: cf.money_config && typeof cf.money_config === "object"
+                  ? cf.money_config as Record<string, unknown>
+                  : null,
+                visible_when: cf.visibility ?? null,
+                validation_rules: cf.validation && typeof cf.validation === "object" && !cf.validation.ref_entity
+                  ? cf.validation as Record<string, unknown>
+                  : null,
                 lookup_config: cf.lookup_config && typeof cf.lookup_config === "object"
                   ? cf.lookup_config as Record<string, unknown>
                   : null,
@@ -424,6 +440,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           sort_order: Number(s.sort_order),
           skip_when: s.skip_when ?? null,
           advance_rule: {
+            ...advanceRule,
             required_fields: Array.isArray(advanceRule["required_fields"])
               ? (advanceRule["required_fields"] as string[])
               : [],

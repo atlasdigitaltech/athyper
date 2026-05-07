@@ -68,7 +68,7 @@ import {
 } from "lucide-react";
 import { useCompiledEntity, useEntityList, useEntityOperations, useSavedViews, useSaveView, useUpdateView, useStatusRoute, useLookupDomain, useRecordBookmarks, useCommentCounts } from "@athyper/query";
 import { resolveActionsForSurface, type ResolvedAction } from "@athyper/metadata-client/operation-reader";
-import type { EntityOperation } from "@athyper/api-contracts/metadata";
+import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
 import { FilterPillBar, SearchInput } from "@athyper/ui/composites";
 import { resolveListConfig, resolvePresentationConfig } from "@athyper/metadata-client/compiled-reader";
 import { resolvePresentationConfig as resolveDisplayConfig } from "../metadata";
@@ -126,6 +126,19 @@ const B5_TO_LEGACY_MODE: Record<string, ViewMode> = {
   dashboard:   "dashboard",
   spreadsheet: "excel",
 };
+
+function isDocumentEntity(entity: CompiledEntity): boolean {
+  return (
+    entity.entity_class === "DOCUMENT" ||
+    entity.entity_class === "DOCUMENT_RELATION" ||
+    entity.display_config.detail_renderer === "document"
+  );
+}
+
+function entityTypeLabel(entity: CompiledEntity): string {
+  const label = entity.display_config.document_header?.type_label ?? entity.entity_name;
+  return label.replace(/_/g, " ").toUpperCase();
+}
 
 // ── Status badge (semantic — driven by ColumnPresentation.semanticResolver) ───
 
@@ -1726,11 +1739,16 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     </div>
   ) : undefined;
 
+  const useDocumentEntityHeader = isDocumentEntity(entity);
+  const listEntityTypeLabel = useDocumentEntityHeader ? entityTypeLabel(entity) : undefined;
+
   return (
     <PageShell
       header={
         <PageHeader
-          title={entity.entity_name}
+          typeChip={listEntityTypeLabel}
+          onBack={useDocumentEntityHeader ? () => router.back() : undefined}
+          title={useDocumentEntityHeader ? undefined : entity.entity_name}
           primaryActions={
             <>
               {operations ? (

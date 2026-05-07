@@ -13,6 +13,8 @@
 
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent, Input, Textarea } from "@athyper/ui/primitives";
+import type { EntityField } from "@athyper/api-contracts/metadata";
+import { resolveFieldRenderer } from "../field-renderers/registry";
 import type { EntityEditableField, FieldRenderer, SectionRenderer } from "./adapter/types";
 
 // ── Generic field fallback ────────────────────────────────────────────────────
@@ -73,6 +75,8 @@ function FormField({
   error,
   disabled,
   customRenderer,
+  metadataField,
+  formData,
 }: {
   field:           EntityEditableField;
   value:           unknown;
@@ -80,7 +84,41 @@ function FormField({
   error?:          string;
   disabled?:       boolean;
   customRenderer?: FieldRenderer;
+  metadataField?:  EntityField;
+  formData?:       Record<string, unknown>;
 }) {
+  if (metadataField && !customRenderer) {
+    const Renderer = resolveFieldRenderer(metadataField);
+    return (
+      <div className="flex flex-col gap-1.5">
+        <label
+          htmlFor={field.name}
+          className="text-sm font-medium leading-none text-foreground"
+        >
+          {field.label}
+          {field.required && <span className="text-destructive ml-0.5">*</span>}
+        </label>
+        <Renderer
+          value={value}
+          field={metadataField}
+          mode="edit"
+          formData={formData}
+          onChange={onChange}
+          error={error}
+          disabled={disabled}
+        />
+        {field.hint && !error && (
+          <p className="text-xs text-muted-foreground">{field.hint}</p>
+        )}
+        {error && (
+          <p id={`${field.name}-error`} className="text-xs text-destructive" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       <label
@@ -128,6 +166,7 @@ export interface GenericMetaEditFormProps {
   isSaving:       boolean;
   /** When set, only fields whose name is in this set are editable. */
   editableFieldNames?: Set<string>;
+  metadataFields?: EntityField[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -142,8 +181,11 @@ export function GenericMetaEditForm({
   globalError,
   isSaving,
   editableFieldNames,
+  metadataFields,
 }: GenericMetaEditFormProps) {
   const visibleFields = editableFields.filter((f) => f.editable !== false);
+  const metadataByName = new Map((metadataFields ?? []).map((field) => [field.name, field]));
+  const formData = { ...record, ...patch };
 
   return (
     <div className="flex flex-col gap-5">
@@ -179,6 +221,8 @@ export function GenericMetaEditForm({
                     error={fieldErrors[field.name]}
                     disabled={isDisabled}
                     customRenderer={fieldRenderers?.[field.name]}
+                    metadataField={metadataByName.get(field.name)}
+                    formData={formData}
                   />
                 </div>
               );

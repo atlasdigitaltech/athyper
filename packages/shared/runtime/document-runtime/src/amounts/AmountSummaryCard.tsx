@@ -4,9 +4,8 @@
  * Spec v1.2 §C.1: Renders an amount breakdown grid showing the waterfall
  * from subtotal through deductions to outstanding amount.
  *
- * Each row: label (left-aligned) + formatted currency amount (right-aligned).
- * Total rows get a top border and bold styling. Indented rows shift right.
- * Amount pattern: [$ symbol] [1,000.00] [USD] — symbol and code are muted.
+ * Each tile: label + ISO currency prefix + emphasized numeric amount.
+ * Total rows get bold styling. Indented rows shift right.
  */
 "use client";
 
@@ -14,7 +13,7 @@ import { cn } from "@athyper/theme/utils";
 import { type SemanticIntent, resolveSemanticColors } from "@athyper/theme/semantic-colors";
 import { Card, CardContent } from "@athyper/ui/primitives";
 import { type AmountBreakdownLine } from "@athyper/api-contracts/documents";
-import { getCurrencySymbol, fmtNum } from "@athyper/runtime-shared/core";
+import { fmtMoneyNumber, normaliseCurrencyCode } from "@athyper/runtime-shared/core";
 
 export interface AmountSummaryCardProps {
   lines: AmountBreakdownLine[];
@@ -24,6 +23,10 @@ export interface AmountSummaryCardProps {
 
 const INDENT_CLASS = ["", "pl-4", "pl-8"] as const;
 
+function formatAmount(amount: unknown, currencyCode: string): string {
+  return fmtMoneyNumber(amount, { currencyCode }) ?? "--";
+}
+
 export function AmountSummaryCard({
   lines,
   title = "Amount Summary",
@@ -32,48 +35,50 @@ export function AmountSummaryCard({
   if (lines.length === 0) return null;
 
   return (
-    <Card className={className}>
-      <CardContent className="pt-5">
-        <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </h3>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4 lg:grid-cols-7">
+    <Card className={cn("overflow-hidden", className)}>
+      <CardContent className="p-0">
+        <div className="border-b border-border/60 px-4 py-3 sm:px-5 lg:px-[22px]">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {title}
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 gap-px bg-border/60 sm:grid-cols-2 lg:grid-cols-4">
           {lines.map((line) => {
             const intentColors = line.intent
               ? resolveSemanticColors(line.intent as SemanticIntent)
               : null;
 
-            const symbol = getCurrencySymbol(line.currency_code);
+            const currencyCode = normaliseCurrencyCode(line.currency_code) ?? line.currency_code;
             const isBold = line.is_total;
 
             return (
               <div
                 key={line.label}
-                className={cn(INDENT_CLASS[line.indent] ?? "")}
+                className={cn(
+                  "flex min-w-0 flex-col gap-1.5 bg-card px-4 py-3.5 sm:px-5 lg:px-[22px]",
+                  INDENT_CLASS[line.indent] ?? "",
+                )}
               >
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">{line.label}</div>
                 <div className={cn(
-                  "flex items-baseline gap-[3px]",
+                  "text-xs font-semibold uppercase tracking-wider text-muted-foreground",
                   intentColors?.text,
                 )}>
-                  {symbol && (
+                  {line.label}
+                </div>
+                <div className="flex min-w-0 items-baseline gap-2">
+                  {currencyCode && (
                     <span className={cn(
-                      "text-sm tabular-nums",
-                      isBold ? "font-bold" : "font-medium",
-                      !intentColors && "text-foreground",
+                      "shrink-0 text-base leading-none tabular-nums text-foreground",
+                      isBold ? "font-bold" : "font-semibold",
                     )}>
-                      {symbol}
+                      {currencyCode}
                     </span>
                   )}
                   <span className={cn(
-                    "text-sm tabular-nums",
-                    isBold ? "font-bold" : "font-medium",
-                    !intentColors && "text-foreground",
+                    "min-w-0 truncate text-base leading-none tabular-nums text-foreground",
+                    isBold ? "font-bold" : "font-semibold",
                   )}>
-                    {fmtNum(line.amount)}
-                  </span>
-                  <span className="text-2xs text-muted-foreground font-mono">
-                    {line.currency_code}
+                    {formatAmount(line.amount, currencyCode)}
                   </span>
                 </div>
               </div>

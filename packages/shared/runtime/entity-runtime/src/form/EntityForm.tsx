@@ -12,6 +12,10 @@
 import { forwardRef, useImperativeHandle, useState, type FormEvent } from "react";
 import { useCompiledEntity } from "@athyper/query";
 import { resolveFormConfig } from "@athyper/metadata-client/compiled-reader";
+import {
+  validateMetaFieldRules,
+  validationFieldsAffectedByChange,
+} from "@athyper/runtime-shared/validation";
 import { Card, CardContent, CardHeader, CardTitle, Button, Label, Separator, Skeleton } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
 import { resolveFieldRenderer } from "../field-renderers/registry";
@@ -101,10 +105,12 @@ export const EntityForm = forwardRef<EntityFormHandle, EntityFormProps>(
       const next = { ...formData, [fieldName]: value };
       setFormData(next);
       onChange?.(next);
-      if (errors[fieldName]) {
+      if (Object.keys(errors).length > 0) {
         setErrors((prev) => {
           const updated = { ...prev };
-          delete updated[fieldName];
+          for (const affectedField of validationFieldsAffectedByChange(entity?.fields ?? [], fieldName)) {
+            delete updated[affectedField];
+          }
           return updated;
         });
       }
@@ -118,6 +124,8 @@ export const EntityForm = forwardRef<EntityFormHandle, EntityFormProps>(
           newErrors[field.name] = `${field.label ?? field.name} is required`;
         }
       }
+      const metaValidation = validateMetaFieldRules(formConfig.sections.flatMap((section) => section.fields), formData);
+      Object.assign(newErrors, metaValidation.fieldErrors);
       setErrors(newErrors);
       return Object.keys(newErrors).length === 0;
     }
@@ -155,6 +163,7 @@ export const EntityForm = forwardRef<EntityFormHandle, EntityFormProps>(
                         value={formData[field.name]}
                         field={field}
                         mode="edit"
+                        formData={formData}
                         onChange={(v) => handleFieldChange(field.name, v)}
                         error={errors[field.name]}
                       />

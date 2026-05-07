@@ -4,7 +4,7 @@
  * Built-in renderers for all standard data types.
  * Call registerDefaults() at app startup to populate the registry.
  */
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input, Checkbox, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@athyper/ui/primitives";
 // Select primitives kept for EnumRenderer (LookupSelect).
@@ -12,7 +12,13 @@ import { DatePicker, AsyncCombobox } from "@athyper/ui/composites";
 import {
   EntityPicker,
   entityRowToPickerOption,
+  hasLookupDependency,
+  readLookupFilters,
   resolveEntityPickerOptionConfig,
+  searchLookupOptions,
+  searchParamsForLookupFilters,
+  type EntityPickerSearchContext,
+  type EntityPickerSearchResponse,
   type EntityPickerOptionConfig,
 } from "@athyper/runtime-shared/entity-search";
 import { MoneySummary, QuantityUnit } from "@athyper/domain-widgets";
@@ -194,27 +200,73 @@ function getReferenceEntityCode(field: FieldRendererProps["field"]): string | nu
 
 function ReferencePickerField({
   entityCode,
+  field,
   value,
+  formData,
   displayLabel,
   optionConfig,
+  disabled,
   onChange,
   error,
 }: {
   entityCode: string | null;
+  field: FieldRendererProps["field"];
   value: string;
+  formData?: Record<string, unknown>;
   displayLabel?: string | null;
   optionConfig?: EntityPickerOptionConfig;
+  disabled?: boolean;
   onChange: (v: string) => void;
   error?: string;
 }) {
+  const lookupFilters = useMemo(
+    () => readLookupFilters(field.lookup_config),
+    [field.lookup_config],
+  );
+  const searchParams = useMemo(
+    () => searchParamsForLookupFilters(lookupFilters),
+    [lookupFilters],
+  );
+  const hasDependentLookup = useMemo(
+    () => hasLookupDependency(field.lookup_config),
+    [field.lookup_config],
+  );
+  const metadataSearch = useCallback(
+    (
+      query: string,
+      context?: EntityPickerSearchContext,
+    ): Promise<EntityPickerSearchResponse> => {
+      if (!entityCode) return Promise.resolve({ options: [], totalCount: 0 });
+      return searchLookupOptions({
+        entityCode,
+        query,
+        lookupConfig: field.lookup_config,
+        formData,
+        optionConfig,
+        context,
+      });
+    },
+    [entityCode, field.lookup_config, formData, optionConfig],
+  );
+
   return (
     <EntityPicker
       entityCode={entityCode}
       value={value || null}
       displayLabel={displayLabel}
+      search={hasDependentLookup ? metadataSearch : undefined}
+      searchParams={hasDependentLookup ? undefined : searchParams}
       optionConfig={optionConfig}
+      getOptionHref={
+        entityCode
+          ? (option) => {
+              const recordId = option.recordId ?? option.value;
+              return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`;
+            }
+          : undefined
+      }
       onChange={(v) => onChange(v ?? "")}
-      disabled={!entityCode}
+      disabled={disabled || !entityCode}
       error={error}
       loadOnOpen
       placeholder="Search records…"
@@ -224,7 +276,7 @@ function ReferencePickerField({
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+function ReferenceRenderer({ value, field, mode, formData, onChange, error, disabled }: FieldRendererProps) {
   const entityCode    = getReferenceEntityCode(field);
   const optionConfig  = resolveEntityPickerOptionConfig(field.reference_config);
   const uuid          = typeof value === "string" && UUID_RE.test(value) ? value : null;
@@ -265,9 +317,12 @@ function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendere
   return (
     <ReferencePickerField
       entityCode={entityCode}
+      field={field}
       value={String(value ?? "")}
+      formData={formData}
       displayLabel={pickerDisplayLabel}
       optionConfig={optionConfig}
+      disabled={disabled}
       onChange={(v) => onChange?.(v)}
       error={error}
     />
@@ -277,6 +332,12 @@ function ReferenceRenderer({ value, field, mode, onChange, error }: FieldRendere
 // ── Country Picker ──────────────────────────────────────────────
 
 interface CountryRow { code: string; name: string }
+interface CurrencyRow {
+  code: string;
+  name: string;
+  symbol?: string | null;
+  status?: string | null;
+}
 
 function CountryRenderer({ value, mode, onChange, error }: FieldRendererProps) {
   const [query, setQuery] = useState("");
@@ -324,8 +385,78 @@ function CountryRenderer({ value, mode, onChange, error }: FieldRendererProps) {
   );
 }
 
-// ── JSON ────────────────────────────────────────────────────────
+// Currency picker (ui_type="currency") backed by shared.currency.
+function CurrencyRenderer({ value, mode, onChange, error, disabled }: FieldRendererProps) {
+  const [query, setQuery] = useState("");
+  const currentCode = typeof value === "string" ? value.trim().toUpperCase() : "";
 
+  const { data: currencies, isLoading } = useQuery<CurrencyRow[]>({
+    queryKey: ["ref", "currencies", query],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams({ limit: "50", status: "active" });
+      if (query.trim()) params.set("search", query.trim());
+
+      const res = await fetch(`/api/relay/api/platform/ref/currencies?${params.toString()}`, {
+        signal,
+      });
+      if (!res.ok) return [];
+      const body = await res.json() as { data?: CurrencyRow[] };
+      return body.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const all = currencies ?? [];
+  const selectedFromPage = all.find((currency) => currency.code === currentCode);
+  const shouldHydrateSelected = Boolean(currentCode) && !selectedFromPage;
+  const { data: hydratedSelected } = useQuery<CurrencyRow | null>({
+    queryKey: ["ref", "currencies", "selected", currentCode],
+    enabled: shouldHydrateSelected,
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams({ search: currentCode, limit: "20", status: "active" });
+      const res = await fetch(`/api/relay/api/platform/ref/currencies?${params.toString()}`, {
+        signal,
+      });
+      if (!res.ok) return null;
+      const body = await res.json() as { data?: CurrencyRow[] };
+      return (body.data ?? []).find((currency) => currency.code === currentCode) ?? null;
+    },
+    staleTime: 60 * 60 * 1000,
+  });
+  const selected = selectedFromPage ?? hydratedSelected ?? null;
+  const displayLabel = selected
+    ? `${selected.code} - ${selected.name}`
+    : (currentCode || null);
+
+  if (mode === "view") {
+    if (!currentCode) return <span className="text-sm text-muted-foreground">-</span>;
+    return <span className="text-sm">{displayLabel ?? currentCode}</span>;
+  }
+
+  const options = all.map((currency) => ({
+    value: currency.code,
+    label: `${currency.code} - ${currency.name}`,
+    description: currency.symbol ?? undefined,
+  }));
+
+  return (
+    <AsyncCombobox
+      value={currentCode || null}
+      displayLabel={displayLabel}
+      options={options}
+      loading={isLoading}
+      onQueryChange={setQuery}
+      onOpen={() => setQuery("")}
+      onChange={(v) => onChange?.(v ? v.toUpperCase() : null)}
+      placeholder="Select currency..."
+      searchPlaceholder="Search currencies..."
+      disabled={disabled}
+      error={error}
+    />
+  );
+}
+
+// JSON
 function JsonRenderer({ value, mode }: FieldRendererProps) {
   if (mode === "view") {
     return (
@@ -421,6 +552,7 @@ export function registerDefaults(): void {
 
   // Country picker (ui_type="country" — backed by shared.country lookup domain)
   registerFieldRenderer("country", CountryRenderer);
+  registerFieldRenderer("currency", CurrencyRenderer);
 
   // UUID
   registerFieldRenderer("uuid", UuidRenderer);

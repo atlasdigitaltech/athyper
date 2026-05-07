@@ -14,6 +14,10 @@
  */
 
 import type { EntityViewDescriptor } from "@athyper/runtime-shared/descriptors";
+import {
+  fieldErrorsFromApiErrorBody,
+  validationSummaryMessage,
+} from "@athyper/runtime-shared/validation";
 import type { EntityEditAdapter } from "./adapter/types";
 import type { EntityEditState } from "./types";
 import type { EntityHeaderModel, HeaderFact, HeaderAuditMeta } from "../header/types";
@@ -156,10 +160,20 @@ export function buildTier1Adapter(descriptor: EntityViewDescriptor): EntityEditA
         },
       );
       if (res.ok) return { ok: true };
-      const body = await res.json().catch(() => null) as { message?: string } | null;
+      const body = await res.json().catch(() => null) as Record<string, unknown> | null;
+      const fieldErrors = fieldErrorsFromApiErrorBody(body);
+      if (Object.keys(fieldErrors).length > 0) {
+        return {
+          ok: false,
+          fieldErrors,
+          globalError: validationSummaryMessage(fieldErrors),
+        };
+      }
       return {
         ok:          false,
-        globalError: body?.message ?? "Save failed. Please try again.",
+        globalError: typeof body?.["message"] === "string"
+          ? body["message"]
+          : "Save failed. Please try again.",
       };
     },
   };

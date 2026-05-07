@@ -23,7 +23,16 @@ export interface UseEntitySearchOptions {
 
 export interface UseEntitySearchResult {
   options: EntityPickerOption[];
+  totalCount?: number;
   loading: boolean;
+  /** Run a search directly, including empty-query prefetches. */
+  runSearch: (
+    query: string,
+    immediate?: boolean,
+    limitOverride?: number,
+    pageOverride?: number,
+    append?: boolean,
+  ) => void;
   /** Call this when the query changes (pass to AsyncCombobox onQueryChange). */
   onQueryChange: (query: string) => void;
   /** Call this on popover open to pre-fetch (for loadOnOpen mode). */
@@ -55,6 +64,25 @@ function sameText(left: string | undefined, right: string | undefined): boolean 
   return !!left && !!right && left.toLowerCase() === right.toLowerCase();
 }
 
+function formatLabelTemplate(
+  template: string | null | undefined,
+  row: Record<string, unknown>,
+  values: {
+    label?: string;
+    code?: string;
+    description?: string;
+  },
+): string | undefined {
+  if (!template) return undefined;
+  const formatted = template.replace(/\{([A-Za-z0-9_.-]+)\}/g, (_match, token: string) => {
+    if (token === "label") return values.label ?? "";
+    if (token === "code") return values.code ?? "";
+    if (token === "description") return values.description ?? "";
+    return textValue(row[token]) ?? "";
+  }).replace(/\s+/g, " ").trim();
+  return formatted || undefined;
+}
+
 export function entityRowToPickerOption(
   row: Record<string, unknown>,
   entityCode: string | null,
@@ -73,7 +101,7 @@ export function entityRowToPickerOption(
     "document_number",
     "number",
   ]);
-  const label = firstText(row, [
+  const baseLabel = firstText(row, [
     optionConfig?.labelField ?? undefined,
     entityNameKey,
     "name",
@@ -92,6 +120,15 @@ export function entityRowToPickerOption(
     "long_description",
     "summary",
   ]);
+  const label = formatLabelTemplate(optionConfig?.labelTemplate, row, {
+    label: baseLabel,
+    code: rawCode,
+    description,
+  })
+    ?? baseLabel
+    ?? rawCode
+    ?? textValue(row["id"])?.slice(0, 8)
+    ?? "";
   const code = optionConfig?.showCode === false || sameText(rawCode, label) ? undefined : rawCode;
   const normalizedDescription = optionConfig?.showDescription === false
     || sameText(description, label)
@@ -114,7 +151,23 @@ export function entityRowToPickerOption(
     code,
     description: normalizedDescription,
     recordId,
+    raw: row,
   };
+}
+
+function appendUniqueOptions(
+  current: EntityPickerOption[],
+  next: EntityPickerOption[],
+): EntityPickerOption[] {
+  const seen = new Set(current.map((option) => option.value));
+  return [
+    ...current,
+    ...next.filter((option) => {
+      if (seen.has(option.value)) return false;
+      seen.add(option.value);
+      return true;
+    }),
+  ];
 }
 
 export function useEntitySearch({
@@ -124,14 +177,22 @@ export function useEntitySearch({
   limit = 20,
 }: UseEntitySearchOptions): UseEntitySearchResult {
   const [options, setOptions] = useState<EntityPickerOption[]>([]);
+  const [totalCount, setTotalCount] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const runSearch = useCallback(
-    (query: string, immediate = false) => {
+    (
+      query: string,
+      immediate = false,
+      limitOverride?: number,
+      pageOverride = 1,
+      append = false,
+    ) => {
       if (!entityCode) {
         setOptions([]);
+        setTotalCount(undefined);
         return;
       }
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -140,27 +201,42 @@ export function useEntitySearch({
       const delay = immediate ? 0 : 300;
       debounceRef.current = setTimeout(async () => {
         abortRef.current?.abort();
-        abortRef.current = new AbortController();
+        const controller = new AbortController();
+        abortRef.current = controller;
         try {
-          const params = new URLSearchParams({ q: query, limit: String(limit) });
+          const effectiveLimit = limitOverride ?? limit;
+          const params = new URLSearchParams({
+            q: query,
+            limit: String(effectiveLimit),
+            page_size: String(effectiveLimit),
+            page: String(pageOverride),
+          });
           if (searchParams) {
             Object.entries(searchParams).forEach(([k, v]) => params.set(k, v));
           }
           const res = await fetch(
             `/api/relay/api/records/${encodeURIComponent(entityCode)}?${params}`,
-            { signal: abortRef.current.signal },
+            { signal: controller.signal },
           );
-          if (!res.ok) { setOptions([]); return; }
-          const body = await res.json() as { data?: Record<string, unknown>[] };
-          if (!abortRef.current.signal.aborted) {
-            setOptions((body.data ?? []).map((row) => entityRowToPickerOption(row, entityCode, optionConfig)));
+          if (!res.ok) { setOptions([]); setTotalCount(undefined); return; }
+          const body = await res.json() as {
+            data?: Record<string, unknown>[];
+            pagination?: { total?: number | string };
+          };
+          if (!controller.signal.aborted) {
+            const nextOptions = (body.data ?? []).map((row) => entityRowToPickerOption(row, entityCode, optionConfig));
+            setOptions((current) => append ? appendUniqueOptions(current, nextOptions) : nextOptions);
+            const total = body.pagination?.total;
+            const parsedTotal = total === undefined ? undefined : Number(total);
+            setTotalCount(parsedTotal !== undefined && Number.isFinite(parsedTotal) ? parsedTotal : undefined);
           }
         } catch (err) {
           if (!(err instanceof DOMException && err.name === "AbortError")) {
             setOptions([]);
+            setTotalCount(undefined);
           }
         } finally {
-          if (!abortRef.current?.signal.aborted) setLoading(false);
+          if (!controller.signal.aborted) setLoading(false);
         }
       }, delay);
     },
@@ -169,7 +245,7 @@ export function useEntitySearch({
 
   const onQueryChange = useCallback(
     (query: string) => {
-      if (!query) { setOptions([]); setLoading(false); return; }
+      if (!query) { setOptions([]); setTotalCount(undefined); setLoading(false); return; }
       runSearch(query);
     },
     [runSearch],
@@ -177,5 +253,5 @@ export function useEntitySearch({
 
   const onOpen = useCallback(() => runSearch("", true), [runSearch]);
 
-  return { options, loading, onQueryChange, onOpen };
+  return { options, totalCount, loading, runSearch, onQueryChange, onOpen };
 }

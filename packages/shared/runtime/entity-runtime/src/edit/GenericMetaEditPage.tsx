@@ -28,6 +28,10 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@athyper/ui/primitives";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
+import {
+  validateMetaFieldRules,
+  validationSummaryMessage,
+} from "@athyper/runtime-shared/validation";
 import { EntityHeader } from "../header/EntityHeader";
 import { EntityWorkspaceShell } from "./EntityWorkspaceShell";
 import { useEntityEdit } from "./useEntityEdit";
@@ -58,12 +62,14 @@ function GenericMetaEditInner({
   adapter,
   fetchedRecord,
   stateResult,
+  compiledEntity,
 }: {
   entityCode:    string;
   recordId:      string;
   adapter:       EntityEditAdapter;
   fetchedRecord: { id: string; data: Record<string, unknown>; status?: string };
   stateResult:   EntityEditStateResult;
+  compiledEntity?: CompiledEntity;
 }) {
   const router = useRouter();
   const { guardNavigate } = useEntityEdit();
@@ -137,6 +143,7 @@ function GenericMetaEditInner({
           globalError={globalError}
           isSaving={editState.isSaving}
           editableFieldNames={editableFieldNames}
+          metadataFields={compiledEntity?.fields}
         />
       )}
     </div>
@@ -209,7 +216,23 @@ export function GenericMetaEditPage({ entityCode, recordId }: GenericMetaEditPag
         patch,
       }),
     beforeSubmit:  adapter?.beforeSubmit as never,
-    validatePatch: adapter?.validatePatch as never,
+    validatePatch: (async (patch: Record<string, unknown>, original: Record<string, unknown>) => {
+      if (compiledEntity?.fields?.length) {
+        const data = { ...original, ...patch };
+        const metaValidation = validateMetaFieldRules(compiledEntity.fields, data);
+        if (!metaValidation.valid) {
+          return {
+            valid: false,
+            fieldErrors: metaValidation.fieldErrors,
+            globalError: validationSummaryMessage(metaValidation.fieldErrors),
+          };
+        }
+      }
+      if (adapter?.validatePatch) {
+        return adapter.validatePatch(patch, original);
+      }
+      return { valid: true };
+    }) as never,
   });
 
   const { patch: _patch, updateField: _uf, fieldErrors: _fe, globalError: _ge, ...baseEditState } =
@@ -242,6 +265,7 @@ export function GenericMetaEditPage({ entityCode, recordId }: GenericMetaEditPag
         adapter={adapter}
         fetchedRecord={fetchedRecord}
         stateResult={stateResult}
+        compiledEntity={compiledEntity}
       />
     </EntityWorkspaceShell>
   );

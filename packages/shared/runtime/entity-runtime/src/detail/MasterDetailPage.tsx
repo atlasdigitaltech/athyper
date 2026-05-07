@@ -44,6 +44,7 @@ import { EntityForm, type EntityFormHandle } from "../form/EntityForm";
 import { ChildSummaryCardsPanel, type ViewOnlyReason } from "./ChildSummaryCardsPanel";
 import { ContactsChannelPanel } from "./ContactsChannelPanel";
 import { AddressesPanel } from "./AddressesPanel";
+import { SupplierCcExtensionTab } from "./SupplierCcExtensionTab";
 
 // ── Public props ──────────────────────────────────────────────────────────────
 
@@ -1495,6 +1496,20 @@ export function MasterDetailPage({
               <EmptyState
                 title={activeTabDef.label}
                 description={activeTabDef.blank_message}
+              />
+            </CardContent>
+          </Card>
+        );
+
+      case "supplier_cc_extension":
+        return (
+          <Card>
+            <CardContent className="pt-5">
+              <SupplierCcExtensionTab
+                supplierUuid={record.id}
+                editMode={editMode}
+                viewOnlyReason={viewOnlyReason}
+                tab={activeTabDef}
               />
             </CardContent>
           </Card>

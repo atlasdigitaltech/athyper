@@ -28,10 +28,14 @@ import type { FlowFieldBinding as FlowFieldBindingType } from "@athyper/api-cont
 import { DatePicker, AsyncCombobox } from "@athyper/ui/composites";
 import {
   EntityPicker,
+  applyLookupFiltersParam,
   entityRowToPickerOption,
+  hasLookupDependency,
+  readLookupFilters,
   resolveEntityPickerOptionConfig,
-  type EntityPickerOption,
-  type EntityPickerOptionConfig,
+  searchLookupOptions,
+  type EntityPickerSearchContext,
+  type EntityPickerSearchResponse,
 } from "@athyper/runtime-shared/entity-search";
 import { DerivedChip } from "./DerivedChip";
 import { canOverride } from "./useFlowEngine";
@@ -113,56 +117,10 @@ function resolveSearchEntity(fieldName: string): string | null {
   return null;
 }
 
-function ledgerBookMatches(row: Record<string, unknown>, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return ["code", "name", "description"].some((key) =>
-    String(row[key] ?? "").toLowerCase().includes(q),
-  );
-}
-
-async function searchCompanyLedgerBooks(
-  companyCodeId: string,
-  query: string,
-  optionConfig?: EntityPickerOptionConfig,
-): Promise<EntityPickerOption[]> {
-  const filters = encodeURIComponent(JSON.stringify({ company_code_id: companyCodeId, status: "active" }));
-  const assignmentRes = await fetch(
-    `/api/relay/api/records/company_code_book_assignment?filters=${filters}&page_size=50`,
-  );
-  if (!assignmentRes.ok) return [];
-  const assignmentBody = await assignmentRes.json() as { data?: Record<string, unknown>[] };
-  const bookIds = [
-    ...new Set(
-      (assignmentBody.data ?? [])
-        .sort((a, b) => Number(a["priority"] ?? 0) - Number(b["priority"] ?? 0))
-        .map((row) => row["book_id"])
-        .filter((v): v is string => typeof v === "string" && v.length > 0),
-    ),
-  ];
-  if (bookIds.length === 0) return [];
-
-  const rows = await Promise.all(
-    bookIds.map((bookId) =>
-      fetch(`/api/relay/api/records/ledger_book/${encodeURIComponent(bookId)}`)
-        .then((r) => (r.ok ? (r.json() as Promise<{ data?: Record<string, unknown> }>) : null))
-        .then((body) => body?.data ?? null)
-        .catch(() => null),
-    ),
-  );
-
-  return rows
-    .filter((row): row is Record<string, unknown> => Boolean(row))
-    .filter((row) => (row["status"] == null || row["status"] === "active"))
-    .filter((row) => row["is_manual_je_allowed"] !== false)
-    .filter((row) => row["category"] == null || row["category"] === "statutory")
-    .filter((row) => ledgerBookMatches(row, query))
-    .map((row) => entityRowToPickerOption(row, "ledger_book", optionConfig));
-}
-
 function FlowInlineRefPicker({
   fieldName,
   referenceConfig,
+  lookupConfig,
   value,
   onChange,
   onDisplayLabel,
@@ -174,6 +132,7 @@ function FlowInlineRefPicker({
 }: {
   fieldName: string;
   referenceConfig?: Record<string, unknown> | null;
+  lookupConfig?: Record<string, unknown> | null;
   value: unknown;
   onChange: (v: unknown) => void;
   /** Persist a resolved display label into engine state so it survives step navigation. */
@@ -193,6 +152,10 @@ function FlowInlineRefPicker({
   const optionConfig = useMemo(
     () => resolveEntityPickerOptionConfig(referenceConfig),
     [referenceConfig],
+  );
+  const lookupFilters = useMemo(
+    () => readLookupFilters(lookupConfig),
+    [lookupConfig],
   );
   const [pickerLabel, setPickerLabel] = useState<string | null>(null);
   const labelCache = useRef<Map<string, string>>(new Map());
@@ -225,38 +188,64 @@ function FlowInlineRefPicker({
   }, [uuid, needsResolve]);
 
   const searchFn = useCallback(
-    async (query: string): Promise<EntityPickerOption[]> => {
-      if (!entityCode) return [];
+    async (
+      query: string,
+      context?: EntityPickerSearchContext,
+    ): Promise<EntityPickerSearchResponse> => {
+      if (!entityCode) return { options: [], totalCount: 0 };
       try {
-        if (entityCode === "ledger_book") {
-          const ccId = draftCtxRef.current?.["company_code_id"];
-          if (typeof ccId === "string" && ccId) {
-            const assigned = await searchCompanyLedgerBooks(ccId, query, optionConfig);
-            assigned.forEach((opt) => labelCache.current.set(opt.value, opt.label));
-            if (assigned.length > 0 || !query.trim()) return assigned;
-          }
+        if (hasLookupDependency(lookupConfig)) {
+          const result = await searchLookupOptions({
+            entityCode,
+            query,
+            lookupConfig,
+            formData: draftCtxRef.current,
+            optionConfig,
+            context,
+          });
+          result.options.forEach((opt) => labelCache.current.set(opt.value, opt.label));
+          return result;
         }
 
-        const params = new URLSearchParams({ q: query, limit: "20" });
+        const pageSize = context?.pageSize ?? context?.limit ?? 20;
+        const params = new URLSearchParams({
+          q: query,
+          limit: String(pageSize),
+          page_size: String(pageSize),
+          page: String(context?.page ?? 1),
+        });
+        Object.entries(context?.searchParams ?? {}).forEach(([key, paramValue]) => {
+          params.set(key, paramValue);
+        });
+        const filters = { ...lookupFilters };
 
         if (COMPANY_CODE_SCOPED.has(entityCode)) {
           const ccId = draftCtxRef.current?.["company_code_id"];
           if (typeof ccId === "string" && ccId) {
-            params.set("filters", JSON.stringify({ company_code_id: ccId }));
+            filters["company_code_id"] = ccId;
           }
         }
+        applyLookupFiltersParam(params, filters);
 
         const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}?${params}`);
-        if (!res.ok) return [];
-        const body = await res.json() as { data?: Record<string, unknown>[] };
+        if (!res.ok) return { options: [], totalCount: 0 };
+        const body = await res.json() as {
+          data?: Record<string, unknown>[];
+          pagination?: { total?: number | string };
+        };
         const results = (body.data ?? []).map((row) => entityRowToPickerOption(row, entityCode, optionConfig));
         results.forEach((opt) => labelCache.current.set(opt.value, opt.label));
-        return results;
+        const total = body.pagination?.total;
+        const parsedTotal = total === undefined ? undefined : Number(total);
+        return {
+          options: results,
+          totalCount: parsedTotal !== undefined && Number.isFinite(parsedTotal) ? parsedTotal : undefined,
+        };
       } catch {
-        return [];
+        return { options: [], totalCount: 0 };
       }
     },
-    [entityCode, optionConfig],
+    [entityCode, lookupConfig, lookupFilters, optionConfig],
   );
 
   const handleChange = useCallback(
@@ -513,6 +502,40 @@ interface CurrencyRow {
   name: string;
   symbol?: string | null;
   status?: string | null;
+}
+
+function formatCurrencyLabel(currency: CurrencyRow | null | undefined): string | null {
+  return currency ? `${currency.code} - ${currency.name}` : null;
+}
+
+function CurrencyDisplay({ value }: { value: unknown }) {
+  const code = typeof value === "string" ? value.trim().toUpperCase() : "";
+  const [currency, setCurrency] = useState<CurrencyRow | null>(null);
+
+  useEffect(() => {
+    if (!code) {
+      setCurrency(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const params = new URLSearchParams({ search: code, limit: "20", status: "active" });
+    void fetch(`/api/relay/api/platform/ref/currencies?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ data?: CurrencyRow[] }> : { data: [] }))
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        setCurrency((body.data ?? []).find((row) => row.code === code) ?? null);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCurrency(null);
+      });
+    return () => controller.abort();
+  }, [code]);
+
+  if (!code) return <>-</>;
+  return <>{formatCurrencyLabel(currency) ?? code}</>;
 }
 
 interface CertificationTypeRow {
@@ -987,7 +1010,9 @@ function CurrencySelectInput({
 }) {
   const [query, setQuery] = useState("");
   const [currencies, setCurrencies] = useState<CurrencyRow[]>([]);
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyRow | null>(null);
   const [loading, setLoading] = useState(false);
+  const currentCode = typeof value === "string" ? value.trim().toUpperCase() : "";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1011,8 +1036,30 @@ function CurrencySelectInput({
     return () => controller.abort();
   }, [query]);
 
-  const currentCode = typeof value === "string" ? value.trim().toUpperCase() : "";
-  const selected = currencies.find((c) => c.code === currentCode);
+  const selected = currencies.find((c) => c.code === currentCode) ?? selectedCurrency;
+
+  useEffect(() => {
+    if (!currentCode || currencies.some((c) => c.code === currentCode)) {
+      setSelectedCurrency(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const params = new URLSearchParams({ search: currentCode, limit: "20", status: "active" });
+    void fetch(`/api/relay/api/platform/ref/currencies?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() as Promise<{ data?: CurrencyRow[] }> : { data: [] }))
+      .then((body) => {
+        if (controller.signal.aborted) return;
+        setSelectedCurrency((body.data ?? []).find((row) => row.code === currentCode) ?? null);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setSelectedCurrency(null);
+      });
+    return () => controller.abort();
+  }, [currentCode, currencies]);
+
   const options = currencies.map((c) => ({
     value: c.code,
     label: `${c.code} - ${c.name}`,
@@ -1022,7 +1069,7 @@ function CurrencySelectInput({
   return (
     <AsyncCombobox
       value={currentCode || null}
-      displayLabel={selected ? `${selected.code} - ${selected.name}` : (currentCode || null)}
+      displayLabel={formatCurrencyLabel(selected) ?? (currentCode || null)}
       options={options}
       loading={loading}
       onQueryChange={setQuery}
@@ -1174,7 +1221,13 @@ export function FlowFieldBinding({
       <div className={colSpanClass(binding.span)}>
         <FieldLabel label={field_label} />
         <div className="mt-1 rounded-md border border-transparent bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-          {value !== null && value !== undefined ? String(value) : "—"}
+          {ui_variant === "currency" ? (
+            <CurrencyDisplay value={value} />
+          ) : value !== null && value !== undefined ? (
+            String(value)
+          ) : (
+            "—"
+          )}
         </div>
       </div>
     );
@@ -1203,6 +1256,7 @@ export function FlowFieldBinding({
           <FlowInlineRefPicker
             fieldName={field_name}
             referenceConfig={binding.reference_config ?? null}
+            lookupConfig={binding.lookup_config ?? null}
             value={value}
             onChange={handleValueChange}
             onDisplayLabel={onDisplayLabel}
@@ -1226,7 +1280,7 @@ export function FlowFieldBinding({
           <SegmentedControl value={value} options={options} onChange={handleValueChange} disabled={isDisabled} />
         ) : ui_variant === "select" && options ? (
           <StaticSelectInput value={value} options={options} onChange={handleValueChange} disabled={isDisabled} error={error} />
-        ) : data_type === "text_long" || field_name === "notes" || field_name === "hold_reason" ? (
+        ) : ui_variant === "textarea" || data_type === "text_long" || field_name === "notes" || field_name === "hold_reason" ? (
           <TextareaInput value={value} onChange={handleValueChange} disabled={isDisabled} placeholder={placeholder} />
         ) : data_type === "date" ? (
           <DatePicker

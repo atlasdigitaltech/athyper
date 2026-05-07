@@ -25,6 +25,7 @@ import {
   emitOutboxEvent,
   SYSTEM_PRINCIPAL_UUID,
 } from "@athyper/svc-shared";
+import { positiveFxRateInput, resolveFxRate } from "../../shared/fx-rate.service.js";
 import { randomUUID } from "node:crypto";
 import { WorkflowEngine } from "../../workflow/engine.js";
 import { ApproverResolverService } from "../../workflow/approver-resolver.service.js";
@@ -293,6 +294,53 @@ async function getJournalLineTotals(
   };
 }
 
+async function resolveExistingJournalExchangeRate(
+  db: AnyDb,
+  tenantId: string,
+  journalEntryId: string,
+): Promise<number | null> {
+  const result = await sql<{ exchangeRate: string | null }>`
+    SELECT jl.exchange_rate::text AS "exchangeRate"
+      FROM document.journal_line jl
+     WHERE jl.tenant_id = ${tenantId}
+       AND jl.journal_entry_id = ${journalEntryId}
+       AND jl.exchange_rate IS NOT NULL
+     ORDER BY jl.line_no
+     LIMIT 1
+  `.execute(db);
+
+  const n = Number(result.rows[0]?.exchangeRate);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+async function resolveJournalExchangeRate(
+  db: AnyDb,
+  params: {
+    tenantId: string;
+    transactionCurrency: string;
+    baseCurrency: string;
+    asOf: string;
+    providedRate?: unknown;
+  },
+): Promise<number | null> {
+  const transactionCurrency = normalizeCurrency(params.transactionCurrency);
+  const baseCurrency = normalizeCurrency(params.baseCurrency);
+  if (transactionCurrency === baseCurrency) return 1;
+
+  const providedRate = positiveFxRateInput(params.providedRate);
+  if (providedRate !== null) return providedRate;
+
+  const fxRate = await resolveFxRate(db, {
+    tenantId:      params.tenantId,
+    fromCurrency:  transactionCurrency,
+    toCurrency:    baseCurrency,
+    asOf:          params.asOf,
+    rateType:      "SPOT",
+  });
+
+  return fxRate.rate;
+}
+
 function sendValidationError(res: Parameters<RequestHandler>[1], err: unknown): boolean {
   const e = err as Error & { code?: string };
   if (!e.code) return false;
@@ -460,6 +508,49 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
     }
   }) as RequestHandler);
 
+  router.get("/finance/fx-rate", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "TENANT_NOT_FOUND" }); return; }
+
+      const fromCurrency = normalizeCurrency(req.query["from"]);
+      const toCurrency = normalizeCurrency(req.query["to"]);
+      const asOf = String(req.query["asOf"] ?? req.query["as_of"] ?? new Date().toISOString().slice(0, 10));
+      const rateType = String(req.query["rateType"] ?? req.query["rate_type"] ?? "SPOT");
+
+      if (!fromCurrency || !toCurrency) {
+        res.status(400).json({ error: "MISSING_REQUIRED_FIELDS", message: "from and to currencies are required" });
+        return;
+      }
+
+      const fxRate = await resolveFxRate(db, {
+        tenantId,
+        fromCurrency,
+        toCurrency,
+        asOf,
+        rateType,
+      });
+
+      if (fxRate.rate === null) {
+        res.status(404).json({
+          error: "FX_RATE_NOT_FOUND",
+          message: `No active ${fxRate.rateType} exchange rate found for ${fromCurrency} to ${toCurrency} as of ${fxRate.asOf}`,
+          ...fxRate,
+        });
+        return;
+      }
+
+      res.json(fxRate);
+    } catch (err) {
+      logger?.error("finance_fx_rate_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
   router.get("/finance/journals/:jeId/posting-trace", (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -597,7 +688,9 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
       const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
       const body = req.body as Record<string, unknown>;
 
-      const companyCode = String(body["company_code"] ?? "").trim();
+      const companyCodeIdRef = String(body["company_code_id"] ?? "").trim();
+      const companyCodeRef = String(body["company_code"] ?? "").trim();
+      const companyRef = companyCodeIdRef || companyCodeRef;
       const fiscalYear = Number(body["fiscal_year"]);
       const periodNumber = Number(body["period_number"]);
       const postingDate = String(body["posting_date"] ?? "").trim();
@@ -606,27 +699,29 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
       const description = body["description"] != null ? String(body["description"]) : null;
       const typedLines = body["lines"] as ManualJournalLineInput[];
 
-      if (!companyCode || !fiscalYear || !periodNumber || !postingDate || !currencyCode) {
+      if (!companyRef || !fiscalYear || !periodNumber || !postingDate || !currencyCode) {
         res.status(400).json({
           error: "MISSING_REQUIRED_FIELDS",
-          message: "company_code, fiscal_year, period_number, posting_date, currency_code are required",
+          message: "company_code_id or company_code, fiscal_year, period_number, posting_date, currency_code are required",
         });
         return;
       }
 
-      const { totalDebit } = validateLines(typedLines);
+      const { totalDebit, totalCredit } = validateLines(typedLines);
 
       const company = await db
         .selectFrom("master.company_code as cc")
-        .select(["cc.id", "cc.functional_currency as baseCurrency"])
+        .select(["cc.id", "cc.code", "cc.functional_currency as baseCurrency"])
         .where("cc.tenant_id", "=", tenantId)
-        .where("cc.code", "=", companyCode)
-        .executeTakeFirst() as { id: string; baseCurrency: string } | undefined;
+        .where(isUuid(companyRef) ? "cc.id" : "cc.code", "=", companyRef)
+        .executeTakeFirst() as { id: string; code: string; baseCurrency: string } | undefined;
 
       if (!company) {
-        res.status(400).json({ error: "COMPANY_NOT_FOUND", message: `Company code '${companyCode}' not found` });
+        const fieldLabel = isUuid(companyRef) ? "Company code id" : "Company code";
+        res.status(400).json({ error: "COMPANY_NOT_FOUND", message: `${fieldLabel} '${companyRef}' not found` });
         return;
       }
+      const companyCode = company.code;
 
       const bookId = await resolveManualBook(db, tenantId, company.id);
       if (!bookId) {
@@ -640,13 +735,17 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         return;
       }
 
-      const exchangeRate = currencyCode === company.baseCurrency
-        ? 1
-        : Number(body["exchange_rate"]);
-      if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
+      const exchangeRate = await resolveJournalExchangeRate(db, {
+        tenantId,
+        transactionCurrency: currencyCode,
+        baseCurrency:        company.baseCurrency,
+        asOf:                postingDate,
+        providedRate:        body["exchange_rate"],
+      });
+      if (exchangeRate === null) {
         res.status(400).json({
           error: "EXCHANGE_RATE_REQUIRED",
-          message: "exchange_rate is required and must be positive when transaction currency differs from company base currency",
+          message: `No active SPOT exchange rate found for ${currencyCode} to ${company.baseCurrency} as of ${postingDate}`,
         });
         return;
       }
@@ -726,7 +825,13 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         }
 
         await (trx.updateTable("document.journal_entry") as any)
-          .set({ status: "created", updated_by: actorId })
+          .set({
+            status:       "created",
+            total_debit:  totalDebit.toFixed(4),
+            total_credit: totalCredit.toFixed(4),
+            line_count:   typedLines.length,
+            updated_by:   actorId,
+          })
           .where("id", "=", jeId)
           .where("tenant_id", "=", tenantId)
           .execute();
@@ -775,6 +880,7 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
           "je.company_code_id as companyCodeId",
           "je.transaction_currency as transactionCurrency",
           "je.base_currency as baseCurrency",
+          "je.posting_date as postingDate",
         ])
         .where("je.id", "=", jeId)
         .where("je.tenant_id", "=", tenantId)
@@ -813,15 +919,48 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
       const newLines = body["lines"];
       let typedLines: ManualJournalLineInput[] = [];
       let accountMap: Map<string, string> | null = null;
-      const currencyCode = String(jeRow["transactionCurrency"]);
-      const baseCurrency = String(jeRow["baseCurrency"]);
-      const exchangeRate = currencyCode === baseCurrency ? 1 : Number(body["exchange_rate"]);
+      const currentCurrencyCode = normalizeCurrency(jeRow["transactionCurrency"]);
+      const requestedCurrencyCode = body["currency_code"] !== undefined
+        ? normalizeCurrency(body["currency_code"])
+        : body["transaction_currency"] !== undefined
+          ? normalizeCurrency(body["transaction_currency"])
+          : currentCurrencyCode;
+      if (!/^[A-Z]{3}$/.test(requestedCurrencyCode)) {
+        res.status(400).json({ error: "INVALID_CURRENCY_CODE", message: "currency_code must be a 3-letter ISO code" });
+        return;
+      }
+      const currencyChanged = requestedCurrencyCode !== currentCurrencyCode;
+      if (currencyChanged && !Array.isArray(newLines)) {
+        res.status(400).json({
+          error: "LINES_REQUIRED_FOR_CURRENCY_CHANGE",
+          message: "Changing journal currency requires saving the journal lines in the same request.",
+        });
+        return;
+      }
+      if (currencyChanged) headerUpdates["transaction_currency"] = requestedCurrencyCode;
+
+      const currencyCode = requestedCurrencyCode;
+      const baseCurrency = normalizeCurrency(jeRow["baseCurrency"]);
+      const exchangeRateAsOf = String(body["posting_date"] ?? jeRow["postingDate"] ?? "");
+      let exchangeRate = await resolveJournalExchangeRate(db, {
+        tenantId,
+        transactionCurrency: currencyCode,
+        baseCurrency,
+        asOf:         exchangeRateAsOf,
+        providedRate: body["exchange_rate"],
+      });
 
       if (Array.isArray(newLines)) {
         typedLines = newLines as ManualJournalLineInput[];
         validateLines(typedLines);
-        if ((!Number.isFinite(exchangeRate) || exchangeRate <= 0) && currencyCode !== baseCurrency) {
-          res.status(400).json({ error: "EXCHANGE_RATE_REQUIRED", message: "exchange_rate is required when currencies differ" });
+        if (exchangeRate === null && body["exchange_rate"] === undefined && body["posting_date"] === undefined && !currencyChanged && currencyCode !== baseCurrency) {
+          exchangeRate = await resolveExistingJournalExchangeRate(db, tenantId, jeId);
+        }
+        if (exchangeRate === null) {
+          res.status(400).json({
+            error: "EXCHANGE_RATE_REQUIRED",
+            message: `No active SPOT exchange rate found for ${currencyCode} to ${baseCurrency} as of ${exchangeRateAsOf || "today"}`,
+          });
           return;
         }
         accountMap = await resolveGlAccounts(db, tenantId, typedLines);
@@ -835,6 +974,11 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
           .execute();
 
         if (accountMap) {
+          const resolvedExchangeRate = exchangeRate;
+          if (resolvedExchangeRate === null) {
+            throw Object.assign(new Error("Exchange rate was not resolved for journal lines"), { code: "EXCHANGE_RATE_REQUIRED" });
+          }
+
           if (currentStatus === "created") {
             await (trx.updateTable("document.journal_entry") as any)
               .set({ status: "draft", updated_by: actorId })
@@ -877,9 +1021,9 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
                 transaction_debit: debit.toFixed(4),
                 transaction_credit: credit.toFixed(4),
                 base_currency: baseCurrency,
-                base_debit: (debit * exchangeRate).toFixed(4),
-                base_credit: (credit * exchangeRate).toFixed(4),
-                exchange_rate: currencyCode === baseCurrency ? null : exchangeRate.toFixed(10),
+                base_debit: (debit * resolvedExchangeRate).toFixed(4),
+                base_credit: (credit * resolvedExchangeRate).toFixed(4),
+                exchange_rate: currencyCode === baseCurrency ? null : resolvedExchangeRate.toFixed(10),
                 cost_center_id: line.cost_center_id ?? null,
                 profit_center_id: line.profit_center_id ?? null,
                 project_id: line.project_id ?? null,
@@ -897,19 +1041,24 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
               journalLineId: lineId,
               actorId,
               currencyCode,
-              baseAmount: Math.max(debit, credit) * exchangeRate,
+              baseAmount: Math.max(debit, credit) * resolvedExchangeRate,
               reference: parseLineReference(line.reference),
               lineDescription: descriptionText,
             });
           }
 
-          if (currentStatus === "created") {
-            await (trx.updateTable("document.journal_entry") as any)
-              .set({ status: "created", updated_by: actorId })
-              .where("id", "=", jeId)
-              .where("tenant_id", "=", tenantId)
-              .execute();
-          }
+          const lineTotals = await getJournalLineTotals(trx, tenantId, jeId);
+          await (trx.updateTable("document.journal_entry") as any)
+            .set({
+              ...(currentStatus === "created" ? { status: "created" } : {}),
+              total_debit:  lineTotals.totalDebit.toFixed(4),
+              total_credit: lineTotals.totalCredit.toFixed(4),
+              line_count:   lineTotals.lineCount,
+              updated_by:   actorId,
+            })
+            .where("id", "=", jeId)
+            .where("tenant_id", "=", tenantId)
+            .execute();
         }
 
         await emitOutboxEvent(trx, {
@@ -984,38 +1133,52 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         return;
       }
 
-      if (currentStatus === "draft") {
-        const lineTotals = await getJournalLineTotals(db, tenantId, jeId);
-        if (lineTotals.lineCount < 2) {
-          res.status(422).json({
-            error: "INVALID_LINES",
-            message: "At least 2 journal lines are required before submitting.",
-          });
-          return;
-        }
-        if (lineTotals.totalDebit <= 0 || Math.abs(lineTotals.totalDebit - lineTotals.totalCredit) > 0.005) {
-          res.status(422).json({
-            error: "UNBALANCED",
-            message: `Journal entry must be balanced before submitting. Debit ${lineTotals.totalDebit.toFixed(2)} != Credit ${lineTotals.totalCredit.toFixed(2)}.`,
-          });
-          return;
-        }
+      const lineTotals = await getJournalLineTotals(db, tenantId, jeId);
+      if (lineTotals.lineCount < 2) {
+        res.status(422).json({
+          error: "INVALID_LINES",
+          message: "At least 2 journal lines are required before submitting.",
+        });
+        return;
+      }
+      if (lineTotals.totalDebit <= 0 || Math.abs(lineTotals.totalDebit - lineTotals.totalCredit) > 0.005) {
+        res.status(422).json({
+          error: "UNBALANCED",
+          message: `Journal entry must be balanced before submitting. Debit ${lineTotals.totalDebit.toFixed(2)} != Credit ${lineTotals.totalCredit.toFixed(2)}.`,
+        });
+        return;
+      }
 
+      if (currentStatus === "draft") {
         await (db.updateTable("document.journal_entry" as never) as any)
           .set({
             status:            "created",
             status_changed_at: new Date(),
             status_changed_by: principalId,
+            total_debit:       lineTotals.totalDebit.toFixed(4),
+            total_credit:      lineTotals.totalCredit.toFixed(4),
+            line_count:        lineTotals.lineCount,
             updated_by:        principalId,
           } as never)
           .where("id" as never, "=", jeId)
           .where("tenant_id" as never, "=", tenantId)
           .execute();
         je["status"] = "created";
-        je["totalDebit"] = lineTotals.totalDebit;
-        je["totalCredit"] = lineTotals.totalCredit;
-        je["lineCount"] = lineTotals.lineCount;
+      } else {
+        await (db.updateTable("document.journal_entry" as never) as any)
+          .set({
+            total_debit:  lineTotals.totalDebit.toFixed(4),
+            total_credit: lineTotals.totalCredit.toFixed(4),
+            line_count:   lineTotals.lineCount,
+            updated_by:   principalId,
+          } as never)
+          .where("id" as never, "=", jeId)
+          .where("tenant_id" as never, "=", tenantId)
+          .execute();
       }
+      je["totalDebit"] = lineTotals.totalDebit;
+      je["totalCredit"] = lineTotals.totalCredit;
+      je["lineCount"] = lineTotals.lineCount;
 
       const ccRow = await db
         .selectFrom("master.company_code as cc")

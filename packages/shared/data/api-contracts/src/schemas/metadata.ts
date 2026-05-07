@@ -69,6 +69,41 @@ export const ReferencePickerConfigSchema = z.object({
   show_code: z.boolean().optional(),
   show_description: z.boolean().optional(),
   show_view_action: z.boolean().optional(),
+  option_action_label: z.string().optional(),
+  /** "advanced" enables the portal-based dense chooser display. */
+  variant: z.enum(["standard", "advanced"]).optional(),
+  /** Display density for the advanced chooser. */
+  density: z.enum(["mini", "compact", "comfortable", "mobile"]).optional(),
+  width: z.union([z.number(), z.string()]).optional(),
+  max_list_height: z.number().optional(),
+  show_keyboard_hints: z.boolean().optional(),
+  show_recently_used: z.boolean().optional(),
+  recent_limit: z.number().optional(),
+  result_label: z.string().optional(),
+  controls: z.array(z.object({
+    id: z.string().optional(),
+    label: z.string(),
+    value: z.string().optional(),
+    field: z.string().optional(),
+    match_value: z.string().optional(),
+    search_param: z.string().optional(),
+    count: z.number().optional(),
+    disabled: z.boolean().optional(),
+  })).optional(),
+  sections: z.array(z.object({
+    id: z.string().optional(),
+    label: z.string(),
+    value: z.string().optional(),
+    field: z.string().optional(),
+    match_value: z.string().optional(),
+  })).optional(),
+  badges: z.array(z.object({
+    label: z.string().optional(),
+    field: z.string().optional(),
+    tone: z.enum(["default", "muted", "success", "warning", "destructive", "info"]).optional(),
+    label_map: z.record(z.string(), z.string()).optional(),
+    tone_map: z.record(z.string(), z.enum(["default", "muted", "success", "warning", "destructive", "info"])).optional(),
+  })).optional(),
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -119,10 +154,12 @@ export const EntityFieldSchema = z.object({
     show_view_action: z.boolean().optional(),
     picker: ReferencePickerConfigSchema.optional(),
   }).nullable(),
+  money_config: z.record(z.string(), z.unknown()).nullable().optional(),
 
   sort_order: z.number().int(),
   group_key: z.string().nullable(),
   ui_hint: z.record(z.string(), z.unknown()).nullable().optional(),
+  lookup_config: z.record(z.string(), z.unknown()).nullable().optional(),
   filter_config: z.object({
     section_key: z.string().optional(),
     section_label: z.string().optional(),
@@ -319,6 +356,7 @@ const MasterTabSchema = z.object({
     "summary_cards_with_drawer",
     "contacts_channel_accordion",
     "addresses_accordion",
+    "supplier_cc_extension",
   ]),
   /** Required for renderer="child" or "summary_cards_with_drawer". */
   entity_code:         z.string().optional(),
@@ -596,6 +634,12 @@ export const CompiledEntitySchema = z.object({
         label: z.string(),
       })).optional(),
     }).optional(),
+    /**
+     * Document-specific line editor metadata. Kept open so entity definitions
+     * can describe line entity, reference targets, and editor behavior without
+     * hardcoding those choices in the renderer.
+     */
+    journal_editor: z.record(z.string(), z.unknown()).optional(),
     /**
      * Semantic resolver key for status-field badge coloring in list/detail views.
      * When set, overrides the heuristic detection in resolvePresentationConfig.

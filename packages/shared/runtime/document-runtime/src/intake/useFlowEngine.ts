@@ -31,6 +31,14 @@
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import type { FlowBundle, FlowStep, FlowFieldBinding } from "@athyper/api-contracts/documents";
+import {
+  resolveMoneyFieldFormat,
+  type CurrencyCodePosition,
+} from "@athyper/runtime-shared/core";
+import {
+  validateMetaFieldRules,
+  validationFieldsAffectedByChange,
+} from "@athyper/runtime-shared/validation";
 import { isTruthy, evaluateRule, type RuleContext } from "./evaluateRule";
 
 export interface FlowEngineState {
@@ -46,10 +54,24 @@ export interface SummaryLine {
   field_name: string;
   label: string;
   value: unknown;
+  data_type?: string | null;
+  money_config?: Record<string, unknown> | null;
+  currency_code?: string | null;
+  currency_code_position?: CurrencyCodePosition;
+  minor_units?: number | null;
+  fallback_minor_units?: number;
   /** Resolved display label for UUID reference fields. Falls back to value. */
   displayValue: string;
   summary_role: string;
   is_override: boolean;
+  is_missing?: boolean;
+}
+
+export interface SummaryBalance {
+  label: string;
+  status: "balanced" | "imbalanced" | "none";
+  difference: number;
+  lineCount: number;
 }
 
 export interface UseFlowEngineReturn {
@@ -59,6 +81,7 @@ export interface UseFlowEngineReturn {
   canAdvance: boolean;
   isLastStep: boolean;
   summaryLines: SummaryLine[];
+  summaryBalance: SummaryBalance | null;
   setField: (name: string, value: unknown) => void;
   setOverride: (name: string, value: unknown) => void;
   setDerivedValue: (name: string, value: unknown) => void;
@@ -67,6 +90,289 @@ export interface UseFlowEngineReturn {
   goBack: () => void;
   goToStep: (index: number) => void;
   validateStep: () => boolean;
+}
+
+type FlowSectionForValidation = {
+  section_key: string;
+  payload_key?: string | null;
+  entity_code?: string | null;
+  child_fields?: FlowChildFieldForSummary[];
+};
+
+type FlowChildFieldForSummary = {
+  field_name?: string;
+  field_label?: string;
+  data_type?: string | null;
+  visible_when?: unknown;
+  required_when?: unknown;
+  validation_rules?: Record<string, unknown> | null;
+  sort_order?: number | null;
+};
+
+type FlowSummaryConfig = {
+  fields?: unknown;
+  line_collection?: unknown;
+  balance_rule?: unknown;
+};
+
+type SummaryFieldCandidate = {
+  field_name: string;
+  label: string;
+  data_type?: string | null;
+  visible_when?: unknown;
+  required_when?: unknown;
+  validation_rules?: Record<string, unknown> | null;
+  sort_order: number;
+};
+
+type ExtendedAdvanceRule = FlowStep["advance_rule"] & {
+  required_sections?: string[];
+  min_rows?: Record<string, unknown>;
+  balance_rule?: string | null;
+};
+
+function stepSections(step: FlowStep): FlowSectionForValidation[] {
+  const sections = (step as FlowStep & { sections?: unknown }).sections;
+  return Array.isArray(sections) ? sections as FlowSectionForValidation[] : [];
+}
+
+function sectionPayloadKey(section: FlowSectionForValidation): string {
+  return section.payload_key?.trim() || section.section_key;
+}
+
+function readSectionValue(
+  step: FlowStep,
+  draft: Record<string, unknown>,
+  key: string,
+): unknown {
+  const direct = draft[key];
+  if (direct !== undefined) return direct;
+
+  const section = stepSections(step).find((item) =>
+    item.section_key === key || sectionPayloadKey(item) === key,
+  );
+  return section ? draft[sectionPayloadKey(section)] : undefined;
+}
+
+function flowSummaryConfig(bundle: FlowBundle): FlowSummaryConfig {
+  const config = bundle.config as FlowBundle["config"] & { summary?: FlowSummaryConfig };
+  return config.summary && typeof config.summary === "object" ? config.summary : {};
+}
+
+function configuredSummaryFieldNames(bundle: FlowBundle): string[] {
+  const fields = flowSummaryConfig(bundle).fields;
+  return Array.isArray(fields)
+    ? fields.map(String).map((field) => field.trim()).filter(Boolean)
+    : [];
+}
+
+function configuredChildSummaryFields(
+  steps: FlowStep[],
+  configuredNames: string[],
+  flowFieldNames: Set<string>,
+): SummaryFieldCandidate[] {
+  if (configuredNames.length === 0) return [];
+  const configured = new Set(configuredNames);
+  const candidates = new Map<string, SummaryFieldCandidate>();
+
+  for (const step of steps) {
+    for (const section of stepSections(step)) {
+      for (const field of section.child_fields ?? []) {
+        const fieldName = String(field.field_name ?? "").trim();
+        if (!fieldName || !configured.has(fieldName) || flowFieldNames.has(fieldName) || candidates.has(fieldName)) {
+          continue;
+        }
+        candidates.set(fieldName, {
+          field_name: fieldName,
+          label: String(field.field_label ?? fieldName),
+          data_type: field.data_type ?? null,
+          visible_when: field.visible_when ?? null,
+          required_when: field.required_when ?? null,
+          validation_rules: field.validation_rules ?? null,
+          sort_order: Number(field.sort_order ?? 0),
+        });
+      }
+    }
+  }
+
+  return configuredNames
+    .map((name) => candidates.get(name))
+    .filter((field): field is SummaryFieldCandidate => Boolean(field));
+}
+
+function ruleFromValidation(field: SummaryFieldCandidate): unknown {
+  return field.required_when ?? field.validation_rules?.["required_when"] ?? null;
+}
+
+function isMissingValue(value: unknown): boolean {
+  return value === undefined || value === null || value === "";
+}
+
+function summaryDisplayValue(value: unknown, missing: boolean): string {
+  if (missing) return "Required";
+  if (isMissingValue(value)) return "--";
+  return String(value);
+}
+
+function fallbackCurrency(draft: Record<string, unknown>): string | null {
+  return (
+    stringValue(draft["transaction_currency"]) ??
+    stringValue(draft["currency_code"]) ??
+    stringValue(draft["base_currency"]) ??
+    stringValue(draft["base_currency_code"])
+  )?.toUpperCase() ?? null;
+}
+
+function isMoneySummaryField(field: Pick<FlowFieldBinding, "data_type" | "ui_variant" | "money_config">): boolean {
+  return Boolean(
+    field.money_config ||
+    field.data_type === "money" ||
+    field.ui_variant === "money" ||
+    field.ui_variant === "money_big",
+  );
+}
+
+function moneySummaryProps(
+  field: Pick<FlowFieldBinding, "data_type" | "ui_variant" | "money_config">,
+  draft: Record<string, unknown>,
+): Pick<SummaryLine, "data_type" | "money_config" | "currency_code" | "currency_code_position" | "minor_units" | "fallback_minor_units"> {
+  if (!isMoneySummaryField(field)) {
+    return {
+      data_type: field.data_type ?? null,
+      money_config: field.money_config ?? null,
+    };
+  }
+
+  const format = resolveMoneyFieldFormat(field.money_config, {
+    header:               draft,
+    record:               draft,
+    fallbackCurrencyCode: fallbackCurrency(draft),
+  });
+
+  return {
+    data_type:               field.data_type ?? null,
+    money_config:            field.money_config ?? null,
+    currency_code:           format.currencyCode ?? null,
+    currency_code_position:  format.currencyCodePosition,
+    minor_units:             format.minorUnits ?? null,
+    fallback_minor_units:    format.fallbackMinorUnits,
+  };
+}
+
+function lineFieldNumber(line: unknown, requestedField: string): number {
+  if (!line || typeof line !== "object") return 0;
+  const row = line as Record<string, unknown>;
+  const aliases: Record<string, string[]> = {
+    base_debit:         ["base_debit", "transaction_debit", "debit"],
+    base_credit:        ["base_credit", "transaction_credit", "credit"],
+    transaction_debit:  ["transaction_debit", "debit", "base_debit"],
+    transaction_credit: ["transaction_credit", "credit", "base_credit"],
+    debit:              ["debit", "transaction_debit", "base_debit"],
+    credit:             ["credit", "transaction_credit", "base_credit"],
+  };
+  const keys = aliases[requestedField] ?? [requestedField];
+  return lineAmount(line, keys);
+}
+
+function collectionRows(draft: Record<string, unknown>, collectionKey: string): unknown[] {
+  const value = draft[collectionKey];
+  return Array.isArray(value) ? value : [];
+}
+
+function evaluateLineDerivation(
+  expr: string | null | undefined,
+  draft: Record<string, unknown>,
+): unknown {
+  if (!expr) return undefined;
+
+  const sumMatch = /^([A-Za-z_][\w]*)\.sum\(([^)]+)\)$/.exec(expr.trim());
+  if (sumMatch) {
+    const collectionKey = sumMatch[1]!;
+    const fieldName = sumMatch[2]!.trim();
+    return collectionRows(draft, collectionKey).reduce<number>(
+      (sum, line) => sum + lineFieldNumber(line, fieldName),
+      0,
+    );
+  }
+
+  const countMatch = /^([A-Za-z_][\w]*)\.count\(\)$/.exec(expr.trim());
+  if (countMatch) {
+    return collectionRows(draft, countMatch[1]!).length;
+  }
+
+  return undefined;
+}
+
+function resolveSummaryValue(
+  field: Pick<FlowFieldBinding, "derive_expression" | "field_name">,
+  draft: Record<string, unknown>,
+): unknown {
+  const derivedValue = evaluateLineDerivation(field.derive_expression, draft);
+  return derivedValue !== undefined ? derivedValue : draft[field.field_name];
+}
+
+function lineAmount(line: unknown, keys: string[]): number {
+  if (!line || typeof line !== "object") return 0;
+  const row = line as Record<string, unknown>;
+  for (const key of keys) {
+    const value = row[key];
+    if (value === null || value === undefined || value === "") continue;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function validateSectionAdvanceRules(
+  step: FlowStep,
+  draft: Record<string, unknown>,
+): Record<string, string> {
+  const rule = step.advance_rule as ExtendedAdvanceRule;
+  const errors: Record<string, string> = {};
+  const requiredSections = Array.isArray(rule.required_sections) ? rule.required_sections : [];
+  const minRowsConfig = rule.min_rows && typeof rule.min_rows === "object" && !Array.isArray(rule.min_rows)
+    ? rule.min_rows
+    : {};
+
+  for (const key of requiredSections) {
+    const value = readSectionValue(step, draft, key);
+    if (!Array.isArray(value) || value.length === 0) {
+      errors[key] = "This section is required";
+    }
+  }
+
+  for (const [key, rawMinRows] of Object.entries(minRowsConfig)) {
+    const minRows = Number(rawMinRows);
+    if (!Number.isFinite(minRows) || minRows <= 0) continue;
+
+    const value = readSectionValue(step, draft, key);
+    if (!Array.isArray(value) || value.length < minRows) {
+      errors[key] = `At least ${minRows} rows are required`;
+    }
+  }
+
+  if (rule.balance_rule === "debit_equals_credit") {
+    const sectionKey = requiredSections.find((key) =>
+      Array.isArray(readSectionValue(step, draft, key)),
+    ) ?? "lines";
+    const value = readSectionValue(step, draft, sectionKey);
+
+    if (Array.isArray(value)) {
+      const totalDebit = value.reduce(
+        (sum, line) => sum + lineAmount(line, ["debit", "transaction_debit"]),
+        0,
+      );
+      const totalCredit = value.reduce(
+        (sum, line) => sum + lineAmount(line, ["credit", "transaction_credit"]),
+        0,
+      );
+      if (totalDebit <= 0 || Math.abs(totalDebit - totalCredit) > 0.001) {
+        errors[sectionKey] = "Journal lines must be balanced";
+      }
+    }
+  }
+
+  return errors;
 }
 
 function makeCtx(draft: Record<string, unknown>, userCtx?: Record<string, unknown>): RuleContext {
@@ -319,6 +625,10 @@ export function useFlowEngine(
   const sortedSteps = useMemo(
     () => [...bundle.steps].sort((a, b) => a.sort_order - b.sort_order),
     [bundle.steps],
+  );
+  const allFields = useMemo(
+    () => sortedSteps.flatMap((step) => step.fields),
+    [sortedSteps],
   );
 
   const [state, setState] = useState<FlowEngineState>(() => ({
@@ -621,26 +931,32 @@ export function useFlowEngine(
       return v !== null && v !== undefined && v !== "";
     });
     if (!allFilled) return false;
+    if (Object.keys(validateSectionAdvanceRules(currentStep, state.draft)).length > 0) {
+      return false;
+    }
     if (currentStep.advance_rule.predicate) {
       return Boolean(evaluateRule(currentStep.advance_rule.predicate, ruleCtx));
     }
     return true;
   }, [currentStep, state.draft, ruleCtx]);
 
-  // Summary panel lines: collect all fields with summary_role across ALL steps
+  // Summary panel lines: collect metadata-marked fields across ALL steps.
   const summaryLines = useMemo<SummaryLine[]>(() => {
     const seen = new Set<string>();
     const lines: SummaryLine[] = [];
+    const configuredNames = configuredSummaryFieldNames(bundle);
+    const flowFieldNames = new Set(allFields.map((field) => field.field_name));
     for (const step of sortedSteps) {
       for (const f of step.fields) {
         if (!f.summary_role || seen.has(f.field_name)) continue;
         seen.add(f.field_name);
-        const value = state.draft[f.field_name];
-        if (value !== undefined && value !== null) {
+        const value = resolveSummaryValue(f, state.draft);
+        if (!isMissingValue(value)) {
           lines.push({
             field_name: f.field_name,
             label: f.field_label,
             value,
+            ...moneySummaryProps(f, state.draft),
             // Prefer a resolved display label (e.g. "Net 30 Days") over raw UUID
             displayValue: state.displayLabels[f.field_name] ?? String(value),
             summary_role: f.summary_role,
@@ -649,8 +965,84 @@ export function useFlowEngine(
         }
       }
     }
+
+    for (const field of configuredChildSummaryFields(sortedSteps, configuredNames, flowFieldNames)) {
+      if (seen.has(field.field_name)) continue;
+      if (field.visible_when && !isTruthy(field.visible_when, ruleCtx)) continue;
+
+      const value = state.draft[field.field_name];
+      const requiredRule = ruleFromValidation(field);
+      const missing = isMissingValue(value) && requiredRule != null && isTruthy(requiredRule, ruleCtx);
+      if (isMissingValue(value) && !missing) continue;
+
+      seen.add(field.field_name);
+      lines.push({
+        field_name: field.field_name,
+        label: field.label,
+        value,
+        data_type: field.data_type ?? null,
+        money_config: null,
+        displayValue: summaryDisplayValue(value, missing),
+        summary_role: "meta",
+        is_override: state.overrides.has(field.field_name),
+        is_missing: missing,
+      });
+    }
+
     return lines;
-  }, [sortedSteps, state.draft, state.overrides, state.displayLabels]);
+  }, [bundle, sortedSteps, allFields, state.draft, state.overrides, state.displayLabels, ruleCtx]);
+
+  const summaryBalance = useMemo<SummaryBalance | null>(() => {
+    const configured = flowSummaryConfig(bundle);
+    const configuredRule = typeof configured.balance_rule === "string" ? configured.balance_rule : null;
+    const ruleStep = sortedSteps.find((step) => {
+      const rule = step.advance_rule as ExtendedAdvanceRule;
+      return rule.balance_rule === "debit_equals_credit";
+    });
+    const balanceRule = configuredRule ?? (ruleStep?.advance_rule as ExtendedAdvanceRule | undefined)?.balance_rule ?? null;
+    if (balanceRule !== "debit_equals_credit") return null;
+
+    const configuredCollection = typeof configured.line_collection === "string"
+      ? configured.line_collection.trim()
+      : "";
+    const allSections = sortedSteps.flatMap(stepSections);
+    const configuredSection = allSections.find((section) =>
+      configuredCollection &&
+      (
+        section.section_key === configuredCollection ||
+        sectionPayloadKey(section) === configuredCollection ||
+        section.entity_code === configuredCollection
+      ),
+    );
+    const ruleCollection = ruleStep
+      ? ((ruleStep.advance_rule as ExtendedAdvanceRule).required_sections ?? [])
+          .find((key) => Array.isArray(readSectionValue(ruleStep, state.draft, key)))
+      : null;
+    const collectionKey = configuredSection
+      ? sectionPayloadKey(configuredSection)
+      : ruleCollection ?? "lines";
+
+    const rows = collectionRows(state.draft, collectionKey);
+    const totalDebit = rows.reduce<number>(
+      (sum, line) => sum + lineAmount(line, ["debit", "transaction_debit", "base_debit"]),
+      0,
+    );
+    const totalCredit = rows.reduce<number>(
+      (sum, line) => sum + lineAmount(line, ["credit", "transaction_credit", "base_credit"]),
+      0,
+    );
+    const difference = Math.abs(totalDebit - totalCredit);
+
+    if (rows.length === 0) {
+      return { label: "Balance", status: "none", difference: 0, lineCount: 0 };
+    }
+    return {
+      label: "Balance",
+      status: totalDebit > 0 && difference < 0.001 ? "balanced" : "imbalanced",
+      difference,
+      lineCount: rows.length,
+    };
+  }, [bundle, sortedSteps, state.draft]);
 
   const setField = useCallback((name: string, value: unknown) => {
     setState((prev) => ({
@@ -659,10 +1051,13 @@ export function useFlowEngine(
       errors: (() => {
         const next = { ...prev.errors };
         delete next[name];
+        for (const fieldName of validationFieldsAffectedByChange(allFields, name)) {
+          delete next[fieldName];
+        }
         return next;
       })(),
     }));
-  }, []);
+  }, [allFields]);
 
   const setOverride = useCallback((name: string, value: unknown) => {
     setState((prev) => ({
@@ -672,10 +1067,13 @@ export function useFlowEngine(
       errors: (() => {
         const next = { ...prev.errors };
         delete next[name];
+        for (const fieldName of validationFieldsAffectedByChange(allFields, name)) {
+          delete next[fieldName];
+        }
         return next;
       })(),
     }));
-  }, []);
+  }, [allFields]);
 
   const setDerivedValue = useCallback((name: string, value: unknown) => {
     setState((prev) => {
@@ -709,9 +1107,12 @@ export function useFlowEngine(
         errors[f.field_name] = `${f.field_label} is required`;
       }
     }
+    const metaValidation = validateMetaFieldRules(visibleFields, state.draft);
+    Object.assign(errors, metaValidation.fieldErrors);
+    Object.assign(errors, validateSectionAdvanceRules(currentStep, state.draft));
     setState((prev) => ({ ...prev, errors }));
     return Object.keys(errors).length === 0;
-  }, [visibleFields, state.draft, ruleCtx]);
+  }, [currentStep, visibleFields, state.draft, ruleCtx]);
 
   const goNext = useCallback(() => {
     if (!validateStep()) return;
@@ -745,6 +1146,7 @@ export function useFlowEngine(
     canAdvance,
     isLastStep: state.currentStepIndex === sortedSteps.length - 1,
     summaryLines,
+    summaryBalance,
     setField,
     setOverride,
     setDerivedValue,

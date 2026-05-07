@@ -1133,6 +1133,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
           const jeCompanyId = mappedData["company_code_id"] as string | undefined;
 
+          // Manual JE creation omits the locked source field from the form, but
+          // document.journal_entry.source_doc_type is NOT NULL.
+          if (!mappedData["source_doc_type"]) {
+            mappedData["source_doc_type"] = "manual";
+          }
+
           // Resolve book_id via company_code_book_assignment (statutory book)
           if (!mappedData["book_id"] && jeCompanyId) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2630,7 +2636,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             description: string | null;
             transaction_debit: string; transaction_credit: string;
             base_debit: string; base_credit: string;
-            transaction_currency: string | null;
+            transaction_currency: string | null; base_currency: string | null; exchange_rate: string | null;
             subledger_type: string | null; party_type: string | null; party_id: string | null;
             cost_center_id: string | null; profit_center_id: string | null; project_id: string | null;
             references: unknown;
@@ -2643,6 +2649,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
                    jl.transaction_debit,  jl.transaction_credit,
                    jl.base_debit,         jl.base_credit,
                    jl.transaction_currency,
+                   jl.base_currency,
+                   jl.exchange_rate,
                    jl.subledger_type, jl.party_type, jl.party_id,
                    jl.cost_center_id, jl.profit_center_id, jl.project_id,
                    COALESCE(
@@ -2674,6 +2682,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
              GROUP BY jl.id, jl.line_no, jl.gl_account_id, ga.code, ga.name,
                       jl.description, jl.transaction_debit, jl.transaction_credit,
                       jl.base_debit, jl.base_credit, jl.transaction_currency,
+                      jl.base_currency, jl.exchange_rate,
                       jl.subledger_type, jl.party_type, jl.party_id,
                       jl.cost_center_id, jl.profit_center_id, jl.project_id
              ORDER BY jl.line_no
@@ -2697,8 +2706,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
               gl_account_name:    r.gl_account_name,
               transaction_debit:  r.transaction_debit,
               transaction_credit: r.transaction_credit,
+              transaction_currency: r.transaction_currency,
+              base_currency:      r.base_currency,
               base_debit:         r.base_debit,
               base_credit:        r.base_credit,
+              exchange_rate:      r.exchange_rate,
               subledger_type:     r.subledger_type,
               party_type:         r.party_type,
               party_id:           r.party_id,

@@ -27,6 +27,8 @@ import { FlowSummaryPanel } from "./FlowSummaryPanel";
 import { FlowFieldBinding } from "./FlowFieldBinding";
 import { useFlowEngine } from "./useFlowEngine";
 import { mapFlowHeaderModel } from "./mapFlowHeaderModel";
+import { JournalIntakeLinesGrid, type JournalExchangeRateStatus } from "../items/JournalLinesGrid";
+import { InvoiceIntakeLinesGrid, type InvoiceLineValidationStatus } from "../items/InvoiceIntakeLinesGrid";
 
 export interface FlowWizardProps {
   bundle: FlowBundle;
@@ -45,6 +47,38 @@ export interface FlowWizardProps {
   headerAction?: React.ReactNode;
 }
 
+type IntakeFlowSection = {
+  section_key: string;
+  label?: string;
+  section_type?: string;
+  entity_code?: string | null;
+  payload_key?: string | null;
+  min_rows?: number | null;
+};
+
+function flowSections(step: unknown): IntakeFlowSection[] {
+  const sections = (step as { sections?: unknown }).sections;
+  return Array.isArray(sections) ? sections as IntakeFlowSection[] : [];
+}
+
+function sectionPayloadKey(section: IntakeFlowSection): string {
+  return section.payload_key?.trim() || section.section_key;
+}
+
+function isJournalLineSection(section: IntakeFlowSection): boolean {
+  return (
+    section.section_type === "repeater" &&
+    (section.entity_code === "journal_line" || (!section.entity_code && sectionPayloadKey(section) === "lines"))
+  );
+}
+
+function isInvoiceLineSection(section: IntakeFlowSection): boolean {
+  return (
+    section.section_type === "repeater" &&
+    section.entity_code === "purchase_invoice_line"
+  );
+}
+
 export function FlowWizard({
   bundle,
   userPermissions,
@@ -59,12 +93,16 @@ export function FlowWizard({
 }: FlowWizardProps) {
   const engine = useFlowEngine(bundle, userPermissions, userCtx, initialValues);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [lineFxStatuses, setLineFxStatuses] = React.useState<Record<string, JournalExchangeRateStatus>>({});
+  const [invoiceLineStatuses, setInvoiceLineStatuses] = React.useState<Record<string, InvoiceLineValidationStatus>>({});
   const {
     state,
+    currentStep,
     visibleFields,
     canAdvance,
     isLastStep,
     summaryLines,
+    summaryBalance,
     setField,
     setOverride,
     setDerivedValue,
@@ -76,15 +114,20 @@ export function FlowWizard({
 
   const chipFields  = visibleFields.filter((f) => f.mode === "chip");
   const gridFields  = visibleFields.filter((f) => f.mode !== "chip");
-  const currencyCode = String(
-    state.draft.currency_code ??
-    state.draft.transaction_currency ??
-    state.draft.base_currency_code ??
-    state.draft.base_currency ??
-    "",
+  const lineSections = flowSections(currentStep).filter(isJournalLineSection);
+  const invoiceLineSections = flowSections(currentStep).filter(isInvoiceLineSection);
+  const currentLineFxBlocking = lineSections.some((section) =>
+    Boolean(lineFxStatuses[sectionPayloadKey(section)]?.blocking),
   );
+  const currentInvoiceLineBlocking = invoiceLineSections.some((section) =>
+    Boolean(invoiceLineStatuses[sectionPayloadKey(section)]?.blocking),
+  );
+  const currentLineBlocking = currentLineFxBlocking || currentInvoiceLineBlocking;
+  const transactionCurrencyCode = String(state.draft.transaction_currency ?? state.draft.currency_code ?? "");
+  const baseCurrencyCode = String(state.draft.base_currency_code ?? state.draft.base_currency ?? "");
+  const currencyCode = transactionCurrencyCode || baseCurrencyCode;
   // Defer summary panel until step 2+ so step 1 doesn't show a column of zeros.
-  const showSummary = summaryLines.length > 0 && state.currentStepIndex > 0;
+  const showSummary = (summaryLines.length > 0 || summaryBalance) && state.currentStepIndex > 0;
 
   const entityHeaderModel = mapFlowHeaderModel(bundle, state.currentStepIndex, {
     onCancel,
@@ -95,6 +138,7 @@ export function FlowWizard({
 
   async function handleSubmit() {
     if (!validateStep()) return;
+    if (currentLineBlocking) return;
     setSubmitError(null);
     try {
       await onSubmit(state.draft);
@@ -176,7 +220,53 @@ export function FlowWizard({
                   </div>
                 )}
 
-                {gridFields.length === 0 && chipFields.length === 0 && (
+                {lineSections.map((section) => {
+                  const payloadKey = sectionPayloadKey(section);
+                  return (
+                    <JournalIntakeLinesGrid
+                      key={section.section_key}
+                      value={state.draft[payloadKey]}
+                      error={state.errors[payloadKey]}
+                      currencyCode={currencyCode || "USD"}
+                      transactionCurrencyCode={transactionCurrencyCode}
+                      baseCurrencyCode={baseCurrencyCode}
+                      exchangeRate={state.draft.exchange_rate}
+                      onExchangeRateChange={(value) => setField("exchange_rate", value)}
+                      onExchangeRateStatusChange={(status) => {
+                        setLineFxStatuses((prev) => ({ ...prev, [payloadKey]: status }));
+                      }}
+                      onTransactionCurrencyCodeChange={(value) => {
+                        setOverride("transaction_currency", value);
+                        if ("currency_code" in state.draft) setOverride("currency_code", value);
+                        setField("exchange_rate", "");
+                      }}
+                      currencySelectorEditable
+                      headerContext={state.draft}
+                      lineEntityCode={section.entity_code?.trim() || "journal_line"}
+                      minRows={section.min_rows ?? 2}
+                      onChange={(lines) => setField(payloadKey, lines)}
+                    />
+                  );
+                })}
+
+                {invoiceLineSections.map((section) => {
+                  const payloadKey = sectionPayloadKey(section);
+                  return (
+                    <InvoiceIntakeLinesGrid
+                      key={section.section_key}
+                      value={state.draft[payloadKey]}
+                      error={state.errors[payloadKey]}
+                      currencyCode={currencyCode || "USD"}
+                      minRows={section.min_rows ?? 1}
+                      onValidationStatusChange={(status) => {
+                        setInvoiceLineStatuses((prev) => ({ ...prev, [payloadKey]: status }));
+                      }}
+                      onChange={(lines) => setField(payloadKey, lines)}
+                    />
+                  );
+                })}
+
+                {gridFields.length === 0 && chipFields.length === 0 && lineSections.length === 0 && invoiceLineSections.length === 0 && (
                   <p className="text-sm text-muted-foreground italic">
                     No fields in this step.
                   </p>
@@ -216,7 +306,7 @@ export function FlowWizard({
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={submitting}
+                    disabled={submitting || currentLineBlocking}
                     className={cn(
                       "flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold",
                       "bg-primary text-primary-foreground",
@@ -228,13 +318,15 @@ export function FlowWizard({
                     ) : (
                       <Send className="h-3.5 w-3.5" />
                     )}
-                    {submitting ? "Submitting…" : "Submit"}
+                    {submitting ? "Creating…" : "Create"}
                   </button>
                 ) : (
                   <button
                     type="button"
-                    onClick={goNext}
-                    disabled={!canAdvance || submitting}
+                    onClick={() => {
+                      if (!currentLineBlocking) goNext();
+                    }}
+                    disabled={!canAdvance || submitting || currentLineBlocking}
                     className={cn(
                       "flex items-center gap-1.5 rounded-md px-5 py-2 text-sm font-semibold",
                       "bg-primary text-primary-foreground",
@@ -251,7 +343,7 @@ export function FlowWizard({
 
           {/* Summary panel — sticky right rail */}
           {showSummary && (
-            <FlowSummaryPanel lines={summaryLines} currencyCode={currencyCode} />
+            <FlowSummaryPanel lines={summaryLines} balance={summaryBalance} currencyCode={currencyCode} />
           )}
         </div>
       </div>

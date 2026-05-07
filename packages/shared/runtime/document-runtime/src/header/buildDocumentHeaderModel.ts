@@ -23,7 +23,7 @@ import type {
   HeaderFact,
   HeaderProgressStage,
 } from "@athyper/entity-runtime/header";
-import { statusToIntent, fmtDate, fmtDateTime, fmtAmountMaybe } from "@athyper/runtime-shared/core";
+import { statusToIntent, fmtDate, fmtDateTime, fmtMoneyNumber } from "@athyper/runtime-shared/core";
 
 // ── Stage constants (standard AP/document lifecycle) ─────────────────────────
 
@@ -143,6 +143,8 @@ export interface MapDocumentHeaderModelOpts {
    * Each tab's count/countPending is rendered natively by EntityTabBar.
    */
   tabs?: Array<{ id: string; label: string; count?: number; countPending?: boolean }>;
+  /** Decimal scale from shared.currency.minor_units for the document currency. */
+  currencyMinorUnits?: number | null;
 }
 
 // ── Main function ─────────────────────────────────────────────────────────────
@@ -173,7 +175,7 @@ export function buildDocumentHeaderModel(
     ? String(data[dh.number_field] ?? entity.entity_code)
     : entity.entity_code;
 
-  const typeLabel  = dh?.type_label ?? entity.entity_name.toUpperCase();
+  const typeLabel  = (dh?.type_label ?? entity.entity_name).replace(/_/g, " ").toUpperCase();
   const entityCode = entity.entity_code;
 
   // ── Facts ────────────────────────────────────────────────────────────────────
@@ -214,11 +216,26 @@ export function buildDocumentHeaderModel(
   }
 
   // Amount / total fact (xl emphasis)
-  const amountVal = dh?.amount_field ? fmtAmountMaybe(data[dh.amount_field]) : undefined;
+  const currency = dh?.currency_field ? String(data[dh.currency_field] ?? "") : "";
+  const amountVal = dh?.amount_field
+    ? fmtMoneyNumber(data[dh.amount_field], {
+        currencyCode: currency,
+        minorUnits: opts.currencyMinorUnits,
+      })
+    : undefined;
   if (amountVal) {
-    const currency = dh?.currency_field ? String(data[dh.currency_field] ?? "") : "";
-    const subtotal = dh?.subtotal_field ? fmtAmountMaybe(data[dh.subtotal_field]) : undefined;
-    const tax      = dh?.tax_field      ? fmtAmountMaybe(data[dh.tax_field])      : undefined;
+    const subtotal = dh?.subtotal_field
+      ? fmtMoneyNumber(data[dh.subtotal_field], {
+          currencyCode: currency,
+          minorUnits: opts.currencyMinorUnits,
+        })
+      : undefined;
+    const tax = dh?.tax_field
+      ? fmtMoneyNumber(data[dh.tax_field], {
+          currencyCode: currency,
+          minorUnits: opts.currencyMinorUnits,
+        })
+      : undefined;
     const subValue = [
       subtotal ? `Subtotal ${subtotal}` : null,
       tax      ? `Tax ${tax}`           : null,

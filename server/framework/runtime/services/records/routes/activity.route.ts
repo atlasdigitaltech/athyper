@@ -24,11 +24,13 @@
 
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 import {
   verifyBearer,
   isUuid,
   resolveTenantId,
   extractOrgHeaders,
+  resolvePrincipalIdOrNull,
 } from "@athyper/svc-shared";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,6 +61,56 @@ interface ActivityRow {
 interface PersonaRow {
   principal_id:  string;
   display_name:  string | null;
+}
+
+interface RecentPickerOption {
+  value: string;
+  label: string;
+  code?: string;
+  description?: string;
+  recordId?: string;
+  raw?: Record<string, unknown>;
+}
+
+interface RecentPickerRow {
+  detail: Record<string, unknown> | null;
+  created_at: string | Date;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function optionFromBody(body: unknown): RecentPickerOption | null {
+  const record = body && typeof body === "object" && !Array.isArray(body)
+    ? body as Record<string, unknown>
+    : {};
+  const rawOption = record["option"] && typeof record["option"] === "object" && !Array.isArray(record["option"])
+    ? record["option"] as Record<string, unknown>
+    : record;
+
+  const value = stringValue(rawOption["value"]);
+  const label = stringValue(rawOption["label"]);
+  if (!value || !label) return null;
+
+  const raw = rawOption["raw"] && typeof rawOption["raw"] === "object" && !Array.isArray(rawOption["raw"])
+    ? rawOption["raw"] as Record<string, unknown>
+    : undefined;
+
+  return {
+    value,
+    label,
+    code:        stringValue(rawOption["code"]),
+    description: stringValue(rawOption["description"]),
+    recordId:    stringValue(rawOption["recordId"]) ?? stringValue(raw?.["id"]),
+    raw,
+  };
+}
+
+function optionFromActivityDetail(detail: Record<string, unknown> | null): RecentPickerOption | null {
+  const option = detail?.["option"];
+  if (!option || typeof option !== "object" || Array.isArray(option)) return null;
+  return optionFromBody(option);
 }
 
 function describeActivity(row: ActivityRow): string {
@@ -155,6 +207,135 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
   };
 
   router.get("/activity/recent", recentHandler);
+
+  const recentPickerHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.status(400).json({ error: "MISSING_TENANT", message: "X-Org header is required" });
+        return;
+      }
+
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId);
+      if (!principalId) {
+        res.json({ data: [] });
+        return;
+      }
+
+      const entityCode = String(req.params["entity"] ?? "").replace(/-/g, "_").trim();
+      if (!entityCode) {
+        res.status(400).json({ error: "INVALID_ENTITY", message: "Entity code is required" });
+        return;
+      }
+
+      const limit = Math.min(10, Math.max(1, parseInt(String(req.query["limit"] ?? "5"), 10)));
+      let rows: RecentPickerRow[] = [];
+
+      try {
+        const result = await sql<RecentPickerRow>`
+          WITH latest AS (
+            SELECT DISTINCT ON (COALESCE(al.entity_id::text, al.detail #>> '{option,value}'))
+                   al.detail,
+                   al.created_at,
+                   COALESCE(al.entity_id::text, al.detail #>> '{option,value}') AS record_key
+            FROM log.activity_log al
+            WHERE al.tenant_id = ${tenantId}::uuid
+              AND al.actor_id = ${principalId}::uuid
+              AND al.domain = 'user'
+              AND al.activity_type IN ('user.record_selected', 'user.record_view')
+              AND al.entity_type = ${entityCode}
+              AND al.detail ->> 'source' = 'entity_picker'
+              AND COALESCE(al.entity_id::text, al.detail #>> '{option,value}') IS NOT NULL
+            ORDER BY COALESCE(al.entity_id::text, al.detail #>> '{option,value}'), al.created_at DESC
+          )
+          SELECT detail, created_at
+          FROM latest
+          ORDER BY created_at DESC
+          LIMIT ${limit}
+        `.execute(db);
+        rows = result.rows;
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        if (code === "42P01") rows = [];
+        else throw err;
+      }
+
+      const data = rows
+        .map((row) => optionFromActivityDetail(row.detail))
+        .filter((option): option is RecentPickerOption => Boolean(option));
+
+      res.json({ data });
+    } catch (err) {
+      logger?.error("activity_recent_picker_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  const rememberPickerHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.status(400).json({ error: "MISSING_TENANT", message: "X-Org header is required" });
+        return;
+      }
+
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId);
+      if (!principalId) {
+        res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "No principal bound to this session" });
+        return;
+      }
+
+      const entityCode = String(req.params["entity"] ?? "").replace(/-/g, "_").trim();
+      const option = optionFromBody(req.body);
+      if (!entityCode || !option) {
+        res.status(400).json({ error: "INVALID_RECENT_PICKER_PAYLOAD", message: "Entity code and option are required" });
+        return;
+      }
+
+      const recordId = option.recordId ?? option.value;
+      const insertActivity = (activityType: "user.record_selected" | "user.record_view") => db
+        .insertInto("log.activity_log" as never)
+        .values({
+          tenant_id:     tenantId,
+          log_type:      "business",
+          domain:        "user",
+          activity_type: activityType,
+          entity_type:   entityCode,
+          entity_id:     isUuid(recordId) ? recordId : null,
+          actor_id:      principalId,
+          actor_type:    "principal",
+          detail:        JSON.stringify({
+            source:  "entity_picker",
+            message: `Selected ${option.label}`,
+            option,
+          }),
+          created_by:    principalId,
+        } as never)
+        .execute();
+
+      try {
+        await insertActivity("user.record_selected");
+      } catch {
+        await insertActivity("user.record_view");
+      }
+
+      res.status(204).send();
+    } catch (err) {
+      logger?.error("activity_remember_picker_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  router.get("/activity/recent-picker/:entity", recentPickerHandler);
+  router.post("/activity/recent-picker/:entity", rememberPickerHandler);
 
   const handler: RequestHandler = async (req, res, next) => {
     try {

@@ -52,6 +52,22 @@ export {
   type ComboboxOption,
 } from "./AsyncCombobox";
 export {
+  AdvancedEntityChooserPanel,
+  type AdvancedEntityChooserBadge,
+  type AdvancedEntityChooserControl,
+  type AdvancedEntityChooserDensity,
+  type AdvancedEntityChooserFooterAction,
+  type AdvancedEntityChooserMetaConfig,
+  type AdvancedEntityChooserOption,
+  type AdvancedEntityChooserPanelProps,
+  type AdvancedEntityChooserSection,
+  type AdvancedEntityChooserTone,
+} from "./AdvancedEntityChooser";
+export {
+  AdvancedEntityCombobox,
+  type AdvancedEntityComboboxProps,
+} from "./AdvancedEntityCombobox";
+export {
   ToastProvider,
   useToast,
   type ToastOptions,

@@ -148,6 +148,8 @@ BEGIN
           NULLIF(tm.rc->'picker'->>'description_field', ''),
           NULLIF(tm.rc->>'description_field', ''),
           'description',
+          'account_path',
+          'path',
           'display_description',
           'short_description',
           'long_description',
@@ -157,6 +159,8 @@ BEGIN
           NULLIF(tm.rc->'picker'->>'description_field', ''),
           NULLIF(tm.rc->>'description_field', ''),
           'description',
+          'account_path',
+          'path',
           'display_description',
           'short_description',
           'long_description',
@@ -219,6 +223,35 @@ BEGIN
               'show_description', description_field IS NOT NULL,
               'show_view_action', has_target_entity
             ))
+            || CASE WHEN target_entity = 'gl_account' THEN
+              jsonb_build_object(
+                'variant', 'advanced',
+                'density', 'mini',
+                'width', 390,
+                'max_list_height', 220,
+                'option_action_label', 'Open GL account',
+                'result_label', 'gl account',
+                'show_recently_used', true,
+                'recent_limit', 5,
+                'controls', jsonb_build_array(
+                  jsonb_build_object('id','all','label','All','value','all'),
+                  jsonb_build_object('id','asset','label','Asset','value','asset','field','account_class','match_value','asset'),
+                  jsonb_build_object('id','liability','label','Liability','value','liability','field','account_class','match_value','liability'),
+                  jsonb_build_object('id','expense','label','Expense','value','expense','field','account_class','match_value','expense'),
+                  jsonb_build_object('id','income','label','Income','value','income','field','account_class','match_value','income')
+                ),
+                'sections', jsonb_build_array(
+                  jsonb_build_object('id','matches','label','All matches')
+                ),
+                'badges', jsonb_build_array(
+                  jsonb_build_object(
+                    'field','normal_balance',
+                    'label_map', jsonb_build_object('debit','Dr','credit','Cr'),
+                    'tone_map', jsonb_build_object('debit','success','credit','destructive')
+                  )
+                )
+              )
+            ELSE '{}'::jsonb END
             || COALESCE(rc->'picker', '{}'::jsonb)
         )
       ) AS reference_config

@@ -282,12 +282,37 @@ function stripPgErrorPrefix(message: string): string {
   return message.replace(/^error:\s*/i, "").trim();
 }
 
+function getPgConstraint(err: unknown, message: string): string | null {
+  const record = err && typeof err === "object" ? err as Record<string, unknown> : null;
+  const constraint = record && typeof record["constraint"] === "string"
+    ? record["constraint"]
+    : null;
+  if (constraint) return constraint;
+
+  const match = /constraint\s+"([^"]+)"/i.exec(message);
+  return match?.[1] ?? null;
+}
+
 /**
  * Maps business-rule exceptions raised by PostgreSQL triggers/functions into
  * normal API errors. These are expected user-correctable failures, not 500s.
  */
 export function mapPostgresBusinessError(err: unknown): RouteBusinessError | null {
   const message = stripPgErrorPrefix(getErrorMessage(err));
+  const constraint = getPgConstraint(err, message);
+
+  if (constraint === "je_doc_date_chk") {
+    return {
+      status: 422,
+      code: "journal_entry.document_date.after_posting_date",
+      message: "Document date must be on or before posting date.",
+      field: "document_date",
+      details: {
+        message_key: "journal_entry.document_date.after_posting_date",
+        db_constraint: "je_doc_date_chk",
+      },
+    };
+  }
 
   const fiscalPeriodMatch = /^PERIOD_NOT_OPEN:\s*Fiscal period\s+(\d+)\/(\d+)\s+for company\s+([0-9a-f-]+)\s+has status\s+"([^"]+)"\./i.exec(message);
   if (fiscalPeriodMatch) {

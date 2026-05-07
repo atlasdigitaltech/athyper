@@ -41,7 +41,7 @@
  */
 
 import { type ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 
 // ── TypeChip ─────────────────────────────────────────────────────────────────
@@ -60,8 +60,7 @@ export function TypeChip({
   return (
     <span
       className={cn(
-        "inline-flex h-[26px] items-center rounded-md bg-foreground text-xs font-semibold tracking-wide text-background",
-        onBack ? "pl-1 pr-2.5" : "px-2.5",
+        "inline-flex h-[32px] shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground text-xs font-semibold tracking-wider text-background",
         className,
       )}
     >
@@ -69,13 +68,13 @@ export function TypeChip({
         <button
           type="button"
           onClick={onBack}
-          className="mr-1 flex items-center justify-center rounded p-0.5 opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"
+          className="flex h-full w-9 items-center justify-center border-r border-r-ring bg-foreground text-background transition-colors hover:bg-foreground/85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"
           aria-label="Go back"
         >
-          <ArrowLeft className="h-3 w-3" />
+          <ChevronLeft className="h-3.5 w-3.5" />
         </button>
       )}
-      {children}
+      <span className="flex h-full items-center px-3 leading-none">{children}</span>
     </span>
   );
 }
@@ -106,7 +105,7 @@ export interface PageHeaderProps {
   onBack?: () => void;
 
   /** Primary title: entity plural for list ("Invoices"), doc number for detail ("INV-A1-0001"). */
-  title: string;
+  title?: string;
 
   /**
    * "page" → text-xl/600 (list pages, create "New").
@@ -154,14 +153,16 @@ export function PageHeader({
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             {typeChip && <TypeChip onBack={onBack}>{typeChip}</TypeChip>}
-            <span
-              className={cn(
-                "font-semibold leading-tight text-foreground",
-                titleVariant === "doc" ? "text-base" : "text-xl",
-              )}
-            >
-              {title}
-            </span>
+            {title && (
+              <span
+                className={cn(
+                  "font-semibold leading-tight text-foreground",
+                  titleVariant === "doc" ? "text-base" : "text-xl",
+                )}
+              >
+                {title}
+              </span>
+            )}
             {statusSlot}
           </div>
           {subtitle && (

@@ -20,6 +20,9 @@ export interface FieldRendererProps {
   value: unknown;
   field: EntityField;
   mode: "view" | "edit" | "filter";
+  /** Full form values, used by dependent lookup fields. */
+  formData?: Record<string, unknown>;
+  disabled?: boolean;
   onChange?: (value: unknown) => void;
   error?: string;
 }

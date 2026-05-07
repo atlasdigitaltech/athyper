@@ -64,7 +64,7 @@ CROSS JOIN (VALUES
     ('total_debit',   'total_debit',           'Total Debit',     'decimal', 'one',         NULL::text,                                 true,  false, false, '{"min":0}'::jsonb,            60),
     ('total_credit',  'total_credit',          'Total Credit',    'decimal', 'one',         NULL::text,                                 true,  false, false, '{"min":0}'::jsonb,            70),
     ('source_type',   'source_doc_type',       'Source Type',     'enum',    'zero_or_one', 'document.je_source_doc_type'::text,        false, true,  false, NULL::jsonb,                   80),
-    ('description',   'description',           'Description',     'text',    'zero_or_one', NULL::text,                                 false, false, true,  '{"max_length":500}'::jsonb,   90)
+    ('description',   'description',           'Description',     'text',    'one',         NULL::text,                                 true,  false, true,  '{"max_length":500}'::jsonb,   90)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
        is_required, is_filterable, is_searchable, validation, sort_order)
 WHERE e.table_schema = 'document' AND e.table_name = 'journal_entry'
@@ -179,14 +179,14 @@ UPDATE control.entity
        'event_history', true,
        'version_control', true,
        'posting_trace', true,
-       'line_references', true
+       'line_references', false
    ),
    display_config = jsonb_build_object(
        'detail_renderer', 'document',
        'lines_renderer',  'journal',
        'title_field', 'document_no',
        'subtitle_field', 'description',
-       'list_columns', '["document_no","status","company_code_id","posting_date","period_number","transaction_currency","total_debit","total_credit"]'::jsonb,
+       'list_columns', '["document_no","status","posting_date","period_number","transaction_currency","total_debit","total_credit"]'::jsonb,
        'default_sort_field', 'posting_date',
        'default_sort_order', 'desc',
        'action_groups', jsonb_build_object(
@@ -218,42 +218,10 @@ UPDATE control.entity
        ),
        'journal_editor', jsonb_build_object(
            'mode', 'draft_workspace',
-           'line_reference_strategy', 'optional_per_line',
-           'reference_model', 'journal_line_reference',
+           'line_entity', 'journal_line',
+           'line_reference_strategy', 'none',
            'submit_requires_min_lines', 2,
-           'submit_requires_balance', true,
-           'reference_targets', jsonb_build_array(
-               jsonb_build_object(
-                   'key','purchase_invoice',
-                   'label','Invoice',
-                   'entity','purchase_invoice',
-                   'ref_doc_type','purchase_invoice',
-                   'default_ref_type','invoice_adjustment',
-                   'line_selection',true,
-                   'display_fields','["invoice_number","document_no","code","name"]'::jsonb,
-                   'search_fields','["invoice_number","document_no","supplier_invoice_number","description"]'::jsonb
-               ),
-               jsonb_build_object(
-                   'key','payment_entry',
-                   'label','Receipt / Payment',
-                   'entity','payment_entry',
-                   'ref_doc_type','payment_entry',
-                   'default_ref_type','receipt_adjustment',
-                   'line_selection',true,
-                   'display_fields','["payment_number","document_no","code","name"]'::jsonb,
-                   'search_fields','["payment_number","document_no","description"]'::jsonb
-               ),
-               jsonb_build_object(
-                   'key','journal_entry',
-                   'label','Journal Entry',
-                   'entity','journal_entry',
-                   'ref_doc_type','journal_entry',
-                   'default_ref_type','manual_adjustment',
-                   'line_selection',true,
-                   'display_fields','["je_number","document_no","description"]'::jsonb,
-                   'search_fields','["je_number","document_no","description"]'::jsonb
-               )
-           )
+           'submit_requires_balance', true
        )
    ),
    natural_key_fields = ARRAY['document_no']
@@ -296,9 +264,9 @@ WITH defs AS (
     SELECT * FROM (VALUES
       ('document_no','je_number','JE Number','Number assigned by the JE numbering policy.','text','text','one',NULL::text,NULL::jsonb,true,true,true,true,false,false,true,false,false,'{"max_length":50}'::jsonb,'{"source":"numbering_policy"}'::jsonb,'{"group_key":"identity","badge":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft"]}'::jsonb,NULL::jsonb,10),
       ('status','status','Status','Lifecycle state of the journal entry.','lifecycle_state','status','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,20),
-      ('company_code_id','company_code_id','Company Code','Company whose ledger is affected.','reference','entity_chooser','one',NULL::text,'{"target_entity":"company_code","target_field":"id","display_field":"code"}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"company_code"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,30),
-      ('book_id','book_id','Ledger Book','Ledger book used for posting.','reference','entity_chooser','one',NULL::text,'{"target_entity":"ledger_book","target_field":"id","display_field":"code"}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"ledger_book"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.default_manual_ledger_book"}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","is_manual_je_allowed":true}}'::jsonb,40),
-      ('document_date','document_date','Document Date','Business document date.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
+      ('company_code_id','company_code_id','Company Code','Company whose ledger is affected.','reference','entity_chooser','one',NULL::text,'{"target_entity":"company_code","target_field":"id","display_field":"name","picker":{"label_field":"name","code_field":"code","label_template":"{name} - {code}","show_code":false}}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"company_code"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,30),
+      ('book_id','book_id','Ledger Book','Ledger book used for posting.','reference','entity_chooser','one',NULL::text,'{"target_entity":"ledger_book","target_field":"id","display_field":"name","picker":{"label_field":"name","code_field":"code","show_code":false}}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"ledger_book"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.default_manual_ledger_book"}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","is_manual_je_allowed":true},"dependent_filter":{"source_field":"company_code_id","target_field":"id","through_entity":"company_code_book_assignment","through_source_field":"company_code_id","through_target_field":"book_id","through_filters":{"status":"active"},"sort_field":"priority","sort_direction":"asc","empty_behavior":"empty"}}'::jsonb,40),
+      ('document_date','document_date','Document Date','Business document date.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,'{"rules":[{"code":"journal_entry.document_date.after_posting_date","kind":"cross_field","left_field":"document_date","operator":"<=","right_field":"posting_date","anchor_field":"document_date","highlight_fields":["document_date","posting_date"],"message_key":"journal_entry.document_date.after_posting_date","default_message":"Document date must be on or before posting date.","db_constraint":"je_doc_date_chk"}]}'::jsonb,NULL::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
       ('posting_date','posting_date','Posting Date','GL posting date that drives fiscal period and FX.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,NULL::jsonb,'{"source":"today"}'::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,60),
       ('fiscal_period_id','fiscal_period_id','Fiscal Period','Fiscal period resolved from posting date.','reference','entity_chooser','one',NULL::text,'{"target_entity":"fiscal_period","target_field":"id","display_field":"period_number"}'::jsonb,true,true,false,true,true,false,true,true,false,'{"ref_entity":"fiscal_period"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"fiscal.period_from_posting_date"}'::jsonb,'{"search_fields":["fiscal_year","period_number"],"filters":{"status":["open","soft_close"]}}'::jsonb,70),
       ('fiscal_year','fiscal_year','Fiscal Year','Resolved fiscal year.','integer','number','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,NULL::jsonb,NULL::jsonb,'{"group_key":"posting","summary":true}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,80),
@@ -306,11 +274,11 @@ WITH defs AS (
       ('source_type','source_doc_type','Source Type','Source document category.','enum','select','one','document.je_source_doc_type',NULL::jsonb,true,true,false,true,true,false,false,false,false,NULL::jsonb,'"manual"'::jsonb,'{"group_key":"source"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"default_locked":true}'::jsonb,NULL::jsonb,100),
       ('source_doc_id','source_doc_id','Source Document','Source document id for system-generated JEs.','uuid','hidden','zero_or_one',NULL::text,NULL::jsonb,false,false,false,false,false,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"source"}'::jsonb,'{"!=":[{"var":"source_type"},"manual"]}'::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,110),
       ('transaction_currency','transaction_currency','Transaction Currency','Currency used on JE lines.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,false,false,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.base_currency"}'::jsonb,'{"endpoint":"/api/platform/ref/currencies","search_fields":["code","name"]}'::jsonb,120),
-      ('base_currency','base_currency','Base Currency','Company functional currency; derived from company code.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"company_code.base_currency"}'::jsonb,NULL::jsonb,130),
+      ('base_currency','base_currency','Base Currency','Company functional currency; derived from company code.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"company_code.base_currency"}'::jsonb,'{"endpoint":"/api/platform/ref/currencies","search_fields":["code","name"]}'::jsonb,130),
       ('total_debit','total_debit','Total Debit','Cached total from lines.','decimal','money','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"total"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,140),
       ('total_credit','total_credit','Total Credit','Cached total from lines.','decimal','money','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"total"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,150),
       ('line_count','line_count','Line Count','Number of JE lines.','integer','number','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"meta"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,160),
-      ('description','description','Description','Header narration.','text','textarea','zero_or_one',NULL::text,NULL::jsonb,false,false,true,false,false,false,false,false,false,'{"max_length":500}'::jsonb,NULL::jsonb,'{"group_key":"narrative","span":3}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,170),
+      ('description','description','Description','Header narration.','text','textarea','one',NULL::text,NULL::jsonb,true,false,true,false,false,false,false,false,false,'{"max_length":500}'::jsonb,NULL::jsonb,'{"group_key":"narrative","span":3,"required":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,170),
       ('is_auto_reverse','is_auto_reverse','Auto Reverse','Create a scheduled reversal after posting.','boolean','checkbox','one',NULL::text,NULL::jsonb,false,true,false,false,true,false,false,false,false,NULL::jsonb,'false'::jsonb,'{"group_key":"reversal"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,180),
       ('auto_reverse_date','auto_reverse_date','Auto Reverse Date','Posting date for the scheduled reversal.','date','date','zero_or_one',NULL::text,NULL::jsonb,false,true,false,true,false,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"reversal"}'::jsonb,'{"==":[{"var":"is_auto_reverse"},true]}'::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,190),
       ('is_prior_period','prior_period_flag','Prior Period','Marks a prior-period adjustment.','boolean','checkbox','one',NULL::text,NULL::jsonb,false,true,false,false,true,false,false,false,false,NULL::jsonb,'false'::jsonb,'{"group_key":"controls"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,200),
@@ -349,19 +317,19 @@ WITH defs AS (
     SELECT * FROM (VALUES
       ('document_no','je_number','JE Number','Number assigned by the JE numbering policy.','text','text','one',NULL::text,NULL::jsonb,true,true,true,true,false,false,true,false,false,'{"max_length":50}'::jsonb,'{"source":"numbering_policy"}'::jsonb,'{"group_key":"identity","badge":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft"]}'::jsonb,NULL::jsonb,10),
       ('status','status','Status','Lifecycle state of the journal entry.','lifecycle_state','status','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,20),
-      ('company_code_id','company_code_id','Company Code','Company whose ledger is affected.','reference','entity_chooser','one',NULL::text,'{"target_entity":"company_code","target_field":"id","display_field":"code"}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"company_code"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,30),
-      ('book_id','book_id','Ledger Book','Ledger book used for posting.','reference','entity_chooser','one',NULL::text,'{"target_entity":"ledger_book","target_field":"id","display_field":"code"}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"ledger_book"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.default_manual_ledger_book"}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","is_manual_je_allowed":true}}'::jsonb,40),
-      ('document_date','document_date','Document Date','Business document date.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
+      ('company_code_id','company_code_id','Company Code','Company whose ledger is affected.','reference','entity_chooser','one',NULL::text,'{"target_entity":"company_code","target_field":"id","display_field":"name","picker":{"label_field":"name","code_field":"code","label_template":"{name} - {code}","show_code":false}}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"company_code"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,30),
+      ('book_id','book_id','Ledger Book','Ledger book used for posting.','reference','entity_chooser','one',NULL::text,'{"target_entity":"ledger_book","target_field":"id","display_field":"name","picker":{"label_field":"name","code_field":"code","show_code":false}}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"ledger_book"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.default_manual_ledger_book"}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","is_manual_je_allowed":true},"dependent_filter":{"source_field":"company_code_id","target_field":"id","through_entity":"company_code_book_assignment","through_source_field":"company_code_id","through_target_field":"book_id","through_filters":{"status":"active"},"sort_field":"priority","sort_direction":"asc","empty_behavior":"empty"}}'::jsonb,40),
+      ('document_date','document_date','Document Date','Business document date.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,'{"rules":[{"code":"journal_entry.document_date.after_posting_date","kind":"cross_field","left_field":"document_date","operator":"<=","right_field":"posting_date","anchor_field":"document_date","highlight_fields":["document_date","posting_date"],"message_key":"journal_entry.document_date.after_posting_date","default_message":"Document date must be on or before posting date.","db_constraint":"je_doc_date_chk"}]}'::jsonb,NULL::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
       ('posting_date','posting_date','Posting Date','GL posting date that drives fiscal period and FX.','date','date','one',NULL::text,NULL::jsonb,true,true,false,true,false,false,false,false,false,NULL::jsonb,'{"source":"today"}'::jsonb,'{"group_key":"dates"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,60),
       ('fiscal_period_id','fiscal_period_id','Fiscal Period','Fiscal period resolved from posting date.','reference','entity_chooser','one',NULL::text,'{"target_entity":"fiscal_period","target_field":"id","display_field":"period_number"}'::jsonb,true,true,false,true,true,false,true,true,false,'{"ref_entity":"fiscal_period"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"fiscal.period_from_posting_date"}'::jsonb,'{"search_fields":["fiscal_year","period_number"],"filters":{"status":["open","soft_close"]}}'::jsonb,70),
       ('fiscal_year','fiscal_year','Fiscal Year','Resolved fiscal year.','integer','number','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,NULL::jsonb,NULL::jsonb,'{"group_key":"posting","summary":true}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,80),
       ('period_number','period_number','Period','Resolved fiscal period number.','integer','number','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"min":1,"max":16}'::jsonb,NULL::jsonb,'{"group_key":"posting","summary":true}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,90),
       ('source_type','source_doc_type','Source Type','Source document category.','enum','select','one','document.je_source_doc_type',NULL::jsonb,true,true,false,true,true,false,false,false,false,NULL::jsonb,'"manual"'::jsonb,'{"group_key":"source"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"default_locked":true}'::jsonb,NULL::jsonb,100),
       ('transaction_currency','transaction_currency','Transaction Currency','Currency used on JE lines.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,false,false,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"derive":"company_code.base_currency"}'::jsonb,'{"endpoint":"/api/platform/ref/currencies","search_fields":["code","name"]}'::jsonb,120),
-      ('base_currency','base_currency','Base Currency','Company functional currency; derived from company code.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"company_code.base_currency"}'::jsonb,NULL::jsonb,130),
+      ('base_currency','base_currency','Base Currency','Company functional currency; derived from company code.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,true,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"currency","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":[],"derive":"company_code.base_currency"}'::jsonb,'{"endpoint":"/api/platform/ref/currencies","search_fields":["code","name"]}'::jsonb,130),
       ('total_debit','total_debit','Total Debit','Cached total from lines.','decimal','money','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"total"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,140),
       ('total_credit','total_credit','Total Credit','Cached total from lines.','decimal','money','one',NULL::text,NULL::jsonb,true,false,false,true,false,true,true,true,false,'{"min":0}'::jsonb,NULL::jsonb,'{"group_key":"amounts","summary_role":"total"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,150),
-      ('description','description','Description','Header narration.','text','textarea','zero_or_one',NULL::text,NULL::jsonb,false,false,true,false,false,false,false,false,false,'{"max_length":500}'::jsonb,NULL::jsonb,'{"group_key":"narrative","span":3}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,170)
+      ('description','description','Description','Header narration.','text','textarea','one',NULL::text,NULL::jsonb,true,false,true,false,false,false,false,false,false,'{"max_length":500}'::jsonb,NULL::jsonb,'{"group_key":"narrative","span":3,"required":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,170)
     ) AS x(name,column_name,label,description,data_type,ui_type,cardinality,enum_domain_code,reference_config,is_required,is_filterable,is_searchable,is_sortable,is_groupable,is_aggregatable,is_read_only,is_computed,is_write_once,validation,default_value,ui_hint,visibility,editability,lookup_config,sort_order)
 )
 UPDATE control.entity_field ef
@@ -423,11 +391,72 @@ WHERE ef.entity_version_id = ev.id
   AND e.tenant_id IS NULL
   AND ef.name IN ('entry_date', 'fiscal_period', 'currency_code');
 
+-- Compact Journal Entry detail/edit overview.
+-- The document detail page groups by entity_field.ui_hint.group_key and hides
+-- fields with ui_type='hidden'. Keep the business header in one group, while
+-- removing duplicate totals and technical controls from the primary card stack.
+INSERT INTO control.field_group (group_key, label, description, applies_to_classes, sort_order)
+VALUES (
+    'header',
+    'Header',
+    'Primary business header fields shown on document detail/edit pages.',
+    ARRAY['DOCUMENT'],
+    20
+)
+ON CONFLICT (group_key) DO UPDATE SET
+    label = EXCLUDED.label,
+    description = EXCLUDED.description,
+    applies_to_classes = EXCLUDED.applies_to_classes,
+    sort_order = EXCLUDED.sort_order;
+
+WITH layout AS (
+    SELECT * FROM (VALUES
+      ('company_code_id',      NULL::text, '{"group_key":"header","detail_visibility":"primary"}'::jsonb),
+      ('book_id',              NULL::text, '{"group_key":"header","detail_visibility":"primary"}'::jsonb),
+      ('document_date',        NULL::text, '{"group_key":"header","detail_visibility":"primary"}'::jsonb),
+      ('posting_date',         NULL::text, '{"group_key":"header","detail_visibility":"primary"}'::jsonb),
+      ('fiscal_period_id',     NULL::text, '{"group_key":"header","detail_visibility":"primary"}'::jsonb),
+      ('fiscal_year',          NULL::text, '{"group_key":"header","detail_visibility":"primary"}'::jsonb),
+      ('period_number',        NULL::text, '{"group_key":"header","detail_visibility":"primary"}'::jsonb),
+      ('transaction_currency', NULL::text, '{"group_key":"header","detail_visibility":"primary"}'::jsonb),
+      ('base_currency',        NULL::text, '{"group_key":"header","detail_visibility":"primary"}'::jsonb),
+      ('description',          NULL::text, '{"group_key":"header","detail_visibility":"primary","span":3,"required":true}'::jsonb),
+
+      ('source_type',          'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('source_doc_id',        'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('total_debit',          'hidden',   '{"detail_visibility":"hidden","reason":"shown_in_amount_summary"}'::jsonb),
+      ('total_credit',         'hidden',   '{"detail_visibility":"hidden","reason":"shown_in_amount_summary"}'::jsonb),
+      ('line_count',           'hidden',   '{"detail_visibility":"hidden","reason":"shown_in_amount_summary"}'::jsonb),
+      ('tags',                 'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('is_auto_reverse',      'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('auto_reverse_date',    'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('reversal_of_id',       'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('reversed_by_id',       'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('is_prior_period',      'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('original_period_year', 'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('original_period_number','hidden',  '{"detail_visibility":"hidden"}'::jsonb),
+      ('close_override_id',    'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('posted_at',            'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('posted_by',            'hidden',   '{"detail_visibility":"hidden"}'::jsonb),
+      ('metadata',             'hidden',   '{"detail_visibility":"hidden"}'::jsonb)
+    ) AS x(field_name, ui_type, ui_hint_patch)
+)
+UPDATE control.entity_field ef
+   SET ui_type = COALESCE(layout.ui_type, ef.ui_type),
+       ui_hint = COALESCE(ef.ui_hint, '{}'::jsonb) || layout.ui_hint_patch,
+       updated_at = now(),
+       updated_by = v_su
+FROM layout
+JOIN control.entity e ON e.entity_code = 'journal_entry' AND e.tenant_id IS NULL
+JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
+WHERE ef.entity_version_id = ev.id
+  AND ef.name = layout.field_name;
+
 WITH defs AS (
     SELECT * FROM (VALUES
       ('journal_entry_id','journal_entry_id','Journal Entry','Parent journal entry.','reference','hidden','one',NULL::text,'{"target_entity":"journal_entry","target_field":"id","display_field":"je_number"}'::jsonb,true,false,false,true,false,false,true,false,false,'{"ref_entity":"journal_entry"}'::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,5),
       ('line_no','line_no','Line No.','Sequential line number within the JE.','integer','number','one',NULL::text,NULL::jsonb,true,false,false,true,false,false,false,false,false,'{"min":1}'::jsonb,NULL::jsonb,'{"group_key":"identity","width":"xs"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,10),
-      ('gl_account_id','gl_account_id','GL Account','Account to debit or credit.','reference','entity_chooser','one',NULL::text,'{"target_entity":"gl_account","target_field":"id","display_field":"code"}'::jsonb,true,true,true,true,true,false,false,false,false,'{"ref_entity":"gl_account"}'::jsonb,NULL::jsonb,'{"group_key":"account","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","posting_allowed":true}}'::jsonb,20),
+      ('gl_account_id','gl_account_id','GL Account','Account to debit or credit.','reference','entity_chooser','one',NULL::text,'{"target_entity":"gl_account","target_field":"id","display_field":"name","picker":{"label_field":"name","code_field":"code","show_code":true}}'::jsonb,true,true,true,true,true,false,false,false,false,'{"ref_entity":"gl_account"}'::jsonb,NULL::jsonb,'{"group_key":"account","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","posting_allowed":true},"dependent_filter":{"source_field":"chart_of_account_id","target_field":"chart_of_account_id","empty_behavior":"all"}}'::jsonb,20),
       ('transaction_currency','transaction_currency','Currency','Line transaction currency.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,false,false,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"amounts","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"default":"header.transaction_currency"}'::jsonb,NULL::jsonb,30),
       ('transaction_debit','transaction_debit','Debit','Debit amount in transaction currency.','decimal','money','one',NULL::text,NULL::jsonb,false,false,false,true,false,true,false,false,false,'{"min":0,"exclusive_with":"transaction_credit"}'::jsonb,'0'::jsonb,'{"group_key":"amounts","summary_role":"addition"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,40),
       ('transaction_credit','transaction_credit','Credit','Credit amount in transaction currency.','decimal','money','one',NULL::text,NULL::jsonb,false,false,false,true,false,true,false,false,false,'{"min":0,"exclusive_with":"transaction_debit"}'::jsonb,'0'::jsonb,'{"group_key":"amounts","summary_role":"deduction"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
@@ -473,10 +502,10 @@ UPDATE control.entity
        'detail_renderer', 'line',
        'title_field', 'line_no',
        'subtitle_field', 'description',
-       'list_columns', '["line_no","gl_account_id","description","references","transaction_debit","transaction_credit","cost_center_id","party_id"]'::jsonb,
+       'list_columns', '["line_no","gl_account_id","description","transaction_debit","transaction_credit","cost_center_id","party_id"]'::jsonb,
        'default_sort_field', 'line_no',
        'default_sort_order', 'asc',
-       'reference_model', 'journal_line_reference'
+       'reference_model', NULL
    ),
    natural_key_fields = ARRAY['line_no']
  WHERE table_schema = 'document'

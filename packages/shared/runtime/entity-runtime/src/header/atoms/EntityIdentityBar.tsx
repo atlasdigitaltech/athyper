@@ -19,9 +19,6 @@ interface AmountSummary {
 // Scale font size by character length so trillions don't overflow and $1 looks bold.
 function amountFontClass(amount: string): string {
   const len = amount.length;
-  if (len <= 7)  return "text-xl font-bold";
-  if (len <= 10) return "text-lg font-semibold";
-  if (len <= 13) return "text-base font-semibold";
   if (len <= 17) return "text-sm font-semibold";
   return "text-xs font-semibold";
 }
@@ -84,6 +81,7 @@ export function EntityIdentityBar({
   const [contextCopied, setContextCopied] = useState<string | null>(null);
 
   const canCopy = identity.identifierAction !== "none";
+  const typeLabel = identity.typeLabel.replace(/_/g, " ").toUpperCase();
   const copyItems = [
     ...(identity.number ? [{ key: "code", label: "Code", value: identity.number }] : []),
     ...(identity.name && identity.name !== identity.number
@@ -127,11 +125,11 @@ export function EntityIdentityBar({
 
   // ── Chip (back arrow + type label) ────────────────────────────────────────
   const chipEl = onBack ? (
-    <div className="inline-flex items-center h-[32px] rounded-md border border-border overflow-hidden shrink-0">
+    <div className="inline-flex h-[32px] shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground">
       <button
         onClick={onBack}
         aria-label="Go back"
-        className="px-1 h-full flex items-center text-background bg-foreground hover:bg-foreground/85 border-r border-r-ring transition-colors"
+        className="flex h-full w-9 items-center justify-center border-r border-r-ring bg-foreground text-background transition-colors hover:bg-foreground/85"
       >
         <ChevronLeft className="h-3.5 w-3.5" />
       </button>
@@ -141,18 +139,18 @@ export function EntityIdentityBar({
           onClick={onTypeClick}
           className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center hover:bg-foreground/85 transition-colors"
         >
-          {identity.typeLabel}
+          {typeLabel}
         </button>
       ) : identity.typeHref ? (
         <Link
           href={identity.typeHref}
           className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center hover:bg-foreground/85 transition-colors"
         >
-          {identity.typeLabel}
+          {typeLabel}
         </Link>
       ) : (
         <span className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center">
-          {identity.typeLabel}
+          {typeLabel}
         </span>
       )}
     </div>
@@ -162,18 +160,18 @@ export function EntityIdentityBar({
       onClick={onTypeClick}
       className="shrink-0 h-[32px] rounded-md border border-border bg-foreground text-background px-3 text-xs font-semibold tracking-wider flex items-center hover:bg-foreground/85 transition-colors"
     >
-      {identity.typeLabel}
+      {typeLabel}
     </button>
   ) : identity.typeHref ? (
     <Link
       href={identity.typeHref}
       className="shrink-0 h-[32px] rounded-md border border-border bg-foreground text-background px-3 text-xs font-semibold tracking-wider flex items-center hover:bg-foreground/85 transition-colors"
     >
-      {identity.typeLabel}
+      {typeLabel}
     </Link>
   ) : (
     <span className="shrink-0 h-[32px] rounded-md border border-border bg-foreground text-background px-3 text-xs font-semibold tracking-wider flex items-center">
-      {identity.typeLabel}
+      {typeLabel}
     </span>
   );
 
@@ -262,19 +260,19 @@ export function EntityIdentityBar({
         <div className="ml-auto flex items-center gap-4 min-w-0">
           {actionsSlot}
           {amountSummary && (
-            <div className="flex flex-col items-end gap-0.5 min-w-0">
-              <div className="flex items-baseline gap-1.5 flex-wrap justify-end">
-                <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider leading-none shrink-0">
+            <div className="flex flex-col items-end gap-0.5 min-w-0 shrink-0">
+              <div className="flex items-baseline gap-2 flex-wrap justify-end">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-normal leading-none shrink-0">
                   TOTAL
                 </span>
-                <span className={cn("tabular-nums text-foreground leading-tight shrink-0", amountFontClass(amountSummary.amount))}>
-                  {amountSummary.amount}
-                </span>
                 {amountSummary.currency && (
-                  <span className="text-xs font-normal text-muted-foreground shrink-0">
+                  <span className={cn("tabular-nums text-foreground leading-none shrink-0", amountFontClass(amountSummary.amount))}>
                     {amountSummary.currency}
                   </span>
                 )}
+                <span className={cn("tabular-nums text-foreground leading-none shrink-0", amountFontClass(amountSummary.amount))}>
+                  {amountSummary.amount}
+                </span>
               </div>
               {amountSummary.subtext && (
                 <span className="text-2xs text-muted-foreground text-right break-words min-w-0 max-w-[260px]">
@@ -317,16 +315,18 @@ export function EntityIdentityBar({
         {/* Row 4: amount (documents / invoices) */}
         {amountSummary && (
           <div className="flex flex-col gap-0.5 min-w-0 px-0.5">
-            <div className="flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider leading-none shrink-0">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-normal leading-none shrink-0">
                 TOTAL
               </span>
-              <span className={cn("tabular-nums text-foreground shrink-0", amountFontClass(amountSummary.amount))}>
+              {amountSummary.currency && (
+                <span className={cn("tabular-nums text-foreground leading-none shrink-0", amountFontClass(amountSummary.amount))}>
+                  {amountSummary.currency}
+                </span>
+              )}
+              <span className={cn("tabular-nums text-foreground leading-none shrink-0", amountFontClass(amountSummary.amount))}>
                 {amountSummary.amount}
               </span>
-              {amountSummary.currency && (
-                <span className="text-xs text-muted-foreground shrink-0">{amountSummary.currency}</span>
-              )}
             </div>
             {amountSummary.subtext && (
               <span className="text-2xs text-muted-foreground break-words">{amountSummary.subtext}</span>

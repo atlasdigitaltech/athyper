@@ -19,7 +19,19 @@ export { ItemsGrid, type ItemsGridProps, type ItemsGridColumn } from "./items";
 export { SplitAccountingPanel, type SplitAccountingPanelProps } from "./items/SplitAccountingPanel";
 export { LineEditorSheet, type LineEditorSheetProps } from "./items/LineEditorSheet";
 export { LinesGrid, type LinesGridProps } from "./items/LinesGrid";
-export { JournalLinesGrid, type JournalLinesGridProps } from "./items/JournalLinesGrid";
+export {
+  JournalIntakeLinesGrid,
+  JournalLinesGrid,
+  type JournalIntakeLinesGridProps,
+  type JournalLineGridPayload,
+  type JournalLinesGridProps,
+} from "./items/JournalLinesGrid";
+export {
+  InvoiceIntakeLinesGrid,
+  type InvoiceIntakeLinesGridProps,
+  type InvoiceLineGridPayload,
+  type InvoiceLineValidationStatus,
+} from "./items/InvoiceIntakeLinesGrid";
 export { PaymentAllocationLinesGrid, type PaymentAllocationLinesGridProps } from "./items/PaymentAllocationLinesGrid";
 export {
   ClassificationDecisionPanel,

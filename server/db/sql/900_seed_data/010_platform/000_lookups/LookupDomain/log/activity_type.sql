@@ -62,6 +62,7 @@ FROM (VALUES
     ('user.comment_read',    'Comment Read',           'log.activity_type', 'Principal read a comment. Migrated from log.comment_read.', 180),
     ('user.comment_response','Comment Response',       'log.activity_type', 'Principal responded to a comment.',                        190),
     ('user.record_view',     'Record Viewed',          'log.activity_type', 'Principal viewed a record. Replaces log.recent_activity.',  200),
+    ('user.record_selected', 'Record Selected',        'log.activity_type', 'Principal selected a record from an entity picker. Feeds recently-used entity chooser sections.', 205),
     -- upupr domain
     ('upupr.submitted',           'UPUPR Submitted',              'log.activity_type', 'UPUPR request submitted by principal.',                   210),
     ('upupr.assigned',            'UPUPR Assigned to Supervisor', 'log.activity_type', 'UPUPR assigned to supervisor for review.',                220),

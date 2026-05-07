@@ -27,6 +27,13 @@ import {
   entityRowToPickerOption,
   resolveEntityPickerOptionConfig,
 } from "@athyper/runtime-shared/entity-search";
+import {
+  fieldErrorsFromApiErrorBody,
+  validateMetaFieldRules,
+  validationFieldsAffectedByChange,
+  validationSummaryMessage,
+} from "@athyper/runtime-shared/validation";
+import { normaliseCurrencyCode } from "@athyper/runtime-shared/core";
 import { resolvePresentationConfig as resolveDisplayConfig } from "@athyper/entity-runtime/metadata";
 import { useOperationDispatch } from "@athyper/entity-runtime/actions";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
@@ -65,7 +72,7 @@ export interface DocumentDetailPageProps {
 function LinesPanel({
   entity, entityCode, recordId, recordUuid, companyCodeId, record,
   lines, distributions, isLoading, onRefresh, linesRenderer,
-  hasAiClassification, hasLineComposer, editMode,
+  hasAiClassification, hasLineComposer, editMode, currencyMinorUnits,
 }: {
   entity: CompiledEntity;
   entityCode: string; recordId: string; recordUuid?: string;
@@ -78,6 +85,7 @@ function LinesPanel({
   hasAiClassification?: boolean;
   hasLineComposer?: boolean;
   editMode?: boolean;
+  currencyMinorUnits?: number | null;
 }) {
   const RendererComponent = resolveLinesRenderer(linesRenderer);
   if (!RendererComponent) return null;
@@ -100,6 +108,7 @@ function LinesPanel({
       isLoading={isLoading}
       onRefresh={onRefresh}
       currencyCode={currencyCode}
+      currencyMinorUnits={currencyMinorUnits}
       hasAiClassification={hasAiClassification}
       hasLineComposer={hasLineComposer}
       editMode={editMode}
@@ -129,6 +138,25 @@ function resolveDocumentLinesRenderer(
 interface VersionListResponse {
   data: RecordVersionSummary[];
   current_version_no: number;
+}
+
+interface CurrencyRefRow {
+  code: string;
+  minor_units: number | null;
+}
+
+function numberFromLineData(line: DocumentLine, key: string): number {
+  const data = line.data as Record<string, unknown> | null | undefined ?? {};
+  const n = Number(data[key]);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function journalTotalsFromLines(lines: DocumentLine[]): { totalDebit: number; totalCredit: number; lineCount: number } {
+  return {
+    totalDebit:  lines.reduce((sum, line) => sum + numberFromLineData(line, "transaction_debit"), 0),
+    totalCredit: lines.reduce((sum, line) => sum + numberFromLineData(line, "transaction_credit"), 0),
+    lineCount:   lines.length,
+  };
 }
 
 function versionChangeTypeLabel(t: RecordVersionSummary["change_type"]): string {
@@ -736,6 +764,7 @@ function DocumentEditableFieldsPanel({
                       value={value}
                       field={field}
                       mode="edit"
+                      formData={data}
                       onChange={(v) => onFieldChange(field.name, v)}
                       error={error}
                     />
@@ -911,7 +940,60 @@ export function DocumentDetailPage({
   const isDirty = Object.keys(editPatch).length > 0;
   const displayData = effectiveEditMode ? { ...data, ...editFormData } : data;
 
-  const orchestrator = buildOrchestratorFromRecord(entity, displayData, operations ?? [], statusNorm);
+  const linesQuery = useQuery<{ data: DocumentLine[] }>({
+    queryKey: ["record-lines", entity.entity_code, subResourceRecordId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(subResourceRecordId)}/lines`,
+        { signal },
+      );
+      if (!res.ok) throw new Error(`lines ${res.status}`);
+      return res.json() as Promise<{ data: DocumentLine[] }>;
+    },
+    enabled: hasLinesSection,
+    staleTime: 60_000,
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  const headerDisplayData = useMemo(() => {
+    if (!isJournalEntry || !linesQuery.data) return displayData;
+    const totals = journalTotalsFromLines(linesQuery.data.data ?? []);
+    return {
+      ...displayData,
+      total_debit:  totals.totalDebit,
+      total_credit: totals.totalCredit,
+      line_count:   totals.lineCount,
+    };
+  }, [displayData, isJournalEntry, linesQuery.data]);
+
+  const headerCurrencyCode = useMemo(() => {
+    const dh = entity.display_config.document_header;
+    const candidates = [
+      dh?.currency_field ? headerDisplayData[dh.currency_field] : undefined,
+      headerDisplayData["transaction_currency"],
+      headerDisplayData["currency_code"],
+      headerDisplayData["base_currency"],
+      headerDisplayData["base_currency_code"],
+    ];
+    return candidates.map(normaliseCurrencyCode).find(Boolean) ?? "";
+  }, [entity.display_config.document_header, headerDisplayData]);
+
+  const { data: currencyMeta } = useQuery<CurrencyRefRow | null>({
+    queryKey: ["ref", "currencies", "selected", headerCurrencyCode],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams({ search: headerCurrencyCode, limit: "20", status: "active" });
+      const res = await fetch(`/api/relay/api/platform/ref/currencies?${params.toString()}`, { signal });
+      if (!res.ok) return null;
+      const body = await res.json() as { data?: CurrencyRefRow[] };
+      return (body.data ?? []).find((row) => normaliseCurrencyCode(row.code) === headerCurrencyCode) ?? null;
+    },
+    enabled: Boolean(headerCurrencyCode),
+    staleTime: 60 * 60 * 1000,
+  });
+  const currencyMinorUnits = currencyMeta?.minor_units ?? null;
+
+  const orchestrator = buildOrchestratorFromRecord(entity, headerDisplayData, operations ?? [], statusNorm);
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -1049,12 +1131,13 @@ export function DocumentDetailPage({
     ...(resolvedTabs.includes("reports")       ? [{ id: "__reports",       label: "Reports" }]       : []),
   ];
 
-  const headerModelBase = buildDocumentHeaderModel(entity, displayData, {
+  const headerModelBase = buildDocumentHeaderModel(entity, headerDisplayData, {
     statusDimensions:    orchestrator.statusDimensions ?? [],
     actionBundle:        orchestrator.actionBundle,
     resolvedPartyName:   resolvedPartyName ?? undefined,
     resolvedPartyCode:   partyCode && typeof partyCode === "string" ? partyCode.trim() : undefined,
     resolvedCompanyCode: resolvedCompanyCode ?? undefined,
+    currencyMinorUnits,
     tabs,
   });
 
@@ -1194,22 +1277,6 @@ export function DocumentDetailPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasPlatformComments, hasPlatformAttachments, resolvedTabs.join(","), commentsCount, commentsCountQuery.isPending, attachmentsCount, attachmentsCountQuery.isPending]);
 
-  const linesQuery = useQuery<{ data: DocumentLine[] }>({
-    queryKey: ["record-lines", entity.entity_code, subResourceRecordId],
-    queryFn: async ({ signal }) => {
-      const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(subResourceRecordId)}/lines`,
-        { signal },
-      );
-      if (!res.ok) throw new Error(`lines ${res.status}`);
-      return res.json() as Promise<{ data: DocumentLine[] }>;
-    },
-    enabled: hasLinesSection,
-    staleTime: 60_000,
-    retry: 3,
-    retryDelay: 1000,
-  });
-
   const distQuery = useQuery<{ data: AccountingDistribution[] }>({
     queryKey: ["record-distributions", entity.entity_code, subResourceRecordId],
     queryFn: async ({ signal }) => {
@@ -1236,9 +1303,11 @@ export function DocumentDetailPage({
   function handleDocumentFieldChange(name: string, value: unknown) {
     setEditFormData((prev) => ({ ...prev, [name]: value }));
     setFieldErrors((prev) => {
-      if (!prev[name]) return prev;
+      if (Object.keys(prev).length === 0) return prev;
       const next = { ...prev };
-      delete next[name];
+      for (const fieldName of validationFieldsAffectedByChange(entity.fields, name)) {
+        delete next[fieldName];
+      }
       return next;
     });
     setSaveError(null);
@@ -1295,6 +1364,9 @@ export function DocumentDetailPage({
         nextErrors[field.name] = `${field.label ?? field.name} is required`;
       }
     }
+    const editableFields = entity.fields.filter(isDocumentEditableField);
+    const metaValidation = validateMetaFieldRules(editableFields, editFormData);
+    Object.assign(nextErrors, metaValidation.fieldErrors);
     setFieldErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
@@ -1316,6 +1388,12 @@ export function DocumentDetailPage({
       );
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+        const apiFieldErrors = fieldErrorsFromApiErrorBody(body);
+        if (Object.keys(apiFieldErrors).length > 0) {
+          setFieldErrors((prev) => ({ ...prev, ...apiFieldErrors }));
+          setSaveError(validationSummaryMessage(apiFieldErrors));
+          return false;
+        }
         const message = typeof body["message"] === "string"
           ? body["message"]
           : `Save failed (${res.status})`;
@@ -1520,7 +1598,7 @@ export function DocumentDetailPage({
               recordId={subResourceRecordId}
               recordUuid={record.id}
               companyCodeId={companyCodeId}
-              record={data}
+              record={displayData}
               lines={linesQuery.data?.data ?? []}
               distributions={distQuery.data?.data ?? []}
               isLoading={linesQuery.isLoading}
@@ -1529,6 +1607,7 @@ export function DocumentDetailPage({
               hasAiClassification={Boolean(entity.feature_flags?.["has_ai_classification"])}
               hasLineComposer={Boolean(entity.feature_flags?.["has_line_composer"])}
               editMode={effectiveEditMode}
+              currencyMinorUnits={currencyMinorUnits}
             />
           </Card>
         )}

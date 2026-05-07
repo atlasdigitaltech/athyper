@@ -38,13 +38,11 @@ BEGIN
             'layout', 'wizard_with_summary',
             'intake_variant', 'minimal_header_then_lines',
             'input_modes', jsonb_build_array('manual','source_adjustment','import'),
-            'reference_model', 'journal_line_reference',
-            'line_reference_strategy', 'optional_per_line',
+            'line_reference_strategy', 'none',
             'summary', jsonb_build_object(
-                'fields', jsonb_build_array('company_code_id','posting_date','transaction_currency','total_debit','total_credit','line_count'),
+                'fields', jsonb_build_array('company_code_id','posting_date','transaction_currency','exchange_rate','total_debit','total_credit','line_count'),
                 'line_collection', 'journal_line',
-                'balance_rule', 'debit_equals_credit',
-                'reference_collection', 'journal_line_reference'
+                'balance_rule', 'debit_equals_credit'
             ),
             'controls', jsonb_build_object(
                 'submit_requires_balance', true,
@@ -66,13 +64,11 @@ BEGIN
            'layout', 'wizard_with_summary',
            'intake_variant', 'minimal_header_then_lines',
            'input_modes', jsonb_build_array('manual','source_adjustment','import'),
-           'reference_model', 'journal_line_reference',
-           'line_reference_strategy', 'optional_per_line',
+           'line_reference_strategy', 'none',
            'summary', jsonb_build_object(
-               'fields', jsonb_build_array('company_code_id','posting_date','transaction_currency','total_debit','total_credit','line_count'),
+               'fields', jsonb_build_array('company_code_id','posting_date','transaction_currency','exchange_rate','total_debit','total_credit','line_count'),
                'line_collection', 'journal_line',
-               'balance_rule', 'debit_equals_credit',
-               'reference_collection', 'journal_line_reference'
+               'balance_rule', 'debit_equals_credit'
            ),
            'controls', jsonb_build_object(
                'submit_requires_balance', true,
@@ -96,7 +92,7 @@ BEGIN
         (tenant_id, flow_id, step_key, label, icon_key, sort_order, advance_rule, layout_hint, created_by)
     VALUES
         (NULL, v_flow_id, 'posting_header', 'Posting Header', 'landmark', 10,
-         '{"required_fields":["company_code_id","posting_date","document_date","transaction_currency"]}'::jsonb,
+         '{"required_fields":["company_code_id","posting_date","document_date","transaction_currency","description"]}'::jsonb,
          'summary_side', v_su),
         (NULL, v_flow_id, 'journal_lines', 'Journal Lines', 'list-plus', 20,
          '{"required_sections":["lines"],"min_rows":{"lines":2},"balance_rule":"debit_equals_credit"}'::jsonb,
@@ -135,10 +131,10 @@ BEGIN
          true, NULL, 'honor_default',
          'fields', NULL, NULL, NULL, NULL, NULL, v_su),
         (NULL, v_step_2, 'lines', 'Lines',
-         'Debit and credit lines with optional source document references. The DB validates polarity, balance, dimensions, posting controls, and budget.',
+         'Debit and credit lines. The DB validates polarity, balance, dimensions, posting controls, and budget.',
          10, false, NULL, 'auto_expand',
          'repeater', 'journal_line', 'lines',
-         '["line_no","gl_account_id","description","references","transaction_debit","transaction_credit","cost_center_id","profit_center_id","project_id","party_type","party_id"]'::jsonb,
+         '["line_no","gl_account_id","description","transaction_debit","transaction_credit","exchange_rate","cost_center_id","profit_center_id","project_id","party_type","party_id"]'::jsonb,
          2,
          '{"transaction_debit":0,"transaction_credit":0}'::jsonb,
          v_su),
@@ -173,19 +169,18 @@ BEGIN
            v.visible_when::jsonb, v.required_when::jsonb,
            v.default_source, v.derive_expression, v.override_permission,
            v.summary_role, v.ui_variant, v.span, v.display_size,
-           v.help_text, v.sort_order, v_su
+           v.help_text, COALESCE(v.sort_order, ef.sort_order), v_su
     FROM control.entity_field ef
     JOIN (VALUES
-        ('document_no',          'identity', 'readonly', 'derived_locked', NULL::text, NULL::text, NULL, 'numbering.next(journal_entry)', NULL, 'meta', 'chip', 1, 'compact', NULL, 10),
-        ('status',               'identity', 'chip',     'derived_locked', NULL, NULL, NULL, 'const:draft', NULL, 'meta', 'chip', 1, 'compact', NULL, 20),
-        ('company_code_id',      'posting',  'required', 'derived_overrideable', NULL, NULL, NULL, 'ctx.user.default_company_code', 'je.override_company_code', NULL, 'inline_search', 1, 'standard', NULL, 30),
-        ('book_id',              'posting',  'required', 'derived_overrideable', NULL, NULL, NULL, 'company_code.default_manual_ledger_book(company_code_id)', 'je.override_book', NULL, 'inline_search', 1, 'standard', NULL, 40),
-        ('posting_date',         'posting',  'required', 'manual', NULL, NULL, 'today()', NULL, NULL, NULL, NULL, 1, 'standard', NULL, 50),
-        ('document_date',        'posting',  'required', 'derived_overrideable', NULL, NULL, 'field.posting_date', 'field.posting_date', 'je.override_document_date', NULL, NULL, 1, 'standard', NULL, 60),
-        ('transaction_currency', 'posting',  'required', 'derived_overrideable', NULL, NULL, NULL, 'company_code.base_currency(company_code_id)', 'je.override_currency', NULL, 'currency', 1, 'standard', NULL, 70),
-        ('base_currency',        'posting',  'readonly', 'derived_locked', NULL, NULL, NULL, 'company_code.base_currency(company_code_id)', NULL, 'meta', 'chip', 1, 'compact', NULL, 80),
-        ('source_type',          'source',   'chip',     'derived_locked', NULL, NULL, NULL, 'const:manual', NULL, 'meta', 'chip', 1, 'compact', NULL, 90),
-        ('description',          'source',   'editable', 'manual', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 3, 'standard', NULL, 100)
+        ('status',               'identity', 'chip',     'derived_locked', NULL, NULL, NULL, 'const:draft', NULL, 'meta', 'chip', 1, 'compact', NULL, NULL::smallint),
+        ('company_code_id',      'posting',  'required', 'derived_overrideable', NULL, NULL, NULL, 'ctx.user.default_company_code', 'je.override_company_code', NULL, 'inline_search', 1, 'standard', NULL, NULL::smallint),
+        ('book_id',              'posting',  'required', 'derived_overrideable', NULL, NULL, NULL, 'company_code.default_manual_ledger_book(company_code_id)', 'je.override_book', NULL, 'inline_search', 1, 'standard', NULL, NULL::smallint),
+        ('posting_date',         'posting',  'required', 'manual', NULL, NULL, 'today()', NULL, NULL, NULL, NULL, 1, 'standard', NULL, NULL::smallint),
+        ('document_date',        'posting',  'required', 'derived_overrideable', NULL, NULL, 'field.posting_date', 'field.posting_date', 'je.override_document_date', NULL, NULL, 1, 'standard', NULL, NULL::smallint),
+        ('transaction_currency', 'posting',  'required', 'derived_overrideable', NULL, NULL, NULL, 'company_code.base_currency(company_code_id)', 'je.override_currency', NULL, 'currency', 1, 'standard', NULL, NULL::smallint),
+        ('base_currency',        'posting',  'readonly', 'derived_locked', NULL, NULL, NULL, 'company_code.base_currency(company_code_id)', NULL, 'meta', 'currency', 1, 'compact', NULL, NULL::smallint),
+        ('source_type',          'source',   'chip',     'derived_locked', NULL, NULL, NULL, 'const:manual', NULL, 'meta', 'chip', 1, 'compact', NULL, NULL::smallint),
+        ('description',          'source',   'required', 'manual', NULL, NULL, NULL, NULL, NULL, NULL, 'textarea', 3, 'standard', NULL, NULL::smallint)
     ) AS v(field_name, section_key, mode, derivation_mode, visible_when, required_when,
            default_source, derive_expression, override_permission,
            summary_role, ui_variant, span, display_size, help_text, sort_order)

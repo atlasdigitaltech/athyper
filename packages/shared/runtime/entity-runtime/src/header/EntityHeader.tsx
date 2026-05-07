@@ -21,6 +21,7 @@
 
 import { type ReactNode, useState } from "react";
 import { cn } from "@athyper/theme/utils";
+import { normaliseCurrencyCode } from "@athyper/runtime-shared/core";
 import type { EntityHeaderModel, HeaderMode } from "./types";
 import { useRailState } from "./hooks/useRailState";
 import { EntityIdentityBar } from "./atoms/EntityIdentityBar";
@@ -30,6 +31,40 @@ import { EntityFactRail } from "./atoms/EntityFactRail";
 import { EntityProgressRow } from "./atoms/EntityProgressRow";
 import { EntityStatusStrip } from "./atoms/EntityStatusStrip";
 import { EntityTabBar, type PlatformPanelIcon } from "./atoms/EntityTabBar";
+
+function toAmountSummary(xlFact: NonNullable<EntityHeaderModel["facts"]>[number]) {
+  let amount = xlFact.value.trim();
+  let currency = normaliseCurrencyCode(xlFact.currency);
+
+  const prefixed = amount.match(/^([A-Z]{3})\s+(.+)$/);
+  if (prefixed) {
+    const prefixedCurrency = prefixed[1];
+    const prefixedAmount = prefixed[2];
+    const parsedCurrency = normaliseCurrencyCode(prefixedCurrency);
+    if (prefixedAmount && parsedCurrency && (!currency || currency === parsedCurrency)) {
+      currency = currency ?? parsedCurrency;
+      amount = prefixedAmount.trim();
+    }
+  }
+
+  const suffixed = amount.match(/^(.+?)\s+([A-Z]{3})$/);
+  if (suffixed) {
+    const suffixedAmount = suffixed[1];
+    const suffixedCurrency = suffixed[2];
+    const parsedCurrency = normaliseCurrencyCode(suffixedCurrency);
+    if (suffixedAmount && parsedCurrency && (!currency || currency === parsedCurrency)) {
+      currency = currency ?? parsedCurrency;
+      amount = suffixedAmount.trim();
+    }
+  }
+
+  return {
+    label:    xlFact.label,
+    amount,
+    currency,
+    subtext:  xlFact.subValue,
+  };
+}
 
 export interface EntityHeaderProps {
   model: EntityHeaderModel;
@@ -98,9 +133,7 @@ export function EntityHeader({
   const rail = useRailState(model.progress);
 
   const xlFact = model.facts?.find((f) => f.xl);
-  const amountSummary = xlFact
-    ? { label: xlFact.label, amount: xlFact.value, currency: xlFact.currency, subtext: xlFact.subValue }
-    : undefined;
+  const amountSummary = xlFact ? toAmountSummary(xlFact) : undefined;
   const nonXlFacts = model.facts?.filter((f) => !f.xl) ?? [];
 
   const actionsSlot       = <EntityActionBar actions={model.actions} onAction={onAction} />;

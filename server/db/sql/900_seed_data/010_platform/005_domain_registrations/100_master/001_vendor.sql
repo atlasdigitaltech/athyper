@@ -653,3 +653,69 @@ SET natural_key_fields = ARRAY['supplier_code'],
     feature_flags      = feature_flags || '{"identity_via":"business_partner","list_entity_code":"supplier_app_index","parent_entity":"business_partner","parent_fk":"business_partner_id"}'::jsonb
 WHERE table_schema = 'master' AND table_name = 'supplier'
   AND tenant_id IS NULL;
+
+-- ── 9. Company Setup tab (supplier_cc_extension renderer) ────────────────────
+-- Adds the __cc_extension tab alongside the existing __company_codes tab.
+-- Idempotent: skips if the tab id already present in master_config.tabs.
+-- The tab drives the SupplierCcExtensionTab TSX component via:
+--   renderer = 'supplier_cc_extension'
+-- presentation_config carries:
+--   profile_display_fields → which AP profile fields to show (no hardcode in TSX)
+--   policy_sections        → which child policy entities to surface (no hardcode in TSX)
+UPDATE control.entity
+SET display_config = jsonb_set(
+    display_config,
+    '{master_config,tabs}',
+    (display_config -> 'master_config' -> 'tabs') || jsonb_build_array(
+        jsonb_build_object(
+            'id',          '__cc_extension',
+            'label',       'Company Setup',
+            'renderer',    'supplier_cc_extension',
+            'entity_code', 'company_code_supplier_profile',
+            'add_label',   'Add Company Profile',
+            'empty_title', 'No company profiles configured',
+            'empty_description', 'Add per-company AP and procurement settings for this supplier.',
+            'config', jsonb_build_object(
+                'title',        'company_code_id',
+                'facts',        jsonb_build_array('currency_code','payment_term_id','payment_method_id','tax_group_id'),
+                'badges',       jsonb_build_array('status','is_blocked'),
+                'presentation', 'supplier_cc_extension',
+                'presentation_config', jsonb_build_object(
+                    'profile_display_fields', jsonb_build_array(
+                        'currency_code',
+                        'payment_term_id',
+                        'payment_method_id',
+                        'preferred_remittance_bank_link_id',
+                        'default_accounting_profile_id',
+                        'tax_group_id',
+                        'default_wht_tax_group_id',
+                        'invoice_hold_policy_id'
+                    ),
+                    'policy_sections', jsonb_build_array(
+                        jsonb_build_object(
+                            'id',          'spend_policies',
+                            'label',       'Spend Policies',
+                            'entity_code', 'company_code_supplier_spend_policy',
+                            'add_label',   'Add Spend Policy'
+                        ),
+                        jsonb_build_object(
+                            'id',          'intent_policies',
+                            'label',       'Intent Policies',
+                            'entity_code', 'company_code_supplier_intent_policy',
+                            'add_label',   'Add Intent Policy'
+                        ),
+                        jsonb_build_object(
+                            'id',          'posting_overrides',
+                            'label',       'Posting Overrides',
+                            'entity_code', 'company_code_supplier_posting_override',
+                            'add_label',   'Add Override'
+                        )
+                    )
+                )
+            )
+        )
+    )
+)
+WHERE table_schema = 'master' AND table_name = 'supplier'
+  AND tenant_id IS NULL
+  AND NOT (display_config -> 'master_config' -> 'tabs') @> '[{"id":"__cc_extension"}]'::jsonb;

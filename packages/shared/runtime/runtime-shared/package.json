@@ -11,7 +11,8 @@
     "./client": "./src/client/index.ts",
     "./entity-search": "./src/entity-search/index.ts",
     "./renderer-registry": "./src/renderer-registry/index.ts",
-    "./descriptors": "./src/descriptors/types.ts"
+    "./descriptors": "./src/descriptors/types.ts",
+    "./validation": "./src/validation/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
