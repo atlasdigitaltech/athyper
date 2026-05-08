@@ -201,6 +201,7 @@ build_compose_file_list() {
   _add_file "$COMPOSE_DIR/security/athyper-clamav.yml"
   _add_file "$COMPOSE_DIR/memorycache/athyper-memorycache.yml"
   _add_file "$COMPOSE_DIR/memorycache/athyper-memorycache-exporter.yml"
+  _add_file "$COMPOSE_DIR/telemetry/athyper-alertmanager.yml"
   _add_file "$COMPOSE_DIR/telemetry/athyper-metrics.yml"
   _add_file "$COMPOSE_DIR/telemetry/athyper-tracing.yml"
   _add_file "$COMPOSE_DIR/telemetry/athyper-logging.yml"
