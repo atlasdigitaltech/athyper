@@ -17,8 +17,8 @@ export interface VirtualFilterContext {
 export type VirtualFilterLabelFn = (value: string, ctx: VirtualFilterContext) => string;
 
 export const VIRTUAL_FILTER_LABELS: Record<string, VirtualFilterLabelFn> = {
-  /** S1.A — Bookmarks */
-  __bookmarked: () => "Starred",
+  /** S1.A — Favourites */
+  __bookmarked: () => "Favourites",
 
   /** S2.B — Ownership */
   __assignee:   (value, ctx) =>

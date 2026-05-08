@@ -163,6 +163,7 @@ call :pf "memorycache\redis-acl.conf.tpl" "memorycache\redis-acl.conf" 0
 REM telemetry
 call :pf "telemetry\logging\config.yml" "telemetry\logging\config.yml" 0
 call :pf "telemetry\logging\alloy.alloy" "telemetry\logging\alloy.alloy" 0
+call :pf "telemetry\alertmanager\config.yml.tpl" "telemetry\alertmanager\config.yml.tpl" 0
 call :pf "telemetry\metrics\config.yml" "telemetry\metrics\config.yml" 0
 call :pf "telemetry\metrics\governance-alerts.yml" "telemetry\metrics\governance-alerts.yml" 0
 call :pf "telemetry\metrics\redis-alerts.yml" "telemetry\metrics\redis-alerts.yml" 0

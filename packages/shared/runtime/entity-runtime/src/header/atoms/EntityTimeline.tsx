@@ -25,7 +25,7 @@ function SlaBadge({ stage }: { stage: HeaderProgressStage }) {
   const { subtleBadge } = resolveSemanticColors(SLA_INTENT[stage.slaStatus]);
   return (
     <span className={cn(
-      "inline-flex items-center rounded border px-1 py-px text-[9px] font-semibold leading-none",
+      "inline-flex items-center rounded border px-1 py-px text-doc-field-label font-semibold",
       subtleBadge,
     )}>
       {SLA_LABEL[stage.slaStatus]}
@@ -66,7 +66,7 @@ export function EntityTimeline({ progress, className }: EntityTimelineProps) {
                 )}
                 <div className={cn(
                   "w-[11px] h-[11px] rounded-full relative z-[1]",
-                  isActive ? "bg-card border-2 border-foreground shadow-[0_0_0_3px_color-mix(in_oklab,var(--foreground)_7%,transparent)]"
+                  isActive ? "bg-card border-2 border-foreground shadow-ring-foreground-subtle"
                   : isPast  ? "bg-foreground border-[1.5px] border-foreground"
                   :            "bg-card border-[1.5px] border-border",
                 )}>
@@ -100,7 +100,7 @@ export function EntityTimeline({ progress, className }: EntityTimelineProps) {
               {(stage.durationLabel || stage.slaStatus) && (
                 <div className="flex items-center gap-1 pt-0.5 flex-wrap">
                   {stage.durationLabel && (
-                    <span className="text-[10px] font-medium text-muted-foreground tabular-nums">
+                    <span className="text-doc-support font-medium text-muted-foreground tabular-nums">
                       {isActive ? "⏱ " : ""}{stage.durationLabel}
                     </span>
                   )}

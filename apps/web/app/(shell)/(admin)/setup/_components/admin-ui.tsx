@@ -57,7 +57,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium capitalize",
+        "inline-flex items-center rounded border px-1.5 py-0.5 text-doc-support font-medium capitalize",
         subtleBadge,
         className,
       )}
@@ -209,7 +209,7 @@ export function SectionHeader({
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold">{title}</h1>
             {count !== undefined && (
-              <Badge variant="secondary" className="text-[10px] px-1.5">{count}</Badge>
+              <Badge variant="secondary" className="text-doc-support px-1.5">{count}</Badge>
             )}
           </div>
           {description && (

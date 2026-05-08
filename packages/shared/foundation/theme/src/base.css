@@ -19,9 +19,56 @@
     text-transform: uppercase;
     color: var(--muted-foreground);
   }
+
+  .scrim-modal {
+    background: var(--scrim-modal);
+  }
+
+  .scrim-command {
+    background: var(--scrim-command);
+  }
+
+  .scrim-drawer {
+    background: var(--scrim-drawer);
+  }
+
+  .scrim-context {
+    background: var(--scrim-context);
+  }
+
+  .shadow-separator-primary {
+    box-shadow: 2px 0 0 0 color-mix(in oklab, var(--primary) 25%, transparent);
+  }
+
+  .shadow-ring-foreground-subtle {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--foreground) 7%, transparent);
+  }
+
+  .bg-qr-surface {
+    background: white;
+  }
+
+  .media-caption-overlay {
+    background-image: linear-gradient(to top, rgb(0 0 0 / 0.60), transparent);
+  }
+
+  .media-caption-text {
+    color: white;
+  }
+
+  .tracking-otp {
+    letter-spacing: 0.5em;
+  }
 }
 
 @layer base {
+  :root {
+    --scrim-modal: rgb(0 0 0 / 0.50);
+    --scrim-command: rgb(0 0 0 / 0.40);
+    --scrim-drawer: rgb(0 0 0 / 0.45);
+    --scrim-context: rgb(0 0 0 / 0.20);
+  }
+
   * {
     border-color: var(--border);
   }

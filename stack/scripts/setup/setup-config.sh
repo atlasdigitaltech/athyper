@@ -140,6 +140,7 @@ FILE_MAP["memorycache/redis-acl.conf.tpl"]="memorycache/redis-acl.conf"
 # telemetry — repo-managed (safe to auto-update)
 FILE_MAP["telemetry/logging/config.yml"]="telemetry/logging/config.yml"
 FILE_MAP["telemetry/logging/alloy.alloy"]="telemetry/logging/alloy.alloy"
+FILE_MAP["telemetry/alertmanager/config.yml.tpl"]="telemetry/alertmanager/config.yml.tpl"
 FILE_MAP["telemetry/metrics/config.yml"]="telemetry/metrics/config.yml"
 FILE_MAP["telemetry/metrics/governance-alerts.yml"]="telemetry/metrics/governance-alerts.yml"
 FILE_MAP["telemetry/metrics/redis-alerts.yml"]="telemetry/metrics/redis-alerts.yml"

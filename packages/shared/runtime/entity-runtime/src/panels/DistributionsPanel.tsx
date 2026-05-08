@@ -116,7 +116,7 @@ export function DistributionsPanel({ entityCode, recordId }: DistributionsPanelP
                       {d.distribution_no}
                     </td>
                     <td className="px-3 py-2">
-                      <span className="inline-flex items-center h-[16px] px-[5px] rounded-[3px] text-[9.5px] font-semibold bg-muted border border-border/50 text-muted-foreground leading-none">
+                      <span className="inline-flex items-center h-[16px] px-[5px] rounded-[3px] text-doc-field-label font-semibold bg-muted border border-border/50 text-muted-foreground leading-none">
                         {d.distribution_basis === "PERCENT" && d.split_pct != null
                           ? `${Number(d.split_pct).toFixed(1)}%`
                           : d.distribution_basis}

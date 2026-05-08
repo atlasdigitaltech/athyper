@@ -140,7 +140,7 @@ function QuarantineRow({ item }: { item: QuarantinedAttachment }) {
     <>
       <RowCard
         badge={
-          <Badge variant="destructive" className="text-[10px] gap-1">
+          <Badge variant="destructive" className="text-doc-support gap-1">
             <ShieldAlert className="h-2.5 w-2.5" />
             QUARANTINED
           </Badge>
@@ -148,24 +148,24 @@ function QuarantineRow({ item }: { item: QuarantinedAttachment }) {
         title={item.fileName}
         metadata={
           <>
-            <span className="font-mono text-[10px] text-destructive">
+            <span className="font-mono text-doc-support text-destructive">
               {threat}
             </span>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-doc-support text-muted-foreground">
               {item.contentType} · {fmtBytes(item.sizeBytes)}
             </span>
             {item.entityType && (
-              <span className="font-mono text-[10px] text-muted-foreground">
+              <span className="font-mono text-doc-support text-muted-foreground">
                 {item.entityType}
                 {item.entityId ? ` / ${item.entityId.slice(0, 8)}…` : ""}
               </span>
             )}
             {item.uploadedByName && (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-doc-support text-muted-foreground">
                 Uploaded by {item.uploadedByName}
               </span>
             )}
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-doc-support text-muted-foreground">
               Quarantined {fmtDateTime(item.quarantinedAt)}
             </span>
           </>

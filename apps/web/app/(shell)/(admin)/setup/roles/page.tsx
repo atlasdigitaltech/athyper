@@ -109,7 +109,7 @@ export default function RolesSetupPage() {
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {groupLabel(groupKey)}
                 </h3>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-doc-support">
                   {grouped[groupKey]!.length} role{grouped[groupKey]!.length !== 1 ? "s" : ""}
                 </Badge>
               </div>
@@ -123,9 +123,9 @@ export default function RolesSetupPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="px-4 pb-3">
-                      <p className="font-mono text-[11px] text-muted-foreground">{role.code}</p>
+                      <p className="font-mono text-doc-subtitle text-muted-foreground">{role.code}</p>
                       {role.persona_code && (
-                        <Badge variant="muted" className="mt-2 text-[9px]">{role.persona_code}</Badge>
+                        <Badge variant="muted" className="mt-2 text-doc-field-label">{role.persona_code}</Badge>
                       )}
                     </CardContent>
                   </Card>

@@ -81,7 +81,7 @@ export default function ContentVersionsPage() {
         <div className="overflow-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-[10px] text-muted-foreground uppercase tracking-wider">
+              <tr className="border-b text-left text-doc-support text-muted-foreground uppercase tracking-wider">
                 <th className="pb-2 pr-3 font-medium">#</th>
                 <th className="pb-2 pr-3 font-medium">Checksum</th>
                 <th className="pb-2 pr-3 font-medium">Type</th>
@@ -96,15 +96,15 @@ export default function ContentVersionsPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium">v{v.versionNumber}</span>
                       {v.id === item?.currentVersionId && (
-                        <Badge variant="success" className="text-[10px]">current</Badge>
+                        <Badge variant="success" className="text-doc-support">current</Badge>
                       )}
                     </div>
                   </td>
-                  <td className="py-2.5 pr-3 font-mono text-[10px] text-muted-foreground">
+                  <td className="py-2.5 pr-3 font-mono text-doc-support text-muted-foreground">
                     {v.checksum.substring(0, 12)}…
                   </td>
                   <td className="py-2.5 pr-3">
-                    <Badge variant="outline" className="text-[10px]">{v.contentType}</Badge>
+                    <Badge variant="outline" className="text-doc-support">{v.contentType}</Badge>
                   </td>
                   <td className="py-2.5 pr-3 text-xs text-muted-foreground">{v.createdBy ?? "—"}</td>
                   <td className="py-2.5 text-xs text-muted-foreground">

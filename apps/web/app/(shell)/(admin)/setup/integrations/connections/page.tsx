@@ -184,7 +184,7 @@ function EditDialog({
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Config (JSON)</Label>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-doc-support text-muted-foreground">
               Edit raw config JSONB. Credential fields will be stored as-is — encryption in Phase 5.
             </p>
             <textarea
@@ -253,33 +253,33 @@ function ConnectionRow({ conn }: { conn: Connection }) {
         className={!conn.isActive ? "opacity-60" : ""}
         leading={conn.connectorTypeIcon ? <span className="text-base">{conn.connectorTypeIcon}</span> : undefined}
         badge={<>
-          <Badge variant={STATUS_BADGE[conn.status]} className="text-[10px]">
+          <Badge variant={STATUS_BADGE[conn.status]} className="text-doc-support">
             {conn.status}
           </Badge>
-          <Badge variant={HEALTH_BADGE[displayHealth]} className="text-[10px] gap-1">
+          <Badge variant={HEALTH_BADGE[displayHealth]} className="text-doc-support gap-1">
             {HEALTH_ICON[displayHealth]}
             {displayHealth}
           </Badge>
         </>}
         title={conn.name}
         metadata={<>
-          <div className="flex flex-wrap items-center gap-3 text-[11px]">
+          <div className="flex flex-wrap items-center gap-3 text-doc-subtitle">
             <span className="font-mono">{conn.code}</span>
             {conn.connectorTypeName && <span>{conn.connectorTypeName}</span>}
             {conn.connectorTypeCategory && (
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-doc-support">
                 {conn.connectorTypeCategory.replace(/_/g, " ")}
               </Badge>
             )}
             <span>tested {fmtRelative(conn.lastHealthCheckAt)}</span>
           </div>
           {conn.lastErrorMessage && displayHealth !== "healthy" && (
-            <p className="text-[11px] text-destructive font-mono truncate max-w-xs">
+            <p className="text-doc-subtitle text-destructive font-mono truncate max-w-xs">
               {conn.lastErrorMessage}
             </p>
           )}
           {testResult && (
-            <p className="text-[11px]">
+            <p className="text-doc-subtitle">
               {testResult.probed
                 ? `Probe result: ${testResult.healthStatus}`
                 : "No base URL configured — marked as unknown"}
@@ -362,7 +362,7 @@ export default function ConnectionsPage() {
       actions={
         <div className="flex items-center gap-2">
           {unhealthy > 0 && (
-            <Badge variant="destructive" className="gap-1 text-[10px]">
+            <Badge variant="destructive" className="gap-1 text-doc-support">
               <AlertTriangle className="h-3 w-3" />
               {unhealthy} unhealthy
             </Badge>

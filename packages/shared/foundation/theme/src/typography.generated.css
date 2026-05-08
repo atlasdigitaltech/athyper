@@ -22,6 +22,11 @@
   --doc-field-label-weight: 600;
   --doc-field-label-tracking: 0.10em;
 
+  --doc-compact-code-size: 0.5rem;
+  --doc-compact-code-line-height: 1;
+  --doc-compact-code-weight: 500;
+  --doc-compact-code-tracking: 0.04em;
+
   --doc-field-value-size: 0.75rem;
   --doc-field-value-line-height: 1.2;
   --doc-field-value-weight: 600;
@@ -41,9 +46,43 @@
 }
 
 @layer utilities {
-  .text-doc-label {
+  .text-doc-number {
+    font-size: var(--doc-number-size);
+    line-height: var(--doc-number-line-height);
+    letter-spacing: var(--doc-number-tracking);
+  }
+
+  .text-doc-subtitle {
+    font-size: var(--doc-subtitle-size);
+    line-height: var(--doc-subtitle-line-height);
+  }
+
+  .text-doc-badge {
+    font-size: var(--doc-badge-size);
+    line-height: var(--doc-badge-line-height);
+  }
+
+  .text-doc-field-label {
     font-size: var(--doc-field-label-size);
     line-height: var(--doc-field-label-line-height);
+    letter-spacing: var(--doc-field-label-tracking);
+  }
+
+  .text-doc-compact-code {
+    font-size: var(--doc-compact-code-size);
+    line-height: var(--doc-compact-code-line-height);
+    letter-spacing: var(--doc-compact-code-tracking);
+  }
+
+  .text-doc-field-value {
+    font-size: var(--doc-field-value-size);
+    line-height: var(--doc-field-value-line-height);
+  }
+
+  .text-doc-amount {
+    font-size: var(--doc-amount-size);
+    line-height: var(--doc-amount-line-height);
+    letter-spacing: var(--doc-amount-tracking);
   }
 
   .text-doc-support {
@@ -51,8 +90,14 @@
     line-height: var(--doc-support-line-height);
   }
 
-  .text-doc-subtitle {
-    font-size: var(--doc-subtitle-size);
-    line-height: var(--doc-subtitle-line-height);
+  .text-doc-action {
+    font-size: var(--doc-action-size);
+    line-height: var(--doc-action-line-height);
+  }
+
+  .text-doc-label {
+    font-size: var(--doc-field-label-size);
+    line-height: var(--doc-field-label-line-height);
+    letter-spacing: var(--doc-field-label-tracking);
   }
 }

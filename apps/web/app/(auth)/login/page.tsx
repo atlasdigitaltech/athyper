@@ -139,7 +139,7 @@ function LoginPageInner() {
             <p className="text-xs font-semibold tracking-widest uppercase opacity-50">
               {current.workspace}
             </p>
-            <h3 className="text-[2.2rem] font-bold leading-[1.15] whitespace-pre-line">
+            <h3 className="text-display-auth font-bold whitespace-pre-line">
               {current.headline}
             </h3>
             <p className="text-base leading-relaxed opacity-60">

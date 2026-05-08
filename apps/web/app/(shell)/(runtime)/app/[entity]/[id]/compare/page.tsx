@@ -127,7 +127,7 @@ function VersionHeader({
             : detail.status === "superseded" ? "muted"
             : "secondary"
             }
-            className="capitalize text-[10px]"
+            className="capitalize text-doc-support"
           >
             {detail.status}
           </Badge>
@@ -232,7 +232,7 @@ function DiffTable({
               <tr className="bg-muted/20">
                 <td
                   colSpan={3}
-                  className="py-1.5 pl-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/60"
+                  className="py-1.5 pl-3 text-doc-subtitle font-medium uppercase tracking-wide text-muted-foreground/60"
                 >
                   {unchangedRows.length} unchanged field{unchangedRows.length !== 1 ? "s" : ""}
                 </td>
@@ -345,7 +345,7 @@ function CompareContent() {
               <span>No field differences between these two versions.</span>
             ) : (
               <>
-                <Badge variant="warning" className="text-[10px]">
+                <Badge variant="warning" className="text-doc-support">
                   {changedCount} field{changedCount !== 1 ? "s" : ""} changed
                 </Badge>
                 <span className="text-xs">Showing all fields — changed fields are listed first.</span>

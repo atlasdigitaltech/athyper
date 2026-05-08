@@ -306,9 +306,9 @@ function AddMemberDialog({
                     onClick={() => setSelectedId(p.id)}
                   >
                     <span className="font-medium">{principalLabel(p)}</span>
-                    <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">({p.code})</span>
+                    <span className="ml-1.5 font-mono text-doc-support text-muted-foreground">({p.code})</span>
                     {p.login_email && (
-                      <span className="block text-[10px] text-muted-foreground">{p.login_email}</span>
+                      <span className="block text-doc-support text-muted-foreground">{p.login_email}</span>
                     )}
                   </button>
                 ))
@@ -545,11 +545,11 @@ function GroupSheet({
             <div className="flex items-center gap-2 flex-wrap">
               <SheetTitle className="text-base">{group.name}</SheetTitle>
               {group.is_system && (
-                <Badge variant="muted" className="text-[10px] gap-1">
+                <Badge variant="muted" className="text-doc-support gap-1">
                   <Lock className="h-2.5 w-2.5" />System
                 </Badge>
               )}
-              <Badge variant={STATUS_VARIANT[group.status] ?? "outline"} className="text-[10px]">
+              <Badge variant={STATUS_VARIANT[group.status] ?? "outline"} className="text-doc-support">
                 {group.status}
               </Badge>
             </div>
@@ -601,8 +601,8 @@ function GroupSheet({
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{memberDisplayName(m)}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="font-mono text-[10px] text-muted-foreground">{m.principal_code}</span>
-                          <Badge variant="outline" className="text-[9px] h-4 px-1">{m.principal_type}</Badge>
+                          <span className="font-mono text-doc-support text-muted-foreground">{m.principal_code}</span>
+                          <Badge variant="outline" className="text-doc-field-label h-4 px-1">{m.principal_type}</Badge>
                         </div>
                       </div>
                       {!group.is_system && (
@@ -644,7 +644,7 @@ function GroupSheet({
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-sm font-medium">{r.role_name}</p>
-                          <p className="font-mono text-[10px] text-muted-foreground">{r.role_code}</p>
+                          <p className="font-mono text-doc-support text-muted-foreground">{r.role_code}</p>
                         </div>
                         {!group.is_system && (
                           <Button
@@ -660,22 +660,22 @@ function GroupSheet({
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="text-doc-support">
                           Visibility: {VISIBILITY_LABEL[r.visibility_scope] ?? r.visibility_scope}
                         </Badge>
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="text-doc-support">
                           {SCOPE_TYPE_LABEL[r.assignment_scope_type] ?? r.assignment_scope_type}
                         </Badge>
                         {r.assignment_scope_ref_id && (
-                          <Badge variant="muted" className="text-[10px] font-mono">
+                          <Badge variant="muted" className="text-doc-support font-mono">
                             {r.assignment_scope_ref_id.slice(0, 8)}…
                           </Badge>
                         )}
                         {r.include_descendants && r.assignment_scope_type === "legal_entity" && (
-                          <Badge variant="outline" className="text-[10px]">incl. descendants</Badge>
+                          <Badge variant="outline" className="text-doc-support">incl. descendants</Badge>
                         )}
                         {r.expires_at && (
-                          <Badge variant="warning" className="text-[10px]">
+                          <Badge variant="warning" className="text-doc-support">
                             exp {new Date(r.expires_at).toLocaleDateString()}
                           </Badge>
                         )}
@@ -807,15 +807,15 @@ export default function GroupsSetupPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{g.name}</p>
-                    <p className="font-mono text-[11px] text-muted-foreground">{g.code}</p>
+                    <p className="font-mono text-doc-subtitle text-muted-foreground">{g.code}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {g.is_system && (
-                      <Badge variant="muted" className="gap-1 text-[9px]">
+                      <Badge variant="muted" className="gap-1 text-doc-field-label">
                         <Lock className="h-2.5 w-2.5" />System
                       </Badge>
                     )}
-                    <Badge variant={STATUS_VARIANT[g.status] ?? "outline"} className="text-[10px]">
+                    <Badge variant={STATUS_VARIANT[g.status] ?? "outline"} className="text-doc-support">
                       {g.status}
                     </Badge>
                   </div>

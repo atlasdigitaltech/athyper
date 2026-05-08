@@ -9,7 +9,7 @@
 export type DetailRenderer = "master" | "document" | "ledger";
 export type DetailProfile  = "simple" | "rich" | "read-only";
 export type ListRenderer   = "table" | "kanban" | "dashboard" | "spreadsheet";
-export type ViewMode       = "table" | "kanban" | "dashboard" | "spreadsheet";
+export type ViewMode       = "table" | "compact" | "kanban" | "dashboard" | "spreadsheet";
 
 export interface ResolvedDisplayConfig {
   // ── Rendering strategy ───────────────────────────────────────────────────
@@ -21,6 +21,9 @@ export interface ResolvedDisplayConfig {
 
   // ── List presentation ────────────────────────────────────────────────────
   list_columns:       string[];
+  compact_card?:      {
+    bottom_fields?: string[];
+  };
   default_sort_field: string;
   default_sort_order: "asc" | "desc";
   search_fields?:     string[];
@@ -59,7 +62,7 @@ export const DEFAULT_DISPLAY_CONFIG: ResolvedDisplayConfig = {
   detail_renderer:    "master",
   detail_profile:     "simple",
   list_renderer:      "table",
-  view_modes:         ["table"],
+  view_modes:         ["table", "compact", "kanban", "dashboard", "spreadsheet"],
   list_columns:       ["code", "name", "status"],
   default_sort_field: "updated_at",
   default_sort_order: "desc",

@@ -2,6 +2,7 @@ export { Button, buttonVariants, type ButtonProps } from "./Button";
 export { Input, type InputProps } from "./Input";
 export { Textarea, type TextareaProps } from "./Textarea";
 export { Badge, badgeVariants, type BadgeProps } from "./Badge";
+export { overlayScrimVariants, type OverlayScrimTone } from "./overlay";
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./Card";
 export { Label } from "./Label";
 export { Checkbox } from "./Checkbox";

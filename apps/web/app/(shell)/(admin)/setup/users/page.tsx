@@ -153,16 +153,16 @@ function GroupsTab({ principalId }: { principalId: string }) {
             <div className="flex items-center gap-2">
               <p className="text-sm font-medium">{g.group_name}</p>
               {g.is_system && (
-                <Badge variant="muted" className="text-[9px] gap-1">
+                <Badge variant="muted" className="text-doc-field-label gap-1">
                   <Lock className="h-2.5 w-2.5" />System
                 </Badge>
               )}
-              <span className="font-mono text-[10px] text-muted-foreground ml-auto">{g.group_code}</span>
+              <span className="font-mono text-doc-support text-muted-foreground ml-auto">{g.group_code}</span>
             </div>
             {groupRoles.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {groupRoles.map((r) => (
-                  <Badge key={r.group_role_id ?? r.role_id} variant="outline" className="text-[10px] gap-1">
+                  <Badge key={r.group_role_id ?? r.role_id} variant="outline" className="text-doc-support gap-1">
                     <Shield className="h-2.5 w-2.5" />
                     {r.role_code}
                     {r.assignment_scope_type && r.assignment_scope_type !== "tenant" && (
@@ -172,7 +172,7 @@ function GroupsTab({ principalId }: { principalId: string }) {
                 ))}
               </div>
             )}
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-doc-support text-muted-foreground">
               Joined {new Date(g.joined_at).toLocaleDateString()}
             </p>
           </div>
@@ -217,15 +217,15 @@ function GrantsTab({ principalId }: { principalId: string }) {
     return (
       <div className="rounded-md border p-2.5 space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant={grant.effect === "allow" ? "success" : "destructive"} className="text-[9px]">
+          <Badge variant={grant.effect === "allow" ? "success" : "destructive"} className="text-doc-field-label">
             {grant.effect}
           </Badge>
           <span className="text-sm font-medium">{grant.permission_code ?? "—"}</span>
           {grant.status === "revoked" && (
-            <Badge variant="muted" className="text-[9px]">revoked</Badge>
+            <Badge variant="muted" className="text-doc-field-label">revoked</Badge>
           )}
           {grant.expires_at && (
-            <Badge variant="warning" className="text-[9px] ml-auto">
+            <Badge variant="warning" className="text-doc-field-label ml-auto">
               exp {new Date(grant.expires_at).toLocaleDateString()}
             </Badge>
           )}
@@ -235,13 +235,13 @@ function GrantsTab({ principalId }: { principalId: string }) {
         )}
         {grant.assignment_scope_type && (
           <div className="flex gap-1.5">
-            <Badge variant="outline" className="text-[9px]">{grant.assignment_scope_type}</Badge>
+            <Badge variant="outline" className="text-doc-field-label">{grant.assignment_scope_type}</Badge>
             {grant.visibility_scope && (
-              <Badge variant="outline" className="text-[9px]">{grant.visibility_scope}</Badge>
+              <Badge variant="outline" className="text-doc-field-label">{grant.visibility_scope}</Badge>
             )}
           </div>
         )}
-        {grant.notes && <p className="text-[10px] text-muted-foreground italic">{grant.notes}</p>}
+        {grant.notes && <p className="text-doc-support text-muted-foreground italic">{grant.notes}</p>}
       </div>
     );
   }
@@ -308,14 +308,14 @@ function BindingsTab({ principalId }: { principalId: string }) {
       {bindings.map((b) => (
         <div key={b.id} className="rounded-md border p-3 space-y-2">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="font-mono text-[10px]">{b.provider_code}</Badge>
+            <Badge variant="outline" className="font-mono text-doc-support">{b.provider_code}</Badge>
             {b.sync_status && (
-              <Badge variant={SYNC_VARIANT[b.sync_status] ?? "muted"} className="text-[9px]">
+              <Badge variant={SYNC_VARIANT[b.sync_status] ?? "muted"} className="text-doc-field-label">
                 {b.sync_status}
               </Badge>
             )}
             {b.idp_enabled === false && (
-              <Badge variant="destructive" className="text-[9px]">IdP disabled</Badge>
+              <Badge variant="destructive" className="text-doc-field-label">IdP disabled</Badge>
             )}
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
@@ -326,7 +326,7 @@ function BindingsTab({ principalId }: { principalId: string }) {
               </>
             )}
             <span className="text-muted-foreground">Subject ID</span>
-            <span className="font-mono text-[10px] truncate">{b.subject_id}</span>
+            <span className="font-mono text-doc-support truncate">{b.subject_id}</span>
             {b.synced_at && (
               <>
                 <span className="text-muted-foreground">Last synced</span>
@@ -335,7 +335,7 @@ function BindingsTab({ principalId }: { principalId: string }) {
             )}
           </div>
           {b.sync_error_message && (
-            <p className="text-[10px] text-destructive">{b.sync_error_message}</p>
+            <p className="text-doc-support text-destructive">{b.sync_error_message}</p>
           )}
         </div>
       ))}
@@ -367,14 +367,14 @@ function UserSheet({
           <div className="flex items-center gap-2 flex-wrap">
             <SheetTitle className="text-base">{fullName}</SheetTitle>
             {principal.is_locked && (
-              <Badge variant="destructive" className="text-[10px] gap-1">
+              <Badge variant="destructive" className="text-doc-support gap-1">
                 <Lock className="h-2.5 w-2.5" />Locked
               </Badge>
             )}
-            <Badge variant={STATUS_VARIANT[principal.status] ?? "outline"} className="text-[10px]">
+            <Badge variant={STATUS_VARIANT[principal.status] ?? "outline"} className="text-doc-support">
               {principal.status}
             </Badge>
-            <Badge variant="muted" className="text-[10px]">
+            <Badge variant="muted" className="text-doc-support">
               {PRINCIPAL_TYPE_LABEL[principal.principal_type] ?? principal.principal_type}
             </Badge>
           </div>
@@ -532,9 +532,9 @@ export default function UsersSetupPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="font-mono text-[10px] text-muted-foreground">{p.code}</span>
+                    <span className="font-mono text-doc-support text-muted-foreground">{p.code}</span>
                     {p.login_email && (
-                      <span className="text-[10px] text-muted-foreground truncate">{p.login_email}</span>
+                      <span className="text-doc-support text-muted-foreground truncate">{p.login_email}</span>
                     )}
                   </div>
                 </div>
@@ -542,11 +542,11 @@ export default function UsersSetupPage() {
                 {/* Badges */}
                 <div className="flex shrink-0 items-center gap-1.5">
                   {p.principal_type !== "user" && (
-                    <Badge variant="muted" className="text-[9px]">
+                    <Badge variant="muted" className="text-doc-field-label">
                       {PRINCIPAL_TYPE_LABEL[p.principal_type] ?? p.principal_type}
                     </Badge>
                   )}
-                  <Badge variant={STATUS_VARIANT[p.status] ?? "outline"} className="text-[10px]">
+                  <Badge variant={STATUS_VARIANT[p.status] ?? "outline"} className="text-doc-support">
                     {p.status}
                   </Badge>
                 </div>

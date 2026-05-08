@@ -462,7 +462,7 @@ function BrandsSection() {
               <td className="px-3 py-2">
                 <div className="flex gap-1">
                   {Object.entries(b.palette ?? {}).slice(0, 3).map(([k, v]) => (
-                    <span key={k} className="h-3 w-3 rounded-sm border border-white/10 inline-block" style={{ backgroundColor: v }} title={`${k}: ${v}`} />
+                    <span key={k} className="h-3 w-3 rounded-sm border border-border/40 inline-block" style={{ backgroundColor: v }} title={`${k}: ${v}`} />
                   ))}
                 </div>
               </td>

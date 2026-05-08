@@ -25,7 +25,7 @@ import { PageFrame } from "@athyper/ui/layout";
 import {
   Badge, Button,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Separator,
+  Separator, overlayScrimVariants,
 } from "@athyper/ui/primitives";
 
 // ─── Section imports ──────────────────────────────────────────────────────────
@@ -202,7 +202,10 @@ function SettingsContent() {
       {/* ── Log-out confirmation dialog ── */}
       {showLogout && (
         <div
-          className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          className={cn(
+            "fixed inset-0 z-modal flex items-center justify-center",
+            overlayScrimVariants({ tone: "command" }),
+          )}
           onClick={() => setShowLogout(false)}
         >
           <div

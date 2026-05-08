@@ -19,6 +19,7 @@ import { Pin, PinOff } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import type { ColumnPresentation } from "@athyper/api-contracts/entity-list";
+import { listTypography } from "./listPresentation";
 
 // ── Column width defaults by data_type ────────────────────────────────────────
 
@@ -245,7 +246,7 @@ export function ExcelView({
       leftOffset: stickyOffsets.get(fieldName),
       // Visual separator after the last pinned column — stronger shadow than data cols
       separatorShadow: isLastPinned
-        ? "shadow-[2px_0_0_0_color-mix(in_oklab,var(--primary)_25%,transparent)]"
+        ? "shadow-separator-primary"
         : "",
     };
   };
@@ -253,7 +254,7 @@ export function ExcelView({
   return (
     <div className="overflow-auto rounded-md border max-h-[calc(100dvh-10rem)] min-h-[50dvh]">
       <table
-        className="text-xs font-mono border-collapse"
+        className={cn(listTypography.sheet.table, "border-collapse")}
         style={{ width: totalWidth, tableLayout: "fixed" }}
       >
         {/* Authoritative column widths */}
@@ -268,7 +269,7 @@ export function ExcelView({
         <thead className="sticky top-0 z-10 bg-muted">
           <tr>
             {/* Row-number column */}
-            <th className="sticky left-0 z-20 border-b border-r bg-muted px-2 py-1 text-right text-2xs text-muted-foreground/60 select-none">
+            <th className={cn("sticky left-0 z-20 border-b border-r bg-muted px-2 py-1 text-right select-none", listTypography.sheet.rowNumber)}>
               #
             </th>
 
@@ -281,7 +282,8 @@ export function ExcelView({
                   key={field.name}
                   style={isPinned ? { left: leftOffset } : undefined}
                   className={cn(
-                    "relative border-b border-r px-2 py-1 text-left font-semibold text-muted-foreground overflow-hidden group/col",
+                    "relative border-b border-r px-2 py-1 text-left overflow-hidden group/col",
+                    listTypography.sheet.header,
                     isPinned && "sticky z-10 bg-muted",
                     separatorShadow,
                   )}
@@ -348,7 +350,7 @@ export function ExcelView({
                 onContextMenu={(e) => onRowContextMenu?.(row, e)}
               >
                 {/* Row number */}
-                <td className="sticky left-0 z-10 border-r bg-background px-2 py-0.5 text-right text-2xs text-muted-foreground/50 select-none overflow-hidden">
+                <td className={cn("sticky left-0 z-10 border-r bg-background px-2 py-0.5 text-right select-none overflow-hidden", listTypography.sheet.rowNumber)}>
                   {rowIdx + 1}
                 </td>
 
@@ -362,6 +364,7 @@ export function ExcelView({
                       style={isPinned ? { left: leftOffset } : undefined}
                       className={cn(
                         "border-r px-2 py-0.5 overflow-hidden",
+                        listTypography.sheet.cell,
                         isPinned && "sticky z-10 bg-background",
                         separatorShadow,
                         (field.data_type === "money" || field.data_type === "decimal" || field.data_type === "integer")
@@ -381,7 +384,7 @@ export function ExcelView({
         {hasAgg && (
           <tfoot className="sticky bottom-0 z-10 border-t-2 bg-muted font-semibold">
             <tr>
-              <td className="sticky left-0 z-20 border-r bg-muted px-2 py-1 text-right text-2xs text-muted-foreground/60 overflow-hidden">
+              <td className={cn("sticky left-0 z-20 border-r bg-muted px-2 py-1 text-right overflow-hidden", listTypography.sheet.rowNumber)}>
                 Σ
               </td>
               {displayFields.map((field) => {
@@ -393,6 +396,7 @@ export function ExcelView({
                     style={isPinned ? { left: leftOffset } : undefined}
                     className={cn(
                       "border-r px-2 py-1 text-right tabular-nums overflow-hidden",
+                      listTypography.sheet.cell,
                       isPinned && "sticky z-10 bg-muted",
                       separatorShadow,
                     )}

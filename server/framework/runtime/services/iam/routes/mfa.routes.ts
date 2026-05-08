@@ -38,6 +38,7 @@ import {
   setCachePrivate,
 } from "../../shared/route-helpers.js";
 import { createStepUpService, hashDeviceToken, isDeviceTrusted, type ActionClass } from "../mfa/step-up.service.js";
+import { resolveParameterSnapshot } from "../parameters/parameter-resolver.service.js";
 import { createTotpEnrollmentService } from "../../../../../src/foundation/iam/totp-enrollment.service.js";
 import { createMfaSyncService } from "../mfa/mfa-sync.service.js";
 import type { CacheClient } from "../session/session.service.js";
@@ -124,6 +125,24 @@ async function resolveCallerAuth(
   }
 
   return { sub, tenantId, principalId };
+}
+
+async function resolveNumericParameter(
+  db: AnyDb,
+  cache: CacheClient,
+  tenantId: string,
+  code: string,
+  fallback: number,
+): Promise<number> {
+  try {
+    const namespace = code.split(".").slice(0, 2).join(".");
+    const snapshot = await resolveParameterSnapshot(db, cache, tenantId, namespace);
+    const raw = snapshot.values[code];
+    const value = typeof raw === "number" ? raw : Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 // ─── Route factory ────────────────────────────────────────────────────────────
@@ -377,10 +396,17 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
         return;
       }
 
-      await stepUp.grantElevation(sub, body.action_class as ActionClass);
+      const ttlSec = await resolveNumericParameter(
+        db,
+        cache,
+        tenantId,
+        "runtime.mfa.step_up_ttl_seconds",
+        600,
+      );
+      await stepUp.grantElevation(sub, body.action_class as ActionClass, ttlSec);
 
       setCachePrivate(res, 0);
-      res.json({ elevated: true, action_class: body.action_class, ttl_sec: 600 });
+      res.json({ elevated: true, action_class: body.action_class, ttl_sec: ttlSec });
     } catch (err) {
       logger?.error("mfa_elevate_error", { err: String(err) });
       next(err);
@@ -1099,7 +1125,14 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
 
       // Grant MFA step-up elevation (same as TOTP elevate)
       const stepUp = createStepUpService(cache);
-      await stepUp.grantElevation(sub, "security_change");
+      const ttlSec = await resolveNumericParameter(
+        db,
+        cache,
+        tenantId,
+        "runtime.mfa.step_up_ttl_seconds",
+        600,
+      );
+      await stepUp.grantElevation(sub, "security_change", ttlSec);
 
       // Update last_used_at
       await db.updateTable("control.mfa_config").set({ last_used_at: new Date() } as never)

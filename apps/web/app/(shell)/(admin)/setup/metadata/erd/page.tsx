@@ -108,14 +108,30 @@ const CLASS_BADGE: Record<string, string> = {
   MASTER:    "bg-success/10 text-success border-success/30",
   DOCUMENT:  "bg-warning/10 text-warning border-warning/30",
   CONTROL:   "bg-muted text-muted-foreground border-border",
-  JOURNAL:   "bg-accent/10 text-accent-foreground border-accent/30",
+  JOURNAL:   "bg-categorical-4/10 text-categorical-4 border-categorical-4/30",
 };
 
-const EDGE_COLOR: Record<string, string> = {
-  belongs_to: "#3b82f6",
-  has_many:   "#16a34a",
-  m2m:        "#9333ea",
+const RELATION_COLOR: Record<string, string> = {
+  belongs_to: "var(--info)",
+  has_many:   "var(--success)",
+  m2m:        "var(--categorical-4)",
 };
+
+const ENTITY_CLASS_COLOR: Record<string, string> = {
+  REFERENCE: "var(--info)",
+  MASTER:    "var(--success)",
+  DOCUMENT:  "var(--warning)",
+  CONTROL:   "var(--muted-foreground)",
+  JOURNAL:   "var(--categorical-4)",
+};
+
+function relationColor(kind: string): string {
+  return RELATION_COLOR[kind] ?? "var(--muted-foreground)";
+}
+
+function entityClassColor(entityClass: string): string {
+  return ENTITY_CLASS_COLOR[entityClass] ?? ENTITY_CLASS_COLOR["CONTROL"]!;
+}
 
 // ── Entity node component ─────────────────────────────────────────────────────
 
@@ -141,18 +157,18 @@ function EntityNode({ data }: NodeProps<ErdNode>) {
 
       {/* Label + name */}
       <p className="text-xs font-semibold truncate leading-tight">{data.label ?? data.name}</p>
-      <p className="text-[10px] font-mono text-muted-foreground truncate leading-tight mt-0.5">
+      <p className="text-doc-support font-mono text-muted-foreground truncate mt-0.5">
         {data.name}
       </p>
 
       {/* Class + module */}
       <div className="flex items-center justify-between mt-2">
         <span
-          className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-medium ${badgeClass}`}
+          className={`inline-flex items-center rounded border px-1.5 py-0.5 text-doc-field-label font-medium ${badgeClass}`}
         >
           {data.entity_class}
         </span>
-        <span className="text-[9px] text-muted-foreground font-mono">{data.module_id}</span>
+        <span className="text-doc-field-label text-muted-foreground font-mono">{data.module_id}</span>
       </div>
     </div>
   );
@@ -189,7 +205,7 @@ function buildFlowEdges(apiEdges: ErdApiEdge[], visibleNodeIds: Set<string>): Ed
   return apiEdges
     .filter((e) => visibleNodeIds.has(e.from_entity) && visibleNodeIds.has(e.to_entity))
     .map((e) => {
-      const color = EDGE_COLOR[e.relation_kind] ?? "#9ca3af";
+      const color = relationColor(e.relation_kind);
       const isHasMany = e.relation_kind === "has_many";
       const isM2m     = e.relation_kind === "m2m";
       return {
@@ -205,7 +221,7 @@ function buildFlowEdges(apiEdges: ErdApiEdge[], visibleNodeIds: Set<string>): Ed
         },
         labelBgPadding: [4, 2] as [number, number],
         labelBgBorderRadius: 3,
-        labelBgStyle: { fill: "white", fillOpacity: 0.9, stroke: color, strokeWidth: 0.5 },
+        labelBgStyle: { fill: "var(--popover)", fillOpacity: 0.9, stroke: color, strokeWidth: 0.5 },
         style: {
           stroke: color,
           strokeWidth: 1.5,
@@ -235,18 +251,71 @@ function escapeXml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-const SVG_CLASS_FILL: Record<string, { bg: string; border: string; text: string; badge: string }> =
-  {
-    REFERENCE: { bg: "#dbeafe", border: "#3b82f6", text: "#1e40af", badge: "#bfdbfe" },
-    MASTER:    { bg: "#dcfce7", border: "#16a34a", text: "#15803d", badge: "#bbf7d0" },
-    DOCUMENT:  { bg: "#fef9c3", border: "#ca8a04", text: "#713f12", badge: "#fde68a" },
-    CONTROL:   { bg: "#f3f4f6", border: "#9ca3af", text: "#374151", badge: "#e5e7eb" },
-    JOURNAL:   { bg: "#faf5ff", border: "#9333ea", text: "#6b21a8", badge: "#e9d5ff" },
+interface SvgClassFill {
+  bg: string;
+  border: string;
+  text: string;
+  badge: string;
+}
+
+interface SvgColorSet {
+  canvas: string;
+  labelBackground: string;
+  mutedText: string;
+  relation: Record<string, string>;
+  entityClass: Record<string, SvgClassFill>;
+}
+
+function readThemeVar(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
+
+function mixWithSurface(color: string, surface: string, amount: number): string {
+  return `color-mix(in oklab, ${color} ${amount}%, ${surface})`;
+}
+
+function svgClassFill(color: string, surface: string): SvgClassFill {
+  return {
+    bg: mixWithSurface(color, surface, 12),
+    border: color,
+    text: color,
+    badge: mixWithSurface(color, surface, 24),
   };
+}
+
+function getResolvedSvgColors(): SvgColorSet {
+  const canvas = readThemeVar("--background", "Canvas");
+  const labelBackground = readThemeVar("--popover", canvas);
+  const mutedText = readThemeVar("--muted-foreground", "currentColor");
+  const info = readThemeVar("--info", mutedText);
+  const success = readThemeVar("--success", mutedText);
+  const warning = readThemeVar("--warning", mutedText);
+  const categorical4 = readThemeVar("--categorical-4", mutedText);
+
+  return {
+    canvas,
+    labelBackground,
+    mutedText,
+    relation: {
+      belongs_to: info,
+      has_many: success,
+      m2m: categorical4,
+    },
+    entityClass: {
+      REFERENCE: svgClassFill(info, canvas),
+      MASTER:    svgClassFill(success, canvas),
+      DOCUMENT:  svgClassFill(warning, canvas),
+      CONTROL:   svgClassFill(mutedText, canvas),
+      JOURNAL:   svgClassFill(categorical4, canvas),
+    },
+  };
+}
 
 function exportAsSvg(flowNodes: ErdNode[], flowEdges: Edge[]) {
   if (flowNodes.length === 0) return;
 
+  const svgColors = getResolvedSvgColors();
   const PADDING = 64;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
@@ -279,7 +348,7 @@ function exportAsSvg(flowNodes: ErdNode[], flowEdges: Edge[]) {
     const d    = e.data as Record<string, unknown>;
     const kind = String(d?.["relation_kind"] ?? "");
     const lbl  = String(d?.["relation_name"] ?? "");
-    const col  = EDGE_COLOR[kind] ?? "#9ca3af";
+    const col  = svgColors.relation[kind] ?? svgColors.mutedText;
     const dash =
       kind === "has_many" ? ' stroke-dasharray="6 3"' : kind === "m2m" ? ' stroke-dasharray="3 3"' : "";
     const mid = `M${sx},${sy} C${cpx},${sy} ${cpx},${ty} ${tx},${ty}`;
@@ -293,7 +362,7 @@ function exportAsSvg(flowNodes: ErdNode[], flowEdges: Edge[]) {
       const lx = cpx;
       const ly = (sy + ty) / 2 - 8;
       const lw = lbl.length * 5.8 + 12;
-      edgeParts += `<rect x="${lx - lw / 2}" y="${ly - 10}" width="${lw}" height="14" rx="2" fill="white" stroke="${col}" stroke-width="0.5"/>`;
+      edgeParts += `<rect x="${lx - lw / 2}" y="${ly - 10}" width="${lw}" height="14" rx="2" fill="${svgColors.labelBackground}" stroke="${col}" stroke-width="0.5"/>`;
       edgeParts += `<text x="${lx}" y="${ly}" text-anchor="middle" font-size="9" fill="${col}" font-family="ui-monospace,monospace">${escapeXml(lbl)}</text>`;
     }
   }
@@ -303,7 +372,7 @@ function exportAsSvg(flowNodes: ErdNode[], flowEdges: Edge[]) {
     const x  = n.position.x + ox;
     const y  = n.position.y + oy;
     const nd = n.data as ErdNodeData;
-    const c  = SVG_CLASS_FILL[nd.entity_class] ?? SVG_CLASS_FILL["CONTROL"]!;
+    const c  = svgColors.entityClass[nd.entity_class] ?? svgColors.entityClass["CONTROL"]!;
     const disp  = escapeXml((nd.label || nd.name).slice(0, 26));
     const mono  = escapeXml(nd.name.slice(0, 30));
     const bw    = nd.entity_class.length * 5.6 + 14;
@@ -311,10 +380,10 @@ function exportAsSvg(flowNodes: ErdNode[], flowEdges: Edge[]) {
     nodeParts += `<g transform="translate(${x},${y})">`;
     nodeParts += `<rect width="${NODE_W}" height="${NODE_H}" rx="6" fill="${c.bg}" stroke="${c.border}" stroke-width="1.5"/>`;
     nodeParts += `<text x="10" y="21" font-size="11.5" font-weight="600" fill="${c.text}" font-family="system-ui,sans-serif">${disp}</text>`;
-    nodeParts += `<text x="10" y="35" font-size="9" fill="#6b7280" font-family="ui-monospace,monospace">${mono}</text>`;
+    nodeParts += `<text x="10" y="35" font-size="9" fill="${svgColors.mutedText}" font-family="ui-monospace,monospace">${mono}</text>`;
     nodeParts += `<rect x="8" y="48" width="${bw}" height="16" rx="3" fill="${c.badge}"/>`;
     nodeParts += `<text x="${8 + bw / 2}" y="58.5" text-anchor="middle" font-size="8.5" font-weight="600" fill="${c.text}" font-family="system-ui,sans-serif">${nd.entity_class}</text>`;
-    nodeParts += `<text x="${NODE_W - 8}" y="58.5" text-anchor="end" font-size="8.5" fill="#9ca3af" font-family="system-ui,sans-serif">${escapeXml(nd.module_id)}</text>`;
+    nodeParts += `<text x="${NODE_W - 8}" y="58.5" text-anchor="end" font-size="8.5" fill="${svgColors.mutedText}" font-family="system-ui,sans-serif">${escapeXml(nd.module_id)}</text>`;
     nodeParts += `</g>`;
   }
 
@@ -322,19 +391,19 @@ function exportAsSvg(flowNodes: ErdNode[], flowEdges: Edge[]) {
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
 <defs>
   <marker id="arr-belongs_to" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-    <polygon points="0 0,8 3,0 6" fill="${EDGE_COLOR.belongs_to}"/>
+    <polygon points="0 0,8 3,0 6" fill="${svgColors.relation.belongs_to}"/>
   </marker>
   <marker id="arr-has_many" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-    <polygon points="0 0,8 3,0 6" fill="${EDGE_COLOR.has_many}"/>
+    <polygon points="0 0,8 3,0 6" fill="${svgColors.relation.has_many}"/>
   </marker>
   <marker id="arr-m2m" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-    <polygon points="0 0,8 3,0 6" fill="${EDGE_COLOR.m2m}"/>
+    <polygon points="0 0,8 3,0 6" fill="${svgColors.relation.m2m}"/>
   </marker>
   <marker id="arr-m2m-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto-start-reverse">
-    <polygon points="0 0,8 3,0 6" fill="${EDGE_COLOR.m2m}"/>
+    <polygon points="0 0,8 3,0 6" fill="${svgColors.relation.m2m}"/>
   </marker>
 </defs>
-<rect width="${W}" height="${H}" fill="#f8fafc"/>
+<rect width="${W}" height="${H}" fill="${svgColors.canvas}"/>
 ${edgeParts}
 ${nodeParts}
 </svg>`;
@@ -393,22 +462,28 @@ function ErdInnerControls({ fitSignal }: { fitSignal: number }) {
 
 function Legend() {
   return (
-    <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+    <div className="flex items-center gap-4 text-doc-support text-muted-foreground">
       <span className="flex items-center gap-1.5">
-        <span className="h-0.5 w-6 bg-[#3b82f6] inline-block rounded" />
+        <span className="h-0.5 w-6 bg-info inline-block rounded" />
         belongs_to (N:1)
       </span>
       <span className="flex items-center gap-1.5">
         <span
-          className="h-0.5 w-6 inline-block rounded"
-          style={{ background: "#16a34a", backgroundImage: "repeating-linear-gradient(90deg, #16a34a 0, #16a34a 4px, transparent 4px, transparent 7px)" }}
+          className="h-0.5 w-6 inline-block rounded text-success"
+          style={{
+            background: "currentColor",
+            backgroundImage: "repeating-linear-gradient(90deg, currentColor 0, currentColor 4px, transparent 4px, transparent 7px)",
+          }}
         />
         has_many (1:N)
       </span>
       <span className="flex items-center gap-1.5">
         <span
-          className="h-0.5 w-6 inline-block rounded"
-          style={{ background: "transparent", backgroundImage: "repeating-linear-gradient(90deg, #9333ea 0, #9333ea 2px, transparent 2px, transparent 5px)" }}
+          className="h-0.5 w-6 inline-block rounded text-categorical-4"
+          style={{
+            background: "transparent",
+            backgroundImage: "repeating-linear-gradient(90deg, currentColor 0, currentColor 2px, transparent 2px, transparent 5px)",
+          }}
         />
         m2m (N:N)
       </span>
@@ -477,8 +552,8 @@ export default function SchemaErdPage() {
           {/* Stats */}
           {data && (
             <div className="ml-auto flex items-center gap-2">
-              <Badge variant="secondary" className="text-[10px] px-1.5">{nodeCount} entities</Badge>
-              <Badge variant="outline" className="text-[10px] px-1.5">{edgeCount} relations</Badge>
+              <Badge variant="secondary" size="sm">{nodeCount} entities</Badge>
+              <Badge variant="outline" size="sm">{edgeCount} relations</Badge>
             </div>
           )}
         </div>
@@ -501,7 +576,7 @@ export default function SchemaErdPage() {
           </div>
         ) : (
           <div
-            className="rounded-lg border overflow-hidden bg-[#f8fafc]"
+            className="rounded-lg border overflow-hidden bg-background"
             style={{ height: "calc(100vh - 300px)", minHeight: 520 }}
           >
             <ReactFlow
@@ -518,21 +593,15 @@ export default function SchemaErdPage() {
               minZoom={0.05}
               maxZoom={2}
             >
-              <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#d1d5db" />
+              <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--border)" />
               <Controls showInteractive={false} />
               <MiniMap
                 nodeColor={(n) => {
                   const cls = (n.data as ErdNodeData | undefined)?.entity_class ?? "";
-                  return (
-                    cls === "REFERENCE" ? "#3b82f6" :
-                    cls === "MASTER"    ? "#16a34a" :
-                    cls === "DOCUMENT"  ? "#ca8a04" :
-                    cls === "JOURNAL"   ? "#9333ea" :
-                    "#9ca3af"
-                  );
+                  return entityClassColor(cls);
                 }}
-                maskColor="rgba(248,250,252,0.7)"
-                style={{ background: "#f1f5f9" }}
+                maskColor="var(--background)"
+                style={{ background: "var(--muted)" }}
               />
               <ErdInnerControls fitSignal={fitSignal} />
             </ReactFlow>

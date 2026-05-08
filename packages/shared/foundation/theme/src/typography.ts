@@ -28,25 +28,20 @@ interface SemanticTypeToken {
   fontFamily?: "sans" | "mono" | "serif";
 }
 
+const uiFontStack = [
+  "var(--font-geist-sans)",
+  "Geist",
+  "system-ui",
+  "-apple-system",
+  "BlinkMacSystemFont",
+  "Segoe UI",
+  "sans-serif",
+] as const;
+
 export const fontFamilies = {
-  sans: [
-    "var(--font-geist-sans)",
-    "Geist",
-    "system-ui",
-    "-apple-system",
-    "BlinkMacSystemFont",
-    "Segoe UI",
-    "sans-serif",
-  ],
-  mono: [
-    "var(--font-geist-mono)",
-    "Geist Mono",
-    "ui-monospace",
-    "SFMono-Regular",
-    "Menlo",
-    "monospace",
-  ],
-  serif: ["var(--font-serif)", "Source Serif 4", "Georgia", "Cambria", "serif"],
+  sans: uiFontStack,
+  mono: uiFontStack,
+  serif: uiFontStack,
   arabic: ["IBM Plex Sans Arabic", "Noto Sans Arabic", "Geist", "system-ui", "sans-serif"],
   tamil: ["Noto Sans Tamil", "Geist", "system-ui", "sans-serif"],
 } as const;
@@ -65,6 +60,7 @@ export const typeScale = {
   "3xl": { size: "1.5rem", lineHeight: "2rem" },
   "4xl": { size: "1.875rem", lineHeight: "2.25rem" },
   "5xl": { size: "2.25rem", lineHeight: "2.75rem" },
+  "display-auth": { size: "2.2rem", lineHeight: "1.15" },
 } as const satisfies Record<string, TypeScaleToken>;
 
 export type TypeScaleTokenName = keyof typeof typeScale;
@@ -91,6 +87,12 @@ export const documentTypography = {
     lineHeight: "1",
     fontWeight: 600,
     letterSpacing: "0.10em",
+  },
+  compactCode: {
+    size: "0.5rem",
+    lineHeight: "1",
+    fontWeight: 500,
+    letterSpacing: "0.04em",
   },
   fieldValue: {
     size: "0.75rem",
@@ -272,19 +274,37 @@ export function renderTypographyCss(): string {
   lines.push("");
   lines.push("@layer utilities {");
 
+  for (const [name, token] of documentTypographyEntries) {
+    const stem = cssVariableStem(name);
+    lines.push(`  .text-doc-${docClassName(name)} {`);
+    lines.push(`    font-size: var(${stem}-size);`);
+    lines.push(`    line-height: var(${stem}-line-height);`);
+    if (token.letterSpacing) {
+      lines.push(`    letter-spacing: var(${stem}-tracking);`);
+    }
+    lines.push("  }");
+    lines.push("");
+  }
+
   const denseAliasEntries = Object.entries(denseTextAliases) as Array<
     [string, DocumentTypeTokenName]
   >;
 
   for (const [alias, tokenName] of denseAliasEntries) {
+    if (alias === docClassName(tokenName)) continue;
     const stem = cssVariableStem(tokenName);
+    const token = documentTypography[tokenName] as DocumentTypeToken;
     lines.push(`  .text-doc-${alias} {`);
     lines.push(`    font-size: var(${stem}-size);`);
     lines.push(`    line-height: var(${stem}-line-height);`);
+    if (token.letterSpacing) {
+      lines.push(`    letter-spacing: var(${stem}-tracking);`);
+    }
     lines.push("  }");
-    if (alias !== "subtitle") lines.push("");
+    lines.push("");
   }
 
+  if (lines[lines.length - 1] === "") lines.pop();
   lines.push("}");
 
   return lines.join("\n");

@@ -104,7 +104,7 @@ function AttachmentRow({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <Badge variant="outline" className="text-[10px] font-mono">
+        <Badge variant="outline" className="text-doc-support font-mono">
           {attachment.content_type.split("/")[1]?.toUpperCase() ?? attachment.content_type}
         </Badge>
         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
@@ -220,7 +220,7 @@ export default function AppEntityAttachmentsPage() {
           <h2 className="mb-2 flex items-center gap-2 text-sm font-medium">
             Files
             {attachments && attachments.length > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5">{attachments.length}</Badge>
+              <Badge variant="secondary" className="text-doc-support px-1.5">{attachments.length}</Badge>
             )}
           </h2>
 

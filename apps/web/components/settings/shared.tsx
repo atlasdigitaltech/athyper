@@ -21,6 +21,7 @@ import {
 import { cn } from "@athyper/theme/utils";
 import {
   Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton,
+  overlayScrimVariants,
 } from "@athyper/ui/primitives";
 import { bffFetch } from "@/lib/bff-fetch";
 
@@ -476,7 +477,10 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className={cn(
+        "fixed inset-0 z-modal flex items-center justify-center",
+        overlayScrimVariants({ tone: "command" }),
+      )}
       onClick={onCancel}
     >
       <div

@@ -106,7 +106,7 @@ CROSS JOIN (VALUES
     ('display_name',               'display_name',               'Display Name',             'text',          'zero_or_one', NULL::text,                          false, false, '{"max_length":255}'::jsonb, 30),
     ('partner_category',           'partner_category',           'Category',                 'enum',          'one',         'master.business_partner_category',  true,  true,  NULL::jsonb,                 40),
     ('legal_name',                 'legal_name',                 'Legal Name',               'text',          'zero_or_one', NULL::text,                          false, false, '{"max_length":255}'::jsonb, 50),
-    ('legal_form',                 'legal_form',                 'Legal Form',               'enum',          'zero_or_one', 'master.legal_form',                  false, true,  '{"max_length":100}'::jsonb, 55),
+    ('legal_form',                 'legal_form',                 'Legal Form',               'enum',          'zero_or_one', 'master.legal_form',                  false, true,  '{"max_length":100}'::jsonb, 72),
     ('registration_no',            'registration_no',            'Registration No.',         'text',          'zero_or_one', NULL::text,                          false, true,  '{"max_length":100}'::jsonb, 60),
     ('registration_country_code',  'registration_country_code',  'Registration Country',     'text',          'zero_or_one', NULL::text,                          false, true,  '{"max_length":3}'::jsonb,   70),
     ('tax_residence_country_code', 'tax_residence_country_code', 'Tax Residence Country',    'text',          'zero_or_one', NULL::text,                          false, false, '{"max_length":3}'::jsonb,   75),
@@ -170,6 +170,7 @@ FROM (
     JOIN control.entity e          ON e.id = ev.entity_id
     JOIN (VALUES
         ('registration_country_code',  'text',       'zero_or_one', 'country'::text,   70),
+        ('legal_form',                 'enum',       'zero_or_one', NULL::text,        72),
         ('tax_residence_country_code', 'text',       'zero_or_one', 'country'::text,   75),
         ('parent_business_partner_id', 'uuid',       'zero_or_one', 'reference'::text, 85),
         ('aliases',                    'text_array', 'many',        NULL::text,        100),
@@ -721,7 +722,10 @@ DO $dc$ DECLARE
         'search_fields',      jsonb_build_array('code','name','legal_name','registration_no','external_ref'),
         'default_sort_field', 'name',
         'default_sort_dir',   'asc',
-        'list_columns',       jsonb_build_array('code','name','business_types','registration_country_code','status','legal_name','legal_form','partner_category'),
+        'default_sort_order', 'asc',
+        'list_columns',       jsonb_build_array('code','name','registration_country_code','legal_form','status'),
+        'compact_card',       jsonb_build_object(
+            'bottom_fields',  jsonb_build_array('registration_country_code','legal_form')),
         'intake_modes',       v_intake_modes
     );
 BEGIN
@@ -740,7 +744,10 @@ BEGIN
             'search_fields',      jsonb_build_array('code','name','legal_name','registration_no','external_ref'),
             'default_sort_field', 'name',
             'default_sort_dir',   'asc',
-            'list_columns',       jsonb_build_array('code','name','business_types','registration_country_code','status','legal_name','legal_form','partner_category'),
+            'default_sort_order', 'asc',
+            'list_columns',       jsonb_build_array('code','name','registration_country_code','legal_form','status'),
+            'compact_card',       jsonb_build_object(
+                'bottom_fields',  jsonb_build_array('registration_country_code','legal_form')),
             'intake_modes',       v_intake_modes,
             'master_config',   v_rmc)
     WHERE table_schema = 'master' AND table_name = 'business_partner'
@@ -816,7 +823,7 @@ BEGIN
     SET display_config = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
         'filter_bar', jsonb_build_object(
             'quick_filters', jsonb_build_array(
-                jsonb_build_object('key','__bookmarked','label','Starred by me','value',true,'sort_order',10),
+                jsonb_build_object('key','__bookmarked','label','Favourites','value',true,'sort_order',10),
                 jsonb_build_object('key','__created_by','label','My documents','value','me','sort_order',20),
                 jsonb_build_object('key','partner_category.organization','field','partner_category','label','Organizations','value','organization','sort_order',30),
                 jsonb_build_object('key','partner_category.internal','field','partner_category','label','Internal BPs','value','internal','sort_order',40)

@@ -6,7 +6,7 @@ import {
   ChevronUp, ChevronDown, Trash2, Plus,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { Button } from "@athyper/ui/primitives";
+import { Button, overlayScrimVariants } from "@athyper/ui/primitives";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import type { EntityListSortEntry } from "@athyper/api-contracts/entity-list";
 
@@ -225,7 +225,7 @@ export function SortDrawer({
       {/* Backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-[1px]"
+          className={cn("fixed inset-0 z-30", overlayScrimVariants({ tone: "context" }))}
           onClick={discard}
         />
       )}

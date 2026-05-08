@@ -97,6 +97,7 @@ mkdir "!ATHYPER_DATA!\memorycache-jobs"        >nul 2>&1
 mkdir "!ATHYPER_DATA!\metabase"                >nul 2>&1
 mkdir "!ATHYPER_DATA!\objectstorage"           >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry"               >nul 2>&1
+mkdir "!ATHYPER_DATA!\telemetry\alertmanager"  >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\logging"       >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\metrics"       >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\observability" >nul 2>&1

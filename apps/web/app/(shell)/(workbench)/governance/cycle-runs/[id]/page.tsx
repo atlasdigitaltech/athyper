@@ -83,7 +83,7 @@ function PhaseRail({ phases, currentPhaseCode }: { phases: RunPhase[]; currentPh
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono text-muted-foreground w-6 text-right">{p.sortOrder}.</span>
                 <span className={`text-sm font-medium ${isActive ? "text-primary" : ""}`}>{p.phaseName}</span>
-                <Badge variant="outline" className="text-[10px] font-mono">{p.phaseCode}</Badge>
+                <Badge variant="outline" className="text-doc-support font-mono">{p.phaseCode}</Badge>
               </div>
               <div className="ml-8 flex gap-3 mt-0.5 text-xs text-muted-foreground">
                 <span className="capitalize">{p.status.toLowerCase()}</span>
@@ -147,15 +147,15 @@ function TasksTab({ runId, phases }: { runId: string; phases: RunPhase[] }) {
           <div key={phase.id}>
             <div className="mb-2 flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{phase.phaseName}</span>
-              <Badge variant="outline" className="text-[10px]">{phaseTasks.length} tasks</Badge>
+              <Badge variant="outline" className="text-doc-support">{phaseTasks.length} tasks</Badge>
             </div>
             <div className="space-y-1.5">
               {phaseTasks.map((t) => (
                 <RowCard
                   key={t.id}
                   badge={<>
-                    <Badge variant={TASK_STATUS_VARIANT[t.status]} className="text-[10px]">{t.status}</Badge>
-                    {t.isMandatory && <span className="text-[10px] text-warning font-medium">mandatory</span>}
+                    <Badge variant={TASK_STATUS_VARIANT[t.status]} className="text-doc-support">{t.status}</Badge>
+                    {t.isMandatory && <span className="text-doc-support text-warning font-medium">mandatory</span>}
                   </>}
                   title={t.taskName}
                   metadata={t.completedAt ? (
@@ -262,11 +262,11 @@ function DeviationsTab({ runId }: { runId: string }) {
             <RowCard
               key={d.id}
               badge={<>
-                <Badge variant={DEV_VARIANT[d.status]} className="text-[10px]">{d.status}</Badge>
-                {d.severity && <Badge variant="outline" className="text-[10px]">{d.severity}</Badge>}
+                <Badge variant={DEV_VARIANT[d.status]} className="text-doc-support">{d.status}</Badge>
+                {d.severity && <Badge variant="outline" className="text-doc-support">{d.severity}</Badge>}
               </>}
               title={d.title}
-              metadata={<span className="text-[10px]">{new Date(d.createdAt).toLocaleString()}</span>}
+              metadata={<span className="text-doc-support">{new Date(d.createdAt).toLocaleString()}</span>}
             />
           ))}
         </div>
@@ -347,11 +347,11 @@ function CertificationsTab({ runId }: { runId: string }) {
         certs.map((c) => (
           <RowCard
             key={c.id}
-            badge={<Badge variant={CERT_VARIANT[c.status]} className="text-[10px]">{c.status}</Badge>}
+            badge={<Badge variant={CERT_VARIANT[c.status]} className="text-doc-support">{c.status}</Badge>}
             title={<span className="font-mono">{c.certCode}</span>}
             metadata={<>
               {c.certifiedAt && (
-                <span className="text-[10px]">
+                <span className="text-doc-support">
                   {c.status === "CERTIFIED" ? "Certified" : "Rejected"} {new Date(c.certifiedAt).toLocaleString()}
                 </span>
               )}

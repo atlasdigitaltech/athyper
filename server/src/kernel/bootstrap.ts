@@ -44,6 +44,7 @@ import { ServiceRegistry, type HealthCheck, type HealthContribution } from "../f
 import { createFeatureFlagService } from "../foundation/features/feature-flag.service.js";
 import { createMetadataApprovalBridge } from "../foundation/metadata/metadata-approval-bridge.js";
 import { createEntityCompilerService } from "../foundation/metadata/entity-compiler.service.js";
+import { invalidateDescriptorCache } from "../../framework/runtime/services/metadata/index.js";
 import { WorkflowEngine } from "../../framework/runtime/services/workflow/engine.js";
 import { ApproverResolverService } from "../../framework/runtime/services/workflow/approver-resolver.service.js";
 import { createPdfRendererClient } from "../foundation/render/pdf-renderer-client.js";
@@ -70,7 +71,10 @@ import { createEmailAdapter } from "../../framework/runtime/services/jobs/adapte
 import { createWebhookAdapter } from "../../framework/runtime/services/jobs/adapters/webhook.adapter.js";
 import { createSmsAdapter } from "../../framework/runtime/services/jobs/adapters/sms.adapter.js";
 import { createPushAdapter } from "../../framework/runtime/services/jobs/adapters/push.adapter.js";
-import { createWebhookDeliveryWorker } from "../../framework/runtime/services/jobs/workers/webhook-delivery.worker.js";
+import {
+  createWebhookDeliveryWorker,
+  type WebhookDeliveryWorkerResult,
+} from "../../framework/runtime/services/jobs/workers/webhook-delivery.worker.js";
 
 import type { ServerConfig } from "../config.js";
 import type { ResolvedKernelConfig } from "../kernel-config.js";
@@ -109,6 +113,30 @@ function parseRedisUrl(url: string) {
 }
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
+
+async function checkTikaEndpoint(tikaUrl: string): Promise<HealthContribution> {
+  const url = `${tikaUrl.replace(/\/+$/, "")}/`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 2_000);
+  const t = Date.now();
+
+  try {
+    const res = await fetch(url, { method: "GET", signal: ctrl.signal });
+    return {
+      status:    res.ok ? "healthy" : "degraded",
+      message:   res.ok ? undefined : `tika_http_${res.status}`,
+      latencyMs: Date.now() - t,
+    };
+  } catch (err) {
+    return {
+      status:    "degraded",
+      message:   err instanceof Error ? err.message : String(err),
+      latencyMs: Date.now() - t,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * Construct all infrastructure adapters and return the ServerDeps bag.
@@ -234,6 +262,16 @@ export async function bootstrap(
   });
   lifecycle.onShutdown(() => redis.disconnect());
 
+  const descriptorCache = {
+    get: (k: string) => redis.get(k),
+    set: async (k: string, v: string, ttl: number): Promise<void> => {
+      await redis.set(k, v, "EX", ttl);
+    },
+    del: async (k: string): Promise<void> => {
+      await redis.del(k);
+    },
+  };
+
   const bullmqRedisUrl = config.redis.bullmqUrl || config.redis.url;
   const bullmqConnection = {
     ...parseRedisUrl(bullmqRedisUrl),
@@ -317,6 +355,8 @@ export async function bootstrap(
   // now that dbAdapter is ready. Route handlers use writeRouteAudit() directly.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const _db = db.kysely as unknown as import("kysely").Kysely<Record<string, any>>;
+  const runtimeMode = (process.env["MODE"] ?? "api").trim().toLowerCase();
+  const jobWorkersEnabled = runtimeMode === "worker";
   let audit: AuditWriter = createConsoleAuditWriter();
   if (config.env !== "local") {
     audit = createDbAuditWriter(_db);
@@ -454,9 +494,8 @@ export async function bootstrap(
   }
 
   // ─── Tika text extraction — Track B2.2 ──────────────────────────────────────
-  // Worker is created inside createJobsService() when BOTH tikaUrl and
-  // an object storage adapter are present; absent either and the queue exists
-  // but no consumer drains it.
+  // Worker runtime creates the Tika consumer when BOTH tikaUrl and an object
+  // storage adapter are present. API/scheduler receive queue handles only.
   const tikaUrl = process.env["TIKA_URL"]?.trim() || undefined;
   const attachmentStorage = objectStorageRef.current
     ? { get: (key: string) => objectStorageRef.current!.get(key) }
@@ -503,6 +542,7 @@ export async function bootstrap(
     tikaUrl,
     attachmentStorage,
     backupStorage,
+    workersEnabled: jobWorkersEnabled,
     hooks: {
       onCompleted: (queue, jobName) => pingSuccess(queue, jobName),
       onFailed: (queue, jobName, err) =>
@@ -541,17 +581,25 @@ export async function bootstrap(
 
   // ─── Webhook Delivery Worker — Sprint 30 ─────────────────────────────────────
   // Fans out pending event.outbox rows to matching webhook subscriptions.
-  // Signs each delivery with HMAC-SHA256 if signing_secret is configured.
-  // The webhook worker owns its BullMQ Worker instance, so it needs a real
-  // ioredis handle (not a ConnectionOptions) — construct one with the same
-  // BullMQ-tuned settings (`maxRetriesPerRequest: null`) as bullmqConnection.
-  const webhookRedis = createRedisClient({
-    ...bullmqConnection,
-    errorLogCooldownMs: config.redis.errorLogCooldownMs,
-    logger,
-  });
-  lifecycle.onShutdown(() => webhookRedis.disconnect());
-  const webhookDelivery = createWebhookDeliveryWorker(_db as never, webhookRedis, logger);
+  // This owns a BullMQ Worker instance, so only MODE=worker constructs it.
+  // API and scheduler runtimes keep queue producers and scheduler refreshes
+  // separate from job consumers.
+  let webhookDelivery: WebhookDeliveryWorkerResult | null = null;
+  if (jobWorkersEnabled) {
+    const webhookRedis = createRedisClient({
+      ...bullmqConnection,
+      errorLogCooldownMs: config.redis.errorLogCooldownMs,
+      logger,
+    });
+    lifecycle.onShutdown(() => webhookRedis.disconnect());
+    webhookDelivery = createWebhookDeliveryWorker(_db as never, webhookRedis, logger);
+    lifecycle.onShutdown(async () => {
+      await Promise.all([
+        webhookDelivery!.worker.close(),
+        webhookDelivery!.queue.close(),
+      ]);
+    });
+  }
 
   // ─── Feature flag service ────────────────────────────────────────────────────
   // Phase 1.6: Redis cache-first, DB fallback. <1ms p99 cache hit.
@@ -593,6 +641,21 @@ export async function bootstrap(
   }
 
   // ─── OAuth2 token cache + HTTP connector — Phase 5.3 ────────────────────────
+  registry.registerHealthCheck("tika", async (): Promise<HealthContribution> => {
+    if (!tikaUrl) {
+      return { status: "degraded", message: "tika_url_not_configured" };
+    }
+    if (!jobs.tikaExtractEnabled) {
+      return {
+        status:  "degraded",
+        message: attachmentStorage
+          ? "tika_worker_inactive"
+          : "tika_worker_inactive_object_storage_not_configured",
+      };
+    }
+    return checkTikaEndpoint(tikaUrl);
+  });
+
   const oauth2TokenCache = createOAuth2TokenCache({
     get:   (k: string) => redis.get(k),
     setex: (k: string, s: number, v: string) => redis.setex(k, s, v),
@@ -644,7 +707,12 @@ export async function bootstrap(
           }).then((r) => r.id),
       },
       entityCompiler: {
-        invalidate: (code: string) => entityCompiler.invalidate(code),
+        invalidate: async (code: string, tenantId?: string) => {
+          entityCompiler.invalidate(code);
+          if (tenantId) {
+            await invalidateDescriptorCache(descriptorCache, tenantId, code);
+          }
+        },
       },
     });
 

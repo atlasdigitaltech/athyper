@@ -1,7 +1,7 @@
 {
   "uid": "athyper-governance",
   "title": "Athyper Governance Overview",
-  "description": "Archive lifecycle, legal holds, quotas, privacy guard, and explainability metrics",
+  "description": "Archive lifecycle, legal holds, content quotas, and privacy guard metrics",
   "tags": ["athyper", "governance", "compliance"],
   "timezone": "browser",
   "schemaVersion": 39,
@@ -14,7 +14,7 @@
         "name": "tenant",
         "type": "query",
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "query": "label_values(gov_archive_job_backlog, tenant)",
+        "query": "label_values({__name__=~\"gov_.*\"}, tenant)",
         "refresh": 2,
         "includeAll": true,
         "allValue": ".*",
@@ -105,11 +105,11 @@
     },
     {
       "id": 5,
-      "title": "Quota Breaches",
+      "title": "Current Quota Breaches",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
       "targets": [
-        { "expr": "increase(gov_quota_breach_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Breaches (1h)" }
+        { "expr": "gov_quota_breach_total{tenant=~\"$tenant\"}", "legendFormat": "{{ quota_key }}" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -124,11 +124,11 @@
     },
     {
       "id": 6,
-      "title": "Privacy Rejections",
+      "title": "PII Detections",
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
       "targets": [
-        { "expr": "increase(gov_privacy_guard_rejected_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Rejected (1h)" }
+        { "expr": "increase(gov_privacy_guard_warned_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Detected (1h)" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -148,8 +148,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
       "targets": [
         { "expr": "rate(gov_archive_jobs_completed_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Completed/s" },
-        { "expr": "rate(gov_archive_jobs_failed_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Failed/s" },
-        { "expr": "rate(gov_archive_jobs_queued_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Queued/s" }
+        { "expr": "rate(gov_archive_jobs_failed_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Failed/s" }
       ]
     },
     {
@@ -160,7 +159,7 @@
       "targets": [
         { "expr": "increase(gov_legal_hold_created_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Created" },
         { "expr": "increase(gov_legal_hold_released_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Released" },
-        { "expr": "increase(gov_legal_hold_overlap_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Overlaps" }
+        { "expr": "gov_legal_hold_overlap_total{tenant=~\"$tenant\"}", "legendFormat": "Active overlaps" }
       ]
     },
     {
@@ -191,53 +190,49 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
       "targets": [
         { "expr": "rate(gov_privacy_guard_inspected_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Inspected/s" },
-        { "expr": "rate(gov_privacy_guard_redacted_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Redacted/s" },
-        { "expr": "rate(gov_privacy_guard_rejected_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Rejected/s" },
-        { "expr": "rate(gov_privacy_guard_warned_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Warned/s" }
+        { "expr": "rate(gov_privacy_guard_warned_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "PII detected/s" }
       ]
     },
     {
       "id": 30,
-      "title": "Explainability API Latency (p95)",
+      "title": "Legal Hold Manifest Pressure",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
       "targets": [
-        { "expr": "histogram_quantile(0.95, rate(gov_explain_api_latency_ms[5m]))", "legendFormat": "p95 {{ type }}" }
+        { "expr": "gov_manifests_held{tenant=~\"$tenant\"}", "legendFormat": "Held" },
+        { "expr": "gov_manifests_purge_ready{tenant=~\"$tenant\"}", "legendFormat": "Purge-ready" },
+        { "expr": "gov_legal_hold_overlap_total{tenant=~\"$tenant\"}", "legendFormat": "Overlaps" }
       ],
-      "fieldConfig": { "defaults": { "unit": "ms" } }
+      "fieldConfig": { "defaults": {} }
     },
     {
       "id": 31,
-      "title": "Restore Request Workflow",
+      "title": "Legal Hold Lifecycle Totals",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
       "targets": [
-        { "expr": "increase(gov_restore_requested_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Requested" },
-        { "expr": "increase(gov_restore_approved_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Approved" },
-        { "expr": "increase(gov_restore_completed_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Completed" },
-        { "expr": "increase(gov_restore_failed_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Failed" }
+        { "expr": "gov_legal_hold_created_total{tenant=~\"$tenant\"}", "legendFormat": "Created total" },
+        { "expr": "gov_legal_hold_released_total{tenant=~\"$tenant\"}", "legendFormat": "Released total" }
       ]
     },
     {
       "id": 40,
-      "title": "Purge Certificates",
+      "title": "Archive Job Totals",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
       "targets": [
-        { "expr": "increase(gov_purge_certificate_issued_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Issued" },
-        { "expr": "increase(gov_purge_certificate_verified_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Verified" }
+        { "expr": "gov_archive_jobs_completed_total{tenant=~\"$tenant\"}", "legendFormat": "Completed" },
+        { "expr": "gov_archive_jobs_failed_total{tenant=~\"$tenant\"}", "legendFormat": "Failed" }
       ]
     },
     {
       "id": 41,
-      "title": "Quota Enforcement Decisions",
+      "title": "Privacy Guard Totals",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
       "targets": [
-        { "expr": "rate(gov_quota_check_total{tenant=~\"$tenant\",allowed=\"true\"}[5m])", "legendFormat": "Allowed/s" },
-        { "expr": "rate(gov_quota_check_denied_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Denied/s" },
-        { "expr": "rate(gov_quota_fail_open_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Fail-Open/s" },
-        { "expr": "rate(gov_quota_fail_closed_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Fail-Closed/s" }
+        { "expr": "gov_privacy_guard_inspected_total{tenant=~\"$tenant\"}", "legendFormat": "Inspected" },
+        { "expr": "gov_privacy_guard_warned_total{tenant=~\"$tenant\"}", "legendFormat": "PII detected" }
       ]
     }
   ]

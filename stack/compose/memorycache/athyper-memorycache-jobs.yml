@@ -78,7 +78,10 @@ services:
       - ${ATHYPER_CONFIG}/memorycache/cache.conf:/usr/local/etc/redis/redis.conf:ro
       - ${ATHYPER_CONFIG}/memorycache/redis-acl.conf:/usr/local/etc/redis/redis-acl.conf:ro
       - ${ATHYPER_DATA}/memorycache-jobs:/data
-    networks: [internal]
+    networks:
+      internal:
+        aliases:
+          - memorycache-jobs
     healthcheck:
       # REDISCLI_AUTH keeps the password out of the process table (no -a flag).
       test:

@@ -72,7 +72,7 @@ function EntityCard({ entity }: { entity: EntityEntry }) {
             {entity.table_schema}.{entity.table_name}
           </p>
         </div>
-        <span className={`shrink-0 inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${colorClass}`}>
+        <span className={`shrink-0 inline-flex items-center rounded border px-1.5 py-0.5 text-doc-support font-medium ${colorClass}`}>
           {entity.entity_class}
         </span>
       </div>
@@ -80,8 +80,8 @@ function EntityCard({ entity }: { entity: EntityEntry }) {
         <p className="text-xs text-muted-foreground line-clamp-2">{entity.description}</p>
       )}
       <div className="flex items-center gap-2 pt-1">
-        <Badge variant="outline" className="text-[10px] font-mono">{entity.module_id}</Badge>
-        <Badge variant="outline" className="text-[10px] capitalize">{entity.ownership_model}</Badge>
+        <Badge variant="outline" className="text-doc-support font-mono">{entity.module_id}</Badge>
+        <Badge variant="outline" className="text-doc-support capitalize">{entity.ownership_model}</Badge>
       </div>
     </div>
   );
@@ -108,9 +108,14 @@ export default function MetadataSetupPage() {
       title="Entity Catalog"
       description="All registered entities and data models in the platform"
       actions={
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/metadata-studio">Open Meta Studio</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/setup/parameters">Manage parameters</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/metadata-studio">Open Meta Studio</Link>
+          </Button>
+        </div>
       }
     >
       <div className="space-y-4">
@@ -155,7 +160,7 @@ export default function MetadataSetupPage() {
               <div key={cls}>
                 <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {cls}
-                  <Badge variant="secondary" className="text-[10px] px-1.5 normal-case tracking-normal">{items.length}</Badge>
+                  <Badge variant="secondary" className="text-doc-support px-1.5 normal-case tracking-normal">{items.length}</Badge>
                 </h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {items.map((e) => <EntityCard key={e.id} entity={e} />)}

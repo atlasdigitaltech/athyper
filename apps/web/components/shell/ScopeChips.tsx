@@ -25,7 +25,7 @@ interface ChipProps {
 
 function Chip({ label, value }: ChipProps) {
   return (
-    <span className="flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[10.5px] leading-none whitespace-nowrap">
+    <span className="flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-doc-support leading-none whitespace-nowrap">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-semibold text-foreground">{value}</span>
     </span>

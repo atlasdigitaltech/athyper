@@ -14,7 +14,7 @@
  *   group      → ?group=<field>
  *   page       → ?page=<n>   (omitted when page=1 for clean URLs)
  *   pageSize   → ?size=<n>
- *   viewMode   → ?view=<mode> (omitted when "list" — the default)
+ *   viewMode   → ?view=<mode>
  *   columns    → ?cols=<f1>,<f2>,...
  *   density    → ?density=<value>
  *   facets     → ?facets=<cheap|all>
@@ -23,7 +23,9 @@
  *
  * Mutation semantics:
  *   - setSearch, setSort, setFilters, setGroup, setPage, setViewMode, setColumns
- *     update the URL via router.replace (no history entry).
+ *     update the URL via router.replace (no history entry). View-shaping edits
+ *     clear savedViewId while retaining baseSavedViewId so "Modified from ..."
+ *     affordances work across filters, sort, group, and columns.
  *   - loadSavedView loads a full EntityListQueryState and sets both
  *     savedViewId and baseSavedViewId to the same UUID.
  *   - markModified applies a partial update and clears savedViewId
@@ -49,7 +51,7 @@ import { parseFilterSigil, serializeFilterEntry } from "@athyper/api-contracts/e
 
 const P = {
   SEARCH:       "q",
-  SEARCH_MODE:  "search_mode", // omitted when "server" (the default)
+  SEARCH_MODE:  "search_mode", // omitted when "client" / Search in View (the default)
   SORT:         "sort",        // "<key>:<dir>"
   FILTER_PFX:   "filter.",     // "filter.<field>" = "<sigil>"
   GROUP:        "group",
@@ -76,9 +78,9 @@ function parseState(
   const q = searchParams.get(P.SEARCH);
   if (q) state.search = q;
 
-  // searchMode (only stored in URL when "client"; default is "server")
+  // searchMode (only stored in URL when "server"; default is "client" / Search in View)
   const searchMode = searchParams.get(P.SEARCH_MODE);
-  if (searchMode === "client" || searchMode === "server") state.searchMode = searchMode;
+  if (searchMode === "server") state.searchMode = "server";
 
   // sort: "key:dir[,key:dir:nfirst,...]"  nfirst suffix = NULLS FIRST
   const sortRaw = searchParams.get(P.SORT);
@@ -168,8 +170,8 @@ function stateToParams(s: EntityListQueryState): URLSearchParams {
 
   if (s.search?.trim())   p.set(P.SEARCH, s.search.trim());
 
-  // Omit searchMode when "server" (the default — avoids URL noise)
-  if (s.searchMode && s.searchMode !== "server") p.set(P.SEARCH_MODE, s.searchMode);
+  // Omit searchMode when "client" / Search in View (the default — avoids URL noise)
+  if (s.searchMode && s.searchMode !== "client") p.set(P.SEARCH_MODE, s.searchMode);
 
   if (s.sort?.length) {
     p.set(P.SORT, s.sort.map((e) => e.nulls === "first" ? `${e.key}:${e.dir}:nfirst` : `${e.key}:${e.dir}`).join(","));
@@ -191,8 +193,7 @@ function stateToParams(s: EntityListQueryState): URLSearchParams {
 
   if (s.pageSize) p.set(P.PAGE_SIZE, String(s.pageSize));
 
-  // Omit viewMode="list" — it's the default
-  if (s.viewMode && s.viewMode !== "list") p.set(P.VIEW_MODE, s.viewMode);
+  if (s.viewMode) p.set(P.VIEW_MODE, s.viewMode);
 
   if (s.columns?.length) p.set(P.COLUMNS, s.columns.join(","));
 
@@ -206,6 +207,11 @@ function stateToParams(s: EntityListQueryState): URLSearchParams {
   if (s.baseSavedViewId) p.set(P.BASE_VIEW_ID, s.baseSavedViewId);
 
   return p;
+}
+
+function equalStateValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -233,24 +239,43 @@ export function useEntityListUrl(entityCode: string) {
 
   // ── Setters ──────────────────────────────────────────────────────────────────
 
-  const setSearch = useCallback(
-    (q: string) => applyState({ ...state, search: q.trim() || undefined, page: undefined }),
+  const applyViewEdit = useCallback(
+    (patch: Partial<EntityListQueryState>) => {
+      const next: EntityListQueryState = { ...state, ...patch };
+      const changesSavedViewState = Object.entries(patch).some(([rawKey, value]) => {
+        if (rawKey === "page") return false;
+        const key = rawKey as keyof EntityListQueryState;
+        return !equalStateValue(state[key], value);
+      });
+
+      if (changesSavedViewState && state.savedViewId) {
+        next.baseSavedViewId = state.baseSavedViewId ?? state.savedViewId;
+        delete next.savedViewId;
+      }
+
+      applyState(next);
+    },
     [state, applyState],
+  );
+
+  const setSearch = useCallback(
+    (q: string) => applyViewEdit({ search: q.trim() || undefined, page: undefined }),
+    [applyViewEdit],
   );
 
   const setSort = useCallback(
-    (sort: EntityListSortEntry[] | undefined) => applyState({ ...state, sort, page: undefined }),
-    [state, applyState],
+    (sort: EntityListSortEntry[] | undefined) => applyViewEdit({ sort, page: undefined }),
+    [applyViewEdit],
   );
 
   const setFilters = useCallback(
-    (filters: EntityListFilters | undefined) => applyState({ ...state, filters, page: undefined }),
-    [state, applyState],
+    (filters: EntityListFilters | undefined) => applyViewEdit({ filters, page: undefined }),
+    [applyViewEdit],
   );
 
   const setGroup = useCallback(
-    (group: string | null | undefined) => applyState({ ...state, group, page: undefined }),
-    [state, applyState],
+    (group: string | null | undefined) => applyViewEdit({ group, page: undefined }),
+    [applyViewEdit],
   );
 
   const setPage = useCallback(
@@ -259,25 +284,25 @@ export function useEntityListUrl(entityCode: string) {
   );
 
   const setViewMode = useCallback(
-    (viewMode: EntityListViewMode) => applyState({ ...state, viewMode }),
-    [state, applyState],
+    (viewMode: EntityListViewMode) => applyViewEdit({ viewMode }),
+    [applyViewEdit],
   );
 
   const setColumns = useCallback(
-    (columns: string[]) => applyState({ ...state, columns }),
-    [state, applyState],
+    (columns: string[]) => applyViewEdit({ columns }),
+    [applyViewEdit],
   );
 
   const setDensity = useCallback(
     (density: "compact" | "comfortable" | "spacious" | undefined) =>
-      applyState({ ...state, density }),
-    [state, applyState],
+      applyViewEdit({ density }),
+    [applyViewEdit],
   );
 
   const setSearchMode = useCallback(
     (mode: "server" | "client" | undefined) =>
-      applyState({ ...state, searchMode: mode, page: undefined }),
-    [state, applyState],
+      applyViewEdit({ searchMode: mode, page: undefined }),
+    [applyViewEdit],
   );
 
   const setFacets = useCallback(
@@ -286,8 +311,8 @@ export function useEntityListUrl(entityCode: string) {
   );
 
   const setPinnedCols = useCallback(
-    (cols: string[]) => applyState({ ...state, pinnedCols: cols.length > 0 ? cols : undefined }),
-    [state, applyState],
+    (cols: string[]) => applyViewEdit({ pinnedCols: cols.length > 0 ? cols : undefined }),
+    [applyViewEdit],
   );
 
   // ── Saved view operations ─────────────────────────────────────────────────────
@@ -316,15 +341,8 @@ export function useEntityListUrl(entityCode: string) {
    * Retains baseSavedViewId for "Modified from <name>" UI affordance.
    */
   const markModified = useCallback(
-    (patch: Partial<EntityListQueryState>) => {
-      const next = { ...state, ...patch };
-      if (state.savedViewId) {
-        next.baseSavedViewId = state.baseSavedViewId ?? state.savedViewId;
-        delete next.savedViewId;
-      }
-      applyState(next);
-    },
-    [state, applyState],
+    (patch: Partial<EntityListQueryState>) => applyViewEdit(patch),
+    [applyViewEdit],
   );
 
   /**
@@ -341,12 +359,22 @@ export function useEntityListUrl(entityCode: string) {
   /** True when state has been modified relative to a loaded saved view. */
   const isModified = !!state.baseSavedViewId && !state.savedViewId;
 
-  /** True when any filter/search/sort/group is active. */
+  /** True when any server-query state is active. */
   const hasActiveQuery = !!(
     state.search ||
     (state.filters && Object.keys(state.filters).length > 0) ||
     (state.sort && state.sort.length > 0) ||
-    state.group
+    state.group !== undefined
+  );
+
+  /** True when the current URL state can be saved as a named list view. */
+  const hasSaveableViewState = !!(
+    hasActiveQuery ||
+    state.searchMode ||
+    state.viewMode ||
+    state.density ||
+    (state.columns && state.columns.length > 0) ||
+    (state.pinnedCols && state.pinnedCols.length > 0)
   );
 
   return {
@@ -367,5 +395,6 @@ export function useEntityListUrl(entityCode: string) {
     reset,
     isModified,
     hasActiveQuery,
+    hasSaveableViewState,
   };
 }

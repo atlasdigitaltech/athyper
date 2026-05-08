@@ -46,7 +46,7 @@ export function ApprovalPanel({
       <div
         className={cn(
           "rounded-md border border-destructive/30 bg-destructive/10 p-3",
-          "[font-size:var(--doc-support-size)] text-destructive",
+          "text-doc-support text-destructive",
           className,
         )}
       >
@@ -62,7 +62,7 @@ export function ApprovalPanel({
       <div
         className={cn(
           "rounded-md border border-dashed p-6 text-center",
-          "[font-size:var(--doc-support-size)] text-muted-foreground",
+          "text-doc-support text-muted-foreground",
           className,
         )}
       >
@@ -75,22 +75,22 @@ export function ApprovalPanel({
     <div className={cn("space-y-4", className)}>
       <div className="flex flex-wrap gap-2">
         {behaviors.allow_self_approval && (
-          <Badge variant="muted" className="[font-size:var(--doc-badge-size)]">
+          <Badge variant="muted" className="text-doc-badge">
             Self-approval allowed
           </Badge>
         )}
         {behaviors.allow_reassignment && (
-          <Badge variant="muted" className="[font-size:var(--doc-badge-size)]">
+          <Badge variant="muted" className="text-doc-badge">
             Reassignment allowed
           </Badge>
         )}
         {behaviors.require_reason_on_reject && (
-          <Badge variant="muted" className="[font-size:var(--doc-badge-size)]">
+          <Badge variant="muted" className="text-doc-badge">
             Reason required on reject
           </Badge>
         )}
         {behaviors.early_reject_on_quorum_fail && (
-          <Badge variant="warning" className="[font-size:var(--doc-badge-size)]">
+          <Badge variant="warning" className="text-doc-badge">
             Early reject on quorum fail
           </Badge>
         )}
@@ -122,17 +122,17 @@ function StageCard({ stage, isCurrent, events }: StageCardProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CardTitle className="[font-size:var(--doc-field-value-size)]">
+            <CardTitle className="text-doc-field-value">
               Stage {stage.stage_order}: {stage.stage_name}
             </CardTitle>
             <Badge
               variant={intentToBadgeVariant(intent)}
-              className="[font-size:var(--doc-badge-size)]"
+              className="text-doc-badge"
             >
               {stage.status}
             </Badge>
           </div>
-          <Badge variant="muted" className="flex items-center gap-1 [font-size:var(--doc-badge-size)]">
+          <Badge variant="muted" className="flex items-center gap-1 text-doc-badge">
             {stage.stage_mode === "PARALLEL" && (
               <Users aria-hidden className="h-3 w-3" />
             )}
@@ -141,7 +141,7 @@ function StageCard({ stage, isCurrent, events }: StageCardProps) {
         </div>
 
         {stage.quorum_progress && stage.quorum && (
-          <div className="mt-1 flex items-center gap-1 [font-size:var(--doc-support-size)] text-muted-foreground">
+          <div className="mt-1 flex items-center gap-1 text-doc-support text-muted-foreground">
             <span>
               Quorum: {stage.quorum.strategy} —{" "}
               {stage.quorum_progress.approved_count}/{stage.quorum_progress.total_count} approved
@@ -176,25 +176,25 @@ function WorkItemRow({ item }: { item: WorkItem }) {
       {workflowStatusIcon(item.status)}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="[font-size:var(--doc-field-value-size)] font-medium">
+          <span className="text-doc-field-value font-medium">
             {item.assignee_name ?? `${item.assignee_id.slice(0, 8)}…`}
           </span>
-          <Badge variant="muted" className="[font-size:var(--doc-badge-size)]">
+          <Badge variant="muted" className="text-doc-badge">
             {item.assignee_type}
           </Badge>
           {item.delegated_to && (
-            <span className="[font-size:var(--doc-support-size)] text-muted-foreground">
+            <span className="text-doc-support text-muted-foreground">
               → {item.delegated_to_name ?? `${item.delegated_to.slice(0, 8)}…`}
             </span>
           )}
         </div>
         {item.remarks && (
-          <p className="mt-0.5 italic [font-size:var(--doc-support-size)] text-muted-foreground">
+          <p className="mt-0.5 text-doc-support italic text-muted-foreground">
             "{item.remarks}"
           </p>
         )}
       </div>
-      <div className="[font-size:var(--doc-support-size)] text-muted-foreground">
+      <div className="text-doc-support text-muted-foreground">
         {item.decision_at ? formatDate(item.decision_at, "date") : "Pending"}
       </div>
     </div>

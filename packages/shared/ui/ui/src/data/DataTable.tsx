@@ -15,11 +15,28 @@ import {
   type SortingState,
   type RowSelectionState,
 } from "@tanstack/react-table";
-import { type CSSProperties, type ReactNode, useState } from "react";
+import { type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode, useState } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Button } from "../primitives/Button";
 import { Checkbox } from "../primitives/Checkbox";
+
+const ROW_CLICK_INTERACTIVE_SELECTOR = [
+  "a",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "[role='button']",
+  "[role='checkbox']",
+  "[role='menuitem']",
+  "[data-row-click-ignore='true']",
+].join(",");
+
+function isInteractiveRowClick(event: ReactMouseEvent<HTMLElement>): boolean {
+  const target = event.target;
+  return target instanceof HTMLElement && Boolean(target.closest(ROW_CLICK_INTERACTIVE_SELECTOR));
+}
 
 export interface DataTableProps<TData> {
   columns: ColumnDef<TData, unknown>[];
@@ -236,7 +253,7 @@ export function DataTable<TData>({
   return (
     <div className={cn("space-y-3", className)}>
       <div className={cn("rounded-md border", tableContainerClassName)}>
-        <table className="w-full caption-bottom text-sm">
+        <table className="w-full caption-bottom text-sm text-foreground">
           <thead className="sticky top-0 z-10 border-b bg-muted">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -250,7 +267,7 @@ export function DataTable<TData>({
                     key={header.id}
                     className={cn(
                       headerH,
-                      "px-3 text-left align-middle font-medium text-muted-foreground",
+                      "px-3 text-left align-middle text-xs font-semibold text-muted-foreground",
                       pinStyle && "border-r shadow-[1px_0_0_0_var(--border)]",
                       (header.column.columnDef.meta as { filtered?: boolean } | undefined)?.filtered && "bg-primary/5",
                     )}
@@ -301,7 +318,10 @@ export function DataTable<TData>({
                     row.getIsSelected() && "bg-muted",
                     onRowClick && "cursor-pointer",
                   )}
-                  onClick={() => onRowClick?.(row.original)}
+                  onClick={(event) => {
+                    if (isInteractiveRowClick(event)) return;
+                    onRowClick?.(row.original);
+                  }}
                   onContextMenu={(e) => onRowContextMenu?.(row.original, e)}
                   data-state={row.getIsSelected() ? "selected" : undefined}
                 >

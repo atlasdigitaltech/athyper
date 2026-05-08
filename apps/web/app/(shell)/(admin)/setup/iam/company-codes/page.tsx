@@ -233,9 +233,9 @@ function GrantDialog({
                         ? principalLabel(item as Principal)
                         : (item as Group).name}
                     </span>
-                    <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">({item.code})</span>
+                    <span className="ml-1.5 font-mono text-doc-support text-muted-foreground">({item.code})</span>
                     {entityType === "principal" && (item as Principal).login_email && (
-                      <span className="block text-[10px] text-muted-foreground">{(item as Principal).login_email}</span>
+                      <span className="block text-doc-support text-muted-foreground">{(item as Principal).login_email}</span>
                     )}
                   </button>
                 ))
@@ -490,7 +490,7 @@ export default function CompanyCodeAccessPage() {
                             {g.entity_name ?? g.entity_id.slice(0, 8)}
                           </p>
                           {g.entity_code && (
-                            <p className="font-mono text-[10px] text-muted-foreground">{g.entity_code}</p>
+                            <p className="font-mono text-doc-support text-muted-foreground">{g.entity_code}</p>
                           )}
                         </div>
                       </div>
@@ -498,7 +498,7 @@ export default function CompanyCodeAccessPage() {
 
                     {/* Type */}
                     <td className="py-2.5 pr-4">
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-doc-support">
                         {ENTITY_TYPE_LABELS[g.entity_type] ?? g.entity_type}
                       </Badge>
                     </td>
@@ -516,7 +516,7 @@ export default function CompanyCodeAccessPage() {
 
                     {/* Subtree */}
                     <td className="py-2.5 pr-4">
-                      <Badge variant={g.inherit_subtree ? "success" : "muted"} className="text-[10px]">
+                      <Badge variant={g.inherit_subtree ? "success" : "muted"} className="text-doc-support">
                         {g.inherit_subtree ? "yes" : "no"}
                       </Badge>
                     </td>
@@ -529,7 +529,7 @@ export default function CompanyCodeAccessPage() {
                         })}
                       </div>
                       {g.granted_by_code && (
-                        <div className="font-mono text-[10px]">{g.granted_by_code}</div>
+                        <div className="font-mono text-doc-support">{g.granted_by_code}</div>
                       )}
                     </td>
 

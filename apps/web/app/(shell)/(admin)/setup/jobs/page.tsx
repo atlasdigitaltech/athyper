@@ -134,7 +134,7 @@ function QueueCard({ queue }: { queue: QueueStat }) {
               <CardTitle className="text-sm font-medium">{shortName}</CardTitle>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant={HEALTH_BADGE[health]} className="text-[10px]">
+              <Badge variant={HEALTH_BADGE[health]} className="text-doc-support">
                 {health}
               </Badge>
               <Button
@@ -152,17 +152,17 @@ function QueueCard({ queue }: { queue: QueueStat }) {
         <CardContent className="pt-0">
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="space-y-0.5">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Active</p>
+              <p className="text-doc-support text-muted-foreground uppercase tracking-wide">Active</p>
               <p className="text-lg font-semibold text-primary">
                 {queue.counts.active}
               </p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Waiting</p>
+              <p className="text-doc-support text-muted-foreground uppercase tracking-wide">Waiting</p>
               <p className="text-lg font-semibold">{total}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Failed</p>
+              <p className="text-doc-support text-muted-foreground uppercase tracking-wide">Failed</p>
               <p className={`text-lg font-semibold ${queue.counts.failed > 0 ? "text-destructive" : ""}`}>
                 {queue.counts.failed}
               </p>
@@ -171,12 +171,12 @@ function QueueCard({ queue }: { queue: QueueStat }) {
 
           {queue.counts.failed > 0 && (
             <div className="mt-2 pt-2 border-t flex items-center justify-between">
-              <span className="flex items-center gap-1 text-[10px] text-destructive">
+              <span className="flex items-center gap-1 text-doc-support text-destructive">
                 <AlertTriangle className="h-3 w-3" />
                 {queue.counts.failed} failed job{queue.counts.failed !== 1 ? "s" : ""}
               </span>
               <Link href={`/setup/jobs/dlq?queue=${shortName}`}>
-                <Button size="sm" variant="ghost" className="h-6 text-[10px]">
+                <Button size="sm" variant="ghost" className="h-6 text-doc-support">
                   View DLQ
                 </Button>
               </Link>
@@ -184,7 +184,7 @@ function QueueCard({ queue }: { queue: QueueStat }) {
           )}
 
           {queue.counts.delayed > 0 && (
-            <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+            <div className="mt-1 flex items-center gap-1 text-doc-support text-muted-foreground">
               <Clock className="h-3 w-3" />
               {queue.counts.delayed} delayed
             </div>
@@ -232,7 +232,7 @@ export default function JobsConsolePage() {
       actions={
         <div className="flex items-center gap-2">
           {refreshedAt && (
-            <span className="text-[10px] text-muted-foreground hidden sm:block">
+            <span className="text-doc-support text-muted-foreground hidden sm:block">
               Updated {refreshedAt}
             </span>
           )}

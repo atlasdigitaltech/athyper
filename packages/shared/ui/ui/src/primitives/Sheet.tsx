@@ -3,6 +3,7 @@ import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { overlayScrimVariants } from "./overlay";
 
 const Sheet = SheetPrimitive.Root;
 const SheetTrigger = SheetPrimitive.Trigger;
@@ -14,7 +15,11 @@ const SheetOverlay = forwardRef<
   ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
-    className={cn("fixed inset-0 z-modal bg-black/50 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out", className)}
+    className={cn(
+      "fixed inset-0 z-modal data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
+      overlayScrimVariants({ tone: "modal" }),
+      className,
+    )}
     {...props}
     ref={ref}
   />

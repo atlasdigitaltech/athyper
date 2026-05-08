@@ -4,14 +4,15 @@ import { getSessionRedis } from "@/lib/auth/session-redis";
 import { resolveSessionNamespace } from "@/lib/server/session-namespace";
 import { resolveRealmConfig } from "@/lib/auth/realm-config";
 import { refreshTokens } from "@/lib/auth/keycloak";
-import { sessKey } from "@/lib/auth/redis-keys";
+import {
+  refreshLockKey,
+  sessKey,
+  sidRotationKey,
+  userSessionsKey,
+} from "@/lib/auth/redis-keys";
+import { resolveSessionPolicy, type ResolvedSessionPolicy } from "@/lib/auth/session-policy-resolver";
 import type { V4Session, OrgMembership } from "@/lib/auth/types";
 export { parseOrgAlias } from "@/lib/auth/parse-org-alias";
-
-// Seconds before expiry at which the server proactively refreshes the token.
-// Wider than the client-side timer (90 s) to catch tabs that were backgrounded
-// or closed before the timer fired.
-const SERVER_REFRESH_BUFFER_SEC = 120;
 
 /**
  * Read the full V4Session from Redis for use in Server Components.
@@ -38,29 +39,35 @@ export async function getServerSession(): Promise<V4Session | null> {
 
   try {
     const redis = await getSessionRedis();
-    const raw = await redis.get(sessKey(ns, sid));
-    if (!raw) return null;
+    const read = await readSessionFollowingRotation(redis, ns, sid);
+    if (!read) return null;
 
-    const session = JSON.parse(raw) as V4Session;
+    const { session, sid: resolvedSid } = read;
     const now = Math.floor(Date.now() / 1000);
+    const policy = await resolveSessionPolicy(session);
 
-    if (session.accessExpiresAt > now + SERVER_REFRESH_BUFFER_SEC) {
+    if (isIdleExpired(session, now, policy)) {
+      await destroySession(redis, ns, resolvedSid, session);
+      return null;
+    }
+
+    if (session.accessExpiresAt > now + policy.serverRefreshBufferSeconds) {
       return session;
     }
 
     // Refresh token missing — session cannot be renewed
     if (!session.refreshToken) {
-      await redis.del(sessKey(ns, sid));
+      await destroySession(redis, ns, resolvedSid, session);
       return null;
     }
 
     // Refresh token itself is expired
     if (session.refreshExpiresAt && session.refreshExpiresAt < now) {
-      await redis.del(sessKey(ns, sid));
+      await destroySession(redis, ns, resolvedSid, session);
       return null;
     }
 
-    return silentRefreshSession(session, ns, sid, redis);
+    return silentRefreshSession(session, ns, resolvedSid, redis, policy);
   } catch {
     return null;
   }
@@ -68,14 +75,57 @@ export async function getServerSession(): Promise<V4Session | null> {
 
 type RedisClient = Awaited<ReturnType<typeof getSessionRedis>>;
 
+function isIdleExpired(session: V4Session, now: number, policy: ResolvedSessionPolicy): boolean {
+  const lastSeenAt = typeof session.lastSeenAt === "number" ? session.lastSeenAt : 0;
+  return lastSeenAt > 0 && now - lastSeenAt >= policy.idleTimeoutSeconds;
+}
+
+async function destroySession(
+  redis: RedisClient,
+  ns: string,
+  sid: string,
+  session: V4Session,
+): Promise<void> {
+  await redis.del(sessKey(ns, sid));
+  if (session.userId) {
+    await redis.sRem(userSessionsKey(ns, session.userId), sid).catch(() => {});
+  }
+}
+
+async function readSessionFollowingRotation(
+  redis: RedisClient,
+  ns: string,
+  sid: string,
+): Promise<{ sid: string; session: V4Session } | null> {
+  const raw = await redis.get(sessKey(ns, sid));
+  if (raw) return { sid, session: JSON.parse(raw) as V4Session };
+
+  const rotatedSid = await redis.get(sidRotationKey(ns, sid)).catch(() => null);
+  if (!rotatedSid) return null;
+
+  const rotatedRaw = await redis.get(sessKey(ns, rotatedSid));
+  if (!rotatedRaw) return null;
+
+  return { sid: rotatedSid, session: JSON.parse(rotatedRaw) as V4Session };
+}
+
 async function silentRefreshSession(
   session: V4Session,
   ns: string,
   sid: string,
   redis: RedisClient,
+  policy: ResolvedSessionPolicy,
 ): Promise<V4Session | null> {
   const baseUrl = process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
   const { realm, clientId } = resolveRealmConfig(session.realmKey === "platform");
+  const lockKey = refreshLockKey(ns, sid);
+  const acquired = await redis.set(lockKey, "1", { NX: true, EX: policy.refreshLockTtlSeconds });
+
+  if (!acquired) {
+    await new Promise<void>((resolve) => setTimeout(resolve, policy.refreshLockWaitMs));
+    const read = await readSessionFollowingRotation(redis, ns, sid);
+    return read?.session ?? session;
+  }
 
   try {
     const tokens = await refreshTokens({
@@ -101,7 +151,7 @@ async function silentRefreshSession(
     // Preserve the original session's absolute TTL — resetting to 8 h on every
     // server-side refresh would allow indefinite extension.
     const remainingTtl = await redis.ttl(sessKey(ns, sid));
-    const sessionTtl = remainingTtl > 0 ? remainingTtl : 28800;
+    const sessionTtl = remainingTtl > 0 ? remainingTtl : policy.sessionTtlSeconds;
 
     await redis.set(sessKey(ns, sid), JSON.stringify(updated), { EX: sessionTtl });
     return updated;
@@ -115,13 +165,15 @@ async function silentRefreshSession(
 
     if (isHardFailure) {
       // KC explicitly rejected the session — force re-login
-      await redis.del(sessKey(ns, sid)).catch(() => {});
+      await destroySession(redis, ns, sid, session).catch(() => {});
       return null;
     }
 
     // Transient KC failure (network, 5xx) — preserve the session so the user
     // is not unnecessarily logged out. The client-side refresh timer will retry.
     return session;
+  } finally {
+    await redis.del(lockKey).catch(() => {});
   }
 }
 

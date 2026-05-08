@@ -172,10 +172,10 @@ function EventRow({
   return (
     <RowCard
       badge={<>
-        <Badge variant={OUTCOME_VARIANT[event.outcome] ?? "muted"} className="text-[10px] shrink-0">
+        <Badge variant={OUTCOME_VARIANT[event.outcome] ?? "muted"} className="text-doc-support shrink-0">
           {event.outcome}
         </Badge>
-        <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+        <Badge variant="outline" className="text-doc-support font-mono shrink-0">
           {event.event_category}
         </Badge>
       </>}

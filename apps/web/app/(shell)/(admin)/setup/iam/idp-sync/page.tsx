@@ -244,7 +244,7 @@ export default function IdpSyncPage() {
                           <div className="flex items-center gap-2">
                             <Wifi className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="font-medium">{fmtProvider(p.provider_code)}</span>
-                            <span className="font-mono text-[10px] text-muted-foreground">({p.provider_code})</span>
+                            <span className="font-mono text-doc-support text-muted-foreground">({p.provider_code})</span>
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-right tabular-nums">{p.total.toLocaleString()}</td>
@@ -287,7 +287,7 @@ export default function IdpSyncPage() {
               <h2 className="text-sm font-medium text-muted-foreground">
                 Conflicts &amp; Errors
                 {conflicts.length > 0 && (
-                  <Badge variant="warning" className="ml-2 text-[10px]">{conflicts.length}</Badge>
+                  <Badge variant="warning" className="ml-2 text-doc-support">{conflicts.length}</Badge>
                 )}
               </h2>
             </div>
@@ -327,10 +327,10 @@ export default function IdpSyncPage() {
                             {c.principal_display_name ?? c.principal_code ?? c.principal_id.slice(0, 8)}
                           </p>
                           {c.principal_code && c.principal_display_name && (
-                            <p className="font-mono text-[10px] text-muted-foreground">{c.principal_code}</p>
+                            <p className="font-mono text-doc-support text-muted-foreground">{c.principal_code}</p>
                           )}
                           {c.username && (
-                            <p className="text-[10px] text-muted-foreground">{c.username}</p>
+                            <p className="text-doc-support text-muted-foreground">{c.username}</p>
                           )}
                         </td>
 
@@ -341,7 +341,7 @@ export default function IdpSyncPage() {
 
                         {/* Subject ID */}
                         <td className="px-4 py-2.5">
-                          <span className="font-mono text-[10px] text-muted-foreground">
+                          <span className="font-mono text-doc-support text-muted-foreground">
                             {c.subject_id.slice(0, 20)}{c.subject_id.length > 20 ? "…" : ""}
                           </span>
                         </td>
@@ -350,7 +350,7 @@ export default function IdpSyncPage() {
                         <td className="px-4 py-2.5">
                           <Badge
                             variant={c.sync_status === "error" ? "destructive" : "warning"}
-                            className="text-[10px] capitalize"
+                            className="text-doc-support capitalize"
                           >
                             {c.sync_status}
                           </Badge>

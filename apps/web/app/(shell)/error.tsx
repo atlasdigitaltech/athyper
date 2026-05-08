@@ -26,7 +26,7 @@ export default function ShellError({
           {error.message || "An unexpected error occurred. Try refreshing or contact support if it persists."}
         </p>
         {error.digest && (
-          <p className="font-mono text-[10px] text-muted-foreground/60">ref: {error.digest}</p>
+          <p className="font-mono text-doc-support text-muted-foreground/60">ref: {error.digest}</p>
         )}
       </div>
       <Button size="sm" variant="outline" onClick={reset}>

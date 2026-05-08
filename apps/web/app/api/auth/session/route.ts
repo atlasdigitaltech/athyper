@@ -3,12 +3,14 @@ import { NextResponse } from "next/server";
 import { getSessionRedis } from "@/lib/auth/session-redis";
 import {
   clearCsrfCookie,
+  clearMfaPendingCookie,
   clearSessionCookie,
   getSessionId,
   hashValue,
 } from "@/lib/auth/session";
 import { sessKey, userSessionsKey } from "@/lib/auth/redis-keys";
 import { resolveSessionNamespace } from "@/lib/server/session-namespace";
+import { resolveSessionPolicy } from "@/lib/auth/session-policy-resolver";
 import type { PublicSession, V4Session } from "@/lib/auth/types";
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -74,6 +76,7 @@ export async function GET(req: Request) {
   if (!raw) {
     await clearSessionCookie();
     await clearCsrfCookie();
+    await clearMfaPendingCookie();
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 
@@ -83,6 +86,7 @@ export async function GET(req: Request) {
   if (isBindingMismatch(session, req)) {
     await clearSessionCookie();
     await clearCsrfCookie();
+    await clearMfaPendingCookie();
     await redis.del(sessKey(sessionNamespace, sid));
     console.warn("[auth/session] Session binding mismatch — destroyed:", {
       userId: session.userId,
@@ -147,6 +151,7 @@ export async function PATCH(req: Request) {
   if (isBindingMismatch(session, req)) {
     await clearSessionCookie();
     await clearCsrfCookie();
+    await clearMfaPendingCookie();
     await redis.del(sessKey(sessionNamespace, sid));
     return NextResponse.json(
       { error: "session_binding_mismatch" },
@@ -190,10 +195,11 @@ export async function PATCH(req: Request) {
 
   // Preserve remaining TTL
   const ttl = await redis.ttl(sessKey(sessionNamespace, sid));
+  const policy = await resolveSessionPolicy(updated);
   await redis.set(
     sessKey(sessionNamespace, sid),
     JSON.stringify(updated),
-    { EX: ttl > 0 ? ttl : 28800 },
+    { EX: ttl > 0 ? ttl : policy.sessionTtlSeconds },
   );
 
   return NextResponse.json({ ok: true });
@@ -219,6 +225,7 @@ export async function DELETE(req: Request) {
         if (isBindingMismatch(session, req)) {
           await clearSessionCookie();
           await clearCsrfCookie();
+          await clearMfaPendingCookie();
           await redis.del(sessKey(ns, sid));
           return NextResponse.json({ ok: true });
         }
@@ -236,5 +243,12 @@ export async function DELETE(req: Request) {
 
   await clearSessionCookie();
   await clearCsrfCookie();
-  return NextResponse.json({ ok: true });
+  await clearMfaPendingCookie();
+
+  const res = NextResponse.json({ ok: true });
+  res.cookies.delete("neon_sid");
+  res.cookies.delete("__csrf");
+  res.cookies.delete("neon_mfa_pending");
+  res.cookies.delete("neon_realm");
+  return res;
 }

@@ -258,7 +258,7 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
         </div>
 
         <div
-          className="flex items-center justify-center rounded-md border bg-white p-2 w-fit"
+          className="flex items-center justify-center rounded-md border bg-qr-surface p-2 w-fit"
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: pending.qr_svg }}
         />
@@ -404,7 +404,7 @@ function WebAuthnEnrollCard({ onSyncDone }: { onSyncDone: () => void }) {
           Sync
         </Button>
       </div>
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-doc-support text-muted-foreground">
         You&apos;ll be redirected to the authentication portal to complete registration.
         Return here afterwards and the new key will appear in your methods list.
       </p>
@@ -537,10 +537,10 @@ function TrustedDevicesPanel() {
                   <Monitor className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <p className="text-sm font-medium truncate">{formatDevice(d)}</p>
                   {isExpiringSoon(d) && (
-                    <Badge variant="warning" className="text-[9px]">expiring soon</Badge>
+                    <Badge variant="warning" className="text-doc-field-label">expiring soon</Badge>
                   )}
                 </div>
-                <div className="flex gap-3 text-[10px] text-muted-foreground mt-0.5">
+                <div className="flex gap-3 text-doc-support text-muted-foreground mt-0.5">
                   {d.last_seen_at && <span>Last seen {new Date(d.last_seen_at).toLocaleDateString()}</span>}
                   <span>Expires {new Date(d.expires_at).toLocaleDateString()}</span>
                   {d.ip_address && <span>{d.ip_address}</span>}
@@ -592,7 +592,7 @@ function TrustedDevicesPanel() {
                 placeholder="e.g. Work Laptop, Home Mac"
               />
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-doc-support text-muted-foreground">
               You will need to complete a security verification (MFA step-up) to confirm.
             </p>
           </div>
@@ -731,24 +731,24 @@ export function MfaSection({ active }: { active: boolean }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-medium">{methodLabel(m.method_type, m.user_label)}</p>
                     {m.is_primary && (
-                      <Badge variant="success" className="text-[9px]">Primary</Badge>
+                      <Badge variant="success" className="text-doc-field-label">Primary</Badge>
                     )}
                     {m.is_verified && m.is_enabled
-                      ? <Badge variant="success" className="text-[10px]">Active</Badge>
+                      ? <Badge variant="success" className="text-doc-support">Active</Badge>
                       : m.is_verified
-                      ? <Badge variant="muted" className="text-[10px]">Disabled</Badge>
-                      : <Badge variant="warning" className="text-[10px]">Pending verification</Badge>
+                      ? <Badge variant="muted" className="text-doc-support">Disabled</Badge>
+                      : <Badge variant="warning" className="text-doc-support">Pending verification</Badge>
                     }
                     {m.keycloak_sync_status && (
                       <Badge
                         variant={SYNC_VARIANT[m.keycloak_sync_status] ?? "muted"}
-                        className="text-[9px]"
+                        className="text-doc-field-label"
                       >
                         {m.keycloak_sync_status === "synced" ? "sync: active" : `sync: ${m.keycloak_sync_status}`}
                       </Badge>
                     )}
                   </div>
-                  <div className="flex gap-3 text-[10px] text-muted-foreground">
+                  <div className="flex gap-3 text-doc-support text-muted-foreground">
                     {m.enrolled_at && <span>Enrolled {new Date(m.enrolled_at).toLocaleDateString()}</span>}
                     {m.last_used_at && <span>Last used {new Date(m.last_used_at).toLocaleDateString()}</span>}
                   </div>

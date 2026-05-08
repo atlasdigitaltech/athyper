@@ -11,29 +11,66 @@ import {
   setCsrfCookie,
   setSessionCookie,
 } from "@/lib/auth/session";
-import { refreshLockKey, sessKey, userSessionsKey } from "@/lib/auth/redis-keys";
+import {
+  refreshLockKey,
+  sessKey,
+  sidRotationKey,
+  userSessionsKey,
+} from "@/lib/auth/redis-keys";
+import { resolveSessionPolicy } from "@/lib/auth/session-policy-resolver";
 import { randomUUID } from "node:crypto";
 import type { V4Session } from "@/lib/auth/types";
+
+type RedisClient = Awaited<ReturnType<typeof getSessionRedis>>;
+
+async function readRotatedSession(
+  redis: RedisClient,
+  namespace: string,
+  sid: string,
+): Promise<{ sid: string; session: V4Session } | null> {
+  const rotatedSid = await redis.get(sidRotationKey(namespace, sid)).catch(() => null);
+  if (!rotatedSid) return null;
+
+  const raw = await redis.get(sessKey(namespace, rotatedSid));
+  if (!raw) return null;
+
+  return { sid: rotatedSid, session: JSON.parse(raw) as V4Session };
+}
+
+async function destroySession(
+  redis: RedisClient,
+  namespace: string,
+  sid: string,
+  session?: V4Session,
+): Promise<void> {
+  await redis.del(sessKey(namespace, sid));
+  if (session?.userId) {
+    await redis.sRem(userSessionsKey(namespace, session.userId), sid).catch(() => {});
+  }
+}
+
+async function respondWithRotatedSession(
+  rotated: { sid: string; session: V4Session },
+  env: string,
+): Promise<NextResponse> {
+  await setSessionCookie(rotated.sid, env);
+  await setCsrfCookie(rotated.session.csrfToken, env);
+
+  return NextResponse.json({
+    ok: true,
+    message: "Session already rotated",
+    accessExpiresAt: rotated.session.accessExpiresAt,
+    csrfToken: rotated.session.csrfToken,
+  });
+}
 
 /**
  * POST /api/auth/refresh
  *
- * Proactively refreshes the access token before it expires and rotates
- * the session ID to prevent session fixation.
- *
- * Note: /api/auth/* routes are in the middleware public-bypass list and
- * therefore bypass CSRF enforcement. This route relies on the httpOnly
- * neon_sid cookie (not readable by JS) as the sole auth check.
- *
- * Security controls:
- *   1. Idle timeout (15 min) — refuses to refresh an idle session even if the
- *      refresh token is still valid. A stolen sid cannot silently keep sessions
- *      alive by calling refresh.
- *   2. Early-exit if token still has >120s — prevents multiple tabs racing.
- *   3. Session ID rotation — new sid + new CSRF token on every successful refresh.
- *
- * Response (success): { ok: true, accessExpiresAt, csrfToken }
- * Response (requires re-auth): { redirect: "/api/auth/login", reason? }
+ * Proactively refreshes the access token before it expires and rotates the BFF
+ * session ID. Keycloak refresh tokens are single-use, so this route serializes
+ * concurrent refresh attempts with a short Redis lock and leaves a 30-second
+ * pointer from the old SID to the new SID for in-flight requests.
  */
 export async function POST() {
   const sid = await getSessionId();
@@ -51,10 +88,15 @@ export async function POST() {
 
   const redis = await getSessionRedis();
   const lockKey = refreshLockKey(sessionNamespace, sid);
+  let lockAcquired = false;
+  let sessionForCleanup: V4Session | undefined;
 
   try {
     const raw = await redis.get(sessKey(sessionNamespace, sid));
     if (!raw) {
+      const rotated = await readRotatedSession(redis, sessionNamespace, sid);
+      if (rotated) return respondWithRotatedSession(rotated, env);
+
       return NextResponse.json(
         { redirect: "/api/auth/login" },
         { status: 401 },
@@ -62,26 +104,22 @@ export async function POST() {
     }
 
     const session = JSON.parse(raw) as V4Session;
+    sessionForCleanup = session;
     const now = Math.floor(Date.now() / 1000);
+    const policy = await resolveSessionPolicy(session);
 
-    // ─── Idle timeout check ──────────────────────────────────────────────────
-    const IDLE_TIMEOUT_SEC = 900; // 15 min
     const lastSeenAt =
       typeof session.lastSeenAt === "number" ? session.lastSeenAt : 0;
-    if (lastSeenAt > 0 && now - lastSeenAt >= IDLE_TIMEOUT_SEC) {
-      await redis.del(sessKey(sessionNamespace, sid));
-      if (session.userId) {
-        await redis.sRem(userSessionsKey(sessionNamespace, session.userId), sid);
-      }
+    if (lastSeenAt > 0 && now - lastSeenAt >= policy.idleTimeoutSeconds) {
+      await destroySession(redis, sessionNamespace, sid, session);
       return NextResponse.json(
         { redirect: "/api/auth/login", reason: "idle_expired" },
         { status: 401 },
       );
     }
 
-    // ─── Skip if access token still has plenty of time ───────────────────────
     const remaining = (session.accessExpiresAt ?? 0) - now;
-    if (remaining > 120) {
+    if (remaining > policy.serverRefreshBufferSeconds) {
       return NextResponse.json({
         ok: true,
         message: "Token still valid",
@@ -90,29 +128,40 @@ export async function POST() {
     }
 
     if (!session.refreshToken) {
-      await redis.del(sessKey(sessionNamespace, sid));
+      await destroySession(redis, sessionNamespace, sid, session);
       return NextResponse.json({ redirect: "/api/auth/login" }, { status: 401 });
     }
 
-    // ─── Distributed lock — prevent concurrent refresh races ─────────────────
-    // Multiple browser tabs can call /api/auth/refresh simultaneously when the
-    // token is close to expiry. KC refresh tokens are single-use; the second
-    // concurrent call would receive "Maximum allowed refresh token reuse exceeded."
-    // Acquire a short-lived lock on this sid. The losing tab waits briefly and
-    // returns 200 — the winning tab's Set-Cookie has already updated neon_sid in
-    // the browser (shared across all tabs for the same origin), so the losing
-    // tab's next real request will carry the new sid.
-    const acquired = await redis.set(lockKey, "1", { NX: true, EX: 10 });
-    if (!acquired) {
-      await new Promise<void>((r) => setTimeout(r, 300));
-      // Return the current (pre-rotation) accessExpiresAt so the losing tab
-      // reschedules its timer. The new neon_sid cookie set by the winning tab
-      // is already in the browser; when this timer fires (~30s later) the
-      // remaining > 120 early-exit will return the correct new expiry.
-      return NextResponse.json({ ok: true, message: "Refresh in progress", accessExpiresAt: session.accessExpiresAt });
+    if (session.refreshExpiresAt && session.refreshExpiresAt < now) {
+      await destroySession(redis, sessionNamespace, sid, session);
+      return NextResponse.json(
+        { redirect: "/api/auth/login", reason: "refresh_expired" },
+        { status: 401 },
+      );
     }
 
-    // ─── Refresh tokens at Keycloak ──────────────────────────────────────────
+    const acquired = await redis.set(lockKey, "1", {
+      NX: true,
+      EX: policy.refreshLockTtlSeconds,
+    });
+    lockAcquired = Boolean(acquired);
+
+    if (!lockAcquired) {
+      await new Promise<void>((resolve) => setTimeout(resolve, policy.refreshLockWaitMs));
+
+      const rotated = await readRotatedSession(redis, sessionNamespace, sid);
+      if (rotated) return respondWithRotatedSession(rotated, env);
+
+      const latestRaw = await redis.get(sessKey(sessionNamespace, sid)).catch(() => null);
+      const latest = latestRaw ? (JSON.parse(latestRaw) as V4Session) : session;
+      return NextResponse.json({
+        ok: true,
+        message: "Refresh in progress",
+        accessExpiresAt: latest.accessExpiresAt,
+        csrfToken: latest.csrfToken,
+      });
+    }
+
     const tokens = await refreshTokens({
       baseUrl,
       realm,
@@ -120,11 +169,8 @@ export async function POST() {
       refreshToken: session.refreshToken,
     });
 
-    // ─── Rotate session ID ───────────────────────────────────────────────────
     const newSid = generateSid();
     const newCsrfToken = randomUUID();
-
-    // Re-decode claims — roles may have changed (e.g. org membership updated)
     const claims = decodeJwtPayload(tokens.access_token);
 
     const updatedSession: V4Session = {
@@ -141,23 +187,14 @@ export async function POST() {
       lastSeenAt: now,
     };
 
-    // Re-normalize organizations from refreshed token if claim is present.
-    // NOTE: This only re-reads the JWT organization claim — it does NOT re-run
-    // the 3-pass KC admin API enrichment from the callback (workbenches, names).
-    // Org claim changes (added/removed memberships) are picked up here;
-    // workbench role changes require a full re-login to take effect.
     if (claims.organization) {
       const refreshedOrgs = normalizeOrganizationClaim(claims.organization);
       if (Object.keys(refreshedOrgs).length > 0) {
-        // Preserve enriched roles/names from the existing session for orgs still present.
-        // Only add/remove orgs; don't overwrite roles that came from the admin API.
         for (const [alias, membership] of Object.entries(refreshedOrgs)) {
           if (!updatedSession.organizations[alias]) {
-            // New org — add with base data (no enriched roles yet)
             updatedSession.organizations[alias] = membership;
           }
         }
-        // Remove orgs the user is no longer a member of
         for (const alias of Object.keys(updatedSession.organizations)) {
           if (!refreshedOrgs[alias]) {
             delete updatedSession.organizations[alias];
@@ -166,43 +203,38 @@ export async function POST() {
       }
     }
 
-    // Preserve the remaining absolute TTL from the original session.
-    // Resetting to 28800 on every refresh would allow indefinite session
-    // extension — the 8h window must be anchored to the original login time.
     const remainingTtl = await redis.ttl(sessKey(sessionNamespace, sid));
-    const sessionTtl = remainingTtl > 0 ? remainingTtl : 28800;
+    const sessionTtl = remainingTtl > 0 ? remainingTtl : policy.sessionTtlSeconds;
 
-    // Write new key, delete old (atomic rotation)
     await redis.set(
       sessKey(sessionNamespace, newSid),
       JSON.stringify(updatedSession),
       { EX: sessionTtl },
     );
+    await redis.set(
+      sidRotationKey(sessionNamespace, sid),
+      newSid,
+      { EX: policy.refreshRotationGraceSeconds },
+    );
     await redis.del(sessKey(sessionNamespace, sid));
 
-    // Update user session index
     if (session.userId) {
-      await redis.sRem(userSessionsKey(sessionNamespace, session.userId), sid);
-      await redis.sAdd(userSessionsKey(sessionNamespace, session.userId), newSid);
+      const sessionIndexKey = userSessionsKey(sessionNamespace, session.userId);
+      await redis.sRem(sessionIndexKey, sid);
+      await redis.sAdd(sessionIndexKey, newSid);
+      await redis.expire(sessionIndexKey, sessionTtl);
     }
 
-    await setSessionCookie(newSid, env);
-    await setCsrfCookie(newCsrfToken, env);
+    await setSessionCookie(newSid, env, sessionTtl);
+    await setCsrfCookie(newCsrfToken, env, sessionTtl);
 
-    await redis.del(lockKey).catch(() => { /* best effort */ });
     return NextResponse.json({
       ok: true,
       accessExpiresAt: updatedSession.accessExpiresAt,
       csrfToken: newCsrfToken,
     });
   } catch (e: unknown) {
-    await redis.del(lockKey).catch(() => { /* best effort */ });
     const reason = e instanceof Error ? e.message : "Refresh failed";
-
-    // Hard failure: Keycloak explicitly rejected this session.
-    // Covers: invalid_grant (RT expired/revoked/reused), Session not active,
-    // Token not found, user/client disabled.
-    // ONLY in these cases do we destroy the Redis session and force re-login.
     const isHardFailure =
       reason.includes("invalid_grant") ||
       reason.includes("Session not active") ||
@@ -210,15 +242,16 @@ export async function POST() {
       reason.includes("client not found");
 
     if (isHardFailure) {
-      try { await redis.del(sessKey(sessionNamespace, sid)); } catch { /* best effort */ }
-      console.error("[auth/refresh] KC session invalidated — re-login required:", reason);
+      await destroySession(redis, sessionNamespace, sid, sessionForCleanup).catch(() => {});
+      console.error("[auth/refresh] KC session invalidated; re-login required:", reason);
       return NextResponse.json({ redirect: "/api/auth/login", reason }, { status: 401 });
     }
 
-    // Transient failure: KC unavailable, network timeout, 5xx, DNS, etc.
-    // Keep the Redis session alive so the user is not force-logged out.
-    // Return a retryable 503 so the client reschedules the refresh timer.
-    console.warn("[auth/refresh] Transient KC failure — session preserved, will retry:", reason);
+    console.warn("[auth/refresh] Transient KC failure; session preserved, will retry:", reason);
     return NextResponse.json({ ok: false, retryAfter: 30, reason }, { status: 503 });
+  } finally {
+    if (lockAcquired) {
+      await redis.del(lockKey).catch(() => {});
+    }
   }
 }

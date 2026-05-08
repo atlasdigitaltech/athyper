@@ -47,7 +47,7 @@ export function RowMetaStrip({
       {!suppressTime && updatedAt && (
         <RelativeTimeCell
           value={updatedAt}
-          className="w-6 text-right text-xs tabular-nums text-muted-foreground/40"
+          className="w-6 text-right text-xs tabular-nums text-muted-foreground/60"
         />
       )}
 

@@ -19,11 +19,14 @@ export function ThemeProvider() {
   const { appearanceMode, seedFromBootstrap, setResolvedAppearanceMode } =
     usePreferencesStore();
 
-  // Seed with defaults on first mount (no server profile yet).
+  // Seed with the preset already present on <html> so a cookie-restored hard
+  // refresh is not immediately overwritten by client defaults.
   // When a user logs in and the session contains uiProfile, call
   // seedFromBootstrap(uiProfile) again from SessionProvider.
   useEffect(() => {
-    usePreferencesStore.getState().seedFromBootstrap({});
+    usePreferencesStore.getState().seedFromBootstrap({
+      themePreset: document.documentElement.dataset.themePreset,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

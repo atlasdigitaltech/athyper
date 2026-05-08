@@ -113,7 +113,7 @@ export default function DashboardPage() {
             {inboxLoading ? (
               <Skeleton className="h-5 w-8 rounded-full" />
             ) : pendingCount > 0 ? (
-              <Badge variant="warning" className="text-[10px]">{pendingCount}</Badge>
+              <Badge variant="warning" className="text-doc-support">{pendingCount}</Badge>
             ) : (
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100" />
             )}

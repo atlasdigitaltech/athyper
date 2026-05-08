@@ -69,6 +69,7 @@ import { createOperatorRoutes } from "./operator.routes.js";
 import { createMfaRoutes } from "./mfa.routes.js";
 import { createCcaRoutes } from "./company-code-access.routes.js";
 import { createIamAdminRoutes } from "./iam-admin.routes.js";
+import { createParameterRoutes } from "./parameter.routes.js";
 
 export interface IamRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -126,6 +127,7 @@ export function registerIamRoutes(router: Router, deps: IamRoutesDeps): Router {
   // Sprint 43: Company-code access admin + permission log viewer + IdP sync health
   createCcaRoutes(router, deps);
   createIamAdminRoutes(router, deps);
+  createParameterRoutes(router, deps);
 
   return router;
 }

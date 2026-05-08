@@ -4,6 +4,7 @@ import { useState, useRef, type ReactNode, type CSSProperties } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { overlayScrimVariants, type OverlayScrimTone } from "./overlay";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,9 +48,9 @@ export interface DrawerShellProps {
 
 // ── Overlay strength per intent ───────────────────────────────────────────────
 
-const OVERLAY: Record<DrawerIntent, string> = {
-  transactional: "bg-black/45 backdrop-blur-sm",
-  context:       "bg-black/20 backdrop-blur-[1px]",
+const OVERLAY_TONE: Record<DrawerIntent, OverlayScrimTone> = {
+  transactional: "drawer",
+  context:       "context",
 };
 
 // ── Width helpers ─────────────────────────────────────────────────────────────
@@ -154,7 +155,7 @@ export function DrawerShell({
           className={cn(
             "fixed inset-0 z-modal",
             "data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
-            OVERLAY[intent],
+            overlayScrimVariants({ tone: OVERLAY_TONE[intent] }),
           )}
         />
 
@@ -199,7 +200,7 @@ export function DrawerShell({
           {/* Header */}
           <div className="shrink-0 flex items-start gap-3 px-5 py-4 border-b border-border">
             {badge && (
-              <span className="shrink-0 mt-0.5 inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-muted text-muted-foreground border border-border/60 leading-none">
+              <span className="shrink-0 mt-0.5 inline-flex items-center rounded px-2 py-0.5 text-doc-badge font-semibold uppercase tracking-widest bg-muted text-muted-foreground border border-border/60">
                 {badge}
               </span>
             )}

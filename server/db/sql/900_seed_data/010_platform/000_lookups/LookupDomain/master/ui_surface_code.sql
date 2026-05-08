@@ -7,6 +7,11 @@ INSERT INTO control.lookup_value
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,
        true, 'active', '{}'::jsonb, '00000000-0000-0000-0000-000000000000'
 FROM (VALUES
+    -- Generic runtime entity list surface. entity_key on master.saved_view
+    -- differentiates simple masters, rich masters, and approvable documents.
+    ('entity.list',          'Entity List',                'ui.surface_code',
+     'Generic entity grid/list view used with saved_view.entity_key.',             5),
+
     -- ── Procurement ────────────────────────────────────────────────────────
     ('proc.po_list',           'Purchase Order List',        'ui.surface_code',
      'Purchase order grid/list view.',                                               10),

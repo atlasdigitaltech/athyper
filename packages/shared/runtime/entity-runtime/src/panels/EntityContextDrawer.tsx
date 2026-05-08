@@ -120,7 +120,7 @@ function panelTitle(activePanel: string | null, count: number | null | undefined
   return (
     <span className="flex items-center gap-2">
       {label}
-      <span className="inline-flex items-center h-5 px-1.5 rounded-full text-[11px] font-semibold bg-muted text-muted-foreground border border-border/60 leading-none tabular-nums">
+      <span className="inline-flex items-center h-5 px-1.5 rounded-full text-doc-subtitle font-semibold bg-muted text-muted-foreground border border-border/60 leading-none tabular-nums">
         {count}
       </span>
     </span>

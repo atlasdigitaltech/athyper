@@ -38,7 +38,10 @@ WITH persona_grants AS (
     ('admin', 'JOBS.BOARD.VIEW',   true),
     -- owner tier: full queue control (view + mutate)
     ('owner', 'JOBS.BOARD.VIEW',   true),
-    ('owner', 'JOBS.QUEUE.MANAGE', true)
+    ('owner', 'JOBS.QUEUE.MANAGE', true),
+    -- tenant parameter overrides are high-risk runtime behavior changes
+    ('admin', 'IAM.PARAMETER.MANAGE', true),
+    ('owner', 'IAM.PARAMETER.MANAGE', true)
   ) AS v(pc, pmc, is_granted) ON p.code = v.pc AND pm.code = v.pmc
 )
 INSERT INTO shared.persona_permission (persona_id, permission_id, is_granted, created_by)

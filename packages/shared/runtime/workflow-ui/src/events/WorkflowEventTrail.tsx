@@ -13,7 +13,7 @@ export function WorkflowEventTrail({ events }: WorkflowEventTrailProps) {
       {events.map((event) => (
         <div
           key={event.id}
-          className="flex items-start gap-2 [font-size:var(--doc-support-size)] text-muted-foreground"
+          className="flex items-start gap-2 text-doc-support text-muted-foreground"
         >
           <span className="w-32 shrink-0">{formatDate(event.created_at)}</span>
           <span>{event.actor_name ?? "System"}</span>

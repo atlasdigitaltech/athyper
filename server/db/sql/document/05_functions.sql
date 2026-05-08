@@ -2129,6 +2129,297 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION document.trg_je_lifecycle_log()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, log, control, pg_catalog
+AS $$
+DECLARE
+    v_event_id     uuid := shared.uuidv7();
+    v_lc_id        uuid;
+    v_from_state   uuid;
+    v_to_state     uuid;
+    v_operation    text;
+    v_actor        uuid;
+    v_created_by   uuid;
+    v_payload      jsonb;
+BEGIN
+    IF OLD.status IS NOT DISTINCT FROM NEW.status THEN
+        RETURN NULL;
+    END IF;
+
+    v_actor := COALESCE(
+        nullif(current_setting('app.current_principal_id', true), '')::uuid,
+        NEW.status_changed_by,
+        NEW.updated_by,
+        OLD.updated_by,
+        NEW.created_by
+    );
+    v_created_by := COALESCE(v_actor, NEW.created_by, OLD.created_by);
+
+    SELECT lc.id
+      INTO v_lc_id
+      FROM control.lifecycle lc
+     WHERE lc.code = 'journal_entry'
+       AND lc.tenant_id IS NULL
+     LIMIT 1;
+
+    IF v_lc_id IS NOT NULL THEN
+        SELECT ls.id INTO v_from_state
+          FROM control.lifecycle_state ls
+         WHERE ls.lifecycle_id = v_lc_id
+           AND ls.code = OLD.status
+         LIMIT 1;
+
+        SELECT ls.id INTO v_to_state
+          FROM control.lifecycle_state ls
+         WHERE ls.lifecycle_id = v_lc_id
+           AND ls.code = NEW.status
+         LIMIT 1;
+
+        SELECT lt.operation_code
+          INTO v_operation
+          FROM control.lifecycle_transition lt
+         WHERE lt.lifecycle_id = v_lc_id
+           AND lt.from_state_id IS NOT DISTINCT FROM v_from_state
+           AND lt.to_state_id IS NOT DISTINCT FROM v_to_state
+         LIMIT 1;
+    END IF;
+
+    v_operation := COALESCE(
+        v_operation,
+        CASE NEW.status
+            WHEN 'created'          THEN 'complete'
+            WHEN 'pending_approval' THEN 'submit'
+            WHEN 'approved'         THEN 'approve'
+            WHEN 'rejected'         THEN 'deny'
+            WHEN 'posted'           THEN 'post'
+            WHEN 'reversed'         THEN 'reverse'
+            WHEN 'draft'            THEN 'reopen'
+            ELSE 'status_change'
+        END
+    );
+
+    v_payload := jsonb_build_object(
+        'je_number', NEW.je_number,
+        'source_doc_type', NEW.source_doc_type,
+        'is_reversal', NEW.is_reversal,
+        'status_changed_at', NEW.status_changed_at,
+        'status_changed_by', COALESCE(NEW.status_changed_by, v_actor),
+        'before', jsonb_build_object('status', OLD.status),
+        'after', jsonb_build_object('status', NEW.status)
+    );
+
+    INSERT INTO log.entity_lifecycle_log (
+        id, tenant_id, entity_type, entity_id, lifecycle_id, operation_code,
+        from_status, to_status, from_state_id, to_state_id,
+        actor_id, actor_type, company_code_id, remarks, payload, log_type, created_by
+    )
+    VALUES (
+        v_event_id, NEW.tenant_id, 'journal_entry', NEW.id, v_lc_id, v_operation,
+        OLD.status, NEW.status, v_from_state, v_to_state,
+        v_actor, 'principal', NEW.company_code_id,
+        format('Journal entry status changed from %s to %s', OLD.status, NEW.status),
+        v_payload, 'business', v_created_by
+    );
+
+    INSERT INTO log.audit_log (
+        id, tenant_id, entity_type, entity_id, operation, actor_id, actor_type,
+        company_code_id, old_values, new_values, changed_fields, log_type, created_by
+    )
+    VALUES (
+        v_event_id, NEW.tenant_id, 'journal_entry', NEW.id, 'status_change', v_actor, 'principal',
+        NEW.company_code_id,
+        jsonb_build_object('status', OLD.status),
+        jsonb_build_object('status', NEW.status),
+        ARRAY['status'], 'business', v_created_by
+    );
+
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_je_field_audit_log()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, log, pg_catalog
+AS $$
+DECLARE
+    v_event_id   uuid := shared.uuidv7();
+    v_old        jsonb;
+    v_new        jsonb;
+    v_changed    text[];
+    v_actor      uuid;
+    v_created_by uuid;
+    v_tenant_id  uuid;
+    v_entity_id  uuid;
+    v_company_id uuid;
+    v_operation  text;
+    v_base_excluded text[] := ARRAY[
+        'updated_at', 'updated_by',
+        'status_changed_at', 'status_changed_by',
+        'is_active', 'posted_at', 'posted_by', 'reversed_by_id',
+        'total_debit', 'total_credit', 'line_count'
+    ];
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        v_new := to_jsonb(NEW) - v_base_excluded;
+        SELECT array_agg(k ORDER BY k)
+          INTO v_changed
+          FROM jsonb_object_keys(v_new) AS keys(k);
+
+        v_actor      := COALESCE(NEW.created_by, NEW.updated_by);
+        v_created_by := COALESCE(v_actor, NEW.created_by);
+        v_tenant_id  := NEW.tenant_id;
+        v_entity_id  := NEW.id;
+        v_company_id := NEW.company_code_id;
+        v_operation  := 'insert';
+    ELSIF TG_OP = 'DELETE' THEN
+        v_old := to_jsonb(OLD) - v_base_excluded;
+        SELECT array_agg(k ORDER BY k)
+          INTO v_changed
+          FROM jsonb_object_keys(v_old) AS keys(k);
+
+        v_actor      := COALESCE(
+            nullif(current_setting('app.current_principal_id', true), '')::uuid,
+            OLD.updated_by,
+            OLD.created_by
+        );
+        v_created_by := COALESCE(v_actor, OLD.created_by);
+        v_tenant_id  := OLD.tenant_id;
+        v_entity_id  := OLD.id;
+        v_company_id := OLD.company_code_id;
+        v_operation  := 'delete';
+    ELSE
+        v_old := to_jsonb(OLD) - (v_base_excluded || ARRAY['status']);
+        v_new := to_jsonb(NEW) - (v_base_excluded || ARRAY['status']);
+
+        SELECT array_agg(n.key ORDER BY n.key)
+          INTO v_changed
+          FROM jsonb_each(v_new) AS n(key, value)
+          LEFT JOIN jsonb_each(v_old) AS o(key, value) ON o.key = n.key
+         WHERE n.value IS DISTINCT FROM o.value;
+
+        IF COALESCE(array_length(v_changed, 1), 0) = 0 THEN
+            RETURN NULL;
+        END IF;
+
+        v_actor      := COALESCE(
+            nullif(current_setting('app.current_principal_id', true), '')::uuid,
+            NEW.updated_by,
+            OLD.updated_by,
+            NEW.created_by
+        );
+        v_created_by := COALESCE(v_actor, NEW.updated_by, NEW.created_by);
+        v_tenant_id  := NEW.tenant_id;
+        v_entity_id  := NEW.id;
+        v_company_id := NEW.company_code_id;
+        v_operation  := 'update';
+    END IF;
+
+    INSERT INTO log.audit_log (
+        id, tenant_id, entity_type, entity_id, operation,
+        actor_id, actor_type, company_code_id,
+        old_values, new_values, changed_fields, log_type, created_by
+    )
+    VALUES (
+        v_event_id, v_tenant_id, 'journal_entry', v_entity_id, v_operation,
+        v_actor, 'principal', v_company_id,
+        v_old, v_new, COALESCE(v_changed, ARRAY[]::text[]), 'business', v_created_by
+    );
+
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_jl_field_audit_log()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, log, pg_catalog
+AS $$
+DECLARE
+    v_event_id   uuid := shared.uuidv7();
+    v_old        jsonb;
+    v_new        jsonb;
+    v_changed    text[];
+    v_actor      uuid;
+    v_created_by uuid;
+    v_tenant_id  uuid;
+    v_line_id    uuid;
+    v_company_id uuid;
+    v_operation  text;
+    v_excluded   text[] := ARRAY['updated_at', 'updated_by'];
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        v_new := to_jsonb(NEW) - v_excluded;
+        SELECT array_agg(k ORDER BY k)
+          INTO v_changed
+          FROM jsonb_object_keys(v_new) AS keys(k);
+
+        v_actor      := COALESCE(NEW.created_by, NEW.updated_by);
+        v_created_by := COALESCE(v_actor, NEW.created_by);
+        v_tenant_id  := NEW.tenant_id;
+        v_line_id    := NEW.id;
+        v_company_id := NEW.company_code_id;
+        v_operation  := 'insert';
+    ELSIF TG_OP = 'DELETE' THEN
+        v_old := to_jsonb(OLD) - v_excluded;
+        SELECT array_agg(k ORDER BY k)
+          INTO v_changed
+          FROM jsonb_object_keys(v_old) AS keys(k);
+
+        v_actor      := COALESCE(
+            nullif(current_setting('app.current_principal_id', true), '')::uuid,
+            OLD.updated_by,
+            OLD.created_by
+        );
+        v_created_by := COALESCE(v_actor, OLD.created_by);
+        v_tenant_id  := OLD.tenant_id;
+        v_line_id    := OLD.id;
+        v_company_id := OLD.company_code_id;
+        v_operation  := 'delete';
+    ELSE
+        v_old := to_jsonb(OLD) - v_excluded;
+        v_new := to_jsonb(NEW) - v_excluded;
+
+        SELECT array_agg(n.key ORDER BY n.key)
+          INTO v_changed
+          FROM jsonb_each(v_new) AS n(key, value)
+          LEFT JOIN jsonb_each(v_old) AS o(key, value) ON o.key = n.key
+         WHERE n.value IS DISTINCT FROM o.value;
+
+        IF COALESCE(array_length(v_changed, 1), 0) = 0 THEN
+            RETURN NULL;
+        END IF;
+
+        v_actor      := COALESCE(
+            nullif(current_setting('app.current_principal_id', true), '')::uuid,
+            NEW.updated_by,
+            OLD.updated_by,
+            NEW.created_by
+        );
+        v_created_by := COALESCE(v_actor, NEW.updated_by, NEW.created_by);
+        v_tenant_id  := NEW.tenant_id;
+        v_line_id    := NEW.id;
+        v_company_id := NEW.company_code_id;
+        v_operation  := 'update';
+    END IF;
+
+    INSERT INTO log.audit_log (
+        id, tenant_id, entity_type, entity_id, operation,
+        actor_id, actor_type, company_code_id,
+        old_values, new_values, changed_fields, log_type, created_by
+    )
+    VALUES (
+        v_event_id, v_tenant_id, 'journal_line', v_line_id, v_operation,
+        v_actor, 'principal', v_company_id,
+        v_old, v_new, COALESCE(v_changed, ARRAY[]::text[]), 'business', v_created_by
+    );
+
+    RETURN NULL;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION document.trg_jl_validate_posting_controls_fn()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -2265,6 +2556,65 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- =============================================================================
+-- §JE  document.journal_entry — BEFORE INSERT: code + name auto-population
+-- =============================================================================
+-- Reads naming_policy.auto_name_rule from control.entity (meta-driven, no
+-- hardcodes) so customers can reconfigure the rule without a code deploy.
+--
+-- code  ← je_number (already set by the app route via numbering_series)
+-- name  ← description when non-empty; else fallback template from meta
+--
+-- auto_name_rule shape (in naming_policy):
+--   { "strategy": "description_or_fallback",
+--     "fallback_template": "{prefix} – {date}",
+--     "date_format": "DD Mon YYYY" }
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION document.trg_je_before_insert()
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = document, control AS $$
+DECLARE
+    v_naming   jsonb;
+    v_rule     jsonb;
+    v_prefix   text;
+    v_date_fmt text;
+BEGIN
+    -- Load naming policy from entity meta (platform-level, tenant_id IS NULL)
+    SELECT e.naming_policy
+      INTO v_naming
+      FROM control.entity e
+     WHERE e.entity_code = 'journal_entry'
+       AND e.tenant_id IS NULL;
+
+    v_rule     := COALESCE(v_naming -> 'auto_name_rule', '{}'::jsonb);
+    v_prefix   := COALESCE(v_naming ->> 'prefix', 'JE');
+    v_date_fmt := COALESCE(v_rule ->> 'date_format', 'DD Mon YYYY');
+
+    -- code ← je_number (already generated by app route)
+    IF NEW.code IS NULL OR btrim(NEW.code) = '' THEN
+        NEW.code := COALESCE(NEW.je_number, '');
+    END IF;
+
+    -- name ← description (user-entered) or meta-configured fallback
+    IF NEW.name IS NULL OR btrim(NEW.name) = '' THEN
+        IF NEW.description IS NOT NULL AND btrim(NEW.description) <> '' THEN
+            NEW.name := btrim(NEW.description);
+        ELSE
+            NEW.name := v_prefix || ' – '
+                || to_char(COALESCE(NEW.posting_date, CURRENT_DATE), v_date_fmt);
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION document.trg_je_before_insert() IS
+    'BEFORE INSERT on document.journal_entry. Sets code from je_number and '
+    'derives name from description or naming_policy.auto_name_rule fallback. '
+    'Meta-driven: rule lives in control.entity.naming_policy.';
 
 CREATE OR REPLACE FUNCTION document.trg_jlr_append_only_guard()
 RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$

@@ -120,7 +120,7 @@ export function PaymentAllocationLinesGrid({
                             {line.item_code}
                           </div>
                           {invoiceDate && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5">{invoiceDate}</div>
+                            <div className="text-doc-support text-muted-foreground mt-0.5">{invoiceDate}</div>
                           )}
                         </>
                       ) : (

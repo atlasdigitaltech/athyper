@@ -112,7 +112,7 @@ export default function DeliveriesPage() {
         <div className="mb-4 flex flex-wrap gap-2">
           {Object.entries(counts).map(([status, count]) => (
             <div key={status} className="flex items-center gap-1.5 rounded-full border px-2.5 py-0.5">
-              <Badge variant={STATUS_VARIANT[status as DeliveryStatus] ?? "outline"} className="text-[9px] px-1">{status}</Badge>
+              <Badge variant={STATUS_VARIANT[status as DeliveryStatus] ?? "outline"} className="text-doc-field-label px-1">{status}</Badge>
               <span className="text-xs font-medium">{count}</span>
             </div>
           ))}
@@ -131,7 +131,7 @@ export default function DeliveriesPage() {
         <div className="overflow-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b text-left text-[10px] text-muted-foreground uppercase tracking-wider">
+              <tr className="border-b text-left text-doc-support text-muted-foreground uppercase tracking-wider">
                 <th className="pb-2 pr-3 font-medium">Status</th>
                 <th className="pb-2 pr-3 font-medium">Channel</th>
                 <th className="pb-2 pr-3 font-medium">Recipient</th>
@@ -144,9 +144,9 @@ export default function DeliveriesPage() {
               {records.map((r) => (
                 <tr key={r.id}>
                   <td className="py-2 pr-3">
-                    <Badge variant={STATUS_VARIANT[r.status]} className="text-[10px]">{r.status}</Badge>
+                    <Badge variant={STATUS_VARIANT[r.status]} className="text-doc-support">{r.status}</Badge>
                   </td>
-                  <td className="py-2 pr-3 font-mono text-[10px]">{r.channel}</td>
+                  <td className="py-2 pr-3 font-mono text-doc-support">{r.channel}</td>
                   <td className="py-2 pr-3 max-w-[160px] truncate text-muted-foreground">{r.recipientRef}</td>
                   <td className="py-2 pr-3 text-center">{r.attempts}</td>
                   <td className="py-2 pr-3 text-muted-foreground whitespace-nowrap">

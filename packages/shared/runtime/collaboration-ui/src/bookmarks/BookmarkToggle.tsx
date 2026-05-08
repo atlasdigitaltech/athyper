@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart } from "lucide-react";
+import { Star } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 
 export interface BookmarkToggleProps {
@@ -13,7 +13,7 @@ export interface BookmarkToggleProps {
 }
 
 /**
- * BookmarkToggle — per-row star/heart icon.
+ * BookmarkToggle — per-row favourites icon.
  *
  * Props-driven: no internal data fetching.
  * Parent (RowMetaStrip) resolves bookmark state via useRecordBookmarks
@@ -31,7 +31,8 @@ export function BookmarkToggle({
 }: BookmarkToggleProps) {
   return (
     <button
-      aria-label={bookmarked ? "Remove bookmark" : "Bookmark record"}
+      aria-label={bookmarked ? "Remove from favourites" : "Add to favourites"}
+      title={bookmarked ? "Remove from favourites" : "Add to favourites"}
       aria-pressed={bookmarked}
       disabled={isPending}
       onClick={(e) => {
@@ -47,7 +48,7 @@ export function BookmarkToggle({
         className,
       )}
     >
-      <Heart
+      <Star
         className={cn(
           "h-3.5 w-3.5 transition-all",
           bookmarked && "fill-current",

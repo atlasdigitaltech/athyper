@@ -26,6 +26,8 @@ services:
       - ${ATHYPER_DATA}/telemetry/metrics:/prometheus
     networks: [edge, internal]
     depends_on:
+      alertmanager:
+        condition: service_healthy
       memorycache_exporter:
         condition: service_started
     healthcheck:

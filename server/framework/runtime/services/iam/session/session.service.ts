@@ -18,6 +18,7 @@ import { sql } from "kysely";
 import type { Kysely } from "kysely";
 
 import { jitProvisionPrincipal } from "../jit/jit.service.js";
+import { resolveParameterSnapshot } from "../parameters/parameter-resolver.service.js";
 import type {
   SessionQuery,
   SessionResponse,
@@ -534,7 +535,12 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
       principal_id: principalId,
       response,
     };
-    await cache.set(key, JSON.stringify(envelope), "EX", SESSION_CACHE_TTL_SEC);
+    const sessionCacheTtlSec = await resolveNumericParameter(
+      tenantId,
+      "runtime.session.cache_ttl_seconds",
+      SESSION_CACHE_TTL_SEC,
+    );
+    await cache.set(key, JSON.stringify(envelope), "EX", sessionCacheTtlSec);
     metrics?.write(tenant);
 
     // P2: Track this key in the per-principal set so the outbox worker can use
@@ -542,10 +548,22 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
     // on every write so it stays alive as long as any session for this sub is active.
     if (typeof cache.sadd === "function" && typeof cache.expire === "function") {
       await cache.sadd(`principal_sessions:${sub}`, key);
-      await cache.expire(`principal_sessions:${sub}`, SESSION_CACHE_TTL_SEC);
+      await cache.expire(`principal_sessions:${sub}`, sessionCacheTtlSec);
     }
 
     return response;
+  }
+
+  async function resolveNumericParameter(tenantId: string, code: string, fallback: number): Promise<number> {
+    try {
+      const namespace = code.split(".").slice(0, 2).join(".");
+      const snapshot = await resolveParameterSnapshot(db, cache, tenantId, namespace);
+      const raw = snapshot.values[code];
+      const value = typeof raw === "number" ? raw : Number(raw);
+      return Number.isFinite(value) && value > 0 ? value : fallback;
+    } catch {
+      return fallback;
+    }
   }
 
   async function invalidate(

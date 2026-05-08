@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { NeonLogoPrimary } from "@athyper/brand";
 import { AthyperLogo } from "@athyper/icons/custom/AthyperLogo";
 import { getCsrfToken } from "@/lib/bff-fetch";
+import { TRUSTED_DEVICE_TTL_DAYS } from "@/lib/auth/session-policy";
 
 const SLIDES = [
   {
@@ -85,7 +86,7 @@ function MfaChallengeInner() {
           await fetch("/api/auth/mfa/trust-device", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-            body: JSON.stringify({ device_name: deviceLabel.trim() || undefined, ttl_days: 30 }),
+            body: JSON.stringify({ device_name: deviceLabel.trim() || undefined, ttl_days: TRUSTED_DEVICE_TTL_DAYS }),
           }).catch(() => { /* best-effort */ });
         }
         router.replace(returnUrl);
@@ -177,7 +178,7 @@ function MfaChallengeInner() {
           await fetch("/api/auth/mfa/trust-device", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-            body: JSON.stringify({ device_name: deviceLabel.trim() || "Security Key Device", ttl_days: 30 }),
+            body: JSON.stringify({ device_name: deviceLabel.trim() || "Security Key Device", ttl_days: TRUSTED_DEVICE_TTL_DAYS }),
           }).catch(() => {});
         }
         router.replace(returnUrl);
@@ -215,7 +216,7 @@ function MfaChallengeInner() {
             <p className="text-xs font-semibold tracking-widest uppercase opacity-50">
               {current.workspace}
             </p>
-            <h3 className="text-[2.2rem] font-bold leading-[1.15] whitespace-pre-line">
+            <h3 className="text-display-auth font-bold whitespace-pre-line">
               {current.headline}
             </h3>
             <p className="text-base leading-relaxed opacity-60">
@@ -307,7 +308,7 @@ function MfaChallengeInner() {
                   onKeyDown={(e) => e.key === "Enter" && handleVerify()}
                   placeholder="000000"
                   disabled={pending}
-                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-center font-mono text-2xl tracking-[0.5em] outline-none ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-center font-mono text-2xl tracking-otp outline-none ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
 
                 <button
@@ -343,7 +344,7 @@ function MfaChallengeInner() {
                 <div className="space-y-2 pt-1">
                   <label className="flex items-center gap-2.5 cursor-pointer select-none">
                     <input type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)} className="h-4 w-4 rounded border-input accent-primary"/>
-                    <span className="text-sm text-muted-foreground">Trust this device for 30 days</span>
+                    <span className="text-sm text-muted-foreground">Trust this device for {TRUSTED_DEVICE_TTL_DAYS} days</span>
                   </label>
                   {trustDevice && (
                     <input type="text" value={deviceLabel} onChange={(e) => setDeviceLabel(e.target.value)} placeholder="Device label (e.g. Work Laptop)" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"/>
@@ -363,7 +364,7 @@ function MfaChallengeInner() {
           <div>
             <button
               className="text-xs text-muted-foreground opacity-60 underline-offset-4 hover:underline"
-              onClick={() => { window.location.href = "/api/auth/logout"; }}
+              onClick={() => { window.location.href = "/logout"; }}
             >
               Sign out
             </button>

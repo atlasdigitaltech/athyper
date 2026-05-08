@@ -111,7 +111,7 @@ export default function OutboxPage() {
           {messages.map((msg) => (
             <RowCard
               key={msg.id}
-              badge={<Badge variant={STATUS_VARIANT[msg.status]} className="text-[10px]">{msg.status}</Badge>}
+              badge={<Badge variant={STATUS_VARIANT[msg.status]} className="text-doc-support">{msg.status}</Badge>}
               title={<>{msg.eventType} <span className="text-muted-foreground">→ {msg.targetService}</span></>}
               metadata={<>
                 <div className="flex gap-3">

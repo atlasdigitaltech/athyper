@@ -13133,8 +13133,8 @@ model saved_view {
   tenant                                                       tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sv_tenant_fk")
   principal_saved_view_updated_byToprincipal                   principal? @relation("saved_view_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "sv_updated_by_fk")
 
-  @@unique([tenant_id, scope, owner_principal_id, surface_code, name], map: "sv_name_uq", where: raw("(status = 'active'::text)"))
-  @@unique([tenant_id, scope, owner_principal_id, surface_code], map: "sv_one_default_uq", where: raw("((is_default = true) AND (status = 'active'::text))"))
+  @@unique([tenant_id, scope, owner_principal_id, surface_code, entity_key, name], map: "sv_name_uq", where: raw("(status = 'active'::text)"))
+  @@unique([tenant_id, scope, owner_principal_id, surface_code, entity_key], map: "sv_one_default_uq", where: raw("((is_default = true) AND (status = 'active'::text))"))
   @@unique([tenant_id, id], map: "sv_tenant_id_uq")
   @@index([tenant_id, surface_code, state_hash], map: "sv_hash_idx", where: raw("((state_hash IS NOT NULL) AND (status = 'active'::text))"))
   @@index([tenant_id, owner_principal_id, surface_code], map: "sv_owner_idx", where: raw("((status = 'active'::text) AND (owner_principal_id IS NOT NULL))"))

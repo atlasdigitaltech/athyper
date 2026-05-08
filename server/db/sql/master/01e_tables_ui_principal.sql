@@ -268,15 +268,17 @@ COMMENT ON COLUMN master.saved_view.version IS
     'Optimistic concurrency version. Incremented on every write. '
     'Client sends current version; server rejects stale updates.';
 
--- Active name uniqueness per owner+surface+scope
+-- Active name uniqueness per owner+surface+entity+scope
+DROP INDEX IF EXISTS master.sv_name_uq;
 CREATE UNIQUE INDEX IF NOT EXISTS sv_name_uq
-    ON master.saved_view (tenant_id, scope, owner_principal_id, surface_code, name)
+    ON master.saved_view (tenant_id, scope, owner_principal_id, surface_code, entity_key, name)
     NULLS NOT DISTINCT
     WHERE status = 'active';
 
--- At most one active default per owner+surface+scope
+-- At most one active default per owner+surface+entity+scope
+DROP INDEX IF EXISTS master.sv_one_default_uq;
 CREATE UNIQUE INDEX IF NOT EXISTS sv_one_default_uq
-    ON master.saved_view (tenant_id, scope, owner_principal_id, surface_code)
+    ON master.saved_view (tenant_id, scope, owner_principal_id, surface_code, entity_key)
     NULLS NOT DISTINCT
     WHERE is_default = true AND status = 'active';
 

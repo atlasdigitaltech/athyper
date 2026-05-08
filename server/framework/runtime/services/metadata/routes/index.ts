@@ -24,7 +24,7 @@
 
 import type { Router } from "express";
 import type { Kysely } from "kysely";
-import { createCompiledEntityRoute } from "./compiled-entity.route.js";
+import { createCompiledEntityRoute, type DescriptorCache } from "./compiled-entity.route.js";
 import { createEntityFlowRoute } from "./entity-flow.route.js";
 import { createLookupRoute } from "./lookup.route.js";
 import { createEntityOperationsRoute } from "./entity-operations.route.js";
@@ -41,6 +41,7 @@ export interface MetadataRoutesDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
   };
+  cache?: DescriptorCache;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string, personaId: string) => Promise<Record<string, { decision: string } | undefined>>;
 }

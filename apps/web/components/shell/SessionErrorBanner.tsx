@@ -152,7 +152,7 @@ function loginUrl() {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SessionErrorBanner() {
-  const { runtimeError, runtimeLoading, bff, retryRuntime } = useShellSession();
+  const { runtimeError, runtimeLoading, bff, retryRuntime, sessionPolicy } = useShellSession();
 
   // "Stay on page" converts the auth modal to a collapsed banner
   const [stayedOnPage, setStayedOnPage] = useState(false);
@@ -174,7 +174,10 @@ export function SessionErrorBanner() {
   // ── Auth treatment: modal (unless user chose "stay on page") ─────────────
   if (meta.treatment === "auth" && !stayedOnPage) {
     return (
-      <SessionExpiredDialog onStay={() => setStayedOnPage(true)} />
+      <SessionExpiredDialog
+        countdownSeconds={sessionPolicy.sessionExpiredRedirectCountdownSeconds}
+        onStay={() => setStayedOnPage(true)}
+      />
     );
   }
 

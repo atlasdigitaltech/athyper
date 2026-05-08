@@ -24,6 +24,7 @@
       "@athyper/svc-records":   ["./framework/runtime/services/records/index.ts"],
       "@athyper/svc-documents": ["./framework/runtime/services/documents/index.ts"],
       "@athyper/svc-collab":    ["./framework/runtime/services/collab/index.ts"],
+      "@athyper/svc-jobs":      ["./framework/runtime/services/jobs/index.ts"],
       "@athyper/svc-finance":   ["./framework/runtime/services/finance/index.ts"],
       "@athyper/svc-platform":  ["./framework/runtime/services/platform/index.ts"]
     }

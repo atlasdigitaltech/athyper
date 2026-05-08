@@ -73,6 +73,12 @@ CREATE TRIGGER trg_render_job_updated_at
 --   trg_je_workflow_gate           ← workflow approval gate (after status transition)
 -- =============================================================================
 
+-- A1: Auto-populate code + name on INSERT (fires before all other JE triggers)
+DROP TRIGGER IF EXISTS trg_je_auto_identity ON document.journal_entry;
+CREATE TRIGGER trg_je_auto_identity
+    BEFORE INSERT ON document.journal_entry
+    FOR EACH ROW EXECUTE FUNCTION document.trg_je_before_insert();
+
 -- G1: Immutability guard — blocks mutations on posted/reversed JEs
 DROP TRIGGER IF EXISTS trg_je_immutability_guard ON document.journal_entry;
 CREATE TRIGGER trg_je_immutability_guard
@@ -107,6 +113,19 @@ CREATE TRIGGER trg_je_status_transition_guard
     FOR EACH ROW
     WHEN (OLD.status IS DISTINCT FROM NEW.status)
     EXECUTE FUNCTION document.trg_je_status_transition_guard();
+
+DROP TRIGGER IF EXISTS trg_je_lifecycle_log ON document.journal_entry;
+CREATE TRIGGER trg_je_lifecycle_log
+    AFTER UPDATE OF status ON document.journal_entry
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION document.trg_je_lifecycle_log();
+
+DROP TRIGGER IF EXISTS trg_je_field_audit_log ON document.journal_entry;
+CREATE TRIGGER trg_je_field_audit_log
+    AFTER INSERT OR UPDATE OR DELETE ON document.journal_entry
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_je_field_audit_log();
 
 DROP TRIGGER IF EXISTS trg_je_sync_fiscal_period ON document.journal_entry;
 CREATE TRIGGER trg_je_sync_fiscal_period
@@ -240,6 +259,12 @@ COMMENT ON TRIGGER trg_jl_check_budget ON document.journal_line IS
     'master.budget_allocation and ledger.budget_balance. Enforces overspend_policy: '
     'BLOCK/ESCALATE → hard exception; WARN → non-blocking warning; ALLOW → pass-through. '
     'Depends on: 08_functions/004c_document_finance.sql.';
+
+DROP TRIGGER IF EXISTS trg_jl_field_audit_log ON document.journal_line;
+CREATE TRIGGER trg_jl_field_audit_log
+    AFTER INSERT OR UPDATE OR DELETE ON document.journal_line
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_jl_field_audit_log();
 
 -- G2a: Cached totals sync — AFTER trigger recomputes header totals from lines
 DROP TRIGGER IF EXISTS trg_jl_sync_cached_totals ON document.journal_line;

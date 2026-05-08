@@ -7,7 +7,7 @@
  *
  * Runtime selection via MODE env var (default: "api"):
  *
- *   MODE=api        HTTP API server + workers (current default — unchanged)
+ *   MODE=api        HTTP API server, no job consumers
  *   MODE=worker     BullMQ workers + IAM outbox, no HTTP
  *   MODE=scheduler  BullMQ repeatable scheduler registration, no HTTP
  *

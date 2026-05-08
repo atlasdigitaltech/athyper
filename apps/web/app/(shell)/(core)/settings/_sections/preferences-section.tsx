@@ -16,6 +16,7 @@ import {
 import { usePreferencesStore, type AppearanceMode, type DensityCode } from "@/stores/preferences/usePreferencesStore";
 import { useShellSession } from "@/components/providers/SessionProvider";
 import { bffFetch } from "@/lib/bff-fetch";
+import { normalizePreferencesForBootstrap, readPreferenceMetadata } from "@/lib/preferences/ui-profile";
 import {
   Banner, SectionCard, DataTable, SkeletonCard, ToggleGroup,
   SourceChip, str, fmtDate,
@@ -200,8 +201,70 @@ const DENSITY_OPTIONS: { value: DensityCode; label: string; desc: string }[] = [
   { value: "spacious",    label: "Spacious",    desc: "Generous padding" },
 ];
 
+const HOME_WORKSPACE_OPTIONS = [
+  { value: "CORE", label: "Core Platform" },
+  { value: "FIN",  label: "Finance" },
+  { value: "SCM",  label: "Supply Chain" },
+  { value: "COM",  label: "Commercial" },
+  { value: "PPL",  label: "People" },
+  { value: "PRS",  label: "Projects & Services" },
+  { value: "OPS",  label: "Operations" },
+  { value: "AST",  label: "Assets & Facilities" },
+  { value: "PTR",  label: "Partner Collaboration" },
+];
+
+const HOME_MODULE_OPTIONS_BY_WORKSPACE: Record<string, { value: string; label: string }[]> = {
+  CORE: [
+    { value: "FND",  label: "Foundation Runtime" },
+    { value: "META", label: "Metadata Studio" },
+    { value: "IAM",  label: "Identity & Access Management" },
+    { value: "AUD",  label: "Audit & Governance" },
+    { value: "NTF",  label: "Notification Services" },
+  ],
+  FIN: [
+    { value: "ACC",      label: "Core Accounting" },
+    { value: "PAY",      label: "Payment Processing" },
+    { value: "TREASURY", label: "Treasury & Cash Management" },
+    { value: "BUDGET",   label: "Budget & Funds Control" },
+  ],
+  SCM: [
+    { value: "SRM",       label: "Supplier Relationship Management" },
+    { value: "SOURCE",    label: "Sourcing" },
+    { value: "CONTRACT",  label: "Contract Management" },
+    { value: "BUY",       label: "Procurement" },
+    { value: "INVENTORY", label: "Inventory Management" },
+  ],
+  COM: [
+    { value: "CRM",  label: "Customer Relationship Management" },
+    { value: "SALE", label: "Sales & Order Management" },
+  ],
+  PPL: [
+    { value: "HR",      label: "Human Resources" },
+    { value: "PAYROLL", label: "Payroll" },
+  ],
+  PRS: [
+    { value: "PRJCOST", label: "Project Management" },
+    { value: "ITSM",    label: "Service Management" },
+  ],
+  OPS: [
+    { value: "MAINT", label: "Maintenance Management" },
+    { value: "MFG",   label: "Manufacturing" },
+  ],
+  AST: [
+    { value: "ASSET",     label: "Asset Management" },
+    { value: "ASSETREMS", label: "Real Estate Asset Management" },
+    { value: "ASSETFM",   label: "Facility Management" },
+  ],
+  PTR: [
+    { value: "PCON", label: "Proposal & Contract Collaboration" },
+    { value: "OMI",  label: "Order Intake" },
+    { value: "IMO",  label: "Invoice Delivery" },
+    { value: "LOGX", label: "Logistics Collaboration" },
+  ],
+};
+
 export function PreferencesSection({ active }: { active: boolean }) {
-  const { appearanceMode, themePreset, densityCode, setAppearanceMode, setThemePreset, setDensityCode } =
+  const { appearanceMode, themePreset, densityCode, setAppearanceMode, setThemePreset, setDensityCode, seedFromBootstrap } =
     usePreferencesStore();
   const { bff } = useShellSession();
 
@@ -210,8 +273,8 @@ export function PreferencesSection({ active }: { active: boolean }) {
   const [timezone,   setTimezone]   = useState("Asia/Dubai");
   const [dateFormat, setDateFormat] = useState("%d/%m/%Y");
   const [weekStart,  setWeekStart]  = useState("1");
-  const [homeWs,     setHomeWs]     = useState("finance");
-  const [homeMod,    setHomeMod]    = useState("dashboard");
+  const [homeWs,     setHomeWs]     = useState("FIN");
+  const [homeMod,    setHomeMod]    = useState("ACC");
   const [digest,     setDigest]     = useState("daily");
 
   const [prefsLoaded, setPrefsLoaded] = useState(false);
@@ -219,6 +282,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
   const [saving,      setSaving]      = useState(false);
   const [saveStatus,  setSaveStatus]  = useState<"idle" | "saved" | "error">("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const homeModuleOptions = HOME_MODULE_OPTIONS_BY_WORKSPACE[homeWs] ?? HOME_MODULE_OPTIONS_BY_WORKSPACE.FIN ?? [];
 
   // Saved views
   const [views,        setViews]        = useState<SavedView[]>([]);
@@ -231,6 +295,8 @@ export function PreferencesSection({ active }: { active: boolean }) {
     setPrefsLoaded(true);
     bffFetch<Record<string, unknown>>("/api/user/preferences")
       .then((d) => {
+        seedFromBootstrap(normalizePreferencesForBootstrap(d));
+        const metadata = readPreferenceMetadata(d);
         if (d["language_code"])       setLanguage(String(d["language_code"]));
         if (d["timezone_code"])       setTimezone(String(d["timezone_code"]));
         if (d["date_format"])         setDateFormat(String(d["date_format"]));
@@ -238,9 +304,10 @@ export function PreferencesSection({ active }: { active: boolean }) {
         if (d["home_workspace_code"]) setHomeWs(String(d["home_workspace_code"]));
         if (d["home_module_code"])    setHomeMod(String(d["home_module_code"]));
         if (d["notification_digest"]) setDigest(String(d["notification_digest"]));
+        else if (typeof metadata["digest"] === "string") setDigest(metadata["digest"]);
       })
       .catch(() => { /* use defaults */ });
-  }, [active, prefsLoaded]);
+  }, [active, prefsLoaded, seedFromBootstrap]);
 
   // Load saved views once
   useEffect(() => {
@@ -500,11 +567,18 @@ export function PreferencesSection({ active }: { active: boolean }) {
               <label className="text-xs font-medium text-muted-foreground">Home Workspace</label>
               <SourceChip source="principal_ui_profile" />
             </div>
-            <Select value={homeWs} onValueChange={(v) => { setHomeWs(v); markDirty(); }}>
+            <Select
+              value={homeWs}
+              onValueChange={(v) => {
+                setHomeWs(v);
+                setHomeMod(HOME_MODULE_OPTIONS_BY_WORKSPACE[v]?.[0]?.value ?? "");
+                markDirty();
+              }}
+            >
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {["finance", "procurement", "hrm", "asset"].map((ws) => (
-                  <SelectItem key={ws} value={ws} className="text-sm capitalize">{ws}</SelectItem>
+                {HOME_WORKSPACE_OPTIONS.map((ws) => (
+                  <SelectItem key={ws.value} value={ws.value} className="text-sm">{ws.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -518,8 +592,8 @@ export function PreferencesSection({ active }: { active: boolean }) {
             <Select value={homeMod} onValueChange={(v) => { setHomeMod(v); markDirty(); }}>
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {["dashboard", "inbox", "reports"].map((m) => (
-                  <SelectItem key={m} value={m} className="text-sm capitalize">{m}</SelectItem>
+                {homeModuleOptions.map((m) => (
+                  <SelectItem key={m.value} value={m.value} className="text-sm">{m.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

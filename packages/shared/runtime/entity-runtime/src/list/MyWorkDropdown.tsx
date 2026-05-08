@@ -4,10 +4,10 @@
  * MyWorkDropdown — toolbar dropdown for quick personal-scope filters.
  *
  * Options rendered (metadata-gated):
- *   All              — always; clears all __assignee/__created_by/__bookmarked filters
- *   Assigned to me   — when entity has an assigned_to / assignee field
- *   Created by me    — when entity has a created_by field (almost universal)
- *   Starred by me    — always (bookmark infrastructure is unconditional)
+ *   All             — always; clears all __assignee/__created_by/__bookmarked filters
+ *   Assigned to me  — when entity has an assigned_to / assignee field
+ *   Created by me   — when entity has a created_by field (almost universal)
+ *   My favourites   — always (bookmark infrastructure is unconditional)
  *
  * Applies virtual filter keys (__assignee, __created_by, __bookmarked) which are
  * resolved server-side before the main field-filter builder.
@@ -25,11 +25,11 @@ const VK_ASSIGNEE   = "__assignee";
 const VK_CREATED_BY = "__created_by";
 const VK_BOOKMARKED = "__bookmarked";
 
-type VirtualMode = "all" | "assigned" | "created" | "starred";
+type VirtualMode = "all" | "assigned" | "created" | "favourites";
 
 function activeMode(filters: EntityListFilters): VirtualMode {
   const f = filters as Record<string, unknown>;
-  if (f[VK_BOOKMARKED]) return "starred";
+  if (f[VK_BOOKMARKED]) return "favourites";
   if (f[VK_ASSIGNEE])   return "assigned";
   if (f[VK_CREATED_BY]) return "created";
   return "all";
@@ -71,20 +71,20 @@ export function MyWorkDropdown({
     if (mode === "all")      { onSetFilters(base); return; }
     if (mode === "assigned") { onSetFilters({ ...base, [VK_ASSIGNEE]:   { op: "eq", value: ["me"] } } as EntityListFilters); return; }
     if (mode === "created")  { onSetFilters({ ...base, [VK_CREATED_BY]: { op: "eq", value: ["me"] } } as EntityListFilters); return; }
-    if (mode === "starred")  { onSetFilters({ ...base, [VK_BOOKMARKED]: { op: "eq", value: [true]  } } as EntityListFilters); return; }
+    if (mode === "favourites") { onSetFilters({ ...base, [VK_BOOKMARKED]: { op: "eq", value: [true]  } } as EntityListFilters); return; }
   };
 
   const label =
-    current === "assigned" ? "Assigned to me"  :
-    current === "created"  ? "Created by me"   :
-    current === "starred"  ? "Starred by me"   :
+    current === "assigned"   ? "Assigned to me" :
+    current === "created"    ? "Created by me"  :
+    current === "favourites" ? "My favourites"  :
     "My Work";
 
   const options: { mode: VirtualMode; label: string; show: boolean }[] = [
     { mode: "all",      label: "All",             show: true             },
     { mode: "assigned", label: "Assigned to me",  show: hasAssigneeField },
     { mode: "created",  label: "Created by me",   show: hasCreatedByField },
-    { mode: "starred",  label: "Starred by me",   show: true             },
+    { mode: "favourites", label: "My favourites", show: true             },
   ];
 
   const visibleOptions = options.filter((o) => o.show);

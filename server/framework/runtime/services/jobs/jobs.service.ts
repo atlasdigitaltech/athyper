@@ -146,6 +146,14 @@ export interface JobsServiceDeps {
   hooks?: JobHeartbeatHooks;
   /** Object storage adapter for pg_dump backup uploads. Optional — backup worker inactive if absent. */
   backupStorage?: BackupObjectStorage;
+  /**
+   * Whether this process should construct BullMQ Worker consumers.
+   *
+   * API and scheduler runtimes need Queue handles for producers, BullBoard, and
+   * repeatable scheduler upserts, but must not consume jobs. Worker runtime sets
+   * this true. Defaults true for direct package consumers and legacy tests.
+   */
+  workersEnabled?: boolean;
 }
 
 // ─── Queue name → queues key resolution ──────────────────────────────────────
@@ -191,6 +199,8 @@ export interface JobsService {
   stop(): Promise<void>;
   readonly queues: JobsQueues;
   readonly isRunning: boolean;
+  readonly tikaExtractEnabled: boolean;
+  readonly workersEnabled: boolean;
 }
 
 export function createJobsService(deps: JobsServiceDeps): JobsService {
@@ -208,6 +218,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     attachmentStorage,
     hooks,
     backupStorage,
+    workersEnabled = true,
     options = {},
   } = deps;
 
@@ -232,6 +243,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
   // Passing ConnectionOptions (not an existing IORedis instance) causes BullMQ
   // to create a fresh connection per object — safe and correct.
   const conn = connection;
+  const tikaExtractEnabled = Boolean(tikaUrl && attachmentStorage);
 
   // ── Queues (producers) ───────────────────────────────────────────────────
 
@@ -252,7 +264,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
 
   // ── Workers (consumers) ──────────────────────────────────────────────────
 
-  const workers: Worker[] = [
+  const workers: Worker[] = workersEnabled ? [
     createLifecycleTimerWorker({
       db,
       queue:      queues.lifecycleTimers,
@@ -290,12 +302,12 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     }),
     ...(kcAdmin ? [createKcSyncWorker({ db, kcAdmin, connection: conn, logger })] : []),
     createEndpointHealthWorker({ db, connection: conn, logger }),
-    ...(tikaUrl && attachmentStorage
+    ...(tikaExtractEnabled
       ? [createTikaExtractWorker({
           db,
           connection:    conn,
-          objectStorage: attachmentStorage,
-          tikaUrl,
+          objectStorage: attachmentStorage!,
+          tikaUrl:       tikaUrl!,
           queue:         queues.tikaExtract,
           logger,
         })]
@@ -304,7 +316,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
       ? [createBackupWorker({ connection: conn, backupStorage, logger })]
       : []),
     createStaleLockWorker({ db, connection: conn, logger }),
-  ];
+  ] : [];
 
   // ── Error handlers on workers ────────────────────────────────────────────
 
@@ -357,6 +369,8 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
 
   return {
     get isRunning() { return running; },
+    get tikaExtractEnabled() { return tikaExtractEnabled; },
+    get workersEnabled() { return workersEnabled; },
     queues,
 
     async start(): Promise<void> {
@@ -449,11 +463,11 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         { name: JOB_NAME.ENDPOINT_HEALTH_SWEEP, data: {} as Record<string, never> },
       );
 
-      // ── Tika extraction backfill sweep (only when worker is active) ──────
+      // ── Tika extraction backfill sweep (only when Tika is configured) ─────
       // Picks up rows where text_extraction_status IS NULL — covers uploads
       // that missed the inline enqueue (S3 ack → Redis add race, restarts)
       // plus any pre-existing rows from before the column was added.
-      if (tikaUrl && attachmentStorage) {
+      if (tikaExtractEnabled) {
         await queues.tikaExtract.upsertJobScheduler(
           SCHEDULER_ID.TIKA_EXTRACT_SWEEP,
           { every: tikaExtractSweepMs },
@@ -663,8 +677,9 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         kcSyncMs,
         kcSyncEnabled:               kcAdmin != null,
         endpointHealthSweepMs,
-        tikaExtractEnabled:          Boolean(tikaUrl && attachmentStorage),
+        tikaExtractEnabled,
         tikaExtractSweepMs,
+        workersEnabled,
       });
     },
 

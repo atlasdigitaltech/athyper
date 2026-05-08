@@ -23,7 +23,9 @@
     "policy:versions:fix": "syncpack fix-mismatches",
     "policy:peers": "tsx scripts/policy/verify-peer-ranges.ts",
     "policy:tsconfig": "tsx scripts/policy/verify-tsconfig.ts",
-    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig"
+    "policy:style-tokens": "tsx scripts/policy/audit-style-tokens.ts",
+    "policy:style-tokens:strict": "tsx scripts/policy/audit-style-tokens.ts --strict",
+    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:style-tokens"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -75,7 +75,8 @@ function TypeChip({
 }) {
   const baseClass = cn(
     "inline-flex items-center h-[34px] px-4 leading-none shrink-0",
-    "bg-foreground text-background text-xs font-semibold tracking-wider",
+    standalone ? "bg-foreground" : "bg-inherit",
+    "text-background text-xs font-semibold tracking-wider",
     standalone && "rounded-full border border-border",
     onClick && "transition-opacity hover:opacity-85",
   );
@@ -193,12 +194,12 @@ export function DocumentIdentityCard({
         <div className="flex items-center gap-3 flex-1 min-w-[200px]">
 
           {onBack ? (
-            <div className="inline-flex items-center h-[34px] rounded-full border border-border overflow-hidden shrink-0">
+            <div className="inline-flex items-center h-[34px] rounded-full border border-border overflow-hidden shrink-0 bg-foreground text-background">
               <button
                 type="button"
                 onClick={onBack}
                 aria-label="Go back"
-                className="flex items-center justify-center h-full w-9 bg-card text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border-r border-border"
+                className="flex h-full w-9 items-center justify-center border-r border-border bg-inherit text-inherit transition-opacity hover:opacity-85"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>

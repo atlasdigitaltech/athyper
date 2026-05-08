@@ -68,7 +68,7 @@ export function TypeChip({
         <button
           type="button"
           onClick={onBack}
-          className="flex h-full w-9 items-center justify-center border-r border-r-ring bg-foreground text-background transition-colors hover:bg-foreground/85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"
+          className="flex h-full w-9 items-center justify-center border-r border-r-ring bg-inherit text-inherit transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"
           aria-label="Go back"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -130,6 +130,13 @@ export interface PageHeaderProps {
   /** Secondary toolbar (search, filters, organise). Row 2 on mobile; right cluster on sm+. */
   actions?: ReactNode;
 
+  /**
+   * "inline"   -> secondary toolbar moves to the right cluster on sm+.
+   * "adaptive" -> stacked through tablet widths, then inline on desktop.
+   * "stacked"  -> identity/primary actions stay on row 1 and toolbar stays full-width on row 2.
+   */
+  actionsLayout?: "inline" | "adaptive" | "stacked";
+
   className?: string;
 }
 
@@ -142,15 +149,32 @@ export function PageHeader({
   subtitle,
   primaryActions,
   actions,
+  actionsLayout = "inline",
   className,
 }: PageHeaderProps) {
+  const stackedActions = actionsLayout === "stacked";
+  const adaptiveActions = actionsLayout === "adaptive";
+
   return (
-    <div className={cn("flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4", className)}>
+    <div
+      className={cn(
+        "flex min-w-0 flex-col gap-2",
+        actionsLayout === "inline" && "sm:flex-row sm:items-start sm:justify-between sm:gap-4",
+        adaptiveActions && "xl:flex-row xl:items-start xl:justify-between xl:gap-4",
+        className,
+      )}
+    >
 
       {/* Row 1 on mobile: identity (left) + primaryActions (right) */}
-      <div className="flex min-w-0 items-center justify-between gap-2 sm:block sm:min-w-0 sm:flex-1">
+      <div
+        className={cn(
+          "flex min-w-0 items-center justify-between gap-2",
+          actionsLayout === "inline" && "sm:block sm:min-w-0 sm:flex-1",
+          adaptiveActions && "xl:block xl:min-w-0 xl:flex-1",
+        )}
+      >
         {/* Identity cluster */}
-        <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             {typeChip && <TypeChip onBack={onBack}>{typeChip}</TypeChip>}
             {title && (
@@ -174,18 +198,36 @@ export function PageHeader({
 
         {/* Primary actions — anchored in title row on mobile, hidden here on sm+ */}
         {primaryActions && (
-          <div className="flex shrink-0 items-center gap-1.5 sm:hidden">
+          <div
+            className={cn(
+              "flex shrink-0 items-center gap-1.5",
+              actionsLayout === "inline" && "sm:hidden",
+              adaptiveActions && "xl:hidden",
+            )}
+          >
             {primaryActions}
           </div>
         )}
       </div>
 
       {/* Row 2 on mobile / right cluster on sm+: secondary toolbar + primary actions merged */}
-      {(actions || primaryActions) && (
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none sm:shrink-0">
+      {(actions || (!stackedActions && primaryActions)) && (
+        <div
+          className={cn(
+            "flex w-full min-w-0 items-center gap-1.5 overflow-x-auto scrollbar-none",
+            actionsLayout === "inline" && "sm:w-auto sm:shrink-0",
+            adaptiveActions && "xl:w-auto xl:shrink-0",
+          )}
+        >
           {actions}
-          {primaryActions && (
-            <div className="hidden sm:flex items-center gap-1.5">
+          {!stackedActions && primaryActions && (
+            <div
+              className={cn(
+                "hidden items-center gap-1.5",
+                actionsLayout === "inline" && "sm:flex",
+                adaptiveActions && "xl:flex",
+              )}
+            >
               {primaryActions}
             </div>
           )}

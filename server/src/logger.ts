@@ -9,6 +9,7 @@
 // In all other envs logs are emitted as JSON for log aggregation pipelines.
 
 import pino, { type Logger as PinoLogger, type LoggerOptions } from "pino";
+import { trace } from "@opentelemetry/api";
 
 export type LogLevel = "fatal" | "error" | "warn" | "info" | "debug" | "trace";
 
@@ -23,6 +24,20 @@ export interface Logger {
   error(event: string, fields?: Record<string, unknown>): void;
   debug(event: string, fields?: Record<string, unknown>): void;
   fatal(event: string, fields?: Record<string, unknown>): void;
+}
+
+function withTraceContext(fields?: Record<string, unknown>): Record<string, unknown> {
+  const activeSpan = trace.getActiveSpan();
+  if (!activeSpan) return fields ?? {};
+
+  const spanContext = activeSpan.spanContext();
+  if (!spanContext.traceId || !spanContext.spanId) return fields ?? {};
+
+  return {
+    ...(fields ?? {}),
+    trace_id: fields?.trace_id ?? spanContext.traceId,
+    span_id:  fields?.span_id  ?? spanContext.spanId,
+  };
 }
 
 export function createLogger(opts: {
@@ -53,10 +68,10 @@ export function createLogger(opts: {
 
   // Adapter: flip (event, fields?) → pino's native (mergingObject, message) call order
   return {
-    info:  (event, fields) => p.info(fields ?? {},  event),
-    warn:  (event, fields) => p.warn(fields ?? {},  event),
-    error: (event, fields) => p.error(fields ?? {}, event),
-    debug: (event, fields) => p.debug(fields ?? {}, event),
-    fatal: (event, fields) => p.fatal(fields ?? {}, event),
+    info:  (event, fields) => p.info(withTraceContext(fields),  event),
+    warn:  (event, fields) => p.warn(withTraceContext(fields),  event),
+    error: (event, fields) => p.error(withTraceContext(fields), event),
+    debug: (event, fields) => p.debug(withTraceContext(fields), event),
+    fatal: (event, fields) => p.fatal(withTraceContext(fields), event),
   };
 }

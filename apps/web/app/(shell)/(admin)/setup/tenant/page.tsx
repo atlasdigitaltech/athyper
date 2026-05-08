@@ -87,7 +87,7 @@ function CompanyTable({ companies }: { companies: CompanyCode[] }) {
               <td className="px-3 py-2.5">{c.name}</td>
               <td className="px-3 py-2.5">
                 {c.functionalCurrency ? (
-                  <Badge variant="secondary" className="font-mono text-[10px]">{c.functionalCurrency}</Badge>
+                  <Badge variant="secondary" className="font-mono text-doc-support">{c.functionalCurrency}</Badge>
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
@@ -164,13 +164,13 @@ export default function TenantSetupPage() {
             <TabsTrigger value="companies">
               Company Codes
               {companies && companies.length > 0 && (
-                <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">{companies.length}</Badge>
+                <Badge variant="secondary" className="ml-1.5 text-doc-support px-1.5 py-0">{companies.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="entities">
               Legal Entities
               {entities && entities.length > 0 && (
-                <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">{entities.length}</Badge>
+                <Badge variant="secondary" className="ml-1.5 text-doc-support px-1.5 py-0">{entities.length}</Badge>
               )}
             </TabsTrigger>
           </TabsList>

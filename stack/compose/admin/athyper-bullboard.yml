@@ -37,16 +37,16 @@
 
 services:
   bullboard:
-    image: deadly0/bull-board:3.2.6
+    image: deadly0/bull-board:3.2.6@sha256:58817a076c16055e090f095103b9f3fe3a8b8500cf75cd5abe610f409bcc8fa6
     profiles: ["emergency"]
     networks: [internal]
     environment:
-      REDIS_HOST: memorycache
-      REDIS_PORT: "6379"
-      REDIS_DB: "0"
-      REDIS_USE_TLS: "false"
-      REDIS_USERNAME: app
-      REDIS_PASSWORD: ${MEMORYCACHE_PASSWORD}
+      REDIS_HOST: "${BULLBOARD_REDIS_HOST:-memorycache}"
+      REDIS_PORT: "${BULLBOARD_REDIS_PORT:-6379}"
+      REDIS_DB: "${BULLBOARD_REDIS_DB:-0}"
+      REDIS_USE_TLS: "${BULLBOARD_REDIS_USE_TLS:-false}"
+      REDIS_USERNAME: "${BULLBOARD_REDIS_USERNAME:-app}"
+      REDIS_PASSWORD: "${BULLBOARD_REDIS_PASSWORD:-${MEMORYCACHE_PASSWORD}}"
     deploy:
       resources:
         limits:

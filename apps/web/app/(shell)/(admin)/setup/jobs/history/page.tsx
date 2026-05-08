@@ -87,13 +87,13 @@ function HistoryRow({ entry }: { entry: JobLogEntry }) {
         <span className="font-mono text-xs font-medium flex-1 min-w-0 truncate">
           {entry.job_type}
         </span>
-        <Badge variant={STATUS_VARIANT[entry.status]} className="text-[10px] shrink-0">
+        <Badge variant={STATUS_VARIANT[entry.status]} className="text-doc-support shrink-0">
           {entry.status}
         </Badge>
-        <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:block">
+        <span className="text-doc-support text-muted-foreground shrink-0 hidden sm:block">
           {formatDuration(entry.duration_ms)}
         </span>
-        <span className="text-[10px] text-muted-foreground shrink-0 hidden md:block">
+        <span className="text-doc-support text-muted-foreground shrink-0 hidden md:block">
           {entry.started_at ? new Date(entry.started_at).toLocaleString() : "—"}
         </span>
         <Button size="sm" variant="ghost" className="h-5 w-5 p-0 shrink-0">
@@ -103,7 +103,7 @@ function HistoryRow({ entry }: { entry: JobLogEntry }) {
 
       {expanded && (
         <div className="mt-2 pt-2 border-t grid gap-1.5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-doc-support">
             <div>
               <p className="text-muted-foreground uppercase">Flow ID</p>
               <p className="font-mono truncate">{entry.flow_id}</p>
@@ -143,8 +143,8 @@ function HistoryRow({ entry }: { entry: JobLogEntry }) {
           </div>
           {entry.error && (
             <div className="mt-1">
-              <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Error</p>
-              <pre className="text-[10px] text-destructive bg-destructive/5 rounded p-2 whitespace-pre-wrap break-all max-h-24 overflow-y-auto">
+              <p className="text-doc-support text-muted-foreground uppercase mb-0.5">Error</p>
+              <pre className="text-doc-support text-destructive bg-destructive/5 rounded p-2 whitespace-pre-wrap break-all max-h-24 overflow-y-auto">
                 {entry.error}
               </pre>
             </div>

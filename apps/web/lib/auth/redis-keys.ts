@@ -7,10 +7,24 @@
  * Backend keys (session:*, bootstrap:*, principal_sessions:*, etc.) are
  * defined in server/framework/runtime/services/iam/redis-keys.ts.
  *
- * namespace = realmKey, either "athyper" or "platform-control"
+ * namespace = realmKey for tenant sessions, or "platform" for platform sessions.
  */
 
 // ─── Frontend key builders ────────────────────────────────────────────────────
+
+export {
+  CLIENT_REFRESH_BEFORE_EXPIRY_SECONDS,
+  HEARTBEAT_INTERVAL_MS,
+  IDLE_TIMEOUT_SECONDS,
+  IDLE_WARNING_SECONDS,
+  REFRESH_LOCK_WAIT_MS,
+  REFRESH_LOCK_TTL_SECONDS,
+  REFRESH_ROTATION_GRACE_SECONDS,
+  SERVER_REFRESH_BUFFER_SECONDS,
+  SESSION_EXPIRED_REDIRECT_COUNTDOWN_SECONDS,
+  SESSION_TTL_SECONDS,
+  PKCE_STATE_TTL_SECONDS,
+} from "./session-policy";
 
 /** OAuth2 PKCE state + codeVerifier ephemeral key. TTL: 1800s (30 min). */
 export const pkceStateKey = (state: string): string => `pkce_state:${state}`;
@@ -26,6 +40,10 @@ export const userSessionsKey = (namespace: string, userId: string): string =>
 /** Distributed lock used to serialise concurrent refresh attempts. TTL: 10s. */
 export const refreshLockKey = (namespace: string, sid: string): string =>
   `refresh_lock:${namespace}:${sid}`;
+
+/** Short-lived pointer from a rotated old SID to its new SID. TTL: 30s. */
+export const sidRotationKey = (namespace: string, sid: string): string =>
+  `refresh_lock:${namespace}:${sid}:rotated`;
 
 // ─── Pattern matchers ─────────────────────────────────────────────────────────
 

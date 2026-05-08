@@ -27,6 +27,13 @@ import { makeAuditEvent } from "../audit.js";
 import { startProbeServer } from "./probe.js";
 import type { ServerDeps } from "../kernel/bootstrap.js";
 
+async function checkBullmqQueue(queues: unknown): Promise<void> {
+  const queue = (queues as { lifecycleTimers?: { getJobCounts?: (...states: string[]) => Promise<unknown> } })
+    .lifecycleTimers;
+  if (typeof queue?.getJobCounts !== "function") return;
+  await queue.getJobCounts("wait", "delayed", "active", "paused");
+}
+
 export async function startWorker(deps: ServerDeps): Promise<void> {
   const startedAt = Date.now();
   const { config, logger, lifecycle, db, redis, jobs, audit } = deps;
@@ -42,7 +49,8 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
     get: (k: string) => redis.get(k),
     set: (k: string, v: string, _ex: "EX", ttl: number) =>
       redis.set(k, v, "EX", ttl),
-    del: (k: string | string[]) => redis.del(k as string),
+    del: (k: string | string[]) =>
+      Array.isArray(k) ? (k.length > 0 ? redis.del(...k) : Promise.resolve(0)) : redis.del(k),
     scan: (
       cursor: string,
       matchFlag: "MATCH",
@@ -78,7 +86,7 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
     cache: iamCache as unknown as import("@athyper/svc-iam").OutboxWorkerCache,
     sessionNamespaces: [
       config.iam.realm,                // "athyper" (default tenant realm)
-      config.platformControl.realmKey, // "platform-control"
+      "platform",                      // web BFF platform session namespace
     ],
     logger,
     pollIntervalMs: config.outbox.pollIntervalMs,
@@ -91,8 +99,8 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
   });
 
   // ─── BullMQ jobs ──────────────────────────────────────────────────────────
-  // start() registers all repeatable schedulers. Workers were already created
-  // (and began listening) inside createJobsService() during bootstrap.
+  // start() registers all repeatable schedulers. Worker consumers are created
+  // during bootstrap only for MODE=worker.
   await jobs.start();
   lifecycle.onShutdown(async () => {
     await jobs.stop();
@@ -103,7 +111,14 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
   // Registered LAST so it stops FIRST on shutdown, signalling to the
   // load balancer / orchestrator that this container is no longer ready
   // before the actual drain begins.
-  const probe = startProbeServer({ port: config.port, mode: "worker" });
+  const probe = startProbeServer({
+    port: config.port,
+    mode: "worker",
+    checks: {
+      redis: () => redis.ping(),
+      bullmq: () => checkBullmqQueue(jobs.queues),
+    },
+  });
   lifecycle.onShutdown(
     () => new Promise<void>((resolve) => probe.close(() => resolve())),
   );

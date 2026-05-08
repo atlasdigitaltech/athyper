@@ -94,7 +94,7 @@ export function RichCommentRenderer({
           // Prose baseline
           "[&_strong]:font-semibold",
           "[&_em]:italic",
-          "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:text-[0.85em] [&_code]:font-mono",
+          "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:text-doc-support [&_code]:font-mono",
           "[&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3 [&_pre]:text-xs [&_pre]:font-mono",
           "[&_pre_code]:bg-transparent [&_pre_code]:p-0",
           "[&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground",

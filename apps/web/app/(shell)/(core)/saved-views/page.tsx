@@ -97,8 +97,8 @@ function ViewRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-medium">{view.name}</p>
-          {view.is_default && <Badge variant="info" className="text-[10px]">Default</Badge>}
-          {view.is_shared && <Badge variant="secondary" className="text-[10px]">Shared</Badge>}
+          {view.is_default && <Badge variant="info" className="text-doc-support">Default</Badge>}
+          {view.is_shared && <Badge variant="secondary" className="text-doc-support">Shared</Badge>}
         </div>
         <p className="text-xs text-muted-foreground">
           {[
@@ -221,7 +221,7 @@ export default function SavedViewsPage() {
                   <div className="space-y-2">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       Shared
-                      <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 normal-case tracking-normal">{sharedViews.length}</Badge>
+                      <Badge variant="secondary" className="ml-2 text-doc-support px-1.5 normal-case tracking-normal">{sharedViews.length}</Badge>
                     </h3>
                     {sharedViews.map((v) => (
                       <ViewRow
@@ -240,7 +240,7 @@ export default function SavedViewsPage() {
                   <div className="space-y-2">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       Personal
-                      <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 normal-case tracking-normal">{personalViews.length}</Badge>
+                      <Badge variant="secondary" className="ml-2 text-doc-support px-1.5 normal-case tracking-normal">{personalViews.length}</Badge>
                     </h3>
                     {personalViews.map((v) => (
                       <ViewRow

@@ -72,7 +72,7 @@ export function AppNavRail({
           break;
         case "favorites":
         case "recent":
-          // TODO: open favorites / recent panel (Sprint 5)
+          // TODO: open favourites / recent panel (Sprint 5)
           break;
         default:
           // Workspace or platform key

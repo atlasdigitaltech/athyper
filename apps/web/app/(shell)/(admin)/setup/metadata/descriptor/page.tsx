@@ -188,7 +188,7 @@ function FieldTable({ fields }: { fields: EntityField[] }) {
                 <td className="px-3 py-2">
                   <Badge
                     variant="outline"
-                    className={`text-[10px] ${
+                    className={`text-doc-support ${
                       f.origin === "system" ? "text-muted-foreground" :
                       f.origin === "standard" ? "text-primary border-primary/30" :
                       "text-accent-foreground border-accent/30"
@@ -199,12 +199,12 @@ function FieldTable({ fields }: { fields: EntityField[] }) {
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap gap-0.5">
-                    {f.is_required  && <span className="text-[9px] bg-destructive/10 text-destructive border border-destructive/30 px-1 rounded">req</span>}
-                    {f.is_unique    && <span className="text-[9px] bg-primary/10 text-primary border border-primary/30 px-1 rounded">uniq</span>}
-                    {f.is_searchable && <span className="text-[9px] bg-success/10 text-success border border-success/30 px-1 rounded">search</span>}
-                    {f.is_filterable && <span className="text-[9px] bg-warning/10 text-warning border border-warning/30 px-1 rounded">filter</span>}
-                    {f.is_pii       && <span className="text-[9px] bg-accent/10 text-accent-foreground border border-accent/30 px-1 rounded">PII</span>}
-                    {f.is_readonly  && <span className="text-[9px] bg-muted text-muted-foreground border border-border px-1 rounded">ro</span>}
+                    {f.is_required  && <span className="text-doc-field-label bg-destructive/10 text-destructive border border-destructive/30 px-1 rounded">req</span>}
+                    {f.is_unique    && <span className="text-doc-field-label bg-primary/10 text-primary border border-primary/30 px-1 rounded">uniq</span>}
+                    {f.is_searchable && <span className="text-doc-field-label bg-success/10 text-success border border-success/30 px-1 rounded">search</span>}
+                    {f.is_filterable && <span className="text-doc-field-label bg-warning/10 text-warning border border-warning/30 px-1 rounded">filter</span>}
+                    {f.is_pii       && <span className="text-doc-field-label bg-accent/10 text-accent-foreground border border-accent/30 px-1 rounded">PII</span>}
+                    {f.is_readonly  && <span className="text-doc-field-label bg-muted text-muted-foreground border border-border px-1 rounded">ro</span>}
                   </div>
                 </td>
                 <td className="px-3 py-2 font-mono text-muted-foreground">
@@ -308,7 +308,7 @@ export default function DescriptorInspectorPage() {
                 }, {})
               ).sort(([a], [b]) => a.localeCompare(b)).map(([cls, items]) => (
                 <div key={cls}>
-                  <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div className="px-2 py-1 text-doc-support font-semibold text-muted-foreground uppercase tracking-wider">
                     {cls}
                   </div>
                   {items.map((e) => (
@@ -412,12 +412,12 @@ export default function DescriptorInspectorPage() {
                 <TabsTrigger value="fields" className="gap-1.5 text-xs">
                   <Database className="size-3.5" />
                   Fields
-                  <Badge variant="secondary" className="text-[10px] px-1">{descriptor.fields.length}</Badge>
+                  <Badge variant="secondary" className="text-doc-support px-1">{descriptor.fields.length}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="groups" className="gap-1.5 text-xs">
                   <Layers className="size-3.5" />
                   Groups
-                  <Badge variant="secondary" className="text-[10px] px-1">{descriptor.field_groups.length}</Badge>
+                  <Badge variant="secondary" className="text-doc-support px-1">{descriptor.field_groups.length}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="flags" className="gap-1.5 text-xs">
                   <Flag className="size-3.5" />
@@ -447,7 +447,7 @@ export default function DescriptorInspectorPage() {
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm">{g.label}</span>
                             <CodeBadge>{g.group_key}</CodeBadge>
-                            <Badge variant="secondary" className="text-[10px] px-1">{g.fields.length} fields</Badge>
+                            <Badge variant="secondary" className="text-doc-support px-1">{g.fields.length} fields</Badge>
                           </div>
                           {g.description && (
                             <p className="text-xs text-muted-foreground">{g.description}</p>

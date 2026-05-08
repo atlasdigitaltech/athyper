@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
 import { RUNTIME_API_URL, buildRuntimeHeaders } from "@/lib/server/runtime-headers";
+import {
+  extractThemePresetFromPreferences,
+  THEME_PRESET_COOKIE,
+  THEME_PRESET_COOKIE_MAX_AGE,
+} from "@/lib/preferences/ui-profile";
 
 /**
  * GET  /api/user/preferences — current user's persisted UI preferences
@@ -20,7 +25,9 @@ export async function GET() {
       cache: "no-store",
     });
     const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    const response = NextResponse.json(data, { status: res.status });
+    if (res.ok && isRecord(data)) syncThemePresetCookie(response, data);
+    return response;
   } catch {
     return NextResponse.json({ appearance_mode: null, density_code: null, metadata: {} });
   }
@@ -42,8 +49,25 @@ export async function PATCH(req: NextRequest) {
       cache: "no-store",
     });
     const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    const response = NextResponse.json(data, { status: res.status });
+    if (res.ok) syncThemePresetCookie(response, body);
+    return response;
   } catch {
     return NextResponse.json({ error: "Failed to save preferences" }, { status: 500 });
   }
+}
+
+function syncThemePresetCookie(response: NextResponse, profile: Record<string, unknown>) {
+  const themePreset = extractThemePresetFromPreferences(profile);
+
+  response.cookies.set(THEME_PRESET_COOKIE, themePreset ?? "", {
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: themePreset ? THEME_PRESET_COOKIE_MAX_AGE : 0,
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

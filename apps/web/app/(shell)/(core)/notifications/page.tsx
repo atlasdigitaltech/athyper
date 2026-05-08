@@ -128,9 +128,9 @@ function NotificationRow({
           </span>
         </div>
         <div className="mt-1 flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="text-[10px]">{eventLabel(item.event_code)}</Badge>
+          <Badge variant="outline" className="text-doc-support">{eventLabel(item.event_code)}</Badge>
           {item.priority !== "normal" && (
-            <Badge variant={priorityVariant(item.priority)} className="text-[10px] capitalize">{item.priority}</Badge>
+            <Badge variant={priorityVariant(item.priority)} className="text-doc-support capitalize">{item.priority}</Badge>
           )}
           {item.entity_type && (
             <span className="text-xs text-muted-foreground font-mono">{item.entity_type}</span>
@@ -189,7 +189,7 @@ export default function NotificationsPage() {
             <BellOff className="mr-1.5 h-3.5 w-3.5" />
             Unread only
             {unreadCount > 0 && !unreadOnly && (
-              <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5">{unreadCount}</Badge>
+              <Badge variant="secondary" className="ml-1.5 text-doc-support px-1.5">{unreadCount}</Badge>
             )}
           </Button>
           {unreadCount > 0 && (

@@ -15,6 +15,12 @@ import { cn } from "@athyper/theme/utils";
 import { getWorkbenchLabel } from "@/lib/auth/workbench-config";
 import { useShellSession } from "@/components/providers/SessionProvider";
 
+const WORKBENCH_ORDER: Record<string, number> = {
+  user:    0,
+  partner: 1,
+  admin:   2,
+};
+
 export function WorkbenchToggle() {
   const { bff, switchContext } = useShellSession();
   const { organizations, activeOrg, activeWorkbench } = bff;
@@ -25,6 +31,9 @@ export function WorkbenchToggle() {
   if (!activeOrg) return null;
   const org = organizations[activeOrg];
   if (!org || org.roles.length < 2) return null;
+  const orderedRoles = [...org.roles].sort(
+    (a, b) => (WORKBENCH_ORDER[a] ?? 99) - (WORKBENCH_ORDER[b] ?? 99),
+  );
 
   async function handleSwitch(workbench: string) {
     if (!activeOrg || workbench === activeWorkbench || switching) return;
@@ -47,7 +56,7 @@ export function WorkbenchToggle() {
         switching && "opacity-60 pointer-events-none",
       )}
     >
-      {org.roles.map((role) => {
+      {orderedRoles.map((role) => {
         const isActive = role === activeWorkbench;
         return (
           <button

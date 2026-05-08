@@ -194,9 +194,9 @@ export default function WebhooksPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    {!sub.isActive && <Badge variant="muted" className="text-[10px]">inactive</Badge>}
+                    {!sub.isActive && <Badge variant="muted" className="text-doc-support">inactive</Badge>}
                     {sub.failureCount > 0 && (
-                      <Badge variant="destructive" className="text-[10px]">{sub.failureCount} failures</Badge>
+                      <Badge variant="destructive" className="text-doc-support">{sub.failureCount} failures</Badge>
                     )}
                     <span className="font-medium text-sm">{sub.name}</span>
                   </div>
@@ -204,14 +204,14 @@ export default function WebhooksPage() {
                   {sub.topics.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {sub.topics.slice(0, 5).map((t) => (
-                        <span key={t} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{t}</span>
+                        <span key={t} className="rounded bg-muted px-1.5 py-0.5 font-mono text-doc-support">{t}</span>
                       ))}
                       {sub.topics.length > 5 && (
-                        <span className="text-[10px] text-muted-foreground">+{sub.topics.length - 5} more</span>
+                        <span className="text-doc-support text-muted-foreground">+{sub.topics.length - 5} more</span>
                       )}
                     </div>
                   )}
-                  <div className="flex gap-3 text-[10px] text-muted-foreground">
+                  <div className="flex gap-3 text-doc-support text-muted-foreground">
                     <span>Retries: {sub.maxRetries}</span>
                     <span>Timeout: {sub.timeoutMs}ms</span>
                     {sub.lastFailureAt && <span>Last failure: {new Date(sub.lastFailureAt).toLocaleString()}</span>}

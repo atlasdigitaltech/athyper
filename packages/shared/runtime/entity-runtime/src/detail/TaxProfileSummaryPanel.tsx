@@ -232,6 +232,15 @@ function toneClass(tone: HealthTone): string {
   }
 }
 
+function toneForegroundClass(tone: HealthTone): string {
+  switch (tone) {
+    case "success": return "text-success-foreground";
+    case "warning": return "text-warning-foreground";
+    case "destructive": return "text-destructive-foreground";
+    default: return "text-background";
+  }
+}
+
 function profileIssueLabel(rec: TaxRecord): string {
   if (!hasAnyIdentifier(rec)) return "Missing tax identifier";
   if (missingVatDocument(rec)) return "Missing VAT document";
@@ -326,9 +335,9 @@ function CountryTabs({
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
-              <span className="text-[11px] font-semibold">{code}</span>
+              <span className="text-doc-subtitle font-semibold">{code}</span>
               <span>{countryName(code)}</span>
-              <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
+              <span className="rounded bg-muted px-1 text-doc-support text-muted-foreground">
                 {code}
               </span>
               <span className={cn("size-2 rounded-sm", toneClass(tone))} aria-label={profileIssueLabel(rec)} />
@@ -632,7 +641,7 @@ function ClearanceStatus({ rec }: { rec: TaxRecord }) {
       tone === "destructive" && "border-destructive/30 bg-destructive/10",
     )}>
       <div className="flex items-center gap-3">
-        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold", toneClass(tone), "text-white")}>
+        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold", toneClass(tone), toneForegroundClass(tone))}>
           {days === null ? "?" : Math.max(days, 0)}
         </span>
         <div>
@@ -755,7 +764,7 @@ function RailBox({
       <div className="mb-3 flex items-center justify-between gap-2">
         <h4 className={TAX_ITEM_TITLE_CLASS}>{title}</h4>
         {badge && (
-          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{badge}</span>
+          <span className="rounded bg-muted px-1.5 py-0.5 text-doc-support text-muted-foreground">{badge}</span>
         )}
       </div>
       {children}

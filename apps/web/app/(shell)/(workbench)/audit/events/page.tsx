@@ -70,7 +70,7 @@ const OPERATION_COLOR: Record<string, string> = {
 function OperationBadge({ op }: { op: string }) {
   const cls = OPERATION_COLOR[op] ?? "bg-muted text-muted-foreground border-border";
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium capitalize", cls)}>
+    <span className={cn("inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-doc-support font-medium capitalize", cls)}>
       {OPERATION_ICON[op]}
       {op}
     </span>
@@ -91,28 +91,28 @@ function EventDetailRow({ event }: { event: AuditEvent }) {
       <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs sm:grid-cols-3">
         <div>
           <span className="text-muted-foreground">Event ID</span>
-          <p className="font-mono text-[10px] truncate">{event.id}</p>
+          <p className="font-mono text-doc-support truncate">{event.id}</p>
         </div>
         <div>
           <span className="text-muted-foreground">Entity ID</span>
-          <p className="font-mono text-[10px] truncate">{event.entityId}</p>
+          <p className="font-mono text-doc-support truncate">{event.entityId}</p>
         </div>
         {event.correlationId && (
           <div>
             <span className="text-muted-foreground">Correlation</span>
-            <p className="font-mono text-[10px] truncate">{event.correlationId}</p>
+            <p className="font-mono text-doc-support truncate">{event.correlationId}</p>
           </div>
         )}
         {event.actorId && (
           <div>
             <span className="text-muted-foreground">Actor ID</span>
-            <p className="font-mono text-[10px] truncate">{event.actorId}</p>
+            <p className="font-mono text-doc-support truncate">{event.actorId}</p>
           </div>
         )}
         {event.ipAddress && (
           <div>
             <span className="text-muted-foreground">IP Address</span>
-            <p className="font-mono text-[10px]">{event.ipAddress}</p>
+            <p className="font-mono text-doc-support">{event.ipAddress}</p>
           </div>
         )}
         {event.changedFields && event.changedFields.length > 0 && (
@@ -132,16 +132,16 @@ function EventDetailRow({ event }: { event: AuditEvent }) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {event.oldValues && (
             <div className="space-y-1">
-              <p className="text-[10px] font-semibold text-destructive uppercase tracking-wider">Before</p>
-              <pre className="text-[10px] font-mono bg-background border rounded p-2 overflow-x-auto max-h-32 text-muted-foreground">
+              <p className="text-doc-support font-semibold text-destructive uppercase tracking-wider">Before</p>
+              <pre className="text-doc-support font-mono bg-background border rounded p-2 overflow-x-auto max-h-32 text-muted-foreground">
                 {JSON.stringify(event.oldValues, null, 2)}
               </pre>
             </div>
           )}
           {event.newValues && (
             <div className="space-y-1">
-              <p className="text-[10px] font-semibold text-success uppercase tracking-wider">After</p>
-              <pre className="text-[10px] font-mono bg-background border rounded p-2 overflow-x-auto max-h-32 text-muted-foreground">
+              <p className="text-doc-support font-semibold text-success uppercase tracking-wider">After</p>
+              <pre className="text-doc-support font-mono bg-background border rounded p-2 overflow-x-auto max-h-32 text-muted-foreground">
                 {JSON.stringify(event.newValues, null, 2)}
               </pre>
             </div>

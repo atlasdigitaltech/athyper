@@ -159,7 +159,7 @@ function ScheduleForm({ form, onChange, isEdit, error }: ScheduleFormProps) {
           <Label className="text-xs">Cron Expression *</Label>
           <Input value={form.cron_expression} onChange={set("cron_expression")}
             className="font-mono text-xs" placeholder="0 2 * * *" />
-          <p className="text-[9px] text-muted-foreground">min hour day month weekday</p>
+          <p className="text-doc-field-label text-muted-foreground">min hour day month weekday</p>
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Timezone</Label>
@@ -182,7 +182,7 @@ function ScheduleForm({ form, onChange, isEdit, error }: ScheduleFormProps) {
           className="font-mono text-xs"
           placeholder="{}"
         />
-        <p className="text-[9px] text-muted-foreground">Supports &#123;&#123;tenant_id&#125;&#125; and &#123;&#123;now&#125;&#125; interpolation</p>
+        <p className="text-doc-field-label text-muted-foreground">Supports &#123;&#123;tenant_id&#125;&#125; and &#123;&#123;now&#125;&#125; interpolation</p>
       </div>
 
       {/* Priority + Retries + Lock key */}
@@ -376,7 +376,7 @@ function ScheduleCard({ schedule }: { schedule: CronSchedule }) {
               <span className="text-xs text-muted-foreground">{schedule.name}</span>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <Badge variant={schedule.is_enabled ? "success" : "muted"} className="text-[10px]">
+              <Badge variant={schedule.is_enabled ? "success" : "muted"} className="text-doc-support">
                 {schedule.is_enabled ? "active" : "disabled"}
               </Badge>
               <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => toggle.mutate()} title="Toggle">
@@ -393,14 +393,14 @@ function ScheduleCard({ schedule }: { schedule: CronSchedule }) {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 text-doc-support text-muted-foreground">
             <span className="font-mono bg-muted/50 px-1 rounded">{schedule.cron_expression}</span>
             <span>{schedule.timezone}</span>
             <span className="font-mono">{schedule.target_queue.replace("jobs:", "")}</span>
             <span>handler: <code>{schedule.handler_type}</code></span>
           </div>
 
-          <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+          <div className="flex flex-wrap gap-3 text-doc-support text-muted-foreground">
             {schedule.last_run_at && (
               <span>Last run: {new Date(schedule.last_run_at).toLocaleString()}</span>
             )}
@@ -415,7 +415,7 @@ function ScheduleCard({ schedule }: { schedule: CronSchedule }) {
           </div>
 
           {schedule.description && (
-            <p className="text-[10px] text-muted-foreground">{schedule.description}</p>
+            <p className="text-doc-support text-muted-foreground">{schedule.description}</p>
           )}
         </div>
       </RowCard>

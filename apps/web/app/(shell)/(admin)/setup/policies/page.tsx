@@ -125,7 +125,7 @@ const ACTION_ICON: Record<string, React.ReactNode> = {
 
 function ActionBadge({ action }: { action: string }) {
   return (
-    <Badge variant={ACTION_VARIANT[action] ?? "muted"} className="inline-flex items-center gap-1 text-[10px]">
+    <Badge variant={ACTION_VARIANT[action] ?? "muted"} className="inline-flex items-center gap-1 text-doc-support">
       {ACTION_ICON[action]}
       {action}
     </Badge>
@@ -272,7 +272,7 @@ function RulesTable({ policyId }: RulesTableProps) {
       ) : (
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b text-left text-[10px] text-muted-foreground uppercase tracking-wider">
+            <tr className="border-b text-left text-doc-support text-muted-foreground uppercase tracking-wider">
               <th className="pb-1.5 pr-3 font-medium">P#</th>
               <th className="pb-1.5 pr-3 font-medium">Action</th>
               <th className="pb-1.5 pr-3 font-medium">Score</th>
@@ -291,7 +291,7 @@ function RulesTable({ policyId }: RulesTableProps) {
                 <td className="py-2 pr-3 text-muted-foreground">
                   {rule.confidence != null ? rule.confidence.toFixed(2) : "—"}
                 </td>
-                <td className="py-2 font-mono text-[10px] text-muted-foreground">
+                <td className="py-2 font-mono text-doc-support text-muted-foreground">
                   {conditionsSummary(rule.conditions)}
                 </td>
               </tr>
@@ -348,20 +348,20 @@ function RuleVersionHistory({ ruleId }: { ruleId: string }) {
         <div key={v.id} className="rounded-md border p-3 space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-[10px] font-mono">v{v.versionNo}</Badge>
+              <Badge variant="outline" className="text-doc-support font-mono">v{v.versionNo}</Badge>
               <ActionBadge action={v.ruleSnapshot["action"] as string} />
               {v.ruleSnapshot["score"] != null && (
                 <span className="text-xs text-muted-foreground">score: {String(v.ruleSnapshot["score"])}</span>
               )}
             </div>
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-doc-support text-muted-foreground">
               {v.effectiveUntil
                 ? `${new Date(v.effectiveFrom).toLocaleDateString()} → ${new Date(v.effectiveUntil).toLocaleDateString()}`
                 : `${new Date(v.effectiveFrom).toLocaleDateString()} → current`}
             </div>
           </div>
           {Boolean(v.ruleSnapshot["conditions"]) && (
-            <p className="font-mono text-[10px] text-muted-foreground line-clamp-2">
+            <p className="font-mono text-doc-support text-muted-foreground line-clamp-2">
               {JSON.stringify(v.ruleSnapshot["conditions"])}
             </p>
           )}
@@ -496,7 +496,7 @@ function TestCasesPanel({ policyId, entityType }: { policyId: string; entityType
                   {tc.lastRunPassed === null && <TestTube2 className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />}
                   <span className="text-sm font-medium">{tc.testName}</span>
                   {tc.lastRunMs !== null && (
-                    <span className="text-[10px] text-muted-foreground">{tc.lastRunMs} ms</span>
+                    <span className="text-doc-support text-muted-foreground">{tc.lastRunMs} ms</span>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
@@ -515,14 +515,14 @@ function TestCasesPanel({ policyId, entityType }: { policyId: string; entityType
 
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-[10px] text-muted-foreground mb-1">Input</p>
-                  <pre className="rounded bg-muted/50 p-1.5 text-[10px] font-mono overflow-auto max-h-20">
+                  <p className="text-doc-support text-muted-foreground mb-1">Input</p>
+                  <pre className="rounded bg-muted/50 p-1.5 text-doc-support font-mono overflow-auto max-h-20">
                     {JSON.stringify(tc.inputPayload, null, 2)}
                   </pre>
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground mb-1">Expected</p>
-                  <pre className="rounded bg-muted/50 p-1.5 text-[10px] font-mono overflow-auto max-h-20">
+                  <p className="text-doc-support text-muted-foreground mb-1">Expected</p>
+                  <pre className="rounded bg-muted/50 p-1.5 text-doc-support font-mono overflow-auto max-h-20">
                     {JSON.stringify(tc.expectedOutcome, null, 2)}
                   </pre>
                 </div>
@@ -530,8 +530,8 @@ function TestCasesPanel({ policyId, entityType }: { policyId: string; entityType
 
               {tc.lastRunResult && tc.lastRunPassed === false && (
                 <div className="mt-2">
-                  <p className="text-[10px] text-muted-foreground mb-1">Actual (last run)</p>
-                  <pre className="rounded bg-destructive/5 border border-destructive/20 p-1.5 text-[10px] font-mono text-destructive overflow-auto max-h-20">
+                  <p className="text-doc-support text-muted-foreground mb-1">Actual (last run)</p>
+                  <pre className="rounded bg-destructive/5 border border-destructive/20 p-1.5 text-doc-support font-mono text-destructive overflow-auto max-h-20">
                     {JSON.stringify(tc.lastRunResult, null, 2)}
                   </pre>
                 </div>
@@ -625,9 +625,9 @@ function PolicyCard({ def }: { def: PolicyDef }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-medium text-sm">{def.name}</span>
-              <Badge variant={statusVariant(def.status)} className="text-[10px]">{def.status}</Badge>
-              <Badge variant="outline" className="text-[10px]">{def.entity_type}</Badge>
-              <Badge variant="muted" className="text-[10px]">{evalModeLabel(def.evaluation_mode)}</Badge>
+              <Badge variant={statusVariant(def.status)} className="text-doc-support">{def.status}</Badge>
+              <Badge variant="outline" className="text-doc-support">{def.entity_type}</Badge>
+              <Badge variant="muted" className="text-doc-support">{evalModeLabel(def.evaluation_mode)}</Badge>
             </div>
             <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
               <span>Priority: {def.priority}</span>
@@ -1198,7 +1198,7 @@ function PolicyEvaluator() {
                     <ActionBadge action={result.action} />
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant={result.permitted ? "success" : "destructive"} className="text-[10px]">
+                    <Badge variant={result.permitted ? "success" : "destructive"} className="text-doc-support">
                       {result.permitted ? "Permitted" : "Blocked"}
                     </Badge>
                     <span>{result.evaluationMs.toFixed(1)} ms</span>
@@ -1211,7 +1211,7 @@ function PolicyEvaluator() {
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Winning Rule</p>
                       <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="font-mono text-[10px] text-muted-foreground">
+                        <span className="font-mono text-doc-support text-muted-foreground">
                           {result.winning.rule_id.slice(0, 8)}…
                         </span>
                         <ActionBadge action={result.winning.action} />
@@ -1241,7 +1241,7 @@ function PolicyEvaluator() {
                 <CardContent className="p-4 pt-0">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b text-[10px] text-left text-muted-foreground uppercase tracking-wider">
+                      <tr className="border-b text-doc-support text-left text-muted-foreground uppercase tracking-wider">
                         <th className="pb-1.5 pr-3 font-medium">Rule</th>
                         <th className="pb-1.5 pr-3 font-medium">Action</th>
                         <th className="pb-1.5 pr-3 font-medium">Matched</th>
@@ -1251,7 +1251,7 @@ function PolicyEvaluator() {
                     <tbody className="divide-y divide-border/50">
                       {result.outcomes.map((o) => (
                         <tr key={o.rule_id} className={o.matched ? "bg-muted/20" : ""}>
-                          <td className="py-1.5 pr-3 font-mono text-[10px] text-muted-foreground">
+                          <td className="py-1.5 pr-3 font-mono text-doc-support text-muted-foreground">
                             {o.rule_id.slice(0, 8)}…
                           </td>
                           <td className="py-1.5 pr-3"><ActionBadge action={o.action} /></td>

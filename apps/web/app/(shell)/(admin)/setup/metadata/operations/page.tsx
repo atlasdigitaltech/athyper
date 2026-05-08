@@ -327,13 +327,13 @@ function OperationRow({
 
         {/* Badges */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${HANDLER_COLORS[op.handler_type] ?? ""}`}>
+          <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-doc-support font-medium ${HANDLER_COLORS[op.handler_type] ?? ""}`}>
             {op.handler_type}
           </span>
-          <Badge variant="outline" className="text-[10px]">{op.surface}</Badge>
-          <Badge variant="outline" className="text-[10px]">{op.placement}</Badge>
+          <Badge variant="outline" className="text-doc-support">{op.surface}</Badge>
+          <Badge variant="outline" className="text-doc-support">{op.placement}</Badge>
           {op.is_record_required && (
-            <Badge variant="secondary" className="text-[10px]">record req.</Badge>
+            <Badge variant="secondary" className="text-doc-support">record req.</Badge>
           )}
           {!op.is_enabled && <StatusPill value="disabled" />}
         </div>
@@ -469,7 +469,7 @@ export default function EntityOperationsPage() {
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {entityName}
                     </h3>
-                    <Badge variant="secondary" className="text-[10px] px-1.5">{items.length}</Badge>
+                    <Badge variant="secondary" className="text-doc-support px-1.5">{items.length}</Badge>
                   </div>
                   <div className="rounded-lg border bg-card divide-y divide-border/50">
                     {items

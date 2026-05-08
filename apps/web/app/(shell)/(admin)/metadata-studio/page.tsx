@@ -111,12 +111,12 @@ function EntityRow({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-xs font-medium">{entity.name}</p>
-          <p className="mt-0.5 truncate text-[10px] text-muted-foreground font-mono">
+          <p className="mt-0.5 truncate text-doc-support text-muted-foreground font-mono">
             {entity.table_schema}.{entity.table_name}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1 mt-0.5">
-          <span className={cn("rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase", resolveSemanticColors(entityClassIntent(entity.entity_class)).subtleBadge)}>
+          <span className={cn("rounded border px-1.5 py-0.5 text-doc-field-label font-semibold uppercase", resolveSemanticColors(entityClassIntent(entity.entity_class)).subtleBadge)}>
             {entity.entity_class}
           </span>
           {selected && <ChevronRight className="h-3 w-3 text-primary" />}
@@ -131,17 +131,17 @@ function EntityRow({
 function FieldRow({ field }: { field: EntityField }) {
   const typeBadge = resolveSemanticColors(dataTypeIntent(field.data_type)).subtleBadge;
   const flagCls = (key: string) =>
-    cn("text-[9px] px-1 py-0 h-4", resolveSemanticColors(FIELD_FLAG_INTENT[key] ?? "neutral").subtleBadge);
+    cn("text-doc-field-label px-1 py-0 h-4", resolveSemanticColors(FIELD_FLAG_INTENT[key] ?? "neutral").subtleBadge);
   return (
     <tr className="border-b last:border-0 hover:bg-muted/20 text-xs">
       <td className="py-2 px-3 font-medium">{field.label ?? field.name}</td>
-      <td className="py-2 px-3 font-mono text-muted-foreground text-[10px]">{field.name}</td>
+      <td className="py-2 px-3 font-mono text-muted-foreground text-doc-support">{field.name}</td>
       <td className="py-2 px-3">
-        <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-mono font-medium", typeBadge)}>
+        <span className={cn("rounded px-1.5 py-0.5 text-doc-support font-mono font-medium", typeBadge)}>
           {field.data_type}
         </span>
       </td>
-      <td className="py-2 px-3 font-mono text-[10px] text-muted-foreground">{field.column_name}</td>
+      <td className="py-2 px-3 font-mono text-doc-support text-muted-foreground">{field.column_name}</td>
       <td className="py-2 px-3">
         <div className="flex flex-wrap gap-1">
           {field.is_required   && <Badge variant="outline" className={flagCls("required")}>req</Badge>}
@@ -151,7 +151,7 @@ function FieldRow({ field }: { field: EntityField }) {
           {field.is_searchable && <Badge variant="outline" className={flagCls("searchable")}>search</Badge>}
         </div>
       </td>
-      <td className="py-2 px-3 text-[10px] text-muted-foreground capitalize">{field.origin}</td>
+      <td className="py-2 px-3 text-doc-support text-muted-foreground capitalize">{field.origin}</td>
     </tr>
   );
 }
@@ -200,7 +200,7 @@ export default function MetadataStudioPage() {
             <button
               onClick={() => setClassFilter("")}
               className={cn(
-                "rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors",
+                "rounded-full px-2.5 py-1 text-doc-support font-medium transition-colors",
                 classFilter === "" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
               )}
             >
@@ -211,7 +211,7 @@ export default function MetadataStudioPage() {
                 key={cls}
                 onClick={() => setClassFilter(classFilter === cls ? "" : cls)}
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors",
+                  "rounded-full px-2.5 py-1 text-doc-support font-medium transition-colors",
                   classFilter === cls ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -263,11 +263,11 @@ export default function MetadataStudioPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-semibold">{selected.name}</h2>
-                    <span className={cn("rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase", resolveSemanticColors(entityClassIntent(selected.entity_class)).subtleBadge)}>
+                    <span className={cn("rounded border px-1.5 py-0.5 text-doc-field-label font-semibold uppercase", resolveSemanticColors(entityClassIntent(selected.entity_class)).subtleBadge)}>
                       {selected.entity_class}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-[10px] font-mono text-muted-foreground">
+                  <p className="mt-0.5 text-doc-support font-mono text-muted-foreground">
                     {selected.table_schema}.{selected.table_name}
                     {selected.module_id && ` · module: ${selected.module_id}`}
                   </p>

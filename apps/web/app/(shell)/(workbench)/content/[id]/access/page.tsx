@@ -190,8 +190,8 @@ export default function ContentAccessPage() {
             <RowCard
               key={g.id}
               badge={<>
-                <Badge variant={LEVEL_VARIANT[g.accessLevel]} className="text-[10px]">{g.accessLevel}</Badge>
-                <Badge variant="outline" className="text-[10px]">{g.principalType}</Badge>
+                <Badge variant={LEVEL_VARIANT[g.accessLevel]} className="text-doc-support">{g.accessLevel}</Badge>
+                <Badge variant="outline" className="text-doc-support">{g.principalType}</Badge>
               </>}
               title={<span className="font-mono">{g.principalId}</span>}
               metadata={<div className="flex gap-3">

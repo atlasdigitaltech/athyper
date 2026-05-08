@@ -103,7 +103,7 @@ function SlaBadge({ status, targetHours }: { status: SlaStatus; targetHours?: nu
   const label = SLA_LABEL[status];
   const target = targetHours !== undefined ? ` · ${targetHours}h SLA` : "";
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] font-semibold leading-none", subtleBadge)}>
+    <span className={cn("inline-flex items-center gap-1 rounded border px-2 py-0.5 text-doc-support font-semibold leading-none", subtleBadge)}>
       <Clock className="h-2.5 w-2.5" />
       {label}{target}
     </span>
@@ -151,7 +151,7 @@ function StageCard({ stage, isLast }: { stage: ApiWorkflowStage; isLast: boolean
               {stage.completed_at && <> · Completed {fmtDateTime(stage.completed_at)}</>}
             </p>
           </div>
-          <span className={cn("shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize", subtleBadge)}>
+          <span className={cn("shrink-0 rounded-full border px-2.5 py-0.5 text-doc-subtitle font-semibold capitalize", subtleBadge)}>
             {stage.status}
           </span>
         </div>
@@ -160,7 +160,7 @@ function StageCard({ stage, isLast }: { stage: ApiWorkflowStage; isLast: boolean
         {(stage.sla_status || elapsedLabel || deadlineStr) && (
           <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t pt-2">
             {elapsedLabel && (
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1 text-doc-subtitle text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 {stage.status === "active" ? "Elapsed: " : "Took: "}
                 <span className="font-medium tabular-nums">{elapsedLabel}</span>
@@ -170,7 +170,7 @@ function StageCard({ stage, isLast }: { stage: ApiWorkflowStage; isLast: boolean
               <SlaBadge status={stage.sla_status} targetHours={stage.sla_target_hours} />
             )}
             {deadlineStr && stage.status === "active" && (
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-doc-subtitle text-muted-foreground">
                 Due: <span className="font-medium">{deadlineStr}</span>
               </span>
             )}

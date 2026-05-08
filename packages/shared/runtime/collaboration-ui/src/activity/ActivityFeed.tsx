@@ -51,9 +51,19 @@ function formatTimestamp(iso: string): string {
 function summarize(entry: ActivityEntry): string {
   const actor = entry.actor_name ?? "System";
   const type  = entry.activity_type;
+  const detail = entry.detail as Record<string, unknown> | null;
+  const after = detail?.after as Record<string, unknown> | null;
+  if (type === "document.created" && (entry.to_state === "draft" || after?.status === "draft")) {
+    return `${actor} created draft`;
+  }
   const templates: Record<string, string> = {
     "document.created":              `${actor} created document`,
+    "document.ready":                `${actor} marked document ready`,
     "document.updated":              `${actor} updated document`,
+    "document.deleted":              `${actor} deleted document`,
+    "document.item_created":         `${actor} added journal line`,
+    "document.item_updated":         `${actor} updated journal line`,
+    "document.item_deleted":         `${actor} removed journal line`,
     "document.submitted":            `${actor} submitted document`,
     "document.approved":             `${actor} approved document`,
     "document.rejected":             `${actor} rejected document`,
@@ -98,6 +108,30 @@ interface DiffLine {
   plain?: string;
 }
 
+function changedFieldNames(before?: Record<string, unknown> | null, after?: Record<string, unknown> | null): string[] {
+  if (!before || !after) return [];
+  return Array.from(new Set([...Object.keys(before), ...Object.keys(after)]))
+    .filter((field) => String(before[field] ?? "") !== String(after[field] ?? ""));
+}
+
+function journalLineLabel(detail: Record<string, unknown> | null): string {
+  const lineNo = detail?.line_no;
+  return typeof lineNo === "number" || typeof lineNo === "string" ? `Line ${lineNo}` : "Journal line";
+}
+
+function detailChangedFieldNames(
+  detail: Record<string, unknown> | null,
+  before?: Record<string, unknown> | null,
+  after?: Record<string, unknown> | null,
+): string[] {
+  const changedFields = detail?.changed_fields;
+  if (Array.isArray(changedFields)) {
+    const fields = changedFields.filter((field): field is string => typeof field === "string" && field.length > 0);
+    if (fields.length > 0) return fields;
+  }
+  return changedFieldNames(before, after);
+}
+
 function buildDetailLine(entry: ActivityEntry): DiffLine | null {
   const d = entry.detail as Record<string, unknown> | null;
   const type = entry.activity_type;
@@ -129,15 +163,24 @@ function buildDetailLine(entry: ActivityEntry): DiffLine | null {
     const snippet = comment.slice(0, 90);
     return { plain: `"${snippet}${comment.length > 90 ? "…" : ""}"` };
   }
-  if (type === "document.updated") {
+  if (type === "document.item_created") {
+    return { plain: `${journalLineLabel(d)} added` };
+  }
+  if (type === "document.item_deleted") {
+    return { plain: `${journalLineLabel(d)} removed` };
+  }
+  if (type === "document.updated" || type === "document.item_updated") {
     if (before && after) {
-      const changed = Object.keys(after).filter(k => String(after[k]) !== String(before[k]));
+      const changed = detailChangedFieldNames(d, before, after);
       if (changed.length === 1) {
         return { prefix: `${changed[0]!.replace(/_/g, " ")}:`, before: String(before[changed[0]!] ?? "—"), after: String(after[changed[0]!] ?? "—") };
       }
       if (changed.length > 1) return { plain: `${changed.length} fields updated` };
     }
     if (filename) return { plain: `Description edited on ${filename}` };
+  }
+  if (type === "document.deleted") {
+    return { plain: "Header deleted" };
   }
   if (entry.from_state || entry.to_state) {
     return {
@@ -157,7 +200,7 @@ function trailingAction(entry: ActivityEntry): { label: string; kind: ActionKind
   const d    = entry.detail as Record<string, unknown> | null;
   const type = entry.activity_type;
   const hasDiff = (d?.before && d?.after) || entry.from_state || entry.to_state;
-  if (hasDiff || type.includes(".updated") || type.includes("visibility_changed") || type.includes("renamed"))
+  if (hasDiff || type.includes(".updated") || type.startsWith("document.item_") || type === "document.deleted" || type.includes("visibility_changed") || type.includes("renamed"))
     return { label: "View changes", kind: "view_changes" };
   if (type.includes("comment") || type.includes("user.comment"))
     return { label: "View comment", kind: "view_comment" };
@@ -205,13 +248,13 @@ function DetailLine({ dl }: { dl: DiffLine }) {
     <span className="flex flex-wrap items-center gap-1">
       {dl.prefix && <span>{dl.prefix}</span>}
       {dl.before && (
-        <span className="inline-flex items-center rounded border border-border bg-secondary px-1.5 py-0 text-[11px] font-normal text-foreground">
+        <span className="inline-flex items-center rounded border border-border bg-secondary px-1.5 py-0 text-doc-subtitle font-normal text-foreground">
           {dl.before}
         </span>
       )}
       {dl.before && dl.after && <ArrowRight className="size-2.5 shrink-0 text-muted-foreground" />}
       {dl.after && (
-        <span className="inline-flex items-center rounded border border-border bg-secondary px-1.5 py-0 text-[11px] font-medium text-foreground">
+        <span className="inline-flex items-center rounded border border-border bg-secondary px-1.5 py-0 text-doc-subtitle font-medium text-foreground">
           {dl.after}
         </span>
       )}
@@ -226,8 +269,11 @@ function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAud
   const d          = entry.detail as Record<string, unknown> | null;
   const before     = d?.before as Record<string, unknown> | null;
   const after      = d?.after  as Record<string, unknown> | null;
-  const hasDiff    = !!(before && after && Object.keys(after).length > 0);
+  const diffFields = detailChangedFieldNames(d, before, after);
+  const hasDiff    = diffFields.length > 0;
   const hasSession = !!(d?.ip_address || d?.device || d?.session_id || d?.correlation_id);
+  const sourceLog  = typeof d?.source_log === "string" ? d.source_log : "log.activity_log";
+  const canOpenAuditLog = sourceLog.startsWith("log.");
 
   const copyId = useCallback(async () => {
     await navigator.clipboard.writeText(entry.id).catch(() => {});
@@ -237,37 +283,37 @@ function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAud
     <div className="mx-3 mb-3 mt-0.5 rounded-lg border border-border bg-muted/20 p-3 text-xs">
 
       {/* EVENT */}
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Event</p>
+      <p className="mb-1.5 text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">Event</p>
       <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1">
         <span className="text-muted-foreground">Event code</span>
-        <span className="break-all font-mono text-[11px] text-foreground">{entry.activity_type}</span>
+        <span className="break-all font-mono text-doc-subtitle text-foreground">{entry.activity_type}</span>
         <span className="text-muted-foreground">Event ID</span>
-        <span className="break-all font-mono text-[11px] text-foreground">{entry.id}</span>
+        <span className="break-all font-mono text-doc-subtitle text-foreground">{entry.id}</span>
         <span className="text-muted-foreground">Source</span>
-        <span className="font-mono text-[11px] text-foreground">log.activity_log</span>
+        <span className="font-mono text-doc-subtitle text-foreground">{sourceLog}</span>
         {!!d?.entity_id && (
           <>
             <span className="text-muted-foreground">Entity</span>
-            <span className="break-all font-mono text-[11px] text-foreground">
+            <span className="break-all font-mono text-doc-subtitle text-foreground">
               {d.entity_table ? `${String(d.entity_table)} · ` : ""}{String(d.entity_id)}
             </span>
           </>
         )}
         <span className="text-muted-foreground">Timestamp</span>
-        <span className="font-mono text-[11px] text-foreground">{formatTimestamp(entry.created_at)}</span>
+        <span className="font-mono text-doc-subtitle text-foreground">{formatTimestamp(entry.created_at)}</span>
       </div>
 
       {/* CHANGE */}
       {(hasDiff || entry.from_state || entry.to_state) && (
         <>
           <div className="my-2.5 border-t border-border" />
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Change</p>
+          <p className="mb-1.5 text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">Change</p>
           <div className="grid grid-cols-[110px_1fr_1fr] gap-x-2 gap-y-1">
-            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Field</span>
-            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Before</span>
-            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">After</span>
+            <span className="text-doc-support font-medium uppercase tracking-wide text-muted-foreground">Field</span>
+            <span className="text-doc-support font-medium uppercase tracking-wide text-muted-foreground">Before</span>
+            <span className="text-doc-support font-medium uppercase tracking-wide text-muted-foreground">After</span>
             {hasDiff
-              ? Object.keys(after!).map((field) => (
+              ? diffFields.map((field) => (
                   <Row3
                     key={field}
                     label={field.replace(/_/g, " ")}
@@ -288,7 +334,7 @@ function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAud
       {(hasSession || entry.actor_name) && (
         <>
           <div className="my-2.5 border-t border-border" />
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Session</p>
+          <p className="mb-1.5 text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">Session</p>
           <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1">
             {entry.actor_name && (
               <>
@@ -299,7 +345,7 @@ function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAud
             {!!d?.ip_address && (
               <>
                 <span className="text-muted-foreground">IP address</span>
-                <span className="font-mono text-[11px] text-foreground">{String(d.ip_address)}</span>
+                <span className="font-mono text-doc-subtitle text-foreground">{String(d.ip_address)}</span>
               </>
             )}
             {!!d?.device && (
@@ -311,13 +357,13 @@ function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAud
             {!!d?.session_id && (
               <>
                 <span className="text-muted-foreground">Session</span>
-                <span className="font-mono text-[11px] text-foreground">{String(d.session_id)}</span>
+                <span className="font-mono text-doc-subtitle text-foreground">{String(d.session_id)}</span>
               </>
             )}
             {!!d?.correlation_id && (
               <>
                 <span className="text-muted-foreground">Correlation</span>
-                <span className="break-all font-mono text-[11px] text-foreground">{String(d.correlation_id)}</span>
+                <span className="break-all font-mono text-doc-subtitle text-foreground">{String(d.correlation_id)}</span>
               </>
             )}
           </div>
@@ -329,17 +375,19 @@ function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAud
         <button
           type="button"
           onClick={copyId}
-          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-[11px] text-foreground transition-colors hover:bg-muted"
+          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-doc-subtitle text-foreground transition-colors hover:bg-muted"
         >
           <Copy className="size-3" />Copy event ID
         </button>
-        <button
-          type="button"
-          onClick={() => onOpenAuditLog?.(entry.id)}
-          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-[11px] text-foreground transition-colors hover:bg-muted"
-        >
-          <ExternalLink className="size-3" />Open in audit log
-        </button>
+        {canOpenAuditLog && (
+          <button
+            type="button"
+            onClick={() => onOpenAuditLog?.(entry.id)}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-doc-subtitle text-foreground transition-colors hover:bg-muted"
+          >
+            <ExternalLink className="size-3" />Open in audit log
+          </button>
+        )}
       </div>
     </div>
   );
@@ -349,8 +397,8 @@ function Row3({ label, before, after }: { label: string; before: string; after: 
   return (
     <>
       <span className="text-muted-foreground">{label}</span>
-      <span className="rounded border border-border bg-card px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">{before}</span>
-      <span className="rounded border border-primary/20 bg-primary/5 px-1.5 py-0.5 font-mono text-[11px] font-medium text-foreground">{after}</span>
+      <span className="rounded border border-border bg-card px-1.5 py-0.5 font-mono text-doc-subtitle text-muted-foreground">{before}</span>
+      <span className="rounded border border-primary/20 bg-primary/5 px-1.5 py-0.5 font-mono text-doc-subtitle font-medium text-foreground">{after}</span>
     </>
   );
 }
@@ -387,7 +435,7 @@ function ActivityRow({
         )}
       >
         {/* Time */}
-        <span className="whitespace-nowrap pt-0.5 text-[11px] tabular-nums text-muted-foreground">
+        <span className="whitespace-nowrap pt-0.5 text-doc-subtitle tabular-nums text-muted-foreground">
           {time}
         </span>
 
@@ -547,7 +595,7 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-16 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
-        <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">
+        <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 py-0.5 text-doc-support text-muted-foreground">
           Ctrl K
         </kbd>
       </div>
@@ -571,7 +619,7 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
               >
                 {chip.label}
                 {chip.key !== "all" && chipCounts[chip.key] > 0 && (
-                  <span className={cn("tabular-nums text-[10px]", active ? "opacity-80" : "opacity-60")}>
+                  <span className={cn("tabular-nums text-doc-support", active ? "opacity-80" : "opacity-60")}>
                     {chipCounts[chip.key]}
                   </span>
                 )}
@@ -628,11 +676,11 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
         <div key={group.label}>
           {/* Day header */}
           <div className="mb-1.5 flex items-center gap-2">
-            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <span className="shrink-0 text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">
               {group.label}
             </span>
             <div className="h-px flex-1 bg-border" />
-            <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground">
+            <span className="shrink-0 tabular-nums text-doc-support text-muted-foreground">
               {group.count} event{group.count !== 1 ? "s" : ""}
             </span>
           </div>

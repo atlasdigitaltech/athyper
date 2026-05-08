@@ -8,6 +8,14 @@ import { cn } from "@athyper/theme/utils";
 import { Badge, type BadgeProps } from "@athyper/ui/primitives";
 
 import type { HeaderIdentity } from "../types";
+import {
+  typeChipBackButtonClass,
+  typeChipClass,
+  typeChipLabelClass,
+  typeChipStandaloneClass,
+  typeChipStandaloneStaticClass,
+  typeChipStaticLabelClass,
+} from "./headerChrome";
 
 interface AmountSummary {
   label: string;
@@ -125,11 +133,11 @@ export function EntityIdentityBar({
 
   // ── Chip (back arrow + type label) ────────────────────────────────────────
   const chipEl = onBack ? (
-    <div className="inline-flex h-[32px] shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground">
+    <div className={typeChipClass}>
       <button
         onClick={onBack}
         aria-label="Go back"
-        className="flex h-full w-9 items-center justify-center border-r border-r-ring bg-foreground text-background transition-colors hover:bg-foreground/85"
+        className={typeChipBackButtonClass}
       >
         <ChevronLeft className="h-3.5 w-3.5" />
       </button>
@@ -137,19 +145,19 @@ export function EntityIdentityBar({
         <button
           type="button"
           onClick={onTypeClick}
-          className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center hover:bg-foreground/85 transition-colors"
+          className={typeChipLabelClass}
         >
           {typeLabel}
         </button>
       ) : identity.typeHref ? (
         <Link
           href={identity.typeHref}
-          className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center hover:bg-foreground/85 transition-colors"
+          className={typeChipLabelClass}
         >
           {typeLabel}
         </Link>
       ) : (
-        <span className="px-3 text-xs font-semibold tracking-wider text-background bg-foreground h-full flex items-center">
+        <span className={typeChipStaticLabelClass}>
           {typeLabel}
         </span>
       )}
@@ -158,19 +166,19 @@ export function EntityIdentityBar({
     <button
       type="button"
       onClick={onTypeClick}
-      className="shrink-0 h-[32px] rounded-md border border-border bg-foreground text-background px-3 text-xs font-semibold tracking-wider flex items-center hover:bg-foreground/85 transition-colors"
+      className={typeChipStandaloneClass}
     >
       {typeLabel}
     </button>
   ) : identity.typeHref ? (
     <Link
       href={identity.typeHref}
-      className="shrink-0 h-[32px] rounded-md border border-border bg-foreground text-background px-3 text-xs font-semibold tracking-wider flex items-center hover:bg-foreground/85 transition-colors"
+      className={typeChipStandaloneClass}
     >
       {typeLabel}
     </Link>
   ) : (
-    <span className="shrink-0 h-[32px] rounded-md border border-border bg-foreground text-background px-3 text-xs font-semibold tracking-wider flex items-center">
+    <span className={typeChipStandaloneStaticClass}>
       {typeLabel}
     </span>
   );
@@ -366,7 +374,7 @@ export function EntityIdentityBar({
             {canCopy && copyItems.length > 0 && (
               <>
                 <div className="my-1 h-px bg-border" />
-                <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                <div className="px-3 pb-0.5 pt-1 text-doc-support font-semibold uppercase tracking-wider text-muted-foreground/50">
                   Copy field
                 </div>
                 {copyItems.map((item) => (

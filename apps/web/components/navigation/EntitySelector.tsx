@@ -105,11 +105,11 @@ export function EntitySelector() {
     return (
       <div className="flex items-center gap-1.5 px-2 py-1">
         <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-        <Badge variant="secondary" className="text-[11px]">
+        <Badge variant="secondary" className="text-doc-subtitle">
           {activeEntityCode ?? "—"}
         </Badge>
         {activeOrgEntry && (
-          <span className="hidden max-w-[160px] truncate text-xs text-muted-foreground sm:block">
+          <span className="hidden max-w-[160px] truncate text-xs font-medium text-muted-foreground sm:block">
             {activeOrgEntry.name}
           </span>
         )}
@@ -131,11 +131,11 @@ export function EntitySelector() {
         )}
       >
         <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-        <Badge variant={activeEntityCode ? "secondary" : "outline"} className="text-[11px]">
+        <Badge variant={activeEntityCode ? "secondary" : "outline"} className="text-doc-subtitle">
           {activeEntityCode ?? "Select"}
         </Badge>
         {activeOrgEntry && (
-          <span className="hidden max-w-[140px] truncate text-xs text-muted-foreground lg:block">
+          <span className="hidden max-w-[140px] truncate text-xs font-medium text-muted-foreground lg:block">
             {activeOrgEntry.name}
           </span>
         )}
@@ -180,7 +180,7 @@ export function EntitySelector() {
               <div key={tenant}>
                 {/* Tenant group label */}
                 {tenantGroups.size > 1 && (
-                  <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  <p className="px-3 pb-1 pt-2 text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">
                     {tenant}
                   </p>
                 )}
@@ -206,7 +206,7 @@ export function EntitySelector() {
                       <div className="flex min-w-0 items-center gap-2">
                         <Badge
                           variant={isActive ? "default" : "secondary"}
-                          className="shrink-0 text-[10px]"
+                          className="shrink-0 text-doc-support"
                         >
                           {entityCode}
                         </Badge>

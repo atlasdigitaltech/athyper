@@ -18,16 +18,21 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "@athyper/theme/utils";
+import { overlayScrimVariants } from "@athyper/ui/primitives";
+import { DEFAULT_PUBLIC_SESSION_POLICY } from "@/lib/auth/session-policy";
 
-const COUNTDOWN_SECONDS = 30;
+const COUNTDOWN_SECONDS = DEFAULT_PUBLIC_SESSION_POLICY.sessionExpiredRedirectCountdownSeconds;
 
 interface SessionExpiredDialogProps {
   /** Called when the user clicks "Stay on page" — parent switches to banner. */
   onStay: () => void;
+  countdownSeconds?: number;
 }
 
-export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
-  const [seconds, setSeconds] = useState(COUNTDOWN_SECONDS);
+export function SessionExpiredDialog({ onStay, countdownSeconds = COUNTDOWN_SECONDS }: SessionExpiredDialogProps) {
+  const totalSeconds = Math.max(1, Math.ceil(countdownSeconds));
+  const [seconds, setSeconds] = useState(totalSeconds);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const buildLoginUrl = useCallback(() => {
@@ -64,7 +69,7 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
   // Circumference for SVG progress ring
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
-  const progress = ((COUNTDOWN_SECONDS - seconds) / COUNTDOWN_SECONDS) * circumference;
+  const progress = ((totalSeconds - seconds) / totalSeconds) * circumference;
 
   return (
     /* Backdrop */
@@ -73,7 +78,10 @@ export function SessionExpiredDialog({ onStay }: SessionExpiredDialogProps) {
       aria-modal="true"
       aria-labelledby="session-expired-title"
       aria-describedby="session-expired-desc"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className={cn(
+        "fixed inset-0 z-50 flex items-center justify-center",
+        overlayScrimVariants({ tone: "modal" }),
+      )}
     >
       {/* Panel */}
       <div className="relative mx-4 w-full max-w-md rounded-2xl bg-card shadow-2xl">

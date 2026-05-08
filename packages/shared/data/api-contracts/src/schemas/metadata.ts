@@ -500,6 +500,9 @@ export const CompiledEntitySchema = z.object({
     default_sort_field: z.string().optional(),
     default_sort_order: z.enum(["asc", "desc"]).optional(),
     list_columns: z.array(z.string()).optional(),
+    compact_card: z.object({
+      bottom_fields: z.array(z.string()).optional(),
+    }).optional(),
     search_fields: z.array(z.string()).optional(),
     filter_bar: z.object({
       quick_filters: z.array(z.object({
@@ -538,10 +541,10 @@ export const CompiledEntitySchema = z.object({
      */
     list_renderer: z.enum(["table", "kanban", "dashboard", "spreadsheet"]).optional(),
     /**
-     * Which view modes the user may switch to. Subset of the four canonical modes.
-     * Default: ["table"].
+     * Which view modes the user may switch to. Subset of the five canonical modes.
+     * Default: ["table", "compact", "kanban", "dashboard", "spreadsheet"].
      */
-    view_modes: z.array(z.enum(["table", "kanban", "dashboard", "spreadsheet"])).optional(),
+    view_modes: z.array(z.enum(["table", "compact", "kanban", "dashboard", "spreadsheet"])).optional(),
     /**
      * Key of the lines renderer registered via registerLinesRenderer().
      * null  = entity has no line items (master records).
@@ -590,6 +593,8 @@ export const CompiledEntitySchema = z.object({
     document_header: z.object({
       /** Primary document number field, e.g. "document_no" */
       number_field: z.string(),
+      /** Secondary display name/description field, e.g. "name" */
+      name_field: z.string().optional(),
       /** Status field, e.g. "status" */
       status_field: z.string().optional(),
       /** Human-readable type chip, e.g. "INVOICE" */

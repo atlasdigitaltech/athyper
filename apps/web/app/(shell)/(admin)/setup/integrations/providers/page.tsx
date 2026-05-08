@@ -110,7 +110,7 @@ function NewProviderDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               <Input value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} placeholder="noreply@company.com" />
             </div>
           )}
-          <p className="text-[10px] text-muted-foreground">Config is encrypted at rest. Existing values are not shown.</p>
+          <p className="text-doc-support text-muted-foreground">Config is encrypted at rest. Existing values are not shown.</p>
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <DialogFooter>
@@ -188,8 +188,8 @@ export default function ProvidersPage() {
               key={p.id}
               className={!p.isActive ? "opacity-60" : ""}
               badge={<>
-                <Badge variant={CHANNEL_VARIANT[p.channel]} className="text-[10px]">{p.channel}</Badge>
-                {p.isDefault && <Badge variant="success" className="text-[10px]">default</Badge>}
+                <Badge variant={CHANNEL_VARIANT[p.channel]} className="text-doc-support">{p.channel}</Badge>
+                {p.isDefault && <Badge variant="success" className="text-doc-support">default</Badge>}
               </>}
               title={p.name}
               metadata={<span className="font-mono">{p.code}</span>}

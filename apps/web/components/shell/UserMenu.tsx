@@ -21,7 +21,7 @@ export function UserMenu() {
     <Link
       href="/settings"
       aria-label="Profile &amp; Settings"
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground outline-none transition-all hover:opacity-80"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-doc-subtitle font-semibold text-background outline-none transition-all hover:opacity-80"
     >
       {initials}
     </Link>

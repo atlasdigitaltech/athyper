@@ -12,7 +12,7 @@
 // All external adapter factories are stubbed so this test runs without any
 // real infrastructure (no DB, Redis, Keycloak, or S3 required).
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ─── Stub adapter factories ───────────────────────────────────────────────────
 
@@ -20,6 +20,8 @@ const mockDbClose = vi.fn(() => Promise.resolve());
 const mockRedisDisconnect = vi.fn();
 const mockRedisGet = vi.fn();
 const mockRedisSetex = vi.fn();
+const ORIGINAL_MODE = process.env["MODE"];
+const ORIGINAL_TIKA_URL = process.env["TIKA_URL"];
 
 vi.mock("@athyper/adapter-db", () => ({
   createDbAdapter: vi.fn(() => ({
@@ -68,6 +70,9 @@ vi.mock("@athyper/svc-jobs", () => ({
     start: vi.fn(() => Promise.resolve()),
     stop: vi.fn(() => Promise.resolve()),
     queues: new Map(),
+    isRunning: false,
+    tikaExtractEnabled: false,
+    workersEnabled: false,
   })),
   createWfOutboxHandler: vi.fn(() => ({ handle: vi.fn() })),
 }));
@@ -89,10 +94,19 @@ vi.mock("../../../framework/runtime/services/jobs/adapters/email.adapter.js", ()
   })),
 }));
 
+vi.mock("../../../framework/runtime/services/jobs/workers/webhook-delivery.worker.js", () => ({
+  createWebhookDeliveryWorker: vi.fn(() => ({
+    worker: { close: vi.fn(() => Promise.resolve()) },
+    queue:  { close: vi.fn(() => Promise.resolve()) },
+  })),
+}));
+
 // ─── Import under test (after all vi.mock declarations) ───────────────────────
 
 import { bootstrap } from "../bootstrap.js";
 import type { ServerConfig } from "../../config.js";
+import { createJobsService } from "@athyper/svc-jobs";
+import { createWebhookDeliveryWorker } from "../../../framework/runtime/services/jobs/workers/webhook-delivery.worker.js";
 
 // ─── Minimal valid config (no email, no object storage) ───────────────────────
 
@@ -141,6 +155,21 @@ const baseConfig: ServerConfig = {
 describe("bootstrap", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env["MODE"];
+    delete process.env["TIKA_URL"];
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_MODE === undefined) {
+      delete process.env["MODE"];
+    } else {
+      process.env["MODE"] = ORIGINAL_MODE;
+    }
+    if (ORIGINAL_TIKA_URL === undefined) {
+      delete process.env["TIKA_URL"];
+    } else {
+      process.env["TIKA_URL"] = ORIGINAL_TIKA_URL;
+    }
   });
 
   it("resolves to a deps bag with all required keys", async () => {
@@ -170,19 +199,16 @@ describe("bootstrap", () => {
     expect(mockDbClose).toHaveBeenCalledOnce();
   });
 
-  it("calls redis.disconnect() on lifecycle.shutdown() for both cache and BullMQ clients", async () => {
-    // bootstrap constructs TWO ioredis clients:
-    //   - `redis`         : cache client (JWKS / feature flags / OAuth2 / IAM session)
-    //   - `webhookRedis`  : BullMQ-tuned client (maxRetriesPerRequest: null)
-    // Both register disconnect() via lifecycle.onShutdown — enforces F1 isolation.
+  it("calls redis.disconnect() on lifecycle.shutdown() for the API cache client", async () => {
+    // API mode constructs only the shared cache client; worker-only BullMQ
+    // consumers get their own client in MODE=worker.
     const deps = await bootstrap(baseConfig, null);
     await deps.lifecycle.shutdown("test");
-    expect(mockRedisDisconnect).toHaveBeenCalledTimes(2);
+    expect(mockRedisDisconnect).toHaveBeenCalledTimes(1);
   });
 
-  it("redis clients disconnect before db.close() on shutdown (LIFO order)", async () => {
-    // Both redis clients are registered after db, so in LIFO order they shut
-    // down first. This preserves the invariant: consumers stop before connections.
+  it("redis client disconnects before db.close() on shutdown (LIFO order)", async () => {
+    // Redis is registered after db, so LIFO shutdown closes Redis first.
     const callOrder: string[] = [];
     mockDbClose.mockImplementation(() => { callOrder.push("db.close"); return Promise.resolve(); });
     mockRedisDisconnect.mockImplementation(() => { callOrder.push("redis.disconnect"); });
@@ -190,7 +216,7 @@ describe("bootstrap", () => {
     const deps = await bootstrap(baseConfig, null);
     await deps.lifecycle.shutdown("test");
 
-    expect(callOrder).toEqual(["redis.disconnect", "redis.disconnect", "db.close"]);
+    expect(callOrder).toEqual(["redis.disconnect", "db.close"]);
   });
 
   it("objectStorageRef.current is set when objectStorage is configured", async () => {
@@ -212,5 +238,67 @@ describe("bootstrap", () => {
 
     const deps = await bootstrap(configWithStorage, null);
     expect(deps.objectStorageRef.current).not.toBeNull();
+  });
+
+  it("does not enable BullMQ worker consumers for the default API runtime", async () => {
+    await bootstrap(baseConfig, null);
+
+    expect(createJobsService).toHaveBeenCalledWith(expect.objectContaining({
+      workersEnabled: false,
+    }));
+  });
+
+  it("does not enable BullMQ worker consumers for the scheduler runtime", async () => {
+    process.env["MODE"] = "scheduler";
+
+    await bootstrap(baseConfig, null);
+
+    expect(createJobsService).toHaveBeenCalledWith(expect.objectContaining({
+      workersEnabled: false,
+    }));
+  });
+
+  it("does not instantiate the standalone webhook BullMQ worker for API or scheduler runtimes", async () => {
+    await bootstrap(baseConfig, null);
+
+    expect(createWebhookDeliveryWorker).not.toHaveBeenCalled();
+
+    vi.clearAllMocks();
+    process.env["MODE"] = "scheduler";
+
+    await bootstrap(baseConfig, null);
+
+    expect(createWebhookDeliveryWorker).not.toHaveBeenCalled();
+  });
+
+  it("enables BullMQ worker consumers only for the worker runtime", async () => {
+    process.env["MODE"] = "worker";
+
+    await bootstrap(baseConfig, null);
+
+    expect(createJobsService).toHaveBeenCalledWith(expect.objectContaining({
+      workersEnabled: true,
+    }));
+    expect(createWebhookDeliveryWorker).toHaveBeenCalledOnce();
+  });
+
+  it("disconnects the worker-only webhook Redis client on worker shutdown", async () => {
+    process.env["MODE"] = "worker";
+
+    const deps = await bootstrap(baseConfig, null);
+    await deps.lifecycle.shutdown("test");
+
+    expect(mockRedisDisconnect).toHaveBeenCalledTimes(2);
+  });
+
+  it("registers a Tika health contributor", async () => {
+    const deps = await bootstrap(baseConfig, null);
+    const check = deps.serviceHealthChecks.get("tika");
+
+    expect(check).toBeDefined();
+    await expect(check!()).resolves.toMatchObject({
+      status:  "degraded",
+      message: "tika_url_not_configured",
+    });
   });
 });

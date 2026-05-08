@@ -98,11 +98,11 @@ function ConfigForm({
               {label}
               {isRequired && <span className="text-destructive ml-0.5">*</span>}
               {isPassword && (
-                <Badge variant="outline" className="ml-1.5 text-[9px] font-normal">credential</Badge>
+                <Badge variant="outline" className="ml-1.5 text-doc-field-label font-normal">credential</Badge>
               )}
             </Label>
             {prop.description && (
-              <p className="text-[10px] text-muted-foreground">{prop.description}</p>
+              <p className="text-doc-support text-muted-foreground">{prop.description}</p>
             )}
             {prop.enum ? (
               <select
@@ -224,7 +224,7 @@ function NewConnectionDialog({
                 placeholder={connectorType.code + "-prod"}
                 className="font-mono text-sm"
               />
-              <p className="text-[10px] text-muted-foreground">Auto-generated if left blank. Lowercase, hyphens OK.</p>
+              <p className="text-doc-support text-muted-foreground">Auto-generated if left blank. Lowercase, hyphens OK.</p>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Description</Label>
@@ -287,11 +287,11 @@ function ConnectorCard({ type }: { type: ConnectorType }) {
                     <span className="text-base">{type.iconKey}</span>
                   )}
                   <CardTitle className="text-sm">{type.name}</CardTitle>
-                  <Badge variant={CATEGORY_BADGE[type.category] ?? "outline"} className="text-[10px]">
+                  <Badge variant={CATEGORY_BADGE[type.category] ?? "outline"} className="text-doc-support">
                     {type.category.replace(/_/g, " ")}
                   </Badge>
                   {type.isSystem && (
-                    <Badge variant="outline" className="text-[10px] text-muted-foreground">system</Badge>
+                    <Badge variant="outline" className="text-doc-support text-muted-foreground">system</Badge>
                   )}
                 </div>
                 {type.description && (
@@ -315,10 +315,10 @@ function ConnectorCard({ type }: { type: ConnectorType }) {
             <div className="border-t pt-2 mt-1 space-y-2">
               {type.authTypes.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Auth</p>
+                  <p className="text-doc-support text-muted-foreground uppercase tracking-wide mb-1">Auth</p>
                   <div className="flex flex-wrap gap-1">
                     {type.authTypes.map((a) => (
-                      <Badge key={a} variant="outline" className="text-[10px] font-mono">
+                      <Badge key={a} variant="outline" className="text-doc-support font-mono">
                         {a.replace(/_/g, " ")}
                       </Badge>
                     ))}
@@ -327,15 +327,15 @@ function ConnectorCard({ type }: { type: ConnectorType }) {
               )}
               {type.capabilities.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Capabilities</p>
+                  <p className="text-doc-support text-muted-foreground uppercase tracking-wide mb-1">Capabilities</p>
                   <div className="flex flex-wrap gap-1">
                     {type.capabilities.map((c) => (
-                      <Badge key={c} variant="secondary" className="text-[10px]">{c}</Badge>
+                      <Badge key={c} variant="secondary" className="text-doc-support">{c}</Badge>
                     ))}
                   </div>
                 </div>
               )}
-              <p className="text-[10px] text-muted-foreground font-mono">{type.code}</p>
+              <p className="text-doc-support text-muted-foreground font-mono">{type.code}</p>
             </div>
           </CardContent>
         )}

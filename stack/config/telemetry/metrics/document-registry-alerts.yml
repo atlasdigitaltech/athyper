@@ -19,7 +19,7 @@ groups:
           team: finance
         annotations:
           summary: "Posting inconsistencies detected ({{ $value }} documents)"
-          description: "More than 20 documents have posting/JE inconsistencies. Check v_doc_posting_inconsistency view."
+          description: "More than 20 documents have posting/JE inconsistencies. Check finance document JE links and journal_entry source metadata."
 
       - alert: PostingInconsistencyCritical
         expr: fin_doc_registry_compliance_posting_inconsistency > 100
@@ -88,7 +88,7 @@ groups:
           description: "Registry trigger sync failures exceeding 0.05/s for 3+ minutes."
 
       - alert: StatusMappingFallback
-        expr: rate(fin_doc_registry_status_mapping_fallback_total[5m]) > 0.1
+        expr: fin_doc_registry_status_mapping_fallback_total > 0
         for: 5m
         labels:
           severity: warning

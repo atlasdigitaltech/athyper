@@ -73,7 +73,7 @@ function PhasesTab({ typeId }: { typeId: string }) {
             <RowCard
               key={p.id}
               leading={<span className="text-xs font-mono text-muted-foreground w-6 text-right">{p.sortOrder}.</span>}
-              badge={<Badge variant="outline" className="text-[10px] font-mono">{p.phaseCode}</Badge>}
+              badge={<Badge variant="outline" className="text-doc-support font-mono">{p.phaseCode}</Badge>}
               title={p.phaseName}
               metadata={<div className="flex gap-3">
                 <span>Gate: {p.isGateEnforced ? "enforced" : "optional"}</span>
@@ -172,7 +172,7 @@ function CategoriesTab({ typeId }: { typeId: string }) {
             <div key={c.id} className="flex items-center gap-1.5 rounded-full border px-3 py-1">
               {c.colorCode && <span className="h-2.5 w-2.5 rounded-full bg-[var(--category-color)]" style={{ "--category-color": c.colorCode } as CSSProperties} />}
               <span className="text-sm font-medium">{c.categoryName}</span>
-              <span className="text-[10px] font-mono text-muted-foreground">{c.categoryCode}</span>
+              <span className="text-doc-support font-mono text-muted-foreground">{c.categoryCode}</span>
             </div>
           ))}
         </div>
@@ -216,7 +216,7 @@ function TemplatesTab({ typeId }: { typeId: string }) {
         <div className="overflow-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b text-left text-[10px] text-muted-foreground uppercase tracking-wider">
+              <tr className="border-b text-left text-doc-support text-muted-foreground uppercase tracking-wider">
                 <th className="pb-2 pr-3 font-medium">Code</th>
                 <th className="pb-2 pr-3 font-medium">Name</th>
                 <th className="pb-2 pr-3 font-medium">Mode</th>
@@ -228,9 +228,9 @@ function TemplatesTab({ typeId }: { typeId: string }) {
             <tbody className="divide-y divide-border/50">
               {templates.map((t) => (
                 <tr key={t.id}>
-                  <td className="py-2 pr-3 font-mono text-[11px]">{t.taskCode}</td>
+                  <td className="py-2 pr-3 font-mono text-doc-subtitle">{t.taskCode}</td>
                   <td className="py-2 pr-3">{t.taskName}</td>
-                  <td className="py-2 pr-3"><Badge variant="outline" className="text-[10px]">{t.completionMode}</Badge></td>
+                  <td className="py-2 pr-3"><Badge variant="outline" className="text-doc-support">{t.completionMode}</Badge></td>
                   <td className="py-2 pr-3">{t.isMandatory ? "Yes" : "No"}</td>
                   <td className="py-2 pr-3">{t.severity ?? "—"}</td>
                   <td className="py-2">{t.slaHours ?? "—"}</td>

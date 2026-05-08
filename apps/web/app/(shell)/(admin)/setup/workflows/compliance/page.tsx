@@ -381,7 +381,7 @@ export default function WorkflowCompliancePage() {
                                 {r.templateName ?? <span className="text-muted-foreground italic">No template</span>}
                               </span>
                               {r.templateCode && (
-                                <span className="font-mono text-[10px] bg-muted/60 border px-1 py-0.5 rounded text-muted-foreground">
+                                <span className="font-mono text-doc-support bg-muted/60 border px-1 py-0.5 rounded text-muted-foreground">
                                   {r.templateCode}
                                 </span>
                               )}
@@ -399,7 +399,7 @@ export default function WorkflowCompliancePage() {
                               {r.rejected}
                             </span>
                             {rejRate > 0 && (
-                              <span className="ml-1 text-[10px] text-muted-foreground">
+                              <span className="ml-1 text-doc-support text-muted-foreground">
                                 ({fmtRate(rejRate)})
                               </span>
                             )}
@@ -419,7 +419,7 @@ export default function WorkflowCompliancePage() {
                             {r.slaBreachedCount > 0 ? (
                               <Badge
                                 variant={slaRate > 10 ? "destructive" : "warning"}
-                                className="text-[10px]"
+                                className="text-doc-support"
                               >
                                 {r.slaBreachedCount} ({fmtRate(slaRate)})
                               </Badge>

@@ -6219,3 +6219,73 @@ CREATE TRIGGER trg_flow_field_one_writer
 BEFORE INSERT OR UPDATE OF mode, entity_field_id, flow_step_id
 ON control.entity_flow_field
 FOR EACH ROW EXECUTE FUNCTION control.trg_fn_flow_field_one_writer();
+
+
+-- =============================================================================
+-- Parameter Catalog
+-- =============================================================================
+-- Product-owned runtime parameters. Tenants may view every active row unless
+-- tenant_visibility = hidden, and may override only rows marked configurable.
+CREATE TABLE IF NOT EXISTS control.parameter_definition (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    code                  text        NOT NULL,
+    namespace             text        NOT NULL,
+    display_name          text        NOT NULL,
+    description           text,
+
+    owner_model           text        NOT NULL DEFAULT 'product',
+    control_level         text        NOT NULL DEFAULT 'system_controlled',
+    tenant_visibility     text        NOT NULL DEFAULT 'readonly',
+
+    data_type             text        NOT NULL,
+    unit                  text,
+    default_value         jsonb       NOT NULL,
+    product_value         jsonb,
+    min_value             jsonb,
+    max_value             jsonb,
+    allowed_values        jsonb,
+
+    runtime_reload        text        NOT NULL DEFAULT 'next_request',
+    cache_ttl_seconds     integer     NOT NULL DEFAULT 300,
+    is_security_sensitive boolean     NOT NULL DEFAULT false,
+    is_runtime_reloadable boolean     NOT NULL DEFAULT true,
+    is_enabled            boolean     NOT NULL DEFAULT true,
+    sort_order            integer     NOT NULL DEFAULT 0,
+
+    metadata              jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status                text        NOT NULL DEFAULT 'active',
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+    updated_at            timestamptz,
+    updated_by            uuid,
+
+    CONSTRAINT parameter_definition_pkey PRIMARY KEY (id),
+    CONSTRAINT parameter_definition_code_uq UNIQUE (code),
+    CONSTRAINT parameter_definition_code_fmt CHECK (code ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'),
+    CONSTRAINT parameter_definition_namespace_fmt CHECK (namespace ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$'),
+    CONSTRAINT parameter_definition_name_chk CHECK (btrim(display_name) <> ''),
+    CONSTRAINT parameter_definition_owner_chk CHECK (owner_model IN ('product', 'tenant')),
+    CONSTRAINT parameter_definition_control_chk CHECK (control_level IN ('system_controlled', 'tenant_configurable', 'tenant_owned')),
+    CONSTRAINT parameter_definition_visibility_chk CHECK (tenant_visibility IN ('hidden', 'readonly', 'configurable')),
+    CONSTRAINT parameter_definition_type_chk CHECK (data_type IN ('boolean', 'integer', 'number', 'string', 'enum', 'duration', 'json')),
+    CONSTRAINT parameter_definition_reload_chk CHECK (runtime_reload IN ('immediate', 'next_request', 'next_login', 'restart', 'external_provider')),
+    CONSTRAINT parameter_definition_cache_ttl_chk CHECK (cache_ttl_seconds BETWEEN 0 AND 86400),
+    CONSTRAINT parameter_definition_status_chk CHECK (status IN ('active', 'deprecated')),
+    CONSTRAINT parameter_definition_allowed_values_chk CHECK (allowed_values IS NULL OR jsonb_typeof(allowed_values) = 'array'),
+    CONSTRAINT parameter_definition_metadata_chk CHECK (jsonb_typeof(metadata) = 'object')
+);
+
+CREATE INDEX IF NOT EXISTS parameter_definition_namespace_idx
+    ON control.parameter_definition (namespace, sort_order, code)
+    WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS parameter_definition_visibility_idx
+    ON control.parameter_definition (tenant_visibility, control_level)
+    WHERE status = 'active';
+
+COMMENT ON TABLE control.parameter_definition IS
+    'ARCHETYPE=B;SCOPE=N. Product-owned runtime parameter catalog. Tenants can view active non-hidden rows and override rows with tenant_visibility=configurable.';
+COMMENT ON COLUMN control.parameter_definition.control_level IS
+    'system_controlled = product-owned read-only; tenant_configurable = product-owned with tenant override; tenant_owned = future tenant-authored parameter class.';
+COMMENT ON COLUMN control.parameter_definition.runtime_reload IS
+    'How a changed value takes effect: immediate, next_request, next_login, restart, or external_provider.';

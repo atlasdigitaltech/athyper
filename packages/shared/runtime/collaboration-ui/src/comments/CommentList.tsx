@@ -177,7 +177,7 @@ export function CommentList({ entityType, entityId, className, onCountChange, se
               >
                 {tab.label}
                 {count > 0 && (
-                  <span className={cn("tabular-nums text-[10px]", isActive ? "opacity-80" : "opacity-60")}>
+                  <span className={cn("tabular-nums text-doc-support", isActive ? "opacity-80" : "opacity-60")}>
                     {count}
                   </span>
                 )}
@@ -215,7 +215,7 @@ export function CommentList({ entityType, entityId, className, onCountChange, se
               {idx === unreadDividerBeforeIdx && (
                 <div className="flex items-center gap-3 py-2">
                   <div className="h-px flex-1 bg-border" />
-                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  <span className="shrink-0 text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">
                     {unreadCount} new since you last viewed
                   </span>
                   <div className="h-px flex-1 bg-border" />

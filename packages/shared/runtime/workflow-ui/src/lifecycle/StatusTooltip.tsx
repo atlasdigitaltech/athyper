@@ -24,15 +24,15 @@ export function StatusTooltipContent({ data, className }: StatusTooltipProps) {
     <div className={cn("max-w-xs space-y-2 p-1", className)}>
       <div className="flex items-center gap-2">
         <Info aria-hidden className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="[font-size:var(--doc-field-value-size)] font-medium">
+        <span className="text-doc-field-value font-medium">
           {data.statusLabel}
         </span>
       </div>
 
-      <p className="[font-size:var(--doc-support-size)] text-muted-foreground">{data.meaning}</p>
+      <p className="text-doc-support text-muted-foreground">{data.meaning}</p>
 
       {data.enteredAt && (
-        <div className="[font-size:var(--doc-support-size)] text-muted-foreground">
+        <div className="text-doc-support text-muted-foreground">
           Since: {formatDate(data.enteredAt)}
           {data.enteredBy && ` by ${data.enteredBy}`}
         </div>
@@ -43,7 +43,7 @@ export function StatusTooltipContent({ data, className }: StatusTooltipProps) {
           <p className="section-label mb-1">Next possible</p>
           <div className="flex flex-wrap gap-1">
             {nextStates.map((state) => (
-              <Badge key={state} variant="outline" className="[font-size:var(--doc-badge-size)]">
+              <Badge key={state} variant="outline" className="text-doc-badge">
                 {state}
               </Badge>
             ))}

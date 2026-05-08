@@ -3,6 +3,7 @@ import { getSessionRedis } from "@/lib/auth/session-redis";
 import { getSessionId, clearMfaPendingCookie } from "@/lib/auth/session";
 import { resolveRealmConfig } from "@/lib/auth/realm-config";
 import { sessKey } from "@/lib/auth/redis-keys";
+import { resolveSessionPolicy } from "@/lib/auth/session-policy-resolver";
 import type { V4Session } from "@/lib/auth/types";
 
 const RUNTIME_API_URL = process.env.RUNTIME_API_URL ?? "http://localhost:4000";
@@ -11,7 +12,8 @@ async function markSessionVerified(redis: Awaited<ReturnType<typeof getSessionRe
   session.mfaRequired = false;
   session.mfaVerified = true;
   const ttl = await redis.ttl(key);
-  await redis.set(key, JSON.stringify(session), { EX: ttl > 0 ? ttl : 28800 });
+  const policy = await resolveSessionPolicy(session);
+  await redis.set(key, JSON.stringify(session), { EX: ttl > 0 ? ttl : policy.sessionTtlSeconds });
   await clearMfaPendingCookie();
 }
 

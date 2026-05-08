@@ -41,6 +41,7 @@ SELECT v.code, v.name, c.id, v.st, v.rl, v.pr, v.so, '00000000-0000-0000-0000-00
 FROM shared.permission_category c
 JOIN (VALUES
     ('JOBS.BOARD.VIEW',   'View job queues (BullBoard)', 'special', 'tenant', 'medium',   false, 110),
-    ('JOBS.QUEUE.MANAGE', 'Manage job queues',            'special', 'tenant', 'critical', true,  120)
+    ('JOBS.QUEUE.MANAGE', 'Manage job queues',            'special', 'tenant', 'critical', true,  120),
+    ('IAM.PARAMETER.MANAGE', 'Manage tenant parameter overrides', 'special', 'tenant', 'high', true, 130)
 ) AS v(code, name, cat, st, rl, pr, so) ON c.code = v.cat
 ON CONFLICT (code) DO NOTHING;

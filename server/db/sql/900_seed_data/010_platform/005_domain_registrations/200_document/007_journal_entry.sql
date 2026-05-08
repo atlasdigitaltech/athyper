@@ -23,7 +23,7 @@ SELECT
     'document', 'journal_entry',
     'Journal Entry', 'Journal Entries', 'book-open', 'slate',
     true,
-    '{"prefix":"JE","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
+    '{"prefix":"JE","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}],"auto_name_rule":{"strategy":"description_or_fallback","fallback_template":"{prefix} – {date}","date_format":"DD Mon YYYY"}}'::jsonb,
     '{"is_approvable":true,"document_category":"general_ledger","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
@@ -111,7 +111,13 @@ SET display_config = jsonb_build_object(
         'date_label',     'ENTRY DATE',
         'amount_field',   'total_debit',
         'currency_field', 'currency_code',
-        'date_field',     'entry_date'
+        'date_field',     'entry_date',
+        'created_at_field', 'created_at',
+        'created_by_field', 'created_by',
+        'updated_at_field', 'updated_at',
+        'updated_by_field', 'updated_by',
+        'status_changed_at_field', 'status_changed_at',
+        'status_changed_by_field', 'status_changed_by'
     )
 )
 WHERE table_schema = 'document' AND table_name = 'journal_entry'
@@ -200,6 +206,7 @@ UPDATE control.entity
        ),
        'document_header', jsonb_build_object(
            'number_field', 'document_no',
+           'name_field', 'name',
            'status_field', 'status',
            'type_label', 'JOURNAL ENTRY',
            'total_label', 'TOTAL',
@@ -207,6 +214,12 @@ UPDATE control.entity
            'currency_field', 'transaction_currency',
            'date_field', 'posting_date',
            'title_field', 'description',
+           'created_at_field', 'created_at',
+           'created_by_field', 'created_by',
+           'updated_at_field', 'updated_at',
+           'updated_by_field', 'updated_by',
+           'status_changed_at_field', 'status_changed_at',
+           'status_changed_by_field', 'status_changed_by',
            'lifecycle_stages', jsonb_build_array(
                jsonb_build_object('key','draft',            'label','Draft'),
                jsonb_build_object('key','created',          'label','Ready'),
@@ -228,6 +241,20 @@ UPDATE control.entity
  WHERE table_schema = 'document'
    AND table_name = 'journal_entry'
    AND tenant_id IS NULL;
+
+-- Patch naming_policy to add auto_name_rule (idempotent — merges into existing JSON)
+UPDATE control.entity
+   SET naming_policy = naming_policy || jsonb_build_object(
+       'auto_name_rule', jsonb_build_object(
+           'strategy',          'description_or_fallback',
+           'fallback_template', '{prefix} – {date}',
+           'date_format',       'DD Mon YYYY'
+       )
+   )
+ WHERE table_schema = 'document'
+   AND table_name = 'journal_entry'
+   AND tenant_id IS NULL
+   AND NOT (naming_policy ? 'auto_name_rule');
 
 INSERT INTO control.entity (
     module_id, name, entity_short, entity_code,
@@ -262,6 +289,8 @@ ON CONFLICT (entity_id, version_no) DO NOTHING;
 
 WITH defs AS (
     SELECT * FROM (VALUES
+      ('code','code','Code','Auto-numbered document code (mirrors je_number).','text','text','one',NULL::text,NULL::jsonb,true,true,true,true,false,false,true,false,false,'{"max_length":50}'::jsonb,'{"source":"numbering_policy"}'::jsonb,'{"group_key":"identity","badge":true}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,5),
+      ('name','name','Name','Auto-named title derived from description or naming policy fallback.','text','text','one',NULL::text,NULL::jsonb,true,false,true,true,false,false,false,false,false,'{"max_length":500}'::jsonb,'{"source":"auto_name_rule"}'::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,6),
       ('document_no','je_number','JE Number','Number assigned by the JE numbering policy.','text','text','one',NULL::text,NULL::jsonb,true,true,true,true,false,false,true,false,false,'{"max_length":50}'::jsonb,'{"source":"numbering_policy"}'::jsonb,'{"group_key":"identity","badge":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft"]}'::jsonb,NULL::jsonb,10),
       ('status','status','Status','Lifecycle state of the journal entry.','lifecycle_state','status','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,20),
       ('company_code_id','company_code_id','Company Code','Company whose ledger is affected.','reference','entity_chooser','one',NULL::text,'{"target_entity":"company_code","target_field":"id","display_field":"name","picker":{"label_field":"name","code_field":"code","label_template":"{name} - {code}","show_code":false}}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"company_code"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,30),
@@ -315,6 +344,8 @@ ON CONFLICT DO NOTHING;
 
 WITH defs AS (
     SELECT * FROM (VALUES
+      ('code','code','Code','Auto-numbered document code (mirrors je_number).','text','text','one',NULL::text,NULL::jsonb,true,true,true,true,false,false,true,false,false,'{"max_length":50}'::jsonb,'{"source":"numbering_policy"}'::jsonb,'{"group_key":"identity","badge":true}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,5),
+      ('name','name','Name','Auto-named title derived from description or naming policy fallback.','text','text','one',NULL::text,NULL::jsonb,true,false,true,true,false,false,false,false,false,'{"max_length":500}'::jsonb,'{"source":"auto_name_rule"}'::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,6),
       ('document_no','je_number','JE Number','Number assigned by the JE numbering policy.','text','text','one',NULL::text,NULL::jsonb,true,true,true,true,false,false,true,false,false,'{"max_length":50}'::jsonb,'{"source":"numbering_policy"}'::jsonb,'{"group_key":"identity","badge":true}'::jsonb,NULL::jsonb,'{"editable_in":["draft"]}'::jsonb,NULL::jsonb,10),
       ('status','status','Status','Lifecycle state of the journal entry.','lifecycle_state','status','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,20),
       ('company_code_id','company_code_id','Company Code','Company whose ledger is affected.','reference','entity_chooser','one',NULL::text,'{"target_entity":"company_code","target_field":"id","display_field":"name","picker":{"label_field":"name","code_field":"code","label_template":"{name} - {code}","show_code":false}}'::jsonb,true,true,false,true,true,false,false,false,false,'{"ref_entity":"company_code"}'::jsonb,NULL::jsonb,'{"group_key":"posting","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,30),
@@ -579,6 +610,92 @@ FROM defs d
 JOIN control.entity e ON e.entity_code = 'journal_line_reference' AND e.tenant_id IS NULL
 JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
 ON CONFLICT DO NOTHING;
+
+-- DDL completeness guard: keep compiled metadata aware of physical system,
+-- audit, generated, and denormalized columns used by the journal tables.
+WITH defs AS (
+    SELECT * FROM (VALUES
+      ('journal_entry','id','id','ID','Primary key (UUIDv7).','uuid','hidden','one','system',NULL::text,NULL::jsonb,true,false,false,false,false,false,true,false,false,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,1),
+      ('journal_entry','tenant_id','tenant_id','Tenant','Owning tenant id.','uuid','hidden','one','system',NULL::text,NULL::jsonb,true,true,false,false,true,false,true,false,false,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,2),
+      ('journal_entry','is_reversal','is_reversal','Is Reversal','Marks a journal entry generated as a reversal.','boolean','hidden','one','system',NULL::text,NULL::jsonb,false,true,false,false,true,false,true,false,false,'{"group_key":"reversal"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,235),
+      ('journal_entry','derived_from_je_id','derived_from_je_id','Derived From JE','Source journal entry for cross-book derivation.','reference','hidden','zero_or_one','system',NULL::text,'{"target_entity":"journal_entry","target_field":"id","display_field":"je_number"}'::jsonb,false,true,false,false,false,false,true,false,false,'{"group_key":"source"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,255),
+      ('journal_entry','posting_rule_id','posting_rule_id','Posting Rule','Posting rule used to derive the journal entry.','reference','hidden','zero_or_one','system',NULL::text,'{"target_entity":"book_posting_rule","target_field":"id","display_field":"code"}'::jsonb,false,false,false,false,false,false,true,false,false,'{"group_key":"source"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,256),
+      ('journal_entry','book_idempotency_key','book_idempotency_key','Book Idempotency Key','Idempotency key for cross-book derived entries.','text','hidden','zero_or_one','system',NULL::text,NULL::jsonb,false,false,false,false,false,false,true,false,false,'{"group_key":"source"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,257),
+      ('journal_entry','is_active','is_active','Active','Generated active-state flag.','boolean','hidden','one','system',NULL::text,NULL::jsonb,true,true,false,false,true,false,true,true,false,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,900),
+      ('journal_entry','status_changed_at','status_changed_at','Status Changed At','Timestamp of the last status change.','timestamptz','datetime','zero_or_one','system',NULL::text,NULL::jsonb,false,true,false,true,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,910),
+      ('journal_entry','status_changed_by','status_changed_by','Status Changed By','Principal who last changed status.','reference','hidden','zero_or_one','system',NULL::text,'{"target_entity":"principal","target_field":"id","display_field":"display_name"}'::jsonb,false,true,false,false,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,920),
+      ('journal_entry','created_at','created_at','Created At','Row creation timestamp.','timestamptz','datetime','one','system',NULL::text,NULL::jsonb,true,true,false,true,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,950),
+      ('journal_entry','created_by','created_by','Created By','Principal who created the row.','reference','hidden','one','system',NULL::text,'{"target_entity":"principal","target_field":"id","display_field":"display_name"}'::jsonb,true,true,false,false,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,960),
+      ('journal_entry','updated_at','updated_at','Updated At','Timestamp of the last row update.','timestamptz','datetime','zero_or_one','system',NULL::text,NULL::jsonb,false,true,false,true,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,970),
+      ('journal_entry','updated_by','updated_by','Updated By','Principal who last updated the row.','reference','hidden','zero_or_one','system',NULL::text,'{"target_entity":"principal","target_field":"id","display_field":"display_name"}'::jsonb,false,true,false,false,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,980),
+
+      ('journal_line','id','id','ID','Primary key (UUIDv7).','uuid','hidden','one','system',NULL::text,NULL::jsonb,true,false,false,false,false,false,true,false,false,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,1),
+      ('journal_line','tenant_id','tenant_id','Tenant','Owning tenant id.','uuid','hidden','one','system',NULL::text,NULL::jsonb,true,true,false,false,true,false,true,false,false,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,2),
+      ('journal_line','company_code_id','company_code_id','Company Code','Denormalized from the journal entry header.','reference','hidden','one','system',NULL::text,'{"target_entity":"company_code","target_field":"id","display_field":"name"}'::jsonb,true,true,false,true,true,false,true,false,false,'{"group_key":"posting"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,210),
+      ('journal_line','book_id','book_id','Ledger Book','Denormalized from the journal entry header.','reference','hidden','one','system',NULL::text,'{"target_entity":"ledger_book","target_field":"id","display_field":"name"}'::jsonb,true,true,false,true,true,false,true,false,false,'{"group_key":"posting"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,220),
+      ('journal_line','fiscal_period_id','fiscal_period_id','Fiscal Period','Denormalized from the journal entry header.','reference','hidden','one','system',NULL::text,'{"target_entity":"fiscal_period","target_field":"id","display_field":"period_number"}'::jsonb,true,true,false,true,true,false,true,false,false,'{"group_key":"posting"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,230),
+      ('journal_line','fiscal_year','fiscal_year','Fiscal Year','Denormalized fiscal year.','integer','hidden','one','system',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,false,false,'{"group_key":"posting"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,240),
+      ('journal_line','period_number','period_number','Period','Denormalized fiscal period number.','integer','hidden','one','system',NULL::text,NULL::jsonb,true,true,false,true,true,false,true,false,false,'{"group_key":"posting"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,250),
+      ('journal_line','posting_date','posting_date','Posting Date','Denormalized posting date.','date','hidden','one','system',NULL::text,NULL::jsonb,true,true,false,true,false,false,true,false,false,'{"group_key":"posting"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,260),
+      ('journal_line','dimension_set_id','dimension_set_id','Dimension Set','Composite dimension set id.','reference','hidden','zero_or_one','system',NULL::text,'{"target_entity":"dimension_set","target_field":"id","display_field":"code"}'::jsonb,false,true,false,false,false,false,true,false,false,'{"group_key":"dimensions"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,270),
+      ('journal_line','posted_at','posted_at','Posted At','Timestamp when the line was posted.','timestamptz','hidden','zero_or_one','system',NULL::text,NULL::jsonb,false,true,false,true,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,930),
+      ('journal_line','posted_by','posted_by','Posted By','Principal who posted the line.','reference','hidden','zero_or_one','system',NULL::text,'{"target_entity":"principal","target_field":"id","display_field":"display_name"}'::jsonb,false,true,false,false,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,940),
+      ('journal_line','created_at','created_at','Created At','Row creation timestamp.','timestamptz','datetime','one','system',NULL::text,NULL::jsonb,true,true,false,true,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,950),
+      ('journal_line','created_by','created_by','Created By','Principal who created the row.','reference','hidden','one','system',NULL::text,'{"target_entity":"principal","target_field":"id","display_field":"display_name"}'::jsonb,true,true,false,false,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,960),
+      ('journal_line','updated_at','updated_at','Updated At','Timestamp of the last row update.','timestamptz','datetime','zero_or_one','system',NULL::text,NULL::jsonb,false,true,false,true,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,970),
+      ('journal_line','updated_by','updated_by','Updated By','Principal who last updated the row.','reference','hidden','zero_or_one','system',NULL::text,'{"target_entity":"principal","target_field":"id","display_field":"display_name"}'::jsonb,false,true,false,false,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,980),
+
+      ('journal_line_reference','id','id','ID','Primary key (UUIDv7).','uuid','hidden','one','system',NULL::text,NULL::jsonb,true,false,false,false,false,false,true,false,false,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,1),
+      ('journal_line_reference','tenant_id','tenant_id','Tenant','Owning tenant id.','uuid','hidden','one','system',NULL::text,NULL::jsonb,true,true,false,false,true,false,true,false,false,'{"group_key":"system"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,2),
+      ('journal_line_reference','created_at','created_at','Created At','Append-only creation timestamp.','timestamptz','datetime','one','system',NULL::text,NULL::jsonb,true,true,false,true,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,950),
+      ('journal_line_reference','created_by','created_by','Created By','Principal who created the reference.','reference','hidden','one','system',NULL::text,'{"target_entity":"principal","target_field":"id","display_field":"display_name"}'::jsonb,true,true,false,false,false,false,true,false,false,'{"group_key":"audit"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,960)
+    ) AS x(entity_code,name,column_name,label,description,data_type,ui_type,cardinality,origin,enum_domain_code,reference_config,is_required,is_filterable,is_searchable,is_sortable,is_groupable,is_aggregatable,is_read_only,is_computed,is_write_once,ui_hint,visibility,editability,sort_order)
+)
+INSERT INTO control.entity_field (
+    entity_version_id, name, column_name, label, description, data_type, ui_type,
+    cardinality, origin, enum_domain_code, reference_config,
+    is_required, is_filterable, is_searchable, is_sortable, is_groupable,
+    is_aggregatable, is_read_only, is_computed, is_write_once, compute_mode, compute_expr,
+    ui_hint, visibility, editability, sort_order, created_by)
+SELECT ev.id, d.name, d.column_name, d.label, d.description, d.data_type, d.ui_type,
+       d.cardinality, d.origin, d.enum_domain_code, d.reference_config,
+       d.is_required, d.is_filterable, d.is_searchable, d.is_sortable, d.is_groupable,
+       d.is_aggregatable, d.is_read_only, d.is_computed, d.is_write_once,
+       CASE WHEN d.is_computed THEN 'database' ELSE NULL END,
+       CASE WHEN d.is_computed THEN jsonb_build_object('source', 'db') ELSE NULL END,
+       d.ui_hint, d.visibility, d.editability, d.sort_order, v_su
+FROM defs d
+JOIN control.entity e ON e.entity_code = d.entity_code AND e.tenant_id IS NULL
+JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
+ON CONFLICT (entity_version_id, name) WHERE entity_version_id IS NOT NULL DO UPDATE
+   SET column_name      = EXCLUDED.column_name,
+       label            = EXCLUDED.label,
+       description      = EXCLUDED.description,
+       data_type        = EXCLUDED.data_type,
+       ui_type          = EXCLUDED.ui_type,
+       cardinality      = EXCLUDED.cardinality,
+       origin           = EXCLUDED.origin,
+       enum_domain_code = EXCLUDED.enum_domain_code,
+       reference_config = EXCLUDED.reference_config,
+       is_required      = EXCLUDED.is_required,
+       is_filterable    = EXCLUDED.is_filterable,
+       is_searchable    = EXCLUDED.is_searchable,
+       is_sortable      = EXCLUDED.is_sortable,
+       is_groupable     = EXCLUDED.is_groupable,
+       is_aggregatable  = EXCLUDED.is_aggregatable,
+       is_read_only     = EXCLUDED.is_read_only,
+       is_computed      = EXCLUDED.is_computed,
+       is_write_once    = EXCLUDED.is_write_once,
+       compute_mode     = EXCLUDED.compute_mode,
+       compute_expr     = EXCLUDED.compute_expr,
+       ui_hint          = EXCLUDED.ui_hint,
+       visibility       = EXCLUDED.visibility,
+       editability      = EXCLUDED.editability,
+       sort_order       = EXCLUDED.sort_order,
+       is_active        = true,
+       is_deprecated    = false,
+       updated_at       = now(),
+       updated_by       = v_su;
 
 UPDATE control.entity
    SET display_config = jsonb_build_object(

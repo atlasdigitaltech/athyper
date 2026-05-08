@@ -63,12 +63,12 @@ export function StagedAttachmentChip({ item, onRemove, onRetry }: StagedChipProp
           </div>
         )}
         {isError && (
-          <p className="mt-0.5 truncate text-[10px] leading-none text-destructive/80">
+          <p className="mt-0.5 truncate text-doc-support leading-none text-destructive/80">
             {item.errorMessage ?? "Upload failed"}
           </p>
         )}
         {item.status === "done" && (
-          <p className="mt-0.5 text-[10px] leading-none text-muted-foreground">
+          <p className="mt-0.5 text-doc-support leading-none text-muted-foreground">
             {formatBytes(item.file.size)}
           </p>
         )}
@@ -123,7 +123,7 @@ export function RenderedAttachmentChip({ item }: RenderedChipProps) {
       <FileIcon contentType={item.contentType} className="size-3.5 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium leading-none">{item.fileName}</p>
-        <p className="mt-0.5 text-[10px] leading-none text-muted-foreground">
+        <p className="mt-0.5 text-doc-support leading-none text-muted-foreground">
           {formatBytes(item.sizeBytes)} · {item.contentType.split("/")[1]?.toUpperCase() ?? "FILE"}
         </p>
       </div>
@@ -152,8 +152,8 @@ export function RenderedImageChip({ item }: RenderedChipProps) {
         className="h-24 w-36 object-cover transition-opacity group-hover:opacity-90"
         loading="lazy"
       />
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1">
-        <p className="truncate text-[10px] text-white">{item.fileName}</p>
+      <div className="media-caption-overlay absolute inset-x-0 bottom-0 px-2 py-1">
+        <p className="media-caption-text truncate text-doc-support">{item.fileName}</p>
       </div>
     </a>
   );

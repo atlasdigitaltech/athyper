@@ -12,11 +12,10 @@
 //   running. Keeping this process alive ensures schedulers are refreshed after
 //   Redis restarts or BullMQ version upgrades.
 //
-// Note on Phase 2A workers:
-//   createJobsService() in bootstrap() eagerly creates BullMQ Worker objects
-//   (they connect to Redis and begin listening immediately). In this runtime
-//   they sit idle — no domain jobs are processed here. Phase 2B will introduce
-//   a Queue-only scheduler factory so this runtime has zero worker connections.
+// Note on workers:
+//   bootstrap() creates Queue handles for this runtime but does not construct
+//   BullMQ Worker consumers. This process only refreshes repeatable scheduler
+//   entries; MODE=worker owns job consumption.
 //
 // Shutdown (LIFO):
 //   probe → jobs service → redis → db
@@ -29,9 +28,16 @@ import { makeAuditEvent } from "../audit.js";
 import { startProbeServer } from "./probe.js";
 import type { ServerDeps } from "../kernel/bootstrap.js";
 
+async function checkBullmqQueue(queues: unknown): Promise<void> {
+  const queue = (queues as { lifecycleTimers?: { getJobCounts?: (...states: string[]) => Promise<unknown> } })
+    .lifecycleTimers;
+  if (typeof queue?.getJobCounts !== "function") return;
+  await queue.getJobCounts("wait", "delayed", "active", "paused");
+}
+
 export async function startScheduler(deps: ServerDeps): Promise<void> {
   const startedAt = Date.now();
-  const { config, logger, lifecycle, jobs, audit } = deps;
+  const { config, logger, lifecycle, jobs, audit, redis } = deps;
 
   await audit.write(
     makeAuditEvent({
@@ -53,7 +59,14 @@ export async function startScheduler(deps: ServerDeps): Promise<void> {
 
   // ─── Readiness probe ──────────────────────────────────────────────────────
   // Registered LAST so it stops FIRST on shutdown.
-  const probe = startProbeServer({ port: config.port, mode: "scheduler" });
+  const probe = startProbeServer({
+    port: config.port,
+    mode: "scheduler",
+    checks: {
+      redis: () => redis.ping(),
+      bullmq: () => checkBullmqQueue(jobs.queues),
+    },
+  });
   lifecycle.onShutdown(
     () => new Promise<void>((resolve) => probe.close(() => resolve())),
   );

@@ -109,7 +109,7 @@ export function ContextSwitcher() {
         {/* Avatar */}
         <span
           aria-hidden
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-semibold text-primary"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-doc-subtitle font-semibold text-primary"
         >
           {initials || <User className="h-3.5 w-3.5" />}
         </span>
@@ -119,7 +119,7 @@ export function ContextSwitcher() {
           <span className="max-w-full truncate text-xs font-medium leading-tight text-foreground">
             {activeOrgEntry?.name ?? displayName}
           </span>
-          <span className="max-w-full truncate text-[10px] leading-tight text-muted-foreground">
+          <span className="max-w-full truncate text-doc-support leading-tight text-muted-foreground">
             {activeEntityCode && workbenchLabel
               ? `${activeEntityCode} · ${workbenchLabel}`
               : (activeEntityCode ?? workbenchLabel ?? "No context")}
@@ -147,7 +147,7 @@ export function ContextSwitcher() {
           {/* Org list */}
           {allOrgs.length > 1 && (
             <section>
-              <p className="px-3 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="px-3 pb-1 pt-2.5 text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">
                 Entity
               </p>
               {allOrgs.map((org) => {
@@ -170,7 +170,7 @@ export function ContextSwitcher() {
                       <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       <div className="flex min-w-0 flex-col items-start">
                         <span className="truncate text-xs font-medium">{org.name}</span>
-                        <span className="text-[10px] text-muted-foreground">{entityCode}</span>
+                        <span className="text-doc-support text-muted-foreground">{entityCode}</span>
                       </div>
                     </div>
                     {isLoading ? (
@@ -189,7 +189,7 @@ export function ContextSwitcher() {
             <>
               {allOrgs.length > 1 && <div className="mx-3 my-1 border-t" />}
               <section className="pb-1">
-                <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                <p className="px-3 pb-1 pt-2 text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">
                   Workbench
                 </p>
                 {activeOrgWorkbenches.map((role) => {

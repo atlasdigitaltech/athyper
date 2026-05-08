@@ -117,7 +117,7 @@ function DomainDialog({
                 disabled={isEdit}
                 onChange={(e) => setCode(slugify(e.target.value).replace(/_/g, "."))}
               />
-              <p className="text-[10px] text-muted-foreground">dot.separated lowercase</p>
+              <p className="text-doc-support text-muted-foreground">dot.separated lowercase</p>
             </div>
             <div className="space-y-1">
               <Label>Name</Label>
@@ -248,10 +248,10 @@ function ValueRow({
               <span className="text-xs text-muted-foreground truncate max-w-[200px]">{value.description}</span>
             )}
             {value.is_system && (
-              <Badge variant="outline" className="text-[10px]">system</Badge>
+              <Badge variant="outline" className="text-doc-support">system</Badge>
             )}
             {value.tenant_owned && (
-              <Badge variant="secondary" className="text-[10px]">tenant</Badge>
+              <Badge variant="secondary" className="text-doc-support">tenant</Badge>
             )}
             <StatusPill value={value.status as "active" | "deprecated"} />
           </div>
@@ -361,8 +361,8 @@ function DomainCard({ domain, onRefresh }: { domain: Domain; onRefresh: () => vo
                   <CodeBadge>{domain.code}</CodeBadge>
                   <StatusPill value={domain.status as "active" | "deprecated"} />
                   {domain.is_extensible
-                    ? <Badge variant="secondary" className="text-[10px]">extensible</Badge>
-                    : <Badge variant="outline" className="text-[10px] text-muted-foreground">platform-only</Badge>}
+                    ? <Badge variant="secondary" className="text-doc-support">extensible</Badge>
+                    : <Badge variant="outline" className="text-doc-support text-muted-foreground">platform-only</Badge>}
                 </div>
                 {domain.description && (
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">{domain.description}</p>

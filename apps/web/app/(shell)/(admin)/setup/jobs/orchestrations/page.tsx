@@ -177,20 +177,20 @@ function NodeTimeline({ runId, nodes, runStatus }: { runId: string; nodes: OrchN
               <div className="flex items-start justify-between gap-2 flex-wrap">
                 <div>
                   <p className="text-sm font-medium">{node.node_code}</p>
-                  <p className="text-[11px] text-muted-foreground font-mono">{node.node_type}</p>
+                  <p className="text-doc-subtitle text-muted-foreground font-mono">{node.node_type}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <Badge variant={STATUS_BADGE[node.status] ?? "outline"} className="text-[10px]">
+                  <Badge variant={STATUS_BADGE[node.status] ?? "outline"} className="text-doc-support">
                     {node.status}
                   </Badge>
                   {node.retry_count > 0 && (
-                    <Badge variant="outline" className="text-[10px]">
+                    <Badge variant="outline" className="text-doc-support">
                       retry ×{node.retry_count}
                     </Badge>
                   )}
                   {node.status === "failed" && (runStatus === "failed" || runStatus === "running") && (
                     <Button
-                      size="sm" variant="ghost" className="h-6 text-[10px]"
+                      size="sm" variant="ghost" className="h-6 text-doc-support"
                       disabled={retryNode.isPending}
                       onClick={() => retryNode.mutate(node.node_code)}
                     >
@@ -202,7 +202,7 @@ function NodeTimeline({ runId, nodes, runStatus }: { runId: string; nodes: OrchN
               </div>
 
               {/* Timing */}
-              <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+              <div className="mt-1 flex flex-wrap gap-3 text-doc-subtitle text-muted-foreground">
                 {node.started_at && (
                   <span>Started: {new Date(node.started_at).toLocaleTimeString()}</span>
                 )}
@@ -220,7 +220,7 @@ function NodeTimeline({ runId, nodes, runStatus }: { runId: string; nodes: OrchN
               {/* Error */}
               {node.error && (
                 <div className="mt-1.5 rounded bg-destructive/5 border border-destructive/20 px-2 py-1.5">
-                  <p className="text-[11px] text-destructive font-mono whitespace-pre-wrap break-all line-clamp-4">
+                  <p className="text-doc-subtitle text-destructive font-mono whitespace-pre-wrap break-all line-clamp-4">
                     {node.error}
                   </p>
                 </div>
@@ -283,11 +283,11 @@ function RunRow({ run }: { run: OrchRun }) {
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-semibold">{run.dag_id}</span>
-                <Badge variant={STATUS_BADGE[run.status] ?? "outline"} className="text-[10px]">
+                <Badge variant={STATUS_BADGE[run.status] ?? "outline"} className="text-doc-support">
                   {run.status}
                 </Badge>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-doc-subtitle text-muted-foreground mt-0.5">
                 <span className="font-mono">{shortId(run.id)}</span>
                 {run.trigger_ref && <span> · {run.trigger_ref}</span>}
                 {" · "}
@@ -299,7 +299,7 @@ function RunRow({ run }: { run: OrchRun }) {
 
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Progress pills */}
-            <div className="hidden sm:flex items-center gap-1 text-[11px]">
+            <div className="hidden sm:flex items-center gap-1 text-doc-subtitle">
               {run.completed_nodes > 0 && (
                 <span className="text-success">
                   {run.completed_nodes}✓
@@ -316,7 +316,7 @@ function RunRow({ run }: { run: OrchRun }) {
 
             {run.status === "running" && (
               <Button
-                size="sm" variant="ghost" className="h-7 text-[10px]"
+                size="sm" variant="ghost" className="h-7 text-doc-support"
                 onClick={() => setCancelOpen(true)}
               >
                 <Ban className="h-3 w-3 mr-1" />
@@ -422,13 +422,13 @@ export default function OrchestrationPage() {
       actions={
         <div className="flex items-center gap-2">
           {runningCount > 0 && (
-            <Badge variant="warning" className="gap-1 text-[10px]">
+            <Badge variant="warning" className="gap-1 text-doc-support">
               <Loader2 className="h-3 w-3 animate-spin" />
               {runningCount} running
             </Badge>
           )}
           {failedCount > 0 && (
-            <Badge variant="destructive" className="gap-1 text-[10px]">
+            <Badge variant="destructive" className="gap-1 text-doc-support">
               <XCircle className="h-3 w-3" />
               {failedCount} failed
             </Badge>

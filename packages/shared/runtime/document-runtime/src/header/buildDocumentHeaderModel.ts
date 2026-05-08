@@ -23,7 +23,7 @@ import type {
   HeaderFact,
   HeaderProgressStage,
 } from "@athyper/entity-runtime/header";
-import { statusToIntent, fmtDate, fmtDateTime, fmtMoneyNumber } from "@athyper/runtime-shared/core";
+import { statusToIntent, fmtDate, fmtMoneyNumber } from "@athyper/runtime-shared/core";
 
 // ── Stage constants (standard AP/document lifecycle) ─────────────────────────
 
@@ -59,6 +59,72 @@ function normaliseStageKey(s: string): string {
   const k = s.toLowerCase().replace(/[\s-]/g, "_");
   if (k === "fully_paid" || k === "partially_paid") return "paid";
   return k;
+}
+
+function readFirstPresent(data: Record<string, unknown>, ...fieldNames: Array<string | undefined>): unknown {
+  for (const fieldName of fieldNames) {
+    if (!fieldName) continue;
+    const value = data[fieldName];
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return undefined;
+}
+
+function formatTimelineDate(value: unknown): string | undefined {
+  const input = value instanceof Date ? value.toISOString() : value;
+  const formatted = fmtDate(input);
+  return formatted === "—" ? undefined : formatted;
+}
+
+function hasTimelineValue(value: unknown): boolean {
+  return value !== undefined && value !== null && value !== "";
+}
+
+// Auto paths can skip intermediate statuses without dedicated timestamp columns.
+function fillSkippedCompletedStageDates(values: unknown[], effectiveIndex: number): unknown[] {
+  return values.map((value, i) => {
+    if (hasTimelineValue(value) || i >= effectiveIndex) return value;
+
+    for (let j = i + 1; j <= effectiveIndex; j += 1) {
+      const nextValue = values[j];
+      if (hasTimelineValue(nextValue)) return nextValue;
+    }
+
+    return undefined;
+  });
+}
+
+function timelineDateValueForStage(
+  data: Record<string, unknown>,
+  stageKey: string,
+  isCurrent: boolean,
+  statusChangedAtField?: string,
+): unknown {
+  const currentStatusField = isCurrent ? statusChangedAtField : undefined;
+  const currentStatusFallback = isCurrent ? "status_changed_at" : undefined;
+
+  switch (normaliseStageKey(stageKey)) {
+    case "draft":
+      return readFirstPresent(data, "created_at", "created_on");
+    case "created":
+    case "ready":
+      return readFirstPresent(data, "ready_at", "prepared_at", currentStatusField, currentStatusFallback);
+    case "pending_approval":
+    case "submitted":
+      return readFirstPresent(data, "submitted_at", "submission_at", currentStatusField, currentStatusFallback);
+    case "approved":
+      return readFirstPresent(data, "approved_at", currentStatusField, currentStatusFallback);
+    case "posted":
+      return readFirstPresent(data, "posted_at", currentStatusField, currentStatusFallback);
+    case "paid":
+      return readFirstPresent(data, "paid_at", "settled_at", currentStatusField, currentStatusFallback);
+    case "reversed":
+      return readFirstPresent(data, "reversed_at", currentStatusField, currentStatusFallback);
+    case "rejected":
+      return readFirstPresent(data, "rejected_at", currentStatusField, currentStatusFallback);
+    default:
+      return isCurrent ? readFirstPresent(data, currentStatusField, currentStatusFallback) : undefined;
+  }
 }
 
 // ── Duration label ────────────────────────────────────────────────────────────
@@ -175,6 +241,10 @@ export function buildDocumentHeaderModel(
     ? String(data[dh.number_field] ?? entity.entity_code)
     : entity.entity_code;
 
+  const nameVal = dh?.name_field && data[dh.name_field]
+    ? String(data[dh.name_field])
+    : undefined;
+
   const typeLabel  = (dh?.type_label ?? entity.entity_name).replace(/_/g, " ").toUpperCase();
   const entityCode = entity.entity_code;
 
@@ -259,23 +329,34 @@ export function buildDocumentHeaderModel(
   const effectiveIndex = stepIndex === -1 ? 0 : stepIndex;
   const currentKey = stepIndex === -1 ? "draft" : stageKey;
 
-  const createdAtIso       = dh?.created_at_field       ? String(data[dh.created_at_field]       ?? "") : undefined;
-  const statusChangedAtIso = dh?.status_changed_at_field ? String(data[dh.status_changed_at_field] ?? "") : undefined;
+  const createdAtValue       = readFirstPresent(data, dh?.created_at_field, "created_at");
+  const statusChangedAtField = dh?.status_changed_at_field ?? "status_changed_at";
+  const statusChangedAtValue = readFirstPresent(data, statusChangedAtField, "status_changed_at");
+  const createdAtIso         = createdAtValue ? String(createdAtValue) : undefined;
+  const statusChangedAtIso   = statusChangedAtValue ? String(statusChangedAtValue) : undefined;
+
+  const rawStageReachedAtValues = lifecycleStages.map((stage, i): unknown => {
+    const isPast    = i < effectiveIndex;
+    const isCurrent = i === effectiveIndex;
+
+    if (!isPast && !isCurrent) return undefined;
+    if (i === 0) return createdAtValue;
+
+    return timelineDateValueForStage(data, stage.key, isCurrent, statusChangedAtField);
+  });
+  const stageReachedAtValues = fillSkippedCompletedStageDates(rawStageReachedAtValues, effectiveIndex);
 
   const stages: HeaderProgressStage[] = lifecycleStages.map((stage, i): HeaderProgressStage => {
     const isPast    = i < effectiveIndex;
     const isCurrent = i === effectiveIndex;
 
-    const reachedAt = isPast || isCurrent
-      ? (i === 0 ? fmtDate(createdAtIso)
-        : i === effectiveIndex ? fmtDate(statusChangedAtIso)
-        : fmtDate(statusChangedAtIso))
-      : undefined;
+    const reachedAtValue = isPast || isCurrent ? stageReachedAtValues[i] : undefined;
+    const reachedAt = formatTimelineDate(reachedAtValue);
 
     const durationLabel = (() => {
       if (i > effectiveIndex) return undefined;
       if (i === 0) return calcDurationLabel(createdAtIso || undefined, effectiveIndex > 0 ? statusChangedAtIso || undefined : undefined);
-      if (i === effectiveIndex) return calcDurationLabel(statusChangedAtIso || undefined);
+      if (i === effectiveIndex) return calcDurationLabel(reachedAtValue ? String(reachedAtValue) : undefined);
       return undefined;
     })();
 
@@ -294,7 +375,7 @@ export function buildDocumentHeaderModel(
       typeLabel,
       typeHref:        `/app/${entityCode}`,
       typeTooltip:     `View all ${entity.entity_name.toLowerCase()}`,
-      name:             opts.resolvedPartyName ?? numberVal,
+      name:             opts.resolvedPartyName ?? nameVal ?? numberVal,
       number:           numberVal,
       identifierAction: "copy",
       status:          {

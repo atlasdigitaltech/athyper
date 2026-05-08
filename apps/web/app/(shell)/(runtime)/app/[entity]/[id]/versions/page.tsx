@@ -172,15 +172,15 @@ function VersionCard({
             </span>
             <Badge
               variant={versionStatusVariant(version.status)}
-              className="capitalize text-[10px]"
+              className="capitalize text-doc-support"
             >
               {version.status}
             </Badge>
             {version.is_current && (
-              <Badge variant="info" className="text-[10px]">Current</Badge>
+              <Badge variant="info" className="text-doc-support">Current</Badge>
             )}
             {isPinned && (
-              <Badge variant="secondary" className="text-[10px]">Selected</Badge>
+              <Badge variant="secondary" className="text-doc-support">Selected</Badge>
             )}
           </div>
 
@@ -255,7 +255,7 @@ function VersionCard({
         </div>
 
         {/* Hash (integrity fingerprint) */}
-        <div className="mt-2 truncate font-mono text-[10px] text-muted-foreground/50">
+        <div className="mt-2 truncate font-mono text-doc-support text-muted-foreground/50">
           {version.data_hash}
         </div>
       </div>

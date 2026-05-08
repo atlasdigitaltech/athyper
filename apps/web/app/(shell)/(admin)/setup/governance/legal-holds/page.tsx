@@ -371,11 +371,11 @@ function HoldCard({
                     <span className="font-medium text-sm">{hold.holdName}</span>
                   </button>
                 </CollapsibleTrigger>
-                <Badge variant={STATUS_VARIANT[hold.status] ?? "muted"} className="text-[10px]">
+                <Badge variant={STATUS_VARIANT[hold.status] ?? "muted"} className="text-doc-support">
                   {hold.status}
                 </Badge>
               </div>
-              <p className="font-mono text-[11px] text-muted-foreground ml-5">{hold.holdCode}</p>
+              <p className="font-mono text-doc-subtitle text-muted-foreground ml-5">{hold.holdCode}</p>
               {hold.description && (
                 <p className="text-xs text-muted-foreground mt-1 ml-5 line-clamp-2">{hold.description}</p>
               )}
@@ -407,23 +407,23 @@ function HoldCard({
           {/* Scope summary */}
           <div className="flex flex-wrap gap-1.5 mt-3 ml-5">
             {hold.scopeEntityType && (
-              <Badge variant="outline" className="text-[10px] font-mono">{hold.scopeEntityType}</Badge>
+              <Badge variant="outline" className="text-doc-support font-mono">{hold.scopeEntityType}</Badge>
             )}
             {hold.scopeDateFrom && (
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-doc-support">
                 {fmt(hold.scopeDateFrom)} → {fmt(hold.scopeDateTo)}
               </Badge>
             )}
             {hold.scopeLogSchemas?.map((s) => (
-              <Badge key={s} variant="muted" className="text-[10px] font-mono">{s}</Badge>
+              <Badge key={s} variant="muted" className="text-doc-support font-mono">{s}</Badge>
             ))}
             {hold.effectiveTo && (
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-doc-support">
                 Until {fmt(hold.effectiveTo)}
               </Badge>
             )}
             {expanded && blockedCount > 0 && (
-              <Badge variant="destructive" className="text-[10px]">
+              <Badge variant="destructive" className="text-doc-support">
                 <Database className="mr-1 h-2.5 w-2.5" />
                 {blockedCount} partition{blockedCount !== 1 ? "s" : ""} blocked
               </Badge>
@@ -460,16 +460,16 @@ function HoldCard({
                     <tbody>
                       {manifestRows.map((m) => (
                         <tr key={m.id} className="border-t">
-                          <td className="px-3 py-1.5 font-mono text-[11px]">
+                          <td className="px-3 py-1.5 font-mono text-doc-subtitle">
                             {m.partitionSchema}.{m.partitionTable}
                           </td>
-                          <td className="px-3 py-1.5 text-muted-foreground font-mono text-[11px]">
+                          <td className="px-3 py-1.5 text-muted-foreground font-mono text-doc-subtitle">
                             {fmt(m.partitionRangeLo)} → {fmt(m.partitionRangeHi)}
                           </td>
                           <td className="px-3 py-1.5">
                             <Badge
                               variant={m.isReleased ? "success" : "destructive"}
-                              className="text-[9px]"
+                              className="text-doc-field-label"
                             >
                               {m.isReleased ? "released" : "blocked"}
                             </Badge>

@@ -242,7 +242,7 @@ export default function IntegrationEndpointsPage() {
                 ) : (
                   <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/30" title="No health check URL configured" />
                 )}
-                <Badge variant="outline" className="text-[10px] font-mono">{ep.method}</Badge>
+                <Badge variant="outline" className="text-doc-support font-mono">{ep.method}</Badge>
               </>}
               title={ep.name}
               metadata={<>

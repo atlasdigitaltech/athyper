@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@athyper/ui/primitives";
 import type { HeaderTab } from "../types";
+import { headerIconButtonActiveClass, headerIconButtonClass } from "./headerChrome";
 
 // Width reserved for the "More ▾" button + gap before it
 const MORE_BTN_W = 96;
@@ -31,7 +32,7 @@ export interface PlatformPanelIcon {
   icon: ReactNode;
   /** Tooltip / aria-label. */
   label: string;
-  /** Badge count. Shown only when > 0. */
+  /** Count used for tooltip / screen-reader labels. The icon button stays visually stable. */
   count?: number;
   /** True while the count query is in-flight. */
   countPending?: boolean;
@@ -274,28 +275,19 @@ interface PlatformIconButtonProps {
 }
 
 function PlatformIconButton({ icon, active, onClick }: PlatformIconButtonProps) {
+  const label = icon.count && icon.count > 0 ? `${icon.label}: ${icon.count}` : icon.label;
   return (
     <button
       type="button"
-      title={icon.label}
-      aria-label={icon.label}
+      title={label}
+      aria-label={label}
       onClick={() => onClick?.(icon.id)}
       className={cn(
-        "relative flex items-center gap-1 py-2.5 px-1.5 transition-colors shrink-0",
-        active
-          ? "text-foreground after:absolute after:left-0 after:right-0 after:-bottom-px after:h-0.5 after:bg-foreground after:content-['']"
-          : "text-muted-foreground hover:text-foreground",
+        headerIconButtonClass,
+        active && headerIconButtonActiveClass,
       )}
     >
       {icon.icon}
-      {icon.countPending && !icon.count && (
-        <span className="inline-block h-3 w-4 rounded bg-muted animate-pulse" />
-      )}
-      {icon.count != null && icon.count > 0 && (
-        <span className="text-2xs px-1 py-0.5 rounded bg-muted text-muted-foreground font-semibold tabular-nums">
-          {icon.count}
-        </span>
-      )}
     </button>
   );
 }

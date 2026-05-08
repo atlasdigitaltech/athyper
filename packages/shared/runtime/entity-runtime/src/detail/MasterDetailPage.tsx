@@ -1525,6 +1525,7 @@ export function MasterDetailPage({
       <EntityHeader
         model={headerModel}
         onBack={() => router.back()}
+        editMode={editMode}
         onAction={handleAction}
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -1805,6 +1806,7 @@ export function SimpleDetailPage({
       <EntityHeader
         model={headerModel}
         onBack={() => router.back()}
+        editMode={editMode}
         onAction={handleAction}
         activeTab={activeTab}
         onTabChange={setActiveTab}

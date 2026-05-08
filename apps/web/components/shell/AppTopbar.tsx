@@ -103,7 +103,7 @@ export function AppTopbar({
       href="/home"
       className="flex items-center gap-1.5 outline-none"
     >
-      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary p-1 text-primary-foreground">
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-foreground p-1 text-background">
         <NeonIcon className="h-full w-full" />
       </div>
       <span className="hidden text-sm font-semibold tracking-tight lg:block">neon</span>

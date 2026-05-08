@@ -76,7 +76,7 @@ export class MetadataApprovalBridge {
 
   // Phase 3.4: these will be injected once WorkflowEngine is wired
   private workflowEngine: { createRequest?: Function; completeTask?: Function } | null = null;
-  private entityCompiler: { invalidate?: (code: string) => void } | null = null;
+  private entityCompiler: { invalidate?: (code: string, tenantId?: string) => void | Promise<void> } | null = null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(db: Kysely<any>) {
@@ -89,7 +89,7 @@ export class MetadataApprovalBridge {
    */
   wire(deps: {
     workflowEngine?: { createRequest?: Function; completeTask?: Function };
-    entityCompiler?: { invalidate?: (code: string) => void };
+    entityCompiler?: { invalidate?: (code: string, tenantId?: string) => void | Promise<void> };
   }): void {
     this.workflowEngine = deps.workflowEngine ?? null;
     this.entityCompiler = deps.entityCompiler ?? null;
@@ -218,8 +218,8 @@ export class MetadataApprovalBridge {
     const payload = JSON.parse(row["payload"] as string) as ChangeRequestPayload;
     const tenantId = row["tenant_id"] as string;
 
-    // Invalidate entity compiler so next access recompiles from DB
-    this.entityCompiler?.invalidate?.(payload.entityCode);
+    // Invalidate compiled descriptors so next access recompiles from DB.
+    await Promise.resolve(this.entityCompiler?.invalidate?.(payload.entityCode, tenantId));
 
     // Mark as applied
     await this.db

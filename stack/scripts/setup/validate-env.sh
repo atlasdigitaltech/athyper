@@ -136,6 +136,7 @@ require_var APPS_ATHYPER_API_HOST
 require_var APPS_ATHYPER_WEB_UPSTREAM_URL
 require_var GATEWAY_HOST
 require_var IAM_HOST
+require_var ALERTMANAGER_HOST
 require_var IAM_ISSUER_URL
 require_var ATHYPER_KERNEL_CONFIG_PATH
 
@@ -173,6 +174,14 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   # cannot reach the Loki/Tempo/Prom dashboards mid-incident.
   require_var TELEMETRY_ADMIN_USER
   require_var TELEMETRY_ADMIN_PASSWORD
+  require_var ALERTMANAGER_SMTP_SMARTHOST
+  require_var ALERTMANAGER_SMTP_FROM
+  require_var ALERTMANAGER_SMTP_REQUIRE_TLS
+  require_var ALERTMANAGER_PLATFORM_EMAIL
+  require_var ALERTMANAGER_CRITICAL_EMAIL
+  require_var ALERTMANAGER_FINANCE_EMAIL
+  require_var ALERTMANAGER_COMPLIANCE_EMAIL
+  require_var ALERTMANAGER_SECURITY_EMAIL
 else
   echo "[3/6] Skipping non-local secrets check (ENVIRONMENT=local)"
 fi
@@ -300,7 +309,7 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   fi
 
   # Detect dev passwords in non-local environments
-  for var in DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET APP_S3_ACCESS_KEY APP_S3_SECRET_KEY BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY TEMPO_S3_ACCESS_KEY TEMPO_S3_SECRET_KEY LOKI_S3_ACCESS_KEY LOKI_S3_SECRET_KEY; do
+  for var in DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET APP_S3_ACCESS_KEY APP_S3_SECRET_KEY BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY TEMPO_S3_ACCESS_KEY TEMPO_S3_SECRET_KEY LOKI_S3_ACCESS_KEY LOKI_S3_SECRET_KEY ALERTMANAGER_SMTP_AUTH_PASSWORD; do
     val="${ENV_MAP[$var]:-}"
     if [[ "$val" == "athyperadmin" ]]; then
       echo "  FAIL  $var = 'athyperadmin' in $ENVIRONMENT environment (dev password leaked to non-local)"
@@ -311,6 +320,17 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   # P2.4 — Traefik workbench upstream must NOT point at host.docker.internal in
   # non-local environments. That hostname only resolves on the dev operator's
   # host; in staging/production the upstream is an in-network Docker service.
+  AM_SMARTHOST="${ENV_MAP[ALERTMANAGER_SMTP_SMARTHOST]:-}"
+  if [[ "$AM_SMARTHOST" == mailhog:* ]]; then
+    echo "  FAIL  ALERTMANAGER_SMTP_SMARTHOST=$AM_SMARTHOST in $ENVIRONMENT (MailHog is local-only)"
+    ERRORS=$((ERRORS + 1))
+  fi
+  AM_REQUIRE_TLS="${ENV_MAP[ALERTMANAGER_SMTP_REQUIRE_TLS]:-}"
+  if [[ "$AM_REQUIRE_TLS" != "true" ]]; then
+    echo "  FAIL  ALERTMANAGER_SMTP_REQUIRE_TLS=$AM_REQUIRE_TLS in $ENVIRONMENT (must be true outside local)"
+    ERRORS=$((ERRORS + 1))
+  fi
+
   UPSTREAM="${ENV_MAP[APPS_ATHYPER_WEB_UPSTREAM_URL]:-}"
   if [[ "$UPSTREAM" == *"host.docker.internal"* ]]; then
     echo "  FAIL  APPS_ATHYPER_WEB_UPSTREAM_URL=$UPSTREAM in $ENVIRONMENT (host.docker.internal is dev-only)"

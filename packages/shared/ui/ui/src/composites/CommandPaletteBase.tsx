@@ -32,6 +32,7 @@ import { type ReactNode, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 
 import { cn } from "@athyper/theme/utils";
+import { overlayScrimVariants } from "../primitives";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -113,7 +114,12 @@ export function CommandPaletteBase({
     <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <Dialog.Portal>
         {/* Overlay */}
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Overlay
+          className={cn(
+            "fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            overlayScrimVariants({ tone: "command" }),
+          )}
+        />
 
         {/* Panel */}
         <Dialog.Content

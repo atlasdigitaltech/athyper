@@ -142,7 +142,7 @@ export function NotifPanel({ open, onClose }: NotifPanelProps) {
           <Bell className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">Notifications</span>
           {unreadCount > 0 && (
-            <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5">
+            <Badge variant="destructive" className="text-doc-support px-1.5 py-0.5">
               {unreadCount}
             </Badge>
           )}
@@ -151,7 +151,7 @@ export function NotifPanel({ open, onClose }: NotifPanelProps) {
           {unreadCount > 0 && (
             <button
               onClick={() => markAll.mutate()}
-              className="text-[11px] text-primary hover:text-primary/80 transition-colors"
+              className="text-doc-subtitle text-primary hover:text-primary/80 transition-colors"
             >
               Mark all read
             </button>
@@ -223,19 +223,19 @@ export function NotifPanel({ open, onClose }: NotifPanelProps) {
                       )}
                     </div>
                     <div className="mt-0.5 flex items-center gap-1.5">
-                      <span className="text-[10px] text-muted-foreground/60 font-mono">
+                      <span className="text-doc-support text-muted-foreground/60 font-mono">
                         {eventLabel(n.event_code)}
                       </span>
                       {n.priority !== "normal" && (
                         <Badge
                           variant={n.priority === "urgent" || n.priority === "high" ? "destructive" : "secondary"}
-                          className="text-[9px] px-1 py-0 leading-tight"
+                          className="text-doc-field-label px-1 py-0 leading-tight"
                         >
                           {n.priority}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                    <p className="text-doc-support text-muted-foreground/60 mt-1">
                       {relativeTime(n.created_at)}
                     </p>
                   </div>

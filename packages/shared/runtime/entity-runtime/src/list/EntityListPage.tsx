@@ -63,12 +63,19 @@ import {
   X as XIcon,
   AlignJustify,
   Zap,
+  Server,
   Shield,
   ScrollText,
 } from "lucide-react";
 import { useCompiledEntity, useEntityList, useEntityOperations, useSavedViews, useSaveView, useUpdateView, useStatusRoute, useLookupDomain, useRecordBookmarks, useCommentCounts } from "@athyper/query";
-import { resolveActionsForSurface, type ResolvedAction } from "@athyper/metadata-client/operation-reader";
-import type { CompiledEntity, EntityOperation } from "@athyper/api-contracts/metadata";
+import { getActionIcon } from "@athyper/icons/actions";
+import {
+  getOverflowActions,
+  getToolbarActions,
+  resolveActionsForSurface,
+  type ResolvedAction,
+} from "@athyper/metadata-client/operation-reader";
+import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
 import { FilterPillBar, SearchInput } from "@athyper/ui/composites";
 import { resolveListConfig, resolvePresentationConfig } from "@athyper/metadata-client/compiled-reader";
 import { resolvePresentationConfig as resolveDisplayConfig } from "../metadata";
@@ -78,18 +85,15 @@ import { PageHeader } from "../shell/PageHeader";
 import {
   Button, Badge, Skeleton, Input, Label,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
-import {
-  kanbanStatusIntent,
-  apArStatusIntent,
-  closeRunStatusIntent,
-  closeTaskStatusIntent,
-  adminStatusIntent,
-} from "@athyper/theme/domain-intents";
+import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
 import { stateToApiParams, getFilterStringValues, describeFilterEntry } from "@athyper/api-contracts/entity-list";
 import type {
+  ColumnPresentation,
   EntityListQueryState,
   EntityListFilters,
   EntityListSortEntry,
@@ -110,8 +114,8 @@ import { ColumnDrawer } from "./ColumnDrawer";
 import { GroupedListView } from "./GroupedListView";
 import { RowMetaStrip } from "./RowMetaStrip";
 import { ColumnFilterHeader } from "./ColumnFilterHeader";
-import { MyWorkDropdown } from "./MyWorkDropdown";
 import { describeVirtualFilter, isVirtualFilter } from "./virtualFilterLabels";
+import { RuntimeStatusText, listTypography, runtimeStatusDotClass } from "./listPresentation";
 
 export interface EntityListPageProps {
   entityCode: string;
@@ -122,50 +126,61 @@ type ViewMode = "list" | "board" | "compact" | "dashboard" | "excel";
 // Maps display_config v2 canonical view-mode names → legacy EntityListPage ViewMode names.
 const B5_TO_LEGACY_MODE: Record<string, ViewMode> = {
   table:       "list",
+  compact:     "compact",
   kanban:      "board",
   dashboard:   "dashboard",
   spreadsheet: "excel",
 };
 
-function isDocumentEntity(entity: CompiledEntity): boolean {
-  return (
-    entity.entity_class === "DOCUMENT" ||
-    entity.entity_class === "DOCUMENT_RELATION" ||
-    entity.display_config.detail_renderer === "document"
-  );
+const DESKTOP_VIEW_QUERY = "(min-width: 1280px)";
+
+function useIsDesktopViewport(): boolean | undefined {
+  const [isDesktop, setIsDesktop] = useState<boolean | undefined>(undefined);
+
+  useEffect(() => {
+    const media = window.matchMedia(DESKTOP_VIEW_QUERY);
+    const update = () => setIsDesktop(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return isDesktop;
+}
+
+function firstAllowedViewMode(
+  modes: ViewMode[] | undefined,
+  candidates: ViewMode[],
+): ViewMode {
+  if (!modes || modes.length === 0) return candidates[0] ?? "list";
+  return candidates.find((mode) => modes.includes(mode)) ?? modes[0] ?? "list";
+}
+
+function savedViewDisplayName(view: { name: string; is_default?: boolean }): string {
+  if (view.is_default) return "My Default View";
+  return view.name;
 }
 
 function entityTypeLabel(entity: CompiledEntity): string {
-  const label = entity.display_config.document_header?.type_label ?? entity.entity_name;
+  const label =
+    entity.display_config.document_header?.type_label ??
+    entity.display_config.master_config?.type_label ??
+    entity.entity_name;
   return label.replace(/_/g, " ").toUpperCase();
 }
 
-// ── Status badge (semantic — driven by ColumnPresentation.semanticResolver) ───
-
-// Registry of named intent resolvers — matches ColumnPresentation.semanticResolver values.
-// Adding a new resolver: add it here and in @athyper/theme/domain-intents.
-const SEMANTIC_RESOLVERS: Record<string, (value: string) => SemanticIntent> = {
-  kanbanStatusIntent,
-  apArStatusIntent,
-  closeRunStatusIntent,
-  closeTaskStatusIntent,
-  adminStatusIntent,
-};
-
-function StatusBadge({ value, resolverName }: { value: string; resolverName?: string }) {
-  if (!value) return null;
-  const resolverFn = resolverName ? SEMANTIC_RESOLVERS[resolverName] : undefined;
-  const intent = resolverFn ? resolverFn(value) : kanbanStatusIntent(value);
-  const colors = resolveSemanticColors(intent);
-  return (
-    <span className={cn("rounded-full border px-2 py-0.5 text-2xs capitalize", colors.subtleBadge)}>
-      {value.replace(/_/g, " ")}
-    </span>
-  );
-}
-
-function getStatusValue(row: Record<string, unknown>): string {
-  return String(row.status ?? row.record_status ?? row.state ?? "");
+function getStatusValue(row: Record<string, unknown>, statusFieldNames: string[] = []): string {
+  const fieldNames = uniqueFieldNames([
+    ...statusFieldNames,
+    "status",
+    "record_status",
+    "state",
+  ]);
+  for (const fieldName of fieldNames) {
+    const value = row[fieldName];
+    if (value !== undefined && value !== null && value !== "") return String(value);
+  }
+  return "";
 }
 
 function normalizeNavValue(value: unknown): string | undefined {
@@ -206,69 +221,179 @@ function resolveRecordNavId(row: Record<string, unknown>, fieldNames: string[]):
 const COMPACT_DENSITY = {
   compact: {
     grid:       "grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
-    card:       "flex flex-col gap-1.5 rounded-xl border bg-card p-3 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
-    title:      "text-xs font-medium leading-snug",
-    metaGap:    "flex items-center gap-1.5",
-    fieldsPt:   "grid grid-cols-2 gap-x-2 gap-y-0.5 border-t pt-1.5",
-    fieldText:  "text-2xs",
+    card:       "flex min-h-[7.25rem] flex-col gap-1.5 rounded-xl border bg-card p-3 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
+    title:      "truncate text-sm font-semibold leading-snug text-foreground",
+    code:       "text-doc-compact-code font-medium leading-none text-muted-foreground",
+    header:     "flex min-h-4 items-center justify-between gap-3",
+    status:     "shrink-0 text-doc-badge",
+    meta:       "mt-1 truncate text-xs font-medium text-muted-foreground/70",
+    audit:      "mt-auto flex items-center justify-between gap-2 pt-2 text-doc-support text-muted-foreground/55",
   },
   comfortable: {
     grid:       "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
-    card:       "flex flex-col gap-2 rounded-xl border bg-card p-4 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
-    title:      "text-sm font-medium leading-snug",
-    metaGap:    "flex items-center gap-2",
-    fieldsPt:   "grid grid-cols-2 gap-x-2 gap-y-0.5 border-t pt-2",
-    fieldText:  "text-2xs",
+    card:       "flex min-h-[8rem] flex-col gap-2 rounded-xl border bg-card p-4 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
+    title:      "truncate text-sm font-semibold leading-snug text-foreground",
+    code:       "text-doc-compact-code font-medium leading-none text-muted-foreground",
+    header:     "flex min-h-4 items-center justify-between gap-3",
+    status:     "shrink-0 text-doc-badge",
+    meta:       "mt-1 truncate text-xs font-medium text-muted-foreground/70",
+    audit:      "mt-auto flex items-center justify-between gap-2 pt-2 text-doc-support text-muted-foreground/55",
   },
   spacious: {
     grid:       "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
-    card:       "flex flex-col gap-2.5 rounded-xl border bg-card p-5 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
-    title:      "text-sm font-medium leading-snug",
-    metaGap:    "flex items-center gap-2",
-    fieldsPt:   "grid grid-cols-2 gap-x-2 gap-y-1 border-t pt-2.5",
-    fieldText:  "text-xs",
+    card:       "flex min-h-[9rem] flex-col gap-2.5 rounded-xl border bg-card p-5 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm",
+    title:      "truncate text-sm font-semibold leading-snug text-foreground",
+    code:       "text-doc-field-label font-medium leading-none text-muted-foreground",
+    header:     "flex min-h-4 items-center justify-between gap-3",
+    status:     "shrink-0 text-xs",
+    meta:       "mt-1 truncate text-xs font-medium text-muted-foreground/70",
+    audit:      "mt-auto flex items-center justify-between gap-2 pt-2 text-doc-support text-muted-foreground/55",
   },
 } as const;
 
+type CompactCardConfig = {
+  bottom_fields?: string[];
+};
+
+function compactCardConfig(entity: CompiledEntity): CompactCardConfig | undefined {
+  const raw = entity.display_config.compact_card;
+  if (!raw || typeof raw !== "object") return undefined;
+  const bottomFields = (raw as CompactCardConfig).bottom_fields;
+  return Array.isArray(bottomFields) ? { bottom_fields: bottomFields } : undefined;
+}
+
+function isStatusFieldName(fieldName: string, statusFieldNames: string[]): boolean {
+  return statusFieldNames.includes(fieldName) || ["status", "record_status", "state", "lifecycle_state"].includes(fieldName);
+}
+
+function isCompactBottomCandidate(field: EntityField): boolean {
+  return !field.is_computed && !["json", "jsonb", "text_array", "uuid_array", "int_array", "jsonb_array"].includes(field.data_type);
+}
+
+function humanizeCompactToken(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function compactCountryLabel(value: string): string {
+  const code = value.trim().toUpperCase();
+  if (!code) return "";
+  try {
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+function compactMetaValue(field: EntityField, value: unknown): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number" || typeof value === "bigint") return String(value);
+  const raw = String(value).trim();
+  if (!raw) return undefined;
+  if (field.ui_type === "country" || field.name.endsWith("_country_code")) {
+    return compactCountryLabel(raw);
+  }
+  return humanizeCompactToken(raw);
+}
+
+function compactAuditFieldNames(entity: CompiledEntity): { createdAt: string; updatedAt: string } {
+  const documentHeader = entity.display_config.document_header;
+  return {
+    createdAt: documentHeader?.created_at_field ?? "created_at",
+    updatedAt: documentHeader?.updated_at_field ?? "updated_at",
+  };
+}
+
+function compactAuditTime(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return undefined;
+  return new Intl.DateTimeFormat(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function CompactStatusText({
+  value,
+  resolverName,
+  className,
+}: {
+  value: string;
+  resolverName?: string;
+  className?: string;
+}) {
+  if (!value) return null;
+  return (
+    <span className={cn("inline-flex items-center gap-2 font-medium text-foreground", className)}>
+      <span className={cn("size-2 rounded-full", runtimeStatusDotClass(value, resolverName))} aria-hidden="true" />
+      <span className="truncate">{humanizeCompactToken(value)}</span>
+    </span>
+  );
+}
+
 function CompactView({
   rows,
-  titleKey,
-  entityCode,
+  entity,
+  codeFieldName,
+  titleFieldName,
+  statusFieldNames,
   onRowClick,
   onRowContextMenu,
   statusResolverName,
   compactColumns,
-  density = "comfortable",
+  density = "compact",
 }: {
   rows:               Record<string, unknown>[];
-  titleKey:           string;
-  entityCode:         string;
+  entity:             CompiledEntity;
+  codeFieldName:      string;
+  titleFieldName:     string;
+  statusFieldNames:   string[];
   onRowClick?:        (row: Record<string, unknown>) => void;
   onRowContextMenu?:  (row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => void;
   statusResolverName?: string;
-  /** Presentation-config columns filtered to compactVisible !== false. Max 4 shown. */
-  compactColumns:     import("@athyper/api-contracts/entity-list").ColumnPresentation[];
+  /** Presentation-config columns filtered to compactVisible !== false. */
+  compactColumns:     ColumnPresentation[];
   density?:           "compact" | "comfortable" | "spacious";
 }) {
   if (rows.length === 0) {
     return (
-      <div className="py-16 text-center text-sm text-muted-foreground">No records</div>
+      <div className={listTypography.emptyState}>No records</div>
     );
   }
 
   const d = COMPACT_DENSITY[density] ?? COMPACT_DENSITY.comfortable;
-
-  const STATUS_KEYS = new Set(["status", "record_status", "state", "lifecycle_state"]);
-  const extraFields = compactColumns
-    .filter((c) => c.fieldName !== titleKey && !STATUS_KEYS.has(c.fieldName))
-    .slice(0, 4);
+  const fieldByName = new Map(entity.fields.map((field) => [field.name, field]));
+  const auditFields = compactAuditFieldNames(entity);
+  const configuredBottomFields = uniqueFieldNames(compactCardConfig(entity)?.bottom_fields ?? []);
+  const fallbackBottomFields = uniqueFieldNames([
+    ...(entity.display_config.list_columns ?? []),
+    ...compactColumns.map((col) => col.fieldName),
+  ]);
+  const bottomFields = (configuredBottomFields.length > 0 ? configuredBottomFields : fallbackBottomFields)
+    .filter((fieldName) => fieldName !== codeFieldName && fieldName !== titleFieldName)
+    .filter((fieldName) => !isStatusFieldName(fieldName, statusFieldNames))
+    .map((fieldName) => fieldByName.get(fieldName))
+    .filter((field): field is EntityField => !!field && isCompactBottomCandidate(field))
+    .slice(0, 2);
 
   return (
     <div className={d.grid}>
       {rows.map((row) => {
         const id     = String(row.id ?? "");
-        const title  = String(row[titleKey] ?? row.name ?? row.code ?? id);
-        const status = getStatusValue(row);
+        const code   = String(row[codeFieldName] ?? row.code ?? row[titleFieldName] ?? id);
+        const title  = String(row[titleFieldName] ?? row.name ?? row[codeFieldName] ?? id);
+        const status = getStatusValue(row, statusFieldNames);
+        const metaValues = bottomFields
+          .map((field) => compactMetaValue(field, row[field.name]))
+          .filter((value): value is string => !!value);
+        const createdAt = compactAuditTime(row[auditFields.createdAt]);
+        const updatedAt = compactAuditTime(row[auditFields.updatedAt]);
         return (
           <div
             key={id}
@@ -276,44 +401,32 @@ function CompactView({
             onContextMenu={(e) => onRowContextMenu?.(row, e)}
             className={cn(d.card, onRowClick && "cursor-pointer")}
           >
-            {/* Title row */}
-            <div className="flex items-start justify-between gap-2">
-              <p className={d.title}>{title}</p>
-              <Badge variant="outline" className="shrink-0 text-2xs px-1.5 py-0.5 font-mono">
-                {entityCode}
-              </Badge>
-            </div>
-
-            {/* Status + id */}
-            <div className={d.metaGap}>
+            <div className={d.header}>
+              <span className={cn(d.code, "min-w-0 truncate tabular-nums")}>{code}</span>
               {status && (
-                <StatusBadge value={status} resolverName={statusResolverName} />
-              )}
-              {id && (
-                <span className="font-mono text-2xs text-muted-foreground/50">
-                  {id.slice(0, 8)}
-                </span>
+                <CompactStatusText
+                  value={status}
+                  resolverName={statusResolverName}
+                  className={d.status}
+                />
               )}
             </div>
 
-            {/* Extra fields from compactVisible config */}
-            {extraFields.length > 0 && (
-              <dl className={d.fieldsPt}>
-                {extraFields.map((col) => {
-                  const val = row[col.fieldName];
-                  if (val === undefined || val === null || val === "") return null;
-                  return (
-                    <div key={col.fieldName} className="contents">
-                      <dt className={cn(d.fieldText, "text-muted-foreground truncate")}>
-                        {col.label ?? col.fieldName}
-                      </dt>
-                      <dd className={cn(d.fieldText, "font-medium truncate")}>
-                        {String(val)}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
+            <p className={d.title}>{title}</p>
+
+            {metaValues.length > 0 && (
+              <p className={d.meta}>{metaValues.join(" · ")}</p>
+            )}
+
+            {(createdAt || updatedAt) && (
+              <div className={d.audit}>
+                <span className="min-w-0 truncate text-left tabular-nums" title={createdAt ? `Created ${createdAt}` : undefined}>
+                  {createdAt ? `Created ${createdAt}` : ""}
+                </span>
+                <span className="min-w-0 truncate text-right tabular-nums" title={updatedAt ? `Updated ${updatedAt}` : undefined}>
+                  {updatedAt ? `Updated ${updatedAt}` : ""}
+                </span>
+              </div>
             )}
           </div>
         );
@@ -327,7 +440,7 @@ function CompactView({
 // Segmented pill: Filter | Sort | Group | Columns
 // Each segment opens its drawer directly. Active state indicated by primary tint.
 
-interface OrganizeControlProps {
+interface OrganizerPaletteProps {
   activeDrawer:     string | null;
   onOpen:           (d: "filter" | "sort" | "group" | "columns") => void;
   hasActiveFilters: boolean;
@@ -337,71 +450,152 @@ interface OrganizeControlProps {
   visibleColumns:   number;
   totalColumns:     number;
   showColumns:      boolean;
+  mode:             ViewMode;
+  density?:         "compact" | "comfortable" | "spacious";
+  hasGroupable:     boolean;
+  onChangeMode:     (m: ViewMode) => void;
+  onChangeDensity:  (d: "compact" | "comfortable" | "spacious" | undefined) => void;
+  availableModes?:  ViewMode[];
+  savedViews:       { id: string; name: string; is_default?: boolean }[];
+  activeSavedViewId?: string;
+  modifiedFromName?: string;
+  onSelectSavedView: (viewId: string) => void;
+  hasSaveableChanges: boolean;
+  entityCode:       string;
+  state:            EntityListQueryState;
+  isModified:       boolean;
+  baseSavedViewId?: string;
+  baseName?:        string;
 }
 
-function OrganizeControl({
+function OrganizerPalette({
   activeDrawer, onOpen,
   hasActiveFilters, filterCount,
   sortCount, groupField, visibleColumns, totalColumns, showColumns,
-}: OrganizeControlProps) {
+  mode, density, hasGroupable, onChangeMode, onChangeDensity, availableModes,
+  savedViews, activeSavedViewId, modifiedFromName, onSelectSavedView,
+  hasSaveableChanges, entityCode, state, isModified, baseSavedViewId, baseName,
+}: OrganizerPaletteProps) {
   const anyOrganize = hasActiveFilters || sortCount > 0 || !!groupField || visibleColumns > 0;
+  const defaultSavedView = savedViews.find((view) => view.is_default);
 
-  const seg = "relative flex items-center justify-center gap-1 px-1.5 py-1.5 sm:px-2 text-xs transition-colors";
-  const segCls = (name: "filter" | "sort" | "group" | "columns", dataActive: boolean) =>
+  const seg = "relative flex h-7 w-8 shrink-0 items-center justify-center rounded-md text-xs font-medium transition-[background-color,color,box-shadow] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
+  const segCls = (name: "filter" | "sort" | "group" | "columns" | "view" | "save", dataActive: boolean) =>
     cn(seg,
       activeDrawer === name
-        ? "text-primary bg-primary/15"
+        ? "bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background"
         : dataActive
-        ? "text-primary bg-primary/8"
-        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        ? "bg-background text-primary shadow-sm ring-1 ring-primary/20 hover:bg-primary/10 hover:text-primary"
+        : "text-muted-foreground hover:bg-background hover:text-foreground",
     );
-
   return (
-    <div className="flex h-8 items-center rounded-md border border-input bg-background shadow-sm overflow-hidden [&>*+*]:border-l [&>*+*]:border-input">
-      <span className="hidden sm:inline select-none px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
-        Organize
-      </span>
-
-      <button
-        onClick={() => onOpen("filter")}
-        className={segCls("filter", hasActiveFilters)}
-        title={hasActiveFilters ? `${filterCount} active filter${filterCount !== 1 ? "s" : ""}` : "Filter"}
-      >
-        <FilterIcon className="h-3.5 w-3.5 shrink-0" />
-        {hasActiveFilters && (
-          <span className="rounded-full bg-primary px-1 py-px text-2xs font-bold text-primary-foreground leading-none">
-            {filterCount}
-          </span>
-        )}
-      </button>
-
-      <button
-        onClick={() => onOpen("sort")}
-        className={segCls("sort", sortCount > 0)}
-        title={sortCount > 0 ? `${sortCount} sort${sortCount !== 1 ? "s" : ""} active` : "Sort"}
-      >
-        <ArrowUpDown className="h-3.5 w-3.5 shrink-0" />
-        {sortCount > 0 && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />}
-      </button>
-
-      <button
-        onClick={() => onOpen("group")}
-        className={segCls("group", !!groupField)}
-        title={groupField ? `Grouped by ${groupField.replace(/_/g, " ")}` : "Group"}
-      >
-        <Layers className="h-3.5 w-3.5 shrink-0" />
-      </button>
-
-      {showColumns && (
-        <button
-          onClick={() => onOpen("columns")}
-          className={segCls("columns", visibleColumns > 0)}
-          title={visibleColumns > 0 ? `${visibleColumns} of ${totalColumns} columns` : "Columns"}
+    <TooltipProvider delayDuration={180}>
+      <div className="flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border/70 bg-muted/40 p-0.5 shadow-sm">
+        <span
+          className={cn(
+            "hidden h-7 select-none items-center rounded-md px-2.5 text-xs font-semibold text-muted-foreground sm:flex",
+            anyOrganize && "text-foreground",
+          )}
         >
-          <Columns3 className="h-3.5 w-3.5 shrink-0" />
-        </button>
-      )}
-    </div>
+          Organize
+        </span>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => onOpen("filter")}
+              className={segCls("filter", hasActiveFilters)}
+              aria-label={hasActiveFilters ? `${filterCount} active filter${filterCount !== 1 ? "s" : ""}` : "Filter"}
+              aria-pressed={activeDrawer === "filter"}
+            >
+              <FilterIcon className="h-3.5 w-3.5 shrink-0" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={8}>
+            {hasActiveFilters ? `${filterCount} active filter${filterCount !== 1 ? "s" : ""}` : "Filter"}
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => onOpen("sort")}
+              className={segCls("sort", sortCount > 0)}
+              aria-label={sortCount > 0 ? `${sortCount} sort${sortCount !== 1 ? "s" : ""} active` : "Sort"}
+              aria-pressed={activeDrawer === "sort"}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 shrink-0" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={8}>
+            {sortCount > 0 ? `${sortCount} sort${sortCount !== 1 ? "s" : ""} active` : "Sort"}
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => onOpen("group")}
+              className={segCls("group", !!groupField)}
+              aria-label={groupField ? `Grouped by ${groupField.replace(/_/g, " ")}` : "Group"}
+              aria-pressed={activeDrawer === "group"}
+            >
+              <Layers className="h-3.5 w-3.5 shrink-0" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={8}>
+            {groupField ? `Grouped by ${groupField.replace(/_/g, " ")}` : "Group"}
+          </TooltipContent>
+        </Tooltip>
+
+        {showColumns && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => onOpen("columns")}
+                className={segCls("columns", visibleColumns > 0)}
+                aria-label={visibleColumns > 0 ? `${visibleColumns} of ${totalColumns} columns` : "Columns"}
+                aria-pressed={activeDrawer === "columns"}
+              >
+                <Columns3 className="h-3.5 w-3.5 shrink-0" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={8}>
+              {visibleColumns > 0 ? `${visibleColumns} of ${totalColumns} columns` : "Columns"}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        <ViewLauncherButton
+          mode={mode}
+          density={density}
+          hasGroupable={hasGroupable}
+          onChangeMode={onChangeMode}
+          onChangeDensity={onChangeDensity}
+          availableModes={availableModes}
+          savedViews={savedViews}
+          activeSavedViewId={activeSavedViewId}
+          modifiedFromName={modifiedFromName}
+          onSelectSavedView={onSelectSavedView}
+          triggerClassName={segCls("view", mode !== "list")}
+        />
+
+        <SaveViewSegment
+          entityCode={entityCode}
+          state={state}
+          isModified={isModified}
+          baseSavedViewId={baseSavedViewId}
+          baseName={baseName}
+          defaultSavedViewId={defaultSavedView?.id}
+          defaultSavedViewName={defaultSavedView?.name}
+          triggerClassName={segCls("save", hasSaveableChanges)}
+        />
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -417,22 +611,19 @@ interface ViewLauncherButtonProps {
   onChangeDensity:  (d: "compact" | "comfortable" | "spacious" | undefined) => void;
   /** When set, restricts the listed view modes to only those in this array. */
   availableModes?:  ViewMode[];
+  savedViews:       { id: string; name: string; is_default?: boolean }[];
+  activeSavedViewId?: string;
+  modifiedFromName?: string;
+  onSelectSavedView: (viewId: string) => void;
+  triggerClassName?: string;
 }
 
 function ViewLauncherButton({
   mode, density, hasGroupable, onChangeMode, onChangeDensity, availableModes,
+  savedViews, activeSavedViewId, modifiedFromName, onSelectSavedView,
+  triggerClassName,
 }: ViewLauncherButtonProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener("mousedown", handler);
-    return () => window.removeEventListener("mousedown", handler);
-  }, [open]);
 
   type ModeOption = { value: ViewMode; Icon: typeof LayoutList; label: string; gated?: boolean };
   const modeOptions: ModeOption[] = [
@@ -451,140 +642,232 @@ function ViewLauncherButton({
   const hdg    = "px-3 pt-2.5 pb-0.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground select-none";
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={cn(
-          "flex h-8 items-center gap-1.5 rounded-md border border-input bg-background shadow-sm px-2.5 text-xs font-medium transition-colors",
-          open ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-        )}
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title={`View: ${currentLabel}`}
+          aria-label={`View: ${currentLabel}`}
+          className={cn(
+            triggerClassName ??
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-input bg-background shadow-sm text-xs font-medium transition-colors text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            open && "bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background",
+          )}
+        >
+          <CurrentIcon className="h-3.5 w-3.5 shrink-0" />
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="end"
+        sideOffset={6}
+        collisionPadding={12}
+        className="w-[clamp(13rem,calc(100vw-1.5rem),16rem)] max-h-[min(34rem,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto p-0"
       >
-        <CurrentIcon className="h-3.5 w-3.5 shrink-0" />
-        <span>View: {currentLabel}</span>
-        <ChevronRight className="h-3 w-3 shrink-0 rotate-90 opacity-50" />
-      </button>
+        <DropdownMenuLabel className={hdg}>View</DropdownMenuLabel>
+        {(availableModes
+          ? modeOptions.filter((o) => availableModes.includes(o.value) && !o.gated)
+          : modeOptions.filter((o) => !o.gated)
+        ).map(({ value, Icon, label }) => (
+          <DropdownMenuItem key={value} onSelect={() => onChangeMode(value)} className={rowAct(mode === value)}>
+            <Icon className={cn("h-3.5 w-3.5 shrink-0", mode !== value && "text-muted-foreground")} />
+            <span className="flex-1">{label}</span>
+            {mode === value && <Check className="h-3 w-3 text-primary" />}
+          </DropdownMenuItem>
+        ))}
 
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-1.5 w-48 rounded-lg border bg-popover shadow-lg overflow-hidden">
-          <div className="absolute -top-[5px] right-3 h-2.5 w-2.5 rotate-45 rounded-sm border-l border-t bg-popover" />
+        <DropdownMenuSeparator className="my-1 bg-border/60" />
 
-          <p className={hdg}>View</p>
-          {(availableModes
-            ? modeOptions.filter((o) => availableModes.includes(o.value))
-            : modeOptions.filter((o) => !o.gated)
-          ).map(({ value, Icon, label }) => (
-            <button key={value} onClick={() => { onChangeMode(value); setOpen(false); }} className={rowAct(mode === value)}>
-              <Icon className={cn("h-3.5 w-3.5 shrink-0", mode !== value && "text-muted-foreground")} />
-              <span className="flex-1">{label}</span>
-              {mode === value && <Check className="h-3 w-3 text-primary" />}
-            </button>
-          ))}
+        <DropdownMenuLabel className={hdg}>Density</DropdownMenuLabel>
+        {(["compact", "comfortable", "spacious"] as const).map((d) => (
+          <DropdownMenuItem key={d} onSelect={() => onChangeDensity(d)} className={cn(rowAct((density ?? "comfortable") === d), "pb-0.5")}>
+            <span className="flex-1 capitalize">{d}</span>
+            {(density ?? "comfortable") === d && <Check className="h-3 w-3 text-primary" />}
+          </DropdownMenuItem>
+        ))}
 
-          <div className="my-1 h-px bg-border/60" />
+        <DropdownMenuSeparator className="my-1 bg-border/60" />
 
-          <p className={hdg}>Density</p>
-          {(["compact", "comfortable", "spacious"] as const).map((d) => (
-            <button key={d} onClick={() => { onChangeDensity(d); setOpen(false); }} className={cn(rowAct((density ?? "comfortable") === d), "pb-0.5")}>
-              <span className="flex-1 capitalize">{d}</span>
-              {(density ?? "comfortable") === d && <Check className="h-3 w-3 text-primary" />}
-            </button>
-          ))}
-          <div className="pb-1" />
-        </div>
-      )}
-    </div>
+        <DropdownMenuLabel className={hdg}>Saved Views</DropdownMenuLabel>
+        {modifiedFromName && (
+          <div className="px-3 pb-1 text-2xs text-muted-foreground">
+            Modified from &quot;{modifiedFromName === "Default View" ? "My Default View" : modifiedFromName}&quot;
+          </div>
+        )}
+        <DropdownMenuItem
+          onSelect={() => onSelectSavedView("__all")}
+          className={rowAct(activeSavedViewId === "__all")}
+        >
+          <RotateCcw className={cn("h-3.5 w-3.5 shrink-0", activeSavedViewId !== "__all" && "text-muted-foreground")} />
+          <span className="flex-1 truncate">System Default View</span>
+          {activeSavedViewId === "__all" && <Check className="h-3 w-3 text-primary" />}
+        </DropdownMenuItem>
+        {savedViews.length > 0 && (
+          <div className="max-h-[clamp(5rem,calc(var(--radix-dropdown-menu-content-available-height)-15rem),14rem)] overflow-y-auto pb-1">
+            {savedViews.map((view) => (
+              <DropdownMenuItem
+                key={view.id}
+                onSelect={() => onSelectSavedView(view.id)}
+                className={rowAct(activeSavedViewId === view.id)}
+              >
+                <Save className={cn("h-3.5 w-3.5 shrink-0", activeSavedViewId !== view.id && "text-muted-foreground")} />
+                <span className="flex-1 truncate">{savedViewDisplayName(view)}</span>
+                {activeSavedViewId === view.id && <Check className="h-3 w-3 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </div>
+        )}
+        <div className="pb-1" />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
 // ── Slim settings menu ────────────────────────────────────────────────────────
 //
-// ≡ dropdown: Save view as default | Manage Access | Permission Log
+// ≡ dropdown: Reload List | Manage Access | Permission Log
 
 interface ListSettingsMenuProps {
   entityCode: string;
-  mode:       ViewMode;
-  density?:   "compact" | "comfortable" | "spacious";
+  onReload:   () => void | Promise<unknown>;
+  reloading?: boolean;
+  operations?: EntityOperation[];
 }
 
-function ListSettingsMenu({ entityCode, mode, density }: ListSettingsMenuProps) {
-  const [open,   setOpen]   = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved,  setSaved]  = useState(false);
-  const ref    = useRef<HTMLDivElement>(null);
+function ListSettingsMenu({ entityCode, onReload, reloading = false, operations }: ListSettingsMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [pendingActionCode, setPendingActionCode] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener("mousedown", handler);
-    return () => window.removeEventListener("mousedown", handler);
-  }, [open]);
+  const entityActions = useMemo(() => {
+    if (!operations) return [];
+    const actions = resolveActionsForSurface(operations, "LIST");
+    return [...getToolbarActions(actions), ...getOverflowActions(actions)];
+  }, [operations]);
 
   const nav = (path: string) => { setOpen(false); router.push(path); };
+  const reload = () => {
+    setOpen(false);
+    void onReload();
+  };
 
-  const saveAsDefault = async () => {
-    setSaving(true);
-    try {
-      await fetch("/api/user/preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          metadata: {
-            [`${entityCode}.list.defaultView`]:    mode,
-            [`${entityCode}.list.defaultDensity`]: density ?? "comfortable",
-          },
-        }),
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch { /* ignore */ }
-    setSaving(false);
+  const runEntityAction = async (action: ResolvedAction) => {
+    setOpen(false);
+    const actionKey = action.handlerTarget ?? action.permissionCode.split(".").pop() ?? action.permissionCode;
+    const normalizedKey = actionKey.replace(/^\//, "");
+
+    if (action.handlerType === "NAVIGATE" && action.handlerTarget) {
+      nav(
+        action.handlerTarget
+          .replace("{entityCode}", entityCode)
+          .replace("{entity}", entityCode),
+      );
+      return;
+    }
+
+    if (normalizedKey === "import" || action.permissionCode.endsWith(".import")) {
+      nav(`/app/${entityCode}/import`);
+      return;
+    }
+
+    if (normalizedKey === "bulk_update" || action.permissionCode.endsWith(".bulk_update")) {
+      nav(`/app/${entityCode}/bulk`);
+      return;
+    }
+
+    if (normalizedKey === "export" || action.permissionCode.endsWith(".export")) {
+      setPendingActionCode(action.permissionCode);
+      try {
+        const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}/export`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ format: "csv", selectionMode: "all" }),
+        });
+        const data = await res.json().catch(() => ({})) as { downloadUrl?: string };
+        if (!res.ok) throw new Error("Export failed");
+        if (data.downloadUrl) window.location.href = `/api/relay${data.downloadUrl}`;
+      } finally {
+        setPendingActionCode(null);
+      }
+    }
   };
 
   const row = "flex w-full items-center gap-2.5 px-3 py-1.5 text-xs text-left transition-colors hover:bg-muted/60 text-muted-foreground hover:text-foreground";
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        title="Settings"
-        className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-md border border-input bg-background shadow-sm transition-colors",
-          open ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title="Settings"
+          aria-label="Settings"
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-md border border-border bg-foreground text-background shadow-sm transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            open && "opacity-85",
+          )}
+        >
+          <AlignJustify className="h-3.5 w-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" sideOffset={6} className="w-56 p-0">
+        {entityActions.length > 0 && (
+          <>
+            <DropdownMenuLabel className="px-3 pb-1 pt-2.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Entity
+            </DropdownMenuLabel>
+            {entityActions.map((action) => {
+              const Icon = getActionIcon(action.icon ?? action.permissionCode.split(".").pop() ?? "settings");
+              const pending = pendingActionCode === action.permissionCode;
+              return (
+                <DropdownMenuItem
+                  key={action.permissionCode}
+                  disabled={pendingActionCode !== null}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    void runEntityAction(action);
+                  }}
+                  className={cn(row, "text-foreground disabled:opacity-50")}
+                >
+                  {pending ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                  ) : (
+                    <Icon size={14} className="shrink-0 text-muted-foreground" />
+                  )}
+                  <span>{action.label}</span>
+                </DropdownMenuItem>
+              );
+            })}
+            <DropdownMenuSeparator className="my-1 bg-border/60" />
+          </>
         )}
-      >
-        <AlignJustify className="h-3.5 w-3.5" />
-      </button>
 
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-lg border bg-popover shadow-lg overflow-hidden">
-          <div className="absolute -top-[5px] right-2.5 h-2.5 w-2.5 rotate-45 rounded-sm border-l border-t bg-popover" />
+        <DropdownMenuItem
+          onSelect={reload}
+          disabled={reloading}
+          className={cn(row, entityActions.length === 0 && "pt-2.5", "text-foreground disabled:opacity-50")}
+        >
+          {reloading ? (
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+          ) : (
+            <RotateCcw className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
+          <span>{reloading ? "Reloading List" : "Reload List"}</span>
+        </DropdownMenuItem>
 
-          <button onClick={saveAsDefault} disabled={saving} className={cn(row, "pt-2.5 disabled:opacity-50")}>
-            {saved
-              ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
-              : saving
-              ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-              : <Save className="h-3.5 w-3.5 shrink-0" />}
-            <span>{saved ? "Saved!" : "Save view as default"}</span>
-          </button>
+        <DropdownMenuSeparator className="my-1 bg-border/60" />
 
-          <div className="my-1 h-px bg-border/60" />
+        <DropdownMenuItem onSelect={() => nav(`/setup/policies?entity=${entityCode}`)} className={row}>
+          <Shield className="h-3.5 w-3.5 shrink-0" />
+          <span>Manage Access</span>
+        </DropdownMenuItem>
 
-          <button onClick={() => nav(`/setup/policies?entity=${entityCode}`)} className={row}>
-            <Shield className="h-3.5 w-3.5 shrink-0" />
-            <span>Manage Access</span>
-          </button>
-
-          <button onClick={() => nav(`/setup/audit/events?entity=${entityCode}`)} className={cn(row, "pb-2")}>
-            <ScrollText className="h-3.5 w-3.5 shrink-0" />
-            <span>Permission Log</span>
-          </button>
-        </div>
-      )}
-    </div>
+        <DropdownMenuItem onSelect={() => nav(`/setup/audit/events?entity=${entityCode}`)} className={cn(row, "pb-2")}>
+          <ScrollText className="h-3.5 w-3.5 shrink-0" />
+          <span>Permission Log</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -615,25 +898,42 @@ function ModifiedIndicator({
 
 // ── Save view bar ─────────────────────────────────────────────────────────────
 
-function SaveViewBar({
+function SaveViewSegment({
   entityCode,
   state,
   isModified,
   baseSavedViewId,
   baseName,
+  defaultSavedViewId,
+  defaultSavedViewName,
+  triggerClassName,
 }: {
   entityCode:     string;
   state:          EntityListQueryState;
   isModified:     boolean;
   baseSavedViewId?: string;
   baseName?:      string;
+  defaultSavedViewId?: string;
+  defaultSavedViewName?: string;
+  triggerClassName?: string;
 }) {
   const [open, setOpen]     = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [name, setName]     = useState("");
+  const [savingDefault, setSavingDefault] = useState(false);
+  const [defaultSaved, setDefaultSaved] = useState(false);
   const nameInputRef        = useRef<HTMLInputElement>(null);
 
   const saveView   = useSaveView();
   const updateView = useUpdateView(entityCode);
+
+  const viewConfig = useMemo(() => {
+    const config: EntityListQueryState = { ...state };
+    delete config.savedViewId;
+    delete config.baseSavedViewId;
+    delete config.page;
+    return config;
+  }, [state]);
 
   const handleSaveNew = () => {
     if (!name.trim()) return;
@@ -643,7 +943,7 @@ function SaveViewBar({
         name:        name.trim(),
         is_default:  false,
         is_shared:   false,
-        config:      state,
+        config:      viewConfig,
       },
       {
         onSuccess: () => {
@@ -656,50 +956,135 @@ function SaveViewBar({
 
   const handleUpdate = () => {
     if (!baseSavedViewId) return;
-    updateView.mutate({ viewId: baseSavedViewId, config: state });
+    updateView.mutate({ viewId: baseSavedViewId, config: viewConfig });
   };
 
-  const saving = saveView.isPending || updateView.isPending;
+  const markSavedViewDefault = async (viewId: string) => {
+    const res = await fetch(
+      `/api/relay/platform/saved-views/${encodeURIComponent(entityCode)}/${encodeURIComponent(viewId)}/default`,
+      { method: "PATCH" },
+    );
+    if (!res.ok) throw new Error("Failed to set default saved view");
+  };
+
+  const handleSaveCurrentAsDefault = async () => {
+    setSavingDefault(true);
+    try {
+      let targetViewId = baseSavedViewId ?? defaultSavedViewId;
+
+      if (baseSavedViewId) {
+        if (isModified) {
+          await updateView.mutateAsync({ viewId: baseSavedViewId, config: viewConfig });
+        }
+      } else if (defaultSavedViewId) {
+        await updateView.mutateAsync({
+          viewId: defaultSavedViewId,
+          config: viewConfig,
+          name: defaultSavedViewName,
+        });
+      } else {
+        const created = await saveView.mutateAsync({
+          entity_code: entityCode,
+          name:        "My Default View",
+          is_default:  false,
+          is_shared:   false,
+          config:      viewConfig,
+        });
+        targetViewId = created.id;
+      }
+
+      if (targetViewId) await markSavedViewDefault(targetViewId);
+      setDefaultSaved(true);
+      setTimeout(() => setDefaultSaved(false), 2000);
+    } catch {
+      // Keep the menu lightweight; failed preference writes are non-destructive.
+    } finally {
+      setSavingDefault(false);
+    }
+  };
+
+  const saving = saveView.isPending || updateView.isPending || savingDefault;
+  const canUpdateBaseView = isModified && !!baseSavedViewId;
+  const row = "flex w-full items-center gap-2.5 px-3 py-1.5 text-xs text-left transition-colors hover:bg-muted/60";
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        {/* Update (overwrite base view) — only when modified from a saved view */}
-        {isModified && baseSavedViewId && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1.5 text-xs"
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            title={canUpdateBaseView ? "Save or update view" : "Save as View"}
+            aria-label={canUpdateBaseView ? "Save or update view" : "Save as View"}
             disabled={saving}
-            onClick={handleUpdate}
-          >
-            {updateView.isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Save className="h-3 w-3" />
+            className={cn(
+              triggerClassName ??
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-input bg-background shadow-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
+              menuOpen && "bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background",
+              saving && "pointer-events-none opacity-60",
             )}
-            Update{baseName ? ` "${baseName}"` : ""}
-          </Button>
-        )}
+          >
+            {saving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5 shrink-0" />
+            )}
+          </button>
+        </DropdownMenuTrigger>
 
-        {/* Save as new view */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 gap-1.5 text-xs"
-          onClick={() => { setName(""); setOpen(true); }}
-        >
-          <Save className="h-3 w-3" />
-          Save as View
-        </Button>
-      </div>
+        <DropdownMenuContent align="end" sideOffset={6} className="w-56 p-0">
+          {canUpdateBaseView && (
+            <DropdownMenuItem
+              disabled={saving}
+              onSelect={() => handleUpdate()}
+              className={cn(row, "pt-2.5 text-foreground")}
+            >
+              {updateView.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              )}
+              <span className="flex-1 truncate">Update{baseName ? ` "${baseName === "Default View" ? "My Default View" : baseName}"` : " view"}</span>
+            </DropdownMenuItem>
+          )}
+
+          {canUpdateBaseView && <DropdownMenuSeparator className="my-1 bg-border/60" />}
+
+          <DropdownMenuItem
+            onSelect={() => { setName(""); setOpen(true); }}
+            className={cn(row, canUpdateBaseView ? "text-foreground" : "pt-2.5 text-foreground")}
+          >
+            <Save className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span>Save as View</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator className="my-1 bg-border/60" />
+
+          <DropdownMenuItem
+            disabled={savingDefault}
+            onSelect={(event) => {
+              event.preventDefault();
+              void handleSaveCurrentAsDefault();
+            }}
+            className={cn(row, "pb-2.5 text-foreground disabled:opacity-50")}
+          >
+            {defaultSaved ? (
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
+            ) : savingDefault ? (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            )}
+            <span>{defaultSaved ? "My default saved" : "Save current as my default"}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Save View</DialogTitle>
             <DialogDescription>
-              Give this filter/sort configuration a name to recall it later.
+              Give this list configuration a name to recall it later.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
@@ -714,9 +1099,18 @@ function SaveViewBar({
               autoFocus
             />
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <DialogFooter className="pt-3 flex-row items-center justify-end gap-2 space-x-0 sm:space-x-0">
             <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 px-4"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="h-9 min-w-20 px-4"
               onClick={handleSaveNew}
               disabled={!name.trim() || saving}
             >
@@ -1297,7 +1691,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     loadSavedView,
     reset,
     isModified,
-    hasActiveQuery,
+    hasSaveableViewState,
   } = useEntityListUrl(entityCode);
 
   const { data: entity,     isLoading: metaLoading, error: metaError } = useCompiledEntity(entityCode);
@@ -1326,26 +1720,46 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     [entity],
   );
 
+  const isDesktopViewport = useIsDesktopViewport();
+
   // Normalised display_config v2 fields (list_renderer, view_modes, status_field_names, …)
   const displayConfig = useMemo(
     () => entity ? resolveDisplayConfig(entity.display_config as Record<string, unknown>) : undefined,
     [entity],
   );
 
-  // Active view mode: URL state overrides the entity-level default.
-  // Fallback chain: state.viewMode → display_config.list_renderer → "list"
-  const viewMode = (state.viewMode ?? (
-    displayConfig?.list_renderer ? (B5_TO_LEGACY_MODE[displayConfig.list_renderer] ?? "list") : "list"
-  )) as ViewMode;
+  const availableViewModes = useMemo<ViewMode[] | undefined>(
+    () => displayConfig?.view_modes?.map((m) => B5_TO_LEGACY_MODE[m] ?? (m as ViewMode)),
+    [displayConfig],
+  );
+
+  const responsiveDefaultViewMode = useMemo<ViewMode>(() => {
+    const responsiveDefault = isDesktopViewport === false ? "compact" : "list";
+    const metadataDefault = displayConfig?.list_renderer
+      ? (B5_TO_LEGACY_MODE[displayConfig.list_renderer] ?? "list")
+      : "list";
+    return firstAllowedViewMode(availableViewModes, [
+      responsiveDefault,
+      metadataDefault,
+      "list",
+      "compact",
+    ]);
+  }, [availableViewModes, displayConfig?.list_renderer, isDesktopViewport]);
+
+  // Active view mode: URL/saved view state wins; otherwise compact below desktop,
+  // list at desktop and up. Unknown viewport starts as list to keep hydration stable.
+  const viewMode = (state.viewMode ?? responsiveDefaultViewMode) as ViewMode;
+  const effectiveDensity = state.density ?? "compact";
 
   // Resolve active sort: URL state → metadata default → undefined
   const activeSort = (state.sort && state.sort.length > 0) ? state.sort : presentationConfig?.defaultSort;
+  const searchMode = state.searchMode ?? "client";
 
   // Build server request params from canonical URL state.
-  // client searchMode: strip q from server request — rows are filtered in-browser instead.
+  // Search in View (default/client): strip q from server request — rows are filtered in-browser instead.
   // facets: honour state.facets (user may upgrade to "all" via Load all button); default "cheap".
   const apiParams = useMemo(() => {
-    const effectiveState = state.searchMode === "client"
+    const effectiveState = searchMode === "client"
       ? { ...state, search: undefined }
       : state;
     const base = stateToApiParams({ ...effectiveState, sort: activeSort });
@@ -1359,9 +1773,14 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       }
     }
     return base;
-  }, [state, activeSort, viewMode]);
+  }, [state, activeSort, viewMode, searchMode]);
 
-  const { data: listData, isLoading: dataLoading } = useEntityList(entityCode, apiParams);
+  const {
+    data: listData,
+    isFetching: dataFetching,
+    isLoading: dataLoading,
+    refetch: refetchList,
+  } = useEntityList(entityCode, apiParams);
 
   // Controlled sort state for DataTable (server-side sort — shows primary sort in headers)
   const tableSortingState = useMemo<SortingState>(
@@ -1433,17 +1852,17 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
 
   const rawRows = (listData?.data ?? []) as Record<string, unknown>[];
 
-  // Client search mode: filter the current page of rows in-browser.
-  // Server search mode (default): server already applied the ?q= filter.
+  // Search in View mode: filter the current page of rows in-browser.
+  // Search in Server mode: server already applied the ?q= filter.
   const allRows = useMemo(() => {
-    if (state.searchMode !== "client" || !state.search?.trim()) return rawRows;
+    if (searchMode !== "client" || !state.search?.trim()) return rawRows;
     const q = state.search.toLowerCase();
     const searchableCols = entity?.fields.filter((f) => f.is_searchable).map((f) => f.name) ?? [];
     if (searchableCols.length === 0) return rawRows;
     return rawRows.filter((row) =>
       searchableCols.some((col) => String(row[col] ?? "").toLowerCase().includes(q)),
     );
-  }, [rawRows, state.searchMode, state.search, entity?.fields]);
+  }, [rawRows, searchMode, state.search, entity?.fields]);
 
   // ── Social signals — batch-fetched for all visible rows (S1.A/S1.B) ─────────
   // Called unconditionally before any early return (Rules of Hooks).
@@ -1574,6 +1993,13 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
 
   const listConfig   = resolveListConfig(entity);
   const titleKey     = listConfig.columns[0]?.name ?? "name";
+  const codeFieldName = entity.display_config.code_field
+    ?? entity.display_config.document_header?.number_field
+    ?? "code";
+  const compactTitleFieldName = entity.display_config.title_field
+    ?? titleKey
+    ?? "name";
+  const statusFieldNames = displayConfig?.status_field_names ?? ["status"];
   const hasGroupable = !!findKanbanGroupField(entity);
   const navFieldNames = uniqueFieldNames([
     entity.display_config.code_field,
@@ -1589,7 +2015,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
 
   // Status field resolver from presentation config (for compact view badges)
   const statusResolverName = presentationConfig?.columns.find(
-    (c) => c.semanticResolver && ["status","record_status","state"].includes(c.fieldName),
+    (c) => c.semanticResolver && isStatusFieldName(c.fieldName, statusFieldNames),
   )?.semanticResolver;
 
   const selectedCount = Object.keys(rowSelection).length;
@@ -1655,10 +2081,10 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       cell: ({ getValue }: { getValue: () => unknown }) => {
         const value = getValue();
         if (colPres?.semanticResolver && typeof value === "string" && value) {
-          return <StatusBadge value={value} resolverName={colPres.semanticResolver} />;
+          return <RuntimeStatusText value={value} resolverName={colPres.semanticResolver} />;
         }
         const Renderer = resolveFieldRenderer(field);
-        return <Renderer value={value} field={field} mode="view" />;
+        return <Renderer value={value} field={field} mode="view" density="table" />;
       },
     };
   };
@@ -1678,7 +2104,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
           enableSorting: ef.is_sortable,
           meta:          { filtered: false },
           cell: ({ getValue }: { getValue: () => unknown }) => (
-            <Renderer value={getValue()} field={ef} mode="view" />
+            <Renderer value={getValue()} field={ef} mode="view" density="table" />
           ),
         }];
       });
@@ -1693,8 +2119,8 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     if (href) router.push(href);
   };
 
-  // Determine which saved view tab is "active" based on URL state
-  const activeSavedViewId = state.savedViewId ?? "__all";
+  // Determine which saved view menu item is an exact match.
+  const activeSavedViewId = state.savedViewId ?? (!hasSaveableViewState && !isModified ? "__all" : undefined);
 
   const handleSavedViewClick = (viewId: string) => {
     if (viewId === "__all") {
@@ -1708,47 +2134,15 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     }
   };
 
-  // Saved views tab bar — becomes Region 2 (context bar) when views exist
-  const savedViewsContext = savedViews.length > 0 ? (
-    <div className="flex gap-1 overflow-x-auto">
-      <button
-        onClick={() => handleSavedViewClick("__all")}
-        className={cn(
-          "shrink-0 px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors",
-          activeSavedViewId === "__all"
-            ? "border-primary text-foreground"
-            : "border-transparent text-muted-foreground hover:text-foreground",
-        )}
-      >
-        All
-      </button>
-      {savedViews.map((view) => (
-        <button
-          key={view.id}
-          onClick={() => handleSavedViewClick(view.id)}
-          className={cn(
-            "shrink-0 px-3 py-1.5 text-xs font-medium border-b-2 -mb-px transition-colors",
-            activeSavedViewId === view.id
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {view.name}
-        </button>
-      ))}
-    </div>
-  ) : undefined;
-
-  const useDocumentEntityHeader = isDocumentEntity(entity);
-  const listEntityTypeLabel = useDocumentEntityHeader ? entityTypeLabel(entity) : undefined;
+  const listEntityTypeLabel = entityTypeLabel(entity);
 
   return (
     <PageShell
       header={
         <PageHeader
           typeChip={listEntityTypeLabel}
-          onBack={useDocumentEntityHeader ? () => router.back() : undefined}
-          title={useDocumentEntityHeader ? undefined : entity.entity_name}
+          onBack={() => router.back()}
+          actionsLayout="adaptive"
           primaryActions={
             <>
               {operations ? (
@@ -1756,45 +2150,44 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                   operations={operations.filter((op) => !op.permission_code.toLowerCase().includes("export"))}
                   surface="LIST"
                   entityCode={entityCode}
+                  showSecondaryActions={false}
                 />
               ) : null}
               <ListSettingsMenu
                 entityCode={entityCode}
-                mode={viewMode}
-                density={state.density}
+                onReload={refetchList}
+                reloading={dataFetching}
+                operations={operations}
               />
             </>
           }
           actions={
-            <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex w-full min-w-0 items-center gap-1 sm:gap-2">
               <SearchInput
-                placeholder={`Search ${entity.entity_name}…`}
+                placeholder="Search..."
                 value={state.search ?? ""}
                 onSearch={setSearch}
-                loading={dataLoading && !!state.search && state.searchMode !== "client"}
-                className="w-28 sm:w-44 lg:w-64"
+                loading={dataLoading && !!state.search && searchMode === "server"}
+                className="min-w-[7rem] flex-1 xl:w-64 xl:flex-none"
                 onKeyDown={(e: React.KeyboardEvent) => {
                   if (e.key === "Escape") setSearch("");
                 }}
                 modeToggle={entity.fields.some((f) => f.is_searchable) ? {
-                  active:         state.searchMode === "client",
-                  onToggle:       () => setSearchMode(state.searchMode === "client" ? undefined : "client"),
+                  active:         searchMode === "client",
+                  onToggle:       () => setSearchMode(searchMode === "client" ? "server" : undefined),
                   activeLabel:    "In view",
-                  inactiveLabel:  "All",
-                  icon:           <Zap className="size-3" />,
-                  title:          state.searchMode === "client"
-                    ? "Instant search: filtering this page only — click to switch to server search (all records)"
-                    : "Server search: querying all records — click to switch to instant page filter",
+                  inactiveLabel:  "Server",
+                  icon:           searchMode === "client" ? <Zap className="size-3" /> : <Server className="size-3" />,
+                  title:          searchMode === "client"
+                    ? "Search in View: filters the rows currently loaded in this view. Click to switch to Search in Server."
+                    : "Search in Server: queries all matching records from the server. Click to switch to Search in View.",
+                  labelMode:      "always",
+                  activeClassName: "bg-muted text-foreground hover:bg-muted/80",
+                  inactiveClassName: "bg-primary text-primary-foreground hover:bg-primary/90",
                 } : undefined}
               />
 
-              <MyWorkDropdown
-                entity={entity}
-                activeFilters={activeFilters}
-                onSetFilters={(f) => setFilters(Object.keys(f).length > 0 ? f : undefined)}
-              />
-
-              <OrganizeControl
+              <OrganizerPalette
                 activeDrawer={activeDrawer}
                 onOpen={openDrawer}
                 hasActiveFilters={hasActiveFilters}
@@ -1804,33 +2197,27 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                 visibleColumns={visibleColumnNames.length}
                 totalColumns={allDescriptorColumns.length}
                 showColumns={viewMode === "list" || viewMode === "excel"}
-              />
-
-              <ViewLauncherButton
                 mode={viewMode}
-                density={state.density}
+                density={effectiveDensity}
                 hasGroupable={hasGroupable}
                 onChangeMode={setViewMode}
                 onChangeDensity={(d) => setDensity(d)}
-                availableModes={displayConfig?.view_modes?.map(
-                  (m) => B5_TO_LEGACY_MODE[m] ?? (m as ViewMode),
-                )}
+                availableModes={availableViewModes}
+                savedViews={savedViews}
+                activeSavedViewId={activeSavedViewId}
+                modifiedFromName={isModified ? baseSavedView?.name : undefined}
+                onSelectSavedView={handleSavedViewClick}
+                hasSaveableChanges={(hasSaveableViewState && !state.savedViewId) || isModified}
+                entityCode={entityCode}
+                state={state}
+                isModified={isModified}
+                baseSavedViewId={state.baseSavedViewId}
+                baseName={baseSavedView?.name}
               />
-
-              {(hasActiveQuery || isModified) && (
-                <SaveViewBar
-                  entityCode={entityCode}
-                  state={state}
-                  isModified={isModified}
-                  baseSavedViewId={state.baseSavedViewId}
-                  baseName={baseSavedView?.name}
-                />
-              )}
             </div>
           }
         />
       }
-      context={savedViewsContext}
     >
       {/* Drawers — one open at a time; all rendered for CSS transitions */}
       <FilterDrawer
@@ -1911,9 +2298,9 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               {/* Record count */}
               {serverTotal !== undefined && (
                 <span className="shrink-0">
-                  Showing <strong className="text-foreground">{allRows.length}</strong>
+                  Showing <strong className="font-semibold text-foreground">{allRows.length}</strong>
                   {" of "}
-                  <strong className="text-foreground">{serverTotal.toLocaleString()}</strong>
+                  <strong className="font-semibold text-foreground">{serverTotal.toLocaleString()}</strong>
                   {" "}{entity.entity_name.toLowerCase()}
                 </span>
               )}
@@ -2072,7 +2459,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               onRowContextMenu={(row, e) => handleRowContextMenu(row as Record<string, unknown>, e)}
               sortingState={tableSortingState}
               onSortingChange={handleSortChange}
-              density={state.density ?? "comfortable"}
+              density={effectiveDensity}
               aggregations={aggregations}
               pinnedColumns={pinnedColumns.length > 0 ? pinnedColumns : undefined}
               totalCount={serverTotal}
@@ -2110,7 +2497,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               groupCounts={groupCounts}
               columnOrder={kanbanColumnOrder}
               loading={dataLoading}
-              density={state.density ?? "comfortable"}
+              density={effectiveDensity}
               onRowClick={handleRowClick}
               onRowContextMenu={(row, e) => handleRowContextMenu(row, e)}
               rowActions={operations && operations.length > 0
@@ -2141,13 +2528,15 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
           {viewMode === "compact" && (
             <CompactView
               rows={allRows}
-              titleKey={titleKey}
-              entityCode={entityCode}
+              entity={entity}
+              codeFieldName={codeFieldName}
+              titleFieldName={compactTitleFieldName}
+              statusFieldNames={statusFieldNames}
               onRowClick={handleRowClick}
               onRowContextMenu={handleRowContextMenu}
               statusResolverName={statusResolverName}
               compactColumns={compactColumns}
-              density={state.density ?? "comfortable"}
+              density={effectiveDensity}
             />
           )}
 
@@ -2218,7 +2607,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             {ctxCopyItems.length > 0 && (
               <>
                 <div className="my-1 h-px bg-border" />
-                <div className="px-3 pb-0.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                <div className="px-3 pb-0.5 pt-1 text-doc-support font-semibold uppercase tracking-wider text-muted-foreground/50">
                   Copy field
                 </div>
                 <div className="max-h-[220px] overflow-y-auto">

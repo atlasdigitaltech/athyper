@@ -237,11 +237,11 @@ function VersionCard({
               <VersionChangeTypeIcon type={version.change_type} />
               {versionChangeTypeLabel(version.change_type)}
             </span>
-            <Badge variant={versionStatusVariant(version.status)} className="capitalize text-[10px]">
+            <Badge variant={versionStatusVariant(version.status)} className="capitalize text-doc-support">
               {version.status}
             </Badge>
-            {version.is_current && <Badge variant="info" className="text-[10px]">Current</Badge>}
-            {isPinned        && <Badge variant="secondary" className="text-[10px]">Selected</Badge>}
+            {version.is_current && <Badge variant="info" className="text-doc-support">Current</Badge>}
+            {isPinned        && <Badge variant="secondary" className="text-doc-support">Selected</Badge>}
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
@@ -308,7 +308,7 @@ function VersionCard({
           {version.created_by_name && <span>by {version.created_by_name}</span>}
           {version.change_reason   && <span className="italic">"{version.change_reason}"</span>}
         </div>
-        <div className="mt-2 truncate font-mono text-[10px] text-muted-foreground/50">
+        <div className="mt-2 truncate font-mono text-doc-support text-muted-foreground/50">
           {version.data_hash}
         </div>
       </div>

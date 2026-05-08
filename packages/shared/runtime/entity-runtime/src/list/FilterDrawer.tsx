@@ -26,7 +26,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
-  Heart,
+  Star,
   BookmarkPlus,
   Bookmark,
   FileText,
@@ -35,7 +35,7 @@ import {
   Filter,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { Button } from "@athyper/ui/primitives";
+import { Button, overlayScrimVariants } from "@athyper/ui/primitives";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import {
   type EntityListFilters,
@@ -198,7 +198,7 @@ function quickFilterActive(draft: EntityListFilters, filter: MetadataQuickFilter
 
 function QuickFilterIcon({ filter, active }: { filter: MetadataQuickFilter; active: boolean }) {
   const cls = cn("h-3 w-3 shrink-0", active && "fill-current");
-  if (filter.key === "__bookmarked") return <Heart className={cls} />;
+  if (filter.key === "__bookmarked") return <Star className={cls} />;
   if (filter.key === "__created_by") return <FileText className="h-3 w-3 shrink-0" />;
   if (filter.key.includes("internal")) return <ShieldCheck className="h-3 w-3 shrink-0" />;
   if (filter.key.includes("organization") || filter.field === "partner_category") {
@@ -376,7 +376,7 @@ export function FilterDrawer({
     const configured = metadataFilterBar?.quick_filters ?? [];
 
     const defaults: MetadataQuickFilter[] = [
-      { key: "__bookmarked", label: "Starred by me", value: true, sort_order: 10 },
+      { key: "__bookmarked", label: "Favourites", value: true, sort_order: 10 },
       { key: "__created_by", label: "My documents", value: "me", sort_order: 20 },
     ];
 
@@ -388,6 +388,11 @@ export function FilterDrawer({
         seen.add(key);
         return true;
       })
+      .map((filter) => (
+        filter.key === "__bookmarked"
+          ? { ...filter, label: "Favourites" }
+          : filter
+      ))
       .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
   }, [metadataFilterBar?.quick_filters]);
 
@@ -533,7 +538,8 @@ export function FilterDrawer({
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-black/25 transition-opacity duration-200",
+          "fixed inset-0 z-40 transition-opacity duration-200",
+          overlayScrimVariants({ tone: "context" }),
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
         )}
         onClick={onClose}
@@ -689,7 +695,7 @@ export function FilterDrawer({
         {/* ── Scrollable body ── */}
         <div className="flex-1 overflow-y-auto">
 
-          {/* Starred by me — virtual filter toggle (S1.A) */}
+          {/* Favourites virtual filter toggle (S1.A) */}
           {!filterSearch && metadataQuickFilters.length > 0 && (
             <div className="border-b bg-muted/15 px-4 py-3">
               <div className="mb-2 flex items-center justify-between">

@@ -572,7 +572,7 @@ export function RichCommentComposer({
             "[&_.ProseMirror]:text-sm [&_.ProseMirror]:leading-relaxed [&_.ProseMirror]:text-foreground",
             "[&_.ProseMirror_strong]:font-semibold",
             "[&_.ProseMirror_em]:italic",
-            "[&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:bg-muted [&_.ProseMirror_code]:px-1 [&_.ProseMirror_code]:text-[0.85em] [&_.ProseMirror_code]:font-mono",
+            "[&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:bg-muted [&_.ProseMirror_code]:px-1 [&_.ProseMirror_code]:text-doc-support [&_.ProseMirror_code]:font-mono",
             "[&_.ProseMirror_pre]:rounded-md [&_.ProseMirror_pre]:bg-muted [&_.ProseMirror_pre]:p-3 [&_.ProseMirror_pre]:text-xs [&_.ProseMirror_pre]:font-mono [&_.ProseMirror_pre]:overflow-x-auto",
             "[&_.ProseMirror_blockquote]:border-l-2 [&_.ProseMirror_blockquote]:border-border [&_.ProseMirror_blockquote]:pl-3 [&_.ProseMirror_blockquote]:text-muted-foreground",
             "[&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5",
@@ -590,7 +590,7 @@ export function RichCommentComposer({
 
       {/* Paste notice — shown when a table is pasted */}
       {pasteNotice && (
-        <div className="mx-3 mb-1 mt-2 flex items-center justify-between gap-2 rounded-md border border-border bg-muted/60 px-3 py-1.5 text-[11px] text-muted-foreground">
+        <div className="mx-3 mb-1 mt-2 flex items-center justify-between gap-2 rounded-md border border-border bg-muted/60 px-3 py-1.5 text-doc-subtitle text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <Table2 className="size-3 shrink-0" />
             Table pasted · {pasteNotice.cols} col{pasteNotice.cols !== 1 ? "s" : ""} × {pasteNotice.rows} row{pasteNotice.rows !== 1 ? "s" : ""}
@@ -681,7 +681,7 @@ export function RichCommentComposer({
                   onMouseDown={(e) => { e.preventDefault(); setVisMenuOpen((x) => !x); }}
                   title="Set comment visibility"
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none transition-colors",
+                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-doc-support font-medium leading-none transition-colors",
                     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                     cur.pillCls,
                   )}
@@ -710,7 +710,7 @@ export function RichCommentComposer({
                           </span>
                           <span>
                             <span className="block text-xs font-medium text-foreground">{opt.label}</span>
-                            <span className="block text-[10px] text-muted-foreground">{opt.description}</span>
+                            <span className="block text-doc-support text-muted-foreground">{opt.description}</span>
                           </span>
                         </button>
                       );
@@ -729,7 +729,7 @@ export function RichCommentComposer({
               <Loader2 className="size-3 animate-spin" />Uploading…
             </span>
           )}
-          <span className="hidden select-none rounded border border-border bg-muted px-1 py-0.5 text-[10px] text-muted-foreground sm:inline">
+          <span className="hidden select-none rounded border border-border bg-muted px-1 py-0.5 text-doc-support text-muted-foreground sm:inline">
             ⌘↵
           </span>
           {onCancel && (

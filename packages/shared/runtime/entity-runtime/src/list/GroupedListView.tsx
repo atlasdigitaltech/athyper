@@ -16,21 +16,14 @@
  * Group ordering:
  *   columnOrder → count-desc → Unassigned always last.
  *
- * Cell rendering mirrors EntityListPage: resolveFieldRenderer + StatusBadge
+ * Cell rendering mirrors EntityListPage: resolveFieldRenderer + RuntimeStatusText
  * for semantic-resolver columns.
  */
 
 import { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
-import {
-  kanbanStatusIntent,
-  apArStatusIntent,
-  closeRunStatusIntent,
-  closeTaskStatusIntent,
-  adminStatusIntent,
-} from "@athyper/theme/domain-intents";
+import { resolveRuntimeStatusColors, RuntimeStatusText, listTypography } from "./listPresentation";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import type { ColumnPresentation } from "@athyper/api-contracts/entity-list";
 import { resolveFieldRenderer } from "../field-renderers/registry";
@@ -38,26 +31,6 @@ import { resolveFieldRenderer } from "../field-renderers/registry";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const UNASSIGNED_KEY = "__unassigned__";
-
-const SEMANTIC_RESOLVERS: Record<string, (value: string) => SemanticIntent> = {
-  kanbanStatusIntent,
-  apArStatusIntent,
-  closeRunStatusIntent,
-  closeTaskStatusIntent,
-  adminStatusIntent,
-};
-
-function StatusBadge({ value, resolverName }: { value: string; resolverName?: string }) {
-  if (!value) return null;
-  const fn     = resolverName ? SEMANTIC_RESOLVERS[resolverName] : undefined;
-  const intent = fn ? fn(value) : kanbanStatusIntent(value);
-  const colors = resolveSemanticColors(intent);
-  return (
-    <span className={cn("rounded-full border px-2 py-0.5 text-2xs capitalize", colors.subtleBadge)}>
-      {value.replace(/_/g, " ")}
-    </span>
-  );
-}
 
 function getGroupValue(row: Record<string, unknown>, fieldName: string): string {
   const v = row[fieldName];
@@ -97,9 +70,9 @@ function orderGroups(
 // ── Density ───────────────────────────────────────────────────────────────────
 
 const DENSITY_CELL: Record<string, string> = {
-  compact:     "px-3 py-1.5 text-xs",
-  comfortable: "px-3 py-2.5 text-sm",
-  spacious:    "px-4 py-4 text-sm",
+  compact:     "px-3 py-1.5",
+  comfortable: "px-3 py-2.5",
+  spacious:    "px-4 py-4",
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -171,7 +144,7 @@ export function GroupedListView({
 
   if (!loading && rows.length === 0) {
     return (
-      <div className="py-16 text-center text-sm text-muted-foreground">No records found</div>
+      <div className={listTypography.emptyState}>No records found</div>
     );
   }
 
@@ -185,7 +158,7 @@ export function GroupedListView({
       </p>
 
       <div className="overflow-auto min-h-[50dvh] max-h-[calc(100dvh-12rem)] rounded-md border">
-        <table className="w-full border-collapse text-sm">
+        <table className={cn("w-full border-collapse", listTypography.table.cell)}>
           {/* Sticky column header */}
           <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
             <tr className="border-b">
@@ -193,7 +166,8 @@ export function GroupedListView({
                 <th
                   key={field.name}
                   className={cn(
-                    "text-left font-medium text-muted-foreground whitespace-nowrap",
+                    "text-left whitespace-nowrap",
+                    listTypography.table.header,
                     cellCls,
                   )}
                 >
@@ -217,7 +191,7 @@ export function GroupedListView({
                 ? "bg-muted/40 text-muted-foreground border-border"
                 : (() => {
                     try {
-                      return resolveSemanticColors(kanbanStatusIntent(groupKey)).subtleBadge;
+                      return resolveRuntimeStatusColors(groupKey).subtleBadge;
                     } catch {
                       return "bg-muted/40 text-muted-foreground border-border";
                     }
@@ -238,7 +212,7 @@ export function GroupedListView({
                           : <ChevronDown  className="h-3.5 w-3.5 shrink-0 opacity-60" />}
                         <span className="text-xs font-semibold capitalize">{label}</span>
                         <span
-                          className="ml-0.5 rounded-full bg-white/60 dark:bg-black/30 px-2 py-0.5 text-2xs font-bold tabular-nums"
+                          className="ml-0.5 rounded-full bg-background/60 dark:bg-background/30 px-2 py-0.5 text-2xs font-bold tabular-nums"
                           title={serverTotal !== undefined
                             ? `${serverTotal.toLocaleString()} total · ${pageCount} on this page`
                             : `${pageCount} on this page`}
@@ -278,11 +252,11 @@ export function GroupedListView({
                               className={cn(cellCls, "whitespace-nowrap max-w-[280px] truncate")}
                             >
                               {colPres?.semanticResolver && typeof value === "string" && value ? (
-                                <StatusBadge value={value} resolverName={colPres.semanticResolver} />
+                                <RuntimeStatusText value={value} resolverName={colPres.semanticResolver} />
                               ) : (
                                 (() => {
                                   const Renderer = resolveFieldRenderer(field);
-                                  return <Renderer value={value} field={field} mode="view" />;
+                                  return <Renderer value={value} field={field} mode="view" density="table" />;
                                 })()
                               )}
                             </td>

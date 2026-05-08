@@ -50,7 +50,7 @@ const ROLE_CHIP: Record<string, string> = {
 function RoleChip({ role }: { role: string }) {
   const cls = ROLE_CHIP[role.toLowerCase()] ?? "border-border/60 bg-muted text-muted-foreground";
   return (
-    <span className={cn("inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-none uppercase tracking-wide", cls)}>
+    <span className={cn("inline-flex items-center rounded border px-1.5 py-0.5 text-doc-support font-semibold leading-none uppercase tracking-wide", cls)}>
       {role}
     </span>
   );
@@ -62,14 +62,14 @@ function VisibilityChip({ visibility }: { visibility: string }) {
   if (!visibility || visibility === "internal") return null;
   if (visibility === "public") {
     return (
-      <span className="inline-flex items-center gap-0.5 rounded border border-success/30 bg-success/10 px-1.5 py-0.5 text-[10px] font-medium text-success leading-none">
+      <span className="inline-flex items-center gap-0.5 rounded border border-success/30 bg-success/10 px-1.5 py-0.5 text-doc-support font-medium text-success leading-none">
         <Globe className="size-2.5" />Public
       </span>
     );
   }
   if (visibility === "private") {
     return (
-      <span className="inline-flex items-center gap-0.5 rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning leading-none">
+      <span className="inline-flex items-center gap-0.5 rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-doc-support font-medium text-warning leading-none">
         <Lock className="size-2.5" />Private
       </span>
     );

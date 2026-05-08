@@ -362,11 +362,11 @@ function RoutingRulesTab() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm">{rule.rule_name}</span>
                     <CodeBadge>{rule.event_code}</CodeBadge>
-                    <Badge variant="outline" className="text-[10px]">{CHANNEL_LABEL[rule.channel] ?? rule.channel}</Badge>
+                    <Badge variant="outline" className="text-doc-support">{CHANNEL_LABEL[rule.channel] ?? rule.channel}</Badge>
                     {rule.template_key && <CodeBadge>{rule.template_key}</CodeBadge>}
                     {!rule.is_enabled && <StatusPill value="disabled" />}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                  <p className="text-doc-support text-muted-foreground mt-0.5">
                     Priority {rule.priority}
                     {rule.dedup_window_ms && ` · Dedup ${rule.dedup_window_ms}ms`}
                     {` · ${fmtDate(rule.created_at)}`}
@@ -496,7 +496,7 @@ function TemplateDialog({
             <Textarea className="h-32 resize-none font-mono text-xs" value={body}
               placeholder="Your request {{request_id}} requires action. {{action_url}}"
               onChange={(e) => setBody(e.target.value)} />
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-doc-support text-muted-foreground">
               Use {"{{variable}}"} syntax for interpolation. Variables come from the event payload.
             </p>
           </div>
@@ -577,7 +577,7 @@ function TemplatesTab() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <CodeBadge>{t.template_key}</CodeBadge>
-                    <Badge variant="outline" className="text-[10px]">{t.locale_code}</Badge>
+                    <Badge variant="outline" className="text-doc-support">{t.locale_code}</Badge>
                     {t.is_active
                       ? <StatusPill value="active" label="active" />
                       : <StatusPill value="draft" label="draft" />}
@@ -680,10 +680,10 @@ function ProvidersTab() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">{p.code}</span>
                     <CodeBadge>{p.adapter_key}</CodeBadge>
-                    <Badge variant="outline" className="text-[10px]">{CHANNEL_LABEL[p.channel] ?? p.channel}</Badge>
+                    <Badge variant="outline" className="text-doc-support">{CHANNEL_LABEL[p.channel] ?? p.channel}</Badge>
                     {!p.is_enabled && <StatusPill value="disabled" />}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                  <p className="text-doc-support text-muted-foreground mt-0.5">
                     Priority {p.priority}
                     {p.failure_count > 0 && ` · ${p.failure_count} failure${p.failure_count !== 1 ? "s" : ""}`}
                     {p.last_health_check && ` · Checked ${fmtDateTime(p.last_health_check)}`}
@@ -765,16 +765,16 @@ function DeliveriesTab() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <CodeBadge>{m.event_code}</CodeBadge>
-                      <Badge variant="outline" className="text-[10px]">{CHANNEL_LABEL[m.channel] ?? m.channel}</Badge>
+                      <Badge variant="outline" className="text-doc-support">{CHANNEL_LABEL[m.channel] ?? m.channel}</Badge>
                       <StatusPill
                         value={m.status === "sent" ? "active" : m.status === "failed" ? "down" : "pending"}
                         label={m.status}
                       />
                       {m.attempt_count > 1 && (
-                        <span className="text-[10px] text-muted-foreground">{m.attempt_count} attempts</span>
+                        <span className="text-doc-support text-muted-foreground">{m.attempt_count} attempts</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                    <p className="text-doc-support text-muted-foreground mt-0.5">
                       {fmtDateTime(m.created_at)}
                       {m.last_attempt_at && ` · Last attempt ${fmtDateTime(m.last_attempt_at)}`}
                     </p>

@@ -22,7 +22,12 @@ import type { Request, Response } from "express";
 // Populated by registerJobQueues() after the jobs service starts.
 // Duck-typed to avoid importing the full BullMQ Queue class here.
 type DepthQueue = { getJobCounts(...states: string[]): Promise<Record<string, number>> };
+export type MetricCollector = () => Promise<string[]>;
+
 let jobQueues: Record<string, DepthQueue> | null = null;
+let metricCollectors: MetricCollector[] = [];
+
+const HTTP_DURATION_BUCKETS_SECONDS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
 
 /**
  * Register BullMQ queues for depth metrics.
@@ -31,6 +36,15 @@ let jobQueues: Record<string, DepthQueue> | null = null;
  */
 export function registerJobQueues(queues: Record<string, DepthQueue>): void {
   jobQueues = queues;
+}
+
+/**
+ * Register live metric collectors that need application dependencies such as DB
+ * access. Collectors return Prometheus text-format lines and are polled on each
+ * /metrics scrape.
+ */
+export function registerMetricCollectors(collectors: MetricCollector[]): void {
+  metricCollectors = collectors;
 }
 
 // ─── Internal counter store ───────────────────────────────────────────────────
@@ -47,6 +61,10 @@ interface LabelSet {
 const counters = new Map<string, number>();
 // Track total invalidated keys separately (not just the number of DEL calls)
 const invalidatedKeys = new Map<string, number>();
+const httpRequests = new Map<string, number>();
+const httpDurationBuckets = new Map<string, number>();
+const httpDurationSum = new Map<string, number>();
+const httpDurationCount = new Map<string, number>();
 
 function key(labels: LabelSet): string {
   return `${labels.tenant}\0${labels.operation}\0${labels.service}`;
@@ -55,6 +73,43 @@ function key(labels: LabelSet): string {
 function inc(labels: LabelSet, amount = 1): void {
   const k = key(labels);
   counters.set(k, (counters.get(k) ?? 0) + amount);
+}
+
+function incMap(map: Map<string, number>, key: string, amount = 1): void {
+  map.set(key, (map.get(key) ?? 0) + amount);
+}
+
+function normalizePath(path: string): string {
+  const clean = path.split("?")[0] || "/";
+  return clean
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id")
+    .replace(/\/\d+(?=\/|$)/g, "/:id")
+    .replace(/\/[0-9a-f]{16,}(?=\/|$)/gi, "/:id")
+    .replace(/\/[^/]*[0-9][^/]{20,}(?=\/|$)/g, "/:id");
+}
+
+export function observeHttpRequest(input: {
+  method: string;
+  path: string;
+  statusCode: number;
+  durationMs: number;
+}): void {
+  const method = input.method.toUpperCase();
+  const route = normalizePath(input.path);
+  const status = String(input.statusCode);
+  const labels = `${method}\0${route}\0${status}`;
+  const durationSeconds = input.durationMs / 1000;
+
+  incMap(httpRequests, labels);
+  incMap(httpDurationSum, `${method}\0${route}`, durationSeconds);
+  incMap(httpDurationCount, `${method}\0${route}`);
+
+  for (const bucket of HTTP_DURATION_BUCKETS_SECONDS) {
+    if (durationSeconds <= bucket) {
+      incMap(httpDurationBuckets, `${method}\0${route}\0${bucket}`);
+    }
+  }
+  incMap(httpDurationBuckets, `${method}\0${route}\0+Inf`);
 }
 
 // ─── Public factory ───────────────────────────────────────────────────────────
@@ -87,6 +142,15 @@ const HELP = [
   "",
   "# HELP athyper_queue_jobs_total Current BullMQ job counts by queue and state (gauge)",
   "# TYPE athyper_queue_jobs_total gauge",
+  "",
+  "# HELP gov_archive_job_backlog Current partition archive queue backlog",
+  "# TYPE gov_archive_job_backlog gauge",
+  "",
+  "# HELP athyper_http_requests_total HTTP requests by method, normalized route, and status",
+  "# TYPE athyper_http_requests_total counter",
+  "",
+  "# HELP athyper_http_request_duration_seconds HTTP request duration by method and normalized route",
+  "# TYPE athyper_http_request_duration_seconds histogram",
 ].join("\n");
 
 function escape(v: string): string {
@@ -127,11 +191,62 @@ export function metricsHandler(_req: Request, res: Response): void {
               `athyper_queue_jobs_total{queue="${escape(queueName)}",state="${escape(state)}"} ${count}`,
             );
           }
+          if (queueName === "partitionArchive" || queueName === "jobs-partition-archive") {
+            const backlog =
+              (counts.active  ?? 0) +
+              (counts.waiting ?? 0) +
+              (counts.delayed ?? 0);
+            lines.push(`gov_archive_job_backlog{tenant="system"} ${backlog}`);
+          }
         } catch {
           // Queue unreachable (Redis down, etc.) — emit nothing for this queue
         }
       }
       lines.push("");
+    }
+
+    for (const [k, count] of httpRequests) {
+      const parts = k.split("\0");
+      const method = parts[0] ?? ""; const route = parts[1] ?? ""; const status = parts[2] ?? "";
+      lines.push(
+        `athyper_http_requests_total{method="${escape(method)}",route="${escape(route)}",status="${escape(status)}"} ${count}`,
+      );
+    }
+
+    lines.push("");
+
+    for (const [k, count] of httpDurationBuckets) {
+      const parts = k.split("\0");
+      const method = parts[0] ?? ""; const route = parts[1] ?? ""; const le = parts[2] ?? "";
+      lines.push(
+        `athyper_http_request_duration_seconds_bucket{method="${escape(method)}",route="${escape(route)}",le="${escape(le)}"} ${count}`,
+      );
+    }
+    for (const [k, sum] of httpDurationSum) {
+      const parts = k.split("\0");
+      const method = parts[0] ?? ""; const route = parts[1] ?? "";
+      lines.push(
+        `athyper_http_request_duration_seconds_sum{method="${escape(method)}",route="${escape(route)}"} ${sum}`,
+      );
+    }
+    for (const [k, count] of httpDurationCount) {
+      const parts = k.split("\0");
+      const method = parts[0] ?? ""; const route = parts[1] ?? "";
+      lines.push(
+        `athyper_http_request_duration_seconds_count{method="${escape(method)}",route="${escape(route)}"} ${count}`,
+      );
+    }
+    lines.push("");
+
+    for (const collect of metricCollectors) {
+      try {
+        const collectorLines = await collect();
+        if (collectorLines.length > 0) {
+          lines.push(...collectorLines, "");
+        }
+      } catch {
+        // Collector failures are scrape-local; keep core runtime metrics alive.
+      }
     }
 
     res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");

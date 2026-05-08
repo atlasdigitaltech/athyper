@@ -131,12 +131,12 @@ function FlagList({ status }: { status: FlagStatus }) {
         {flags.map((f) => (
           <RowCard
             key={f.id}
-            badge={<Badge variant={STATUS_VARIANT[f.status]} className="text-[10px]">{f.status}</Badge>}
+            badge={<Badge variant={STATUS_VARIANT[f.status]} className="text-doc-support">{f.status}</Badge>}
             title={f.flagReason}
             metadata={<>
-              <span className="font-mono text-[10px]">{f.contextType}</span>
+              <span className="font-mono text-doc-support">{f.contextType}</span>
               {f.note && <p className="truncate">{f.note}</p>}
-              <p className="text-[10px]">{new Date(f.createdAt).toLocaleString()}</p>
+              <p className="text-doc-support">{new Date(f.createdAt).toLocaleString()}</p>
             </>}
             actions={
               (f.status === "pending" || f.status === "reviewed") ? (

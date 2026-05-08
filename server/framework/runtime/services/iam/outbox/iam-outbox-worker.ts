@@ -62,7 +62,7 @@ export interface IamOutboxWorkerDeps {
   /**
    * Realm keys used as session namespaces in the web BFF.
    * Each namespace is checked when invalidating frontend sessions.
-   * Defaults to ["athyper", "platform-control"] — the two known KC realms.
+   * Defaults to ["athyper", "platform"] — the web BFF session namespaces.
    */
   sessionNamespaces?: string[];
 }
@@ -83,12 +83,13 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
     logger,
     pollIntervalMs = 10_000,
     batchSize = 50,
-    sessionNamespaces = ["athyper", "platform-control"],
+    sessionNamespaces = ["athyper", "platform"],
   } = deps;
 
   const TOPIC = "iam";
   const LOCK_OWNER = `iam-worker-${process.pid}`;
   const RETRY_DELAY_MS = 30_000;
+  const uniqueSessionNamespaces = [...new Set(sessionNamespaces)];
 
   let running = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -108,6 +109,19 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
     return keys.length;
   }
 
+  async function subjectIdsForPrincipal(principalId: string): Promise<string[]> {
+    const rows = await db
+      .selectFrom("master.principal_identity_binding")
+      .select("subject_id")
+      .where("principal_id", "=", principalId)
+      .where("provider_code", "=", "keycloak")
+      .execute() as Array<{ subject_id: string | null }>;
+
+    return rows
+      .map((row) => row.subject_id)
+      .filter((subjectId): subjectId is string => typeof subjectId === "string" && subjectId.length > 0);
+  }
+
   /**
    * Invalidate backend API session and bootstrap cache for a principal.
    *
@@ -120,10 +134,10 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
    *      (≤ 5 min TTL) until all active sessions have been re-written using the set path.
    *   3. Once the transition is stable, the SCAN fallback can be removed.
    */
-  async function invalidateBackendSessions(principalId: string): Promise<number> {
+  async function invalidateBackendSessions(sub: string): Promise<number> {
     // Try per-principal set lookup first (P2 path — avoids full keyspace SCAN)
-    const sessionSetKey = `principal_sessions:${principalId}`;
-    const bootstrapSetKey = `bootstrap_keys:${principalId}`;
+    const sessionSetKey = `principal_sessions:${sub}`;
+    const bootstrapSetKey = `bootstrap_keys:${sub}`;
 
     const [sessionKeys, bootstrapKeys] = await Promise.all([
       cache.smembers(sessionSetKey),
@@ -139,8 +153,8 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
       invalidated = sessionKeys.length + bootstrapKeys.length;
     } else {
       // Fallback: SCAN for sessions and bootstrap written before P2 migration
-      const sessionCount = await scanAndDelete(`session:${principalId}:*`);
-      const bootstrapCount = await scanAndDelete(`bootstrap:${principalId}:*`);
+      const sessionCount = await scanAndDelete(`session:${sub}:*`);
+      const bootstrapCount = await scanAndDelete(`bootstrap:${sub}:*`);
       invalidated = sessionCount + bootstrapCount;
     }
 
@@ -154,11 +168,11 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
    * find all active session IDs, then DELs the session blobs and the index set.
    * This closes the 8-hour window where a deactivated user's web session remained valid.
    */
-  async function invalidateFrontendSessions(principalId: string): Promise<number> {
+  async function invalidateFrontendSessions(sub: string): Promise<number> {
     let invalidated = 0;
 
-    for (const ns of sessionNamespaces) {
-      const indexKey = `user_sessions:${ns}:${principalId}`;
+    for (const ns of uniqueSessionNamespaces) {
+      const indexKey = `user_sessions:${ns}:${sub}`;
       const sids = await cache.smembers(indexKey);
       if (sids.length === 0) continue;
 
@@ -172,9 +186,16 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
 
   async function invalidatePrincipalSessions(principalId: string): Promise<number> {
     // principalId == KC subject UUID (sub) — matches all cache key formats
-    const backendCount = await invalidateBackendSessions(principalId);
-    const frontendCount = await invalidateFrontendSessions(principalId);
-    return backendCount + frontendCount;
+    const subjects = new Set([principalId, ...(await subjectIdsForPrincipal(principalId))]);
+    let invalidated = 0;
+
+    for (const sub of subjects) {
+      const backendCount = await invalidateBackendSessions(sub);
+      const frontendCount = await invalidateFrontendSessions(sub);
+      invalidated += backendCount + frontendCount;
+    }
+
+    return invalidated;
   }
 
   // ─── Security cleanup ────────────────────────────────────────────────────

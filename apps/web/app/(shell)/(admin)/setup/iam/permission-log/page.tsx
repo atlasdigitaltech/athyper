@@ -58,7 +58,7 @@ const DECISION_VARIANT: Record<string, "success" | "destructive" | "warning" | "
 
 function DecisionBadge({ decision }: { decision: string }) {
   return (
-    <Badge variant={DECISION_VARIANT[decision] ?? "outline"} className="text-[10px] capitalize whitespace-nowrap">
+    <Badge variant={DECISION_VARIANT[decision] ?? "outline"} className="text-doc-support capitalize whitespace-nowrap">
       {decision.replace(/_/g, " ")}
     </Badge>
   );
@@ -169,7 +169,7 @@ export default function PermissionLogPage() {
             <Search className="mr-1.5 h-3.5 w-3.5" />
             {filtersOpen ? "Hide Filters" : "Show Filters"}
             {hasActiveFilters && (
-              <Badge variant="secondary" className="ml-1.5 text-[9px] px-1">active</Badge>
+              <Badge variant="secondary" className="ml-1.5 text-doc-field-label px-1">active</Badge>
             )}
           </Button>
         </CollapsibleTrigger>
@@ -296,7 +296,7 @@ export default function PermissionLogPage() {
                           {e.principal_display_name ?? e.principal_code ?? e.principal_id.slice(0, 8)}
                         </p>
                         {e.principal_code && e.principal_display_name && (
-                          <p className="font-mono text-[10px] text-muted-foreground">{e.principal_code}</p>
+                          <p className="font-mono text-doc-support text-muted-foreground">{e.principal_code}</p>
                         )}
                       </div>
                     </td>
@@ -305,7 +305,7 @@ export default function PermissionLogPage() {
                     <td className="py-2 pr-4">
                       <span className="font-mono text-xs">{e.permission_code ?? "—"}</span>
                       {e.module_code && (
-                        <span className="ml-1.5 text-[10px] text-muted-foreground">{e.module_code}</span>
+                        <span className="ml-1.5 text-doc-support text-muted-foreground">{e.module_code}</span>
                       )}
                     </td>
 
@@ -313,9 +313,9 @@ export default function PermissionLogPage() {
                     <td className="py-2 pr-4 text-xs">
                       {e.entity_type ? (
                         <div>
-                          <Badge variant="outline" className="text-[9px] px-1">{e.entity_type}</Badge>
+                          <Badge variant="outline" className="text-doc-field-label px-1">{e.entity_type}</Badge>
                           {e.entity_id && (
-                            <p className="font-mono text-[10px] text-muted-foreground mt-0.5">
+                            <p className="font-mono text-doc-support text-muted-foreground mt-0.5">
                               {e.entity_id.slice(0, 8)}…
                             </p>
                           )}
@@ -336,7 +336,7 @@ export default function PermissionLogPage() {
                         {e.decision_reason}
                       </p>
                       {e.scope_applied && (
-                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">{e.scope_applied}</p>
+                        <p className="text-doc-support text-muted-foreground/70 mt-0.5">{e.scope_applied}</p>
                       )}
                     </td>
 

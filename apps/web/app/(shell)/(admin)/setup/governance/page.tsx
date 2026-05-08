@@ -190,16 +190,16 @@ export default function GovernanceSetupPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-medium text-sm">{ct.typeName}</p>
-                    <p className="font-mono text-[11px] text-muted-foreground">{ct.typeCode}</p>
+                    <p className="font-mono text-doc-subtitle text-muted-foreground">{ct.typeCode}</p>
                   </div>
-                  <Badge variant={!ct.isActive ? "muted" : "outline"} className="text-[10px] shrink-0">
+                  <Badge variant={!ct.isActive ? "muted" : "outline"} className="text-doc-support shrink-0">
                     {ct.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </div>
                 {ct.description && <p className="text-xs text-muted-foreground line-clamp-2">{ct.description}</p>}
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  <Badge variant={DOMAIN_VARIANT[ct.domain] ?? "muted"} className="text-[10px]">{ct.domain}</Badge>
-                  <Badge variant="outline" className="text-[10px] flex items-center gap-1">
+                  <Badge variant={DOMAIN_VARIANT[ct.domain] ?? "muted"} className="text-doc-support">{ct.domain}</Badge>
+                  <Badge variant="outline" className="text-doc-support flex items-center gap-1">
                     <Calendar className="h-2.5 w-2.5" />{ct.frequency}
                   </Badge>
                 </div>

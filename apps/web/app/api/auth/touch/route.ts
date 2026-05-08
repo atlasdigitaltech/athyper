@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 
 import { getSessionRedis } from "@/lib/auth/session-redis";
-import { getSessionId } from "@/lib/auth/session";
-import { sessKey } from "@/lib/auth/redis-keys";
+import {
+  clearCsrfCookie,
+  clearMfaPendingCookie,
+  clearSessionCookie,
+  getSessionId,
+} from "@/lib/auth/session";
+import {
+  sessKey,
+  userSessionsKey,
+} from "@/lib/auth/redis-keys";
+import { resolveSessionPolicy } from "@/lib/auth/session-policy-resolver";
 import { resolveSessionNamespace } from "@/lib/server/session-namespace";
 import type { V4Session } from "@/lib/auth/types";
 
@@ -27,16 +36,39 @@ export async function POST() {
     if (!raw) return NextResponse.json({ ok: false }, { status: 401 });
 
     const session = JSON.parse(raw) as V4Session;
+    const now = Math.floor(Date.now() / 1000);
+    const policy = await resolveSessionPolicy(session);
+    const lastSeenAt =
+      typeof session.lastSeenAt === "number" ? session.lastSeenAt : 0;
+
+    if (lastSeenAt > 0 && now - lastSeenAt >= policy.idleTimeoutSeconds) {
+      await redis.del(sessKey(sessionNamespace, sid));
+      if (session.userId) {
+        await redis.sRem(userSessionsKey(sessionNamespace, session.userId), sid).catch(() => {});
+      }
+      await clearSessionCookie();
+      await clearCsrfCookie();
+      await clearMfaPendingCookie();
+      const res = NextResponse.json(
+        { ok: false, reason: "idle_expired" },
+        { status: 401 },
+      );
+      res.cookies.delete("neon_sid");
+      res.cookies.delete("__csrf");
+      res.cookies.delete("neon_mfa_pending");
+      return res;
+    }
+
     const ttl = await redis.ttl(sessKey(sessionNamespace, sid));
     const updated: V4Session = {
       ...session,
-      lastSeenAt: Math.floor(Date.now() / 1000),
+      lastSeenAt: now,
     };
 
     await redis.set(
       sessKey(sessionNamespace, sid),
       JSON.stringify(updated),
-      { EX: ttl > 0 ? ttl : 28800 },
+      { EX: ttl > 0 ? ttl : policy.sessionTtlSeconds },
     );
 
     return NextResponse.json({ ok: true });

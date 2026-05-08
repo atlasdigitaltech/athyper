@@ -33,6 +33,7 @@ include:
   - objectstorage/athyper-objectstorage.yml
   - telemetry/athyper-logging.yml
   - telemetry/athyper-logshipper.yml
+  - telemetry/athyper-alertmanager.yml
   - telemetry/athyper-metrics.yml
   - telemetry/athyper-tracing.yml
   - telemetry/athyper-telemetry.yml

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { X, Search, Layers, Check } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { Button } from "@athyper/ui/primitives";
+import { Button, overlayScrimVariants } from "@athyper/ui/primitives";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 
 // ─── Highlight helper ─────────────────────────────────────────────────────────
@@ -121,7 +121,10 @@ export function GroupDrawer({
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-30 bg-black/20 backdrop-blur-[1px]" onClick={discard} />
+        <div
+          className={cn("fixed inset-0 z-30", overlayScrimVariants({ tone: "context" }))}
+          onClick={discard}
+        />
       )}
 
       <div

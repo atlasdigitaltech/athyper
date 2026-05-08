@@ -19,12 +19,19 @@
 import { create } from "zustand";
 
 import type { ThemePresetMeta } from "@athyper/theme";
+import {
+  normalizeAppearanceMode,
+  normalizeDensityCode,
+  normalizeThemePreset,
+  type AppearanceModeValue,
+  type DensityCodeValue,
+} from "@/lib/preferences/ui-profile";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type AppearanceMode = "light" | "dark" | "system";
+export type AppearanceMode = AppearanceModeValue;
 export type ResolvedAppearanceMode = "light" | "dark";
-export type DensityCode = "compact" | "comfortable" | "spacious";
+export type DensityCode = DensityCodeValue;
 
 /** Preset value — must match a `ThemePresetMeta.value` in @athyper/theme. */
 export type ThemePresetValue = ThemePresetMeta["value"];
@@ -68,9 +75,9 @@ export interface PreferencesState {
 }
 
 export interface PreferencesBootstrapInput {
-  appearanceMode: string;
-  densityCode: string;
-  themePreset?: string;
+  appearanceMode?: string | null;
+  densityCode?: string | null;
+  themePreset?: string | null;
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -117,13 +124,13 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
 
   seedFromBootstrap: (profile) => {
     const themePreset =
-      (profile.themePreset as ThemePresetValue | undefined) ??
+      (normalizeThemePreset(profile.themePreset) as ThemePresetValue | undefined) ??
       PREFERENCES_DEFAULTS.themePreset;
     const appearanceMode =
-      (profile.appearanceMode as AppearanceMode | undefined) ??
+      normalizeAppearanceMode(profile.appearanceMode) ??
       PREFERENCES_DEFAULTS.appearanceMode;
     const densityCode =
-      (profile.densityCode as DensityCode | undefined) ??
+      normalizeDensityCode(profile.densityCode) ??
       PREFERENCES_DEFAULTS.densityCode;
 
     const resolved: ResolvedAppearanceMode =

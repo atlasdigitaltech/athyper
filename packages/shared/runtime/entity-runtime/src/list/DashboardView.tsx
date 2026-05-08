@@ -10,50 +10,14 @@
 "use client";
 
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
+import { cn } from "@athyper/theme/utils";
+import { listTypography, runtimeStatusBarClass, runtimeStatusDotClass } from "./listPresentation";
 
 // ── Numeric data types ────────────────────────────────────────────────────────
 
 const NUMERIC_TYPES = new Set(["integer", "bigint", "decimal", "numeric", "money", "float"]);
 
 // ── Status bar palette ────────────────────────────────────────────────────────
-
-const STATUS_BAR: Record<string, string> = {
-  active:      "bg-success/70",
-  approved:    "bg-success/70",
-  completed:   "bg-info/70",
-  in_progress: "bg-info/70",
-  pending:     "bg-warning/70",
-  on_hold:     "bg-warning/70",
-  draft:       "bg-muted-foreground/30",
-  inactive:    "bg-muted-foreground/30",
-  rejected:    "bg-destructive/70",
-  cancelled:   "bg-destructive/70",
-  deprecated:  "bg-muted-foreground/20",
-};
-const BAR_DEFAULT = "bg-muted-foreground/30";
-
-function barColor(s: string) {
-  return STATUS_BAR[s.toLowerCase()] ?? BAR_DEFAULT;
-}
-
-const STATUS_DOT: Record<string, string> = {
-  active:      "bg-success",
-  approved:    "bg-success",
-  completed:   "bg-info",
-  in_progress: "bg-info",
-  pending:     "bg-warning",
-  on_hold:     "bg-warning",
-  draft:       "bg-muted-foreground/50",
-  inactive:    "bg-muted-foreground/50",
-  rejected:    "bg-destructive",
-  cancelled:   "bg-destructive",
-  deprecated:  "bg-muted-foreground/30",
-};
-const DOT_DEFAULT = "bg-muted-foreground/50";
-
-function dotColor(s: string) {
-  return STATUS_DOT[s.toLowerCase()] ?? DOT_DEFAULT;
-}
 
 // ── Stat tile ─────────────────────────────────────────────────────────────────
 
@@ -80,9 +44,9 @@ function StatTile({
 }) {
   return (
     <div className={`rounded-lg border p-4 space-y-1 ${TILE_ACCENT[accent]}`}>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-2xl font-semibold tabular-nums">{value}</p>
-      {sub && <p className="text-2xs text-muted-foreground">{sub}</p>}
+      <p className={listTypography.kpi.label}>{label}</p>
+      <p className={listTypography.kpi.value}>{value}</p>
+      {sub && <p className={listTypography.kpi.sub}>{sub}</p>}
     </div>
   );
 }
@@ -101,7 +65,7 @@ function StatusDistribution({
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      <p className={listTypography.sectionHeading}>
         Status Distribution
       </p>
 
@@ -112,7 +76,7 @@ function StatusDistribution({
             key={status}
             title={`${status}: ${count}`}
             style={{ width: `${(count / total) * 100}%` }}
-            className={`h-full ${barColor(status)}`}
+            className={cn("h-full", runtimeStatusBarClass(status))}
           />
         ))}
       </div>
@@ -121,7 +85,7 @@ function StatusDistribution({
       <div className="flex flex-wrap gap-x-5 gap-y-1.5">
         {entries.map(([status, count]) => (
           <div key={status} className="flex items-center gap-1.5 text-xs">
-            <div className={`h-2 w-2 shrink-0 rounded-full ${dotColor(status)}`} />
+            <div className={cn("h-2 w-2 shrink-0 rounded-full", runtimeStatusDotClass(status))} />
             <span className="capitalize text-muted-foreground">{status.replace(/_/g, " ")}</span>
             <span className="font-semibold tabular-nums">{count}</span>
             <span className="text-muted-foreground/60">
@@ -174,7 +138,7 @@ function NumericTiles({
 
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      <p className={listTypography.sectionHeading}>
         Numeric Aggregates
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -225,7 +189,7 @@ export function DashboardView({ rows, entity }: DashboardViewProps) {
     <div className="space-y-5">
       {/* ── KPI row ── */}
       <div className="space-y-1.5">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <p className={listTypography.sectionHeading}>
           Summary
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -266,7 +230,7 @@ export function DashboardView({ rows, entity }: DashboardViewProps) {
 
       {/* ── Empty hint ── */}
       {total === 0 && (
-        <div className="py-16 text-center text-sm text-muted-foreground">
+        <div className={listTypography.emptyState}>
           No data to display.
         </div>
       )}

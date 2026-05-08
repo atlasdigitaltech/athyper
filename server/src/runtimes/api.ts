@@ -51,10 +51,17 @@ import {
   registerAiRoutes,
 } from "../../framework/runtime/services/ai/index.js";
 
-import { createCacheMetrics, metricsHandler, registerJobQueues } from "../metrics.js";
+import {
+  createCacheMetrics,
+  metricsHandler,
+  observeHttpRequest,
+  registerJobQueues,
+  registerMetricCollectors,
+} from "../metrics.js";
 import { makeAuditEvent } from "../audit.js";
 import { runComplianceSuiteIfDev } from "../foundation/metadata/entity-compliance.js";
 import { createEntityCompilerService } from "../foundation/metadata/entity-compiler.service.js";
+import { createPlatformMetricCollector } from "../foundation/monitoring/platform-metrics.js";
 import { runWithContext, tryGetContext } from "../kernel/request-context.js";
 import type { ServerDeps } from "../kernel/bootstrap.js";
 import { livenessHandler } from "./liveness.js";
@@ -70,6 +77,19 @@ interface HealthContribution {
 }
 
 type HealthCheck = () => Promise<HealthContribution>;
+
+function hasHeader(req: Request, name: string): boolean {
+  const value = req.headers[name.toLowerCase()];
+  return Array.isArray(value) ? value.length > 0 : typeof value === "string" && value.length > 0;
+}
+
+function isForwardedMetricsRequest(req: Request): boolean {
+  return (
+    hasHeader(req, "forwarded") ||
+    hasHeader(req, "x-forwarded-host") ||
+    hasHeader(req, "x-forwarded-proto")
+  );
+}
 
 // ─── startApi ─────────────────────────────────────────────────────────────────
 
@@ -110,6 +130,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // Register BullMQ queues for /metrics queue depth gauges.
   // Cast to Record<string, unknown> — DepthQueue duck-type is satisfied by BullMQ Queue.
   registerJobQueues(jobs.queues as unknown as Parameters<typeof registerJobQueues>[0]);
+  registerMetricCollectors([createPlatformMetricCollector(_db)]);
 
   // ─── IAM cache client ──────────────────────────────────────────────────────
   // Provides the full CacheClient surface used by IAM and platform routes:
@@ -118,7 +139,8 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     get: (k: string) => redis.get(k),
     set: (k: string, v: string, _ex: "EX", ttl: number) =>
       redis.set(k, v, "EX", ttl),
-    del: (k: string | string[]) => redis.del(k as string),
+    del: (k: string | string[]) =>
+      Array.isArray(k) ? (k.length > 0 ? redis.del(...k) : Promise.resolve(0)) : redis.del(k),
     scan: (
       cursor: string,
       matchFlag: "MATCH",
@@ -136,6 +158,16 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     smembers: (k: string) => redis.smembers(k),
     expire: (k: string, ttl: number) => redis.expire(k, ttl),
   } as Parameters<typeof registerIamRoutes>[1]["cache"];
+
+  const descriptorCache = {
+    get: (k: string) => redis.get(k),
+    set: async (k: string, v: string, ttl: number): Promise<void> => {
+      await redis.set(k, v, "EX", ttl);
+    },
+    del: async (k: string): Promise<void> => {
+      await redis.del(k);
+    },
+  };
 
   // ─── Health checks ────────────────────────────────────────────────────────
   // Three-level contract: healthy | degraded | unhealthy
@@ -237,6 +269,19 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       (req.headers["x-request-id"] as string) ?? crypto.randomUUID();
     req.headers["x-request-id"] = requestId;
     runWithContext({ requestId }, next);
+  });
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const startedAt = process.hrtime.bigint();
+    res.on("finish", () => {
+      observeHttpRequest({
+        method: req.method,
+        path: req.originalUrl || req.url,
+        statusCode: res.statusCode,
+        durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
+      });
+    });
+    next();
   });
 
   // ─── Health probes ─────────────────────────────────────────────────────────
@@ -441,6 +486,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     db: db.kysely,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
     logger,
+    cache: descriptorCache,
     checkPermissionBatch,
   });
 
@@ -482,7 +528,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
           maxUploadMb: config.objectStorage!.maxUploadMb,
         }
       : undefined,
-    tikaQueue: jobs.queues.tikaExtract,
+    tikaQueue: jobs.tikaExtractEnabled ? jobs.queues.tikaExtract : undefined,
     logger,
   });
 
@@ -653,9 +699,15 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   }));
 
   // ─── Prometheus metrics ────────────────────────────────────────────────────
-  // /metrics is on the same port as the API but only reachable on the internal
-  // Docker network (Traefik does not route /metrics to the public edge).
-  app.get("/metrics", metricsHandler);
+  // /metrics is on the same port as the API. Prometheus scrapes it over the
+  // internal Docker network; reverse-proxied requests are hidden as 404.
+  app.get("/metrics", (req: Request, res: Response) => {
+    if (isForwardedMetricsRequest(req)) {
+      res.status(404).json({ error: "NOT_FOUND", message: "Route not found" });
+      return;
+    }
+    metricsHandler(req, res);
+  });
 
   // ─── 404 + error handlers ──────────────────────────────────────────────────
 

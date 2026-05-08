@@ -31,6 +31,7 @@ import { EntityFactRail } from "./atoms/EntityFactRail";
 import { EntityProgressRow } from "./atoms/EntityProgressRow";
 import { EntityStatusStrip } from "./atoms/EntityStatusStrip";
 import { EntityTabBar, type PlatformPanelIcon } from "./atoms/EntityTabBar";
+import { entityHeaderEditClass, entityHeaderShellClass } from "./atoms/headerChrome";
 
 function toAmountSummary(xlFact: NonNullable<EntityHeaderModel["facts"]>[number]) {
   let amount = xlFact.value.trim();
@@ -100,7 +101,7 @@ function AuditBar({ audit }: { audit: NonNullable<EntityHeaderModel["audit"]> })
   if (parts.length === 0) return null;
   return (
     <div className="border-t border-dashed border-border/40 px-4 py-[7px] sm:px-5 lg:px-[22px]">
-      <p className="text-2xs text-muted-foreground/55 leading-none tracking-[0.01em]">
+      <p className="text-2xs text-muted-foreground/55 leading-none tracking-normal">
         {parts.join("   ·   ")}
       </p>
     </div>
@@ -144,8 +145,9 @@ export function EntityHeader({
   if (isPinned) {
     return (
       <div className={cn(
-        "sticky top-0 z-30 overflow-hidden rounded-xl border bg-card shadow-sm",
-        editMode && "ring-1 ring-inset ring-primary/30",
+        "sticky top-0 z-30",
+        entityHeaderShellClass,
+        editMode && entityHeaderEditClass,
         className,
       )}>
         {editMode && <div className="h-[2px] bg-primary/70" />}
@@ -177,8 +179,8 @@ export function EntityHeader({
   // Expanded + Collapsed:
   return (
     <div className={cn(
-      "overflow-hidden rounded-xl border bg-card shadow-sm",
-      editMode && "ring-1 ring-inset ring-primary/30",
+      entityHeaderShellClass,
+      editMode && entityHeaderEditClass,
       className,
     )}>
       {editMode && <div className="h-[2px] bg-primary/70" />}

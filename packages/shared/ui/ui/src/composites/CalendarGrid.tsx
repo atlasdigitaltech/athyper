@@ -256,7 +256,7 @@ export function CalendarGrid({ value, onChange, disabled }: CalendarGridProps) {
       <div className="grid grid-cols-7 pb-1">
         {DAY_LABELS.map((d) => (
           <div key={d} className="flex h-7 items-center justify-center">
-            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="text-doc-support font-medium uppercase tracking-wide text-muted-foreground">
               {d}
             </span>
           </div>

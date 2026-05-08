@@ -3,7 +3,6 @@
 import { Fragment } from "react";
 import { Loader2, ChevronDown, MoreHorizontal } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { Button } from "@athyper/ui/primitives";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +19,12 @@ import {
 } from "@athyper/ui/primitives";
 import { getActionIcon } from "@athyper/icons";
 import type { HeaderAction } from "../types";
+import {
+  headerDangerActionClass,
+  headerIconButtonClass,
+  headerPrimaryActionClass,
+  headerSecondaryActionClass,
+} from "./headerChrome";
 
 export interface EntityActionBarProps {
   actions: HeaderAction[];
@@ -47,15 +52,12 @@ function ActionButton({ action, onAction }: { action: HeaderAction; onAction?: (
       aria-busy={action.pending || undefined}
       onClick={() => { action.onSelect?.(); onAction?.(action.id); }}
       className={cn(
-        "inline-flex items-center gap-[7px] h-8 px-3.5 rounded-lg text-xs font-semibold tracking-wider leading-none whitespace-nowrap transition-opacity",
-        isDanger
-          ? "bg-destructive text-destructive-foreground hover:opacity-90"
-          : "bg-foreground text-background hover:opacity-85",
+        isDanger ? headerDangerActionClass : headerPrimaryActionClass,
+        "whitespace-nowrap",
         action.disabled && "opacity-40",
         action.pending && "opacity-40 pointer-events-none",
       )}
     >
-      <span className="w-[6px] h-[6px] rounded-full bg-background/60 flex-none" />
       {action.pending
         ? <Loader2 className="h-3 w-3 animate-spin" />
         : Icon && <Icon className="h-3 w-3" />}
@@ -93,7 +95,8 @@ function SecondaryButton({ action, onAction }: { action: HeaderAction; onAction?
       aria-busy={action.pending || undefined}
       onClick={() => { action.onSelect?.(); onAction?.(action.id); }}
       className={cn(
-        "h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground border border-border bg-card hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap",
+        headerSecondaryActionClass,
+        "whitespace-nowrap",
         action.disabled && "opacity-40",
         action.pending && "opacity-40 pointer-events-none",
       )}
@@ -179,7 +182,7 @@ function OverflowGroups({
         <Fragment key={i}>
           {i > 0 && <DropdownMenuSeparator />}
           {section.label && (
-            <DropdownMenuLabel className="text-[10px] text-muted-foreground/50 px-2 py-1 font-medium uppercase tracking-wider">
+            <DropdownMenuLabel className="text-doc-support text-muted-foreground/50 px-2 py-1 font-medium uppercase tracking-wider">
               {section.label}
             </DropdownMenuLabel>
           )}
@@ -213,9 +216,13 @@ export function EntityActionBar({ actions, onAction, compact = false, className 
         {moreItems.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 w-8 px-0 flex items-center justify-center shrink-0">
+              <button
+                type="button"
+                className={headerIconButtonClass}
+                aria-label="More actions"
+              >
                 <MoreHorizontal className="h-4 w-4" />
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[168px]">
               <OverflowGroups overflow={[...secondary, ...overflow]} danger={danger} onAction={onAction} />
@@ -248,14 +255,17 @@ export function EntityActionBar({ actions, onAction, compact = false, className 
       {showMore && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn("h-8 px-2.5 gap-1 text-xs", moreHiddenOnDesktop && "md:hidden")}
+            <button
+              type="button"
+              className={cn(
+                headerSecondaryActionClass,
+                "gap-1 px-2.5",
+                moreHiddenOnDesktop && "md:hidden",
+              )}
             >
               More
               <ChevronDown className="h-3 w-3" />
-            </Button>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[168px]">
             {/* Secondary items: only visible in dropdown on tablet/mobile (< md) */}

@@ -5,8 +5,8 @@
  *
  * When `modeToggle` is provided the input and toggle are merged into a single
  * rounded container separated by a thin divider — one shell, two segments.
- * The toggle segment fills with the primary colour when active so emphasis
- * lands on the control, not on the input area the user is typing into.
+ * The default active segment is quiet/light for local "in view" search;
+ * callers can use the inactive segment for a stronger server-search mode.
  */
 
 import { Search, X, Loader2 } from "lucide-react";
@@ -31,6 +31,10 @@ export interface SearchInputModeToggle {
   inactiveLabel?: string;
   icon?:          ReactNode;
   title?:         string;
+  /** Keep the label visible, or reveal it only on hover. */
+  labelMode?:     "hover" | "always";
+  activeClassName?: string;
+  inactiveClassName?: string;
 }
 
 export interface SearchInputProps
@@ -109,7 +113,13 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
         inactiveLabel = "All",
         icon,
         title,
+        labelMode = "hover",
+        activeClassName,
+        inactiveClassName,
       } = modeToggle;
+      const labelClassName = labelMode === "always"
+        ? "max-w-[64px] opacity-100"
+        : "max-w-0 opacity-0 group-hover:max-w-[64px] group-hover:opacity-100";
 
       return (
         <div
@@ -127,7 +137,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
               value={internalValue}
               onChange={handleChange}
               placeholder={placeholder}
-              className="h-full w-full bg-transparent pl-9 pr-8 text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-full w-full bg-transparent pl-9 pr-8 text-xs font-medium text-foreground placeholder:font-normal placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               {...rest}
             />
             <div className="absolute right-2.5 flex items-center gap-1">
@@ -158,12 +168,12 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
             className={cn(
               "group flex h-full shrink-0 items-center justify-center gap-1 px-2.5 text-xs font-medium transition-colors",
               active
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                ? activeClassName ?? "bg-muted text-foreground hover:bg-muted/80"
+                : inactiveClassName ?? "bg-primary text-primary-foreground hover:bg-primary/90",
             )}
           >
             {icon}
-            <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-[48px] group-hover:opacity-100">
+            <span className={cn("overflow-hidden whitespace-nowrap transition-all duration-200", labelClassName)}>
               {active ? activeLabel : inactiveLabel}
             </span>
           </button>

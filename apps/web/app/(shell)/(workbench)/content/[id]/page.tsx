@@ -236,24 +236,24 @@ export default function ContentEditorPage() {
           <Card>
             <CardContent className="p-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="space-y-0.5">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Code</p>
+                <p className="text-doc-support text-muted-foreground uppercase tracking-wide">Code</p>
                 <p className="font-mono text-sm">{item.itemCode}</p>
               </div>
               <div className="space-y-0.5">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Type</p>
+                <p className="text-doc-support text-muted-foreground uppercase tracking-wide">Type</p>
                 <p className="text-sm">{item.contentType}</p>
               </div>
               <div className="space-y-0.5">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Locale</p>
+                <p className="text-doc-support text-muted-foreground uppercase tracking-wide">Locale</p>
                 <p className="text-sm">{item.locale ?? "—"}</p>
               </div>
               <div className="space-y-0.5">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Updated</p>
+                <p className="text-doc-support text-muted-foreground uppercase tracking-wide">Updated</p>
                 <p className="text-sm">{new Date(item.updatedAt).toLocaleDateString()}</p>
               </div>
               {item.description && (
                 <div className="col-span-2 sm:col-span-4 space-y-0.5">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Description</p>
+                  <p className="text-doc-support text-muted-foreground uppercase tracking-wide">Description</p>
                   <p className="text-sm">{item.description}</p>
                 </div>
               )}

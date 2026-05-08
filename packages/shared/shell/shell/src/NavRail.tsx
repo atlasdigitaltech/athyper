@@ -9,7 +9,7 @@
  *   1. Global   — Home · Inbox (badge) · Search
  *   2. Spaces   — one icon per workspace (from shared.workspace)
  *   3. Core     — ⚙ icon, accent tint, visible only when hasPlatform = true
- *   4. Utilities — Favorites · Recent · Settings (anchored at bottom)
+ *   4. Utilities — Favourites · Recent · Settings (anchored at bottom)
  *
  * Active workspace is indicated by:
  *   - Tinted background on the icon
@@ -208,7 +208,7 @@ export function NavRail({
       {/* ── Zone 4: Utilities (bottom) ─────────────────────────── */}
       <div className="mt-auto flex flex-col items-center gap-0.5">
         <ZoneSep />
-        <RailIcon icon={Star}     label="Favorites" active={activeKey === "favorites"} onClick={() => onSelect("favorites")} />
+        <RailIcon icon={Star}     label="Favourites" active={activeKey === "favorites"} onClick={() => onSelect("favorites")} />
         <RailIcon icon={Clock}    label="Recent"    active={activeKey === "recent"}    onClick={() => onSelect("recent")} />
         <RailIcon icon={Settings} label="Settings"  href="/settings" active={activeKey === "settings"}  onClick={() => onSelect("settings")} />
       </div>

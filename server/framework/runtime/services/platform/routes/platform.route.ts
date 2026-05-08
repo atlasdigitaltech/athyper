@@ -51,6 +51,8 @@ export interface PlatformRoutesDeps {
   };
 }
 
+const ENTITY_LIST_SAVED_VIEW_SURFACE = "entity.list";
+
 // ─── Row mappers ──────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -58,6 +60,9 @@ function toSavedView(row: Record<string, any>) {
   // config IS EntityListQueryState — pass state_json through directly.
   // _v defaults to 1 for legacy rows that pre-date the canonical schema.
   const config = { _v: 1, ...(row.state_json ?? {}) } as Record<string, unknown>;
+  if (typeof config["surface"] !== "string" && typeof row.surface_code === "string") {
+    config["surface"] = row.surface_code;
+  }
   return {
     id:          row.id as string,
     entity_code: (row.entity_key ?? "") as string,
@@ -67,6 +72,17 @@ function toSavedView(row: Record<string, any>) {
     config,
     created_by:  row.created_by as string,
     created_at:  (row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at)),
+  };
+}
+
+function normalizeSavedViewConfig(config: Record<string, unknown>, entityKey: string) {
+  return {
+    _v: 1,
+    ...config,
+    entity: typeof config["entity"] === "string" && config["entity"].trim()
+      ? config["entity"]
+      : entityKey,
+    surface: ENTITY_LIST_SAVED_VIEW_SURFACE,
   };
 }
 
@@ -125,7 +141,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         .selectFrom("master.saved_view as sv")
         .select([
           "sv.id", "sv.entity_key", "sv.name", "sv.scope",
-          "sv.is_default", "sv.state_json",
+          "sv.surface_code", "sv.is_default", "sv.state_json",
           "sv.created_by", "sv.created_at",
         ])
         .where("sv.tenant_id", "=", tenantId)
@@ -181,7 +197,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const body = req.body as Record<string, unknown>;
       const name  = typeof body["name"] === "string" ? body["name"].trim() : "";
       const scope = typeof body["is_shared"] === "boolean" && body["is_shared"] ? "shared" : "personal";
-      const config = (body["config"] ?? {}) as Record<string, unknown>;
+      const config = normalizeSavedViewConfig((body["config"] ?? {}) as Record<string, unknown>, entityKey);
 
       if (!name) { res.status(400).json({ error: "NAME_REQUIRED" }); return; }
 
@@ -194,7 +210,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           tenant_id:          tenantId,
           owner_principal_id: scope === "personal" ? principalId : null,
           scope,
-          surface_code:       "entity-list",
+          surface_code:       ENTITY_LIST_SAVED_VIEW_SURFACE,
           entity_key:         entityKey,
           code,
           name,
@@ -204,7 +220,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           status:             "active",
           created_by:         principalId,
         } as never)
-        .returning(["id", "entity_key", "name", "scope", "is_default", "state_json", "created_by", "created_at"] as never[])
+        .returning(["id", "entity_key", "name", "scope", "surface_code", "is_default", "state_json", "created_by", "created_at"] as never[])
         .executeTakeFirstOrThrow();
 
       res.status(201).json(toSavedView(row as Record<string, unknown>));
@@ -303,7 +319,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       const existing = await db
         .selectFrom("master.saved_view as sv")
-        .select(["sv.id", "sv.scope", "sv.owner_principal_id", "sv.state_json"] as never[])
+        .select(["sv.id", "sv.entity_key", "sv.scope", "sv.owner_principal_id", "sv.state_json"] as never[])
         .where("sv.id", "=", viewId)
         .where("sv.tenant_id", "=", tenantId)
         .where("sv.deleted_at" as never, "is", null)
@@ -315,7 +331,10 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       }
 
       const body   = req.body as Record<string, unknown>;
-      const config = (body["config"] ?? {}) as Record<string, unknown>;
+      const existingEntityKey = typeof existing["entity_key"] === "string" && existing["entity_key"].trim()
+        ? existing["entity_key"]
+        : String(req.params["entity"] ?? "");
+      const config = normalizeSavedViewConfig((body["config"] ?? {}) as Record<string, unknown>, existingEntityKey);
       const name   = typeof body["name"] === "string" ? body["name"].trim() : undefined;
 
       const updateClause: Record<string, unknown> = {
@@ -330,7 +349,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         .set(updateClause as never)
         .where("id" as never, "=", viewId as never)
         .where("tenant_id" as never, "=", tenantId as never)
-        .returning(["id", "entity_key", "name", "scope", "is_default", "state_json", "created_by", "created_at"] as never[])
+        .returning(["id", "entity_key", "name", "scope", "surface_code", "is_default", "state_json", "created_by", "created_at"] as never[])
         .executeTakeFirstOrThrow();
 
       res.json(toSavedView(row as Record<string, unknown>));
@@ -1227,6 +1246,12 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
     home_workspace_code: null, home_module_code: null, default_company_code_id: null,
   };
 
+  const nullablePreferenceText = (value: unknown): string | null => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  };
+
   const getPreferencesHandler: RequestHandler = async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -1290,34 +1315,88 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_REQUIRED" }); return; }
 
       const body = req.body as {
-        appearance_mode?: string;
-        density_code?: string;
+        appearance_mode?: string | null;
+        density_code?: string | null;
         metadata?: Record<string, unknown>;
-        locale_code?: string;
-        language_code?: string;
-        timezone_code?: string;
-        date_format?: string;
-        number_format?: string;
-        week_start?: number | null;
-        home_workspace_code?: string;
-        home_module_code?: string;
+        locale_code?: string | null;
+        language_code?: string | null;
+        timezone_code?: string | null;
+        date_format?: string | null;
+        number_format?: string | null;
+        week_start?: number | string | null;
+        home_workspace_code?: string | null;
+        home_module_code?: string | null;
       };
+
+      const weekStart =
+        body.week_start === undefined || body.week_start === null || body.week_start === ""
+          ? null
+          : Number(body.week_start);
+
+      if (weekStart !== null && (!Number.isInteger(weekStart) || weekStart < 0 || weekStart > 6)) {
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "week_start must be an integer between 0 and 6",
+          field: "week_start",
+        });
+        return;
+      }
+
+      const homeWorkspaceCode = nullablePreferenceText(body.home_workspace_code);
+      const homeModuleCode = nullablePreferenceText(body.home_module_code);
+
+      const [homeWorkspace, homeModule] = await Promise.all([
+        homeWorkspaceCode
+          ? db
+            .selectFrom("shared.workspace as w")
+            .select("w.code")
+            .where("w.code", "=", homeWorkspaceCode)
+            .executeTakeFirst()
+          : Promise.resolve(null),
+        homeModuleCode
+          ? db
+            .selectFrom("shared.module as m")
+            .select("m.code")
+            .where("m.code", "=", homeModuleCode)
+            .executeTakeFirst()
+          : Promise.resolve(null),
+      ]);
+
+      if (homeWorkspaceCode && !homeWorkspace) {
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "home_workspace_code must match shared.workspace.code",
+          field: "home_workspace_code",
+          value: homeWorkspaceCode,
+        });
+        return;
+      }
+
+      if (homeModuleCode && !homeModule) {
+        res.status(400).json({
+          error: "VALIDATION_ERROR",
+          message: "home_module_code must match shared.module.code",
+          field: "home_module_code",
+          value: homeModuleCode,
+        });
+        return;
+      }
 
       const now = new Date().toISOString();
       const vals = {
         tenant_id:           tenantId,
         principal_id:        principalId,
-        appearance_mode:     body.appearance_mode     ?? null,
-        density_code:        body.density_code        ?? null,
+        appearance_mode:     nullablePreferenceText(body.appearance_mode),
+        density_code:        nullablePreferenceText(body.density_code),
         metadata:            JSON.stringify(body.metadata ?? {}),
-        locale_code:         body.locale_code         ?? null,
-        language_code:       body.language_code       ?? null,
-        timezone_code:       body.timezone_code       ?? null,
-        date_format:         body.date_format         ?? null,
-        number_format:       body.number_format       ?? null,
-        week_start:          body.week_start          ?? null,
-        home_workspace_code: body.home_workspace_code ?? null,
-        home_module_code:    body.home_module_code    ?? null,
+        locale_code:         nullablePreferenceText(body.locale_code),
+        language_code:       nullablePreferenceText(body.language_code),
+        timezone_code:       nullablePreferenceText(body.timezone_code),
+        date_format:         nullablePreferenceText(body.date_format),
+        number_format:       nullablePreferenceText(body.number_format),
+        week_start:          weekStart,
+        home_workspace_code: homeWorkspaceCode,
+        home_module_code:    homeModuleCode,
         created_by:          principalId,
         updated_at:          now,
         updated_by:          principalId,

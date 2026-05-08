@@ -15,11 +15,14 @@ export interface EventsPanelProps {
 
 export function EventsPanel({ entityCode, recordId, recordUuid }: EventsPanelProps) {
   const apiId = recordUuid ?? recordId;
-  const { data, isLoading } = useQuery<{ data: ActivityEntry[] }>({
+  const { data, error, isLoading } = useQuery<{ data: ActivityEntry[] }>({
     queryKey: ["activity", entityCode, apiId],
     queryFn: async ({ signal }) => {
       const res = await fetch(`/api/relay/api/activity/${entityCode}/${apiId}`, { signal });
-      if (!res.ok) return { data: [] };
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Activity request failed with ${res.status}`);
+      }
       return res.json() as Promise<{ data: ActivityEntry[] }>;
     },
     staleTime: 30 * 1000,
@@ -29,6 +32,14 @@ export function EventsPanel({ entityCode, recordId, recordUuid }: EventsPanelPro
     return (
       <div className="space-y-2 py-4">
         {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+        Activity could not be loaded.
       </div>
     );
   }

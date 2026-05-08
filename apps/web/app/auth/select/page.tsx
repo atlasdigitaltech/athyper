@@ -217,7 +217,7 @@ function SelectPageInner() {
         <div className="flex flex-1 flex-col justify-center px-16 pb-10">
           <div className="space-y-4">
             <p className="text-xs font-semibold tracking-widest uppercase opacity-50">Your workspace</p>
-            <h3 className="text-[2.2rem] font-bold leading-[1.15]">
+            <h3 className="text-display-auth font-bold">
               {session?.displayName ?? "Welcome back"}
             </h3>
             <p className="text-base leading-relaxed opacity-60">Choose your entity and workbench to continue.</p>

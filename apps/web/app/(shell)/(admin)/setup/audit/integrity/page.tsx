@@ -98,7 +98,7 @@ function ResultPanel({ result }: { result: IntegrityResult }) {
           )}
           <Badge
             variant={result.intact ? "success" : "destructive"}
-            className="ml-auto text-[10px]"
+            className="ml-auto text-doc-support"
           >
             {result.intact ? "PASS" : "FAIL"}
           </Badge>
@@ -146,12 +146,12 @@ function ResultPanel({ result }: { result: IntegrityResult }) {
               </p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {result.gaps.slice(0, 20).map((g) => (
-                  <span key={g} className="rounded bg-warning/10 px-2 py-0.5 font-mono text-[11px] text-warning">
+                  <span key={g} className="rounded bg-warning/10 px-2 py-0.5 font-mono text-doc-subtitle text-warning">
                     {g}
                   </span>
                 ))}
                 {result.gaps.length > 20 && (
-                  <span className="rounded bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                  <span className="rounded bg-muted px-2 py-0.5 text-doc-subtitle text-muted-foreground">
                     +{result.gaps.length - 20} more
                   </span>
                 )}
@@ -182,7 +182,7 @@ function ResultPanel({ result }: { result: IntegrityResult }) {
         )}
 
         {/* Footer */}
-        <p className="text-right text-[11px] text-muted-foreground">
+        <p className="text-right text-doc-subtitle text-muted-foreground">
           Verified at {fmtTs(result.verifiedAt)}
         </p>
       </CardContent>
@@ -197,7 +197,7 @@ function StatCell({
 }) {
   return (
     <div className="rounded-md border bg-muted/20 px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-doc-support uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={cn("mt-0.5 text-sm font-medium", highlight && "text-destructive")}>{value}</p>
     </div>
   );
@@ -252,7 +252,7 @@ export default function AuditIntegrityPage() {
           <p className="font-medium text-primary">How it works</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             Each night the system seals the day&apos;s audit log into a SHA-256 anchor:
-            <span className="font-mono text-[11px] mx-1">anchor(N) = SHA-256(anchor(N-1) + all events on day N)</span>
+            <span className="font-mono text-doc-subtitle mx-1">anchor(N) = SHA-256(anchor(N-1) + all events on day N)</span>
             This creates a chain where any retrospective edit to a historical row causes every
             subsequent anchor to diverge. Verification re-derives each anchor from raw rows and
             compares it to the stored value.

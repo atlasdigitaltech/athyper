@@ -1,6 +1,7 @@
 import { forwardRef, type ComponentPropsWithoutRef, type HTMLAttributes } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@athyper/theme/utils";
+import { overlayScrimVariants } from "./overlay";
 
 // AlertDialog is semantically a confirmation dialog — no close (X) button.
 // Built on Radix Dialog to avoid adding a new dependency.
@@ -16,7 +17,8 @@ const AlertDialogOverlay = forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-modal bg-black/50 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
+      "fixed inset-0 z-modal data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
+      overlayScrimVariants({ tone: "modal" }),
       className,
     )}
     {...props}

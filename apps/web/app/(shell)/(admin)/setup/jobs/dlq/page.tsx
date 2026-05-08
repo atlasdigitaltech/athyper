@@ -88,16 +88,16 @@ function DlqRow({
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             <Badge
               variant={errClass === "transient" ? "warning" : "destructive"}
-              className="text-[10px] shrink-0"
+              className="text-doc-support shrink-0"
             >
               {errClass}
             </Badge>
             <span className="font-mono text-xs font-medium">{item.job_name}</span>
-            <span className="text-[10px] text-muted-foreground font-mono">{item.queue_name}</span>
+            <span className="text-doc-support text-muted-foreground font-mono">{item.queue_name}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {alreadyRetried ? (
-              <Badge variant="muted" className="text-[10px]">retried</Badge>
+              <Badge variant="muted" className="text-doc-support">retried</Badge>
             ) : (
               <>
                 <Button
@@ -126,7 +126,7 @@ function DlqRow({
 
         <p className="text-xs text-destructive line-clamp-1">{item.error_message}</p>
 
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-3 text-doc-support text-muted-foreground">
           <span>Attempts: {item.retry_count}</span>
           <span>{new Date(item.created_at).toLocaleString()}</span>
         </div>
@@ -134,21 +134,21 @@ function DlqRow({
         {expanded && (
           <div className="mt-2 pt-2 border-t space-y-2">
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase mb-1">Full Error</p>
-              <pre className="text-[10px] bg-muted/50 rounded p-2 whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
+              <p className="text-doc-support text-muted-foreground uppercase mb-1">Full Error</p>
+              <pre className="text-doc-support bg-muted/50 rounded p-2 whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
                 {item.error_message}
               </pre>
             </div>
             {parsedPayload !== null && (
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase mb-1">Job Payload</p>
-                <pre className="text-[10px] bg-muted/50 rounded p-2 whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
+                <p className="text-doc-support text-muted-foreground uppercase mb-1">Job Payload</p>
+                <pre className="text-doc-support bg-muted/50 rounded p-2 whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
                   {JSON.stringify(parsedPayload, null, 2)}
                 </pre>
               </div>
             )}
             {alreadyRetried && item.retried_job_id && (
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-doc-support text-muted-foreground">
                 Retried at {new Date(item.retried_at!).toLocaleString()} → job <code>{item.retried_job_id}</code>
               </p>
             )}
@@ -290,7 +290,7 @@ export default function DlqBrowserPage() {
             <div key={sec.table}>
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-sm font-medium">{TABLE_LABEL[sec.table] ?? sec.table}</h3>
-                <Badge variant="muted" className="text-[10px]">{sec.total} total</Badge>
+                <Badge variant="muted" className="text-doc-support">{sec.total} total</Badge>
               </div>
               <div className="space-y-2">
                 {sec.items.map((item) => (

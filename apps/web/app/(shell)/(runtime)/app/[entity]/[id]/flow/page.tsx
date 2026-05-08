@@ -133,7 +133,7 @@ function WorkItemRow({ item }: { item: WorkItem }) {
     <div className="flex items-center gap-2 text-sm">
       <StatusIcon className={`h-4 w-4 shrink-0 ${statusColor[item.status] ?? "text-muted-foreground"}`} />
       <span className="flex-1 capitalize text-muted-foreground">{item.assignee_type}</span>
-      <Badge variant="outline" className="capitalize text-[10px]">{item.status}</Badge>
+      <Badge variant="outline" className="capitalize text-doc-support">{item.status}</Badge>
       {item.decision_at && (
         <span className="text-xs text-muted-foreground">{fmtDate(item.decision_at)}</span>
       )}
@@ -159,13 +159,13 @@ function StageCard({ stage, isCurrent }: { stage: WorkflowStageDetail; isCurrent
         <div className="flex items-center gap-2">
           <span className="text-xs tabular-nums font-mono text-muted-foreground w-5">{stage.stage_order}</span>
           <span className="font-medium text-sm">{stage.stage_name}</span>
-          <Badge variant="outline" className="capitalize text-[10px]">{stage.stage_mode.toLowerCase()}</Badge>
+          <Badge variant="outline" className="capitalize text-doc-support">{stage.stage_mode.toLowerCase()}</Badge>
         </div>
         <div className="flex items-center gap-1.5">
-          {isCurrent && <Badge variant="info" className="text-[10px]">Current</Badge>}
+          {isCurrent && <Badge variant="info" className="text-doc-support">Current</Badge>}
           <Badge
             variant={stage.status === "completed" ? "success" : stage.status === "rejected" ? "destructive" : "secondary"}
-            className="capitalize text-[10px]"
+            className="capitalize text-doc-support"
           >
             {stage.status}
           </Badge>

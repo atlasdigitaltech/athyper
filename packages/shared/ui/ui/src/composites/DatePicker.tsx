@@ -180,7 +180,7 @@ export function DatePicker({
           {mode === "datetime" && (
             <div className="mt-3 border-t border-border pt-3 space-y-3">
               <div>
-                <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                <label className="mb-1.5 block text-doc-support font-medium uppercase tracking-wide text-muted-foreground">
                   Time
                 </label>
                 <input

@@ -112,9 +112,17 @@ export interface ActionBarProps {
   entityCode: string;
   recordId?: string;
   className?: string;
+  showSecondaryActions?: boolean;
 }
 
-export function ActionBar({ operations, surface, entityCode, recordId, className }: ActionBarProps) {
+export function ActionBar({
+  operations,
+  surface,
+  entityCode,
+  recordId,
+  className,
+  showSecondaryActions = true,
+}: ActionBarProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -227,7 +235,7 @@ export function ActionBar({ operations, surface, entityCode, recordId, className
           );
         })}
 
-        {toolbar.length > 0 && (
+        {showSecondaryActions && toolbar.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -259,7 +267,7 @@ export function ActionBar({ operations, surface, entityCode, recordId, className
           </DropdownMenu>
         )}
 
-        {overflow.length > 0 && (
+        {showSecondaryActions && overflow.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="More actions">

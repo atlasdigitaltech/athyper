@@ -124,6 +124,7 @@ call :require_var APPS_ATHYPER_API_HOST
 call :require_var APPS_ATHYPER_WEB_UPSTREAM_URL
 call :require_var GATEWAY_HOST
 call :require_var IAM_HOST
+call :require_var ALERTMANAGER_HOST
 call :require_var IAM_ISSUER_URL
 call :require_var ATHYPER_KERNEL_CONFIG_PATH
 
@@ -153,6 +154,14 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
   call :require_var INFISICAL_AUTH_SECRET
   call :require_var TELEMETRY_ADMIN_USER
   call :require_var TELEMETRY_ADMIN_PASSWORD
+  call :require_var ALERTMANAGER_SMTP_SMARTHOST
+  call :require_var ALERTMANAGER_SMTP_FROM
+  call :require_var ALERTMANAGER_SMTP_REQUIRE_TLS
+  call :require_var ALERTMANAGER_PLATFORM_EMAIL
+  call :require_var ALERTMANAGER_CRITICAL_EMAIL
+  call :require_var ALERTMANAGER_FINANCE_EMAIL
+  call :require_var ALERTMANAGER_COMPLIANCE_EMAIL
+  call :require_var ALERTMANAGER_SECURITY_EMAIL
   call :require_var APP_S3_ACCESS_KEY
   call :require_var APP_S3_SECRET_KEY
   call :require_var BACKUP_S3_ACCESS_KEY
@@ -237,7 +246,7 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
   )
 
   REM Dev passwords must not appear in non-local
-  for %%V in (DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET) do (
+  for %%V in (DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET ALERTMANAGER_SMTP_AUTH_PASSWORD) do (
     if "!ENV_%%V!"=="athyperadmin" (
       echo   FAIL  %%V = 'athyperadmin' in !ENVIRONMENT! ^(dev password in non-local^)
       set /a ERRORS+=1
@@ -250,6 +259,16 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
       echo   FAIL  %%V = 'athyperadmin' in !ENVIRONMENT! ^(dev credential in non-local; inject from secrets manager^)
       set /a ERRORS+=1
     )
+  )
+
+  echo !ENV_ALERTMANAGER_SMTP_SMARTHOST! | findstr /B /C:"mailhog:" >nul
+  if not errorlevel 1 (
+    echo   FAIL  ALERTMANAGER_SMTP_SMARTHOST=!ENV_ALERTMANAGER_SMTP_SMARTHOST! in !ENVIRONMENT! ^(MailHog is local-only^)
+    set /a ERRORS+=1
+  )
+  if /I not "!ENV_ALERTMANAGER_SMTP_REQUIRE_TLS!"=="true" (
+    echo   FAIL  ALERTMANAGER_SMTP_REQUIRE_TLS=!ENV_ALERTMANAGER_SMTP_REQUIRE_TLS! in !ENVIRONMENT! ^(must be true outside local^)
+    set /a ERRORS+=1
   )
 
   REM BACKUP_S3_BUCKET must be configured for the daily pg_dump backup

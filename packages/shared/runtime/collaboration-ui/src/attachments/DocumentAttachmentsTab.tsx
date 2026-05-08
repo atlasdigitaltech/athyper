@@ -92,14 +92,14 @@ function DocIcon({ contentType, className }: { contentType: string; className?: 
 
 function VisibilityBadge({ visibility }: { visibility?: "internal" | "shared" | "private" }) {
   const v = visibility ?? "internal";
-  if (v === "shared")   return <span className="inline-flex items-center gap-0.5 rounded-sm bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"><Globe   className="size-2.5" />Shared</span>;
-  if (v === "private")  return <span className="inline-flex items-center gap-0.5 rounded-sm bg-muted      px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"><EyeOff  className="size-2.5" />Private</span>;
-  return                       <span className="inline-flex items-center gap-0.5 rounded-sm bg-muted      px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"><Lock    className="size-2.5" />Internal</span>;
+  if (v === "shared")   return <span className="inline-flex items-center gap-0.5 rounded-sm bg-warning/10 px-1.5 py-0.5 text-doc-support font-medium text-warning"><Globe   className="size-2.5" />Shared</span>;
+  if (v === "private")  return <span className="inline-flex items-center gap-0.5 rounded-sm bg-muted      px-1.5 py-0.5 text-doc-support font-medium text-muted-foreground"><EyeOff  className="size-2.5" />Private</span>;
+  return                       <span className="inline-flex items-center gap-0.5 rounded-sm bg-muted      px-1.5 py-0.5 text-doc-support font-medium text-muted-foreground"><Lock    className="size-2.5" />Internal</span>;
 }
 
 function ScanBadge({ scanStatus }: { scanStatus?: "pending" | "clean" | "quarantined" }) {
   if (scanStatus === "quarantined") {
-    return <span className="inline-flex items-center gap-0.5 rounded-sm bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive"><ShieldX className="size-2.5" />Quarantined</span>;
+    return <span className="inline-flex items-center gap-0.5 rounded-sm bg-destructive/10 px-1.5 py-0.5 text-doc-support font-medium text-destructive"><ShieldX className="size-2.5" />Quarantined</span>;
   }
   return null;
 }
@@ -107,7 +107,7 @@ function ScanBadge({ scanStatus }: { scanStatus?: "pending" | "clean" | "quarant
 function PreviewBadge({ previewStatus, previewKind }: { previewStatus?: string; previewKind?: string }) {
   if (!previewKind || previewKind === "none" || !previewStatus) return null;
   if (previewStatus === "failed") {
-    return <span className="inline-flex items-center gap-0.5 rounded-sm bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">Preview failed</span>;
+    return <span className="inline-flex items-center gap-0.5 rounded-sm bg-destructive/10 px-1.5 py-0.5 text-doc-support font-medium text-destructive">Preview failed</span>;
   }
   return null;
 }
@@ -342,10 +342,10 @@ function FileCard({
           <ScanBadge       scanStatus={item.scanStatus} />
           <PreviewBadge    previewStatus={item.previewStatus} previewKind={item.previewKind} />
           {item.extractionStatus === "extracted" && (
-            <span className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">Text extracted</span>
+            <span className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-doc-support font-medium text-muted-foreground">Text extracted</span>
           )}
           {item.isCurrent === false && (
-            <span className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">Older version</span>
+            <span className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-doc-support font-medium text-muted-foreground">Older version</span>
           )}
         </div>
       </div>
@@ -688,7 +688,7 @@ export function DocumentAttachmentsTab({ entityType, entityId, className }: Docu
                 )}
               >
                 {tab.label}
-                <span className={cn("text-[10px] opacity-60", category === tab.key && "opacity-80")}>
+                <span className={cn("text-doc-support opacity-60", category === tab.key && "opacity-80")}>
                   {counts[tab.key]}
                 </span>
               </button>

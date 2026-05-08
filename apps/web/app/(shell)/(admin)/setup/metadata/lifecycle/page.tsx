@@ -181,7 +181,7 @@ function BindingDialog({
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
             />
-            <p className="text-[10px] text-muted-foreground">Lower number = evaluated first. Default: 100</p>
+            <p className="text-doc-support text-muted-foreground">Lower number = evaluated first. Default: 100</p>
           </div>
 
           {/* Conditions */}
@@ -196,7 +196,7 @@ function BindingDialog({
             {!conditionsValid && (
               <p className="text-xs text-destructive">Invalid JSON</p>
             )}
-            <p className="text-[10px] text-muted-foreground">If blank, lifecycle always applies to this entity.</p>
+            <p className="text-doc-support text-muted-foreground">If blank, lifecycle always applies to this entity.</p>
           </div>
         </div>
 
@@ -270,7 +270,7 @@ function BindingCard({
 
           {hasConditions && (
             <div className="flex items-center gap-1.5">
-              <Badge variant="outline" className="text-[10px]">conditional</Badge>
+              <Badge variant="outline" className="text-doc-support">conditional</Badge>
               <span className="text-xs text-muted-foreground font-mono truncate max-w-xs">
                 {JSON.stringify(binding.conditions).slice(0, 60)}
                 {JSON.stringify(binding.conditions).length > 60 ? "…" : ""}
@@ -278,7 +278,7 @@ function BindingCard({
             </div>
           )}
 
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-doc-support text-muted-foreground">
             Created {fmtDate(binding.created_at)}
             {binding.updated_at && ` · Updated ${fmtDate(binding.updated_at)}`}
           </p>
@@ -381,7 +381,7 @@ export default function LifecycleAdminPage() {
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {entityName}
                     </h3>
-                    <Badge variant="secondary" className="text-[10px] px-1.5">
+                    <Badge variant="secondary" className="text-doc-support px-1.5">
                       {items.length}
                     </Badge>
                   </div>

@@ -230,22 +230,22 @@ function ChannelDetailRow({
           {ch.is_primary && (
             <Badge
               variant="outline"
-              className={cn(PRIMARY_INDICATOR_CLASS, "text-[10px] h-4 px-1.5 leading-none")}
+              className={cn(PRIMARY_INDICATOR_CLASS, "text-doc-support h-4 px-1.5 leading-none")}
             >
               primary
             </Badge>
           )}
           {ch.purposes.map((p) => (
-            <Badge key={p} variant="muted" className="text-[10px] h-4 px-1.5 leading-none">{p}</Badge>
+            <Badge key={p} variant="muted" className="text-doc-support h-4 px-1.5 leading-none">{p}</Badge>
           ))}
           {ch.line_type && ch.line_type !== "unknown" && (
-            <Badge variant="muted" className="text-[10px] h-4 px-1.5 leading-none">{ch.line_type}</Badge>
+            <Badge variant="muted" className="text-doc-support h-4 px-1.5 leading-none">{ch.line_type}</Badge>
           )}
           {ch.channel_type === "whatsapp" && (
-            <Badge variant="muted" className="text-[10px] h-4 px-1.5 leading-none">whatsapp</Badge>
+            <Badge variant="muted" className="text-doc-support h-4 px-1.5 leading-none">whatsapp</Badge>
           )}
           {!ch.is_verified && (
-            <Badge variant="warning" className="text-[10px] h-4 px-1.5 leading-none">unverified</Badge>
+            <Badge variant="warning" className="text-doc-support h-4 px-1.5 leading-none">unverified</Badge>
           )}
         </div>
         {meta && (

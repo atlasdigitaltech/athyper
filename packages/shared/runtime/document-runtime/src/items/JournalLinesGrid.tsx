@@ -1089,7 +1089,7 @@ function ReferenceBadge({ references }: { references: unknown }) {
   const type = String(first["ref_doc_type"] ?? "").replace(/_/g, " ");
 
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-doc-subtitle text-muted-foreground">
       <Link2 className="h-3 w-3 shrink-0" />
       <span className="truncate">{[type, doc, line].filter(Boolean).join(" - ")}</span>
       {refs.length > 1 && <span className="font-medium">+{refs.length - 1}</span>}
@@ -1133,7 +1133,7 @@ function CurrencyLeadingControl({
   }, [open]);
 
   const codeLabel = (
-    <span className="font-mono text-[11px] font-semibold uppercase tracking-normal">
+    <span className="font-mono text-doc-subtitle font-semibold uppercase tracking-normal">
       {code.slice(0, 3)}
     </span>
   );
@@ -1306,7 +1306,7 @@ function AmtCell({ value, side, minorUnits }: { value: unknown; side: "debit" | 
 function SubledgerBadge({ type }: { type: string | null | undefined }) {
   if (!type) return <span className="text-muted-foreground/30 text-xs">-</span>;
   return (
-    <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide text-muted-foreground">
+    <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 text-doc-support font-mono uppercase tracking-wide text-muted-foreground">
       {type}
     </span>
   );
@@ -1482,7 +1482,7 @@ export function JournalIntakeLinesGrid({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 bg-muted/20 px-3.5 py-2">
           <div className="min-w-0">
             <div className="text-xs font-medium text-foreground">Exchange Rate</div>
-            <div className="text-[11px] text-muted-foreground">{transactionCurrency} to {baseCurrency}</div>
+            <div className="text-doc-subtitle text-muted-foreground">{transactionCurrency} to {baseCurrency}</div>
           </div>
           <Input
             className="h-8 w-full max-w-60 flex-1 text-right text-xs tabular-nums sm:flex-none"
@@ -1862,7 +1862,7 @@ export function JournalLinesGrid({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 bg-muted/20 px-3.5 py-2">
             <div className="min-w-0">
               <div className="text-xs font-medium text-foreground">Exchange Rate</div>
-              <div className="text-[11px] text-muted-foreground">
+              <div className="text-doc-subtitle text-muted-foreground">
                 {currencyContext.transactionCurrency} to {currencyContext.baseCurrency}
               </div>
             </div>

@@ -7,7 +7,7 @@ import {
 import { resolveRealmConfig } from "@/lib/auth/realm-config";
 import { getSessionRedis } from "@/lib/auth/session-redis";
 import { sanitizeReturnUrl } from "@/lib/auth/validate-return-url";
-import { pkceStateKey } from "@/lib/auth/redis-keys";
+import { PKCE_STATE_TTL_SECONDS, pkceStateKey } from "@/lib/auth/redis-keys";
 import { resolvePublicBaseUrl } from "@/lib/auth/resolve-public-base-url";
 
 /**
@@ -82,7 +82,7 @@ export async function GET(req: Request) {
   await redis.set(
     pkceStateKey(state),
     JSON.stringify({ codeVerifier, returnUrl, filter, isPlatformLogin, realm, provider, redirectUri }),
-    { EX: 1800 }, // 30 min — accommodates email-based flows (magic link, password reset)
+    { EX: PKCE_STATE_TTL_SECONDS },
   );
 
   const authUrl = buildAuthorizationUrl({

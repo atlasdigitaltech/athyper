@@ -166,7 +166,7 @@ function BlueprintCard({
               <p className="text-xs font-mono text-muted-foreground">{bp.code}</p>
             </div>
           </div>
-          <span className={cn("shrink-0 inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium", colorClass)}>
+          <span className={cn("shrink-0 inline-flex items-center rounded border px-1.5 py-0.5 text-doc-support font-medium", colorClass)}>
             {CATEGORY_LABELS[bp.category]}
           </span>
         </div>
@@ -177,13 +177,13 @@ function BlueprintCard({
 
         <div className="flex items-center flex-wrap gap-1.5">
           {bp.framework && (
-            <Badge variant="outline" className="text-[10px]">{bp.framework}</Badge>
+            <Badge variant="outline" className="text-doc-support">{bp.framework}</Badge>
           )}
           {bp.industry_vertical?.map((v) => (
-            <Badge key={v} variant="secondary" className="text-[10px] capitalize">{v}</Badge>
+            <Badge key={v} variant="secondary" className="text-doc-support capitalize">{v}</Badge>
           ))}
           {bp.dependencies && bp.dependencies.length > 0 && (
-            <span className="text-[10px] text-muted-foreground ml-auto">
+            <span className="text-doc-support text-muted-foreground ml-auto">
               Requires: {bp.dependencies.join(", ")}
             </span>
           )}
@@ -364,7 +364,7 @@ export default function BlueprintsPage() {
               >
                 {label}
                 {key !== "all" && !isLoading && (
-                  <span className="ml-1 text-[10px] opacity-60">
+                  <span className="ml-1 text-doc-support opacity-60">
                     ({allBlueprints.filter((b) => b.category === key).length})
                   </span>
                 )}

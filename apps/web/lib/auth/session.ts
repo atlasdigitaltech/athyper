@@ -1,6 +1,8 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
+import { SESSION_TTL_SECONDS } from "@/lib/auth/redis-keys";
+import { MFA_PENDING_TTL_SECONDS } from "@/lib/auth/session-policy";
 
 export const SESSION_COOKIE_NAME = "neon_sid";
 export const CSRF_COOKIE_NAME = "__csrf";
@@ -27,6 +29,7 @@ export async function getSessionId(): Promise<string | null> {
 export async function setSessionCookie(
   sid: string,
   env: string,
+  maxAgeSeconds = SESSION_TTL_SECONDS,
 ): Promise<void> {
   const store = await cookies();
   store.set(SESSION_COOKIE_NAME, sid, {
@@ -34,7 +37,7 @@ export async function setSessionCookie(
     secure: env !== "local",
     sameSite: "lax",
     path: "/",
-    maxAge: 28800, // 8 h — matches Redis TTL
+    maxAge: maxAgeSeconds,
   });
 }
 
@@ -47,6 +50,7 @@ export async function setSessionCookie(
 export async function setCsrfCookie(
   token: string,
   env: string,
+  maxAgeSeconds = SESSION_TTL_SECONDS,
 ): Promise<void> {
   const store = await cookies();
   store.set(CSRF_COOKIE_NAME, token, {
@@ -54,7 +58,7 @@ export async function setCsrfCookie(
     secure: env !== "local",
     sameSite: "lax",
     path: "/",
-    maxAge: 28800,
+    maxAge: maxAgeSeconds,
   });
 }
 
@@ -71,14 +75,17 @@ export async function clearCsrfCookie(): Promise<void> {
 export const MFA_PENDING_COOKIE = "neon_mfa_pending";
 
 /** Set the MFA-pending cookie (JS-readable so middleware edge runtime can read it). */
-export async function setMfaPendingCookie(env: string): Promise<void> {
+export async function setMfaPendingCookie(
+  env: string,
+  maxAgeSeconds = MFA_PENDING_TTL_SECONDS,
+): Promise<void> {
   const store = await cookies();
   store.set(MFA_PENDING_COOKIE, "1", {
     httpOnly: false,
     secure: env !== "local",
     sameSite: "lax",
     path: "/",
-    maxAge: 900, // 15 min — must complete MFA within this window
+    maxAge: maxAgeSeconds,
   });
 }
 

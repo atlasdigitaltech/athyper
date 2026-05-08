@@ -90,6 +90,7 @@ mkdir -p "$ATHYPER_DATA/memorycache"              # redis (shared)
 mkdir -p "$ATHYPER_DATA/memorycache-jobs"         # redis (bullmq isolation, opt-in)
 mkdir -p "$ATHYPER_DATA/metabase"                 # analytics profile (deferred)
 mkdir -p "$ATHYPER_DATA/objectstorage"            # minio
+mkdir -p "$ATHYPER_DATA/telemetry/alertmanager"   # alertmanager
 mkdir -p "$ATHYPER_DATA/telemetry/logging"        # loki
 mkdir -p "$ATHYPER_DATA/telemetry/metrics"        # prometheus
 mkdir -p "$ATHYPER_DATA/telemetry/observability"  # grafana

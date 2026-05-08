@@ -2,7 +2,7 @@
 # Athyper Governance Alert Rules
 # Prometheus alerting rules for the governance subsystem.
 #
-# Targets: archive backlog, legal holds, quotas, privacy, explainability
+# Targets: archive backlog, legal holds, quotas, and privacy
 # Grafana datasource: Prometheus (default)
 # ============================================================================
 
@@ -72,7 +72,7 @@ groups:
           description: "Over 100 archive manifests are under legal hold. Review hold scopes for potential over-retention."
 
       - alert: LegalHoldOverlapDetected
-        expr: increase(gov_legal_hold_overlap_total[1h]) > 5
+        expr: gov_legal_hold_overlap_total > 5
         labels:
           severity: warning
           team: compliance
@@ -84,7 +84,7 @@ groups:
     interval: 15s
     rules:
       - alert: QuotaBreached
-        expr: increase(gov_quota_breach_total[5m]) > 0
+        expr: gov_quota_breach_total > 0
         labels:
           severity: warning
           team: platform
@@ -102,61 +102,28 @@ groups:
           summary: "Quota utilization >90% ({{ $labels.quota_key }})"
           description: "Tenant {{ $labels.tenant }} quota {{ $labels.quota_key }} at {{ $value }}%. Consider limit increase or usage review."
 
-      - alert: QuotaFailClosedSpike
-        expr: rate(gov_quota_fail_closed_total[5m]) > 0.5
-        for: 2m
-        labels:
-          severity: critical
-          team: platform
-        annotations:
-          summary: "Quota enforcement failing closed at high rate"
-          description: "Quota checks are failing closed (rejecting requests due to enforcement errors) at >0.5/s. Users may be blocked."
-
   - name: governance_privacy
     interval: 30s
     rules:
-      - alert: PrivacyGuardRejectionSpike
-        expr: rate(gov_privacy_guard_rejected_total[5m]) > 1
+      - alert: PrivacyGuardPiiDetectionSpike
+        expr: rate(gov_privacy_guard_warned_total[5m]) > 1
         for: 3m
         labels:
           severity: warning
           team: security
         annotations:
-          summary: "Privacy guard rejecting events at high rate"
-          description: "The privacy guard is rejecting >1 event/s due to PII violations. Check event producers for PII leaks."
+          summary: "Privacy guard detecting PII at high rate"
+          description: "The attachment extraction worker is detecting >1 PII-positive attachment/s. Check upload sources for PII exposure."
 
-      - alert: PrivacyGuardRedactionRate
-        expr: rate(gov_privacy_guard_redacted_total[5m]) / rate(gov_privacy_guard_inspected_total[5m]) > 0.5
+      - alert: PrivacyGuardDetectionRate
+        expr: rate(gov_privacy_guard_warned_total[5m]) / clamp_min(rate(gov_privacy_guard_inspected_total[5m]), 1) > 0.5
         for: 10m
         labels:
           severity: warning
           team: security
         annotations:
-          summary: "Over 50% of events require PII redaction"
-          description: "High redaction rate may indicate missing privacy controls at the source."
-
-  - name: governance_explainability
-    interval: 30s
-    rules:
-      - alert: ExplainApiErrorRate
-        expr: rate(gov_explain_api_errors_total[5m]) / rate(gov_explain_api_calls_total[5m]) > 0.1
-        for: 5m
-        labels:
-          severity: warning
-          team: platform
-        annotations:
-          summary: "Explainability API error rate >10%"
-          description: "The governance explain API is returning errors at >10%. Admin dashboards may show stale data."
-
-      - alert: ExplainApiLatencyHigh
-        expr: histogram_quantile(0.95, rate(gov_explain_api_latency_ms[5m])) > 2000
-        for: 5m
-        labels:
-          severity: warning
-          team: platform
-        annotations:
-          summary: "Explainability API p95 latency >2s"
-          description: "Governance explain queries are slow. Check DB query plans and index health."
+          summary: "Over 50% of inspected attachments contain PII"
+          description: "High PII detection rate may indicate missing privacy controls at the source."
 
   - name: governance_purge
     interval: 60s
@@ -170,13 +137,3 @@ groups:
         annotations:
           summary: "{{ $value }} manifests are purge-ready but not purged"
           description: "Archive manifests have been eligible for purge for >1h. Check purge worker health or approval queues."
-
-      - alert: PurgeCertificateUnverified
-        expr: increase(gov_purge_certificate_issued_total[24h]) > increase(gov_purge_certificate_verified_total[24h])
-        for: 6h
-        labels:
-          severity: warning
-          team: compliance
-        annotations:
-          summary: "Purge certificates issued but not verified within 6h"
-          description: "Some purge certificates have not been independently verified. Manual verification may be required."

@@ -23,6 +23,7 @@ import {
 } from "@athyper/runtime-shared/entity-search";
 import { MoneySummary, QuantityUnit } from "@athyper/domain-widgets";
 import { useLookupDomain } from "@athyper/query";
+import { cn } from "@athyper/theme/utils";
 import { registerFieldRenderer, type FieldRendererProps } from "./registry";
 
 function humanizeToken(value: string): string {
@@ -33,11 +34,31 @@ function humanizeToken(value: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function viewTextClass(density?: FieldRendererProps["density"]): string {
+  return density === "compact" || density === "table" || density === "sheet" ? "text-xs" : "text-sm";
+}
+
+function viewEmptyClass(density?: FieldRendererProps["density"]): string {
+  return cn(viewTextClass(density), "text-muted-foreground");
+}
+
+function viewIdClass(density?: FieldRendererProps["density"]): string {
+  return cn(density === "compact" || density === "sheet" ? "text-doc-support" : viewTextClass(density), "text-muted-foreground");
+}
+
+function badgeSize(density?: FieldRendererProps["density"]): "sm" | "md" {
+  return density === "compact" || density === "sheet" ? "sm" : "md";
+}
+
+function viewBadgeClass(density?: FieldRendererProps["density"]): string | undefined {
+  return density === "table" ? "text-xs leading-normal" : undefined;
+}
+
 // ── Text / String ───────────────────────────────────────────────
 
-function TextRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+function TextRenderer({ value, field, mode, density, onChange, error }: FieldRendererProps) {
   if (mode === "view") {
-    return <span className="text-sm">{String(value ?? "—")}</span>;
+    return <span className={viewTextClass(density)}>{String(value ?? "—")}</span>;
   }
   return (
     <Input
@@ -51,12 +72,12 @@ function TextRenderer({ value, field, mode, onChange, error }: FieldRendererProp
 
 // ── Number / Integer / Decimal ──────────────────────────────────
 
-function NumberRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+function NumberRenderer({ value, field, mode, density, onChange, error }: FieldRendererProps) {
   if (mode === "view") {
     if (field.unit) {
       return <QuantityUnit quantity={Number(value ?? 0)} unit={field.unit} />;
     }
-    return <span className="text-sm tabular-nums">{value != null ? String(value) : "—"}</span>;
+    return <span className={cn(viewTextClass(density), "tabular-nums")}>{value != null ? String(value) : "—"}</span>;
   }
   return (
     <Input
@@ -71,9 +92,13 @@ function NumberRenderer({ value, field, mode, onChange, error }: FieldRendererPr
 
 // ── Boolean ─────────────────────────────────────────────────────
 
-function BooleanRenderer({ value, mode, onChange }: FieldRendererProps) {
+function BooleanRenderer({ value, mode, density, onChange }: FieldRendererProps) {
   if (mode === "view") {
-    return <Badge variant={value ? "success" : "muted"}>{value ? "Yes" : "No"}</Badge>;
+    return (
+      <Badge variant={value ? "success" : "muted"} size={badgeSize(density)} className={viewBadgeClass(density)}>
+        {value ? "Yes" : "No"}
+      </Badge>
+    );
   }
   return (
     <Checkbox
@@ -85,14 +110,14 @@ function BooleanRenderer({ value, mode, onChange }: FieldRendererProps) {
 
 // ── Date / DateTime ─────────────────────────────────────────────
 
-function DateRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+function DateRenderer({ value, field, mode, density, onChange, error }: FieldRendererProps) {
   if (mode === "view") {
-    if (!value) return <span className="text-sm text-muted-foreground">—</span>;
+    if (!value) return <span className={viewEmptyClass(density)}>—</span>;
     const date = new Date(String(value));
     const formatted = field.data_type === "date"
       ? date.toLocaleDateString()
       : date.toLocaleString();
-    return <span className="text-sm">{formatted}</span>;
+    return <span className={viewTextClass(density)}>{formatted}</span>;
   }
   return (
     <DatePicker
@@ -106,10 +131,10 @@ function DateRenderer({ value, field, mode, onChange, error }: FieldRendererProp
 
 // ── Money ───────────────────────────────────────────────────────
 
-function MoneyRenderer({ value, mode, onChange, error }: FieldRendererProps) {
+function MoneyRenderer({ value, mode, density, onChange, error }: FieldRendererProps) {
   if (mode === "view") {
     const data = value as { amount?: number; currency_code?: string } | null;
-    if (!data?.amount) return <span className="text-sm text-muted-foreground">—</span>;
+    if (!data?.amount) return <span className={viewEmptyClass(density)}>—</span>;
     return <MoneySummary amount={data.amount} currencyCode={data.currency_code ?? "USD"} />;
   }
   return (
@@ -125,17 +150,17 @@ function MoneyRenderer({ value, mode, onChange, error }: FieldRendererProps) {
 
 // ── Enum / Lookup ───────────────────────────────────────────────
 
-function EnumRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+function EnumRenderer({ value, field, mode, density, onChange, error }: FieldRendererProps) {
   const domainCode = field.enum_domain_code ?? "";
   const { data } = useLookupDomain(domainCode, { enabled: mode === "view" && !!domainCode });
 
   if (mode === "view") {
     if (value === null || value === undefined || value === "") {
-      return <span className="text-sm text-muted-foreground">—</span>;
+      return <span className={viewEmptyClass(density)}>—</span>;
     }
     const code = String(value);
     const label = data?.values?.find((v) => v.code === code)?.name ?? humanizeToken(code);
-    return <Badge variant="outline">{label}</Badge>;
+    return <Badge variant="outline" size={badgeSize(density)} className={viewBadgeClass(density)}>{label}</Badge>;
   }
   return (
     <LookupSelect
@@ -181,12 +206,12 @@ function LookupSelect({ domainCode, value, onChange, error }: LookupSelectProps)
 
 // ── UUID ─────────────────────────────────────────────────────────
 
-function UuidRenderer({ value, mode }: FieldRendererProps) {
+function UuidRenderer({ value, mode, density }: FieldRendererProps) {
   if (mode === "view") {
     const str = String(value ?? "");
-    return <span className="font-mono text-xs text-muted-foreground">{str.slice(0, 8)}…</span>;
+    return <span className={cn(viewIdClass(density), "font-mono")}>{str.slice(0, 8)}…</span>;
   }
-  return <span className="text-sm">{String(value ?? "")}</span>;
+  return <span className={viewTextClass(density)}>{String(value ?? "")}</span>;
 }
 
 // ── Reference (entity chooser) ───────────────────────────────────
@@ -276,7 +301,7 @@ function ReferencePickerField({
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function ReferenceRenderer({ value, field, mode, formData, onChange, error, disabled }: FieldRendererProps) {
+function ReferenceRenderer({ value, field, mode, density, formData, onChange, error, disabled }: FieldRendererProps) {
   const entityCode    = getReferenceEntityCode(field);
   const optionConfig  = resolveEntityPickerOptionConfig(field.reference_config);
   const uuid          = typeof value === "string" && UUID_RE.test(value) ? value : null;
@@ -303,12 +328,12 @@ function ReferenceRenderer({ value, field, mode, formData, onChange, error, disa
   const pickerDisplayLabel = displayLabel ?? (uuid && refRecordLoading ? "Loading..." : null);
 
   if (mode === "view") {
-    if (!value) return <span className="text-sm text-muted-foreground">—</span>;
+    if (!value) return <span className={viewEmptyClass(density)}>—</span>;
     if (displayLabel) {
-      return <span className="text-sm">{displayLabel}</span>;
+      return <span className={viewTextClass(density)}>{displayLabel}</span>;
     }
     return (
-      <span className="font-mono text-xs text-muted-foreground">
+      <span className={cn(viewIdClass(density), "font-mono")}>
         {String(value).slice(0, 8)}…
       </span>
     );
@@ -339,7 +364,7 @@ interface CurrencyRow {
   status?: string | null;
 }
 
-function CountryRenderer({ value, mode, onChange, error }: FieldRendererProps) {
+function CountryRenderer({ value, mode, density, onChange, error }: FieldRendererProps) {
   const [query, setQuery] = useState("");
 
   // Load all countries once (250 rows, rarely changes).
@@ -357,8 +382,11 @@ function CountryRenderer({ value, mode, onChange, error }: FieldRendererProps) {
   const all = countries ?? [];
 
   if (mode === "view") {
-    const country = all.find((c) => c.code === String(value ?? ""));
-    return <span className="text-sm">{country?.name ?? (value ? String(value) : "—")}</span>;
+    const code = String(value ?? "").trim().toUpperCase();
+    if (!code) return <span className={viewTextClass(density)}>-</span>;
+    const country = all.find((c) => c.code.toUpperCase() === code);
+    const label = country?.name;
+    return <span className={viewTextClass(density)}>{label && label !== code ? `${code} - ${label}` : code}</span>;
   }
 
   const q = query.toLowerCase();
@@ -386,7 +414,7 @@ function CountryRenderer({ value, mode, onChange, error }: FieldRendererProps) {
 }
 
 // Currency picker (ui_type="currency") backed by shared.currency.
-function CurrencyRenderer({ value, mode, onChange, error, disabled }: FieldRendererProps) {
+function CurrencyRenderer({ value, mode, density, onChange, error, disabled }: FieldRendererProps) {
   const [query, setQuery] = useState("");
   const currentCode = typeof value === "string" ? value.trim().toUpperCase() : "";
 
@@ -429,8 +457,8 @@ function CurrencyRenderer({ value, mode, onChange, error, disabled }: FieldRende
     : (currentCode || null);
 
   if (mode === "view") {
-    if (!currentCode) return <span className="text-sm text-muted-foreground">-</span>;
-    return <span className="text-sm">{displayLabel ?? currentCode}</span>;
+    if (!currentCode) return <span className={viewEmptyClass(density)}>-</span>;
+    return <span className={viewTextClass(density)}>{displayLabel ?? currentCode}</span>;
   }
 
   const options = all.map((currency) => ({
@@ -491,17 +519,17 @@ function normalizeArray(value: unknown): string[] {
   return [];
 }
 
-function ArrayRenderer({ value, field, mode, onChange, error }: FieldRendererProps) {
+function ArrayRenderer({ value, field, mode, density, onChange, error }: FieldRendererProps) {
   const values = normalizeArray(value);
 
   if (mode === "view") {
     if (values.length === 0) {
-      return <span className="text-sm text-muted-foreground">-</span>;
+      return <span className={viewEmptyClass(density)}>-</span>;
     }
     return (
       <div className="flex flex-wrap gap-1">
         {values.map((item, index) => (
-          <Badge key={`${item}-${index}`} variant="secondary">
+          <Badge key={`${item}-${index}`} variant="secondary" size={badgeSize(density)} className={viewBadgeClass(density)}>
             {field.data_type === "text_array" ? humanizeToken(item) : item}
           </Badge>
         ))}

@@ -2856,3 +2856,25 @@ DO $$ BEGIN ALTER TABLE master.party_risk_review_event ADD CONSTRAINT prre_asses
     FOREIGN KEY (tenant_id, assessment_id)
     REFERENCES master.party_risk_assessment (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- Parameter management
+DO $$ BEGIN ALTER TABLE master.tenant_parameter_definition ADD CONSTRAINT tpd_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.tenant_parameter_definition ADD CONSTRAINT tpd_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.tenant_parameter_definition ADD CONSTRAINT tpd_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.tenant_parameter_value ADD CONSTRAINT tpv_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.tenant_parameter_value ADD CONSTRAINT tpv_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.tenant_parameter_value ADD CONSTRAINT tpv_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

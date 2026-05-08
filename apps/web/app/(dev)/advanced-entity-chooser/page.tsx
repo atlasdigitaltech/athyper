@@ -382,7 +382,7 @@ function CollisionPrototype({
         </span>
       </div>
 
-      <div className="relative min-h-[320px] overflow-hidden rounded-md border bg-[#f8f7f2]">
+      <div className="relative min-h-[320px] overflow-hidden rounded-md border bg-muted/40">
         <div className="absolute left-1/2 top-3 -translate-x-1/2 text-doc-label font-semibold uppercase text-muted-foreground">
           Browser viewport
         </div>

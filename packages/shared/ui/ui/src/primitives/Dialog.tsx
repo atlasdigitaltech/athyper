@@ -2,6 +2,7 @@ import { forwardRef, type ComponentPropsWithoutRef, type HTMLAttributes } from "
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { overlayScrimVariants } from "./overlay";
 
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
@@ -15,7 +16,8 @@ const DialogOverlay = forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-modal bg-black/50 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
+      "fixed inset-0 z-modal data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
+      overlayScrimVariants({ tone: "modal" }),
       className,
     )}
     {...props}

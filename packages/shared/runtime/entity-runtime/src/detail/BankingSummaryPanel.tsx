@@ -233,7 +233,7 @@ function BankAccountAvatar({ rec, size = "md" }: { rec: BankingRecord; size?: "s
   return (
     <div className={cn(
       "flex shrink-0 select-none items-center justify-center rounded-full bg-foreground font-semibold text-background",
-      size === "sm" ? "size-8 text-[11px]" : "size-9 text-xs",
+      size === "sm" ? "size-8 text-doc-subtitle" : "size-9 text-xs",
     )}>
       {initials(bankName(rec))}
     </div>
@@ -463,7 +463,7 @@ function DetailPanel({
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className="rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">{tab.count}</span>
+              <span className="rounded-full bg-muted px-1.5 text-doc-support text-muted-foreground">{tab.count}</span>
             )}
           </button>
         ))}

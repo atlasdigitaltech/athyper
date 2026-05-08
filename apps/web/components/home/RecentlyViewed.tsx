@@ -54,10 +54,10 @@ export function RecentlyViewed() {
                 <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="font-mono text-[9px] bg-muted px-1 py-0.5 rounded text-muted-foreground">
+                <span className="font-mono text-doc-field-label bg-muted px-1 py-0.5 rounded text-muted-foreground">
                   {item.entityCode}
                 </span>
-                <span className="text-[10px] text-muted-foreground/60">
+                <span className="text-doc-support text-muted-foreground/60">
                   {timeAgo(item.viewedAt)}
                 </span>
               </div>

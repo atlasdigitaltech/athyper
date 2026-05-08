@@ -119,11 +119,11 @@ export function Topbar({
       <button
         onClick={onSearchClick}
         aria-label="Open launcher"
-        className="hidden min-w-60 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/60 sm:flex"
+        className="hidden min-w-60 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 sm:flex"
       >
         <Search className="h-3.5 w-3.5 shrink-0" />
         <span className="flex-1 text-left">Search or do anything…</span>
-        <kbd className="hidden items-center gap-0.5 rounded border bg-background px-1 py-0.5 font-mono text-xs text-muted-foreground lg:flex">
+        <kbd className="hidden items-center gap-0.5 rounded border bg-background px-1 py-0.5 font-mono text-2xs font-normal text-muted-foreground lg:flex">
           <span>⌘</span><span>K</span>
         </kbd>
       </button>

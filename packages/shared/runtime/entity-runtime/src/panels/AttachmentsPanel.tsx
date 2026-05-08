@@ -236,7 +236,7 @@ function VisibilityPill({
         disabled={disabled || pending}
         onClick={(e) => { e.stopPropagation(); setOpen((x) => !x); }}
         className={cn(
-          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none transition-colors",
+          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-doc-support font-medium leading-none transition-colors",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
           "disabled:pointer-events-none disabled:opacity-60",
           cfg.pillCls,
@@ -271,7 +271,7 @@ function VisibilityPill({
                 </span>
                 <span>
                   <span className="block text-xs font-medium text-foreground">{opt.label}</span>
-                  <span className="block text-[10px] text-muted-foreground">{opt.description}</span>
+                  <span className="block text-doc-support text-muted-foreground">{opt.description}</span>
                 </span>
               </button>
             );
@@ -286,17 +286,17 @@ function VisibilityPill({
 
 function ProcessingBadge({ scanStatus, previewStatus }: { scanStatus?: string; previewStatus?: string }) {
   if (scanStatus === "pending") return (
-    <span className="inline-flex items-center gap-0.5 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center gap-0.5 rounded-sm bg-muted px-1.5 py-0.5 text-doc-support font-medium text-muted-foreground">
       <Shield className="size-2.5 animate-pulse" />Scanning
     </span>
   );
   if (previewStatus === "pending") return (
-    <span className="inline-flex items-center gap-0.5 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center gap-0.5 rounded-sm bg-muted px-1.5 py-0.5 text-doc-support font-medium text-muted-foreground">
       <Clock className="size-2.5" />Preview pending
     </span>
   );
   if (previewStatus === "failed") return (
-    <span className="inline-flex items-center gap-0.5 rounded-sm bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+    <span className="inline-flex items-center gap-0.5 rounded-sm bg-destructive/10 px-1.5 py-0.5 text-doc-support font-medium text-destructive">
       <AlertTriangle className="size-2.5" />Preview failed
     </span>
   );
@@ -305,7 +305,7 @@ function ProcessingBadge({ scanStatus, previewStatus }: { scanStatus?: string; p
 
 function QuarantinedBadge() {
   return (
-    <span className="inline-flex items-center gap-0.5 rounded-sm bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+    <span className="inline-flex items-center gap-0.5 rounded-sm bg-destructive/10 px-1.5 py-0.5 text-doc-support font-medium text-destructive">
       <ShieldX className="size-2.5" />Quarantined
     </span>
   );
@@ -313,7 +313,7 @@ function QuarantinedBadge() {
 
 function JustAddedBadge() {
   return (
-    <span className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground leading-none">
+    <span className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-doc-support font-semibold text-primary-foreground leading-none">
       just now
     </span>
   );
@@ -387,12 +387,12 @@ function UploadQueueTray({ files }: { files: QueuedFile[] }) {
                         style={{ width: `${qf.progress}%` }}
                       />
                     </div>
-                    <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground">{qf.progress}%</span>
+                    <span className="shrink-0 tabular-nums text-doc-support text-muted-foreground">{qf.progress}%</span>
                   </div>
                 )}
-                {qf.state === "queued"   && <span className="text-[10px] text-muted-foreground">Waiting…</span>}
-                {qf.state === "uploaded" && <span className="text-[10px] text-muted-foreground">Uploaded</span>}
-                {qf.state === "failed"   && <span className="text-[10px] text-destructive">{qf.error ?? "Upload failed"}</span>}
+                {qf.state === "queued"   && <span className="text-doc-support text-muted-foreground">Waiting…</span>}
+                {qf.state === "uploaded" && <span className="text-doc-support text-muted-foreground">Uploaded</span>}
+                {qf.state === "failed"   && <span className="text-doc-support text-destructive">{qf.error ?? "Upload failed"}</span>}
               </div>
             </div>
             <div className="shrink-0">
@@ -434,7 +434,7 @@ function SuccessStrip({ count, onDismiss }: { count: number; onDismiss(): void }
       <span className="flex-1 text-xs font-medium text-success">
         {count} {count === 1 ? "file" : "files"} uploaded · scanning in progress
       </span>
-      <span className="shrink-0 text-[10px] text-muted-foreground">auto-dismiss in {remaining}s</span>
+      <span className="shrink-0 text-doc-support text-muted-foreground">auto-dismiss in {remaining}s</span>
     </div>
   );
 }
@@ -495,7 +495,7 @@ function BulkActionBar({
 }: BulkActionBarProps) {
   return (
     <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
-      <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground leading-none tabular-nums">
+      <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-doc-support font-semibold text-primary-foreground leading-none tabular-nums">
         {selectedCount} selected
       </span>
       <button
@@ -1115,7 +1115,7 @@ function FileRow({
                 previewStatus={att.preview_status}
               />
               {(att.version_no ?? 1) > 1 && (
-                <span className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                <span className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-doc-support font-medium text-muted-foreground">
                   v{att.version_no}
                 </span>
               )}
@@ -1731,7 +1731,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                     )}
                   >
                     {tab.label}
-                    <span className={cn("text-[10px] opacity-70", isActive && "opacity-90")}>{counts[tab.key]}</span>
+                    <span className={cn("text-doc-support opacity-70", isActive && "opacity-90")}>{counts[tab.key]}</span>
                     {isActive && tab.key !== "all" && (
                       <span className="ml-0.5 opacity-70 hover:opacity-100"
                         onClick={(e) => { e.stopPropagation(); setCategory("all"); }}
@@ -1756,7 +1756,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
               <input type="search" placeholder="Search files…" value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-14 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 select-none rounded border border-border bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 select-none rounded border border-border bg-muted px-1 py-0.5 text-doc-support text-muted-foreground">
                 {shortcut}
               </span>
             </div>
@@ -1873,8 +1873,8 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
             {sortedJustAdded.length > 0 && (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Just added</span>
-                  <span className="text-[10px] text-muted-foreground">{justAddedScanned} of {sortedJustAdded.length} scanned</span>
+                  <span className="text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">Just added</span>
+                  <span className="text-doc-support text-muted-foreground">{justAddedScanned} of {sortedJustAdded.length} scanned</span>
                 </div>
                 <div className="space-y-1.5">
                   {sortedJustAdded.map((att) => (
@@ -1889,7 +1889,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                 {(folders.length > 0 || uncategorizedEarlier.length > 0) && (
                   <div className="flex items-center gap-2 pt-1">
                     <div className="h-px flex-1 bg-border" />
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Earlier</span>
+                    <span className="text-doc-support font-semibold uppercase tracking-widest text-muted-foreground">Earlier</span>
                     <div className="h-px flex-1 bg-border" />
                   </div>
                 )}

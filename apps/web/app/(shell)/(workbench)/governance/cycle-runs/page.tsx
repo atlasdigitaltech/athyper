@@ -239,7 +239,7 @@ export default function CycleRunsPage() {
             <RowCard
               key={run.id}
               onClick={() => router.push(`/governance/cycle-runs/${run.id}`)}
-              badge={<Badge variant={STATUS_VARIANT[run.status]} className="text-[10px]">{run.status}</Badge>}
+              badge={<Badge variant={STATUS_VARIANT[run.status]} className="text-doc-support">{run.status}</Badge>}
               title={run.runLabel || run.runCode}
               metadata={<div className="flex flex-wrap items-center gap-3">
                 {run.cycleTypeName && <span>{run.cycleTypeName}</span>}

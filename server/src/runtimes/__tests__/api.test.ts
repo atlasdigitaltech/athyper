@@ -18,6 +18,7 @@ vi.mock("@athyper/svc-iam", () => ({
     start: vi.fn(),
     stop: vi.fn(),
   })),
+  checkPermissionBatch: vi.fn(),
   registerIamRoutes: vi.fn(),
 }));
 
@@ -36,6 +37,22 @@ vi.mock("@athyper/svc-platform", () => ({
 }));
 vi.mock("@athyper/svc-jobs", () => ({ registerJobsRoutes: vi.fn() }));
 
+vi.mock("../../../framework/runtime/services/collab/routes/collab-attachments.route.js", () => ({
+  registerCollabAttachmentRoutes: vi.fn(),
+}));
+vi.mock("../../../framework/runtime/services/master/routes/contacts.route.js", () => ({
+  registerMasterContactsRoutes: vi.fn(),
+}));
+vi.mock("../../../framework/runtime/services/master/routes/addresses.route.js", () => ({
+  registerMasterAddressRoutes: vi.fn(),
+}));
+vi.mock("../../../framework/runtime/services/jobs/routes/jobs.admin.route.js", () => ({
+  registerJobsAdminRoutes: vi.fn(),
+}));
+vi.mock("../../../framework/runtime/services/jobs/routes/jobs.board.route.js", () => ({
+  registerJobsBoardRoutes: vi.fn(),
+}));
+
 // Paths are relative to this test file (one level deeper than api.ts → need ../../../)
 vi.mock("../../../framework/runtime/services/workflow/routes/index.js", () => ({
   registerWorkflowRoutes: vi.fn(),
@@ -52,11 +69,28 @@ vi.mock("../../../framework/runtime/services/content/routes/index.js", () => ({
 vi.mock("../../../framework/runtime/services/integration/routes/index.js", () => ({
   registerIntegrationRoutes: vi.fn(),
 }));
+vi.mock("../../../framework/runtime/services/docservices/routes/index.js", () => ({
+  registerDocServicesRoutes: vi.fn(),
+}));
+vi.mock("../../../framework/runtime/services/ai/index.js", () => ({
+  createAiServiceBundle: vi.fn(async () => ({
+    aiRuntime: {},
+    autonomyResolver: {},
+    confidenceResolver: {},
+    feedbackLogWriter: {},
+  })),
+  registerAiRoutes: vi.fn(),
+}));
+vi.mock("../../../framework/runtime/openapi/openapi-generator.js", () => ({
+  createOpenApiRouter: vi.fn(() => vi.fn()),
+}));
 
 vi.mock("../../metrics.js", () => ({
   createCacheMetrics: vi.fn(() => ({})),
   metricsHandler: vi.fn(),
+  observeHttpRequest: vi.fn(),
   registerJobQueues: vi.fn(),
+  registerMetricCollectors: vi.fn(),
 }));
 
 vi.mock("../../audit.js", () => ({

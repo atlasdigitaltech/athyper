@@ -59,7 +59,7 @@ function ClassChip({ cls, selected, onClick }: { cls: string; selected: boolean;
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-medium transition-all ${
+      className={`inline-flex items-center rounded border px-2 py-0.5 text-doc-support font-medium transition-all ${
         selected
           ? (CLASS_STYLE[cls] ?? "bg-primary/10 text-primary border-primary/30")
           : "bg-muted/40 text-muted-foreground border-border hover:border-primary/50"
@@ -161,7 +161,7 @@ function FieldGroupDialog({
                 onChange={(e) => setKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
               />
               {!isEdit && groupKey && !keyValid && (
-                <p className="text-[10px] text-destructive">Must start with a letter, only a-z 0-9 _</p>
+                <p className="text-doc-support text-destructive">Must start with a letter, only a-z 0-9 _</p>
               )}
             </div>
           </div>
@@ -188,7 +188,7 @@ function FieldGroupDialog({
                 />
               ))}
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-doc-support text-muted-foreground">
               Leave empty to apply to all classes.
             </p>
           </div>
@@ -245,7 +245,7 @@ function FieldGroupCard({
         {/* Drag handle (visual only) */}
         <div className="flex flex-col items-center gap-1 shrink-0 pt-1">
           <GripVertical className="size-4 text-muted-foreground/40" />
-          <span className="text-[10px] font-mono text-muted-foreground">{group.sort_order}</span>
+          <span className="text-doc-support font-mono text-muted-foreground">{group.sort_order}</span>
         </div>
 
         {/* Content */}
@@ -268,7 +268,7 @@ function FieldGroupCard({
               {group.applies_to_classes.map((cls) => (
                 <span
                   key={cls}
-                  className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${CLASS_STYLE[cls] ?? ""}`}
+                  className={`inline-flex items-center rounded border px-1.5 py-0.5 text-doc-support font-medium ${CLASS_STYLE[cls] ?? ""}`}
                 >
                   {cls}
                 </span>
@@ -276,7 +276,7 @@ function FieldGroupCard({
             </div>
           )}
           {group.applies_to_classes.length === 0 && (
-            <span className="text-[10px] text-muted-foreground italic">all entity classes</span>
+            <span className="text-doc-support text-muted-foreground italic">all entity classes</span>
           )}
         </div>
 

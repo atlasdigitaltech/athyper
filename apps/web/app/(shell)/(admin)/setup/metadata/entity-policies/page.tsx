@@ -175,7 +175,7 @@ function PolicyDialog({
                 {selectedEntity?.label_singular && (
                   <span className="text-sm text-muted-foreground">{selectedEntity.label_singular}</span>
                 )}
-                <p className="text-[10px] text-muted-foreground ml-auto">entity cannot be changed</p>
+                <p className="text-doc-support text-muted-foreground ml-auto">entity cannot be changed</p>
               </div>
             ) : (
               <Select value={entityId} onValueChange={setEntityId}>
@@ -272,7 +272,7 @@ function PolicyDialog({
             </div>
 
             {!jsonValid && (
-              <p className="text-[10px] text-destructive">One or more JSON fields are invalid.</p>
+              <p className="text-doc-support text-destructive">One or more JSON fields are invalid.</p>
             )}
           </div>
         </div>
@@ -351,29 +351,29 @@ function PolicyCard({
               <CodeBadge>{policy.entity_name}</CodeBadge>
             )}
             {policy.entity_class && (
-              <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${CLASS_STYLE[policy.entity_class] ?? ""}`}>
+              <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-doc-support font-medium ${CLASS_STYLE[policy.entity_class] ?? ""}`}>
                 {policy.entity_class}
               </span>
             )}
             {policy.entity_version_id && (
-              <Badge variant="outline" className="text-[10px] font-mono">v: {policy.entity_version_id.slice(0, 8)}</Badge>
+              <Badge variant="outline" className="text-doc-support font-mono">v: {policy.entity_version_id.slice(0, 8)}</Badge>
             )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${ACCESS_STYLE[policy.access_mode] ?? ""}`}>
+            <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-doc-support font-medium ${ACCESS_STYLE[policy.access_mode] ?? ""}`}>
               {ACCESS_MODES.find((m) => m.value === policy.access_mode)?.label ?? policy.access_mode}
             </span>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-doc-support text-muted-foreground">
               scope: <strong>{SCOPE_MODES.find((m) => m.value === policy.company_scope_mode)?.label ?? policy.company_scope_mode}</strong>
             </span>
-            <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${AUDIT_STYLE[policy.audit_mode] ?? ""}`}>
+            <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-doc-support font-medium ${AUDIT_STYLE[policy.audit_mode] ?? ""}`}>
               audit: {AUDIT_MODES.find((m) => m.value === policy.audit_mode)?.label ?? policy.audit_mode}
             </span>
           </div>
 
           {/* JSONB summary */}
-          <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-3 text-doc-support text-muted-foreground flex-wrap">
             {Object.keys(policy.retention_policy).length > 0 && (
               <span>retention: {Object.keys(policy.retention_policy).join(", ")}</span>
             )}

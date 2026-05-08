@@ -21,7 +21,7 @@
 UPDATE control.entity
 SET display_config = display_config || jsonb_build_object(
   'list_renderer',      'table',
-  'view_modes',         jsonb_build_array('table'),
+  'view_modes',         jsonb_build_array('table', 'compact', 'kanban', 'dashboard', 'spreadsheet'),
   'lines_renderer',     NULL,
   'status_field_names', jsonb_build_array('status'),
   'alternate_flows',    '[]'::jsonb

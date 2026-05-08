@@ -19,7 +19,7 @@ const LIST_RENDERERS = new Set<ListRenderer>([
   "table", "kanban", "dashboard", "spreadsheet",
 ]);
 const VIEW_MODES = new Set<ViewMode>([
-  "table", "kanban", "dashboard", "spreadsheet",
+  "table", "compact", "kanban", "dashboard", "spreadsheet",
 ]);
 
 function toDetailRenderer(v: unknown): DetailRenderer {
@@ -44,6 +44,9 @@ function toListRenderer(v: unknown): ListRenderer {
 function toViewModes(v: unknown): ViewMode[] {
   if (!Array.isArray(v)) return DEFAULT_DISPLAY_CONFIG.view_modes;
   const filtered = v.filter((m): m is ViewMode => VIEW_MODES.has(m as ViewMode));
+  // Older B.5 backfills wrote ["table"] as a placeholder, which unintentionally
+  // hid the Smart List modes. Treat that legacy singleton as the modern default.
+  if (filtered.length === 1 && filtered[0] === "table") return DEFAULT_DISPLAY_CONFIG.view_modes;
   return filtered.length > 0 ? filtered : DEFAULT_DISPLAY_CONFIG.view_modes;
 }
 

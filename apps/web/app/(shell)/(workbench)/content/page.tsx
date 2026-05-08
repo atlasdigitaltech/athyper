@@ -221,8 +221,8 @@ export default function ContentBrowserPage() {
               key={item.id}
               onClick={() => router.push(`/content/${item.id}`)}
               badge={<>
-                <Badge variant={STATUS_VARIANT[item.status]} className="text-[10px]">{item.status}</Badge>
-                <Badge variant="outline" className="text-[10px]">{item.contentType}</Badge>
+                <Badge variant={STATUS_VARIANT[item.status]} className="text-doc-support">{item.status}</Badge>
+                <Badge variant="outline" className="text-doc-support">{item.contentType}</Badge>
               </>}
               title={item.title}
               metadata={<div className="flex flex-wrap items-center gap-3">

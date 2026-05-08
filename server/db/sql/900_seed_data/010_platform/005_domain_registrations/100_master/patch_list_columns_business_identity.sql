@@ -22,16 +22,33 @@
 --   FROM master.business_partner bp
 --   WHERE bp.id = cai.business_partner_id AND bp.tenant_id = cai.tenant_id;
 
--- Business Partner: 8-column layout ordered by business priority
+-- Business Partner: list layout matching the business partner list screenshot
 UPDATE control.entity
 SET display_config = COALESCE(display_config, '{}'::jsonb)
     || jsonb_build_object(
         'default_sort_field', 'name',
         'default_sort_dir',   'asc',
-        'list_columns',       jsonb_build_array('code','name','business_types','registration_country_code','status','legal_name','legal_form','partner_category')
+        'default_sort_order', 'asc',
+        'list_columns',       jsonb_build_array('code','name','registration_country_code','legal_form','status'),
+        'compact_card',       jsonb_build_object(
+            'bottom_fields',  jsonb_build_array('registration_country_code','legal_form'))
     )
 WHERE table_schema = 'master' AND table_name = 'business_partner'
   AND tenant_id IS NULL;
+
+-- Keep the current list resolver's sort_order-based column order aligned with
+-- the seeded list_columns order.
+UPDATE control.entity_field ef
+SET sort_order = 72
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND e.table_schema = 'master'
+  AND e.table_name = 'business_partner'
+  AND e.tenant_id IS NULL
+  AND ev.version_no = 1
+  AND ef.name = 'legal_form'
+  AND ef.sort_order IS DISTINCT FROM 72;
 
 -- Supplier App Index: business identity first, then role status and payment signal
 UPDATE control.entity

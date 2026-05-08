@@ -198,7 +198,7 @@ export function ActivityTimeline({ entries = [], className }: ActivityTimelinePr
                       </span>
                       <Badge
                         variant={domainVariant(entry.domain)}
-                        className="w-fit text-[10px] capitalize"
+                        className="w-fit text-doc-support capitalize"
                       >
                         {entry.domain}
                       </Badge>
@@ -211,7 +211,7 @@ export function ActivityTimeline({ entries = [], className }: ActivityTimelinePr
                     {(entry.from_state || entry.to_state) && (
                       <div className="mt-1 flex items-center gap-1">
                         {entry.from_state && (
-                          <Badge variant="outline" className="text-[10px]">
+                          <Badge variant="outline" className="text-doc-support">
                             {entry.from_state.replace(/_/g, " ")}
                           </Badge>
                         )}
@@ -219,7 +219,7 @@ export function ActivityTimeline({ entries = [], className }: ActivityTimelinePr
                           <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
                         )}
                         {entry.to_state && (
-                          <Badge variant="outline" className="text-[10px] font-medium">
+                          <Badge variant="outline" className="text-doc-support font-medium">
                             {entry.to_state.replace(/_/g, " ")}
                           </Badge>
                         )}

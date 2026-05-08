@@ -109,7 +109,7 @@ function ApproverCard({ item }: { item: ApiWorkItem }) {
           {name}
         </span>
         {isManual && (
-          <span className="ml-auto shrink-0 rounded bg-muted px-1 py-0.5 text-[9px] font-medium text-muted-foreground">
+          <span className="ml-auto shrink-0 rounded bg-muted px-1 py-0.5 text-doc-field-label font-medium text-muted-foreground">
             +
           </span>
         )}
@@ -117,7 +117,7 @@ function ApproverCard({ item }: { item: ApiWorkItem }) {
 
       {/* Completed date */}
       {item.completed_at && (
-        <div className="border-t px-3 pb-2 pt-1 text-[10px] text-muted-foreground">
+        <div className="border-t px-3 pb-2 pt-1 text-doc-support text-muted-foreground">
           {new Date(item.completed_at).toLocaleDateString("en-GB", {
             day: "2-digit", month: "short",
           })}

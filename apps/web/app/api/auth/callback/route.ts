@@ -9,7 +9,8 @@ import { normalizeOrganizationClaim } from "@/lib/auth/org-normalize";
 import { resolveRealmConfig } from "@/lib/auth/realm-config";
 import { getSessionRedis } from "@/lib/auth/session-redis";
 import { generateSid, hashValue, setCsrfCookie, setSessionCookie } from "@/lib/auth/session";
-import { pkceStateKey, sessKey, userSessionsKey } from "@/lib/auth/redis-keys";
+import { SESSION_TTL_SECONDS, pkceStateKey, sessKey, userSessionsKey } from "@/lib/auth/redis-keys";
+import { MFA_PENDING_TTL_SECONDS } from "@/lib/auth/session-policy";
 import { resolvePublicBaseUrl } from "@/lib/auth/resolve-public-base-url";
 import type { V4Session } from "@/lib/auth/types";
 
@@ -417,11 +418,13 @@ export async function GET(req: Request) {
     await redis.set(
       sessKey(sessionNamespace, sid),
       JSON.stringify(session),
-      { EX: 28800 },
+      { EX: SESSION_TTL_SECONDS },
     );
 
     // ─── Step 6: User session index ─────────────────────────────────────────
-    await redis.sAdd(userSessionsKey(sessionNamespace, sub), sid);
+    const sessionIndexKey = userSessionsKey(sessionNamespace, sub);
+    await redis.sAdd(sessionIndexKey, sid);
+    await redis.expire(sessionIndexKey, SESSION_TTL_SECONDS);
 
     // ─── Step 7: Set cookies ─────────────────────────────────────────────────
     await setSessionCookie(sid, env);
@@ -436,7 +439,7 @@ export async function GET(req: Request) {
       const target = new URL("/platform", publicBaseUrl);
       const response = NextResponse.redirect(target);
       response.cookies.set("neon_realm", "platform", {
-        httpOnly: true, secure: env !== "local", sameSite: "lax", path: "/", maxAge: 28800,
+        httpOnly: true, secure: env !== "local", sameSite: "lax", path: "/", maxAge: SESSION_TTL_SECONDS,
       });
       return response;
     }
@@ -460,7 +463,7 @@ export async function GET(req: Request) {
         secure: env !== "local",
         sameSite: "lax",
         path: "/",
-        maxAge: 900,
+        maxAge: MFA_PENDING_TTL_SECONDS,
       });
       return mfaResponse;
     }

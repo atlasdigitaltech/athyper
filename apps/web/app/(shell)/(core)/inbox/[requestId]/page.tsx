@@ -91,12 +91,12 @@ function ActivityTimeline({ requestId }: { requestId: string }) {
                   {event.actor_name ?? "System"}
                 </span>
                 {event.action && (
-                  <Badge variant={severityVariant(event.severity)} className="text-[10px] capitalize">
+                  <Badge variant={severityVariant(event.severity)} className="text-doc-support capitalize">
                     {event.action}
                   </Badge>
                 )}
                 {event.from_status && event.to_status && (
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-doc-support text-muted-foreground">
                     {event.from_status} → {event.to_status}
                   </span>
                 )}
@@ -107,7 +107,7 @@ function ActivityTimeline({ requestId }: { requestId: string }) {
                 </p>
               )}
             </div>
-            <span className="shrink-0 text-[10px] text-muted-foreground">
+            <span className="shrink-0 text-doc-support text-muted-foreground">
               {new Date(event.created_at).toLocaleString()}
             </span>
           </div>

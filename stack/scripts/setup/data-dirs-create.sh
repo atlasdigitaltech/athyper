@@ -74,6 +74,7 @@ mkdir -p "$ATHYPER_DATA/memorycache"              # redis (shared)
 mkdir -p "$ATHYPER_DATA/memorycache-jobs"         # redis (bullmq isolation, opt-in)
 mkdir -p "$ATHYPER_DATA/metabase"                 # analytics profile (deferred)
 mkdir -p "$ATHYPER_DATA/objectstorage"            # minio
+mkdir -p "$ATHYPER_DATA/telemetry/alertmanager"   # alertmanager
 mkdir -p "$ATHYPER_DATA/telemetry/logging"        # loki
 mkdir -p "$ATHYPER_DATA/telemetry/metrics"        # prometheus
 mkdir -p "$ATHYPER_DATA/telemetry/observability"  # grafana
@@ -88,6 +89,7 @@ echo "  $ATHYPER_DATA/memorycache"
 echo "  $ATHYPER_DATA/memorycache-jobs"
 echo "  $ATHYPER_DATA/metabase"
 echo "  $ATHYPER_DATA/objectstorage"
+echo "  $ATHYPER_DATA/telemetry/alertmanager"
 echo "  $ATHYPER_DATA/telemetry/logging"
 echo "  $ATHYPER_DATA/telemetry/metrics"
 echo "  $ATHYPER_DATA/telemetry/observability"
@@ -131,7 +133,9 @@ if [[ "${ATHYPER_DATA_ROOT:-}" == /opt/* ]] && [[ "$(id -u)" -eq 0 ]]; then
   chmod 0750 "$ATHYPER_DATA/telemetry/tracing"
 
   # svc-prometheus (9104:9104) — metrics
+  chown svc-prometheus:svc-prometheus "$ATHYPER_DATA/telemetry/alertmanager"
   chown svc-prometheus:svc-prometheus "$ATHYPER_DATA/telemetry/metrics"
+  chmod 0750 "$ATHYPER_DATA/telemetry/alertmanager"
   chmod 0750 "$ATHYPER_DATA/telemetry/metrics"
 
   # svc-grafana (9102:9102) — telemetry/observability (Grafana)
@@ -156,6 +160,7 @@ if [[ "${ATHYPER_DATA_ROOT:-}" == /opt/* ]] && [[ "$(id -u)" -eq 0 ]]; then
     "svc-meili:svc-meili:$ATHYPER_DATA/meilisearch" \
     "svc-meili:svc-meili:$ATHYPER_DATA/uptime-kuma" \
     "svc-meili:svc-meili:$ATHYPER_DATA/metabase" \
+    "svc-prometheus:svc-prometheus:$ATHYPER_DATA/telemetry/alertmanager" \
     "svc-loki:svc-loki:$ATHYPER_DATA/telemetry/logging" \
     "svc-prometheus:svc-prometheus:$ATHYPER_DATA/telemetry/metrics" \
     "svc-grafana:svc-grafana:$ATHYPER_DATA/telemetry/observability" \
