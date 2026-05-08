@@ -6346,6 +6346,50 @@ export type owner_type = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type parameter_change_log = {
+    id: Generated<string>;
+    tenant_id: string;
+    parameter_code: string;
+    actor_principal_id: string | null;
+    operation: string;
+    old_override_enabled: boolean | null;
+    new_override_enabled: boolean | null;
+    old_value: unknown | null;
+    new_value: unknown | null;
+    reason: string | null;
+    request_id: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+};
+export type parameter_definition = {
+    id: Generated<string>;
+    code: string;
+    namespace: string;
+    display_name: string;
+    description: string | null;
+    owner_model: Generated<string>;
+    control_level: Generated<string>;
+    tenant_visibility: Generated<string>;
+    data_type: string;
+    unit: string | null;
+    default_value: unknown;
+    product_value: unknown | null;
+    min_value: unknown | null;
+    max_value: unknown | null;
+    allowed_values: unknown | null;
+    runtime_reload: Generated<string>;
+    cache_ttl_seconds: Generated<number>;
+    is_security_sensitive: Generated<boolean>;
+    is_runtime_reloadable: Generated<boolean>;
+    is_enabled: Generated<boolean>;
+    sort_order: Generated<number>;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type party_advance_balance = {
     id: Generated<string>;
     tenant_id: string;
@@ -7979,6 +8023,8 @@ export type record_bookmark = {
     principal_id: string;
     entity_code: string;
     record_id: string;
+    display_name: string | null;
+    record_code: string | null;
     created_at: Generated<Timestamp>;
 };
 export type record_edit_lock = {
@@ -9013,6 +9059,48 @@ export type tenant_module_subscription = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type tenant_parameter_definition = {
+    id: Generated<string>;
+    tenant_id: string;
+    code: string;
+    namespace: string;
+    display_name: string;
+    description: string | null;
+    data_type: string;
+    unit: string | null;
+    default_value: unknown;
+    min_value: unknown | null;
+    max_value: unknown | null;
+    allowed_values: unknown | null;
+    runtime_reload: Generated<string>;
+    cache_ttl_seconds: Generated<number>;
+    is_security_sensitive: Generated<boolean>;
+    is_runtime_reloadable: Generated<boolean>;
+    is_enabled: Generated<boolean>;
+    sort_order: Generated<number>;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type tenant_parameter_value = {
+    id: Generated<string>;
+    tenant_id: string;
+    parameter_code: string;
+    override_enabled: Generated<boolean>;
+    value: unknown | null;
+    reason: string | null;
+    effective_from: Generated<Timestamp>;
+    effective_to: Timestamp | null;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type tenant_permission_override = {
     id: Generated<string>;
     tenant_id: string;
@@ -9573,6 +9661,7 @@ export type DB = {
     "control.outbox_routing_rule": outbox_routing_rule;
     "control.overlay": overlay;
     "control.overlay_change": overlay_change;
+    "control.parameter_definition": parameter_definition;
     "control.payment_method_company_policy": payment_method_company_policy;
     "control.payment_method_interface_binding": payment_method_interface_binding;
     "control.payment_settlement_rule": payment_settlement_rule;
@@ -9727,6 +9816,7 @@ export type DB = {
     "log.kpi_execution_log": kpi_execution_log;
     "log.notification_delivery_attempt": notification_delivery_attempt;
     "log.notification_dlq": notification_dlq;
+    "log.parameter_change_log": parameter_change_log;
     "log.password_history": password_history;
     "log.permission_decision_log": permission_decision_log;
     "log.policy_evaluation_log": policy_evaluation_log;
@@ -9885,6 +9975,8 @@ export type DB = {
     "master.tenant": tenant;
     "master.tenant_feature_entitlement": tenant_feature_entitlement;
     "master.tenant_module_subscription": tenant_module_subscription;
+    "master.tenant_parameter_definition": tenant_parameter_definition;
+    "master.tenant_parameter_value": tenant_parameter_value;
     "master.tenant_permission_override": tenant_permission_override;
     "master.tenant_profile": tenant_profile;
     "master.tenant_risk_source_config": tenant_risk_source_config;
