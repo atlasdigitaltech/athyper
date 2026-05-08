@@ -22,6 +22,11 @@ const Bool = z.preprocess((v) => {
   return v;
 }, z.boolean());
 
+const OptionalNonEmptyString = z.preprocess((v) => {
+  if (typeof v === "string" && v.trim() === "") return undefined;
+  return v;
+}, z.string().optional());
+
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
 const ServerConfigSchema = z.object({
@@ -58,7 +63,7 @@ const ServerConfigSchema = z.object({
      * Redis server or db index (e.g. redis://host:6379/1) so a READONLY error
      * or reconnect storm on the cache client cannot cascade to job coordination.
      */
-    bullmqUrl: z.string().optional(),
+    bullmqUrl: OptionalNonEmptyString,
     /** Hard timeout for the initial TCP connection (ioredis: connectTimeout). */
     connectTimeout:       z.coerce.number().int().min(100).default(5_000),
     /** Max retries per request before failing fast (ioredis: maxRetriesPerRequest). */

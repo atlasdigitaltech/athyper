@@ -50,6 +50,43 @@ interface Tolerance {
 
 const DEFAULT_TOLERANCE: Tolerance = { quantity_pct: 3, price_pct: 2, amount_abs: 5 };
 
+async function resolveCatalogTolerance(db: AnyDb, tenantId: string): Promise<Tolerance> {
+  const tol: Tolerance = { ...DEFAULT_TOLERANCE };
+  try {
+    const rows = await sql<{ code: string; value_text: string | null }>`
+      SELECT
+        d.code,
+        COALESCE(
+          CASE
+            WHEN tv.override_enabled IS TRUE THEN tv.value
+            ELSE COALESCE(d.product_value, d.default_value)
+          END,
+          d.default_value
+        ) #>> '{}' AS value_text
+      FROM control.parameter_definition d
+      LEFT JOIN master.tenant_parameter_value tv
+        ON tv.tenant_id = ${tenantId}::uuid
+       AND tv.parameter_code = d.code
+       AND tv.status = 'active'
+       AND now() >= tv.effective_from
+       AND (tv.effective_to IS NULL OR now() < tv.effective_to)
+      WHERE d.code IN ('finance.ap.tolerance_amount', 'finance.ap.tolerance_percent')
+        AND d.status = 'active'
+        AND d.is_enabled = true
+    `.execute(db);
+
+    for (const row of rows.rows) {
+      const n = Number(row.value_text);
+      if (!Number.isFinite(n)) continue;
+      if (row.code === "finance.ap.tolerance_amount") tol.amount_abs = n;
+      if (row.code === "finance.ap.tolerance_percent") tol.price_pct = n;
+    }
+  } catch {
+    return tol;
+  }
+  return tol;
+}
+
 async function resolveTolerance(
   db:          AnyDb,
   tenantId:    string,
@@ -70,7 +107,7 @@ async function resolveTolerance(
            ELSE 2 END
   `.execute(db);
 
-  const tol: Tolerance = { ...DEFAULT_TOLERANCE };
+  const tol: Tolerance = await resolveCatalogTolerance(db, tenantId);
   for (const row of rows.rows) {
     if (row.tolerance_type === "quantity_pct") tol.quantity_pct = Number(row.tolerance_value);
     if (row.tolerance_type === "price_pct")    tol.price_pct    = Number(row.tolerance_value);

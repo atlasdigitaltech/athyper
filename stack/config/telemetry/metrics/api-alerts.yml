@@ -1,0 +1,21 @@
+# ============================================================================
+# Athyper API Alert Rules
+# Prometheus alerting rules for API health derived from application metrics.
+# ============================================================================
+
+groups:
+  - name: athyper_api_health
+    interval: 30s
+    rules:
+      - alert: ApiHighErrorRate
+        expr: >
+          job:http_error_ratio:rate5m{service="athyper-api"} > 0.05
+          and
+          job:http_requests:rate5m{service="athyper-api"} > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "API error rate above 5% ({{ $labels.route }})"
+          description: "The API 5xx error ratio has exceeded 5% for 5+ minutes for tenant {{ $labels.tenant_id }}."

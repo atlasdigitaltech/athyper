@@ -20,6 +20,7 @@ import {
   resolvePrincipalIdOrNull,
   isUuid,
   extractOrgHeaders,
+  withDomainSpan,
 } from "@athyper/svc-shared";
 import { WorkflowEngine } from "../engine.js";
 
@@ -166,14 +167,20 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
         return;
       }
 
-      await engine.processAction({
+      await withDomainSpan("workflow.request.action", {
+        tenant_id: tenantId,
+        request_id: requestId,
+        work_item_id: workItemId,
+        actor_id: principalId,
+        action,
+      }, () => engine.processAction({
         workItemId,
         actorId: principalId,
         tenantId,
         action,
         comment,
         delegateTo,
-      });
+      }));
 
       res.json({ ok: true });
     } catch (err) {
@@ -441,14 +448,19 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
         return;
       }
 
-      await engine.processAction({
+      await withDomainSpan("workflow.work_item.action", {
+        tenant_id: tenantId,
+        work_item_id: workItemId,
+        actor_id: principalId,
+        action,
+      }, () => engine.processAction({
         workItemId,
         actorId: principalId,
         tenantId,
         action,
         comment,
         delegateTo,
-      });
+      }));
 
       res.json({ ok: true });
     } catch (err) {

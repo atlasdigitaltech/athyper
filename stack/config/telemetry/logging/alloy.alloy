@@ -5,6 +5,35 @@ discovery.docker "linux" {
 loki.process "normalize" {
   forward_to = [loki.write.loki.receiver]
 
+  stage.json {
+    expressions = {
+      trace_id = "trace_id",
+      span_id  = "span_id",
+      level    = "level",
+      service  = "service",
+      env      = "env",
+    }
+  }
+
+  stage.match {
+    selector      = `{platform="docker"} !~ "^\\{"`
+    pipeline_name = "non-json-fallback"
+
+    stage.regex {
+      expression = `(?i)(?P<level>fatal|error|warn|warning|info|debug)`
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      trace_id = "",
+      span_id  = "",
+      level    = "",
+      service  = "",
+      env      = "",
+    }
+  }
+
   stage.label_drop {
     values = ["stream", "container_name"]
   }

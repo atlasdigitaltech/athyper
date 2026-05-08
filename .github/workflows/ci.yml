@@ -54,6 +54,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma/Kysely types
+        run: pnpm --filter @athyper/adapter-db run prisma:generate
+
+      - name: Check generated Kysely types are current
+        run: git diff --exit-code -- server/framework/adapters/db/src/generated/kysely/types.ts
+
       - name: Format check
         run: pnpm run format:check
 
@@ -64,6 +70,9 @@ jobs:
 
       - name: Typecheck
         run: pnpm run typecheck
+
+      - name: Check generated typography CSS
+        run: pnpm --filter @athyper/theme run check:typography
 
       - name: Test
         run: pnpm run test -- --coverage

@@ -14,6 +14,7 @@
 
 import express, { type Request, type Response, type NextFunction } from "express";
 import { Router } from "express";
+import { trace } from "@opentelemetry/api";
 
 import { registerIamRoutes, checkPermissionBatch } from "@athyper/svc-iam";
 import { registerMetadataRoutes } from "@athyper/svc-metadata";
@@ -52,6 +53,7 @@ import {
 } from "../../framework/runtime/services/ai/index.js";
 
 import {
+  createAiLogMetrics,
   createCacheMetrics,
   metricsHandler,
   observeHttpRequest,
@@ -89,6 +91,28 @@ function isForwardedMetricsRequest(req: Request): boolean {
     hasHeader(req, "x-forwarded-host") ||
     hasHeader(req, "x-forwarded-proto")
   );
+}
+
+function appendExposeHeader(res: Response, headerName: string): void {
+  const existing = res.getHeader("Access-Control-Expose-Headers");
+  const values = new Set<string>();
+  if (typeof existing === "string") {
+    for (const part of existing.split(",")) values.add(part.trim().toLowerCase());
+  } else if (Array.isArray(existing)) {
+    for (const value of existing) {
+      for (const part of String(value).split(",")) values.add(part.trim().toLowerCase());
+    }
+  }
+
+  values.add(headerName.toLowerCase());
+  res.setHeader("Access-Control-Expose-Headers", [...values].filter(Boolean).join(", "));
+}
+
+function exposeActiveTraceId(res: Response): void {
+  const spanContext = trace.getActiveSpan()?.spanContext();
+  if (!spanContext?.traceId) return;
+  res.setHeader("X-Trace-ID", spanContext.traceId);
+  appendExposeHeader(res, "X-Trace-ID");
 }
 
 // ─── startApi ─────────────────────────────────────────────────────────────────
@@ -130,7 +154,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // Register BullMQ queues for /metrics queue depth gauges.
   // Cast to Record<string, unknown> — DepthQueue duck-type is satisfied by BullMQ Queue.
   registerJobQueues(jobs.queues as unknown as Parameters<typeof registerJobQueues>[0]);
-  registerMetricCollectors([createPlatformMetricCollector(_db)]);
+  registerMetricCollectors([{ name: "platform", collect: createPlatformMetricCollector(_db) }]);
 
   // ─── IAM cache client ──────────────────────────────────────────────────────
   // Provides the full CacheClient surface used by IAM and platform routes:
@@ -157,6 +181,9 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     srem: (k: string, member: string) => redis.srem(k, member),
     smembers: (k: string) => redis.smembers(k),
     expire: (k: string, ttl: number) => redis.expire(k, ttl),
+    eval: (script: string, numKeys: number, ...args: Array<string | number>) =>
+      redis.eval(script, numKeys, ...args),
+    incr: (k: string) => redis.incr(k),
   } as Parameters<typeof registerIamRoutes>[1]["cache"];
 
   const descriptorCache = {
@@ -274,13 +301,20 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   app.use((req: Request, res: Response, next: NextFunction) => {
     const startedAt = process.hrtime.bigint();
     res.on("finish", () => {
+      const tenantId = tryGetContext()?.tenantId ?? "unknown";
       observeHttpRequest({
         method: req.method,
         path: req.originalUrl || req.url,
         statusCode: res.statusCode,
         durationMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
+        tenantId,
       });
     });
+    next();
+  });
+
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    exposeActiveTraceId(res);
     next();
   });
 
@@ -494,6 +528,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     db:           db.kysely,
     auth:         { verifyToken: (token: string) => auth.verifyToken(token) },
     logger,
+    cache:         iamCache,
     objectStorage: objectStorageRef.current ?? undefined,
   });
 
@@ -583,6 +618,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   registerFinanceRoutes(apiRouter, {
     db: db.kysely,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    cache: iamCache,
     logger,
   });
 
@@ -627,6 +663,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     db: _db,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
     storage: objectStorageRef.current,
+    cache: iamCache,
     logger,
   });
 
@@ -655,6 +692,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   registerIntegrationRoutes(apiRouter, {
     db: _db,
     auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    cache: iamCache,
     logger,
     credentialEncryption: credentialEncryption ?? undefined,
   });
@@ -675,7 +713,30 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // Phase 7a: POST /ai/actions/run | /preview, POST /ai/feedback,
   //           GET /ai/policy/effective
   // ANTHROPIC_API_KEY must be set in env to enable real model calls.
-  const aiBundle = await createAiServiceBundle({ db: _db, redis, logger });
+  const aiCache = {
+    get: (k: string) => redis.get(k),
+    set: (k: string, v: string, _ex: "EX", ttl: number) => redis.set(k, v, "EX", ttl),
+    del: (k: string | string[]) =>
+      Array.isArray(k) ? (k.length > 0 ? redis.del(...k) : Promise.resolve(0)) : redis.del(k),
+    scan: (
+      cursor: string,
+      matchFlag: "MATCH",
+      pattern: string,
+      countFlag: "COUNT",
+      count: number,
+    ) =>
+      (
+        redis as unknown as {
+          scan(cursor: string, ...args: unknown[]): Promise<[string, string[]]>;
+        }
+      ).scan(cursor, matchFlag, pattern, countFlag, count),
+  };
+  const aiBundle = await createAiServiceBundle({
+    db: _db,
+    redis: aiCache,
+    logger,
+    metrics: createAiLogMetrics(),
+  });
   registerAiRoutes(apiRouter, {
     db:    _db,
     auth:  { verifyToken: (token: string) => auth.verifyToken(token) as Promise<{ sub: string; [k: string]: unknown }> },
@@ -777,7 +838,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // Compiles all system entities first so snapshot.entity_compiled rows exist,
   // then validates the 10-point checklist. Never blocks boot or affects /readyz.
   lifecycle.onReady(async () => {
-    await createEntityCompilerService(_db).compileAllSystemEntities();
+    await createEntityCompilerService(_db, logger).compileAllSystemEntities();
     await runComplianceSuiteIfDev(_db, logger);
   });
 

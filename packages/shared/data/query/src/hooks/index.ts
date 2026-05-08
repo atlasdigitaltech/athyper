@@ -471,3 +471,11 @@ export function useEditLock(opts: UseEditLockOptions): EditLockState & {
 
   return { ...state, acquire, release };
 }
+
+export {
+  useRecordBookmarks,
+  useBookmarksList,
+  type BookmarkSnapshot,
+  type BookmarkListItem,
+  type BookmarkListGroup,
+} from "./useRecordBookmarks";

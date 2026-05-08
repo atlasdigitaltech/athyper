@@ -67,6 +67,48 @@ export interface DocumentDetailPageProps {
   editMode?:  boolean;
 }
 
+const RECENT_RECORD_SNAPSHOT_EVENT = "athyper:recent-record-snapshot";
+
+function recentEntityLabel(entity: CompiledEntity): string {
+  return (entity.entity_name || entity.entity_code)
+    .replace(/[_-]+/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function dispatchRecentDocumentSnapshot({
+  entity,
+  recordId,
+  recordCode,
+  recordName,
+}: {
+  entity: CompiledEntity;
+  recordId: string;
+  recordCode: string;
+  recordName?: string;
+}) {
+  if (typeof window === "undefined") return;
+
+  const code = recordCode.trim() || recordId;
+  const name = recordName?.trim();
+  const displayName = name && name.toLowerCase() !== code.toLowerCase() ? name : undefined;
+
+  const detail = {
+    href: `/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`,
+    label: displayName ?? code,
+    refCode: code,
+    entityCode: entity.entity_code,
+    entityLabel: recentEntityLabel(entity),
+    recordCode: code,
+    recordName: displayName,
+    recordFamily: "document",
+  };
+
+  window.setTimeout(() => {
+    window.dispatchEvent(new CustomEvent(RECENT_RECORD_SNAPSHOT_EVENT, { detail }));
+  }, 0);
+}
+
 // ── Sub-panels ────────────────────────────────────────────────────────────────
 
 function LinesPanel({
@@ -1220,6 +1262,15 @@ export function DocumentDetailPage({
     statusNorm,
     operations,
   ]);
+
+  useEffect(() => {
+    dispatchRecentDocumentSnapshot({
+      entity,
+      recordId,
+      recordCode: headerModel.identity.number,
+      recordName: headerModel.identity.name,
+    });
+  }, [entity, recordId, headerModel.identity.number, headerModel.identity.name]);
 
   const overviewRail = useRailState(headerModel.progress);
 

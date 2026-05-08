@@ -19,6 +19,7 @@ import type { Kysely } from "kysely";
 
 import { jitProvisionPrincipal } from "../jit/jit.service.js";
 import { resolveParameterSnapshot } from "../parameters/parameter-resolver.service.js";
+import { addTrackedKey } from "../../shared/cache-utils.js";
 import type {
   SessionQuery,
   SessionResponse,
@@ -54,6 +55,8 @@ export interface CacheClient {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, exFlag: "EX", ttl: number): Promise<unknown>;
   del(key: string | string[]): Promise<unknown>;
+  eval?(script: string, numKeys: number, ...args: Array<string | number>): Promise<unknown>;
+  incr?(key: string): Promise<number>;
   scan?(
     cursor: string,
     matchFlag: "MATCH",
@@ -73,6 +76,36 @@ export interface CacheClient {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Record<string, any>;
+
+const AUTH_EPOCH_CACHE_TTL_SEC = 15;
+
+function authEpochKey(principalId: string): string {
+  return `session:auth_epoch:${principalId}`;
+}
+
+async function resolveCurrentAuthEpoch(
+  db: Kysely<AnyDb>,
+  cache: CacheClient,
+  principalId: string,
+): Promise<number> {
+  const epochCacheKey = authEpochKey(principalId);
+  const cachedEpoch = await cache.get(epochCacheKey).catch(() => null);
+  if (cachedEpoch !== null) {
+    const parsed = Number(cachedEpoch);
+    if (Number.isFinite(parsed)) return parsed;
+    await cache.del(epochCacheKey).catch(() => undefined);
+  }
+
+  const epochRow = await db
+    .selectFrom("master.principal as p")
+    .select("p.auth_epoch")
+    .where("p.id", "=", principalId)
+    .executeTakeFirst();
+
+  const dbEpoch = (epochRow?.auth_epoch as number | undefined) ?? 0;
+  await cache.set(epochCacheKey, String(dbEpoch), "EX", AUTH_EPOCH_CACHE_TTL_SEC).catch(() => undefined);
+  return dbEpoch;
+}
 
 // ─── Error ────────────────────────────────────────────────────────────────────
 
@@ -128,18 +161,12 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
     if (cached) {
       const envelope = JSON.parse(cached) as CachedSession;
 
-      // auth_epoch guard: compare cached epoch with current DB value.
+      // auth_epoch guard: compare cached epoch with a short-lived Redis mirror.
       // A mismatch means a security-critical mutation occurred (principal locked,
       // deny grant created/revoked, delegation revoked) since this session was
       // cached. Force immediate re-resolution regardless of remaining TTL.
-      const epochRow = await db
-        .selectFrom("master.principal as p")
-        .select("p.auth_epoch")
-        .where("p.id", "=", envelope.principal_id)
-        .executeTakeFirst();
-
-      const dbEpoch = (epochRow?.auth_epoch as number | undefined) ?? 0;
-      if (dbEpoch !== envelope.auth_epoch) {
+      const currentEpoch = await resolveCurrentAuthEpoch(db, cache, envelope.principal_id);
+      if (currentEpoch !== envelope.auth_epoch) {
         // Stale cache — invalidate this key and fall through to full resolution.
         await cache.del(key);
         if (typeof cache.srem === "function") {
@@ -541,15 +568,13 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
       SESSION_CACHE_TTL_SEC,
     );
     await cache.set(key, JSON.stringify(envelope), "EX", sessionCacheTtlSec);
+    await cache.set(authEpochKey(principalId), String(currentAuthEpoch), "EX", AUTH_EPOCH_CACHE_TTL_SEC).catch(() => undefined);
     metrics?.write(tenant);
 
     // P2: Track this key in the per-principal set so the outbox worker can use
     // SMEMBERS instead of SCAN for bulk invalidation. The set TTL is refreshed
     // on every write so it stays alive as long as any session for this sub is active.
-    if (typeof cache.sadd === "function" && typeof cache.expire === "function") {
-      await cache.sadd(`principal_sessions:${sub}`, key);
-      await cache.expire(`principal_sessions:${sub}`, sessionCacheTtlSec);
-    }
+    await addTrackedKey(cache, `principal_sessions:${sub}`, key, sessionCacheTtlSec);
 
     return response;
   }

@@ -339,13 +339,27 @@ const POLICY_DEFAULTS: ConcurrencyPolicy = {
   heartbeatSeconds: DEFAULT_HEARTBEAT_SECONDS,
 };
 
+function defaultConcurrencyPolicy(
+  defaults?: Partial<Pick<ConcurrencyPolicy, "lockTtlSeconds" | "heartbeatSeconds">>,
+): ConcurrencyPolicy {
+  return {
+    ...POLICY_DEFAULTS,
+    lockTtlSeconds:  defaults?.lockTtlSeconds  ?? POLICY_DEFAULTS.lockTtlSeconds,
+    heartbeatSeconds: defaults?.heartbeatSeconds ?? POLICY_DEFAULTS.heartbeatSeconds,
+  };
+}
+
 /**
  * Parses the raw concurrency_policy JSON from control.entity.
  * Falls back to safe defaults when the field is absent or malformed.
  * Any unknown rollout/strategy value is treated as observe/none.
  */
-export function resolveConcurrencyPolicy(raw: unknown): ConcurrencyPolicy {
-  if (!raw || typeof raw !== "object") return POLICY_DEFAULTS;
+export function resolveConcurrencyPolicy(
+  raw: unknown,
+  defaults?: Partial<Pick<ConcurrencyPolicy, "lockTtlSeconds" | "heartbeatSeconds">>,
+): ConcurrencyPolicy {
+  const fallback = defaultConcurrencyPolicy(defaults);
+  if (!raw || typeof raw !== "object") return fallback;
   const p = raw as Record<string, unknown>;
 
   const strategy = ["none", "version_only", "lease_plus_version"].includes(String(p["strategy"] ?? ""))
@@ -360,7 +374,7 @@ export function resolveConcurrencyPolicy(raw: unknown): ConcurrencyPolicy {
     strategy,
     rollout,
     versionColumn:   typeof p["version_column"]    === "string" ? p["version_column"]    : "row_version",
-    lockTtlSeconds:  typeof p["lock_ttl_seconds"]  === "number" ? p["lock_ttl_seconds"]  : DEFAULT_LOCK_TTL_SECONDS,
-    heartbeatSeconds: typeof p["heartbeat_seconds"] === "number" ? p["heartbeat_seconds"] : DEFAULT_HEARTBEAT_SECONDS,
+    lockTtlSeconds:  typeof p["lock_ttl_seconds"]  === "number" ? p["lock_ttl_seconds"]  : fallback.lockTtlSeconds,
+    heartbeatSeconds: typeof p["heartbeat_seconds"] === "number" ? p["heartbeat_seconds"] : fallback.heartbeatSeconds,
   };
 }

@@ -9,7 +9,7 @@
  */
 
 import { sql } from "kysely";
-import type { AnyDb, AiLogger } from "./ai-runtime.types.js";
+import type { AiLogMetrics, AnyDb, AiLogger } from "./ai-runtime.types.js";
 
 export type FeedbackVerdict = "correct" | "wrong" | "partial" | "missing";
 
@@ -31,6 +31,7 @@ export class FeedbackLogWriter {
   constructor(
     private readonly db:     AnyDb,
     private readonly logger: AiLogger,
+    private readonly metrics?: AiLogMetrics,
   ) {}
 
   async write(args: FeedbackWriteArgs): Promise<void> {
@@ -54,8 +55,8 @@ export class FeedbackLogWriter {
           'business',
           ${feedbackType},
           ${entityType ?? null},
-          ${entityId    ? `${entityId}::uuid` : null},
-          ${targetId    ? `${targetId}::uuid` : null},
+          ${entityId    ?? null}::uuid,
+          ${targetId    ?? null}::uuid,
           ${verdict},
           ${reasonCode   ?? null},
           ${reasonDetail ?? null},
@@ -66,7 +67,9 @@ export class FeedbackLogWriter {
         )
       `.execute(this.db);
     } catch (e) {
+      this.metrics?.writeFailed("feedback");
       this.logger.error("ai_feedback_log_write_failed", { err: String(e) });
+      throw e;
     }
   }
 }

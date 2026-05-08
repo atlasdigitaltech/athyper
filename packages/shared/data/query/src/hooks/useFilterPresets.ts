@@ -10,6 +10,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { EntityListFilters } from "@athyper/api-contracts/entity-list";
 
+function getCsrfToken(): string {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]!) : "";
+}
+
 export interface FilterPreset {
   id:        string;
   name:      string;
@@ -50,7 +56,7 @@ export function useFilterPresets(entityCode: string) {
     }) => {
       const res = await fetch(`/api/records/${entityCode}/filter-presets`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body:    JSON.stringify({ name, filters, is_shared: isShared }),
       });
       if (!res.ok) throw new Error("Failed to save preset");
@@ -65,7 +71,7 @@ export function useFilterPresets(entityCode: string) {
     mutationFn: async (presetId: string) => {
       const res = await fetch(
         `/api/records/${entityCode}/filter-presets/${presetId}`,
-        { method: "DELETE" },
+        { method: "DELETE", headers: { "X-CSRF-Token": getCsrfToken() } },
       );
       if (!res.ok && res.status !== 204) throw new Error("Failed to delete preset");
     },

@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
-import { RUNTIME_API_URL, buildRuntimeHeaders, sanitizeContentDisposition } from "@/lib/server/runtime-headers";
+import {
+  RUNTIME_API_URL,
+  buildRuntimeHeaders,
+  copyTraceResponseHeaders,
+  sanitizeContentDisposition,
+  withTraceResponseHeaders,
+} from "@/lib/server/runtime-headers";
 
 /**
  * Creates a catch-all relay handler for a specific module prefix.
@@ -42,13 +48,17 @@ export function makeModuleRelay(modulePrefix: string) {
         const noContentRes = new NextResponse(null, { status: 204 });
         const setCookie = upstream.headers.get("Set-Cookie");
         if (setCookie) noContentRes.headers.set("Set-Cookie", setCookie);
+        copyTraceResponseHeaders(upstream.headers, noContentRes.headers);
         return noContentRes;
       }
       const ct = upstream.headers.get("Content-Type") ?? "application/json";
       const disposition = upstream.headers.get("Content-Disposition");
       const resHeaders: Record<string, string> = { "Content-Type": ct };
       if (disposition) resHeaders["Content-Disposition"] = sanitizeContentDisposition(disposition);
-      const res = new NextResponse(await upstream.arrayBuffer(), { status: upstream.status, headers: resHeaders });
+      const res = new NextResponse(await upstream.arrayBuffer(), {
+        status: upstream.status,
+        headers: withTraceResponseHeaders(upstream.headers, resHeaders),
+      });
       // Forward Set-Cookie from backend (e.g. td_token for trusted-device registration)
       const setCookie = upstream.headers.get("Set-Cookie");
       if (setCookie) res.headers.set("Set-Cookie", setCookie);

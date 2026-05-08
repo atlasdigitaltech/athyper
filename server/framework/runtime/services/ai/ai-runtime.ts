@@ -127,7 +127,7 @@ export class AIRuntime {
       confidence:   capResult.confidence,
       evidence:     capResult.evidence,
       pipeline_id:        pipelineId,
-      ai_inference_log_id: "", // filled below after write
+      ai_inference_log_id: null, // filled below after write
       model_id:     modelId,
       model_version: modelVersion,
       prompt_version: capResult.promptVersion,
@@ -141,7 +141,7 @@ export class AIRuntime {
       .write({ pipelineId, tenantId, principalId, request, response: finalResponse })
       .catch((e) => {
         logger.error("ai_inference_log_failed", { pipelineId, err: String(e) });
-        return "";
+        return null;
       });
 
     finalResponse.ai_inference_log_id = logId;
@@ -180,7 +180,7 @@ export class AIRuntime {
       confidence:  { overall: 0, fields: {} },
       evidence:    {},
       pipeline_id:          pipelineId,
-      ai_inference_log_id:  "",
+      ai_inference_log_id:  null,
       model_id:    "",
       model_version: "",
       prompt_version: null,

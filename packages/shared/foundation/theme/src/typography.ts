@@ -38,10 +38,27 @@ const uiFontStack = [
   "sans-serif",
 ] as const;
 
+const monoFontStack = [
+  "var(--font-geist-mono)",
+  "Geist Mono",
+  "ui-monospace",
+  "SFMono-Regular",
+  "Menlo",
+  "monospace",
+] as const;
+
+const serifFontStack = [
+  "var(--font-serif)",
+  "Source Serif 4",
+  "Georgia",
+  "Cambria",
+  "serif",
+] as const;
+
 export const fontFamilies = {
   sans: uiFontStack,
-  mono: uiFontStack,
-  serif: uiFontStack,
+  mono: monoFontStack,
+  serif: serifFontStack,
   arabic: ["IBM Plex Sans Arabic", "Noto Sans Arabic", "Geist", "system-ui", "sans-serif"],
   tamil: ["Noto Sans Tamil", "Geist", "system-ui", "sans-serif"],
 } as const;
@@ -60,7 +77,7 @@ export const typeScale = {
   "3xl": { size: "1.5rem", lineHeight: "2rem" },
   "4xl": { size: "1.875rem", lineHeight: "2.25rem" },
   "5xl": { size: "2.25rem", lineHeight: "2.75rem" },
-  "display-auth": { size: "2.2rem", lineHeight: "1.15" },
+  "display-auth": { size: "2.2rem", lineHeight: "2.53rem" },
 } as const satisfies Record<string, TypeScaleToken>;
 
 export type TypeScaleTokenName = keyof typeof typeScale;
@@ -89,7 +106,7 @@ export const documentTypography = {
     letterSpacing: "0.10em",
   },
   compactCode: {
-    size: "0.5rem",
+    size: "0.5625rem",
     lineHeight: "1",
     fontWeight: 500,
     letterSpacing: "0.04em",
@@ -243,6 +260,8 @@ function cssVariableStem(name: DocumentTypeTokenName): string {
   return `--doc-${docClassName(name)}`;
 }
 
+// Preferred short aliases for dense UI text. `text-doc-label` is the author-facing
+// alias for field-label-sized UI text; `text-doc-field-label` remains canonical.
 const denseTextAliases = {
   label: "fieldLabel",
   support: "support",
@@ -294,6 +313,9 @@ export function renderTypographyCss(): string {
     if (alias === docClassName(tokenName)) continue;
     const stem = cssVariableStem(tokenName);
     const token = documentTypography[tokenName] as DocumentTypeToken;
+    if (alias === "label") {
+      lines.push("  /* Preferred short alias for field-label-sized UI text. */");
+    }
     lines.push(`  .text-doc-${alias} {`);
     lines.push(`    font-size: var(${stem}-size);`);
     lines.push(`    line-height: var(${stem}-line-height);`);

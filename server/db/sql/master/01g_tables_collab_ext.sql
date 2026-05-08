@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS master.record_bookmark (
     principal_id  uuid        NOT NULL,
     entity_code   text        NOT NULL,
     record_id     uuid        NOT NULL,
+    display_name  text,
+    record_code   text,
     created_at    timestamptz NOT NULL DEFAULT now(),
 
     CONSTRAINT record_bookmark_pkey   PRIMARY KEY (id),
@@ -37,6 +39,10 @@ CREATE TABLE IF NOT EXISTS master.record_bookmark (
     CONSTRAINT record_bookmark_record_id_nonempty
         CHECK (record_id IS NOT NULL)
 );
+
+ALTER TABLE master.record_bookmark
+    ADD COLUMN IF NOT EXISTS display_name text,
+    ADD COLUMN IF NOT EXISTS record_code text;
 
 -- Pattern 1: O(1) membership check — "has principal P bookmarked record R?"
 CREATE INDEX IF NOT EXISTS record_bookmark_lookup_idx

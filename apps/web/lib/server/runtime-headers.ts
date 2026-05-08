@@ -12,6 +12,7 @@ import type { V4Session } from "@/lib/auth/types";
 
 export const RUNTIME_API_URL = process.env.RUNTIME_API_URL ?? "http://localhost:4000";
 export const COLLAB_API_URL  = process.env.COLLAB_API_URL  ?? RUNTIME_API_URL;
+export const TRACE_ID_HEADER = "X-Trace-ID";
 
 /** Build the standard auth headers for any runtime / collab service call. */
 export function buildRuntimeHeaders(session: V4Session): Record<string, string> {
@@ -55,4 +56,41 @@ export function forwardSearchParams(url: string, allowed: readonly string[]): st
  */
 export function sanitizeContentDisposition(disposition: string): string {
   return disposition.replace(/[\r\n\0]/g, "");
+}
+
+function appendHeaderValue(existing: string | null, value: string): string {
+  const values = new Set(
+    (existing ?? "")
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean),
+  );
+  values.add(value);
+  return [...values].join(", ");
+}
+
+export function getTraceId(headers: Headers): string | null {
+  const traceId = headers.get(TRACE_ID_HEADER);
+  if (!traceId || !/^[0-9a-f]{32}$/i.test(traceId)) return null;
+  return traceId.toLowerCase();
+}
+
+export function copyTraceResponseHeaders(source: Headers, target: Headers): void {
+  const traceId = getTraceId(source);
+  if (!traceId) return;
+  target.set(TRACE_ID_HEADER, traceId);
+  target.set(
+    "Access-Control-Expose-Headers",
+    appendHeaderValue(target.get("Access-Control-Expose-Headers"), TRACE_ID_HEADER),
+  );
+}
+
+export function withTraceResponseHeaders(source: Headers, headers: Record<string, string>): Record<string, string> {
+  const traceId = getTraceId(source);
+  if (!traceId) return headers;
+  return {
+    ...headers,
+    [TRACE_ID_HEADER]: traceId,
+    "Access-Control-Expose-Headers": appendHeaderValue(headers["Access-Control-Expose-Headers"] ?? null, TRACE_ID_HEADER),
+  };
 }

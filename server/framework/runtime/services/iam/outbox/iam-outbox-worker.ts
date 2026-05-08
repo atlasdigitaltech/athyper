@@ -70,9 +70,13 @@ export interface IamOutboxWorkerDeps {
 interface ClaimedEvent {
   id: string;
   event_type: string | null;
+  entity_type: string | null;
   entity_id: string | null;
   tenant_id: string;
+  payload: unknown;
 }
+
+type PayloadRecord = Record<string, unknown>;
 
 // ─── Worker factory ───────────────────────────────────────────────────────────
 
@@ -93,6 +97,33 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
 
   let running = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
+
+  function authEpochKey(principalId: string): string {
+    return `session:auth_epoch:${principalId}`;
+  }
+
+  function asRecord(value: unknown): PayloadRecord | null {
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value as PayloadRecord
+      : null;
+  }
+
+  function parsePayload(payload: unknown): PayloadRecord {
+    if (typeof payload === "string") {
+      try {
+        return asRecord(JSON.parse(payload)) ?? {};
+      } catch {
+        return {};
+      }
+    }
+    return asRecord(payload) ?? {};
+  }
+
+  function addId(target: Set<string>, value: unknown): void {
+    if (typeof value === "string" && value.trim().length > 0) {
+      target.add(value);
+    }
+  }
 
   // ─── Cache invalidation ──────────────────────────────────────────────────
 
@@ -120,6 +151,72 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
     return rows
       .map((row) => row.subject_id)
       .filter((subjectId): subjectId is string => typeof subjectId === "string" && subjectId.length > 0);
+  }
+
+  async function principalIdsForGroups(tenantId: string, groupIds: string[]): Promise<string[]> {
+    if (groupIds.length === 0) return [];
+    const rows = await db
+      .selectFrom("master.auth_group_member")
+      .select("principal_id")
+      .where("tenant_id", "=", tenantId)
+      .where("group_id", "in", [...new Set(groupIds)])
+      .execute() as Array<{ principal_id: string | null }>;
+
+    return rows
+      .map((row) => row.principal_id)
+      .filter((principalId): principalId is string => typeof principalId === "string" && principalId.length > 0);
+  }
+
+  async function groupIdsForRoles(tenantId: string, roleIds: string[]): Promise<string[]> {
+    if (roleIds.length === 0) return [];
+    const rows = await db
+      .selectFrom("master.auth_group_role")
+      .select("group_id")
+      .where("tenant_id", "=", tenantId)
+      .where("role_id", "in", [...new Set(roleIds)])
+      .where("is_active", "=", true)
+      .execute() as Array<{ group_id: string | null }>;
+
+    return rows
+      .map((row) => row.group_id)
+      .filter((groupId): groupId is string => typeof groupId === "string" && groupId.length > 0);
+  }
+
+  async function affectedPrincipalIds(event: ClaimedEvent): Promise<string[]> {
+    const ids = new Set<string>();
+    const groupIds = new Set<string>();
+    const roleIds = new Set<string>();
+    const payload = parsePayload(event.payload);
+    const oldRow = asRecord(payload.old);
+    const newRow = asRecord(payload.new);
+    const rows = [payload, oldRow, newRow].filter((row): row is PayloadRecord => row !== null);
+
+    for (const row of rows) {
+      addId(ids, row.principal_id);
+      addId(ids, row.delegate_id);
+      addId(groupIds, row.group_id);
+      addId(roleIds, row.role_id);
+    }
+
+    if (
+      event.entity_type === "principal" ||
+      event.event_type === "auth_epoch_changed" ||
+      event.event_type === "auth_epoch_bumped" ||
+      event.event_type?.startsWith("principal.")
+    ) {
+      addId(ids, event.entity_id);
+    }
+    if (event.entity_type === "auth_group") {
+      addId(groupIds, event.entity_id);
+    }
+
+    const groupsFromRoles = await groupIdsForRoles(event.tenant_id, [...roleIds]);
+    for (const groupId of groupsFromRoles) groupIds.add(groupId);
+
+    const principalsFromGroups = await principalIdsForGroups(event.tenant_id, [...groupIds]);
+    for (const principalId of principalsFromGroups) ids.add(principalId);
+
+    return [...ids];
   }
 
   /**
@@ -185,9 +282,11 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
   }
 
   async function invalidatePrincipalSessions(principalId: string): Promise<number> {
-    // principalId == KC subject UUID (sub) — matches all cache key formats
+    // Cache keys use KC subjects, so expand the principal id through bindings.
     const subjects = new Set([principalId, ...(await subjectIdsForPrincipal(principalId))]);
     let invalidated = 0;
+
+    await cache.del([authEpochKey(principalId)]).catch(() => undefined);
 
     for (const sub of subjects) {
       const backendCount = await invalidateBackendSessions(sub);
@@ -268,7 +367,7 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
         LIMIT ${batchSize}
         FOR UPDATE SKIP LOCKED
       )
-      RETURNING id, event_type, entity_id, tenant_id
+      RETURNING id, event_type, entity_type, entity_id, tenant_id, payload
     `.execute(db);
 
     return result.rows as ClaimedEvent[];
@@ -285,9 +384,9 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
         let invalidated = 0;
         let devicesRevoked = 0;
 
-        // The principal's UUID is stored in entity_id for all IAM events.
-        if (event.entity_id) {
-          invalidated = await invalidatePrincipalSessions(event.entity_id);
+        const principalIds = await affectedPrincipalIds(event);
+        for (const principalId of principalIds) {
+          invalidated += await invalidatePrincipalSessions(principalId);
 
           // On deactivation or lock: revoke all trusted devices.
           // Trusted devices grant step-up bypass — an inactive/locked principal
@@ -298,7 +397,7 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
           ) {
             devicesRevoked = await revokeTrustedDevices(
               event.tenant_id,
-              event.entity_id,
+              principalId,
               event.event_type,
             );
           }
@@ -319,7 +418,7 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
         logger?.info("iam_event_processed", {
           id: event.id,
           event_type: event.event_type,
-          principal_id: event.entity_id,
+          principal_ids: principalIds,
           cache_keys_deleted: invalidated,       // backend + frontend combined
           trusted_devices_revoked: devicesRevoked,
         });

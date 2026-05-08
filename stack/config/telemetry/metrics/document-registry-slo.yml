@@ -19,8 +19,8 @@ slos:
   - name: status_mapping_success
     description: "Less than 0.1% of status mappings fall back to DRAFT"
     target: 0.999
-    metric_success: fin_doc_registry_trigger_sync_total
-    metric_failure: fin_doc_registry_status_mapping_fallback_total
+    metric_success: fin_doc_registry_trigger_sync_count
+    metric_failure: fin_doc_registry_status_mapping_fallbacks
     window: 1h
     burn_rate_alert:
       fast: { window: 5m, factor: 14.4, severity: warning }

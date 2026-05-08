@@ -132,6 +132,22 @@ export async function resolvePrincipalIdWithJit(
 // ── Pagination ────────────────────────────────────────────────────────────────
 
 /**
+ * Parses a query integer with an explicit default and inclusive range.
+ * Invalid values (including NaN) fall back before clamping.
+ */
+export function parseQueryInt(
+  raw: unknown,
+  defaultVal: number,
+  min: number,
+  max: number,
+): number {
+  const parsed = typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);
+  const fallback = Number.isFinite(defaultVal) ? defaultVal : min;
+  const n = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
+/**
  * Parses ?page= and ?limit= from a query object.
  * Defaults: page=1, limit=50. Hard cap: limit=200.
  */
@@ -140,8 +156,13 @@ export function parsePagination(query: Record<string, unknown>): {
   limit: number;
   offset: number;
 } {
-  const page  = Math.max(1, parseInt(String(query["page"]  ?? "1"),  10) || 1);
-  const limit = Math.min(200, Math.max(1, parseInt(String(query["limit"] ?? "50"), 10) || 50));
+  const limit = parseQueryInt(query["limit"], 50, 1, 200);
+  const page  = parseQueryInt(
+    query["page"],
+    1,
+    1,
+    Math.floor(Number.MAX_SAFE_INTEGER / limit),
+  );
   return { page, limit, offset: (page - 1) * limit };
 }
 
@@ -231,6 +252,32 @@ export async function resolveArrayColumns(db: Kysely<any>, entityCode: string): 
 }
 
 /**
+ * Returns a Map from physical column_name -> data_type for JSON-typed fields
+ * on the entity's effective version.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function resolveJsonColumns(db: Kysely<any>, entityCode: string): Promise<Map<string, string>> {
+  const name = entityCode.replace(/-/g, "_");
+  const rows = await db
+    .selectFrom("control.entity_field as ef")
+    .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
+    .innerJoin("control.entity as e", "e.id", "ev.entity_id")
+    .select(["ef.column_name", "ef.data_type"])
+    .where("e.name", "=", name)
+    .where("e.tenant_id", "is", null)
+    .where("ev.status", "=", "EFFECTIVE")
+    .where("ef.is_active", "=", true)
+    .where("ef.data_type", "in", ["json", "jsonb"])
+    .execute();
+
+  const map = new Map<string, string>();
+  for (const r of rows) {
+    map.set(r.column_name as string, r.data_type as string);
+  }
+  return map;
+}
+
+/**
  * Coerces values in mappedData to JS arrays for columns registered as array
  * types in entity_field (text_array / uuid_array / int_array / jsonb_array).
  *
@@ -260,6 +307,39 @@ export function coerceArrayFields(
       const isIntArray = dataType === "int_array" || dataType === "int[]" || dataType === "integer[]";
       mappedData[col] = isIntArray ? parts.map((s) => parseInt(s, 10)) : parts;
     }
+  }
+}
+
+function serializeJsonValue(raw: unknown): string {
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed !== "") {
+      try {
+        return JSON.stringify(JSON.parse(trimmed));
+      } catch {
+        // Plain text is still a valid JSON scalar when encoded as a JSON string.
+      }
+    }
+  }
+
+  return JSON.stringify(raw) ?? "null";
+}
+
+/**
+ * Serializes JSON/JSONB values before they are handed to node-postgres.
+ *
+ * node-postgres treats plain JS arrays as Postgres array literals. When the
+ * target column is json/jsonb, that literal is invalid JSON. Sending canonical
+ * JSON text keeps arrays, objects, and scalars valid for the DB cast.
+ */
+export function serializeJsonFields(
+  mappedData: Record<string, unknown>,
+  jsonColumns: Map<string, string>,
+): void {
+  for (const col of jsonColumns.keys()) {
+    const raw = mappedData[col];
+    if (raw === undefined || raw === null) continue;
+    mappedData[col] = serializeJsonValue(raw);
   }
 }
 

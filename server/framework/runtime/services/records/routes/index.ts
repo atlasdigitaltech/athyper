@@ -20,6 +20,7 @@ import { createActionDispatcherRoute } from "./action-dispatcher.route.js";
 import { createActivityRoute } from "./activity.route.js";
 import { createSupplierIntakeRoute } from "./supplier-intake.route.js";
 import { createBusinessPartnerManagementRoute } from "./business-partner-management.route.js";
+import type { CacheClient } from "../../iam/session/session.service.js";
 
 export interface RecordsRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +35,7 @@ export interface RecordsRoutesDeps {
   };
   importQueue?: Queue;
   objectStorage?: ImportObjectStorage;
+  cache?: CacheClient;
 }
 
 export function registerRecordsRoutes(router: Router, deps: RecordsRoutesDeps): Router {

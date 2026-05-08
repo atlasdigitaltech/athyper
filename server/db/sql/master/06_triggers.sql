@@ -2006,6 +2006,7 @@ AS $$
 DECLARE
     v_principal_id  uuid;
     v_tenant_id     uuid;
+    v_auth_epoch    integer;
 BEGIN
     -- ── Determine the target principal ────────────────────────────────────
     IF TG_TABLE_NAME = 'principal' THEN
@@ -2036,7 +2037,8 @@ BEGIN
     UPDATE master.principal
     SET    auth_epoch = auth_epoch + 1
     WHERE  id        = v_principal_id
-      AND  tenant_id = v_tenant_id;
+      AND  tenant_id = v_tenant_id
+    RETURNING auth_epoch INTO v_auth_epoch;
 
     -- ── Emit IAM outbox event ─────────────────────────────────────────────
     -- The IAM outbox worker picks this up and invalidates frontend/BFF sessions.
@@ -2051,6 +2053,7 @@ BEGIN
         v_principal_id,
         jsonb_build_object(
             'principal_id', v_principal_id,
+            'auth_epoch',   v_auth_epoch,
             'trigger_table', TG_TABLE_NAME,
             'trigger_op',    TG_OP
         )

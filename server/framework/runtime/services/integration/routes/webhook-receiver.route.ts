@@ -35,6 +35,11 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { createHmac, timingSafeEqual, createHash } from "node:crypto";
 import { resolveTenantId, extractOrgHeaders } from "../../shared/route-helpers.js";
+import type { CacheClient } from "../../iam/session/session.service.js";
+import {
+  resolveParameterSnapshot,
+  getIntParam,
+} from "../../iam/parameters/parameter-resolver.service.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,6 +51,7 @@ export interface WebhookReceiverDeps {
     warn?(event: string, fields?: Record<string, unknown>): void;
     error(event: string, fields?: Record<string, unknown>): void;
   };
+  cache?: CacheClient;
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -90,7 +96,7 @@ interface RateEntry {
 
 const rateMap = new Map<string, RateEntry>();
 
-function isRateLimited(subscriptionId: string): boolean {
+function isRateLimited(subscriptionId: string, limit: number = RATE_LIMIT_RPM): boolean {
   const now   = Date.now();
   const entry = rateMap.get(subscriptionId);
 
@@ -100,7 +106,7 @@ function isRateLimited(subscriptionId: string): boolean {
   }
 
   entry.count++;
-  if (entry.count > RATE_LIMIT_RPM) return true;
+  if (entry.count > limit) return true;
 
   return false;
 }
@@ -131,7 +137,7 @@ const SYSTEM_ACTOR_ID = "00000000-0000-7000-a000-000000000001";
 // ─── Route factory ─────────────────────────────────────────────────────────────
 
 export function createWebhookReceiverRoute(router: Router, deps: WebhookReceiverDeps): Router {
-  const { db, logger } = deps;
+  const { db, logger, cache } = deps;
 
   /**
    * POST /api/webhooks/:subscriptionId
@@ -152,7 +158,12 @@ export function createWebhookReceiverRoute(router: Router, deps: WebhookReceiver
       }
 
       // ── 2. Rate limiting ──────────────────────────────────────────────────
-      if (isRateLimited(subscriptionId)) {
+      const webhookSnap = cache
+        ? await resolveParameterSnapshot(db, cache, tenantId, "notifications.webhook").catch(() => null)
+        : null;
+      const rateLimitRpm = getIntParam(webhookSnap, "notifications.webhook.rate_limit_rpm", RATE_LIMIT_RPM);
+
+      if (isRateLimited(subscriptionId, rateLimitRpm)) {
         res.status(429).json({ error: "RATE_LIMITED", message: "Too many webhook deliveries" });
         return;
       }

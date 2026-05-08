@@ -20,9 +20,11 @@ services:
           memory: "${METRICS_MEMORY_LIMIT}"
     volumes:
       - ${ATHYPER_CONFIG}/telemetry/metrics/config.yml:/etc/prometheus/prometheus.yml:ro
+      - ${ATHYPER_CONFIG}/telemetry/metrics/recording-rules.yml:/etc/prometheus/recording-rules.yml:ro
       - ${ATHYPER_CONFIG}/telemetry/metrics/governance-alerts.yml:/etc/prometheus/governance-alerts.yml:ro
       - ${ATHYPER_CONFIG}/telemetry/metrics/redis-alerts.yml:/etc/prometheus/redis-alerts.yml:ro
       - ${ATHYPER_CONFIG}/telemetry/metrics/document-registry-alerts.yml:/etc/prometheus/document-registry-alerts.yml:ro
+      - ${ATHYPER_CONFIG}/telemetry/metrics/api-alerts.yml:/etc/prometheus/api-alerts.yml:ro
       - ${ATHYPER_DATA}/telemetry/metrics:/prometheus
     networks: [edge, internal]
     depends_on:

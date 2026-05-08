@@ -61,33 +61,41 @@ interface SyncRow {
   failed: string | number | bigint | null;
 }
 
-const DEFAULT_CACHE_TTL_MS = 15_000;
+interface MetricSectionResult {
+  name: string;
+  ok: boolean;
+  samples: MetricSample[];
+}
+
+type MetricSectionCollector = (db: DB, samples: MetricSample[]) => Promise<void>;
+
+const DEFAULT_CACHE_TTL_MS = 30_000;
 
 const HELP = [
   "# HELP gov_legal_holds_active Active legal holds by tenant and scope",
   "# TYPE gov_legal_holds_active gauge",
-  "# HELP gov_legal_hold_created_total Legal hold rows created, counted from governance.legal_hold",
-  "# TYPE gov_legal_hold_created_total counter",
-  "# HELP gov_legal_hold_released_total Legal hold rows released, counted from governance.legal_hold",
-  "# TYPE gov_legal_hold_released_total counter",
+  "# HELP gov_legal_holds_created Legal hold rows currently recorded from governance.legal_hold",
+  "# TYPE gov_legal_holds_created gauge",
+  "# HELP gov_legal_holds_released Released legal hold rows currently recorded from governance.legal_hold",
+  "# TYPE gov_legal_holds_released gauge",
   "# HELP gov_manifests_held Active legal hold manifest rows currently blocking archive partitions",
   "# TYPE gov_manifests_held gauge",
   "# HELP gov_manifests_purge_ready Released legal hold manifest rows eligible for purge/archive progression",
   "# TYPE gov_manifests_purge_ready gauge",
-  "# HELP gov_legal_hold_overlap_total Active legal hold manifest partition overlaps detected from governance.legal_hold_manifest",
-  "# TYPE gov_legal_hold_overlap_total gauge",
+  "# HELP gov_legal_hold_overlaps Active legal hold manifest partition overlaps detected from governance.legal_hold_manifest",
+  "# TYPE gov_legal_hold_overlaps gauge",
   "# HELP gov_quota_utilization_pct Current content quota utilization percentage by tenant and quota key",
   "# TYPE gov_quota_utilization_pct gauge",
-  "# HELP gov_quota_breach_total Current breached content quotas by tenant and quota key",
-  "# TYPE gov_quota_breach_total gauge",
-  "# HELP gov_privacy_guard_inspected_total Attachments that have completed PII inspection",
-  "# TYPE gov_privacy_guard_inspected_total counter",
-  "# HELP gov_privacy_guard_warned_total Attachments where PII was detected by the extraction worker",
-  "# TYPE gov_privacy_guard_warned_total counter",
-  "# HELP gov_archive_jobs_completed_total Completed partition archive jobs from log.job_log",
-  "# TYPE gov_archive_jobs_completed_total counter",
-  "# HELP gov_archive_jobs_failed_total Failed partition archive jobs from log.job_log",
-  "# TYPE gov_archive_jobs_failed_total counter",
+  "# HELP gov_quota_breaches Current breached content quotas by tenant and quota key",
+  "# TYPE gov_quota_breaches gauge",
+  "# HELP gov_privacy_guard_inspected Attachments that completed PII inspection in the recent monitoring window",
+  "# TYPE gov_privacy_guard_inspected gauge",
+  "# HELP gov_privacy_guard_warned Attachments where PII was detected in the recent monitoring window",
+  "# TYPE gov_privacy_guard_warned gauge",
+  "# HELP gov_archive_jobs_completed Completed partition archive jobs in the recent monitoring window",
+  "# TYPE gov_archive_jobs_completed gauge",
+  "# HELP gov_archive_jobs_failed Failed partition archive jobs in the recent monitoring window",
+  "# TYPE gov_archive_jobs_failed gauge",
   "# HELP fin_doc_registry_compliance_posting_inconsistency Posted finance documents whose linked journal entry is missing or inconsistent",
   "# TYPE fin_doc_registry_compliance_posting_inconsistency gauge",
   "# HELP fin_doc_registry_compliance_approved_not_posted Approved finance documents not yet posted",
@@ -100,12 +108,14 @@ const HELP = [
   "# TYPE fin_doc_registry_bridge_incomplete gauge",
   "# HELP fin_doc_registry_compliance_approved_without_scoring Approved or posted invoices without classification decision evidence",
   "# TYPE fin_doc_registry_compliance_approved_without_scoring gauge",
-  "# HELP fin_doc_registry_trigger_sync_total Registry sync outbox events completed",
-  "# TYPE fin_doc_registry_trigger_sync_total counter",
-  "# HELP fin_doc_registry_trigger_sync_failed_total Registry sync outbox events failed or dead-lettered",
-  "# TYPE fin_doc_registry_trigger_sync_failed_total counter",
-  "# HELP fin_doc_registry_status_mapping_fallback_total Source document statuses without an active canonical_status lookup mapping",
-  "# TYPE fin_doc_registry_status_mapping_fallback_total gauge",
+  "# HELP fin_doc_registry_trigger_sync_count Current registry sync outbox rows completed",
+  "# TYPE fin_doc_registry_trigger_sync_count gauge",
+  "# HELP fin_doc_registry_trigger_sync_failed_count Current registry sync outbox rows failed or dead-lettered",
+  "# TYPE fin_doc_registry_trigger_sync_failed_count gauge",
+  "# HELP fin_doc_registry_status_mapping_fallbacks Source document statuses without an active canonical_status lookup mapping",
+  "# TYPE fin_doc_registry_status_mapping_fallbacks gauge",
+  "# HELP athyper_platform_metric_section_up Whether a platform metric collection section succeeded on the last scrape",
+  "# TYPE athyper_platform_metric_section_up gauge",
 ];
 
 function escapeLabel(value: string): string {
@@ -151,27 +161,50 @@ function cacheTtlMs(): number {
 }
 
 async function queryRows<T>(db: DB, query: RawBuilder<T>): Promise<T[]> {
-  try {
-    const result = await query.execute(db);
-    return result.rows;
-  } catch {
-    return [];
-  }
+  const result = await query.execute(db);
+  return result.rows;
 }
 
 async function collectLegalHoldMetrics(db: DB, samples: MetricSample[]): Promise<void> {
   const rows = await queryRows<LegalHoldRow>(db, sql<LegalHoldRow>`
+    WITH legal_hold_scopes(scope) AS (
+      SELECT scope
+      FROM (
+        VALUES
+          ('all'::text),
+          ('purchase_invoice'::text),
+          ('payment_entry'::text),
+          ('goods_receipt'::text),
+          ('service_entry_sheet'::text)
+      ) AS known(scope)
+      UNION
+      SELECT DISTINCT COALESCE(scope_entity_type, 'all') AS scope
+      FROM governance.legal_hold
+    ),
+    hold_counts AS (
+      SELECT
+        lh.tenant_id,
+        COALESCE(lh.scope_entity_type, 'all') AS scope,
+        count(*) FILTER (WHERE lh.status = 'active') AS active,
+        count(*) AS created,
+        count(*) FILTER (WHERE lh.status = 'released') AS released
+      FROM governance.legal_hold lh
+      GROUP BY lh.tenant_id, COALESCE(lh.scope_entity_type, 'all')
+    )
     SELECT
       t.code AS tenant,
-      lh.tenant_id::text AS tenant_id,
+      t.id::text AS tenant_id,
       'db'::text AS source,
-      COALESCE(lh.scope_entity_type, 'all') AS scope,
-      count(*) FILTER (WHERE lh.status = 'active')::text AS active,
-      count(*)::text AS created,
-      count(*) FILTER (WHERE lh.status = 'released')::text AS released
-    FROM governance.legal_hold lh
-    JOIN master.tenant t ON t.id = lh.tenant_id
-    GROUP BY t.code, lh.tenant_id, COALESCE(lh.scope_entity_type, 'all')
+      s.scope,
+      COALESCE(h.active, 0)::text AS active,
+      COALESCE(h.created, 0)::text AS created,
+      COALESCE(h.released, 0)::text AS released
+    FROM master.tenant t
+    CROSS JOIN legal_hold_scopes s
+    LEFT JOIN hold_counts h
+      ON h.tenant_id = t.id
+     AND h.scope = s.scope
+    WHERE t.is_active = true
   `);
 
   for (const row of rows) {
@@ -181,8 +214,8 @@ async function collectLegalHoldMetrics(db: DB, samples: MetricSample[]): Promise
       scope: row.scope ?? "all",
     };
     addSample(samples, "gov_legal_holds_active", labels, row.active);
-    addSample(samples, "gov_legal_hold_created_total", labels, row.created);
-    addSample(samples, "gov_legal_hold_released_total", labels, row.released);
+    addSample(samples, "gov_legal_holds_created", labels, row.created);
+    addSample(samples, "gov_legal_holds_released", labels, row.released);
   }
 }
 
@@ -242,7 +275,7 @@ async function collectLegalHoldManifestMetrics(db: DB, samples: MetricSample[]):
   `);
 
   for (const row of overlaps) {
-    addSample(samples, "gov_legal_hold_overlap_total", tenantLabels(row), row.value);
+    addSample(samples, "gov_legal_hold_overlaps", tenantLabels(row), row.value);
   }
 }
 
@@ -303,7 +336,7 @@ async function collectQuotaMetrics(db: DB, samples: MetricSample[]): Promise<voi
       quota_key: row.quota_key ?? "unknown",
     };
     addSample(samples, "gov_quota_utilization_pct", labels, row.utilization_pct);
-    addSample(samples, "gov_quota_breach_total", labels, row.breached);
+    addSample(samples, "gov_quota_breaches", labels, row.breached);
   }
 }
 
@@ -316,12 +349,14 @@ async function collectPrivacyMetrics(db: DB, samples: MetricSample[]): Promise<v
       count(*) FILTER (WHERE a.pii_detected = true)::text AS warned
     FROM master.attachment a
     JOIN master.tenant t ON t.id = a.tenant_id
+    WHERE a.created_at >= now() - interval '30 days'
+       OR a.pii_scanned_at >= now() - interval '30 days'
     GROUP BY t.code, a.tenant_id
   `);
 
   for (const row of rows) {
-    addSample(samples, "gov_privacy_guard_inspected_total", tenantLabels(row), row.inspected);
-    addSample(samples, "gov_privacy_guard_warned_total", tenantLabels(row), row.warned);
+    addSample(samples, "gov_privacy_guard_inspected", tenantLabels(row), row.inspected);
+    addSample(samples, "gov_privacy_guard_warned", tenantLabels(row), row.warned);
   }
 }
 
@@ -335,28 +370,29 @@ async function collectArchiveJobMetrics(db: DB, samples: MetricSample[]): Promis
     FROM log.job_log jl
     JOIN master.tenant t ON t.id = jl.tenant_id
     WHERE jl.job_type = 'partition_archive'
+      AND jl.created_at >= now() - interval '24 hours'
     GROUP BY t.code, jl.tenant_id
   `);
 
   for (const row of rows) {
-    addSample(samples, "gov_archive_jobs_completed_total", tenantLabels(row), row.completed);
-    addSample(samples, "gov_archive_jobs_failed_total", tenantLabels(row), row.failed);
+    addSample(samples, "gov_archive_jobs_completed", tenantLabels(row), row.completed);
+    addSample(samples, "gov_archive_jobs_failed", tenantLabels(row), row.failed);
   }
 }
 
 async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricSample[]): Promise<void> {
   const postingRows = await queryRows<DocumentRegistryRow>(db, sql<DocumentRegistryRow>`
     WITH fin_docs AS (
-      SELECT tenant_id, company_code_id, 'purchase_invoice'::text AS doc_type, id AS doc_id, ap_je_id AS je_id, status, is_posted
+      SELECT tenant_id, company_code_id, 'purchase_invoice'::text AS doc_type, id AS doc_id, ap_je_id AS je_id, status, is_posted, posted_at
       FROM document.purchase_invoice
       UNION ALL
-      SELECT tenant_id, company_code_id, 'payment_entry'::text AS doc_type, id AS doc_id, payment_je_id AS je_id, status, is_posted
+      SELECT tenant_id, company_code_id, 'payment_entry'::text AS doc_type, id AS doc_id, payment_je_id AS je_id, status, is_posted, posted_at
       FROM document.payment_entry
       UNION ALL
-      SELECT tenant_id, company_code_id, 'goods_receipt'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted
+      SELECT tenant_id, company_code_id, 'goods_receipt'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
       FROM document.goods_receipt
       UNION ALL
-      SELECT tenant_id, company_code_id, 'service_entry_sheet'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted
+      SELECT tenant_id, company_code_id, 'service_entry_sheet'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
       FROM document.service_entry_sheet
     )
     SELECT
@@ -370,10 +406,11 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
       ON je.tenant_id = d.tenant_id
      AND je.id = d.je_id
     WHERE (d.is_posted = true OR d.status = 'posted')
+      AND (d.posted_at IS NULL OR d.posted_at >= now() - interval '90 days')
+      AND d.je_id IS NOT NULL
+      AND je.id IS NOT NULL
       AND (
-        d.je_id IS NULL
-        OR je.id IS NULL
-        OR je.status <> 'posted'
+        je.status <> 'posted'
         OR je.source_doc_type <> d.doc_type
         OR je.source_doc_id IS DISTINCT FROM d.doc_id
       )
@@ -408,8 +445,7 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
       count(*)::text AS value
     FROM fin_docs d
     JOIN master.tenant t ON t.id = d.tenant_id
-    WHERE (d.status = 'approved' OR d.approved_at IS NOT NULL)
-      AND d.status <> 'posted'
+    WHERE d.status = 'approved'
       AND d.is_posted = false
     GROUP BY t.code, d.tenant_id, d.doc_type
   `);
@@ -423,16 +459,16 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
 
   const entityMismatchRows = await queryRows<DocumentRegistryRow>(db, sql<DocumentRegistryRow>`
     WITH fin_docs AS (
-      SELECT tenant_id, company_code_id, 'purchase_invoice'::text AS doc_type, id AS doc_id, ap_je_id AS je_id
+      SELECT tenant_id, company_code_id, 'purchase_invoice'::text AS doc_type, id AS doc_id, ap_je_id AS je_id, status, is_posted, posted_at
       FROM document.purchase_invoice
       UNION ALL
-      SELECT tenant_id, company_code_id, 'payment_entry'::text AS doc_type, id AS doc_id, payment_je_id AS je_id
+      SELECT tenant_id, company_code_id, 'payment_entry'::text AS doc_type, id AS doc_id, payment_je_id AS je_id, status, is_posted, posted_at
       FROM document.payment_entry
       UNION ALL
-      SELECT tenant_id, company_code_id, 'goods_receipt'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id
+      SELECT tenant_id, company_code_id, 'goods_receipt'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
       FROM document.goods_receipt
       UNION ALL
-      SELECT tenant_id, company_code_id, 'service_entry_sheet'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id
+      SELECT tenant_id, company_code_id, 'service_entry_sheet'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
       FROM document.service_entry_sheet
     )
     SELECT
@@ -445,7 +481,9 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
     JOIN document.journal_entry je
       ON je.tenant_id = d.tenant_id
      AND je.id = d.je_id
-    WHERE je.company_code_id IS DISTINCT FROM d.company_code_id
+    WHERE (d.is_posted = true OR d.status = 'posted')
+      AND (d.posted_at IS NULL OR d.posted_at >= now() - interval '90 days')
+      AND je.company_code_id IS DISTINCT FROM d.company_code_id
     GROUP BY t.code, d.tenant_id, d.doc_type
   `);
 
@@ -458,16 +496,16 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
 
   const bridgeRows = await queryRows<DocumentRegistryRow>(db, sql<DocumentRegistryRow>`
     WITH fin_docs AS (
-      SELECT tenant_id, 'purchase_invoice'::text AS doc_type, ap_je_id AS je_id, status, is_posted
+      SELECT tenant_id, 'purchase_invoice'::text AS doc_type, ap_je_id AS je_id, status, is_posted, posted_at
       FROM document.purchase_invoice
       UNION ALL
-      SELECT tenant_id, 'payment_entry'::text AS doc_type, payment_je_id AS je_id, status, is_posted
+      SELECT tenant_id, 'payment_entry'::text AS doc_type, payment_je_id AS je_id, status, is_posted, posted_at
       FROM document.payment_entry
       UNION ALL
-      SELECT tenant_id, 'goods_receipt'::text AS doc_type, accrual_je_id AS je_id, status, is_posted
+      SELECT tenant_id, 'goods_receipt'::text AS doc_type, accrual_je_id AS je_id, status, is_posted, posted_at
       FROM document.goods_receipt
       UNION ALL
-      SELECT tenant_id, 'service_entry_sheet'::text AS doc_type, accrual_je_id AS je_id, status, is_posted
+      SELECT tenant_id, 'service_entry_sheet'::text AS doc_type, accrual_je_id AS je_id, status, is_posted, posted_at
       FROM document.service_entry_sheet
     )
     SELECT
@@ -481,6 +519,7 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
       ON je.tenant_id = d.tenant_id
      AND je.id = d.je_id
     WHERE (d.is_posted = true OR d.status = 'posted')
+      AND (d.posted_at IS NULL OR d.posted_at >= now() - interval '90 days')
       AND (d.je_id IS NULL OR je.id IS NULL)
     GROUP BY t.code, d.tenant_id, d.doc_type
   `);
@@ -511,6 +550,7 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
      AND bps.period_number = je.period_number
     WHERE je.status = 'posted'
       AND je.source_doc_type IN ('purchase_invoice', 'payment_entry', 'goods_receipt', 'service_entry_sheet')
+      AND (je.posted_at IS NULL OR je.posted_at >= now() - interval '90 days')
       AND je.close_override_id IS NULL
       AND (
         (fp.status IN ('hard_close', 'future') AND (fp.hard_closed_at IS NULL OR je.posted_at > fp.hard_closed_at))
@@ -535,6 +575,7 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
     FROM document.purchase_invoice pi
     JOIN master.tenant t ON t.id = pi.tenant_id
     WHERE pi.status IN ('approved', 'posted', 'partially_paid', 'fully_paid')
+      AND COALESCE(pi.posted_at, pi.approved_at, pi.created_at) >= now() - interval '90 days'
       AND NOT EXISTS (
         SELECT 1
         FROM document.purchase_invoice_line pil
@@ -567,8 +608,8 @@ async function collectDocumentRegistrySyncMetrics(db: DB, samples: MetricSample[
   `);
 
   for (const row of rows) {
-    addSample(samples, "fin_doc_registry_trigger_sync_total", tenantLabels(row), row.total);
-    addSample(samples, "fin_doc_registry_trigger_sync_failed_total", tenantLabels(row), row.failed);
+    addSample(samples, "fin_doc_registry_trigger_sync_count", tenantLabels(row), row.total);
+    addSample(samples, "fin_doc_registry_trigger_sync_failed_count", tenantLabels(row), row.failed);
   }
 
   const fallbackRows = await queryRows<DocumentRegistryRow>(db, sql<DocumentRegistryRow>`
@@ -604,24 +645,38 @@ async function collectDocumentRegistrySyncMetrics(db: DB, samples: MetricSample[
   `);
 
   for (const row of fallbackRows) {
-    addSample(samples, "fin_doc_registry_status_mapping_fallback_total", {
+    addSample(samples, "fin_doc_registry_status_mapping_fallbacks", {
       ...tenantLabels(row),
       doc_type: row.doc_type ?? "unknown",
     }, row.value);
   }
 }
 
-async function collectGovernanceMetrics(db: DB, samples: MetricSample[]): Promise<void> {
-  await collectLegalHoldMetrics(db, samples);
-  await collectLegalHoldManifestMetrics(db, samples);
-  await collectQuotaMetrics(db, samples);
-  await collectPrivacyMetrics(db, samples);
-  await collectArchiveJobMetrics(db, samples);
+async function collectSection(db: DB, name: string, collect: MetricSectionCollector): Promise<MetricSectionResult> {
+  const samples: MetricSample[] = [];
+  try {
+    await collect(db, samples);
+    return { name, ok: true, samples };
+  } catch {
+    return { name, ok: false, samples: [] };
+  }
 }
 
-async function collectDocumentRegistryMetrics(db: DB, samples: MetricSample[]): Promise<void> {
-  await collectDocumentRegistryComplianceMetrics(db, samples);
-  await collectDocumentRegistrySyncMetrics(db, samples);
+async function collectGovernanceMetrics(db: DB): Promise<MetricSectionResult[]> {
+  return Promise.all([
+    collectSection(db, "governance_legal_hold", collectLegalHoldMetrics),
+    collectSection(db, "governance_legal_hold_manifest", collectLegalHoldManifestMetrics),
+    collectSection(db, "governance_quota", collectQuotaMetrics),
+    collectSection(db, "governance_privacy", collectPrivacyMetrics),
+    collectSection(db, "governance_archive_jobs", collectArchiveJobMetrics),
+  ]);
+}
+
+async function collectDocumentRegistryMetrics(db: DB): Promise<MetricSectionResult[]> {
+  return Promise.all([
+    collectSection(db, "document_registry_compliance", collectDocumentRegistryComplianceMetrics),
+    collectSection(db, "document_registry_sync", collectDocumentRegistrySyncMetrics),
+  ]);
 }
 
 export function createPlatformMetricCollector(db: DB): () => Promise<string[]> {
@@ -634,9 +689,22 @@ export function createPlatformMetricCollector(db: DB): () => Promise<string[]> {
     }
 
     const samples: MetricSample[] = [];
+    const [governanceResults, documentRegistryResults] = await Promise.all([
+      collectGovernanceMetrics(db),
+      collectDocumentRegistryMetrics(db),
+    ]);
+    const sectionResults = [...governanceResults, ...documentRegistryResults];
 
-    await collectGovernanceMetrics(db, samples);
-    await collectDocumentRegistryMetrics(db, samples);
+    for (const result of sectionResults) {
+      addSample(samples, "athyper_platform_metric_section_up", { section: result.name }, result.ok ? 1 : 0);
+      if (result.ok) {
+        samples.push(...result.samples);
+      }
+    }
+
+    if (sectionResults.length > 0 && sectionResults.every((result) => !result.ok)) {
+      throw new Error("All platform metric collection sections failed");
+    }
 
     const lines = [
       ...HELP,

@@ -20,10 +20,17 @@
 import type { RequestHandler, Router } from "express";
 import { sql, type Kysely } from "kysely";
 import { verifyBearer, resolveTenantId } from "@athyper/svc-shared";
+import { incrementRateLimit } from "../../shared/cache-utils.js";
 
 export interface FinanceRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: Kysely<any>;
+  cache?: {
+    eval?(script: string, numKeys: number, ...args: Array<string | number>): Promise<unknown>;
+    incr?(key: string): Promise<number>;
+    expire?(key: string, ttlSeconds: number): Promise<unknown>;
+    del?(key: string | string[]): Promise<unknown>;
+  };
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
@@ -31,6 +38,28 @@ export interface FinanceRouteDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     info?(event: string, fields?: Record<string, unknown>): void;
   };
+}
+
+export async function enforceWriteRateLimit(
+  cache: FinanceRouteDeps["cache"],
+  res: Parameters<RequestHandler>[1],
+  key: string,
+  limit = 30,
+  windowSec = 60,
+): Promise<boolean> {
+  if (!cache) return true;
+
+  const count = await incrementRateLimit(cache, key, windowSec).catch(() => 0);
+  if (count === 0) return true;
+  if (count <= limit) return true;
+
+  res.setHeader("Retry-After", String(windowSec));
+  res.status(429).json({
+    error: "RATE_LIMITED",
+    message: "Too many write attempts. Please wait and try again.",
+    retry_after_seconds: windowSec,
+  });
+  return false;
 }
 
 // ── Scope params ──────────────────────────────────────────────────────────────

@@ -20,6 +20,7 @@
  */
 
 import { useEffect, type ReactNode } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { registerDefaults } from "@athyper/entity-runtime/field-renderers";
 import { registerDocumentRenderers } from "@athyper/document-runtime/register";
 import {
@@ -62,6 +63,13 @@ function getCsrfToken(): string {
   return match ? decodeURIComponent(match[1]!) : "";
 }
 
+function captureTraceId(response: Response): void {
+  const traceId = response.headers.get("X-Trace-ID");
+  if (traceId && /^[0-9a-f]{32}$/i.test(traceId)) {
+    Sentry.getCurrentScope().setTag("trace_id", traceId.toLowerCase());
+  }
+}
+
 // ── BFF relay fetch adapter ───────────────────────────────────────────────────
 //
 // Wraps every API client call so requests go through /api/relay/* instead of
@@ -86,6 +94,7 @@ async function relayFetch<T>(path: string, options: RequestInit = {}): Promise<T
   }
 
   const response = await fetch(relayUrl, { ...options, method, headers });
+  captureTraceId(response);
 
   if (!response.ok) {
     let body: { errors?: Array<{ code?: string; message?: string }>; error?: string; message?: string } = {};

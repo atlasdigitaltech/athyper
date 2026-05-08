@@ -34,6 +34,14 @@ async function checkBullmqQueue(queues: unknown): Promise<void> {
   await queue.getJobCounts("wait", "delayed", "active", "paused");
 }
 
+function resolveSessionNamespaces(defaultRealm: string): string[] {
+  const configured = process.env.SESSION_NAMESPACES ?? process.env.AUTH_SESSION_NAMESPACES;
+  const namespaces = configured
+    ? configured.split(",").map((namespace) => namespace.trim()).filter(Boolean)
+    : [defaultRealm];
+  return [...new Set([...namespaces, "platform"])];
+}
+
 export async function startWorker(deps: ServerDeps): Promise<void> {
   const startedAt = Date.now();
   const { config, logger, lifecycle, db, redis, jobs, audit } = deps;
@@ -67,6 +75,9 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
     srem: (k: string, member: string) => redis.srem(k, member),
     smembers: (k: string) => redis.smembers(k),
     expire: (k: string, ttl: number) => redis.expire(k, ttl),
+    eval: (script: string, numKeys: number, ...args: Array<string | number>) =>
+      redis.eval(script, numKeys, ...args),
+    incr: (k: string) => redis.incr(k),
   };
 
   await audit.write(
@@ -84,10 +95,7 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
   const outboxWorker = createIamOutboxWorker({
     db: _db,
     cache: iamCache as unknown as import("@athyper/svc-iam").OutboxWorkerCache,
-    sessionNamespaces: [
-      config.iam.realm,                // "athyper" (default tenant realm)
-      "platform",                      // web BFF platform session namespace
-    ],
+    sessionNamespaces: resolveSessionNamespaces(config.iam.realm),
     logger,
     pollIntervalMs: config.outbox.pollIntervalMs,
   });

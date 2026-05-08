@@ -138,8 +138,8 @@ export interface SessionRouteQuery {
  * The session service stores this format; the route handler extracts `.response`.
  *
  * auth_epoch: matches master.principal.auth_epoch at write time.
- *   On every cache hit the service compares this with the current DB value.
- *   A mismatch forces immediate cache invalidation + re-resolution.
+ *   On cache hit the service compares this with a short-lived Redis epoch mirror.
+ *   A mismatch forces cache invalidation + re-resolution.
  *
  * principal_id: UUID needed for the DB auth_epoch lookup without an extra JOIN.
  */

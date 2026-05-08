@@ -17,6 +17,18 @@ export interface RecentlyViewedItem {
 
 const KEY = "neon:recently-viewed";
 const MAX = 12;
+let maxItems = MAX;
+
+export function setRecentlyViewedLimit(limit: number): void {
+  if (!Number.isFinite(limit) || limit < 1) return;
+  maxItems = Math.floor(limit);
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(readItems().slice(0, maxItems)));
+  } catch {
+    // Storage unavailable — ignore
+  }
+}
 
 export function trackRecentlyViewed(
   item: Omit<RecentlyViewedItem, "viewedAt">,
@@ -29,7 +41,7 @@ export function trackRecentlyViewed(
     const updated: RecentlyViewedItem[] = [
       { ...item, viewedAt: new Date().toISOString() },
       ...filtered,
-    ].slice(0, MAX);
+    ].slice(0, maxItems);
     localStorage.setItem(KEY, JSON.stringify(updated));
   } catch {
     // Storage unavailable — ignore

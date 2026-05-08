@@ -29,6 +29,11 @@ import {
   extractOrgHeaders,
   parsePagination,
 } from "../../shared/route-helpers.js";
+import type { CacheClient } from "../../iam/session/session.service.js";
+import {
+  resolveParameterSnapshot,
+  getIntParam,
+} from "../../iam/parameters/parameter-resolver.service.js";
 
 // ── Deps ──────────────────────────────────────────────────────────────────────
 
@@ -38,6 +43,7 @@ export interface AuditRouteDeps {
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
+  cache?: CacheClient;
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
   };
@@ -45,20 +51,24 @@ export interface AuditRouteDeps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const DEFAULT_WINDOW_DAYS = 7;
-const MAX_WINDOW_DAYS = 90;
+const DEFAULT_WINDOW_DAYS = 7;   // compile-time fallback
+const MAX_WINDOW_DAYS = 90;      // compile-time fallback
 
-function parseDateBounds(query: Record<string, unknown>): { from: Date; to: Date } {
+function parseDateBounds(
+  query: Record<string, unknown>,
+  windowDays    = DEFAULT_WINDOW_DAYS,
+  maxWindowDays = MAX_WINDOW_DAYS,
+): { from: Date; to: Date } {
   const now = new Date();
   const to = query["to"]
     ? new Date(String(query["to"]))
     : now;
   const from = query["from"]
     ? new Date(String(query["from"]))
-    : new Date(now.getTime() - DEFAULT_WINDOW_DAYS * 86_400_000);
+    : new Date(now.getTime() - windowDays * 86_400_000);
 
-  // Cap range to MAX_WINDOW_DAYS to prevent runaway scans on partitioned tables
-  const maxFrom = new Date(to.getTime() - MAX_WINDOW_DAYS * 86_400_000);
+  // Cap range to maxWindowDays to prevent runaway scans on partitioned tables
+  const maxFrom = new Date(to.getTime() - maxWindowDays * 86_400_000);
   return {
     from: from < maxFrom ? maxFrom : from,
     to,
@@ -151,7 +161,7 @@ function hashInput(row: Record<string, unknown>): string {
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
-  const { db, auth, logger } = deps;
+  const { db, auth, cache, logger } = deps;
 
   // ── GET /audit/events/export ─────────────────────────────────────────────
   //
@@ -170,8 +180,15 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
+      const auditSnap = cache
+        ? await resolveParameterSnapshot(db, cache, tenantId, "api").catch(() => null)
+        : null;
+      const windowDays    = getIntParam(auditSnap, "api.audit.default_window_days", DEFAULT_WINDOW_DAYS);
+      const maxWindowDays = getIntParam(auditSnap, "api.audit.max_window_days",     MAX_WINDOW_DAYS);
+      const exportMaxRows = getIntParam(auditSnap, "api.export.audit_max_rows",     EXPORT_MAX_ROWS);
+
       const format = req.query["format"] === "json" ? "json" : "csv";
-      const { from, to } = parseDateBounds(req.query as Record<string, unknown>);
+      const { from, to } = parseDateBounds(req.query as Record<string, unknown>, windowDays, maxWindowDays);
 
       const entityType = req.query["entityType"] as string | undefined;
       const actorId    = req.query["actorId"]    as string | undefined;
@@ -193,7 +210,7 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
         let exported  = 0;
         let batchFrom = from;
 
-        while (exported < EXPORT_MAX_ROWS) {
+        while (exported < exportMaxRows) {
           let q = db
             .selectFrom("log.audit_log as al" as never)
             .selectAll("al" as never)
@@ -251,7 +268,7 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
         let exported  = 0;
         let batchFrom = from;
 
-        while (exported < EXPORT_MAX_ROWS) {
+        while (exported < exportMaxRows) {
           let q = db
             .selectFrom("log.audit_log as al" as never)
             .selectAll("al" as never)
@@ -326,7 +343,14 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
       const { limit, offset } = parsePagination(req.query as Record<string, unknown>);
-      const { from, to } = parseDateBounds(req.query as Record<string, unknown>);
+      const auditSnap = cache
+        ? await resolveParameterSnapshot(db, cache, tenantId, "api.audit").catch(() => null)
+        : null;
+      const { from, to } = parseDateBounds(
+        req.query as Record<string, unknown>,
+        getIntParam(auditSnap, "api.audit.default_window_days", DEFAULT_WINDOW_DAYS),
+        getIntParam(auditSnap, "api.audit.max_window_days",     MAX_WINDOW_DAYS),
+      );
 
       const entityType = req.query["entityType"] as string | undefined;
       const entityId   = req.query["entityId"]   as string | undefined;
@@ -406,7 +430,14 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
       const { limit, offset } = parsePagination(req.query as Record<string, unknown>);
-      const { from, to } = parseDateBounds(req.query as Record<string, unknown>);
+      const auditSnap2 = cache
+        ? await resolveParameterSnapshot(db, cache, tenantId, "api.audit").catch(() => null)
+        : null;
+      const { from, to } = parseDateBounds(
+        req.query as Record<string, unknown>,
+        getIntParam(auditSnap2, "api.audit.default_window_days", DEFAULT_WINDOW_DAYS),
+        getIntParam(auditSnap2, "api.audit.max_window_days",     MAX_WINDOW_DAYS),
+      );
 
       const principalId    = req.query["principalId"]    as string | undefined;
       const permissionCode = req.query["permissionCode"] as string | undefined;

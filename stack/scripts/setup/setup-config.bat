@@ -96,6 +96,7 @@ if /I "!ENV_NAME!"=="staging" (
   set "TIKA_SRC=render\environments\tika-config.staging.xml"
   set "GATEWAY_TLS_SRC=gateway\environments\athyper.tls.staging.yml"
   set "WORKBENCH_SRC=gateway\environments\neon-workbench-routes.staging.yml"
+  set "METRICS_CONFIG_SRC=telemetry\metrics\config.staging.yml"
 )
 if /I "!ENV_NAME!"=="production" (
   set "MEMORYCACHE_SRC=memorycache\environments\cache.production.conf"
@@ -103,6 +104,7 @@ if /I "!ENV_NAME!"=="production" (
   set "TIKA_SRC=render\environments\tika-config.production.xml"
   set "GATEWAY_TLS_SRC=gateway\environments\athyper.tls.production.yml"
   set "WORKBENCH_SRC=gateway\environments\neon-workbench-routes.prod.yml"
+  set "METRICS_CONFIG_SRC=telemetry\metrics\config.production.yml"
 )
 if /I "!ENV_NAME!"=="local" (
   set "MEMORYCACHE_SRC=memorycache\cache.conf"
@@ -110,6 +112,7 @@ if /I "!ENV_NAME!"=="local" (
   set "TIKA_SRC=render\tika-config.xml"
   set "GATEWAY_TLS_SRC=gateway\dynamic\athyper.tls.yml"
   set "WORKBENCH_SRC=gateway\dynamic\athyper.workbench.yml"
+  set "METRICS_CONFIG_SRC=telemetry\metrics\config.yml"
 )
 
 echo.
@@ -164,10 +167,12 @@ REM telemetry
 call :pf "telemetry\logging\config.yml" "telemetry\logging\config.yml" 0
 call :pf "telemetry\logging\alloy.alloy" "telemetry\logging\alloy.alloy" 0
 call :pf "telemetry\alertmanager\config.yml.tpl" "telemetry\alertmanager\config.yml.tpl" 0
-call :pf "telemetry\metrics\config.yml" "telemetry\metrics\config.yml" 0
+call :pf "!METRICS_CONFIG_SRC!" "telemetry\metrics\config.yml" 0
+call :pf "telemetry\metrics\recording-rules.yml" "telemetry\metrics\recording-rules.yml" 0
 call :pf "telemetry\metrics\governance-alerts.yml" "telemetry\metrics\governance-alerts.yml" 0
 call :pf "telemetry\metrics\redis-alerts.yml" "telemetry\metrics\redis-alerts.yml" 0
 call :pf "telemetry\metrics\document-registry-alerts.yml" "telemetry\metrics\document-registry-alerts.yml" 0
+call :pf "telemetry\metrics\api-alerts.yml" "telemetry\metrics\api-alerts.yml" 0
 call :pf "telemetry\metrics\document-registry-slo.yml" "telemetry\metrics\document-registry-slo.yml" 0
 call :pf "telemetry\tracing\config.yml" "telemetry\tracing\config.yml" 0
 call :pf "telemetry\provisioning.env\dashboards.!ENV_NAME!.yml" "telemetry\provisioning.env\dashboards.!ENV_NAME!.yml" 0
@@ -180,7 +185,9 @@ REM ── Directory copies: CALL :pd "dir_rel" ──────────�
 call :pd "iam\themes\neon"
 call :pd "telemetry\provisioning"
 
-REM ── MANIFEST (server only: LIVE_CFG != REPO_CFG) ─────────────────────────────
+REM ── MANIFEST (server only: LIVE_CFG != REPO_CFG, skipped for --diff) ─────────
+if /I "!MODE!"=="--diff" goto :sc_no_manifest
+
 set "_LIVE_NORM=!LIVE_CFG:\=/!"
 set "_REPO_NORM=%REPO_CFG:\=/%"
 

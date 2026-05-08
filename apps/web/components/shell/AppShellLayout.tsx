@@ -19,15 +19,25 @@
  * AppNavRail (active bar color) and AppContextPanel (module accent + page dots).
  */
 
-import { useState, useCallback, type ReactNode } from "react";
+import { useState, useCallback, useEffect, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ShellLayout } from "@athyper/shell";
+import { FavoritesPanel, type FavoritesPanelTab } from "@athyper/collaboration-ui/bookmarks";
+import { useBookmarksList } from "@athyper/query";
 import { AppNavRail } from "./AppNavRail";
 import { AppContextPanel } from "./AppContextPanel";
 import { usePreferencesStore } from "@/stores/preferences/usePreferencesStore";
 import { useShellSession } from "@/components/providers/SessionProvider";
 import { getWorkbenchTheme } from "@/lib/workbench-theme";
 import { useRecentTracker } from "@/hooks/useRecentTracker";
+import {
+  getRecentItems,
+  removeRecentItem,
+  RECENT_ITEMS_CHANGED_EVENT,
+  RECENT_ITEMS_STORAGE_KEY,
+  type RecentItem,
+} from "@/lib/recent-items";
 
 // ── Notification count (shared query key with AppTopbar) ─────────────────────
 // Reads from the same cache key that AppTopbar writes via useNotificationCount
@@ -62,6 +72,7 @@ export interface AppShellLayoutProps {
 
 export function AppShellLayout({ topbar, banner, children }: AppShellLayoutProps) {
   const { bff } = useShellSession();
+  const router = useRouter();
   const { sidebarCollapsed, setSidebarCollapsed } = usePreferencesStore();
 
   // Track every route visit into the recent items store (feeds launcher Recent tab)
@@ -69,6 +80,7 @@ export function AppShellLayout({ topbar, banner, children }: AppShellLayoutProps
 
   // Which workspace key the rail has last selected
   const [activeWorkspaceKey, setActiveWorkspaceKey] = useState<string | null>(null);
+  const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
 
   // Notification count — deduped by RQ with AppTopbar
   const { data: notifData } = useUnreadCount(!!bff.activeOrg);
@@ -76,9 +88,55 @@ export function AppShellLayout({ topbar, banner, children }: AppShellLayoutProps
 
   // Panel is open when a workspace is selected AND the user hasn't collapsed it
   const panelOpen = !!activeWorkspaceKey && !sidebarCollapsed;
+  const specialPanelMode =
+    activeWorkspaceKey === "favorites" || activeWorkspaceKey === "recent"
+      ? activeWorkspaceKey
+      : null;
+  const favoritesTab: FavoritesPanelTab = specialPanelMode === "recent" ? "recent" : "bookmarks";
+
+  const {
+    groups: bookmarkGroups,
+    isLoading: bookmarksLoading,
+    error: bookmarksError,
+    removeBookmark,
+    isRemoving: bookmarkRemoving,
+  } = useBookmarksList({ enabled: panelOpen && !!specialPanelMode });
 
   // Workbench accent theme — drives active bar + module highlight colors
   const theme = getWorkbenchTheme(bff.activeWorkbench);
+
+  const refreshRecentItems = useCallback(() => {
+    setRecentItems(getRecentItems());
+  }, []);
+
+  useEffect(() => {
+    refreshRecentItems();
+
+    const onRecentChange = () => refreshRecentItems();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === RECENT_ITEMS_STORAGE_KEY) refreshRecentItems();
+    };
+
+    window.addEventListener(RECENT_ITEMS_CHANGED_EVENT, onRecentChange);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(RECENT_ITEMS_CHANGED_EVENT, onRecentChange);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [refreshRecentItems]);
+
+  const handleRecentDismiss = useCallback(
+    (href: string) => {
+      removeRecentItem(href);
+      refreshRecentItems();
+    },
+    [refreshRecentItems],
+  );
+
+  const handleFavoritesTabChange = useCallback((tab: FavoritesPanelTab) => {
+    setActiveWorkspaceKey(tab === "recent" ? "recent" : "favorites");
+    setSidebarCollapsed(false);
+  }, [setSidebarCollapsed]);
 
   const handleWorkspaceChange = useCallback(
     (key: string | null) => {
@@ -110,12 +168,31 @@ export function AppShellLayout({ topbar, banner, children }: AppShellLayoutProps
         />
       }
       panel={
-        <AppContextPanel
-          activeWorkspaceKey={activeWorkspaceKey}
-          onClose={() => setSidebarCollapsed(true)}
-          inboxCount={inboxCount}
-          accentColor={theme.accent}
-        />
+        specialPanelMode ? (
+          <FavoritesPanel
+            activeTab={favoritesTab}
+            onTabChange={handleFavoritesTabChange}
+            onClose={() => setSidebarCollapsed(true)}
+            bookmarks={bookmarkGroups}
+            bookmarksLoading={bookmarksLoading}
+            bookmarksError={bookmarksError}
+            recentItems={recentItems}
+            onNavigate={(href) => router.push(href)}
+            onRemoveBookmark={(item) => removeBookmark({
+              entityCode: item.entityCode,
+              recordId:   item.recordId,
+            })}
+            bookmarkActionPending={bookmarkRemoving}
+            onDismissRecent={handleRecentDismiss}
+          />
+        ) : (
+          <AppContextPanel
+            activeWorkspaceKey={activeWorkspaceKey}
+            onClose={() => setSidebarCollapsed(true)}
+            inboxCount={inboxCount}
+            accentColor={theme.accent}
+          />
+        )
       }
       panelOpen={panelOpen}
       topbar={topbar}

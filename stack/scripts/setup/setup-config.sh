@@ -21,8 +21,8 @@
 # source templates (e.g. cache.staging.conf → cache.conf).
 #
 # MANIFEST — written to the parent of ATHYPER_CONFIG_ROOT on the server
-#   (e.g. /opt/stack/athyper/MANIFEST). Skipped when LIVE_CFG == REPO_CFG
-#   (local dev, where both resolve to stack/config/).
+#   (e.g. /opt/stack/athyper/MANIFEST). Skipped for --diff and when
+#   LIVE_CFG == REPO_CFG (local dev, where both resolve to stack/config/).
 # ============================================================
 
 set -euo pipefail
@@ -79,6 +79,7 @@ case "$ENV_NAME" in
     TIKA_SRC="render/environments/tika-config.staging.xml"
     GATEWAY_TLS_SRC="gateway/environments/athyper.tls.staging.yml"
     WORKBENCH_SRC="gateway/environments/neon-workbench-routes.staging.yml"
+    METRICS_CONFIG_SRC="telemetry/metrics/config.staging.yml"
     ;;
   production)
     MEMORYCACHE_SRC="memorycache/environments/cache.production.conf"
@@ -86,6 +87,7 @@ case "$ENV_NAME" in
     TIKA_SRC="render/environments/tika-config.production.xml"
     GATEWAY_TLS_SRC="gateway/environments/athyper.tls.production.yml"
     WORKBENCH_SRC="gateway/environments/neon-workbench-routes.prod.yml"
+    METRICS_CONFIG_SRC="telemetry/metrics/config.production.yml"
     ;;
   *)
     # local: env-variant files happen to be the same as the canonical files
@@ -94,6 +96,7 @@ case "$ENV_NAME" in
     TIKA_SRC="render/tika-config.xml"
     GATEWAY_TLS_SRC="gateway/dynamic/athyper.tls.yml"
     WORKBENCH_SRC="gateway/dynamic/athyper.workbench.yml"
+    METRICS_CONFIG_SRC="telemetry/metrics/config.yml"
     ;;
 esac
 
@@ -141,10 +144,12 @@ FILE_MAP["memorycache/redis-acl.conf.tpl"]="memorycache/redis-acl.conf"
 FILE_MAP["telemetry/logging/config.yml"]="telemetry/logging/config.yml"
 FILE_MAP["telemetry/logging/alloy.alloy"]="telemetry/logging/alloy.alloy"
 FILE_MAP["telemetry/alertmanager/config.yml.tpl"]="telemetry/alertmanager/config.yml.tpl"
-FILE_MAP["telemetry/metrics/config.yml"]="telemetry/metrics/config.yml"
+FILE_MAP["$METRICS_CONFIG_SRC"]="telemetry/metrics/config.yml"
+FILE_MAP["telemetry/metrics/recording-rules.yml"]="telemetry/metrics/recording-rules.yml"
 FILE_MAP["telemetry/metrics/governance-alerts.yml"]="telemetry/metrics/governance-alerts.yml"
 FILE_MAP["telemetry/metrics/redis-alerts.yml"]="telemetry/metrics/redis-alerts.yml"
 FILE_MAP["telemetry/metrics/document-registry-alerts.yml"]="telemetry/metrics/document-registry-alerts.yml"
+FILE_MAP["telemetry/metrics/api-alerts.yml"]="telemetry/metrics/api-alerts.yml"
 FILE_MAP["telemetry/metrics/document-registry-slo.yml"]="telemetry/metrics/document-registry-slo.yml"
 FILE_MAP["telemetry/tracing/config.yml"]="telemetry/tracing/config.yml"
 # Grafana: env-specific dashboard provisioning config
@@ -305,7 +310,7 @@ done
 # ── MANIFEST ──────────────────────────────────────────────────────────────────
 # Written on server only (LIVE_CFG != REPO_CFG). Preserves initialized_at and
 # initialized_from_commit across runs so first-boot timestamp is not overwritten.
-if [[ "$LIVE_CFG" != "$REPO_CFG" ]] && [[ -d "$STACK_RUNTIME_ROOT" ]]; then
+if [[ "$LIVE_CFG" != "$REPO_CFG" ]] && [[ "$MODE" != "--diff" ]] && [[ -d "$STACK_RUNTIME_ROOT" ]]; then
   GIT_SHA="$(git -C "$STACK_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   INIT_AT="$(grep -m1 '^initialized_at=' "$MANIFEST_FILE" 2>/dev/null | cut -d= -f2- || date -Iseconds)"
   INIT_COMMIT="$(grep -m1 '^initialized_from_commit=' "$MANIFEST_FILE" 2>/dev/null | cut -d= -f2- || echo "$GIT_SHA")"

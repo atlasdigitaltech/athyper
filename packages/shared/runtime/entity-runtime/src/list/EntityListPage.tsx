@@ -117,6 +117,11 @@ import { ColumnFilterHeader } from "./ColumnFilterHeader";
 import { describeVirtualFilter, isVirtualFilter } from "./virtualFilterLabels";
 import { RuntimeStatusText, listTypography, runtimeStatusDotClass } from "./listPresentation";
 
+function getCsrfToken(): string {
+  const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]!) : "";
+}
+
 export interface EntityListPageProps {
   entityCode: string;
 }
@@ -780,7 +785,7 @@ function ListSettingsMenu({ entityCode, onReload, reloading = false, operations 
       try {
         const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}/export`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
           body: JSON.stringify({ format: "csv", selectionMode: "all" }),
         });
         const data = await res.json().catch(() => ({})) as { downloadUrl?: string };
@@ -1197,7 +1202,7 @@ function BulkActionDialog({
           try {
             const res = await fetch(`/api/records/${entityCode}/bulk-preflight`, {
               method:  "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
               body:    JSON.stringify({ action: actionCode, recordIds: selectedIds }),
             });
             if (!res.ok) return [actionCode, null] as const;
@@ -1228,7 +1233,7 @@ function BulkActionDialog({
     try {
       const res = await fetch(`/api/records/${entityCode}/bulk-preflight`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body:    JSON.stringify({ action, recordIds: selectedIds }),
       });
       if (!res.ok) throw new Error(`Preflight failed: ${res.status}`);
@@ -1262,7 +1267,7 @@ function BulkActionDialog({
     try {
       const res = await fetch(`/api/records/${entityCode}/bulk-action`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body:    JSON.stringify({ action: activeAction, recordIds: selectedIds }),
       });
       if (!res.ok) throw new Error(`Action failed: ${res.status}`);
@@ -1563,7 +1568,7 @@ function RowActionMenu({
       const code = action.permissionCode.split(".").pop() ?? action.permissionCode;
       await fetch(`/api/relay/api/records/${entityCode}/${recordId}/action/${code}`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body:    JSON.stringify({}),
       });
     } finally {
@@ -2470,6 +2475,18 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                 const r      = row as Record<string, unknown>;
                 const rid    = String(r.id ?? "");
                 const navId  = resolveRecordNavId(r, navFieldNames);
+                const displayName =
+                  normalizeNavValue(r[compactTitleFieldName]) ??
+                  normalizeNavValue(r.name) ??
+                  normalizeNavValue(r[titleKey]) ??
+                  normalizeNavValue(r[codeFieldName]) ??
+                  rid;
+                const recordCode =
+                  normalizeNavValue(r[codeFieldName]) ??
+                  normalizeNavValue(r.code) ??
+                  normalizeNavValue(r.document_no) ??
+                  normalizeNavValue(r.document_number) ??
+                  normalizeNavValue(r.number);
                 return (
                   <RowMetaStrip
                     row={r}
@@ -2480,6 +2497,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                     commentHasOpen={commentCountMap[rid]?.hasOpen ?? false}
                     onBookmarkToggle={toggleBookmark}
                     bookmarkPending={bookmarkPending}
+                    bookmarkSnapshot={{ displayName, recordCode }}
                     recordNavId={navId && navId !== rid ? navId : undefined}
                   />
                 );

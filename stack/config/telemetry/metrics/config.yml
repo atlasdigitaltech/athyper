@@ -21,9 +21,11 @@ global:
   scrape_timeout: 10s
 
 rule_files:
+  - recording-rules.yml
   - governance-alerts.yml
   - redis-alerts.yml
   - document-registry-alerts.yml
+  - api-alerts.yml
   # NOTE: document-registry-slo.yml is a specification document, not Prometheus-native.
   # It uses a custom recording_rules/slos YAML format. Do not add it to rule_files.
 

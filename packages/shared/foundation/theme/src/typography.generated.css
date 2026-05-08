@@ -22,7 +22,7 @@
   --doc-field-label-weight: 600;
   --doc-field-label-tracking: 0.10em;
 
-  --doc-compact-code-size: 0.5rem;
+  --doc-compact-code-size: 0.5625rem;
   --doc-compact-code-line-height: 1;
   --doc-compact-code-weight: 500;
   --doc-compact-code-tracking: 0.04em;
@@ -95,6 +95,7 @@
     line-height: var(--doc-action-line-height);
   }
 
+  /* Preferred short alias for field-label-sized UI text. */
   .text-doc-label {
     font-size: var(--doc-field-label-size);
     line-height: var(--doc-field-label-line-height);

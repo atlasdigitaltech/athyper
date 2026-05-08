@@ -53,6 +53,7 @@ import {
   extractOrgHeaders,
   parsePagination,
 } from "../../shared/route-helpers.js";
+import type { CacheClient } from "../../iam/session/session.service.js";
 
 // ── Deps ──────────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,7 @@ export interface IntegrationRouteDeps {
     warn?(event: string, fields?: Record<string, unknown>): void;
     error(event: string, fields?: Record<string, unknown>): void;
   };
+  cache?: CacheClient;
   /**
    * Optional AES-256-GCM field encryption for connector_instance.config.
    * When provided, credential fields (keys matching /secret|password|key|token|credential/i)

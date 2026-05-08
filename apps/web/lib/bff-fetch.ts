@@ -1,5 +1,7 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
+
 /**
  * bff-fetch — CSRF-aware fetch wrapper for BFF API routes.
  *
@@ -35,6 +37,13 @@ export class BffError extends Error {
   }
 }
 
+function captureTraceId(response: Response): void {
+  const traceId = response.headers.get("X-Trace-ID");
+  if (traceId && /^[0-9a-f]{32}$/i.test(traceId)) {
+    Sentry.getCurrentScope().setTag("trace_id", traceId.toLowerCase());
+  }
+}
+
 export async function bffFetch<T = unknown>(
   url: string,
   options: BffFetchOptions = {},
@@ -60,6 +69,7 @@ export async function bffFetch<T = unknown>(
   }
 
   const res = await fetch(url, init);
+  captureTraceId(res);
 
   if (!res.ok) {
     let message = res.statusText;

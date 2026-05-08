@@ -28,7 +28,9 @@ import {
   resolvePrincipalIdWithJit,
   resolveFieldMap,
   resolveArrayColumns,
+  resolveJsonColumns,
   coerceArrayFields,
+  serializeJsonFields,
   emitOutboxEvent,
   mapPostgresBusinessError,
 } from "@athyper/svc-shared";
@@ -43,6 +45,15 @@ import {
   getLockStatus,
   resolveConcurrencyPolicy,
 } from "@athyper/svc-shared";
+import type { CacheClient } from "../../iam/session/session.service.js";
+import {
+  resolveParameterSnapshot,
+  getIntParam,
+} from "../../iam/parameters/parameter-resolver.service.js";
+
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE     = 100;
+const DEFAULT_LOCK_TTL_SECONDS = 300;
 
 export interface RecordsRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,6 +65,7 @@ export interface RecordsRouteDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
   };
+  cache?: CacheClient;
 }
 
 // ── Entity table resolver ─────────────────────────────────────────────────────
@@ -310,7 +322,7 @@ function resolveRelativeRange(token: string): { from: string; to: string } | nul
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Router {
-  const { db, auth, logger } = deps;
+  const { db, auth, logger, cache } = deps;
 
   // Best-effort insert into log.activity_log. Never throws — main operation already succeeded.
   const logActivityRecord = async (
@@ -359,9 +371,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
 
-      const page     = Math.max(1, parseInt(String(req.query["page"]      ?? "1"),  10) || 1);
-      const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query["page_size"] ?? "20"), 10) || 20));
-      const offset   = (page - 1) * pageSize;
+      const page          = Math.max(1, parseInt(String(req.query["page"] ?? "1"), 10) || 1);
+      const rawPageSize   = parseInt(String(req.query["page_size"] ?? "0"), 10) || 0;
 
       const searchTerm = typeof req.query["q"] === "string" && req.query["q"].trim()
         ? req.query["q"].trim()
@@ -421,6 +432,14 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      const paginationSnap = tenantId && cache
+        ? await resolveParameterSnapshot(db, cache, tenantId, "api.pagination").catch(() => null)
+        : null;
+      const defaultPageSize = getIntParam(paginationSnap, "api.pagination.default_page_size", DEFAULT_PAGE_SIZE);
+      const maxPageSize     = getIntParam(paginationSnap, "api.pagination.max_page_size",     MAX_PAGE_SIZE);
+      const pageSize = Math.min(maxPageSize, Math.max(1, rawPageSize || defaultPageSize));
+      const offset   = (page - 1) * pageSize;
 
       let fieldMap = await resolveFieldMap(db, listCode);
 
@@ -1053,6 +1072,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         }
       }
       coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
+      serializeJsonFields(mappedData, await resolveJsonColumns(db, entityCode));
 
       // Inject parent FK when entity is a child (feature_flags.parent_fk + parent_scope).
       // The caller passes parent_id in body.data; we resolve the physical FK column from
@@ -1436,6 +1456,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         if (columnName && !IMMUTABLE_COLS.has(columnName)) mappedData[columnName] = value;
       }
       coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
+      serializeJsonFields(mappedData, await resolveJsonColumns(db, entityCode));
 
       // Resolve UUID from business key when caller passes a canonical key
       const physicalId = UUID_RE.test(id)
@@ -1610,6 +1631,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         mappedData[columnName] = value;
       }
       coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
+      serializeJsonFields(mappedData, await resolveJsonColumns(db, entityCode));
 
       mappedData.updated_by = principalId ?? undefined;
       mappedData.updated_at = new Date().toISOString();
@@ -2941,7 +2963,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const body      = (req.body ?? {}) as Record<string, unknown>;
       const sessionId = typeof body["session_id"] === "string" ? body["session_id"] : undefined;
 
-      const policy    = resolveConcurrencyPolicy(table.concurrency_policy);
+      const lockSnap  = cache
+        ? await resolveParameterSnapshot(db, cache, tenantId, "jobs.editlock").catch(() => null)
+        : null;
+      const defaultLockTtl = getIntParam(lockSnap, "jobs.editlock.default_ttl_seconds", DEFAULT_LOCK_TTL_SECONDS);
+      const policy    = resolveConcurrencyPolicy(table.concurrency_policy, { lockTtlSeconds: defaultLockTtl });
       const ttl       = policy.lockTtlSeconds;
 
       const result = await acquireLock(db, { tenantId, entityName: entityCode, recordId, lockedBy: principalId, sessionId, ttlSeconds: ttl });

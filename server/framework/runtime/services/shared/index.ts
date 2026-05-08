@@ -2,3 +2,5 @@ export * from "./route-helpers.js";
 export * from "./outbox.js";
 export * from "./edit-lock.service.js";
 export * from "./fx-rate.service.js";
+export * from "./tracing.js";
+export * from "./cache-utils.js";

@@ -173,7 +173,6 @@ __pycache__/
 
 # Generated (output dirs only — do NOT ignore source packages)
 **/generated/
-!server/framework/adapters/db/src/generated/
 **/codegen/
 **/.prisma/
 

@@ -21,5 +21,15 @@ export {
   type DocumentAttachmentsTabProps,
   type DocumentAttachmentItem,
 } from "./attachments/DocumentAttachmentsTab";
+export {
+  BookmarkToggle,
+  FavoritesPanel,
+  type BookmarkToggleProps,
+  type FavoritesPanelProps,
+  type FavoritesPanelTab,
+  type FavoriteBookmarkItem,
+  type FavoriteBookmarkGroup,
+  type FavoriteRecentItem,
+} from "./bookmarks";
 export { useCommentAttachments } from "./hooks/attachments";
 export type { StagedAttachment, CommentAttachmentItem } from "./hooks/attachments";

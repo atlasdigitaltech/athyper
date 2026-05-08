@@ -30,21 +30,21 @@ groups:
           summary: "Archive job backlog is critical ({{ $value }} pending)"
           description: "The archive job queue has exceeded 500 pending jobs. Immediate investigation required."
 
-      - alert: ArchiveJobFailureRate
-        expr: rate(gov_archive_jobs_failed_total[5m]) > 0.1
-        for: 3m
+      - alert: ArchiveJobFailuresHigh
+        expr: gov_archive_jobs_failed > 10
+        for: 5m
         labels:
           severity: warning
           team: platform
         annotations:
-          summary: "Archive job failure rate elevated"
-          description: "Archive jobs are failing at >0.1/s for 3+ minutes."
+          summary: "Archive job failures are elevated"
+          description: "More than 10 partition archive jobs failed in the recent monitoring window."
 
   - name: governance_legal_holds
     interval: 30s
     rules:
       - alert: LegalHoldCreated
-        expr: increase(gov_legal_hold_created_total[5m]) > 0
+        expr: clamp_min(delta(gov_legal_holds_created[5m]), 0) > 0
         labels:
           severity: info
           team: compliance
@@ -53,7 +53,7 @@ groups:
           description: "A new legal hold was issued (source={{ $labels.source }}, scope={{ $labels.scope }}). Retention/tiering frozen for affected scope."
 
       - alert: LegalHoldReleased
-        expr: increase(gov_legal_hold_released_total[5m]) > 0
+        expr: clamp_min(delta(gov_legal_holds_released[5m]), 0) > 0
         labels:
           severity: info
           team: compliance
@@ -72,7 +72,7 @@ groups:
           description: "Over 100 archive manifests are under legal hold. Review hold scopes for potential over-retention."
 
       - alert: LegalHoldOverlapDetected
-        expr: gov_legal_hold_overlap_total > 5
+        expr: gov_legal_hold_overlaps > 5
         labels:
           severity: warning
           team: compliance
@@ -84,7 +84,7 @@ groups:
     interval: 15s
     rules:
       - alert: QuotaBreached
-        expr: gov_quota_breach_total > 0
+        expr: gov_quota_breaches > 0
         labels:
           severity: warning
           team: platform
@@ -106,17 +106,17 @@ groups:
     interval: 30s
     rules:
       - alert: PrivacyGuardPiiDetectionSpike
-        expr: rate(gov_privacy_guard_warned_total[5m]) > 1
+        expr: clamp_min(delta(gov_privacy_guard_warned[5m]), 0) > 300
         for: 3m
         labels:
           severity: warning
           team: security
         annotations:
           summary: "Privacy guard detecting PII at high rate"
-          description: "The attachment extraction worker is detecting >1 PII-positive attachment/s. Check upload sources for PII exposure."
+          description: "The attachment extraction worker detected more than 300 PII-positive attachments in 5 minutes. Check upload sources for PII exposure."
 
       - alert: PrivacyGuardDetectionRate
-        expr: rate(gov_privacy_guard_warned_total[5m]) / clamp_min(rate(gov_privacy_guard_inspected_total[5m]), 1) > 0.5
+        expr: clamp_min(delta(gov_privacy_guard_warned[5m]), 0) / clamp_min(delta(gov_privacy_guard_inspected[5m]), 1) > 0.5 and delta(gov_privacy_guard_inspected[5m]) >= 10
         for: 10m
         labels:
           severity: warning
@@ -137,3 +137,46 @@ groups:
         annotations:
           summary: "{{ $value }} manifests are purge-ready but not purged"
           description: "Archive manifests have been eligible for purge for >1h. Check purge worker health or approval queues."
+
+  - name: telemetry_metric_collectors
+    interval: 30s
+    rules:
+      - alert: PlatformMetricCollectorDown
+        expr: athyper_metric_collector_up{name="platform"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Platform metric collector is failing"
+          description: "The /metrics live platform collector failed for 2+ minutes. Governance and document-registry alert inputs may be stale or absent."
+
+      - alert: PlatformMetricCollectorMissing
+        expr: absent(athyper_metric_collector_up{name="platform"})
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Platform metric collector is missing"
+          description: "Prometheus is not receiving athyper_metric_collector_up{name=\"platform\"}. Check athyper-api /metrics registration and scrape health."
+
+      - alert: PlatformMetricCollectorStale
+        expr: time() - athyper_metric_collector_last_success_timestamp_seconds{name="platform"} > 120
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Platform metric collector success timestamp is stale"
+          description: "The platform collector has not completed successfully for more than 2 minutes."
+
+      - alert: PlatformMetricSectionDown
+        expr: athyper_platform_metric_section_up == 0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Platform metric section is failing ({{ $labels.section }})"
+          description: "A platform metric sub-collector failed for 5+ minutes while other sections may still be scraping."

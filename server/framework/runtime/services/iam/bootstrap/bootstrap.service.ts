@@ -30,6 +30,7 @@ import type {
   BootstrapEntity,
 } from "../session/session.types.js";
 import type { CacheClient, CacheMetrics } from "../session/session.service.js";
+import { addTrackedKey } from "../../shared/cache-utils.js";
 
 const BOOTSTRAP_CACHE_TTL_SEC = 300; // 5 min
 
@@ -43,14 +44,9 @@ type AnyDb = Record<string, any>;
  * Used as part of the cache key so the key busts when org membership changes.
  */
 function tenantHash(aliases: string[]): string {
-  // Simple djb2-style hash over the sorted concatenation — no crypto needed here.
-  const str = [...aliases].sort().join("|");
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) + h) ^ str.charCodeAt(i);
-    h = h >>> 0; // keep unsigned 32-bit
-  }
-  return h.toString(16);
+  // Encode the canonical alias list directly so different org sets cannot collide.
+  const canonical = JSON.stringify([...aliases].sort());
+  return Buffer.from(canonical).toString("base64url") || "empty";
 }
 
 /**
@@ -125,35 +121,29 @@ export function createBootstrapService(deps: BootstrapServiceDeps): BootstrapSer
 
     // ── Total delegation count across all tenants ──────────────────────────────
     // Aggregate non-revoked, non-expired grants where the user is the delegate.
-    // We query per resolved tenantId to stay within the principal's scope.
     let delegation_count = 0;
-    for (const tenant of tenants) {
-      const tenantRow = await db
-        .selectFrom("master.tenant")
-        .select("id")
-        .where("realm_key", "=", realmKey)
-        .where("code", "=", tenant.code)
-        .executeTakeFirst();
-      if (!tenantRow) continue;
-
-      const principalRow = await db
-        .selectFrom("master.principal_identity_binding as pab")
-        .select("pab.principal_id")
-        .where("pab.subject_id", "=", sub)
-        .where("pab.provider_code", "=", "keycloak")
-        .where("pab.tenant_id", "=", tenantRow.id)
-        .executeTakeFirst();
-      if (!principalRow) continue;
-
+    const tenantCodes = tenants.map((tenant) => tenant.code);
+    if (tenantCodes.length > 0) {
       const countRow = await db
-        .selectFrom("master.delegation_grant")
+        .selectFrom("master.tenant as t")
+        .innerJoin("master.principal_identity_binding as pab", (join) =>
+          join
+            .onRef("pab.tenant_id", "=", "t.id")
+            .on("pab.subject_id", "=", sub)
+            .on("pab.provider_code", "=", "keycloak"),
+        )
+        .innerJoin("master.delegation_grant as dg", (join) =>
+          join
+            .onRef("dg.tenant_id", "=", "t.id")
+            .onRef("dg.delegate_id", "=", "pab.principal_id"),
+        )
         .select((eb) => [eb.fn.countAll<number>().as("cnt")])
-        .where("delegate_id", "=", principalRow.principal_id)
-        .where("tenant_id", "=", tenantRow.id)
-        .where("is_revoked", "=", false)
-        .where("expires_at", ">", sql`now()`)
+        .where("t.realm_key", "=", realmKey)
+        .where("t.code", "in", tenantCodes)
+        .where("dg.is_revoked", "=", false)
+        .where("dg.expires_at", ">", sql`now()`)
         .executeTakeFirst();
-      delegation_count += countRow?.cnt ?? 0;
+      delegation_count = Number(countRow?.cnt ?? 0);
     }
 
     const response: BootstrapResponse = {
@@ -168,10 +158,7 @@ export function createBootstrapService(deps: BootstrapServiceDeps): BootstrapSer
     // P2: Track in per-principal set for SMEMBERS-based bulk invalidation.
     // Set TTL is refreshed on every write so it lives as long as any bootstrap
     // entry for this sub remains active.
-    if (typeof cache.sadd === "function" && typeof cache.expire === "function") {
-      await cache.sadd(`bootstrap_keys:${sub}`, cacheKey);
-      await cache.expire(`bootstrap_keys:${sub}`, BOOTSTRAP_CACHE_TTL_SEC);
-    }
+    await addTrackedKey(cache, `bootstrap_keys:${sub}`, cacheKey, BOOTSTRAP_CACHE_TTL_SEC);
 
     return response;
   }

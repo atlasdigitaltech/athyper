@@ -109,7 +109,7 @@
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
       "targets": [
-        { "expr": "gov_quota_breach_total{tenant=~\"$tenant\"}", "legendFormat": "{{ quota_key }}" }
+        { "expr": "gov_quota_breaches{tenant=~\"$tenant\"}", "legendFormat": "{{ quota_key }}" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -128,7 +128,7 @@
       "type": "stat",
       "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
       "targets": [
-        { "expr": "increase(gov_privacy_guard_warned_total{tenant=~\"$tenant\"}[1h])", "legendFormat": "Detected (1h)" }
+        { "expr": "clamp_min(delta(gov_privacy_guard_warned{tenant=~\"$tenant\"}[1h]), 0)", "legendFormat": "Detected (1h)" }
       ],
       "fieldConfig": {
         "defaults": {
@@ -147,8 +147,8 @@
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
       "targets": [
-        { "expr": "rate(gov_archive_jobs_completed_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Completed/s" },
-        { "expr": "rate(gov_archive_jobs_failed_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Failed/s" }
+        { "expr": "gov_archive_jobs_completed{tenant=~\"$tenant\"}", "legendFormat": "Completed (24h)" },
+        { "expr": "gov_archive_jobs_failed{tenant=~\"$tenant\"}", "legendFormat": "Failed (24h)" }
       ]
     },
     {
@@ -157,9 +157,9 @@
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
       "targets": [
-        { "expr": "increase(gov_legal_hold_created_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Created" },
-        { "expr": "increase(gov_legal_hold_released_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Released" },
-        { "expr": "gov_legal_hold_overlap_total{tenant=~\"$tenant\"}", "legendFormat": "Active overlaps" }
+        { "expr": "clamp_min(delta(gov_legal_holds_created{tenant=~\"$tenant\"}[5m]), 0)", "legendFormat": "Created" },
+        { "expr": "clamp_min(delta(gov_legal_holds_released{tenant=~\"$tenant\"}[5m]), 0)", "legendFormat": "Released" },
+        { "expr": "gov_legal_hold_overlaps{tenant=~\"$tenant\"}", "legendFormat": "Active overlaps" }
       ]
     },
     {
@@ -189,8 +189,8 @@
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
       "targets": [
-        { "expr": "rate(gov_privacy_guard_inspected_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "Inspected/s" },
-        { "expr": "rate(gov_privacy_guard_warned_total{tenant=~\"$tenant\"}[5m])", "legendFormat": "PII detected/s" }
+        { "expr": "clamp_min(delta(gov_privacy_guard_inspected{tenant=~\"$tenant\"}[5m]), 0)", "legendFormat": "Inspected (5m)" },
+        { "expr": "clamp_min(delta(gov_privacy_guard_warned{tenant=~\"$tenant\"}[5m]), 0)", "legendFormat": "PII detected (5m)" }
       ]
     },
     {
@@ -201,7 +201,7 @@
       "targets": [
         { "expr": "gov_manifests_held{tenant=~\"$tenant\"}", "legendFormat": "Held" },
         { "expr": "gov_manifests_purge_ready{tenant=~\"$tenant\"}", "legendFormat": "Purge-ready" },
-        { "expr": "gov_legal_hold_overlap_total{tenant=~\"$tenant\"}", "legendFormat": "Overlaps" }
+        { "expr": "gov_legal_hold_overlaps{tenant=~\"$tenant\"}", "legendFormat": "Overlaps" }
       ],
       "fieldConfig": { "defaults": {} }
     },
@@ -211,8 +211,8 @@
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
       "targets": [
-        { "expr": "gov_legal_hold_created_total{tenant=~\"$tenant\"}", "legendFormat": "Created total" },
-        { "expr": "gov_legal_hold_released_total{tenant=~\"$tenant\"}", "legendFormat": "Released total" }
+        { "expr": "gov_legal_holds_created{tenant=~\"$tenant\"}", "legendFormat": "Created" },
+        { "expr": "gov_legal_holds_released{tenant=~\"$tenant\"}", "legendFormat": "Released" }
       ]
     },
     {
@@ -221,8 +221,8 @@
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
       "targets": [
-        { "expr": "gov_archive_jobs_completed_total{tenant=~\"$tenant\"}", "legendFormat": "Completed" },
-        { "expr": "gov_archive_jobs_failed_total{tenant=~\"$tenant\"}", "legendFormat": "Failed" }
+        { "expr": "gov_archive_jobs_completed{tenant=~\"$tenant\"}", "legendFormat": "Completed (24h)" },
+        { "expr": "gov_archive_jobs_failed{tenant=~\"$tenant\"}", "legendFormat": "Failed (24h)" }
       ]
     },
     {
@@ -231,8 +231,8 @@
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
       "targets": [
-        { "expr": "gov_privacy_guard_inspected_total{tenant=~\"$tenant\"}", "legendFormat": "Inspected" },
-        { "expr": "gov_privacy_guard_warned_total{tenant=~\"$tenant\"}", "legendFormat": "PII detected" }
+        { "expr": "gov_privacy_guard_inspected{tenant=~\"$tenant\"}", "legendFormat": "Inspected (30d)" },
+        { "expr": "gov_privacy_guard_warned{tenant=~\"$tenant\"}", "legendFormat": "PII detected (30d)" }
       ]
     }
   ]

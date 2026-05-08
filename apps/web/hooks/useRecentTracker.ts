@@ -17,7 +17,10 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { pushRecentItem, type RecordFamily } from "@/lib/recent-items";
+import { pushRecentItem, setRecentItemsLimit, type RecordFamily } from "@/lib/recent-items";
+import { setRecentlyViewedLimit } from "@/lib/recently-viewed";
+
+const RECENT_RECORD_SNAPSHOT_EVENT = "athyper:recent-record-snapshot";
 
 // ── Static route map ──────────────────────────────────────────────────────────
 //
@@ -70,15 +73,56 @@ const REF_CODE_RE = /^[A-Z]{2,10}-\d+$/;
 
 function humanise(segment: string): string {
   return segment
-    .replace(/-/g, " ")
+    .replace(/[_-]/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function safeDecode(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
 }
 
 interface ResolvedRoute {
   label: string;
   refCode?: string;
+  entityCode?: string;
+  entityLabel?: string;
+  recordCode?: string;
+  recordName?: string;
   moduleCode?: string;
   recordFamily: RecordFamily;
+}
+
+interface RecentRecordSnapshotDetail {
+  href?: unknown;
+  label?: unknown;
+  refCode?: unknown;
+  entityCode?: unknown;
+  entityLabel?: unknown;
+  recordCode?: unknown;
+  recordName?: unknown;
+  moduleCode?: unknown;
+  recordFamily?: unknown;
+}
+
+function nonBlankString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function recordFamilyFromSnapshot(value: unknown): RecordFamily {
+  if (
+    value === "master" ||
+    value === "document" ||
+    value === "ledger" ||
+    value === "page" ||
+    value === "module"
+  ) {
+    return value;
+  }
+  return "document";
 }
 
 function resolveRoute(pathname: string): ResolvedRoute | null {
@@ -101,13 +145,16 @@ function resolveRoute(pathname: string): ResolvedRoute | null {
   // /app/[entity]/[id] — record detail
   const appDetailMatch = pathname.match(/^\/app\/([^/]+)\/([^/]+)$/);
   if (appDetailMatch) {
-    const entity = appDetailMatch[1]!;
-    const id = appDetailMatch[2]!;
+    const entity = safeDecode(appDetailMatch[1]!);
+    const id = safeDecode(appDetailMatch[2]!);
     if (id === "new") return null; // skip creation forms
     const refCode = REF_CODE_RE.test(id) ? id : undefined;
     return {
       label: refCode ?? humanise(id),
       refCode,
+      entityCode: entity,
+      entityLabel: humanise(entity),
+      recordCode: id,
       recordFamily: "document",
     };
   }
@@ -115,8 +162,11 @@ function resolveRoute(pathname: string): ResolvedRoute | null {
   // /app/[entity] — entity list page
   const appEntityMatch = pathname.match(/^\/app\/([^/]+)$/);
   if (appEntityMatch) {
+    const entity = safeDecode(appEntityMatch[1]!);
     return {
-      label: humanise(appEntityMatch[1]!),
+      label: humanise(entity),
+      entityCode: entity,
+      entityLabel: humanise(entity),
       recordFamily: "page",
     };
   }
@@ -159,6 +209,23 @@ export function useRecentTracker() {
   const prevPath = useRef<string>("");
 
   useEffect(() => {
+    let cancelled = false;
+    fetch("/api/iam/parameters/effective?namespace=ux.recents", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : { values: {} }))
+      .then((body: { values?: Record<string, unknown> }) => {
+        if (cancelled) return;
+        const navLimit = Number(body.values?.["ux.recents.max_nav_items"]);
+        if (Number.isFinite(navLimit) && navLimit > 0) setRecentItemsLimit(navLimit);
+        const recordLimit = Number(body.values?.["ux.recents.max_record_items"]);
+        if (Number.isFinite(recordLimit) && recordLimit > 0) setRecentlyViewedLimit(recordLimit);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!pathname || pathname === prevPath.current) return;
     prevPath.current = pathname;
 
@@ -179,8 +246,40 @@ export function useRecentTracker() {
       href: pathname,
       label: resolved.label,
       refCode: resolved.refCode,
+      entityCode: resolved.entityCode,
+      entityLabel: resolved.entityLabel,
+      recordCode: resolved.recordCode,
+      recordName: resolved.recordName,
       moduleCode: resolved.moduleCode,
       recordFamily: resolved.recordFamily,
     });
   }, [pathname]);
+
+  useEffect(() => {
+    const handleRecordSnapshot = (event: Event) => {
+      const detail = (event as CustomEvent<RecentRecordSnapshotDetail>).detail;
+      if (!detail) return;
+
+      const href = nonBlankString(detail.href);
+      if (!href) return;
+
+      const recordCode = nonBlankString(detail.recordCode) ?? nonBlankString(detail.refCode);
+      const recordName = nonBlankString(detail.recordName);
+
+      pushRecentItem({
+        href,
+        label: nonBlankString(detail.label) ?? recordName ?? recordCode ?? href,
+        refCode: nonBlankString(detail.refCode) ?? recordCode,
+        entityCode: nonBlankString(detail.entityCode),
+        entityLabel: nonBlankString(detail.entityLabel),
+        recordCode,
+        recordName,
+        moduleCode: nonBlankString(detail.moduleCode),
+        recordFamily: recordFamilyFromSnapshot(detail.recordFamily),
+      });
+    };
+
+    window.addEventListener(RECENT_RECORD_SNAPSHOT_EVENT, handleRecordSnapshot);
+    return () => window.removeEventListener(RECENT_RECORD_SNAPSHOT_EVENT, handleRecordSnapshot);
+  }, []);
 }

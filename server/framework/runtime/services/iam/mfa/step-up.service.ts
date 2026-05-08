@@ -6,14 +6,14 @@
  * payment release, security changes) without requiring a full re-authentication.
  *
  * Flow:
- *   1. Service calls requireStepUp(cache, sub, 'iam_admin', res)
+ *   1. Service calls requireStepUp(cache, sub, tenantId, 'iam_admin', res)
  *   2. If elevation key missing → 403 { error: 'STEP_UP_REQUIRED', action_class }
  *   3. Client redirects user to MFA challenge UI
  *   4. After successful MFA challenge, BFF calls POST /api/iam/mfa/elevate
- *      which calls stepUpService.grantElevation(sub, actionClass)
+ *      which calls stepUpService.grantElevation(sub, tenantId, actionClass)
  *   5. Client retries the original request — elevation key now present → proceeds
  *
- * Redis key: `mfa_elevation:{sub}:{action_class}`
+ * Redis key: `mfa_elevation:{sub}:{tenant_id}:{action_class}`
  * Default TTL: 600 seconds (10 minutes)
  *
  * Logout clears all mfa_elevation:{sub}:* keys (handled in logout.routes.ts).
@@ -52,7 +52,7 @@ export interface StepUpService {
    * given action class. Returns false otherwise — the caller must send a 403
    * (or call requireStepUp which does it automatically).
    */
-  isElevated(sub: string, actionClass: ActionClass): Promise<boolean>;
+  isElevated(sub: string, tenantId: string, actionClass: ActionClass): Promise<boolean>;
 
   /**
    * Records a successful MFA challenge result by writing the elevation key.
@@ -60,37 +60,49 @@ export interface StepUpService {
    *
    * @param ttlSec  Override the default 600s TTL. Shorter values for sensitive actions.
    */
-  grantElevation(sub: string, actionClass: ActionClass, ttlSec?: number): Promise<void>;
+  grantElevation(sub: string, tenantId: string, actionClass: ActionClass, ttlSec?: number): Promise<void>;
 
   /**
    * Removes the elevation key — called on explicit revocation or logout.
    * Logout handler uses cache.scan to clear all action classes in bulk.
    */
-  revokeElevation(sub: string, actionClass: ActionClass): Promise<void>;
+  revokeElevation(sub: string, tenantId: string, actionClass: ActionClass): Promise<void>;
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 export function createStepUpService(cache: CacheClient): StepUpService {
-  function elevationKey(sub: string, actionClass: ActionClass): string {
+  function elevationKey(sub: string, tenantId: string, actionClass: ActionClass): string {
+    return `mfa_elevation:${sub}:${tenantId}:${actionClass}`;
+  }
+
+  function legacyElevationKey(sub: string, actionClass: ActionClass): string {
     return `mfa_elevation:${sub}:${actionClass}`;
   }
 
-  async function isElevated(sub: string, actionClass: ActionClass): Promise<boolean> {
-    const value = await cache.get(elevationKey(sub, actionClass));
-    return value !== null;
+  async function isElevated(sub: string, tenantId: string, actionClass: ActionClass): Promise<boolean> {
+    const value = await cache.get(elevationKey(sub, tenantId, actionClass));
+    if (value !== null) return true;
+
+    // Rollout compatibility for elevations issued before tenant scoping.
+    const legacyValue = await cache.get(legacyElevationKey(sub, actionClass)).catch(() => null);
+    return legacyValue !== null;
   }
 
   async function grantElevation(
     sub: string,
+    tenantId: string,
     actionClass: ActionClass,
     ttlSec: number = STEP_UP_TTL_SEC,
   ): Promise<void> {
-    await cache.set(elevationKey(sub, actionClass), "1", "EX", ttlSec);
+    await cache.set(elevationKey(sub, tenantId, actionClass), "1", "EX", ttlSec);
   }
 
-  async function revokeElevation(sub: string, actionClass: ActionClass): Promise<void> {
-    await cache.del(elevationKey(sub, actionClass));
+  async function revokeElevation(sub: string, tenantId: string, actionClass: ActionClass): Promise<void> {
+    await cache.del([
+      elevationKey(sub, tenantId, actionClass),
+      legacyElevationKey(sub, actionClass),
+    ]);
   }
 
   return { isElevated, grantElevation, revokeElevation };
@@ -105,19 +117,23 @@ export function createStepUpService(cache: CacheClient): StepUpService {
  * action class. Otherwise sends a 403 with STEP_UP_REQUIRED and returns false.
  *
  * Usage in route handlers:
- *   const elevated = await requireStepUp(cache, sub, 'iam_admin', res);
+ *   const elevated = await requireStepUp(cache, sub, tenantId, 'iam_admin', res);
  *   if (!elevated) return;
  *   // ... proceed with protected write
  */
 export async function requireStepUp(
   cache: CacheClient,
   sub: string,
+  tenantId: string,
   actionClass: ActionClass,
   res: Response,
 ): Promise<boolean> {
-  const key = `mfa_elevation:${sub}:${actionClass}`;
+  const key = `mfa_elevation:${sub}:${tenantId}:${actionClass}`;
   const value = await cache.get(key);
   if (value !== null) return true;
+
+  const legacyValue = await cache.get(`mfa_elevation:${sub}:${actionClass}`).catch(() => null);
+  if (legacyValue !== null) return true;
 
   res.status(403).json({
     error: "STEP_UP_REQUIRED",
@@ -190,7 +206,7 @@ export async function isDeviceTrusted(
  * Revoke all step-up elevations for a principal (all action classes).
  * Called on logout. Uses cache.scan if available; falls back to individual deletes.
  */
-export async function revokeAllElevations(cache: CacheClient, sub: string): Promise<void> {
+export async function revokeAllElevations(cache: CacheClient, sub: string, tenantId?: string): Promise<void> {
   const pattern = `mfa_elevation:${sub}:*`;
 
   if (typeof cache.scan === "function") {
@@ -209,5 +225,8 @@ export async function revokeAllElevations(cache: CacheClient, sub: string): Prom
   const allClasses: ActionClass[] = [
     "iam_admin", "tenant_settings", "delegation_accept", "payment_release", "security_change",
   ];
-  await cache.del(allClasses.map((ac) => `mfa_elevation:${sub}:${ac}`));
+  await cache.del(allClasses.flatMap((ac) => [
+    `mfa_elevation:${sub}:${ac}`,
+    ...(tenantId ? [`mfa_elevation:${sub}:${tenantId}:${ac}`] : []),
+  ]));
 }

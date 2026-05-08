@@ -80,7 +80,7 @@ export const ActionResponseSchema = z.object({
   }),
   evidence:              z.record(z.string(), EvidencePointerSchema),
   pipeline_id:           z.string().uuid(),
-  ai_inference_log_id:   z.string().uuid(),
+  ai_inference_log_id:   z.string().uuid().nullable(),
   model_id:              z.string(),
   model_version:         z.string(),
   prompt_version:        z.string().nullable(),
@@ -140,4 +140,10 @@ export interface AiLogger {
   info(msg: string,  ctx?: Record<string, unknown>): void;
   warn(msg: string,  ctx?: Record<string, unknown>): void;
   error(msg: string, ctx?: Record<string, unknown>): void;
+}
+
+export type AiLogKind = "inference" | "feedback";
+
+export interface AiLogMetrics {
+  writeFailed(kind: AiLogKind): void;
 }

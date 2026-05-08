@@ -42,6 +42,7 @@ import {
   type ArchivePartitionJobData,
   type JobLogger,
 } from "../jobs.types.js";
+import { withDomainSpan } from "../../shared/tracing.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = Kysely<Record<string, any>>;
@@ -318,9 +319,18 @@ export function createPartitionArchiveWorker(
     QUEUE_NAME.PARTITION_ARCHIVE,
     async (job: Job<ArchivePartitionJobData | PartitionArchiveSweepData>) => {
       if (job.name === JOB_NAME.SWEEP) {
-        await sweep(db, queue, logger);
+        await withDomainSpan("governance.archive.sweep", {
+          job_id: job.id,
+          job_name: job.name,
+        }, async () => sweep(db, queue, logger));
       } else if (job.name === JOB_NAME.ARCHIVE_PARTITION) {
-        await archivePartition(db, job.data as ArchivePartitionJobData, logger);
+        const data = job.data as ArchivePartitionJobData;
+        await withDomainSpan("governance.archive.partition", {
+          job_id: job.id,
+          job_name: job.name,
+          partition_schema: data.partitionSchema,
+          partition_table: data.partitionTable,
+        }, async () => archivePartition(db, data, logger));
       }
     },
     {

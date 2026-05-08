@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getCsrfToken } from "../utils/csrf";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -45,10 +46,36 @@ export interface UseCommentAttachmentsResult {
 
 const MAX_FILES = 10;
 
+interface ParameterSnapshotResponse {
+  values?: Record<string, unknown>;
+}
+
+function numberParam(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useCommentAttachments(): UseCommentAttachmentsResult {
   const [staged, setStaged] = useState<StagedAttachment[]>([]);
+  const attachmentParams = useQuery<ParameterSnapshotResponse>({
+    queryKey: ["iam", "parameters", "effective", "collab.attachments"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/iam/parameters/effective?namespace=collab.attachments", {
+        signal,
+        cache: "no-store",
+      });
+      if (!res.ok) return { values: {} };
+      return res.json() as Promise<ParameterSnapshotResponse>;
+    },
+    staleTime: 300_000,
+    retry: false,
+  });
+  const maxFiles = numberParam(
+    attachmentParams.data?.values?.["collab.attachments.max_files_per_batch"],
+    MAX_FILES,
+  );
 
   const uploadFile = useCallback(async (entry: StagedAttachment): Promise<void> => {
     const form = new FormData();
@@ -108,16 +135,16 @@ export function useCommentAttachments(): UseCommentAttachmentsResult {
 
       if (allNew.length === 0) return;
 
-      setStaged((prev) => {
-        const available = MAX_FILES - prev.length;
-        if (available <= 0) return prev;
-        return [...prev, ...allNew.slice(0, available)];
-      });
+      const available = Math.max(0, maxFiles - staged.length);
+      const accepted = allNew.slice(0, available);
+      if (accepted.length === 0) return;
+
+      setStaged((prev) => [...prev, ...accepted].slice(0, maxFiles));
 
       // Trigger uploads once, outside the updater — safe from Strict Mode double-invoke.
-      allNew.forEach((entry) => void uploadFile(entry));
+      accepted.forEach((entry) => void uploadFile(entry));
     },
-    [uploadFile],
+    [maxFiles, staged.length, uploadFile],
   );
 
   const remove = useCallback((key: string) => {

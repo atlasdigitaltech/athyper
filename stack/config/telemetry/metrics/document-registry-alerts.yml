@@ -12,14 +12,14 @@ groups:
     interval: 60s
     rules:
       - alert: PostingInconsistencyHigh
-        expr: fin_doc_registry_compliance_posting_inconsistency > 20
-        for: 5m
+        expr: fin_doc_registry_compliance_posting_inconsistency > 5
+        for: 10m
         labels:
           severity: warning
           team: finance
         annotations:
           summary: "Posting inconsistencies detected ({{ $value }} documents)"
-          description: "More than 20 documents have posting/JE inconsistencies. Check finance document JE links and journal_entry source metadata."
+          description: "More than 5 documents have posting/JE inconsistencies for 10+ minutes. Check finance document JE links and journal_entry source metadata."
 
       - alert: PostingInconsistencyCritical
         expr: fin_doc_registry_compliance_posting_inconsistency > 100
@@ -78,17 +78,17 @@ groups:
     interval: 30s
     rules:
       - alert: TriggerSyncFailureRate
-        expr: rate(fin_doc_registry_trigger_sync_failed_total[5m]) > 0.05
+        expr: clamp_min(delta(fin_doc_registry_trigger_sync_failed_count[5m]), 0) > 5
         for: 3m
         labels:
           severity: warning
           team: platform
         annotations:
           summary: "Document registry trigger sync failures elevated"
-          description: "Registry trigger sync failures exceeding 0.05/s for 3+ minutes."
+          description: "More than 5 registry trigger sync failures appeared in the last 5 minutes."
 
       - alert: StatusMappingFallback
-        expr: fin_doc_registry_status_mapping_fallback_total > 0
+        expr: fin_doc_registry_status_mapping_fallbacks > 0
         for: 5m
         labels:
           severity: warning
@@ -96,6 +96,26 @@ groups:
         annotations:
           summary: "Status mapping fallbacks elevated (unmapped statuses)"
           description: "Unknown source statuses falling back to DRAFT at elevated rate. May indicate missing canonical_status_mapping entries."
+
+      - alert: StatusMappingFastBurn
+        expr: tenant:fin_doc_registry_status_mapping_burn_rate:5m > 14.4
+        for: 5m
+        labels:
+          severity: warning
+          team: finance
+        annotations:
+          summary: "Status mapping SLO fast burn ({{ $labels.tenant }})"
+          description: "Status mapping success is consuming the 99.9% SLO error budget faster than the 5m burn threshold."
+
+      - alert: StatusMappingSlowBurn
+        expr: tenant:fin_doc_registry_status_mapping_burn_rate:6h > 6
+        for: 15m
+        labels:
+          severity: warning
+          team: finance
+        annotations:
+          summary: "Status mapping SLO slow burn ({{ $labels.tenant }})"
+          description: "Status mapping success is consuming the 99.9% SLO error budget faster than the 6h burn threshold."
 
   - name: document_registry_approval
     interval: 60s

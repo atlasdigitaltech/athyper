@@ -236,6 +236,26 @@ describe("TenantStampDriver", () => {
     expect(sqls).not.toContain("COMMIT");
   });
 
+  it("reports rollback failures without hiding the original query error", async () => {
+    base.throwOn.add("SELECT bad");
+    base.throwOn.add("ROLLBACK");
+    const rollbackFailures: Array<{ error: unknown; originalError: unknown }> = [];
+    const driver = new TenantStampDriver(base, {
+      base: null as never,
+      tenantIdProvider: () => TENANT_A,
+      onRollbackFailure: (error, originalError) => {
+        rollbackFailures.push({ error, originalError });
+      },
+    });
+
+    const conn = await driver.acquireConnection();
+
+    await expect(conn.executeQuery(cq("SELECT bad"))).rejects.toThrow("boom: SELECT bad");
+    expect(rollbackFailures).toHaveLength(1);
+    expect(String(rollbackFailures[0]?.error)).toContain("boom: ROLLBACK");
+    expect(String(rollbackFailures[0]?.originalError)).toContain("boom: SELECT bad");
+  });
+
   it("keeps separate tenant stamps across two connections that run concurrently", async () => {
     // Interleave a TENANT_A query and a TENANT_B query by flipping the
     // provider between calls. Each executeQuery must see the snapshot that

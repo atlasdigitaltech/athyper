@@ -12,6 +12,7 @@ import {
   setSessionCookie,
 } from "@/lib/auth/session";
 import {
+  legacySidRotationKey,
   refreshLockKey,
   sessKey,
   sidRotationKey,
@@ -28,13 +29,27 @@ async function readRotatedSession(
   namespace: string,
   sid: string,
 ): Promise<{ sid: string; session: V4Session } | null> {
-  const rotatedSid = await redis.get(sidRotationKey(namespace, sid)).catch(() => null);
+  const rotatedSid =
+    (await redis.get(sidRotationKey(namespace, sid)).catch(() => null)) ??
+    (await redis.get(legacySidRotationKey(namespace, sid)).catch(() => null));
   if (!rotatedSid) return null;
 
   const raw = await redis.get(sessKey(namespace, rotatedSid));
   if (!raw) return null;
 
   return { sid: rotatedSid, session: JSON.parse(raw) as V4Session };
+}
+
+async function replaceUserSessionIndex(
+  redis: RedisClient,
+  indexKey: string,
+  oldSid: string,
+  newSid: string,
+  ttlSeconds: number,
+): Promise<void> {
+  await redis.sRem(indexKey, oldSid);
+  await redis.sAdd(indexKey, newSid);
+  await redis.expire(indexKey, ttlSeconds);
 }
 
 async function destroySession(
@@ -216,13 +231,12 @@ export async function POST() {
       newSid,
       { EX: policy.refreshRotationGraceSeconds },
     );
+    await redis.del(legacySidRotationKey(sessionNamespace, sid)).catch(() => {});
     await redis.del(sessKey(sessionNamespace, sid));
 
     if (session.userId) {
       const sessionIndexKey = userSessionsKey(sessionNamespace, session.userId);
-      await redis.sRem(sessionIndexKey, sid);
-      await redis.sAdd(sessionIndexKey, newSid);
-      await redis.expire(sessionIndexKey, sessionTtl);
+      await replaceUserSessionIndex(redis, sessionIndexKey, sid, newSid, sessionTtl);
     }
 
     await setSessionCookie(newSid, env, sessionTtl);

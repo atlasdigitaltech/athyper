@@ -16,6 +16,7 @@
  */
 
 import type { CacheMetrics } from "../framework/runtime/services/iam/session/session.service.js";
+import type { AiLogKind, AiLogMetrics } from "../framework/runtime/services/ai/ai-runtime.types.js";
 import type { Request, Response } from "express";
 
 // ─── Queue depth state ────────────────────────────────────────────────────────
@@ -23,16 +24,35 @@ import type { Request, Response } from "express";
 // Duck-typed to avoid importing the full BullMQ Queue class here.
 type DepthQueue = { getJobCounts(...states: string[]): Promise<Record<string, number>> };
 export type MetricCollector = () => Promise<string[]>;
+export interface NamedMetricCollector {
+  name: string;
+  collect: MetricCollector;
+}
+
+interface RegisteredMetricCollector {
+  name: string;
+  collect: MetricCollector;
+}
+
+interface MetricCollectorStats {
+  up: 0 | 1;
+  runs: number;
+  failures: number;
+  lastDurationSeconds: number;
+  lastSuccessTimestampSeconds: number;
+  lastFailureTimestampSeconds: number;
+}
 
 let jobQueues: Record<string, DepthQueue> | null = null;
-let metricCollectors: MetricCollector[] = [];
+let metricCollectors: RegisteredMetricCollector[] = [];
+const metricCollectorStats = new Map<string, MetricCollectorStats>();
 
 const HTTP_DURATION_BUCKETS_SECONDS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
 
 /**
  * Register BullMQ queues for depth metrics.
  * Called once from api.ts after the jobs service is wired.
- * Metrics for each queue are emitted as athyper_queue_jobs_total gauges.
+ * Metrics for each queue are emitted as athyper_queue_jobs gauges.
  */
 export function registerJobQueues(queues: Record<string, DepthQueue>): void {
   jobQueues = queues;
@@ -43,8 +63,26 @@ export function registerJobQueues(queues: Record<string, DepthQueue>): void {
  * access. Collectors return Prometheus text-format lines and are polled on each
  * /metrics scrape.
  */
-export function registerMetricCollectors(collectors: MetricCollector[]): void {
-  metricCollectors = collectors;
+export function registerMetricCollectors(collectors: Array<MetricCollector | NamedMetricCollector>): void {
+  metricCollectors = collectors.map((collector, index) => {
+    if (typeof collector === "function") {
+      return { name: `collector_${index}`, collect: collector };
+    }
+    return collector;
+  });
+
+  for (const collector of metricCollectors) {
+    if (!metricCollectorStats.has(collector.name)) {
+      metricCollectorStats.set(collector.name, {
+        up: 0,
+        runs: 0,
+        failures: 0,
+        lastDurationSeconds: 0,
+        lastSuccessTimestampSeconds: 0,
+        lastFailureTimestampSeconds: 0,
+      });
+    }
+  }
 }
 
 // ─── Internal counter store ───────────────────────────────────────────────────
@@ -65,6 +103,7 @@ const httpRequests = new Map<string, number>();
 const httpDurationBuckets = new Map<string, number>();
 const httpDurationSum = new Map<string, number>();
 const httpDurationCount = new Map<string, number>();
+const aiLogWriteFailures = new Map<AiLogKind, number>();
 
 function key(labels: LabelSet): string {
   return `${labels.tenant}\0${labels.operation}\0${labels.service}`;
@@ -93,23 +132,25 @@ export function observeHttpRequest(input: {
   path: string;
   statusCode: number;
   durationMs: number;
+  tenantId?: string;
 }): void {
   const method = input.method.toUpperCase();
   const route = normalizePath(input.path);
   const status = String(input.statusCode);
-  const labels = `${method}\0${route}\0${status}`;
+  const tenantId = input.tenantId?.trim() || "unknown";
+  const labels = `${method}\0${route}\0${status}\0${tenantId}`;
   const durationSeconds = input.durationMs / 1000;
 
   incMap(httpRequests, labels);
-  incMap(httpDurationSum, `${method}\0${route}`, durationSeconds);
-  incMap(httpDurationCount, `${method}\0${route}`);
+  incMap(httpDurationSum, `${method}\0${route}\0${tenantId}`, durationSeconds);
+  incMap(httpDurationCount, `${method}\0${route}\0${tenantId}`);
 
   for (const bucket of HTTP_DURATION_BUCKETS_SECONDS) {
     if (durationSeconds <= bucket) {
-      incMap(httpDurationBuckets, `${method}\0${route}\0${bucket}`);
+      incMap(httpDurationBuckets, `${method}\0${route}\0${tenantId}\0${bucket}`);
     }
   }
-  incMap(httpDurationBuckets, `${method}\0${route}\0+Inf`);
+  incMap(httpDurationBuckets, `${method}\0${route}\0${tenantId}\0+Inf`);
 }
 
 // ─── Public factory ───────────────────────────────────────────────────────────
@@ -131,6 +172,14 @@ export function createCacheMetrics(service: string): CacheMetrics {
   };
 }
 
+export function createAiLogMetrics(): AiLogMetrics {
+  return {
+    writeFailed(kind: AiLogKind) {
+      aiLogWriteFailures.set(kind, (aiLogWriteFailures.get(kind) ?? 0) + 1);
+    },
+  };
+}
+
 // ─── Prometheus /metrics handler ──────────────────────────────────────────────
 
 const HELP = [
@@ -140,21 +189,75 @@ const HELP = [
   "# HELP athyper_cache_invalidated_keys_total Total individual Redis keys deleted by invalidation events",
   "# TYPE athyper_cache_invalidated_keys_total counter",
   "",
-  "# HELP athyper_queue_jobs_total Current BullMQ job counts by queue and state (gauge)",
-  "# TYPE athyper_queue_jobs_total gauge",
+  "# HELP athyper_queue_jobs Current BullMQ job counts by queue and state (gauge)",
+  "# TYPE athyper_queue_jobs gauge",
   "",
   "# HELP gov_archive_job_backlog Current partition archive queue backlog",
   "# TYPE gov_archive_job_backlog gauge",
   "",
-  "# HELP athyper_http_requests_total HTTP requests by method, normalized route, and status",
+  "# HELP athyper_http_requests_total HTTP requests by method, normalized route, status, and tenant",
   "# TYPE athyper_http_requests_total counter",
   "",
-  "# HELP athyper_http_request_duration_seconds HTTP request duration by method and normalized route",
+  "# HELP athyper_http_request_duration_seconds HTTP request duration by method, normalized route, and tenant",
   "# TYPE athyper_http_request_duration_seconds histogram",
+  "",
+  "# HELP athyper_ai_log_write_failures_total AI log database write failures by log kind",
+  "# TYPE athyper_ai_log_write_failures_total counter",
+  "",
+  "# HELP athyper_metric_collector_up Whether a live metric collector succeeded on its latest scrape",
+  "# TYPE athyper_metric_collector_up gauge",
+  "# HELP athyper_metric_collector_runs_total Live metric collector scrape attempts",
+  "# TYPE athyper_metric_collector_runs_total counter",
+  "# HELP athyper_metric_collector_failures_total Live metric collector scrape failures",
+  "# TYPE athyper_metric_collector_failures_total counter",
+  "# HELP athyper_metric_collector_last_duration_seconds Latest live metric collector scrape duration",
+  "# TYPE athyper_metric_collector_last_duration_seconds gauge",
+  "# HELP athyper_metric_collector_last_success_timestamp_seconds Unix timestamp of latest successful live metric collector scrape",
+  "# TYPE athyper_metric_collector_last_success_timestamp_seconds gauge",
+  "# HELP athyper_metric_collector_last_failure_timestamp_seconds Unix timestamp of latest failed live metric collector scrape",
+  "# TYPE athyper_metric_collector_last_failure_timestamp_seconds gauge",
 ].join("\n");
 
 function escape(v: string): string {
   return v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
+}
+
+function recordMetricCollectorResult(name: string, ok: boolean, durationSeconds: number): void {
+  const nowSeconds = Date.now() / 1000;
+  const current: MetricCollectorStats = metricCollectorStats.get(name) ?? {
+    up: 0,
+    runs: 0,
+    failures: 0,
+    lastDurationSeconds: 0,
+    lastSuccessTimestampSeconds: 0,
+    lastFailureTimestampSeconds: 0,
+  };
+
+  current.up = ok ? 1 : 0;
+  current.runs += 1;
+  current.lastDurationSeconds = durationSeconds;
+  if (ok) {
+    current.lastSuccessTimestampSeconds = nowSeconds;
+  } else {
+    current.failures += 1;
+    current.lastFailureTimestampSeconds = nowSeconds;
+  }
+
+  metricCollectorStats.set(name, current);
+}
+
+function renderMetricCollectorStats(): string[] {
+  const lines: string[] = [];
+  for (const [name, stats] of metricCollectorStats) {
+    const label = `name="${escape(name)}"`;
+    lines.push(`athyper_metric_collector_up{${label}} ${stats.up}`);
+    lines.push(`athyper_metric_collector_runs_total{${label}} ${stats.runs}`);
+    lines.push(`athyper_metric_collector_failures_total{${label}} ${stats.failures}`);
+    lines.push(`athyper_metric_collector_last_duration_seconds{${label}} ${stats.lastDurationSeconds}`);
+    lines.push(`athyper_metric_collector_last_success_timestamp_seconds{${label}} ${stats.lastSuccessTimestampSeconds}`);
+    lines.push(`athyper_metric_collector_last_failure_timestamp_seconds{${label}} ${stats.lastFailureTimestampSeconds}`);
+  }
+  return lines;
 }
 
 export function metricsHandler(_req: Request, res: Response): void {
@@ -188,7 +291,7 @@ export function metricsHandler(_req: Request, res: Response): void {
           const counts = await queue.getJobCounts("active", "waiting", "delayed", "failed");
           for (const [state, count] of Object.entries(counts)) {
             lines.push(
-              `athyper_queue_jobs_total{queue="${escape(queueName)}",state="${escape(state)}"} ${count}`,
+              `athyper_queue_jobs{queue="${escape(queueName)}",state="${escape(state)}"} ${count}`,
             );
           }
           if (queueName === "partitionArchive" || queueName === "jobs-partition-archive") {
@@ -207,9 +310,9 @@ export function metricsHandler(_req: Request, res: Response): void {
 
     for (const [k, count] of httpRequests) {
       const parts = k.split("\0");
-      const method = parts[0] ?? ""; const route = parts[1] ?? ""; const status = parts[2] ?? "";
+      const method = parts[0] ?? ""; const route = parts[1] ?? ""; const status = parts[2] ?? ""; const tenantId = parts[3] ?? "unknown";
       lines.push(
-        `athyper_http_requests_total{method="${escape(method)}",route="${escape(route)}",status="${escape(status)}"} ${count}`,
+        `athyper_http_requests_total{method="${escape(method)}",route="${escape(route)}",status="${escape(status)}",tenant_id="${escape(tenantId)}"} ${count}`,
       );
     }
 
@@ -217,37 +320,57 @@ export function metricsHandler(_req: Request, res: Response): void {
 
     for (const [k, count] of httpDurationBuckets) {
       const parts = k.split("\0");
-      const method = parts[0] ?? ""; const route = parts[1] ?? ""; const le = parts[2] ?? "";
+      const method = parts[0] ?? ""; const route = parts[1] ?? ""; const tenantId = parts[2] ?? "unknown"; const le = parts[3] ?? "";
       lines.push(
-        `athyper_http_request_duration_seconds_bucket{method="${escape(method)}",route="${escape(route)}",le="${escape(le)}"} ${count}`,
+        `athyper_http_request_duration_seconds_bucket{method="${escape(method)}",route="${escape(route)}",tenant_id="${escape(tenantId)}",le="${escape(le)}"} ${count}`,
       );
     }
     for (const [k, sum] of httpDurationSum) {
       const parts = k.split("\0");
-      const method = parts[0] ?? ""; const route = parts[1] ?? "";
+      const method = parts[0] ?? ""; const route = parts[1] ?? ""; const tenantId = parts[2] ?? "unknown";
       lines.push(
-        `athyper_http_request_duration_seconds_sum{method="${escape(method)}",route="${escape(route)}"} ${sum}`,
+        `athyper_http_request_duration_seconds_sum{method="${escape(method)}",route="${escape(route)}",tenant_id="${escape(tenantId)}"} ${sum}`,
       );
     }
     for (const [k, count] of httpDurationCount) {
       const parts = k.split("\0");
-      const method = parts[0] ?? ""; const route = parts[1] ?? "";
+      const method = parts[0] ?? ""; const route = parts[1] ?? ""; const tenantId = parts[2] ?? "unknown";
       lines.push(
-        `athyper_http_request_duration_seconds_count{method="${escape(method)}",route="${escape(route)}"} ${count}`,
+        `athyper_http_request_duration_seconds_count{method="${escape(method)}",route="${escape(route)}",tenant_id="${escape(tenantId)}"} ${count}`,
       );
     }
     lines.push("");
 
-    for (const collect of metricCollectors) {
+    for (const [kind, count] of aiLogWriteFailures) {
+      lines.push(
+        `athyper_ai_log_write_failures_total{kind="${escape(kind)}"} ${count}`,
+      );
+    }
+    lines.push("");
+
+    for (const collector of metricCollectors) {
+      const collectStartedAt = process.hrtime.bigint();
       try {
-        const collectorLines = await collect();
+        const collectorLines = await collector.collect();
+        recordMetricCollectorResult(
+          collector.name,
+          true,
+          Number(process.hrtime.bigint() - collectStartedAt) / 1_000_000_000,
+        );
         if (collectorLines.length > 0) {
           lines.push(...collectorLines, "");
         }
       } catch {
-        // Collector failures are scrape-local; keep core runtime metrics alive.
+        recordMetricCollectorResult(
+          collector.name,
+          false,
+          Number(process.hrtime.bigint() - collectStartedAt) / 1_000_000_000,
+        );
       }
     }
+
+    const collectorStatsLines = renderMetricCollectorStats();
+    if (collectorStatsLines.length > 0) lines.push(...collectorStatsLines, "");
 
     res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
     res.end(lines.join("\n"));

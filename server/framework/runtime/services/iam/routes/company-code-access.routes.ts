@@ -39,6 +39,7 @@ import {
 import { checkPermission, requireAllow } from "../permission/permission.service.js";
 import { requireStepUp } from "../mfa/step-up.service.js";
 import type { CacheClient } from "../session/session.service.js";
+import { incrementRateLimit } from "../../shared/cache-utils.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Record<string, any>;
@@ -84,6 +85,26 @@ async function resolveAuth(
   }
 
   return { sub, tenantId, principalId };
+}
+
+async function enforceCcaWriteRateLimit(
+  cache: CacheClient,
+  res: Parameters<RequestHandler>[1],
+  tenantId: string,
+  sub: string,
+  operation: string,
+): Promise<boolean> {
+  const key = `ratelimit:iam_admin:${operation}:${tenantId}:${sub}`;
+  const count = await incrementRateLimit(cache, key, 60).catch(() => 0);
+  if (count === 0 || count <= 30) return true;
+
+  res.setHeader("Retry-After", "60");
+  res.status(429).json({
+    error: "RATE_LIMITED",
+    message: "Too many IAM write attempts. Please wait and try again.",
+    retry_after_seconds: 60,
+  });
+  return false;
 }
 
 // ─── CCA row shape ────────────────────────────────────────────────────────────
@@ -213,8 +234,10 @@ export function createCcaRoutes(router: Router, deps: CcaRoutesDeps): Router {
       const a = await resolveAuth(req, res, db, auth);
       if (!a) return;
 
+      if (!await enforceCcaWriteRateLimit(cache, res, a.tenantId, a.sub, "company_code_access_grant")) return;
+
       // Require step-up
-      const stepUpOk = await requireStepUp(cache, a.sub, "iam_admin", res);
+      const stepUpOk = await requireStepUp(cache, a.sub, a.tenantId, "iam_admin", res);
       if (!stepUpOk) return;
 
       // Permission check
@@ -290,8 +313,10 @@ export function createCcaRoutes(router: Router, deps: CcaRoutesDeps): Router {
       const a = await resolveAuth(req, res, db, auth);
       if (!a) return;
 
+      if (!await enforceCcaWriteRateLimit(cache, res, a.tenantId, a.sub, "company_code_access_revoke")) return;
+
       // Require step-up
-      const stepUpOk = await requireStepUp(cache, a.sub, "iam_admin", res);
+      const stepUpOk = await requireStepUp(cache, a.sub, a.tenantId, "iam_admin", res);
       if (!stepUpOk) return;
 
       // Permission check

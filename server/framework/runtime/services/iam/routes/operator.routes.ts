@@ -40,6 +40,7 @@ import {
 import { checkPermission, checkPermissionBatch, requireAllow } from "../permission/permission.service.js";
 import { requireStepUp } from "../mfa/step-up.service.js";
 import type { CacheClient } from "../session/session.service.js";
+import { incrementRateLimit } from "../../shared/cache-utils.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Record<string, any>;
@@ -114,6 +115,28 @@ async function resolveTargetPrincipal(
 }
 
 // ─── Route factory ────────────────────────────────────────────────────────────
+
+async function enforceIamWriteRateLimit(
+  cache: CacheClient,
+  res: Parameters<RequestHandler>[1],
+  tenantId: string,
+  sub: string,
+  operation: string,
+  limit = 30,
+  windowSec = 60,
+): Promise<boolean> {
+  const key = `ratelimit:iam_admin:${operation}:${tenantId}:${sub}`;
+  const count = await incrementRateLimit(cache, key, windowSec).catch(() => 0);
+  if (count === 0 || count <= limit) return true;
+
+  res.setHeader("Retry-After", String(windowSec));
+  res.status(429).json({
+    error: "RATE_LIMITED",
+    message: "Too many IAM write attempts. Please wait and try again.",
+    retry_after_seconds: windowSec,
+  });
+  return false;
+}
 
 export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): Router {
   const { db, cache, auth, logger } = deps;
@@ -400,7 +423,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "group_member_add")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GROUP.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -461,7 +485,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "group_member_remove")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GROUP.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -496,7 +521,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "grant_create")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GRANT.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -568,7 +594,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "grant_revoke")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GRANT.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -619,7 +646,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "delegation_accept", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "delegation_create")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "delegation_accept", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.DELEGATION.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -696,7 +724,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "delegation_revoke")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.DELEGATION.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -758,7 +787,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "migrate_bindings", 10)) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GRANT.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -861,7 +891,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "group_create")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GROUP.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -997,7 +1028,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "group_update")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GROUP.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -1072,7 +1104,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "group_delete")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GROUP.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -1133,7 +1166,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "group_role_add")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GROUP.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -1240,7 +1274,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "group_role_update")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GROUP.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -1337,7 +1372,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "group_role_remove")) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GROUP.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 
@@ -1451,7 +1487,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       if (!auth_) return;
       const { sub, tenantId, callerPrincipalId } = auth_;
 
-      if (!await requireStepUp(cache, sub, "iam_admin", res)) return;
+      if (!await enforceIamWriteRateLimit(cache, res, tenantId, sub, "principal_session_invalidate", 10)) return;
+      if (!await requireStepUp(cache, sub, tenantId, "iam_admin", res)) return;
       const permDecision = await checkPermission(db, tenantId, callerPrincipalId, "IAM.GRANT.MANAGE");
       if (!requireAllow(permDecision, res)) return;
 

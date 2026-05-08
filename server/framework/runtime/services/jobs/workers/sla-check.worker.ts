@@ -428,7 +428,7 @@ async function checkWorkflowWorkItems(db: DB, logger?: JobLogger): Promise<void>
 // Idempotency window: a `wf:stuck:<id>:<day>` key prevents re-alerting within
 // the same calendar day. The day suffix rolls automatically each day.
 
-const STUCK_THRESHOLD_HOURS = 24;
+const STUCK_THRESHOLD_HOURS = 24; // fallback constant
 
 interface StuckWorkItem {
   id:                  string;
@@ -439,12 +439,53 @@ interface StuckWorkItem {
   assignee_id:         string | null;
   started_at:          string | null;
   status:              string;
+  threshold_hours:     number | string;
 }
 
 async function checkStuckWorkItems(db: DB, logger?: JobLogger): Promise<void> {
   // Find work items that are in an active state, started more than N hours ago,
-  // and have had no workflow_event_log entry in the last N hours.
+  // and have had no workflow_event_log entry in the last N hours. The threshold
+  // is tenant-resolved from the parameter catalog with a product fallback.
   const stuck = await sql<StuckWorkItem>`
+    WITH active_tenants AS (
+      SELECT DISTINCT wi.tenant_id
+      FROM   event.work_item wi
+      WHERE  wi.status IN ('pending', 'in_progress')
+        AND  wi.started_at IS NOT NULL
+    ),
+    threshold_raw AS (
+      SELECT
+        at.tenant_id,
+        COALESCE(
+          CASE
+            WHEN tv.override_enabled IS TRUE THEN tv.value
+            ELSE COALESCE(d.product_value, d.default_value)
+          END,
+          to_jsonb(${STUCK_THRESHOLD_HOURS}::int)
+        ) AS raw_value
+      FROM active_tenants at
+      LEFT JOIN control.parameter_definition d
+        ON d.code = 'jobs.sla.stuck_threshold_hours'
+       AND d.status = 'active'
+       AND d.is_enabled = true
+      LEFT JOIN master.tenant_parameter_value tv
+        ON tv.tenant_id = at.tenant_id
+       AND tv.parameter_code = d.code
+       AND tv.status = 'active'
+       AND now() >= tv.effective_from
+       AND (tv.effective_to IS NULL OR now() < tv.effective_to)
+    ),
+    tenant_threshold AS (
+      SELECT
+        tenant_id,
+        CASE
+          WHEN raw_value #>> '{}' ~ '^[0-9]+(\\.[0-9]+)?$'
+           AND (raw_value #>> '{}')::numeric > 0
+          THEN (raw_value #>> '{}')::numeric
+          ELSE ${STUCK_THRESHOLD_HOURS}::numeric
+        END AS threshold_hours
+      FROM threshold_raw
+    )
     SELECT
       wi.id,
       wi.tenant_id,
@@ -453,16 +494,19 @@ async function checkStuckWorkItems(db: DB, logger?: JobLogger): Promise<void> {
       wi.task_type,
       wi.assignee_id::text,
       wi.started_at::text,
-      wi.status
+      wi.status,
+      tt.threshold_hours::text
     FROM   event.work_item wi
+    JOIN   tenant_threshold tt
+      ON   tt.tenant_id = wi.tenant_id
     WHERE  wi.status IN ('pending', 'in_progress')
       AND  wi.started_at IS NOT NULL
-      AND  wi.started_at < now() - (${STUCK_THRESHOLD_HOURS} * interval '1 hour')
+      AND  wi.started_at < now() - (tt.threshold_hours * interval '1 hour')
       AND  NOT EXISTS (
              SELECT 1
              FROM   log.workflow_event_log el
              WHERE  el.work_item_id = wi.id
-               AND  el.created_at   > now() - (${STUCK_THRESHOLD_HOURS} * interval '1 hour')
+               AND  el.created_at   > now() - (tt.threshold_hours * interval '1 hour')
            )
     ORDER  BY wi.started_at ASC
     LIMIT  ${BATCH}
@@ -496,7 +540,7 @@ async function checkStuckWorkItems(db: DB, logger?: JobLogger): Promise<void> {
       assigneeId:         item.assignee_id,
       status:             item.status,
       startedAt:          item.started_at,
-      stuckThresholdHours: STUCK_THRESHOLD_HOURS,
+      stuckThresholdHours: Number(item.threshold_hours) || STUCK_THRESHOLD_HOURS,
       detectedAt:         new Date().toISOString(),
     });
 
@@ -517,7 +561,7 @@ async function checkStuckWorkItems(db: DB, logger?: JobLogger): Promise<void> {
     logger?.warn("wf_recovery_stuck_items_flagged", {
       scanned: stuck.rows.length,
       flagged,
-      thresholdHours: STUCK_THRESHOLD_HOURS,
+      thresholdHours: [...new Set(stuck.rows.map((item) => Number(item.threshold_hours) || STUCK_THRESHOLD_HOURS))],
     });
   } else {
     logger?.info("wf_recovery_check", { scanned: stuck.rows.length, flagged: 0 });

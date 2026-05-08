@@ -349,7 +349,7 @@ function ParameterGroup({
                     <span className="font-medium">{parameter.displayName}</span>
                     <ControlBadge parameter={parameter} />
                     {parameter.isSecuritySensitive ? (
-                      <Badge variant="outline" className="gap-1 text-[11px]">
+                      <Badge variant="outline" className="gap-1 text-doc-badge">
                         <ShieldCheck className="size-3" />
                         Security
                       </Badge>
@@ -497,12 +497,12 @@ function ParameterValueInput({
 
 function ControlBadge({ parameter }: { parameter: ParameterRecord }) {
   if (parameter.controlLevel === "tenant_owned") {
-    return <Badge variant="secondary" className="text-[11px]">Tenant owned</Badge>;
+    return <Badge variant="secondary" className="text-doc-badge">Tenant owned</Badge>;
   }
   if (parameter.tenantVisibility === "configurable") {
-    return <Badge variant="outline" className="border-primary/30 text-[11px] text-primary">Configurable</Badge>;
+    return <Badge variant="outline" className="border-primary/30 text-doc-badge text-primary">Configurable</Badge>;
   }
-  return <Badge variant="outline" className="text-[11px] text-muted-foreground">System view</Badge>;
+  return <Badge variant="outline" className="text-doc-badge text-muted-foreground">System view</Badge>;
 }
 
 function Detail({ label, value, wide }: { label: string; value: string; wide?: boolean }) {

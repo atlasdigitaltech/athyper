@@ -387,6 +387,10 @@ function RecordActionMenu({
 
 const CERT_EXPIRING_SOON_DAYS = 90;
 
+interface ParameterSnapshotResponse {
+  values?: Record<string, unknown>;
+}
+
 type CertificationState = "active" | "expiring_soon" | "expired" | "revoked" | "other";
 
 interface CertificationMetrics {
@@ -423,18 +427,23 @@ function certificationIssuer(rec: ChildRecord): string | null {
   return typeof raw === "string" && raw.trim() ? raw : null;
 }
 
-function certificationState(rec: ChildRecord): CertificationState {
+function certificationState(rec: ChildRecord, expiringSoonDays: number = CERT_EXPIRING_SOON_DAYS): CertificationState {
   const status = typeof rec.status === "string" ? rec.status.toLowerCase() : "";
   const days = daysUntil(rec.effective_until ?? rec.expiry_date ?? rec.expires_at);
   if (status === "revoked") return "revoked";
   if (status === "expired" || (days !== null && days < 0)) return "expired";
-  if (days !== null && days <= CERT_EXPIRING_SOON_DAYS) return "expiring_soon";
+  if (days !== null && days <= expiringSoonDays) return "expiring_soon";
   if (status === "active") return "active";
   return "other";
 }
 
-function certificationBadges(rec: ChildRecord): BadgeEntry[] {
-  const state = certificationState(rec);
+function numberParam(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function certificationBadges(rec: ChildRecord, expiringSoonDays: number = CERT_EXPIRING_SOON_DAYS): BadgeEntry[] {
+  const state = certificationState(rec, expiringSoonDays);
   if (state === "expired") return [{ kind: "expired", label: "Expired" }];
   if (state === "revoked") return [{ kind: "rejected", label: "Revoked" }];
   if (state === "expiring_soon") return [{ kind: "expiring_soon", label: "Expiring Soon" }];
@@ -503,15 +512,17 @@ function CertificationSummaryCard({
   onDelete,
   onMarkPrimary,
   canEdit,
+  expiringSoonDays = CERT_EXPIRING_SOON_DAYS,
 }: {
-  rec:           ChildRecord;
-  onView:        () => void;
-  onEdit:        () => void;
-  onDelete:      () => void;
-  onMarkPrimary: () => void;
-  canEdit:       boolean;
+  rec:               ChildRecord;
+  onView:            () => void;
+  onEdit:            () => void;
+  onDelete:          () => void;
+  onMarkPrimary:     () => void;
+  canEdit:           boolean;
+  expiringSoonDays?: number;
 }) {
-  const state = certificationState(rec);
+  const state = certificationState(rec, expiringSoonDays);
   const category = certificationCategory(rec);
   const issuer = certificationIssuer(rec);
   const progress = certificationValidityProgress(rec);
@@ -554,7 +565,7 @@ function CertificationSummaryCard({
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-            {certificationBadges(rec).map((badge, i) => (
+            {certificationBadges(rec, expiringSoonDays).map((badge, i) => (
               <RecordBadge key={i} kind={badge.kind} label={badge.label} />
             ))}
             <RecordActionMenu
@@ -597,16 +608,18 @@ function CertificationSummaryView({
   onEdit,
   onDelete,
   onMarkPrimary,
+  expiringSoonDays = CERT_EXPIRING_SOON_DAYS,
 }: {
-  records:       ChildRecord[];
-  tab:           MasterTab;
-  canAdd:        boolean;
-  canEdit:       boolean;
-  onAdd:         () => void;
-  onView:        (rec: ChildRecord) => void;
-  onEdit:        (rec: ChildRecord) => void;
-  onDelete:      (rec: ChildRecord) => void;
-  onMarkPrimary: (rec: ChildRecord) => void;
+  records:           ChildRecord[];
+  tab:               MasterTab;
+  canAdd:            boolean;
+  canEdit:           boolean;
+  onAdd:             () => void;
+  onView:            (rec: ChildRecord) => void;
+  onEdit:            (rec: ChildRecord) => void;
+  onDelete:          (rec: ChildRecord) => void;
+  onMarkPrimary:     (rec: ChildRecord) => void;
+  expiringSoonDays?: number;
 }) {
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -614,7 +627,7 @@ function CertificationSummaryView({
 
   const metrics = records.reduce<CertificationMetrics>(
     (acc, rec) => {
-      const state = certificationState(rec);
+      const state = certificationState(rec, expiringSoonDays);
       if (state === "active") acc.active += 1;
       else if (state === "expiring_soon") acc.expiring += 1;
       else if (state === "expired") acc.expired += 1;
@@ -643,7 +656,7 @@ function CertificationSummaryView({
 
   const normalizedSearch = search.trim().toLowerCase();
   const filteredRecords = records.filter((rec) => {
-    if (statusFilter && certificationState(rec) !== statusFilter) return false;
+    if (statusFilter && certificationState(rec, expiringSoonDays) !== statusFilter) return false;
     if (categoryFilter && certificationCategory(rec) !== categoryFilter) return false;
     if (!normalizedSearch) return true;
     const haystack = [
@@ -713,6 +726,7 @@ function CertificationSummaryView({
               onDelete={() => onDelete(rec)}
               onMarkPrimary={() => onMarkPrimary(rec)}
               canEdit={canEdit}
+              expiringSoonDays={expiringSoonDays}
             />
           ))}
         </div>
@@ -1716,11 +1730,13 @@ export function ChildSummaryCardsPanel({
   recordUuid,
   editMode,
   viewOnlyReason,
+  certExpiringSoonDays,
 }: {
-  tab:            MasterTab;
-  recordUuid:     string;
-  editMode:       boolean;
-  viewOnlyReason: ViewOnlyReason | null;
+  tab:                   MasterTab;
+  recordUuid:            string;
+  editMode:              boolean;
+  viewOnlyReason:        ViewOnlyReason | null;
+  certExpiringSoonDays?: number;
 }) {
   const entityCode       = tab.entity_code!;
   const createEntityCode = tab.create_entity_code ?? entityCode;
@@ -1818,6 +1834,26 @@ export function ChildSummaryCardsPanel({
   const isTaxProfilePanel = entityCode === "business_partner_tax_profile";
   const isCertificationPanel = entityCode === "business_partner_certification";
   const isGovernancePanel = entityCode === "business_partner_governance";
+
+  const certParameterQuery = useQuery<ParameterSnapshotResponse>({
+    queryKey: ["iam", "parameters", "effective", "governance.cert"],
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/iam/parameters/effective?namespace=governance.cert", {
+        signal,
+        cache: "no-store",
+      });
+      if (!res.ok) return { values: {} };
+      return res.json() as Promise<ParameterSnapshotResponse>;
+    },
+    staleTime: 300_000,
+    retry: false,
+    enabled: isCertificationPanel && certExpiringSoonDays === undefined,
+  });
+
+  const resolvedCertExpiringSoonDays = certExpiringSoonDays ?? numberParam(
+    certParameterQuery.data?.values?.["governance.cert.expiring_soon_days"],
+    CERT_EXPIRING_SOON_DAYS,
+  );
 
   function handleViewRecord(rec: ChildRecord) {
     setActiveRecord(rec);
@@ -2054,6 +2090,7 @@ export function ChildSummaryCardsPanel({
           onEdit={handleEditRecord}
           onDelete={setDeleteTarget}
           onMarkPrimary={(rec) => void markPrimaryMutation.mutate(rec)}
+          expiringSoonDays={resolvedCertExpiringSoonDays}
         />
 
         <RecordDetailDrawer

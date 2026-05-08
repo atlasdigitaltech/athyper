@@ -44,5 +44,5 @@ export function createTelemetryAdapter(
   };
 }
 
-// Export trace-context utilities (getOtelTraceContext, withSpan)
+// Export trace-context utilities (getOtelTraceContext, legacy withSpan)
 export * from "./trace-context.js";

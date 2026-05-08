@@ -80,6 +80,10 @@ if [[ "$ENVIRONMENT" == "local" ]]; then
   export KEYCLOAK_REALM="${IAM_DEFAULT_REALM}"
   export KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID:-neon-web}"
 
+  # The shared stack env uses PUBLIC_BASE_URL for the API. The web BFF must
+  # advertise the Neon origin to Keycloak when building OAuth redirect_uri.
+  export PUBLIC_BASE_URL="${PUBLIC_WEB_URL:-https://${APPS_ATHYPER_WEB_HOST}}"
+
   # Allow direct localhost:3000 access in local dev (bypasses host-guard middleware).
   export ALLOW_DIRECT_ACCESS=true
 

@@ -113,6 +113,17 @@ export async function invalidateParameterSnapshot(
     const root = namespace.split(".")[0];
     if (root && root !== namespace) keys.push(snapshotKey(tenantId, root));
   }
+
+  if (namespace && typeof cache.scan === "function") {
+    const pattern = `${snapshotKey(tenantId, namespace)}.*`;
+    let cursor = "0";
+    do {
+      const [nextCursor, found] = await cache.scan(cursor, "MATCH", pattern, "COUNT", 100);
+      cursor = nextCursor;
+      keys.push(...found);
+    } while (cursor !== "0");
+  }
+
   await cache.del([...new Set(keys)]).catch(() => undefined);
 }
 
@@ -255,4 +266,49 @@ function normalizeJson(value: unknown): unknown {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// ── Typed parameter accessors ─────────────────────────────────────────────────
+// Use these instead of raw snapshot.values[code] to get type coercion + fallback.
+
+export function getIntParam(
+  snapshot: ParameterSnapshot | null | undefined,
+  code: string,
+  fallback: number,
+): number {
+  if (!snapshot) return fallback;
+  const v = snapshot.values[code];
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+export function getNumberParam(
+  snapshot: ParameterSnapshot | null | undefined,
+  code: string,
+  fallback: number,
+): number {
+  return getIntParam(snapshot, code, fallback);
+}
+
+export function getStringParam(
+  snapshot: ParameterSnapshot | null | undefined,
+  code: string,
+  fallback: string,
+): string {
+  if (!snapshot) return fallback;
+  const v = snapshot.values[code];
+  return typeof v === "string" ? v : fallback;
+}
+
+export function getBoolParam(
+  snapshot: ParameterSnapshot | null | undefined,
+  code: string,
+  fallback: boolean,
+): boolean {
+  if (!snapshot) return fallback;
+  const v = snapshot.values[code];
+  if (typeof v === "boolean") return v;
+  if (v === "true")  return true;
+  if (v === "false") return false;
+  return fallback;
 }

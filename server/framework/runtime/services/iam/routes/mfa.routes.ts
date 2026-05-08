@@ -42,6 +42,7 @@ import { resolveParameterSnapshot } from "../parameters/parameter-resolver.servi
 import { createTotpEnrollmentService } from "../../../../../src/foundation/iam/totp-enrollment.service.js";
 import { createMfaSyncService } from "../mfa/mfa-sync.service.js";
 import type { CacheClient } from "../session/session.service.js";
+import { incrementRateLimit } from "../../shared/cache-utils.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -145,6 +146,28 @@ async function resolveNumericParameter(
   }
 }
 
+async function enforceRateLimit(
+  cache: CacheClient,
+  res: Parameters<RequestHandler>[1],
+  key: string,
+  limit: number,
+  windowSec: number,
+): Promise<boolean> {
+  if (typeof cache.eval !== "function" && typeof cache.incr !== "function") return true;
+
+  const count = await incrementRateLimit(cache, key, windowSec).catch(() => 0);
+  if (count === 0) return true;
+  if (count <= limit) return true;
+
+  res.setHeader("Retry-After", String(windowSec));
+  res.status(429).json({
+    error: "RATE_LIMITED",
+    message: "Too many MFA attempts. Please wait and try again.",
+    retry_after_seconds: windowSec,
+  });
+  return false;
+}
+
 // ─── Route factory ────────────────────────────────────────────────────────────
 
 export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
@@ -206,7 +229,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
       const { sub, tenantId, principalId } = caller;
 
       // Check elevation first (avoids TOCTOU: elevation state checked before DB query)
-      const elevated = await stepUp.isElevated(sub, "security_change");
+      const elevated = await stepUp.isElevated(sub, tenantId, "security_change");
 
       // Require step-up if there is already an active TOTP method (re-enrollment)
       const existingTotp = await db
@@ -260,7 +283,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
     try {
       const caller = await resolveCallerAuth(req, res, db, auth);
       if (!caller) return;
-      const { tenantId } = caller;
+      const { sub, tenantId } = caller;
 
       const body = req.body as { mfa_config_id?: string; code?: string };
       if (!body.mfa_config_id) {
@@ -271,6 +294,8 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
         res.status(400).json({ error: "MISSING_FIELD", message: "'code' is required" });
         return;
       }
+
+      if (!await enforceRateLimit(cache, res, `ratelimit:mfa:totp_verify:${tenantId}:${sub}`, 5, 300)) return;
 
       const result = await totp.verifyEnrollment(
         body.mfa_config_id,
@@ -301,7 +326,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
       const { sub, tenantId, principalId } = caller;
 
       // Removing MFA always requires step-up (verified via a live code first)
-      const elevated = await stepUp.isElevated(sub, "security_change");
+      const elevated = await stepUp.isElevated(sub, tenantId, "security_change");
       if (!elevated) {
         res.status(403).json({
           error: "STEP_UP_REQUIRED",
@@ -372,6 +397,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
         res.status(400).json({ error: "MISSING_FIELD", message: "'code' is required" });
         return;
       }
+      if (!await enforceRateLimit(cache, res, `ratelimit:mfa:elevate:${tenantId}:${sub}`, 5, 300)) return;
 
       const validActionClasses: ActionClass[] = [
         "iam_admin", "tenant_settings", "delegation_accept",
@@ -403,7 +429,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
         "runtime.mfa.step_up_ttl_seconds",
         600,
       );
-      await stepUp.grantElevation(sub, body.action_class as ActionClass, ttlSec);
+      await stepUp.grantElevation(sub, tenantId, body.action_class as ActionClass, ttlSec);
 
       setCachePrivate(res, 0);
       res.json({ elevated: true, action_class: body.action_class, ttl_sec: ttlSec });
@@ -467,7 +493,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
       if (!caller) return;
       const { sub, tenantId, principalId } = caller;
 
-      const elevated = await stepUp.isElevated(sub, "delegation_accept");
+      const elevated = await stepUp.isElevated(sub, tenantId, "delegation_accept");
       if (!elevated) {
         res.status(403).json({
           error: "STEP_UP_REQUIRED",
@@ -564,7 +590,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
       if (!caller) return;
       const { sub, tenantId, principalId } = caller;
 
-      const elevated = await stepUp.isElevated(sub, "delegation_accept");
+      const elevated = await stepUp.isElevated(sub, tenantId, "delegation_accept");
       if (!elevated) {
         res.status(403).json({
           error: "STEP_UP_REQUIRED",
@@ -667,7 +693,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
       const { sub, tenantId, principalId } = caller;
 
       // Require security_change step-up — proves the user just completed MFA
-      const elevated = await stepUp.isElevated(sub, "security_change");
+      const elevated = await stepUp.isElevated(sub, tenantId, "security_change");
       if (!elevated) {
         res.status(403).json({
           error: "STEP_UP_REQUIRED",
@@ -1132,7 +1158,7 @@ export function createMfaRoutes(router: Router, deps: MfaRoutesDeps): Router {
         "runtime.mfa.step_up_ttl_seconds",
         600,
       );
-      await stepUp.grantElevation(sub, "security_change", ttlSec);
+      await stepUp.grantElevation(sub, tenantId, "security_change", ttlSec);
 
       // Update last_used_at
       await db.updateTable("control.mfa_config").set({ last_used_at: new Date() } as never)

@@ -73,6 +73,12 @@ export interface TenantStampDialectOptions {
    * the provider is missing or malformed. Default: no-op. Tests pass a spy.
    */
   readonly onSkippedStamp?: (reason: "no-tenant" | "invalid-uuid", value: unknown) => void;
+  /**
+   * Called when the implicit transaction rollback fails after a query error.
+   * The original query error is still rethrown, but this hook makes the
+   * potentially dirty connection state visible to logs/metrics.
+   */
+  readonly onRollbackFailure?: (error: unknown, originalError: unknown) => void;
 }
 
 /**
@@ -260,8 +266,8 @@ export class TenantStampDriver implements Driver {
         } catch (err) {
           try {
             await s.base.executeQuery(rawQuery(ROLLBACK_SQL, []) as CompiledQuery);
-          } catch {
-            // Swallow rollback errors; the original error is more useful.
+          } catch (rollbackErr) {
+            driver.#reportRollbackFailure(rollbackErr, err);
           }
           throw err;
         }
@@ -292,6 +298,21 @@ export class TenantStampDriver implements Driver {
 
     this.#wrapState.set(wrapped, state);
     return wrapped;
+  }
+
+  #reportRollbackFailure(error: unknown, originalError: unknown): void {
+    if (this.#opts.onRollbackFailure) {
+      this.#opts.onRollbackFailure(error, originalError);
+      return;
+    }
+
+    console.error(
+      JSON.stringify({
+        msg: "tenant_stamp_rollback_failed",
+        err: String(error),
+        originalErr: String(originalError),
+      }),
+    );
   }
 }
 

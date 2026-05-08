@@ -5,13 +5,14 @@
  * content is intended to go to S3 (Phase 7c); here only the redacted snapshot
  * is written to the DB.
  *
- * The writer is fire-and-forget-safe: a write failure must never block the
- * caller's response.  Callers wrap in Promise.resolve().catch().
+ * The runtime treats write failures as non-fatal, but the writer itself must
+ * surface them so callers can emit metrics/alerts and avoid returning a fake
+ * log id.
  */
 
 import { sql } from "kysely";
 import { randomUUID } from "node:crypto";
-import type { AnyDb, ActionRequest, ActionResponse, AiLogger } from "./ai-runtime.types.js";
+import type { AiLogMetrics, AnyDb, ActionRequest, ActionResponse, AiLogger } from "./ai-runtime.types.js";
 
 const SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -49,6 +50,7 @@ export class InferenceLogWriter {
   constructor(
     private readonly db:     AnyDb,
     private readonly logger: AiLogger,
+    private readonly metrics?: AiLogMetrics,
   ) {}
 
   async write(args: InferenceWriteArgs): Promise<string> {
@@ -88,9 +90,11 @@ export class InferenceLogWriter {
         )
       `.execute(this.db);
     } catch (e) {
+      this.metrics?.writeFailed("inference");
       this.logger.error("ai_inference_log_write_failed", {
         pipelineId, err: String(e),
       });
+      throw e;
     }
 
     return logId;

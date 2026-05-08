@@ -22,6 +22,7 @@ import {
   extractOrgHeaders,
   parsePagination,
 } from "../../shared/route-helpers.js";
+import { withDomainSpan } from "../../shared/tracing.js";
 
 // ── Deps ──────────────────────────────────────────────────────────────────────
 
@@ -189,11 +190,21 @@ export function createLegalHoldRoutes(router: Router, deps: LegalHoldRouteDeps):
       if (scopeLogSchemas?.length) insertValues["scope_log_schemas"] = scopeLogSchemas;
       if (effectiveTo)     insertValues["effective_to"] = new Date(effectiveTo);
 
-      const hold = await db
-        .insertInto("governance.legal_hold" as never)
-        .values(insertValues as never)
-        .returningAll()
-        .executeTakeFirst() as Record<string, unknown>;
+      const hold = await withDomainSpan("governance.legal_hold.create", {
+        tenant_id: tenantId,
+        operation: "create",
+        scope_entity_type: scopeEntityType ?? "all",
+        has_scope_date_from: Boolean(scopeDateFrom),
+        has_scope_date_to: Boolean(scopeDateTo),
+      }, async (span) => {
+        const created = await db
+          .insertInto("governance.legal_hold" as never)
+          .values(insertValues as never)
+          .returningAll()
+          .executeTakeFirst() as Record<string, unknown>;
+        span.setAttribute("legal_hold_id", String(created["id"] ?? ""));
+        return created;
+      });
 
       res.status(201).json({ ok: true, data: toHold(hold) });
     } catch (err) {
@@ -271,21 +282,29 @@ export function createLegalHoldRoutes(router: Router, deps: LegalHoldRouteDeps):
       const now = new Date();
 
       // Release the hold — only active holds may be released
-      const updated = await db
-        .updateTable("governance.legal_hold" as never)
-        .set({
-          status:         "released",
-          release_date:   now,
-          release_reason: releaseReason.trim(),
-          released_by:    principalId,
-          updated_at:     now,
-          updated_by:     principalId,
-        } as never)
-        .where("id" as never, "=", id as never)
-        .where("tenant_id" as never, "=", tenantId as never)
-        .where("status" as never, "=", "active" as never)
-        .returningAll()
-        .executeTakeFirst() as Record<string, unknown> | undefined;
+      const updated = await withDomainSpan("governance.legal_hold.release", {
+        tenant_id: tenantId,
+        legal_hold_id: id,
+        operation: "release",
+      }, async (span) => {
+        const released = await db
+          .updateTable("governance.legal_hold" as never)
+          .set({
+            status:         "released",
+            release_date:   now,
+            release_reason: releaseReason.trim(),
+            released_by:    principalId,
+            updated_at:     now,
+            updated_by:     principalId,
+          } as never)
+          .where("id" as never, "=", id as never)
+          .where("tenant_id" as never, "=", tenantId as never)
+          .where("status" as never, "=", "active" as never)
+          .returningAll()
+          .executeTakeFirst() as Record<string, unknown> | undefined;
+        span.setAttribute("result", released ? "released" : "not_active_or_missing");
+        return released;
+      });
 
       if (!updated) {
         // Check if it exists at all

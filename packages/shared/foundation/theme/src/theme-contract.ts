@@ -161,4 +161,8 @@ export const DARK_MODE_INHERITED_THEME_VARIABLES = [
  */
 export const OPTIONAL_THEME_VARIABLES = [
   "--destructive-foreground",
+  "--scrim-modal",
+  "--scrim-command",
+  "--scrim-drawer",
+  "--scrim-context",
 ] as const;

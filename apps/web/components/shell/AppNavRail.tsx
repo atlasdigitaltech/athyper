@@ -71,8 +71,10 @@ export function AppNavRail({
           router.push("/settings");
           break;
         case "favorites":
+          onWorkspaceChange("favorites");
+          break;
         case "recent":
-          // TODO: open favourites / recent panel (Sprint 5)
+          onWorkspaceChange("recent");
           break;
         default:
           // Workspace or platform key

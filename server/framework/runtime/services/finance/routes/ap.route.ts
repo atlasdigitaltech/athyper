@@ -26,6 +26,7 @@ import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import {
   type FinanceRouteDeps,
+  enforceWriteRateLimit,
   parseScopeParams,
   resolveCompanyIds,
 } from "./finance.route.js";
@@ -94,7 +95,7 @@ async function resolveInvoicePaymentStatus(trx: Kysely<any>, tenantId: string, i
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
-  const { db, auth, logger } = deps;
+  const { db, auth, logger, cache } = deps;
 
   // ── GET /api/finance/ap/invoices ──────────────────────────────────────────
   router.get("/finance/ap/invoices", (async (req, res, next) => {
@@ -308,6 +309,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       }
 
       const sub = claims["sub"] as string ?? "";
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:create:${tenantId}:${sub}`, 20, 60)) return;
       const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" });
@@ -1264,7 +1266,9 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const { xOrg, xRealm } = extractOrgHeaders(req);
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
-      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const sub = String(claims.sub ?? "unknown");
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:submit:${tenantId}:${sub}`, 20, 60)) return;
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
       const id = String(req.params["id"] ?? "");
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const result = await handleSubmitPayment(db, tenantId, id, principalId);
@@ -1280,7 +1284,9 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const { xOrg, xRealm } = extractOrgHeaders(req);
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
-      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const sub = String(claims.sub ?? "unknown");
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:post:${tenantId}:${sub}`, 10, 60)) return;
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
       const id = String(req.params["id"] ?? "");
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const result = await handlePostPayment(db, tenantId, id, principalId);
@@ -1296,7 +1302,9 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const { xOrg, xRealm } = extractOrgHeaders(req);
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
-      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const sub = String(claims.sub ?? "unknown");
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:void:${tenantId}:${sub}`, 10, 60)) return;
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
       const id = String(req.params["id"] ?? "");
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const result = await handleVoidPayment(db, tenantId, id, principalId, req.body as Record<string, unknown>);

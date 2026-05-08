@@ -14,7 +14,27 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
 import { RUNTIME_API_URL, buildRuntimeHeaders } from "@/lib/server/runtime-headers";
 
-const MAX_BYTES = 100 * 1024 * 1024; // 100 MiB hard cap at BFF layer
+const MAX_BYTES = 100 * 1024 * 1024; // compile-time fallback
+
+async function resolveAttachmentMaxBytes(session: Awaited<ReturnType<typeof getServerSession>>): Promise<number> {
+  if (!session) return MAX_BYTES;
+  try {
+    const res = await fetch(`${RUNTIME_API_URL}/api/iam/parameters/effective?namespace=collab.attachments`, {
+      headers: buildRuntimeHeaders(session),
+      cache:   "no-store",
+    });
+    if (!res.ok) return MAX_BYTES;
+    const body = await res.json() as { values?: Record<string, unknown> };
+    const n = Number(body.values?.["collab.attachments.max_file_bytes"]);
+    return Number.isFinite(n) && n > 0 ? n : MAX_BYTES;
+  } catch {
+    return MAX_BYTES;
+  }
+}
+
+function formatMegabytes(bytes: number): string {
+  return Math.max(1, Math.floor(bytes / (1024 * 1024))).toString();
+}
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await getServerSession();
@@ -34,9 +54,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Missing file field" }, { status: 400 });
   }
 
-  if (file.size > MAX_BYTES) {
+  const maxBytes = await resolveAttachmentMaxBytes(session);
+  if (file.size > maxBytes) {
     return NextResponse.json(
-      { error: "ATTACHMENT_SIZE_EXCEEDED", message: `File exceeds 100 MB limit` },
+      { error: "ATTACHMENT_SIZE_EXCEEDED", message: `File exceeds ${formatMegabytes(maxBytes)} MB limit` },
       { status: 413 },
     );
   }
@@ -70,4 +91,3 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Bad Gateway" }, { status: 502 });
   }
 }
-

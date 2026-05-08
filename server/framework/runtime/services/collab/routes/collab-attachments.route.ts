@@ -68,6 +68,43 @@ function storageKey(tenantCode: string, companyCode: string, attachmentId: strin
   return `${tenantCode}/${companyCode}/${year}/${month}/collab/${attachmentId}/v1/${sanitizeFileName(fileName)}`;
 }
 
+async function resolveAttachmentMaxBytes(
+  db: Kysely<any>,
+  tenantId: string,
+  fallbackBytes: number,
+): Promise<number> {
+  try {
+    const result = await sql<{ value_text: string | null }>`
+      SELECT COALESCE(
+        CASE
+          WHEN tv.override_enabled IS TRUE THEN tv.value
+          ELSE COALESCE(d.product_value, d.default_value)
+        END,
+        to_jsonb(${fallbackBytes}::int)
+      ) #>> '{}' AS value_text
+      FROM control.parameter_definition d
+      LEFT JOIN master.tenant_parameter_value tv
+        ON tv.tenant_id = ${tenantId}::uuid
+       AND tv.parameter_code = d.code
+       AND tv.status = 'active'
+       AND now() >= tv.effective_from
+       AND (tv.effective_to IS NULL OR now() < tv.effective_to)
+      WHERE d.code = 'collab.attachments.max_file_bytes'
+        AND d.status = 'active'
+        AND d.is_enabled = true
+      LIMIT 1
+    `.execute(db);
+    const n = Number(result.rows[0]?.value_text);
+    return Number.isFinite(n) && n > 0 ? n : fallbackBytes;
+  } catch {
+    return fallbackBytes;
+  }
+}
+
+function formatMegabytes(bytes: number): string {
+  return Math.max(1, Math.floor(bytes / (1024 * 1024))).toString();
+}
+
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttachmentsRouteDeps): void {
@@ -89,7 +126,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
   }
 
   const { adapterRef, bucket, maxUploadMb = 100 } = objectStorage;
-  const maxBytes = maxUploadMb * 1024 * 1024;
+  const fallbackMaxBytes = maxUploadMb * 1024 * 1024;
 
   // ── POST /api/collab/attachments ──────────────────────────────────────────
 
@@ -133,11 +170,12 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
         return;
       }
 
+      const maxBytes    = await resolveAttachmentMaxBytes(db, tenantId, fallbackMaxBytes);
       const fileBuffer  = Buffer.from(body.data_base64, "base64");
       if (fileBuffer.length > maxBytes) {
         res.status(413).json({
           error:   "ATTACHMENT_SIZE_EXCEEDED",
-          message: `File exceeds max size of ${maxUploadMb} MB`,
+          message: `File exceeds max size of ${formatMegabytes(maxBytes)} MB`,
           details: { size_bytes: fileBuffer.length, max_bytes: maxBytes },
         });
         return;

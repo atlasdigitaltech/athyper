@@ -23,6 +23,8 @@ describe("Redis ACL contract", () => {
       "~sess:*",
       "~user_sessions:*",
       "~refresh_lock:*",
+      "~sid_rotation:*",
+      "~ratelimit:*",
       "~pkce_state:*",
       "~jwks:*",
       "~bull:jobs-*",

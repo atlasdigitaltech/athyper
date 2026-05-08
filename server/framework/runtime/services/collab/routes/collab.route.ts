@@ -98,6 +98,43 @@ function toComment(row: Record<string, unknown>) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const DEFAULT_MAX_COMMENT_ATTACHMENTS = 10;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveIntegerParameter(
+  db: Kysely<any>,
+  tenantId: string,
+  code: string,
+  fallback: number,
+): Promise<number> {
+  try {
+    const result = await sql<{ value_text: string | null }>`
+      SELECT COALESCE(
+        CASE
+          WHEN tv.override_enabled IS TRUE THEN tv.value
+          ELSE COALESCE(d.product_value, d.default_value)
+        END,
+        to_jsonb(${fallback}::int)
+      ) #>> '{}' AS value_text
+      FROM control.parameter_definition d
+      LEFT JOIN master.tenant_parameter_value tv
+        ON tv.tenant_id = ${tenantId}::uuid
+       AND tv.parameter_code = d.code
+       AND tv.status = 'active'
+       AND now() >= tv.effective_from
+       AND (tv.effective_to IS NULL OR now() < tv.effective_to)
+      WHERE d.code = ${code}
+        AND d.status = 'active'
+        AND d.is_enabled = true
+      LIMIT 1
+    `.execute(db);
+    const n = Number(result.rows[0]?.value_text);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 /**
  * Creates entity_document_link rows linking pre-uploaded attachments to a
  * comment. Called inside the comment insert flow — any DB error rolls back
@@ -111,8 +148,9 @@ async function linkAttachmentsToComment(
   commentId: string,
   principalId: string,
   attachmentIds: string[],
+  maxFiles: number,
 ): Promise<void> {
-  const validIds = attachmentIds.filter(isUuid).slice(0, 10); // spec: max 10
+  const validIds = attachmentIds.filter(isUuid).slice(0, maxFiles);
   if (validIds.length === 0) return;
 
   // Verify all attachment_ids belong to this tenant and are active
@@ -502,7 +540,13 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       // Link pre-uploaded attachments to this comment — best-effort, non-fatal
       if (attachmentIds.length > 0) {
-        await linkAttachmentsToComment(db, tenantId, commentId, commenterId, attachmentIds).catch(() => {});
+        const maxFiles = await resolveIntegerParameter(
+          db,
+          tenantId,
+          "collab.attachments.max_files_per_batch",
+          DEFAULT_MAX_COMMENT_ATTACHMENTS,
+        );
+        await linkAttachmentsToComment(db, tenantId, commentId, commenterId, attachmentIds, maxFiles).catch(() => {});
       }
 
       // Publish to Redis pub/sub and write to activity log — both fire-and-forget
@@ -638,7 +682,13 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         : String((row as Record<string, unknown>).created_at);
 
       if (replyAttachmentIds.length > 0) {
-        await linkAttachmentsToComment(db, tenantId, commentId, commenterId, replyAttachmentIds).catch(() => {});
+        const maxFiles = await resolveIntegerParameter(
+          db,
+          tenantId,
+          "collab.attachments.max_files_per_batch",
+          DEFAULT_MAX_COMMENT_ATTACHMENTS,
+        );
+        await linkAttachmentsToComment(db, tenantId, commentId, commenterId, replyAttachmentIds, maxFiles).catch(() => {});
       }
 
       // Publish to Redis pub/sub and write to activity log — both fire-and-forget
@@ -1439,14 +1489,33 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
   // ── POST /api/collab/bookmarks — toggle bookmark for current principal ────────
 
+  const optionalBookmarkSnapshotText = (value: unknown, maxLength = 240): string | null => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed ? trimmed.slice(0, maxLength) : null;
+  };
+
+  const bookmarkTimestamp = (value: unknown): string => {
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === "string") return value;
+    return new Date(String(value)).toISOString();
+  };
+
   const toggleBookmarkHandler: RequestHandler = async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
 
-      const body       = req.body as { entity_code?: string; record_id?: string } | undefined;
+      const body       = req.body as {
+        entity_code?: string;
+        record_id?: string;
+        display_name?: unknown;
+        record_code?: unknown;
+      } | undefined;
       const entityCode = (body?.entity_code ?? "").trim();
       const recordId   = (body?.record_id   ?? "").trim();
+      const displayName = optionalBookmarkSnapshotText(body?.display_name);
+      const recordCode  = optionalBookmarkSnapshotText(body?.record_code, 120);
       if (!entityCode || !recordId) {
         res.status(400).json({ error: "entity_code and record_id are required" });
         return;
@@ -1483,6 +1552,8 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
             principal_id: principalId,
             entity_code:  entityCode,
             record_id:    recordId,
+            display_name: displayName,
+            record_code:  recordCode,
             created_at:   new Date().toISOString(),
           } as never)
           .execute() as Promise<unknown>);
@@ -1490,6 +1561,90 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       }
     } catch (err) {
       logger?.error("collab_bookmark_toggle_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /api/collab/bookmarks — grouped bookmark list ───────────────────────
+
+  const listBookmarksHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const tenantId = await resolveTenant(req, res, db);
+      if (!tenantId) {
+        res.json({ ok: true, groups: [] });
+        return;
+      }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        : SYSTEM_PRINCIPAL_UUID;
+
+      type BookmarkRow = {
+        id: string;
+        entity_code: string;
+        record_id: string;
+        display_name: string | null;
+        record_code: string | null;
+        created_at: Date | string;
+      };
+
+      const rows = await (db
+        .selectFrom("master.record_bookmark as rb" as never)
+        .select([
+          "rb.id"           as never,
+          "rb.entity_code"  as never,
+          "rb.record_id"    as never,
+          "rb.display_name" as never,
+          "rb.record_code"  as never,
+          "rb.created_at"   as never,
+        ])
+        .where("rb.tenant_id"    as never, "=", tenantId    as never)
+        .where("rb.principal_id" as never, "=", principalId as never)
+        .orderBy("rb.created_at" as never, "desc")
+        .execute() as Promise<BookmarkRow[]>);
+
+      type BookmarkGroup = {
+        entityCode: string;
+        count: number;
+        items: Array<{
+          id: string;
+          entityCode: string;
+          recordId: string;
+          displayName: string | null;
+          recordCode: string | null;
+          createdAt: string;
+        }>;
+      };
+
+      const groups: BookmarkGroup[] = [];
+      const byEntity = new Map<string, BookmarkGroup>();
+
+      for (const row of rows) {
+        let group = byEntity.get(row.entity_code);
+        if (!group) {
+          group = { entityCode: row.entity_code, count: 0, items: [] };
+          byEntity.set(row.entity_code, group);
+          groups.push(group);
+        }
+
+        group.items.push({
+          id:          row.id,
+          entityCode:  row.entity_code,
+          recordId:    row.record_id,
+          displayName: row.display_name,
+          recordCode:  row.record_code,
+          createdAt:   bookmarkTimestamp(row.created_at),
+        });
+        group.count += 1;
+      }
+
+      res.json({ ok: true, groups });
+    } catch (err) {
+      logger?.error("collab_bookmark_list_error", { err: String(err) });
       next(err);
     }
   };
@@ -1588,6 +1743,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
   // ── Register routes ───────────────────────────────────────────────────────
   // Static paths must come before the :commentId param routes.
+  router.get("/collab/bookmarks",            listBookmarksHandler);
   router.post("/collab/bookmarks",           toggleBookmarkHandler);
   router.get("/collab/bookmarks/batch",      batchBookmarksHandler);
   router.get("/collab/comments/batch-count", batchCommentCountHandler);

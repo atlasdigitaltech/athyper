@@ -32,6 +32,7 @@ Completed work:
 - Removed ERD raw hex colors and tied viewer/export colors to theme variables.
 - Replaced arbitrary pixel typography in scanned app/shared/domain surfaces with generated typography utilities or existing scale utilities.
 - Removed remaining direct palette utility warnings by using semantic foreground/background tokens or named utilities.
+- 2026-05-08 follow-up: restored distinct mono/serif font stacks, removed the parameters and Favorites panel arbitrary typography regressions, and re-verified style and typography policies.
 
 Final audit summary:
 

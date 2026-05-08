@@ -43,6 +43,10 @@ export const refreshLockKey = (namespace: string, sid: string): string =>
 
 /** Short-lived pointer from a rotated old SID to its new SID. TTL: 30s. */
 export const sidRotationKey = (namespace: string, sid: string): string =>
+  `sid_rotation:${namespace}:${sid}`;
+
+/** Legacy rotation pointer used before the dedicated sid_rotation prefix. */
+export const legacySidRotationKey = (namespace: string, sid: string): string =>
   `refresh_lock:${namespace}:${sid}:rotated`;
 
 // ─── Pattern matchers ─────────────────────────────────────────────────────────
@@ -55,6 +59,11 @@ export const userSessionsPattern = (namespace: string): string =>
 
 /** All KC realm keys used as session namespaces. Used for cross-namespace operations. */
 export const SESSION_NAMESPACES = [
-  process.env.KEYCLOAK_REALM ?? "athyper",
-  "platform", // platform sessions always use "platform" namespace (see realm-config.ts)
+  ...new Set([
+    ...((process.env.SESSION_NAMESPACES ?? process.env.AUTH_SESSION_NAMESPACES)
+      ?.split(",")
+      .map((namespace) => namespace.trim())
+      .filter(Boolean) ?? [process.env.KEYCLOAK_REALM ?? "athyper"]),
+    "platform", // platform sessions always use "platform" namespace (see realm-config.ts)
+  ]),
 ] as const;

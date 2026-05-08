@@ -1,7 +1,7 @@
 // server/framework/adapters/telemetry/src/trace-context.ts
 //
 // OpenTelemetry trace context utilities: extracts the active span context and
-// provides a withSpan() helper for wrapping async work in a named span.
+// provides a legacy withSpan() helper for wrapping async work in a named span.
 
 import { trace, SpanStatusCode } from "@opentelemetry/api";
 
@@ -29,13 +29,17 @@ export function getOtelTraceContext(): TelemetryTraceContext | undefined {
 }
 
 /**
- * Create a new span and execute function within it
+ * Create a new span and execute function within it.
+ *
+ * @deprecated Business logic should use withDomainSpan from @athyper/svc-shared.
+ * This helper keeps the domain tracer name to avoid instrumentation.scope drift
+ * for older call sites that still import it.
  */
 export async function withSpan<T>(
   name: string,
   fn: () => Promise<T>,
 ): Promise<T> {
-  const tracer = trace.getTracer("@athyper/telemetry");
+  const tracer = trace.getTracer("@athyper/domain");
 
   return tracer.startActiveSpan(name, async (span) => {
     try {

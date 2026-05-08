@@ -7,5 +7,5 @@ export { type IntegrationRouteDeps };
 export function registerIntegrationRoutes(router: Router, deps: IntegrationRouteDeps): void {
   createIntegrationRoutes(router, deps);
   // Inbound webhook receiver — no Bearer auth, HMAC-SHA256 only
-  createWebhookReceiverRoute(router, { db: deps.db, logger: deps.logger });
+  createWebhookReceiverRoute(router, { db: deps.db, logger: deps.logger, cache: deps.cache });
 }

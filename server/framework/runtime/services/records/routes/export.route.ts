@@ -31,6 +31,11 @@ import {
   resolveFieldMap,
   extractOrgHeaders,
 } from "@athyper/svc-shared";
+import type { CacheClient } from "../../iam/session/session.service.js";
+import {
+  resolveParameterSnapshot,
+  getIntParam,
+} from "../../iam/parameters/parameter-resolver.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -40,6 +45,7 @@ type AnyDb = Kysely<Record<string, any>>;
 export interface ExportRouteDeps {
   db:    AnyDb;
   auth:  { verifyToken(token: string): Promise<Record<string, unknown>> };
+  cache?: CacheClient;
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
@@ -125,12 +131,13 @@ async function fetchRows(
   fullTable:  `${string}.${string}`,
   tenantId:   string,
   ids:        string[] | null,
+  maxRows:    number = EXPORT_MAX_ROWS,
 ): Promise<Record<string, unknown>[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q: any = (db.selectFrom(fullTable) as any)
     .selectAll()
     .where("tenant_id" as never, "=", tenantId as never)
-    .limit(EXPORT_MAX_ROWS);
+    .limit(maxRows);
 
   if (ids && ids.length > 0) {
     q = q.where("id" as never, "in", ids as never);
@@ -182,7 +189,7 @@ async function resolveExportColumns(
 // ─── Route factory ─────────────────────────────────────────────────────────────
 
 export function createExportRoutes(router: Router, deps: ExportRouteDeps): Router {
-  const { db, auth, logger } = deps;
+  const { db, auth, cache, logger } = deps;
 
   // ── POST /records/:entity/export — mint token + return download URL ─────────
   const exportHandler: RequestHandler = async (req, res, next) => {
@@ -246,8 +253,13 @@ export function createExportRoutes(router: Router, deps: ExportRouteDeps): Route
         .where("tenant_id" as never, "=", tenantId as never);
       if (ids) countQ = countQ.where("id" as never, "in", ids as never);
 
+      const exportSnap = cache
+        ? await resolveParameterSnapshot(db, cache, tenantId, "api.export").catch(() => null)
+        : null;
+      const exportMaxRows = getIntParam(exportSnap, "api.export.records_max_rows", EXPORT_MAX_ROWS);
+
       const countRow = await countQ.executeTakeFirst() as { cnt: string | number } | undefined;
-      const rowCount = Math.min(parseInt(String(countRow?.cnt ?? "0"), 10), EXPORT_MAX_ROWS);
+      const rowCount = Math.min(parseInt(String(countRow?.cnt ?? "0"), 10), exportMaxRows);
 
       const token = encodeToken({
         entityCode, tenantId, ids, format, columns, issuedAt: Date.now(),
@@ -295,7 +307,13 @@ export function createExportRoutes(router: Router, deps: ExportRouteDeps): Route
       }
 
       const fullTable = `${entityRow.table_schema}.${entityRow.table_name}` as `${string}.${string}`;
-      const rows = await fetchRows(db, fullTable, token.tenantId, token.ids);
+
+      const dlSnap = cache
+        ? await resolveParameterSnapshot(db, cache, token.tenantId, "api.export").catch(() => null)
+        : null;
+      const dlMaxRows = getIntParam(dlSnap, "api.export.records_max_rows", EXPORT_MAX_ROWS);
+
+      const rows = await fetchRows(db, fullTable, token.tenantId, token.ids, dlMaxRows);
 
       // Resolve column headers
       const columns = await resolveExportColumns(db, entityCode, token.columns);

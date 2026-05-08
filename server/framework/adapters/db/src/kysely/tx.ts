@@ -3,6 +3,17 @@
 import type { DB } from "../generated/kysely/types.js";
 import type { Kysely, Transaction } from "kysely";
 
+declare const tenantTransactionBrand: unique symbol;
+declare const systemTransactionBrand: unique symbol;
+
+export type TenantTransaction = Transaction<DB> & {
+  readonly [tenantTransactionBrand]: "tenant";
+};
+
+export type SystemTransaction = Transaction<DB> & {
+  readonly [systemTransactionBrand]: "system";
+};
+
 /**
  * Provider that resolves the tenant id for the currently-executing request.
  *
@@ -30,25 +41,55 @@ export function setTenantIdProvider(provider: TenantIdProvider | null): void {
 }
 
 /**
- * Execute a function within a database transaction.
+ * Execute tenant-agnostic system/admin work within a database transaction.
  *
  * When the client has a tenant-id provider registered, the TenantStampDriver
  * automatically stamps `app.current_tenant_id` at BEGIN, so transactions
- * opened through this helper carry the tenant GUC for the whole scope. Use
- * `withTx` when you want a transaction regardless of tenant context
- * (migrations, seed, admin tools). Use `withTenantTx` when tenant-scoped
- * atomic work is required and the absence of a tenant context should fail
- * loud rather than silently execute under admin privileges.
+ * opened while a tenant context exists carry the tenant GUC for the whole
+ * scope. This helper deliberately does not require a tenant context. Use it
+ * only for migrations, seed, health/bootstrap, and cross-tenant admin tools.
+ * Use `withTenantTx` when tenant-scoped atomic work is required.
  */
-export async function withTx<T>(
+export async function withSystemTx<T>(
   db: Kysely<DB>,
-  fn: (trx: Transaction<DB>) => Promise<T>,
+  fn: (trx: SystemTransaction) => Promise<T>,
 ): Promise<T> {
-  return db.transaction().execute(fn);
+  return db.transaction().execute((trx) => fn(trx as SystemTransaction));
 }
 
 /**
- * Execute a function within a database transaction with isolation level.
+ * Execute tenant-agnostic system/admin work within a database transaction with
+ * an explicit isolation level.
+ */
+export async function withSystemTxIsolation<T>(
+  db: Kysely<DB>,
+  isolationLevel:
+    | "read uncommitted"
+    | "read committed"
+    | "repeatable read"
+    | "serializable",
+  fn: (trx: SystemTransaction) => Promise<T>,
+): Promise<T> {
+  return db
+    .transaction()
+    .setIsolationLevel(isolationLevel)
+    .execute((trx) => fn(trx as SystemTransaction));
+}
+
+/**
+ * @deprecated Use `withSystemTx` for tenant-agnostic work or `withTenantTx`
+ * for tenant-scoped work. This alias remains for compatibility.
+ */
+export async function withTx<T>(
+  db: Kysely<DB>,
+  fn: (trx: SystemTransaction) => Promise<T>,
+): Promise<T> {
+  return withSystemTx(db, fn);
+}
+
+/**
+ * @deprecated Use `withSystemTxIsolation` for tenant-agnostic work or
+ * `withTenantTxIsolation` for tenant-scoped work.
  */
 export async function withTxIsolation<T>(
   db: Kysely<DB>,
@@ -57,24 +98,24 @@ export async function withTxIsolation<T>(
     | "read committed"
     | "repeatable read"
     | "serializable",
-  fn: (trx: Transaction<DB>) => Promise<T>,
+  fn: (trx: SystemTransaction) => Promise<T>,
 ): Promise<T> {
-  return db.transaction().setIsolationLevel(isolationLevel).execute(fn);
+  return withSystemTxIsolation(db, isolationLevel, fn);
 }
 
 /**
  * Execute tenant-scoped atomic work. Asserts a tenant id is present in the
  * request context; the TenantStampDriver wired into the client stamps
  * `app.current_tenant_id` at BEGIN. The assertion is what makes the helper
- * distinct from `withTx` — `withTx` silently runs without a stamp if no
- * tenant is in context, `withTenantTx` refuses to proceed.
+ * distinct from `withSystemTx` — system transactions may run without a stamp
+ * when no tenant is in context, while `withTenantTx` refuses to proceed.
  */
 export async function withTenantTx<T>(
   db: Kysely<DB>,
-  fn: (trx: Transaction<DB>) => Promise<T>,
+  fn: (trx: TenantTransaction) => Promise<T>,
 ): Promise<T> {
   assertTenantInContext();
-  return db.transaction().execute(fn);
+  return db.transaction().execute((trx) => fn(trx as TenantTransaction));
 }
 
 /**
@@ -87,10 +128,13 @@ export async function withTenantTxIsolation<T>(
     | "read committed"
     | "repeatable read"
     | "serializable",
-  fn: (trx: Transaction<DB>) => Promise<T>,
+  fn: (trx: TenantTransaction) => Promise<T>,
 ): Promise<T> {
   assertTenantInContext();
-  return db.transaction().setIsolationLevel(isolationLevel).execute(fn);
+  return db
+    .transaction()
+    .setIsolationLevel(isolationLevel)
+    .execute((trx) => fn(trx as TenantTransaction));
 }
 
 function assertTenantInContext(): void {

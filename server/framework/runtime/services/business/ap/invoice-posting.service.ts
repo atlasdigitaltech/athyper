@@ -30,6 +30,7 @@ import { postInvoiceTaxCalculations, reverseInvoiceTaxCalculations } from "./tax
 import { deriveApInvoiceProfile } from "./acct-profile-derivation.service.js";
 import { buildJeLinesFromProfile } from "./journal-from-profile.service.js";
 import type { InvoiceLineCtx, InvoiceCtx, PostingCtx } from "./journal-from-profile.service.js";
+import { withDomainSpan } from "../../shared/tracing.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -159,6 +160,30 @@ async function nextJeCode(db: AnyDb, tenantId: string, companyId: string): Promi
 // ── Post invoice ──────────────────────────────────────────────────────────────
 
 export async function handlePostInvoice(
+  db:          AnyDb,
+  tenantId:    string,
+  invoiceId:   string,
+  principalId: string | null,
+  body:        Record<string, unknown>,
+  logger?:     { info(e: string, f?: Record<string, unknown>): void; warn(e: string, f?: Record<string, unknown>): void },
+): Promise<HandlerResult> {
+  return withDomainSpan("finance.invoice.post", {
+    tenant_id: tenantId,
+    invoice_id: invoiceId,
+    actor_id: principalId ?? "system",
+    operation: "post_invoice",
+  }, async (span) => {
+    const result = await handlePostInvoiceInner(db, tenantId, invoiceId, principalId, body, logger);
+    span.setAttribute("result.status_code", result.status);
+    const error = result.body["error"];
+    if (typeof error === "string") span.setAttribute("result.error", error);
+    const journalEntryId = result.body["journal_entry_id"];
+    if (typeof journalEntryId === "string") span.setAttribute("journal_entry_id", journalEntryId);
+    return result;
+  });
+}
+
+async function handlePostInvoiceInner(
   db:          AnyDb,
   tenantId:    string,
   invoiceId:   string,

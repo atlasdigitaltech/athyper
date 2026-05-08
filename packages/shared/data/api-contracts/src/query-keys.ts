@@ -125,6 +125,7 @@ export const queryKeys = {
 
   // ── Collaboration ─────────────────────────────────────────
   collab: {
+    bookmarks: ["collab", "bookmarks"] as const,
     comments: (entityType: string, entityId: string) =>
       ["collab", "comments", entityType, entityId] as const,
     replies: (commentId: string) =>

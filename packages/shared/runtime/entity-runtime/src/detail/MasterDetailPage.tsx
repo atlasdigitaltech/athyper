@@ -8,7 +8,7 @@
  * Platform panels: Comments / Attachments / Activity as icon buttons in the tab bar (Sheet slide-ins).
  */
 
-import { useState, useMemo, useRef, type ReactNode } from "react";
+import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUpdateEntity } from "@athyper/query";
@@ -63,6 +63,46 @@ export interface MasterDetailPageProps {
 const DETAIL_FIELD_LABEL_CLASS = "text-xs font-medium leading-normal text-muted-foreground";
 const DETAIL_FIELD_VALUE_CLASS = "text-sm leading-snug text-foreground";
 const DETAIL_ITEM_TITLE_CLASS = "text-sm font-semibold leading-snug text-foreground";
+const RECENT_RECORD_SNAPSHOT_EVENT = "athyper:recent-record-snapshot";
+
+function recentEntityLabel(entity: CompiledEntity): string {
+  return titleCase((entity.entity_name || entity.entity_code).replace(/[_-]+/g, " ").toLowerCase());
+}
+
+function dispatchRecentRecordSnapshot({
+  entity,
+  recordId,
+  recordCode,
+  recordName,
+  recordFamily,
+}: {
+  entity: CompiledEntity;
+  recordId: string;
+  recordCode: string;
+  recordName?: string;
+  recordFamily: "master" | "document";
+}) {
+  if (typeof window === "undefined") return;
+
+  const code = recordCode.trim() || recordId;
+  const name = recordName?.trim();
+  const displayName = name && name.toLowerCase() !== code.toLowerCase() ? name : undefined;
+
+  const detail = {
+    href: `/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`,
+    label: displayName ?? code,
+    refCode: code,
+    entityCode: entity.entity_code,
+    entityLabel: recentEntityLabel(entity),
+    recordCode: code,
+    recordName: displayName,
+    recordFamily,
+  };
+
+  window.setTimeout(() => {
+    window.dispatchEvent(new CustomEvent(RECENT_RECORD_SNAPSHOT_EVENT, { detail }));
+  }, 0);
+}
 
 function KpiCard({ label, value }: { label: string; value: string }) {
   return (
@@ -1253,6 +1293,16 @@ export function MasterDetailPage({
     [entity, data, config, recordId, operations, editMode, isDirty],
   );
 
+  useEffect(() => {
+    dispatchRecentRecordSnapshot({
+      entity,
+      recordId,
+      recordCode: headerModel.identity.number,
+      recordName: headerModel.identity.name,
+      recordFamily: "master",
+    });
+  }, [entity, recordId, headerModel.identity.number, headerModel.identity.name]);
+
   const opDispatch = useOperationDispatch({
     entityCode: entity.entity_code,
     recordId,
@@ -1740,6 +1790,16 @@ export function SimpleDetailPage({
           m.actions = [...m.actions, ...deleteAction];
         return m;
       })();
+
+  useEffect(() => {
+    dispatchRecentRecordSnapshot({
+      entity,
+      recordId,
+      recordCode: headerModel.identity.number,
+      recordName: headerModel.identity.name,
+      recordFamily: "master",
+    });
+  }, [entity, recordId, headerModel.identity.number, headerModel.identity.name]);
 
   function handleAction(id: string) {
     if (editMode) {

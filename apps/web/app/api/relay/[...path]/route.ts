@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
-import { RUNTIME_API_URL, buildRuntimeHeaders, sanitizeContentDisposition } from "@/lib/server/runtime-headers";
+import {
+  RUNTIME_API_URL,
+  buildRuntimeHeaders,
+  copyTraceResponseHeaders,
+  sanitizeContentDisposition,
+  withTraceResponseHeaders,
+} from "@/lib/server/runtime-headers";
 
 /**
  * GET /api/relay/[...path]
@@ -84,7 +90,9 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
 
     // 204 No Content — return as-is
     if (upstream.status === 204) {
-      return new NextResponse(null, { status: 204 });
+      const res = new NextResponse(null, { status: 204 });
+      copyTraceResponseHeaders(upstream.headers, res.headers);
+      return res;
     }
 
     const contentType        = upstream.headers.get("Content-Type") ?? "application/json";
@@ -98,7 +106,7 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
 
     return new NextResponse(body, {
       status: upstream.status,
-      headers: resHeaders,
+      headers: withTraceResponseHeaders(upstream.headers, resHeaders),
     });
   } catch (err) {
     console.error("[relay] upstream error", err);

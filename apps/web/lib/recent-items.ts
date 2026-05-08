@@ -17,6 +17,14 @@ export interface RecentItem {
   label: string;
   /** Document/record code if applicable — e.g. "PO-8812", "JE-10455". */
   refCode?: string;
+  /** Metadata-backed entity code for record routes, e.g. "business_partner". */
+  entityCode?: string;
+  /** Human-readable entity label for record routes, e.g. "Business Partner". */
+  entityLabel?: string;
+  /** Business record code from the route or page context. */
+  recordCode?: string;
+  /** Business record display name captured from the detail header when available. */
+  recordName?: string;
   /** Module code — e.g. "ACC", "BUY", "SRM". */
   moduleCode?: string;
   /** High-level classification for icon/secondary-line display. */
@@ -27,13 +35,15 @@ export interface RecentItem {
   pinned?: boolean;
 }
 
-const STORAGE_KEY = "athyper:recent-items";
+export const RECENT_ITEMS_STORAGE_KEY = "athyper:recent-items";
+export const RECENT_ITEMS_CHANGED_EVENT = "athyper:recent-items-changed";
 const MAX_ITEMS = 20;
+let maxItems = MAX_ITEMS;
 
 function readStorage(): RecentItem[] {
   if (typeof localStorage === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as RecentItem[];
+    return JSON.parse(localStorage.getItem(RECENT_ITEMS_STORAGE_KEY) ?? "[]") as RecentItem[];
   } catch {
     return [];
   }
@@ -42,10 +52,18 @@ function readStorage(): RecentItem[] {
 function writeStorage(items: RecentItem[]) {
   if (typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    localStorage.setItem(RECENT_ITEMS_STORAGE_KEY, JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent(RECENT_ITEMS_CHANGED_EVENT));
   } catch {
     // Storage full / unavailable
   }
+}
+
+export function setRecentItemsLimit(limit: number): void {
+  if (!Number.isFinite(limit) || limit < 1) return;
+  maxItems = Math.floor(limit);
+  const trimmed = getRecentItems().slice(0, maxItems);
+  writeStorage(trimmed);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -71,7 +89,7 @@ export function pushRecentItem(item: Omit<RecentItem, "visitedAt">) {
     pinned: prev?.pinned ?? false,
   };
   const filtered = existing.filter((i) => i.href !== item.href);
-  writeStorage([updated, ...filtered].slice(0, MAX_ITEMS));
+  writeStorage([updated, ...filtered].slice(0, maxItems));
 }
 
 /** Toggle pinned state for an item. Returns the new pinned value. */

@@ -19,6 +19,7 @@ import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import type { ExtractedDocumentOutput, ExtractedLineItem }
   from "../../ai/adapters/procurement-extraction.adapter.js";
+import { withDomainSpan } from "../../shared/tracing.js";
 import type { CreateInvoiceBody } from "./invoice-create.handler.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -79,6 +80,24 @@ export interface ExtractionConfidence {
 // ── Main entry point ──────────────────────────────────────────────────────────
 
 export async function extractInvoiceDraft(
+  db:    AnyDb,
+  input: ExtractInvoiceInput,
+): Promise<ExtractInvoiceResult> {
+  return withDomainSpan("ai.invoice.extract_draft", {
+    tenant_id: input.tenantId,
+    company_code_id: input.companyCodeId,
+    attachment_id: input.attachmentId,
+    invoice_source: input.invoiceSource,
+  }, async (span) => {
+    const result = await extractInvoiceDraftInner(db, input);
+    span.setAttribute("result.line_count", result.draft.lines.length);
+    span.setAttribute("result.warning_count", result.warnings.length);
+    span.setAttribute("result.confidence", result.confidence.overall);
+    return result;
+  });
+}
+
+async function extractInvoiceDraftInner(
   db:    AnyDb,
   input: ExtractInvoiceInput,
 ): Promise<ExtractInvoiceResult> {

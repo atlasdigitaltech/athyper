@@ -10,6 +10,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
+import { queryKeys } from "@athyper/api-contracts/query-keys";
 
 function getCsrfToken(): string {
   if (typeof document === "undefined") return "";
@@ -18,6 +19,31 @@ function getCsrfToken(): string {
 }
 
 const MAX_BATCH = 100;
+
+export interface BookmarkSnapshot {
+  displayName?: string | null;
+  recordCode?: string | null;
+}
+
+export interface BookmarkListItem {
+  id: string;
+  entityCode: string;
+  recordId: string;
+  displayName: string | null;
+  recordCode: string | null;
+  createdAt: string;
+}
+
+export interface BookmarkListGroup {
+  entityCode: string;
+  count: number;
+  items: BookmarkListItem[];
+}
+
+interface BookmarkListResponse {
+  ok?: boolean;
+  groups?: BookmarkListGroup[];
+}
 
 async function fetchBookmarkedIds(
   entityCode: string,
@@ -49,6 +75,7 @@ async function fetchBookmarkedIds(
 async function toggleBookmarkRequest(
   entityCode: string,
   recordId: string,
+  snapshot?: BookmarkSnapshot,
 ): Promise<{ bookmarked: boolean }> {
   const res = await fetch("/api/collab/bookmarks", {
     method:  "POST",
@@ -56,10 +83,36 @@ async function toggleBookmarkRequest(
       "Content-Type": "application/json",
       "X-CSRF-Token": getCsrfToken(),
     },
-    body:    JSON.stringify({ entity_code: entityCode, record_id: recordId }),
+    body:    JSON.stringify({
+      entity_code:  entityCode,
+      record_id:    recordId,
+      display_name: snapshot?.displayName ?? undefined,
+      record_code:  snapshot?.recordCode ?? undefined,
+    }),
   });
   if (!res.ok) throw new Error("Bookmark toggle failed");
   return res.json() as Promise<{ bookmarked: boolean }>;
+}
+
+async function fetchBookmarksList(signal?: AbortSignal): Promise<BookmarkListGroup[]> {
+  const res = await fetch("/api/collab/bookmarks", { cache: "no-store", signal });
+  if (!res.ok) throw new Error("Bookmark list failed");
+  const data = await res.json() as BookmarkListResponse;
+  return data.groups ?? [];
+}
+
+function removeFromGroups(
+  groups: BookmarkListGroup[],
+  entityCode: string,
+  recordId: string,
+): BookmarkListGroup[] {
+  return groups
+    .map((group) => {
+      if (group.entityCode !== entityCode) return group;
+      const items = group.items.filter((item) => item.recordId !== recordId);
+      return { ...group, items, count: items.length };
+    })
+    .filter((group) => group.items.length > 0);
 }
 
 export function useRecordBookmarks(entityCode: string, recordIds: string[]) {
@@ -77,8 +130,8 @@ export function useRecordBookmarks(entityCode: string, recordIds: string[]) {
   const bookmarkedIds = new Set(data);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: ({ recordId }: { recordId: string }) =>
-      toggleBookmarkRequest(entityCode, recordId),
+    mutationFn: ({ recordId, snapshot }: { recordId: string; snapshot?: BookmarkSnapshot }) =>
+      toggleBookmarkRequest(entityCode, recordId, snapshot),
 
     // Optimistic update — flip the local set immediately
     onMutate: async ({ recordId }) => {
@@ -97,13 +150,58 @@ export function useRecordBookmarks(entityCode: string, recordIds: string[]) {
     },
 
     // Revalidate to sync with server truth
-    onSettled: () => qc.invalidateQueries({ queryKey }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey });
+      qc.invalidateQueries({ queryKey: queryKeys.collab.bookmarks });
+    },
   });
 
   const toggle = useCallback(
-    (recordId: string) => mutate({ recordId }),
+    (recordId: string, snapshot?: BookmarkSnapshot) => mutate({ recordId, snapshot }),
     [mutate],
   );
 
   return { bookmarkedIds, toggle, isLoading, isPending };
+}
+
+export function useBookmarksList(options?: { enabled?: boolean }) {
+  const qc = useQueryClient();
+  const queryKey = queryKeys.collab.bookmarks;
+
+  const query = useQuery<BookmarkListGroup[]>({
+    queryKey,
+    queryFn:   ({ signal }) => fetchBookmarksList(signal),
+    staleTime: 30_000,
+    enabled:   options?.enabled ?? true,
+  });
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: ({ entityCode, recordId }: { entityCode: string; recordId: string }) =>
+      toggleBookmarkRequest(entityCode, recordId),
+
+    onMutate: async ({ entityCode, recordId }) => {
+      await qc.cancelQueries({ queryKey });
+      const previous = qc.getQueryData<BookmarkListGroup[]>(queryKey) ?? [];
+      qc.setQueryData(queryKey, removeFromGroups(previous, entityCode, recordId));
+      return { previous };
+    },
+
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(queryKey, ctx.previous);
+    },
+
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey });
+      qc.invalidateQueries({ queryKey: ["record-bookmarks"] });
+    },
+  });
+
+  return {
+    groups: query.data ?? [],
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+    removeBookmark: mutate,
+    isRemoving: isPending,
+  };
 }

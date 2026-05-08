@@ -15,6 +15,7 @@ import {
 } from "@/lib/auth/session";
 import {
   SESSION_NAMESPACES,
+  legacySidRotationKey,
   sessKey,
   sidRotationKey,
   userSessionsKey,
@@ -41,7 +42,9 @@ async function readSessionFollowingRotation(
   const raw = await redis.get(sessKey(namespace, sid));
   if (raw) return { sid, session: JSON.parse(raw) as V4Session };
 
-  const rotatedSid = await redis.get(sidRotationKey(namespace, sid)).catch(() => null);
+  const rotatedSid =
+    (await redis.get(sidRotationKey(namespace, sid)).catch(() => null)) ??
+    (await redis.get(legacySidRotationKey(namespace, sid)).catch(() => null));
   if (!rotatedSid) return null;
 
   const rotatedRaw = await redis.get(sessKey(namespace, rotatedSid));
@@ -183,6 +186,7 @@ async function destroyAllBffSessions(
       }
       await redis.del(sessKey(namespace, sid)).catch(() => {});
       await redis.del(sidRotationKey(namespace, sid)).catch(() => {});
+      await redis.del(legacySidRotationKey(namespace, sid)).catch(() => {});
     }
 
     await redis.del(indexKey).catch(() => {});
@@ -230,6 +234,7 @@ export async function POST(req: Request) {
       } else {
         await redis.del(sessKey(sessionNamespace, sid)).catch(() => {});
         await redis.del(sidRotationKey(sessionNamespace, sid)).catch(() => {});
+        await redis.del(legacySidRotationKey(sessionNamespace, sid)).catch(() => {});
       }
     } catch {
       // Continue to cookie clearing and Keycloak front-channel logout. Redis

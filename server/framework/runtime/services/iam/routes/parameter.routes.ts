@@ -110,7 +110,7 @@ export function createParameterRoutes(router: Router, deps: ParameterRoutesDeps)
       const auth_ = await resolveParameterAuth(req, res, db, auth);
       if (!auth_) return;
 
-      if (!await requireStepUp(cache, auth_.sub, "iam_admin", res)) return;
+      if (!await requireStepUp(cache, auth_.sub, auth_.tenantId, "iam_admin", res)) return;
       const decision = await checkPermission(db, auth_.tenantId, auth_.callerPrincipalId, "IAM.PARAMETER.MANAGE");
       if (!requireAllow(decision, res)) return;
 

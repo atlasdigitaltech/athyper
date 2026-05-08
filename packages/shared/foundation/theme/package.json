@@ -21,6 +21,7 @@
   },
   "scripts": {
     "typography:generate": "tsx src/typography.generate.ts",
+    "check:typography": "pnpm run typography:generate && git diff --exit-code -- src/typography.generated.css",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "validate-presets": "tsx src/preset-validator.cli.ts --check-shipped"

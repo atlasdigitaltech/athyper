@@ -106,6 +106,18 @@ export type PaginatedResult<T> = {
  */
 export type FieldWhitelist = Set<string>;
 
+export function parseQueryInt(
+  raw: unknown,
+  defaultVal: number,
+  min: number,
+  max: number,
+): number {
+  const parsed = typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);
+  const fallback = Number.isFinite(defaultVal) ? defaultVal : min;
+  const n = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
 /**
  * Builds a Kysely list query with filtering, sorting, and pagination.
  *
@@ -138,9 +150,14 @@ export async function buildKyselyListQuery<DB, TB extends keyof DB & string, O>(
   const { filters = [], sort = [], pagination = {} } = params;
   const { page = 1, limit = 20 } = pagination;
 
-  // Validate pagination
-  const safePage = Math.max(1, page);
-  const safeLimit = Math.max(1, Math.min(100, limit)); // Max 100 items per page
+  // Validate pagination. Math.max/min propagate NaN, so normalize first.
+  const safeLimit = parseQueryInt(limit, 20, 1, 100); // Max 100 items per page
+  const safePage = parseQueryInt(
+    page,
+    1,
+    1,
+    Math.floor(Number.MAX_SAFE_INTEGER / safeLimit),
+  );
   const offset = (safePage - 1) * safeLimit;
 
   // Start with base query

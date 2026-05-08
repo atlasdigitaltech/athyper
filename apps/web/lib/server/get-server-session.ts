@@ -7,6 +7,7 @@ import { refreshTokens } from "@/lib/auth/keycloak";
 import {
   refreshLockKey,
   sessKey,
+  legacySidRotationKey,
   sidRotationKey,
   userSessionsKey,
 } from "@/lib/auth/redis-keys";
@@ -100,7 +101,9 @@ async function readSessionFollowingRotation(
   const raw = await redis.get(sessKey(ns, sid));
   if (raw) return { sid, session: JSON.parse(raw) as V4Session };
 
-  const rotatedSid = await redis.get(sidRotationKey(ns, sid)).catch(() => null);
+  const rotatedSid =
+    (await redis.get(sidRotationKey(ns, sid)).catch(() => null)) ??
+    (await redis.get(legacySidRotationKey(ns, sid)).catch(() => null));
   if (!rotatedSid) return null;
 
   const rotatedRaw = await redis.get(sessKey(ns, rotatedSid));

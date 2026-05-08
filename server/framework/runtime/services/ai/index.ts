@@ -14,7 +14,7 @@
  * Layer 2 (AIRuntime) requires no modification.
  */
 
-import type { AnyDb, AiLogger }   from "./ai-runtime.types.js";
+import type { AiLogMetrics, AnyDb, AiLogger }   from "./ai-runtime.types.js";
 import { AutonomyResolver }        from "./autonomy-resolver.service.js";
 import { ConfidenceResolver }      from "./confidence-resolver.service.js";
 import { ModelRouter }             from "./model-router.js";
@@ -43,6 +43,8 @@ export { ActionRequestSchema }               from "./ai-runtime.types.js";
 export type { ExtractedDocumentOutput }      from "./adapters/procurement-extraction.adapter.js";
 export { normaliseExtractedLines, persistExtractedLines } from "./adapters/procurement-extraction.adapter.js";
 export { registerAiRoutes };
+export { invalidateAutonomyPolicy } from "./autonomy-resolver.service.js";
+export { invalidateConfidenceThreshold } from "./confidence-resolver.service.js";
 export type { AiRouteDeps } from "./routes/ai.route.js";
 
 // ── Redis shape (matches bootstrap-provided client) ───────────────────────────
@@ -50,6 +52,14 @@ export type { AiRouteDeps } from "./routes/ai.route.js";
 interface RedisCache {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, flag: "EX", ttl: number): Promise<unknown>;
+  del?(key: string | string[]): Promise<unknown>;
+  scan?(
+    cursor: string,
+    matchFlag: "MATCH",
+    pattern: string,
+    countFlag: "COUNT",
+    count: number,
+  ): Promise<[string, string[]]>;
 }
 
 // ── Bundle creation ───────────────────────────────────────────────────────────
@@ -58,6 +68,7 @@ export interface AiServiceBundleOptions {
   db:     AnyDb;
   redis:  RedisCache;
   logger: AiLogger;
+  metrics?: AiLogMetrics;
 }
 
 export interface AiServiceBundle {
@@ -69,7 +80,7 @@ export interface AiServiceBundle {
 }
 
 export async function createAiServiceBundle(opts: AiServiceBundleOptions): Promise<AiServiceBundle> {
-  const { db, redis, logger } = opts;
+  const { db, redis, logger, metrics } = opts;
   const secrets = new SecretResolver();
 
   // ── Providers — registered in ModelRouter ──────────────────────────────────
@@ -105,8 +116,8 @@ export async function createAiServiceBundle(opts: AiServiceBundleOptions): Promi
   // ── Shared services ────────────────────────────────────────────────────────
   const promptStore         = new PromptStore();
   const evidenceBinder      = new EvidenceBinder();
-  const inferenceLogWriter  = new InferenceLogWriter(db, logger);
-  const feedbackLogWriter   = new FeedbackLogWriter(db, logger);
+  const inferenceLogWriter  = new InferenceLogWriter(db, logger, metrics);
+  const feedbackLogWriter   = new FeedbackLogWriter(db, logger, metrics);
   const autonomyResolver    = new AutonomyResolver(db, redis, logger);
   const confidenceResolver  = new ConfidenceResolver(db, redis, logger);
 

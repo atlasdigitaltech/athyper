@@ -18,10 +18,16 @@ export interface RowMetaStripProps {
   bookmarked:         boolean;
   commentCount:       number;
   commentHasOpen:     boolean;
-  onBookmarkToggle:   (recordId: string) => void;
+  onBookmarkToggle:   (recordId: string, snapshot?: RowBookmarkSnapshot) => void;
   bookmarkPending?:   boolean;
+  bookmarkSnapshot?:  RowBookmarkSnapshot;
   /** Business code used for the detail-page URL (e.g. AUKA-SITE-HQ). Falls back to row.id. */
   recordNavId?:       string;
+}
+
+export interface RowBookmarkSnapshot {
+  displayName?: string | null;
+  recordCode?: string | null;
 }
 
 export function RowMetaStrip({
@@ -33,6 +39,7 @@ export function RowMetaStrip({
   commentHasOpen,
   onBookmarkToggle,
   bookmarkPending = false,
+  bookmarkSnapshot,
   recordNavId,
 }: RowMetaStripProps) {
   const router     = useRouter();
@@ -62,7 +69,7 @@ export function RowMetaStrip({
       <BookmarkToggle
         bookmarked={bookmarked}
         recordId={recordId}
-        onToggle={onBookmarkToggle}
+        onToggle={(id) => onBookmarkToggle(id, bookmarkSnapshot)}
         isPending={bookmarkPending}
       />
     </div>

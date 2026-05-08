@@ -9,6 +9,8 @@ import {
   setTenantIdProvider,
   withTenantTx,
   withTenantTxIsolation,
+  withSystemTx,
+  withSystemTxIsolation,
   withTx,
   withTxIsolation,
   type TenantIdProvider,
@@ -18,7 +20,11 @@ import type { DB } from "./generated/kysely/types.js";
 import type { Kysely } from "kysely";
 
 export type { DbPoolStats } from "./kysely/db.js";
-export type { TenantIdProvider } from "./kysely/tx.js";
+export type {
+  SystemTransaction,
+  TenantIdProvider,
+  TenantTransaction,
+} from "./kysely/tx.js";
 
 /**
  * Database adapter config.
@@ -49,13 +55,26 @@ export interface DbAdapter {
   readonly kysely: Kysely<DB>;
 
   /**
-   * Execute function within a transaction (no tenant GUC stamping).
+   * Execute function within a transaction without requiring tenant context.
    * Use for tenant-agnostic work (auth bootstrap, cross-tenant admin ops).
+   */
+  withSystemTx: typeof withSystemTx;
+
+  /**
+   * Execute function within a transaction with isolation level and without
+   * requiring tenant context.
+   */
+  withSystemTxIsolation: typeof withSystemTxIsolation;
+
+  /**
+   * @deprecated Use `withSystemTx` for tenant-agnostic work or `withTenantTx`
+   * for tenant-scoped work.
    */
   withTx: typeof withTx;
 
   /**
-   * Execute function within a transaction with isolation level (no tenant GUC stamping).
+   * @deprecated Use `withSystemTxIsolation` for tenant-agnostic work or
+   * `withTenantTxIsolation` for tenant-scoped work.
    */
   withTxIsolation: typeof withTxIsolation;
 
@@ -113,6 +132,8 @@ export function createDbAdapter(config: DbAdapterConfig): DbAdapter {
 
   return {
     kysely: client.kysely,
+    withSystemTx,
+    withSystemTxIsolation,
     withTx,
     withTxIsolation,
     withTenantTx,

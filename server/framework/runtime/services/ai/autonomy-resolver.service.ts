@@ -37,6 +37,41 @@ const CACHE_TTL_SECONDS = 60;
 interface RedisCache {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, flag: "EX", ttl: number): Promise<unknown>;
+  del?(key: string | string[]): Promise<unknown>;
+  scan?(
+    cursor: string,
+    matchFlag: "MATCH",
+    pattern: string,
+    countFlag: "COUNT",
+    count: number,
+  ): Promise<[string, string[]]>;
+}
+
+export async function invalidateAutonomyPolicy(
+  cache: RedisCache,
+  tenantId: string,
+  actionCode?: string | null,
+  docClass?: string | null,
+): Promise<number> {
+  if (typeof cache.del !== "function") return 0;
+
+  const pattern = `ai:autonomy:${tenantId}:${actionCode ?? "*"}:${docClass ?? "*"}`;
+  if (!pattern.includes("*")) {
+    await cache.del(pattern).catch(() => undefined);
+    return 1;
+  }
+
+  if (typeof cache.scan !== "function") return 0;
+  const keys: string[] = [];
+  let cursor = "0";
+  do {
+    const [nextCursor, found] = await cache.scan(cursor, "MATCH", pattern, "COUNT", 100);
+    cursor = nextCursor;
+    keys.push(...found);
+  } while (cursor !== "0");
+
+  if (keys.length > 0) await cache.del(keys).catch(() => undefined);
+  return keys.length;
 }
 
 export class AutonomyResolver {
@@ -45,6 +80,10 @@ export class AutonomyResolver {
     private readonly cache:  RedisCache,
     private readonly logger: AiLogger,
   ) {}
+
+  async invalidate(tenantId: string, actionCode?: string | null, docClass?: string | null): Promise<number> {
+    return invalidateAutonomyPolicy(this.cache, tenantId, actionCode, docClass);
+  }
 
   async resolve(tenantId: string, actionCode: string, docClass: string | null): Promise<ActionPolicy> {
     const cacheKey = `ai:autonomy:${tenantId}:${actionCode}:${docClass ?? "*"}`;

@@ -14,6 +14,7 @@ import { sql, type Kysely } from "kysely";
 import {
   parseScopeParams,
   resolveCompanyIds,
+  enforceWriteRateLimit,
   type FinanceRouteDeps,
 } from "./finance.route.js";
 import {
@@ -604,7 +605,7 @@ async function autoApproveAndPostJournalEntry(
 }
 
 export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Router {
-  const { db, auth, logger } = deps;
+  const { db, auth, logger, cache } = deps;
   const approverResolver = new ApproverResolverService({
     db,
     logger: logger
@@ -886,8 +887,10 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
       const { xOrg, xRealm } = extractOrgHeaders(req);
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "TENANT_NOT_FOUND" }); return; }
+      const sub = String(claims["sub"] ?? "unknown");
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:journals:create:${tenantId}:${sub}`, 20, 60)) return;
 
-      const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
       const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
       const body = req.body as Record<string, unknown>;
 
@@ -1070,8 +1073,10 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         res.status(400).json({ error: "INVALID_ID", message: "jeId must be a UUID" });
         return;
       }
+      const sub = String(claims["sub"] ?? "unknown");
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:journals:submit:${tenantId}:${sub}`, 20, 60)) return;
 
-      const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
       const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
 
       const jeRow = await db
@@ -1294,8 +1299,10 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         res.status(400).json({ error: "INVALID_ID", message: "jeId must be a UUID" });
         return;
       }
+      const sub = String(claims["sub"] ?? "unknown");
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:journals:reverse:${tenantId}:${sub}`, 10, 60)) return;
 
-      const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "no principal bound to this session" });
         return;

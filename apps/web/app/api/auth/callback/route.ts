@@ -8,7 +8,7 @@ import {
 import { normalizeOrganizationClaim } from "@/lib/auth/org-normalize";
 import { resolveRealmConfig } from "@/lib/auth/realm-config";
 import { getSessionRedis } from "@/lib/auth/session-redis";
-import { generateSid, hashValue, setCsrfCookie, setSessionCookie } from "@/lib/auth/session";
+import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, generateSid, hashValue } from "@/lib/auth/session";
 import { SESSION_TTL_SECONDS, pkceStateKey, sessKey, userSessionsKey } from "@/lib/auth/redis-keys";
 import { MFA_PENDING_TTL_SECONDS } from "@/lib/auth/session-policy";
 import { resolvePublicBaseUrl } from "@/lib/auth/resolve-public-base-url";
@@ -19,6 +19,40 @@ import type { V4Session } from "@/lib/auth/types";
 // not by org attributes. This admin-API call only enriches id and display name.
 const KC_ADMIN_TOKEN_KEY = "kc_admin_token";
 const KC_ADMIN_TIMEOUT_MS = 5_000;
+
+type RedisClient = Awaited<ReturnType<typeof getSessionRedis>>;
+
+async function addUserSessionIndex(
+  redis: RedisClient,
+  indexKey: string,
+  sid: string,
+  ttlSeconds: number,
+): Promise<void> {
+  await redis.sAdd(indexKey, sid);
+  await redis.expire(indexKey, ttlSeconds);
+}
+
+function setAuthCookies(
+  response: NextResponse,
+  sid: string,
+  csrfToken: string,
+  env: string,
+): void {
+  response.cookies.set(SESSION_COOKIE_NAME, sid, {
+    httpOnly: true,
+    secure: env !== "local",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_TTL_SECONDS,
+  });
+  response.cookies.set(CSRF_COOKIE_NAME, csrfToken, {
+    httpOnly: false,
+    secure: env !== "local",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_TTL_SECONDS,
+  });
+}
 
 function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
@@ -423,21 +457,17 @@ export async function GET(req: Request) {
 
     // ─── Step 6: User session index ─────────────────────────────────────────
     const sessionIndexKey = userSessionsKey(sessionNamespace, sub);
-    await redis.sAdd(sessionIndexKey, sid);
-    await redis.expire(sessionIndexKey, SESSION_TTL_SECONDS);
-
-    // ─── Step 7: Set cookies ─────────────────────────────────────────────────
-    await setSessionCookie(sid, env);
-    await setCsrfCookie(csrfToken, env);
+    await addUserSessionIndex(redis, sessionIndexKey, sid, SESSION_TTL_SECONDS);
 
     console.log("[auth/callback] Session created:", { sub, username: preferredUsername, realm, requiresMfaChallenge });
 
     // ─── Step 8: Redirect ────────────────────────────────────────────────────
-    // neon_mfa_pending is set DIRECTLY on the redirect response — cookies()
-    // helper writes are not guaranteed to carry over to an explicit redirect.
+    // Auth cookies are set directly on the redirect response so the browser
+    // receives them on the same hop that leaves /api/auth/callback.
     if (isPlatformLogin) {
       const target = new URL("/platform", publicBaseUrl);
       const response = NextResponse.redirect(target);
+      setAuthCookies(response, sid, csrfToken, env);
       response.cookies.set("neon_realm", "platform", {
         httpOnly: true, secure: env !== "local", sameSite: "lax", path: "/", maxAge: SESSION_TTL_SECONDS,
       });
@@ -457,6 +487,7 @@ export async function GET(req: Request) {
       challengeUrl.searchParams.set("returnUrl", selectUrl.pathname + selectUrl.search);
 
       const mfaResponse = NextResponse.redirect(challengeUrl);
+      setAuthCookies(mfaResponse, sid, csrfToken, env);
       mfaResponse.cookies.delete("neon_realm");
       mfaResponse.cookies.set("neon_mfa_pending", "1", {
         httpOnly: false,
@@ -469,6 +500,7 @@ export async function GET(req: Request) {
     }
 
     const response = NextResponse.redirect(selectUrl);
+    setAuthCookies(response, sid, csrfToken, env);
     response.cookies.delete("neon_realm");
     return response;
   } catch (e: unknown) {

@@ -690,7 +690,7 @@ export async function bootstrap(
   // after all services are initialised so WorkflowEngine and EntityCompilerService
   // are guaranteed to be ready.
   const metadataApprovalBridge = createMetadataApprovalBridge(_db);
-  const entityCompiler = createEntityCompilerService(_db);
+  const entityCompiler = createEntityCompilerService(_db, logger);
   const approverResolver = new ApproverResolverService({ db: _db, logger: { warn: (e, f) => logger.warn?.(e, f) } });
   const workflowEngine = new WorkflowEngine({ db: _db, logger, approverResolver });
 

@@ -107,6 +107,14 @@ if /I "!ENVIRONMENT!"=="local" (
   set "KEYCLOAK_REALM=!IAM_DEFAULT_REALM!"
   if "!KEYCLOAK_CLIENT_ID!"=="" set "KEYCLOAK_CLIENT_ID=neon-web"
 
+  REM The shared stack env uses PUBLIC_BASE_URL for the API. The web BFF must
+  REM advertise the Neon origin to Keycloak when building OAuth redirect_uri.
+  if not "!PUBLIC_WEB_URL!"=="" (
+    set "PUBLIC_BASE_URL=!PUBLIC_WEB_URL!"
+  ) else (
+    set "PUBLIC_BASE_URL=https://!APPS_ATHYPER_WEB_HOST!"
+  )
+
   REM Allow direct localhost:3000 access (bypasses host-guard middleware)
   set "ALLOW_DIRECT_ACCESS=true"
 

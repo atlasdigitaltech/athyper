@@ -34,7 +34,13 @@ export {
   useUpdateView,
 } from "./hooks";
 
-export { useRecordBookmarks } from "./hooks/useRecordBookmarks";
+export {
+  useRecordBookmarks,
+  useBookmarksList,
+  type BookmarkSnapshot,
+  type BookmarkListItem,
+  type BookmarkListGroup,
+} from "./hooks/useRecordBookmarks";
 export { useCommentCounts } from "./hooks/useCommentCounts";
 export { useFilterPresets, type FilterPreset } from "./hooks/useFilterPresets";
 
