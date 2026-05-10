@@ -59,7 +59,7 @@ CROSS JOIN (VALUES
     ('document_no',    'document_no',    'PO Number',         'text',    'one',         NULL::text,                              true,  true,  '{"max_length":50}'::jsonb,    10),
     ('order_type',     'order_type',     'Order Type',        'enum',    'one',         'document.purchase_order_type'::text,    true,  true,  NULL::jsonb,                   20),
     ('status',         'status',         'Status',            'lifecycle_state', 'one',  NULL::text,                              true,  true,  NULL::jsonb,                   30),
-    ('supplier_id',    'supplier_id',    'Vendor',            'reference', 'one',         NULL::text,                              true,  true,  '{"ref_entity":"supplier"}'::jsonb, 40),
+    ('supplier_id',    'supplier_id',    'Supplier',          'reference', 'one',         NULL::text,                              true,  true,  '{"ref_entity":"supplier"}'::jsonb, 40),
     ('order_date',     'order_date',     'Order Date',        'date',    'one',         NULL::text,                              true,  true,  NULL::jsonb,                   50),
     ('delivery_date',  'delivery_date',  'Expected Delivery', 'date',    'zero_or_one', NULL::text,                              false, true,  NULL::jsonb,                   60),
     ('currency_code',  'currency_code',  'Currency',          'text',    'one',         NULL::text,                              true,  true,  '{"max_length":3}'::jsonb,     70),

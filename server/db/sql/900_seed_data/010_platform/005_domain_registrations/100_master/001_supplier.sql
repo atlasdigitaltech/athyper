@@ -1,11 +1,11 @@
--- 100_master/001_vendor.sql
+-- 100_master/001_supplier.sql
 -- Purpose: control.entity + entity_version + entity_field for Supplier (master.supplier)
 -- Module: BUY (Buying)
 -- Canonical term: "supplier" — matches table name master.supplier throughout
 -- Depends on: LookupDomain/master/supplier_type.sql
 -- Idempotent: WHERE NOT EXISTS / ON CONFLICT DO NOTHING
 
--- ── 0. Normalize any prior seeding as 'vendor' → 'supplier' ──────────────────
+-- ── 0. Normalize any prior seeding as 'supplier' (was 'vendor') ─────────────
 -- Runs unconditionally — safe to re-run; fixes existing DBs with stale labels.
 UPDATE control.entity
 SET name           = 'supplier',

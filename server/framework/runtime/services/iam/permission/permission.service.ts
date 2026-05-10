@@ -206,7 +206,9 @@ export async function checkPermissionBatch(
     company_code_ids: string[] | null;
   }>`
     WITH all_perms AS (
-      SELECT id, code FROM shared.permission WHERE status = 'active'
+      SELECT id, code, is_plan_restricted
+      FROM shared.permission
+      WHERE status = 'active'
     ),
     -- Step 2: derive group roles for this principal
     principal_group_roles AS (
@@ -250,18 +252,30 @@ export async function checkPermissionBatch(
         AND ag.principal_id  = ${principalId}
         AND (ag.expires_at IS NULL OR ag.expires_at > now())
     ),
-    -- Step 1: plan gate (plan_permission_access or tenant_permission_override)
+    -- Step 1: plan gate (tenant_permission_override or included plan permission)
     plan_denies AS (
-      SELECT ppa.permission_id
-      FROM control.plan_permission_access ppa
-      JOIN master.tenant t ON t.subscription = ppa.plan_code
-      WHERE t.id = ${tenantId}
-        AND ppa.is_permitted = false
-      -- subtract any tenant-level overrides
-      EXCEPT
-      SELECT tpo.permission_id
-      FROM master.tenant_permission_override tpo
-      WHERE tpo.tenant_id = ${tenantId}
+      SELECT ap.id AS permission_id
+      FROM all_perms ap
+      WHERE ap.is_plan_restricted = true
+        AND NOT EXISTS (
+          SELECT 1
+          FROM master.tenant_permission_override tpo
+          WHERE tpo.tenant_id = ${tenantId}
+            AND tpo.permission_id = ap.id
+            AND tpo.is_granted = true
+            AND (tpo.expires_at IS NULL OR tpo.expires_at > now())
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM master.tenant t
+          JOIN shared.subscription_plan sp
+            ON sp.code = t.subscription
+          JOIN shared.plan_permission_access ppa
+            ON ppa.plan_id = sp.id
+          WHERE t.id = ${tenantId}
+            AND ppa.permission_id = ap.id
+            AND ppa.is_included = true
+        )
     ),
     evaluated AS (
       SELECT

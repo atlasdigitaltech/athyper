@@ -80,7 +80,7 @@ async function lockAndGuardInvoice(
     tax_mode: string | null; invoice_date: string;
   }>`
     SELECT id, status, tenant_id, company_code_id, line_count, row_version,
-           tax_mode, invoice_date
+           tax_mode, COALESCE(supplier_invoice_date, document_date) AS invoice_date
       FROM document.purchase_invoice
      WHERE id        = ${invoiceId}::uuid
        AND tenant_id = ${tenantId}::uuid

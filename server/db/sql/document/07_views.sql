@@ -11,7 +11,7 @@
 -- Filters to PO-type commitments: PURCHASE_ORDER and BLANKET_PO.
 --
 -- po_status projects commitment.status to PO-facing vocabulary:
---   active              -> sent_to_vendor
+--   active              -> sent_to_supplier
 --   partially_fulfilled -> partially_received
 --   fully_fulfilled     -> fully_received
 --   expired             -> closed
@@ -43,7 +43,7 @@ SELECT
 
     -- PO-facing projected status
     CASE c.status
-        WHEN 'active'              THEN 'sent_to_vendor'
+        WHEN 'active'              THEN 'sent_to_supplier'
         WHEN 'partially_fulfilled' THEN 'partially_received'
         WHEN 'fully_fulfilled'     THEN 'fully_received'
         WHEN 'expired'             THEN 'closed'

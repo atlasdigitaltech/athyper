@@ -420,7 +420,7 @@ export type StatusDimensionConfig = z.infer<typeof StatusDimensionConfigSchema>;
 export const MasterConfigSchema = z.object({
   /** P1 chip label, e.g. "SUPPLIER". Defaults to entity_name uppercased. */
   type_label:           z.string().optional(),
-  /** Field name whose value is shown as inline classification: "ACME · Vendor". */
+  /** Field name whose value is shown as inline classification: "ACME · Supplier". */
   classification_field: z.string().optional(),
   /** Field names to display as KPI fact cells (P2 header rail for rich profile). */
   header_facts:         z.array(z.string()).optional(),

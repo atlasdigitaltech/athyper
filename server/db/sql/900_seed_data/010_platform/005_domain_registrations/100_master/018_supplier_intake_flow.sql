@@ -14,7 +14,7 @@
 --   (numbering_series is tenant+company scoped — seeded per tenant, not here)
 --
 -- Depends on:
---   001_vendor.sql, control/01g_tables_flow_engine_ext.sql,
+--   001_supplier.sql, control/01g_tables_flow_engine_ext.sql,
 --   control/01h_tables_composite_intake.sql, 017_supplier_permissions.sql
 --
 -- Idempotent:

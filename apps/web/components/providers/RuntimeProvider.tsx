@@ -76,7 +76,7 @@ function captureTraceId(response: Response): void {
 // directly to the runtime API. The relay BFF injects the bearer token
 // server-side, so the browser never holds it.
 //
-// Path mapping:  /api/records/VENDOR  →  /api/relay/api/records/VENDOR
+// Path mapping:  /api/records/SUPPLIER  →  /api/relay/api/records/SUPPLIER
 //
 // The relay route handler strips the leading segment and forwards to RUNTIME_API_URL.
 

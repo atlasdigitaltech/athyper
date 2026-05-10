@@ -21,7 +21,7 @@ SELECT
     'DOCUMENT', 'system', 'ent', 'table',
     'full', 'tenant_critical', 'controlled',
     'document', 'purchase_invoice',
-    'Invoice', 'Invoices', 'file-text', 'violet',
+    'Purchase Invoice', 'Purchase Invoices', 'file-text', 'violet',
     true,
     '{"prefix":"INV","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
     '{"is_approvable":true,"document_category":"payables","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
@@ -31,6 +31,19 @@ WHERE NOT EXISTS (
     WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
       AND tenant_id IS NULL
 );
+
+UPDATE control.entity
+   SET label_singular = 'Purchase Invoice',
+       label_plural = 'Purchase Invoices',
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+ WHERE table_schema = 'document'
+   AND table_name = 'purchase_invoice'
+   AND tenant_id IS NULL
+   AND (
+     label_singular IS DISTINCT FROM 'Purchase Invoice'
+     OR label_plural IS DISTINCT FROM 'Purchase Invoices'
+   );
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
@@ -68,8 +81,8 @@ CROSS JOIN (VALUES
     ('status',                   'status',                  'Status',             'lifecycle_state','one',         NULL::text,                                   true,  true,  NULL::jsonb,                            30),
     ('company_code_id',          'company_code_id',         'Company Code',       'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"company_code","display_field":"name"}'::jsonb, 35),
     -- ── B: Counterparty & Dates ───────────────────────────────────────────────
-    ('supplier_id',              'supplier_id',             'Vendor',             'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"supplier","display_field":"name"}'::jsonb,     40),
-    ('supplier_invoice_date',    'supplier_invoice_date',   'Vendor Invoice Date','date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            45),
+    ('supplier_id',              'supplier_id',             'Supplier',           'reference',      'one',         NULL::text,                                   true,  true,  '{"ref_entity":"supplier","display_field":"name"}'::jsonb,     40),
+    ('supplier_invoice_date',    'supplier_invoice_date',   'Supplier Invoice Date','date',         'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            45),
     ('invoice_date',             'document_date',           'Invoice Date',       'date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            50),
     ('posting_date',             'posting_date',            'Posting Date',       'date',           'one',         NULL::text,                                   true,  true,  NULL::jsonb,                            55),
     ('due_date',                 'due_date',                'Due Date',           'date',           'zero_or_one', NULL::text,                                   false, true,  NULL::jsonb,                            60),
@@ -83,7 +96,7 @@ CROSS JOIN (VALUES
     ('outstanding_amount',       'outstanding_amount',      'Outstanding',        'decimal',        'one',         NULL::text,                                   false, true,  '{"min":0}'::jsonb,                    104),
     -- ── D: Source, References & Terms ────────────────────────────────────────
     ('invoice_source',           'invoice_source',          'Invoice Source',     'enum',           'one',         'document.purchase_invoice_source'::text,     true,  true,  NULL::jsonb,                           110),
-    ('supplier_invoice_number',   'supplier_invoice_number', 'Vendor Invoice No.', 'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":100}'::jsonb,            120),
+    ('supplier_invoice_number',   'supplier_invoice_number', 'Supplier Invoice No.', 'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":100}'::jsonb,            120),
     ('description',              'description',             'Invoice Name',       'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":200}'::jsonb,            130),
     ('payment_term_id',          'payment_term_id',         'Payment Terms',      'reference',      'zero_or_one', NULL::text,                                   false, false, '{"ref_entity":"payment_term"}'::jsonb, 140),
     -- ── E: Matching & Hold ────────────────────────────────────────────────────
@@ -153,7 +166,7 @@ WHERE e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
--- ── Fix ref_entity: "vendor" → "supplier" on already-seeded rows ─────────────
+-- ── Fix ref_entity: "supplier" on already-seeded rows (was "vendor") ────────
 UPDATE control.entity_field ef
 SET validation = '{"ref_entity":"supplier","display_field":"name"}'::jsonb
 FROM control.entity_version ev
@@ -175,7 +188,7 @@ WHERE ef.entity_version_id = ev.id
   AND ef.origin = 'system';
 
 -- ── Mark searchable fields (idempotent) ───────────────────────────────────────
--- document_no (invoice number like INV-A1-0001), vendor_invoice_ref, description
+-- document_no (invoice number like INV-A1-0001), supplier_invoice_number, description
 -- are the natural free-text search targets for the invoice list.
 UPDATE control.entity_field ef
 SET is_searchable = true
@@ -213,7 +226,7 @@ SET display_config = jsonb_build_object(
     'document_header', jsonb_build_object(
         'number_field',     'document_no',
         'status_field',     'status',
-        'type_label',       'INVOICE',
+        'type_label',       'PURCHASE INVOICE',
         'total_label',      'INVOICE TOTAL',
         'date_label',       'INVOICE DATE',
         'party_id_field',   'supplier_id',
@@ -229,6 +242,19 @@ SET display_config = jsonb_build_object(
 WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
   AND tenant_id IS NULL
   AND display_config = '{}'::jsonb;
+
+UPDATE control.entity
+SET display_config = jsonb_set(
+    display_config,
+    '{document_header,type_label}',
+    '"PURCHASE INVOICE"'::jsonb,
+    true
+)
+WHERE table_schema = 'document'
+  AND table_name = 'purchase_invoice'
+  AND tenant_id IS NULL
+  AND display_config IS NOT NULL
+  AND COALESCE(display_config -> 'document_header' ->> 'type_label', '') <> 'PURCHASE INVOICE';
 
 -- ── 4b. Patch: add title_field to document_header on already-seeded databases ──
 -- The initial UPDATE (above) only fires on a fresh DB (display_config = '{}').
@@ -442,13 +468,13 @@ WHERE e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
--- ── Patch: rename 'Vendor Ref' → 'Vendor Invoice No.' on already-seeded rows ──
+-- ── Patch: rename 'Vendor Ref' / 'Vendor Invoice No.' → 'Supplier Invoice No.' on already-seeded rows ──
 UPDATE control.entity_field ef
-   SET label = 'Vendor Invoice No.'
+   SET label = 'Supplier Invoice No.'
   FROM control.entity_version ev
   JOIN control.entity e ON e.id = ev.entity_id
  WHERE ef.entity_version_id = ev.id
    AND e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
    AND e.tenant_id IS NULL AND ev.version_no = 1
    AND ef.name = 'vendor_invoice_ref'
-   AND ef.label = 'Vendor Ref';
+   AND ef.label IN ('Vendor Ref', 'Vendor Invoice No.');

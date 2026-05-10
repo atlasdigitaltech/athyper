@@ -10,8 +10,20 @@
  *   <JournalGrid scope={scope} />
  */
 
-import { useState } from "react";
-import { ChevronDown, ChevronRight, FileText, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ArrowDown,
+  ArrowDownUp,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Plus,
+  RotateCcw,
+  Search,
+  Star,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import {
   Badge, Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
   Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -23,6 +35,7 @@ import { useReverseJournal } from "../hooks/useReverseJournal";
 import { useCompanyList } from "../hooks/useCharts";
 import { PostingTrace } from "./PostingTrace";
 import type { FinanceScope } from "../lib/scope";
+import { openAppRecordFromContextMenu } from "../lib/recordLinks";
 import { fmtCurrency, fmtDate } from "../components/format";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -35,6 +48,43 @@ function statusVariant(status: string): "success" | "destructive" | "muted" | "s
   return "secondary";
 }
 
+function fmtListDate(d: string | null | undefined): string {
+  if (!d) return "-";
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? d : dt.toLocaleDateString("en-US");
+}
+
+function fmtLedgerAmount(value: number): string {
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  });
+}
+
+function currencyName(code: string): string {
+  const names: Record<string, string> = {
+    SAR: "Saudi Riyal",
+    USD: "US Dollar",
+    EUR: "Euro",
+    GBP: "Pound Sterling",
+  };
+  return names[code] ?? code;
+}
+
+function relativeAge(d: string | null | undefined): string {
+  if (!d) return "";
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "";
+
+  const diffMs = Math.max(0, Date.now() - dt.getTime());
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 60) return `${Math.max(1, minutes)}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
 // ── Row ───────────────────────────────────────────────────────────────────────
 
 function JeRow({
@@ -42,13 +92,94 @@ function JeRow({
   expanded,
   onToggle,
   onReverse,
+  entityListStyle = false,
 }: {
   je: JournalEntry;
   expanded: boolean;
   onToggle(): void;
   onReverse(je: JournalEntry): void;
+  entityListStyle?: boolean;
 }) {
   const canReverse = je.status === "posted";
+
+  if (entityListStyle) {
+    return (
+      <>
+        <tr
+          className="cursor-pointer border-b transition-colors hover:bg-muted/50"
+          onClick={onToggle}
+        >
+          <td className="px-3 py-1 align-middle">
+            <span
+              className="cursor-context-menu text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              title="Right-click to open this journal entry."
+              onContextMenu={(event) => openAppRecordFromContextMenu(event, "journal_entry", je.jeNumber, {
+                copyItems: [
+                  { label: "JE Number", value: je.jeNumber },
+                  { label: "Status", value: je.status },
+                  { label: "Posting Date", value: fmtListDate(je.postingDate) },
+                  { label: "Period", value: String(je.periodNumber) },
+                  { label: "Transaction Currency", value: je.currencyCode },
+                  { label: "Total Debit", value: fmtLedgerAmount(je.totalDebit) },
+                  { label: "Total Credit", value: fmtLedgerAmount(je.totalCredit) },
+                ],
+              })}
+            >
+              {je.jeNumber}
+            </span>
+          </td>
+          <td className="px-3 py-1 align-middle">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
+              <span className="size-2 rounded-full bg-muted-foreground" aria-hidden />
+              <span className="capitalize">{je.status}</span>
+            </span>
+          </td>
+          <td className="px-3 py-1 align-middle text-sm text-foreground">
+            {fmtListDate(je.postingDate)}
+          </td>
+          <td className="px-3 py-1 align-middle text-sm text-foreground">
+            {je.periodNumber}
+          </td>
+          <td className="px-3 py-1 align-middle text-sm text-foreground">
+            {je.currencyCode ? `${je.currencyCode} - ${currencyName(je.currencyCode)}` : "-"}
+          </td>
+          <td className="px-3 py-1 text-right align-middle text-sm tabular-nums text-foreground">
+            {fmtLedgerAmount(je.totalDebit)}
+          </td>
+          <td className="px-3 py-1 text-right align-middle text-sm tabular-nums text-foreground">
+            {fmtLedgerAmount(je.totalCredit)}
+          </td>
+          <td className="w-24 px-3 py-1 text-right align-middle">
+            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+              {relativeAge(je.postedAt ?? je.postingDate)}
+              <Star className="h-3.5 w-3.5 text-muted-foreground/50" />
+            </span>
+          </td>
+        </tr>
+
+        {expanded && (
+          <tr>
+            <td colSpan={8} className="border-b bg-muted/20 px-4 pb-4 pt-2">
+              <PostingTrace jeId={je.id} />
+              {canReverse && (
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs text-destructive border-destructive/40 hover:bg-destructive/10"
+                    onClick={(e) => { e.stopPropagation(); onReverse(je); }}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Reverse Entry
+                  </Button>
+                </div>
+              )}
+            </td>
+          </tr>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -405,6 +536,13 @@ function NewJournalDialog({
 
 export interface JournalGridProps {
   scope: FinanceScope;
+  search?: string;
+  hideSearch?: boolean;
+  hideCreateAction?: boolean;
+  entityListStyle?: boolean;
+  activeFilterChips?: Array<{ key: string; label: string; value: string }>;
+  onRemoveFilter?: (key: string) => void;
+  onClearFilters?: () => void;
 }
 
 const STATUS_OPTIONS = [
@@ -417,7 +555,16 @@ const STATUS_OPTIONS = [
 
 const PAGE_SIZE = 50;
 
-export function JournalGrid({ scope }: JournalGridProps) {
+export function JournalGrid({
+  scope,
+  search: controlledSearch,
+  hideSearch = false,
+  hideCreateAction = false,
+  entityListStyle = false,
+  activeFilterChips = [],
+  onRemoveFilter,
+  onClearFilters,
+}: JournalGridProps) {
   const [page,          setPage]          = useState(1);
   const [status,        setStatus]        = useState("all");
   const [search,        setSearch]        = useState("");
@@ -428,10 +575,18 @@ export function JournalGrid({ scope }: JournalGridProps) {
   const [reverseError,  setReverseError]  = useState<string | null>(null);
 
   const reverseJournal = useReverseJournal();
+  const effectiveSearch = controlledSearch ?? search;
+
+  useEffect(() => {
+    if (controlledSearch === undefined) return;
+    setSearch(controlledSearch);
+    setSearchInput(controlledSearch);
+    setPage(1);
+  }, [controlledSearch]);
 
   const { data, isLoading } = useJournalList(scope, {
     status:  status === "all" ? undefined : status,
-    search:  search || undefined,
+    search:  effectiveSearch || undefined,
     page,
     limit:   PAGE_SIZE,
   });
@@ -458,12 +613,60 @@ export function JournalGrid({ scope }: JournalGridProps) {
   }
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
+  const visibleCount = data?.items.length ?? 0;
+  const totalCount = data?.total ?? 0;
 
   return (
     <div className="flex flex-col gap-3">
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
+      {entityListStyle && (
+        <div className="flex min-h-8 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="text-muted-foreground">
+            Showing <strong className="font-semibold text-foreground">{visibleCount.toLocaleString()}</strong>
+            {" of "}
+            <strong className="font-semibold text-foreground">{totalCount.toLocaleString()}</strong>
+            {" "}journal entry
+          </span>
+
+          {activeFilterChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => onRemoveFilter?.(chip.key)}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs text-foreground transition-colors hover:bg-muted/60"
+              title={`Remove ${chip.label} filter`}
+            >
+              <span>
+                <span className="text-muted-foreground">{chip.label}:</span>{" "}
+                <span className="font-medium">{chip.value}</span>
+              </span>
+              <XCircle className="ml-0.5 h-3 w-3 text-muted-foreground" />
+            </button>
+          ))}
+
+          {activeFilterChips.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="text-xs text-muted-foreground/70 underline-offset-2 transition-colors hover:text-foreground hover:underline"
+              >
+                Clear all
+              </button>
+              <span className="text-muted-foreground/30">.</span>
+            </>
+          )}
+
+          <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+            <ArrowDownUp className="h-3.5 w-3.5" />
+            Posting Date
+            <ArrowDown className="h-3.5 w-3.5" />
+          </span>
+        </div>
+      )}
+
+      <div className={entityListStyle ? "hidden" : "flex flex-wrap items-center gap-2"}>
         <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
           <SelectTrigger className="h-8 w-40 text-xs">
             <SelectValue />
@@ -475,18 +678,20 @@ export function JournalGrid({ scope }: JournalGridProps) {
           </SelectContent>
         </Select>
 
-        <div className="flex flex-1 items-center gap-1.5 min-w-48 max-w-sm">
-          <Input
-            className="h-8 text-xs"
-            placeholder="Search JE number or description…"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          />
-          <Button variant="outline" size="sm" className="h-8 px-2" onClick={handleSearch}>
-            <Search className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {!hideSearch && (
+          <div className="flex flex-1 items-center gap-1.5 min-w-48 max-w-sm">
+            <Input
+              className="h-8 text-xs"
+              placeholder="Search JE number or description..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            />
+            <Button variant="outline" size="sm" className="h-8 px-2" onClick={handleSearch}>
+              <Search className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
 
         {data && (
           <span className="text-xs text-muted-foreground">
@@ -494,10 +699,12 @@ export function JournalGrid({ scope }: JournalGridProps) {
           </span>
         )}
 
-        <Button size="sm" className="ml-auto h-8 gap-1.5 text-xs" onClick={() => setDialogOpen(true)}>
-          <Plus className="h-3.5 w-3.5" />
-          New Journal Entry
-        </Button>
+        {!hideCreateAction && (
+          <Button size="sm" className="ml-auto h-8 gap-1.5 text-xs" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-3.5 w-3.5" />
+            New Journal Entry
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -511,6 +718,71 @@ export function JournalGrid({ scope }: JournalGridProps) {
         <div className="flex flex-col items-center gap-2 py-16 text-center">
           <FileText className="h-8 w-8 text-muted-foreground/30" />
           <p className="text-sm text-muted-foreground">No journal entries found</p>
+        </div>
+      ) : entityListStyle ? (
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full min-w-[1040px] caption-bottom text-sm text-foreground">
+            <thead className="sticky top-0 z-10 border-b bg-muted">
+              <tr>
+                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    JE Number <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
+                  </span>
+                </th>
+                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    Status <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
+                  </span>
+                </th>
+                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    Posting Date <ArrowDown className="h-3.5 w-3.5" />
+                  </span>
+                </th>
+                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    Period <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
+                  </span>
+                </th>
+                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    Transaction Currency <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
+                  </span>
+                </th>
+                <th className="h-7 px-3 text-right align-middle text-xs font-semibold text-muted-foreground">
+                  <span className="inline-flex items-center justify-end gap-2">
+                    Total Debit <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
+                  </span>
+                </th>
+                <th className="h-7 px-3 text-right align-middle text-xs font-semibold text-muted-foreground">
+                  <span className="inline-flex items-center justify-end gap-2">
+                    Total Credit <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
+                  </span>
+                </th>
+                <th className="h-7 w-24 px-3 align-middle" />
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((je) => (
+                <JeRow
+                  key={je.id}
+                  je={je}
+                  expanded={expandedId === je.id}
+                  onToggle={() => toggleExpand(je.id)}
+                  onReverse={(target) => { setReverseError(null); setReverseTarget(target); }}
+                  entityListStyle
+                />
+              ))}
+            </tbody>
+            <tfoot className="border-t-2 bg-muted font-medium">
+              <tr>
+                <td colSpan={5} className="h-8" />
+                <td className="px-3 py-1 text-right text-sm font-medium tabular-nums text-foreground">0</td>
+                <td className="px-3 py-1 text-right text-sm font-medium tabular-nums text-foreground">0</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
         </div>
       ) : (
         <div className="rounded-md border overflow-x-auto">

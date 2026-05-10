@@ -43,6 +43,12 @@ export interface FinanceScope {
    */
   currency?: string;
 
+  /**
+   * Transaction currency code on source journals/subledger documents.
+   * Balance-based reports may ignore this until currency conversion is wired.
+   */
+  transactionCurrency?: string;
+
   /** When true the API also returns the prior-year column for comparison. */
   comparative?: boolean;
 }
@@ -68,8 +74,10 @@ export function parseFinanceScope(
     period:       scalar("period") != null
                     ? Number(scalar("period"))
                     : (defaults.period ?? null),
-    bookId:       scalar("bookId")    ?? defaults.bookId,
-    currency:     scalar("currency")  ?? defaults.currency,
+    bookId:       scalar("bookId")              ?? defaults.bookId,
+    currency:     scalar("currency")            ?? defaults.currency,
+    transactionCurrency:
+                  scalar("transactionCurrency") ?? scalar("txnCurrency") ?? defaults.transactionCurrency,
     comparative:  scalar("comparative") === "true" || defaults.comparative,
   };
 }
@@ -86,6 +94,7 @@ export function scopeToParams(scope: FinanceScope): URLSearchParams {
   }
   if (scope.bookId) p.set("bookId", scope.bookId);
   if (scope.currency) p.set("currency", scope.currency);
+  if (scope.transactionCurrency) p.set("transactionCurrency", scope.transactionCurrency);
   if (scope.comparative) p.set("comparative", "true");
   return p;
 }
@@ -99,6 +108,7 @@ export function scopeCacheKey(scope: FinanceScope): readonly unknown[] {
     scope.period ?? "all",
     scope.bookId ?? null,
     scope.currency ?? null,
+    scope.transactionCurrency ?? null,
     scope.comparative ?? false,
   ] as const;
 }

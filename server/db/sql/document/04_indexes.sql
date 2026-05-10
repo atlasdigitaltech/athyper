@@ -547,7 +547,7 @@ CREATE INDEX IF NOT EXISTS sesl_commitment_line_idx
     ON document.service_entry_sheet_line (tenant_id, commitment_line_id);
 
 -- ── document.wht_certificate ─────────────────────────────────────────────────
--- R7-C: lookup by vendor + company + period
+-- R7-C: lookup by supplier + company + period
 CREATE INDEX IF NOT EXISTS whtc_company_party_idx
     ON document.wht_certificate (tenant_id, company_code_id, counterparty_id);
 

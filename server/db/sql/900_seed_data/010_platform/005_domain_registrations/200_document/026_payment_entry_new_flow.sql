@@ -4,7 +4,7 @@
 --
 -- Field ui_variant map:
 --   payment_type      → radio_cards   (bank_transfer / cheque / cash / online_transfer)
---   supplier_id       → inline_search (EntityRefPicker backed by /records/vendor)
+--   supplier_id       → inline_search (EntityRefPicker backed by /records/supplier)
 --   document_date     → date          (DatePicker, defaults to today)
 --   posting_date      → date          (DatePicker, defaults to today)
 --   currency_code     → readonly chip (derived from supplier profile; user can override)
@@ -93,10 +93,10 @@ BEGIN
   JOIN (VALUES
     -- payment_type: radio_cards → bank_transfer / cheque / cash / online_transfer
     ('payment_type',      'required',  'manual', 'radio_cards',   2, NULL::text,     NULL::text, NULL, NULL, 'Type of payment — choose bank transfer, cheque, cash, or online.', 10),
-    -- supplier_id: inline_search → EntityRefPicker backed by /records/vendor
-    ('supplier_id',       'required',  'manual', 'inline_search', 1, NULL::text,     NULL::text, NULL, NULL, 'Vendor being paid.', 20),
+    -- supplier_id: inline_search → EntityRefPicker backed by /records/supplier
+    ('supplier_id',       'required',  'manual', 'inline_search', 1, NULL::text,     NULL::text, NULL, NULL, 'Supplier being paid.', 20),
     -- currency_code: derived from supplier profile; override allowed
-    ('currency_code',     'chip',      'derived_overrideable', NULL, 1, NULL::text,  'vendor.default_currency(supplier_id)', NULL, NULL, 'Payment currency — derived from vendor profile.', 30),
+    ('currency_code',     'chip',      'derived_overrideable', NULL, 1, NULL::text,  'supplier.default_currency(supplier_id)', NULL, NULL, 'Payment currency — derived from supplier profile.', 30),
     -- document_date: DatePicker, defaults to today
     ('document_date',     'required',  'manual', NULL, 1, 'today()',     NULL::text, NULL, NULL, 'Payment date on the payment instrument.', 40),
     -- posting_date: DatePicker, defaults to today

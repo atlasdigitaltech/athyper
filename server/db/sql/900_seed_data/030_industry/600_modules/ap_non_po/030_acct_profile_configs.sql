@@ -8,7 +8,7 @@
 -- Each profile gets exactly one config row at version=1, status='active'.
 -- Fields:
 --   direction       = INBOUND (AP-facing)
---   profile_type    = STANDARD for normal invoicing; PREPAYMENT for AP_ADVANCE_VENDOR
+--   profile_type    = STANDARD for normal invoicing; PREPAYMENT for AP_ADVANCE_SUPPLIER
 --   subledger_type  = AP
 --   applicable_flow_codes   = which transaction_flow_template codes this config applies to
 --   applicable_doc_types    = which document types it applies to
@@ -86,10 +86,10 @@ BEGIN
             ON CONFLICT (accounting_profile_id, version) DO NOTHING;
         END IF;
 
-        -- ── AP_ADVANCE_VENDOR ─────────────────────────────────────────────────
+        -- ── AP_ADVANCE_SUPPLIER ─────────────────────────────────────────────────
         SELECT id, tenant_id INTO v_prof
           FROM master.accounting_profile
-         WHERE tenant_id = v_tenant.tenant_id AND code = 'AP_ADVANCE_VENDOR';
+         WHERE tenant_id = v_tenant.tenant_id AND code = 'AP_ADVANCE_SUPPLIER';
 
         IF v_prof.id IS NOT NULL THEN
             INSERT INTO control.acct_profile_config (

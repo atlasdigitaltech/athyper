@@ -482,7 +482,7 @@ VALUES
 
     ('master.supplier_type',
      'Supplier type',
-     'Classification of supplier (vendor, contractor, distributor, manufacturer, government). '
+     'Classification of supplier (supplier, contractor, distributor, manufacturer, government). '
      'is_extensible=true — tenants may add custom supplier types.',
      'master', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
@@ -951,7 +951,7 @@ VALUES
     ('document.purchase_requisition_type',   'Purchase Requisition Type',   'Classification of purchase requisition (standard, urgent, blanket, framework call-off, capex). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.purchase_order_type',         'Purchase Order Type',         'Classification of purchase order (standard, blanket, service, emergency). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.purchase_invoice_type',       'Purchase Invoice Type',       'Type of AP invoice (standard, credit_note, debit_note, advance, retention_release, proforma, self_billed, down_payment, final). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
-    ('document.purchase_invoice_source',     'Purchase Invoice Source',     'How the invoice was originated (po_based, contract_based, non_po, one_time_vendor). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    ('document.purchase_invoice_source',     'Purchase Invoice Source',     'How the invoice was originated (po_based, contract_based, non_po, one_time_supplier). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.invoice_match_type',          'Invoice Match Type',          'Matching strategy for AP invoices (three_way, two_way, evaluated_receipt, no_match). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.match_exception_type',        'Match Exception Type',        'Types of invoice matching exceptions (price_variance, quantity_variance, missing_receipt, duplicate_invoice, tax_variance, fx_variance, retention_variance, advance_recovery_mismatch). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.payment_entry_type',          'Payment Entry Type',          'Type of outbound payment (standard, retention_release, advance, final, partial, down_payment, netting, urgent). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),

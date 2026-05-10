@@ -385,7 +385,7 @@ export const FlowBundleSchema = z.object({
     }).optional(),
     input_modes: z.array(z.string()).optional(),
     layout: z.string().optional(),
-  }),
+  }).catchall(z.unknown()),
   steps: z.array(FlowStepSchema),
   /** Active permissions for the current user — used to gate overrides. */
   user_permissions: z.array(z.string()),

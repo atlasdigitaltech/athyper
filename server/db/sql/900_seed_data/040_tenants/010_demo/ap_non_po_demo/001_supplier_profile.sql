@@ -1,17 +1,17 @@
 -- ============================================================================
--- FILE: demo/001_vendor_supplier_profile.sql
--- Purpose: Create 1 demo vendor + supplier profile + tax groups for tenant 'athyper'
+-- FILE: demo/001_supplier_profile.sql
+-- Purpose: Create 1 demo supplier profile + tax groups for tenant 'athyper'
 --          and company_code 'AUIC'. Prerequisite for all scenario files.
 -- Idempotent: all inserts use WHERE NOT EXISTS / ON CONFLICT DO NOTHING
 -- ============================================================================
 
-DO $demo_vendor_setup$
+DO $demo_supplier_setup$
 DECLARE
     v_tenant_id      uuid;
     v_cc_id          uuid;
     v_sys            uuid := '00000000-0000-0000-0000-000000000000';
     v_bp_id          uuid;
-    v_vendor_id      uuid;
+    v_supplier_id      uuid;
     v_scp_id         uuid;
     v_bp_addr_id     uuid;
     v_bp_cp_id       uuid;
@@ -64,13 +64,13 @@ BEGIN
         supplier_type, status, created_by
     )
     SELECT v_tenant_id, v_bp_id, 'ACME-CONSULT-US',
-           'vendor', 'active', v_sys
+           'general', 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.supplier
          WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US'
     );
 
-    SELECT id INTO v_vendor_id FROM master.supplier
+    SELECT id INTO v_supplier_id FROM master.supplier
      WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US';
 
     -- ── 2. Tax jurisdiction (US federal) ────────────────────────────────────
@@ -248,7 +248,7 @@ BEGIN
 
     SELECT id INTO v_scp_id FROM master.company_code_supplier_profile
      WHERE tenant_id = v_tenant_id
-       AND supplier_id = v_vendor_id
+       AND supplier_id = v_supplier_id
        AND company_code_id = v_cc_id;
 
     IF v_scp_id IS NULL THEN
@@ -262,7 +262,7 @@ BEGIN
             default_wht_tax_group_id,
             is_blocked, status, created_by
         ) VALUES (
-            v_tenant_id, v_vendor_id, v_cc_id,
+            v_tenant_id, v_supplier_id, v_cc_id,
             v_pt_net30_id, 'USD',
             v_acct_prof_id,
             v_pm_wire_id,
@@ -350,5 +350,5 @@ BEGIN
         ON CONFLICT DO NOTHING;
     END IF;
 
-    RAISE NOTICE 'demo/001: vendor ACME-CONSULT-US + profile for AUIC set up';
-END $demo_vendor_setup$;
+    RAISE NOTICE 'demo/001: supplier ACME-CONSULT-US + profile for AUIC set up';
+END $demo_supplier_setup$;

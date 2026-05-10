@@ -37,10 +37,14 @@ import { usePreferencesStore } from "@/stores/preferences/usePreferencesStore";
 import { InactivityWarningDialog } from "@/components/shell/InactivityWarningDialog";
 import {
   DEFAULT_PUBLIC_SESSION_POLICY,
+  effectiveHeartbeatIntervalMs,
   type PublicSessionPolicy,
 } from "@/lib/auth/session-policy";
 
 const LAST_CONTEXT_KEY = "neon:lastContext";
+const LAST_ACTIVITY_KEY = "neon:lastActivityAt";
+const SESSION_ACTIVITY_CHANNEL = "neon:session-activity";
+const SESSION_ACTIVITY_EVENT = "activity";
 
 // ─── Context shape ────────────────────────────────────────────────────────────
 
@@ -106,6 +110,11 @@ interface ParameterSnapshot {
   values?: Record<string, unknown>;
 }
 
+interface SessionActivityMessage {
+  type: typeof SESSION_ACTIVITY_EVENT;
+  at: number;
+}
+
 function numberPolicyValue(values: Record<string, unknown>, code: string, fallback: number): number {
   const raw = values[code];
   const value = typeof raw === "number" ? raw : Number(raw);
@@ -165,6 +174,8 @@ export function SessionProvider({
   const idleCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const idleWarningActiveRef = useRef(false);
   const lastActivityAtRef = useRef(Date.now());
+  const activityChannelRef = useRef<BroadcastChannel | null>(null);
+  const scheduleIdleTimersRef = useRef<(fromMs?: number) => void>(() => {});
 
   // ── Last-used context restore ─────────────────────────────────────────────
   // On mount: if the BFF session has no active context (e.g. first login or
@@ -251,6 +262,11 @@ export function SessionProvider({
     const fireInMs = Math.max((expiresAt - REFRESH_BEFORE_EXPIRY_SEC - nowSec) * 1000, 0);
 
     refreshTimerRef.current = setTimeout(async () => {
+      if (idleWarningActiveRef.current) {
+        refreshTimerRef.current = setTimeout(() => scheduleTokenRefresh(accessExpiresAtRef.current), 30_000);
+        return;
+      }
+
       try {
         const res = await fetch("/api/auth/refresh", { method: "POST" });
         const body = (await res.json().catch(() => ({}))) as {
@@ -300,12 +316,59 @@ export function SessionProvider({
 
   // ── Activity heartbeat ────────────────────────────────────────────────────
   // Updates lastSeenAt in Redis while the user is actively interacting with
-  // the page. Throttled to at most once per HEARTBEAT_INTERVAL_MS so normal
-  // mouse/keyboard events don't flood the server.
+  // the page. Throttled by the effective policy interval so normal
+  // mouse/keyboard events don't flood the server while Redis stays inside the warning window.
   //
   // Without this, lastSeenAt is only written at login and context switches.
   // For tokens with lifetime > 16 min the proactive refresh would always fire
   // after the 15-min idle window, producing false "session expired" dialogs.
+  const readSharedActivityAt = useCallback(() => {
+    if (typeof window === "undefined") return 0;
+
+    try {
+      const raw = window.localStorage.getItem(LAST_ACTIVITY_KEY);
+      const value = raw ? Number(raw) : 0;
+      return Number.isFinite(value) && value > 0 ? value : 0;
+    } catch {
+      return 0;
+    }
+  }, []);
+
+  const writeSharedActivityAt = useCallback((at: number) => {
+    if (typeof window === "undefined") return;
+
+    try {
+      window.localStorage.setItem(LAST_ACTIVITY_KEY, String(at));
+    } catch {
+      // Storage can be unavailable in private contexts; same-tab timers still work.
+    }
+  }, []);
+
+  const latestActivityAt = useCallback(() => {
+    return Math.max(lastActivityAtRef.current, readSharedActivityAt());
+  }, [readSharedActivityAt]);
+
+  const recordActivity = useCallback((at = Date.now()) => {
+    const latest = Math.max(at, latestActivityAt());
+    lastActivityAtRef.current = latest;
+    writeSharedActivityAt(latest);
+
+    try {
+      const message: SessionActivityMessage = { type: SESSION_ACTIVITY_EVENT, at: latest };
+      activityChannelRef.current?.postMessage(message);
+    } catch {
+      // BroadcastChannel is best-effort; localStorage events provide the fallback.
+    }
+
+    return latest;
+  }, [latestActivityAt, writeSharedActivityAt]);
+
+  const elapsedIdleSeconds = useCallback(() => {
+    const activityAt = latestActivityAt();
+    lastActivityAtRef.current = activityAt;
+    return (Date.now() - activityAt) / 1000;
+  }, [latestActivityAt]);
+
   const clearIdleTimers = useCallback(() => {
     if (idleWarningTimerRef.current) clearTimeout(idleWarningTimerRef.current);
     if (idleExpiryTimerRef.current) clearTimeout(idleExpiryTimerRef.current);
@@ -316,11 +379,23 @@ export function SessionProvider({
   }, []);
 
   const markSessionExpired = useCallback((message: string) => {
+    clearIdleTimers();
+    idleWarningActiveRef.current = false;
+    setIdleWarningSeconds(null);
+    setIdleContinuePending(false);
     setRuntime(null);
     setRuntimeError({ code: "INVALID_TOKEN", message, status: 401 });
-  }, []);
+  }, [clearIdleTimers]);
 
-  const expireForIdle = useCallback(async () => {
+  const expireForIdle = useCallback(async (opts?: { force?: boolean }) => {
+    if (!opts?.force && elapsedIdleSeconds() < sessionPolicy.idleTimeoutSeconds) {
+      idleWarningActiveRef.current = false;
+      setIdleWarningSeconds(null);
+      setIdleContinuePending(false);
+      scheduleIdleTimersRef.current(lastActivityAtRef.current);
+      return;
+    }
+
     clearIdleTimers();
     idleWarningActiveRef.current = false;
     setIdleWarningSeconds(null);
@@ -333,7 +408,7 @@ export function SessionProvider({
     }
 
     markSessionExpired("Your session was locked after a period of inactivity.");
-  }, [clearIdleTimers, markSessionExpired]);
+  }, [clearIdleTimers, elapsedIdleSeconds, markSessionExpired, sessionPolicy.idleTimeoutSeconds]);
 
   const startIdleWarning = useCallback((remainingSeconds = sessionPolicy.idleWarningSeconds) => {
     clearIdleTimers();
@@ -353,38 +428,63 @@ export function SessionProvider({
     }, seconds * 1000);
   }, [clearIdleTimers, expireForIdle, sessionPolicy.idleWarningSeconds]);
 
-  const scheduleIdleTimers = useCallback((fromMs = Date.now()) => {
+  const scheduleIdleTimers = useCallback((fromMs = latestActivityAt()) => {
     clearIdleTimers();
-    const elapsedMs = Date.now() - fromMs;
+    const activityAt = Math.max(fromMs, latestActivityAt());
+    lastActivityAtRef.current = activityAt;
+    const elapsedMs = Date.now() - activityAt;
     const warningInMs = Math.max(
       (sessionPolicy.idleTimeoutSeconds - sessionPolicy.idleWarningSeconds) * 1000 - elapsedMs,
       0,
     );
 
     idleWarningTimerRef.current = setTimeout(() => {
-      const elapsedSeconds = (Date.now() - lastActivityAtRef.current) / 1000;
+      const elapsedSeconds = elapsedIdleSeconds();
+      const warningStartSeconds = sessionPolicy.idleTimeoutSeconds - sessionPolicy.idleWarningSeconds;
+      if (elapsedSeconds < warningStartSeconds) {
+        scheduleIdleTimersRef.current(lastActivityAtRef.current);
+        return;
+      }
+      if (elapsedSeconds >= sessionPolicy.idleTimeoutSeconds) {
+        void expireForIdle();
+        return;
+      }
       const remainingSeconds = sessionPolicy.idleTimeoutSeconds - elapsedSeconds;
       startIdleWarning(Math.min(sessionPolicy.idleWarningSeconds, remainingSeconds));
     }, warningInMs);
-  }, [clearIdleTimers, sessionPolicy.idleTimeoutSeconds, sessionPolicy.idleWarningSeconds, startIdleWarning]);
+  }, [
+    clearIdleTimers,
+    elapsedIdleSeconds,
+    expireForIdle,
+    latestActivityAt,
+    sessionPolicy.idleTimeoutSeconds,
+    sessionPolicy.idleWarningSeconds,
+    startIdleWarning,
+  ]);
+
+  scheduleIdleTimersRef.current = scheduleIdleTimers;
 
   const touchSession = useCallback(async (opts?: { force?: boolean }) => {
     const now = Date.now();
-    if (!opts?.force && now - lastHeartbeatRef.current < sessionPolicy.heartbeatIntervalMs) {
+    const heartbeatIntervalMs = effectiveHeartbeatIntervalMs(sessionPolicy);
+    if (!opts?.force && now - lastHeartbeatRef.current < heartbeatIntervalMs) {
       return true;
     }
     lastHeartbeatRef.current = now;
     try {
-      const res = await fetch("/api/auth/touch", { method: "POST" });
+      const res = await fetch("/api/auth/touch", {
+        method: "POST",
+        headers: opts?.force ? { "X-Session-Continue": "1" } : undefined,
+      });
       if (res.status === 401) {
-        await expireForIdle();
+        await expireForIdle({ force: true });
         return false;
       }
       return res.ok;
     } catch {
       return false;
     }
-  }, [expireForIdle, sessionPolicy.heartbeatIntervalMs]);
+  }, [expireForIdle, sessionPolicy]);
 
   const continueAfterIdleWarning = useCallback(async () => {
     if (idleContinuePending) return;
@@ -418,21 +518,70 @@ export function SessionProvider({
     idleWarningActiveRef.current = false;
     setIdleWarningSeconds(null);
     setIdleContinuePending(false);
-    lastActivityAtRef.current = Date.now();
-    scheduleIdleTimers(lastActivityAtRef.current);
+    const activityAt = recordActivity(Date.now());
+    scheduleIdleTimers(activityAt);
   }, [
     idleContinuePending,
     markSessionExpired,
+    recordActivity,
     scheduleIdleTimers,
     scheduleTokenRefresh,
     touchSession,
   ]);
 
   useEffect(() => {
-    lastActivityAtRef.current = Date.now();
+    const now = Date.now();
+    const sharedActivityAt = readSharedActivityAt();
+    lastActivityAtRef.current = sharedActivityAt > 0
+      ? Math.max(sharedActivityAt, lastActivityAtRef.current)
+      : now;
+
+    if (sharedActivityAt <= 0) {
+      writeSharedActivityAt(lastActivityAtRef.current);
+    }
+
     scheduleIdleTimers(lastActivityAtRef.current);
     return clearIdleTimers;
-  }, [clearIdleTimers, scheduleIdleTimers]);
+  }, [clearIdleTimers, readSharedActivityAt, scheduleIdleTimers, writeSharedActivityAt]);
+
+  useEffect(() => {
+    const syncActivity = (at: number) => {
+      if (!Number.isFinite(at) || at <= 0 || at <= lastActivityAtRef.current) return;
+
+      lastActivityAtRef.current = at;
+      if (idleWarningActiveRef.current) {
+        idleWarningActiveRef.current = false;
+        setIdleWarningSeconds(null);
+        setIdleContinuePending(false);
+      }
+      scheduleIdleTimers(at);
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== LAST_ACTIVITY_KEY || !event.newValue) return;
+      syncActivity(Number(event.newValue));
+    };
+
+    let channel: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== "undefined") {
+      channel = new BroadcastChannel(SESSION_ACTIVITY_CHANNEL);
+      activityChannelRef.current = channel;
+      channel.onmessage = (event: MessageEvent<SessionActivityMessage>) => {
+        if (event.data?.type !== SESSION_ACTIVITY_EVENT) return;
+        syncActivity(event.data.at);
+      };
+    }
+
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      if (activityChannelRef.current === channel) {
+        activityChannelRef.current = null;
+      }
+      channel?.close();
+    };
+  }, [scheduleIdleTimers]);
 
   useEffect(() => {
     const events = ["mousemove", "keydown", "click", "touchstart", "scroll"] as const;
@@ -440,19 +589,21 @@ export function SessionProvider({
       if (idleWarningActiveRef.current) return;
 
       const now = Date.now();
-      const elapsedSeconds = (now - lastActivityAtRef.current) / 1000;
+      const elapsedSeconds = elapsedIdleSeconds();
       if (elapsedSeconds >= sessionPolicy.idleTimeoutSeconds - sessionPolicy.idleWarningSeconds) {
         startIdleWarning(sessionPolicy.idleTimeoutSeconds - elapsedSeconds);
         return;
       }
 
-      lastActivityAtRef.current = now;
-      scheduleIdleTimers(now);
+      const activityAt = recordActivity(now);
+      scheduleIdleTimers(activityAt);
       void touchSession();
     };
     events.forEach((e) => window.addEventListener(e, handler, { passive: true }));
     return () => events.forEach((e) => window.removeEventListener(e, handler));
   }, [
+    elapsedIdleSeconds,
+    recordActivity,
     scheduleIdleTimers,
     sessionPolicy.idleTimeoutSeconds,
     sessionPolicy.idleWarningSeconds,
@@ -469,8 +620,7 @@ export function SessionProvider({
       if (document.visibilityState !== "visible") return;
       if (idleWarningActiveRef.current) return;
 
-      const now = Date.now();
-      const elapsedSeconds = (now - lastActivityAtRef.current) / 1000;
+      const elapsedSeconds = elapsedIdleSeconds();
 
       if (elapsedSeconds >= sessionPolicy.idleTimeoutSeconds) {
         await expireForIdle();
@@ -485,15 +635,17 @@ export function SessionProvider({
       lastHeartbeatRef.current = 0;
       const touched = await touchSession({ force: true });
       if (touched) {
-        lastActivityAtRef.current = Date.now();
-        scheduleIdleTimers(lastActivityAtRef.current);
+        const activityAt = recordActivity(Date.now());
+        scheduleIdleTimers(activityAt);
         scheduleTokenRefresh(accessExpiresAtRef.current);
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [
+    elapsedIdleSeconds,
     expireForIdle,
+    recordActivity,
     scheduleIdleTimers,
     scheduleTokenRefresh,
     sessionPolicy.idleTimeoutSeconds,
@@ -686,6 +838,11 @@ export function SessionProvider({
     void fetchRuntime(tenant, entity, activeWorkbench, activeDelegationId);
   }, [bff, activeDelegationId, fetchRuntime]);
 
+  const showIdleWarning =
+    idleWarningSeconds !== null &&
+    runtimeError?.code !== "INVALID_TOKEN" &&
+    runtimeError?.code !== "MISSING_TOKEN";
+
   return (
     <SessionContext.Provider
       value={{
@@ -702,7 +859,7 @@ export function SessionProvider({
       }}
     >
       {children}
-      {idleWarningSeconds !== null ? (
+      {showIdleWarning ? (
         <InactivityWarningDialog
           secondsRemaining={idleWarningSeconds}
           pending={idleContinuePending}

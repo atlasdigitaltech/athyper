@@ -72,7 +72,7 @@ export interface HeaderIdentity {
   name?: string;
   /**
    * Inline classification shown after the name with a "·" separator.
-   * e.g. "Vendor" for a supplier, "Manufacturer" for another.
+   * e.g. "Contractor" for a supplier, "Manufacturer" for another.
    * Driven by display_config.master_config.classification_field — no hardcoding.
    */
   classification?: string;

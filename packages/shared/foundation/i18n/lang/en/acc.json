@@ -41,7 +41,7 @@
 
   "acc.accounts_payable": "Accounts Payable",
   "acc.accounts_receivable": "Accounts Receivable",
-  "acc.vendor_balance": "Vendor Balance",
+  "acc.supplier_balance": "Supplier Balance",
   "acc.customer_balance": "Customer Balance",
   "acc.open_items": "Open Items",
   "acc.cleared_items": "Cleared Items",

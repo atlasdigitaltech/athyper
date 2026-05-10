@@ -206,7 +206,7 @@ export async function resolveFieldMap(db: Kysely<any>, entityCode: string): Prom
     .selectFrom("control.entity_field as ef")
     .innerJoin("control.entity_version as ev", "ev.id", "ef.entity_version_id")
     .innerJoin("control.entity as e", "e.id", "ev.entity_id")
-    .select(["ef.name", "ef.column_name"])
+    .select(["ef.name", "ef.column_name", "ef.json_config"])
     .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
     .where("ev.status", "=", "EFFECTIVE")
@@ -215,7 +215,10 @@ export async function resolveFieldMap(db: Kysely<any>, entityCode: string): Prom
 
   const map = new Map<string, string>();
   for (const r of rows) {
-    map.set(r.name as string, r.column_name as string);
+    const columnName = String(r.column_name ?? "");
+    const jsonConfig = r.json_config as Record<string, unknown> | null | undefined;
+    const jsonPath = typeof jsonConfig?.["path"] === "string" ? jsonConfig["path"].trim() : "";
+    map.set(r.name as string, columnName === "metadata" && jsonPath ? `${columnName}.${jsonPath}` : columnName);
   }
   return map;
 }

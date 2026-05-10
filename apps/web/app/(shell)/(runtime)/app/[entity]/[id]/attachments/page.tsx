@@ -12,7 +12,7 @@
  * Examples:
  *   /app/purchase_invoice/INV-10045/attachments
  *   /app/purchase_order/PO-2045/attachments
- *   /app/vendor/VND-001/attachments
+ *   /app/supplier/SUP-001/attachments
  */
 
 import { useCallback, useState } from "react";

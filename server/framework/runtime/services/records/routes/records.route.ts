@@ -100,6 +100,121 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
   };
 }
 
+function parseJsonPathColumn(columnName: string): { root: string; path: string[] } | null {
+  const dotIdx = columnName.indexOf(".");
+  if (dotIdx <= 0) return null;
+  const root = columnName.slice(0, dotIdx);
+  const rest = columnName.slice(dotIdx + 1);
+  if (root !== "metadata") return null;
+  const path = rest.split(".").map((part) => part.trim()).filter(Boolean);
+  if (path.length === 0) return null;
+  if (!path.every((part) => /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(part))) return null;
+  return { root, path };
+}
+
+function storageColumnName(columnName: string): string {
+  return parseJsonPathColumn(columnName)?.root ?? columnName;
+}
+
+function asPlainObject(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return { ...(value as Record<string, unknown>) };
+  }
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return { ...(parsed as Record<string, unknown>) };
+      }
+    } catch { /* keep empty object */ }
+  }
+  return {};
+}
+
+function setJsonPath(target: Record<string, unknown>, path: string[], value: unknown): void {
+  let cursor = target;
+  for (let i = 0; i < path.length - 1; i += 1) {
+    const key = path[i]!;
+    const existing = cursor[key];
+    if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
+      cursor[key] = {};
+    }
+    cursor = cursor[key] as Record<string, unknown>;
+  }
+  cursor[path[path.length - 1]!] = value;
+}
+
+function getJsonPath(source: unknown, path: string[]): unknown {
+  let cursor: unknown = source;
+  for (const key of path) {
+    if (!cursor || typeof cursor !== "object" || Array.isArray(cursor)) return null;
+    cursor = (cursor as Record<string, unknown>)[key];
+  }
+  return cursor ?? null;
+}
+
+function assignMappedValue(mappedData: Record<string, unknown>, columnName: string, value: unknown): void {
+  const jsonPath = parseJsonPathColumn(columnName);
+  if (!jsonPath) {
+    mappedData[columnName] = value;
+    return;
+  }
+  const rootObject = asPlainObject(mappedData[jsonPath.root]);
+  setJsonPath(rootObject, jsonPath.path, value);
+  mappedData[jsonPath.root] = rootObject;
+}
+
+function readMappedValue(row: Record<string, unknown>, columnName: string): unknown {
+  const jsonPath = parseJsonPathColumn(columnName);
+  if (!jsonPath) return row[columnName];
+  return getJsonPath(row[jsonPath.root], jsonPath.path);
+}
+
+function remapRecordRow(row: Record<string, unknown>, fieldMap: Map<string, string>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...row };
+  for (const [fieldName, columnName] of fieldMap.entries()) {
+    const value = readMappedValue(row, columnName);
+    if (value !== undefined) out[fieldName] = value;
+  }
+  return out;
+}
+
+function mergeJsonColumnUpdates(
+  mappedData: Record<string, unknown>,
+  existingRow: Record<string, unknown> | undefined,
+  jsonColumns: Map<string, string>,
+): void {
+  for (const columnName of jsonColumns.keys()) {
+    const nextValue = mappedData[columnName];
+    if (!nextValue || typeof nextValue !== "object" || Array.isArray(nextValue)) continue;
+    mappedData[columnName] = {
+      ...asPlainObject(existingRow?.[columnName]),
+      ...(nextValue as Record<string, unknown>),
+    };
+  }
+}
+
+function includeMappedJsonObjects(
+  mappedData: Record<string, unknown>,
+  jsonColumns: Map<string, string>,
+): void {
+  if (mappedData["metadata"] !== undefined) jsonColumns.set("metadata", "jsonb");
+}
+
+function parseFeatureScope(scope: unknown): { column: string; value: string } | null {
+  if (typeof scope !== "string") return null;
+  const eqIdx = scope.indexOf("=");
+  if (eqIdx <= 0) return null;
+
+  const column = scope.slice(0, eqIdx).trim();
+  const value  = scope.slice(eqIdx + 1).trim();
+
+  if (!column || !value) return null;
+  if (!/^[a-z][a-z0-9_]*$/.test(column)) return null;
+
+  return { column, value };
+}
+
 // ── Business-key / UUID dual resolver ────────────────────────────────────────
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -257,6 +372,30 @@ function parseServerFilterSigil(raw: string): ServerFilterOp {
 
   // Default: comma-separated → IN
   return { type: "in", values: raw.split(",").filter(Boolean) };
+}
+
+function singleStringQueryParam(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (Array.isArray(value) && value.length === 1 && typeof value[0] === "string" && value[0].trim()) {
+    return value[0].trim();
+  }
+  return null;
+}
+
+function singleStringFilterValue(op: ServerFilterOp | undefined): string | null {
+  if (!op) return null;
+  if (op.type === "in" && op.values.length === 1 && typeof op.values[0] === "string" && op.values[0].trim()) {
+    return op.values[0].trim();
+  }
+  return null;
+}
+
+function singleStringLegacyFilterValue(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (Array.isArray(value) && value.length === 1 && typeof value[0] === "string" && value[0].trim()) {
+    return value[0].trim();
+  }
+  return null;
 }
 
 // ── Relative range resolver ────────────────────────────────────────────────────
@@ -564,6 +703,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const parentIdParam     = typeof req.query["parent_id"]     === "string" ? req.query["parent_id"]     : null;
       const parentFkCol       = typeof table.feature_flags["parent_fk"] === "string" ? table.feature_flags["parent_fk"] : null;
       const throughEntityCode = typeof req.query["through_entity"] === "string" ? req.query["through_entity"] : null;
+      const parentScope       = parseFeatureScope(table.feature_flags["parent_scope"]);
 
       if (parentIdParam && parentFkCol) {
         if (throughEntityCode) {
@@ -593,47 +733,104 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
           // Apply the entity's own parent_scope (e.g. owner_type=supplier) — driven by
           // the entity registry, never overridden when using through_entity.
-          const scopeStr = typeof table.feature_flags["parent_scope"] === "string" ? table.feature_flags["parent_scope"] : null;
-          if (scopeStr) {
-            const eqIdx = scopeStr.indexOf("=");
-            if (eqIdx > 0) {
-              const scopeCol = scopeStr.slice(0, eqIdx);
-              const scopeVal = scopeStr.slice(eqIdx + 1);
-              listQuery  = listQuery.where(scopeCol  as never, "=", scopeVal as never);
-              countQuery = countQuery.where(scopeCol as never, "=", scopeVal as never);
-              if (groupCountQuery) groupCountQuery = groupCountQuery.where(scopeCol as never, "=", scopeVal as never);
-            }
+          if (parentScope && queryableColumnNames.has(parentScope.column)) {
+            listQuery  = listQuery.where(parentScope.column  as never, "=", parentScope.value as never);
+            countQuery = countQuery.where(parentScope.column as never, "=", parentScope.value as never);
+            if (groupCountQuery) groupCountQuery = groupCountQuery.where(parentScope.column as never, "=", parentScope.value as never);
           }
         } else {
           // ── Direct parent filter — existing logic unchanged ────────────────────
           listQuery  = listQuery.where(parentFkCol  as never, "=", parentIdParam as never);
           countQuery = countQuery.where(parentFkCol as never, "=", parentIdParam as never);
           if (groupCountQuery) groupCountQuery = groupCountQuery.where(parentFkCol as never, "=", parentIdParam as never);
-          const scopeStr = typeof table.feature_flags["parent_scope"] === "string" ? table.feature_flags["parent_scope"] : null;
-          if (scopeStr) {
-            const eqIdx = scopeStr.indexOf("=");
-            if (eqIdx > 0) {
-              const scopeCol = scopeStr.slice(0, eqIdx);
-              // Allow caller to override the entity's default parent_scope value via
-              // ?{col}_filter=X (e.g. ?owner_type_filter=business_partner).  This lets
-              // polymorphic tables (party_identifier, party_contact_person) be queried
-              // from Business Partner or Customer pages without a separate entity registration.
-              const overrideKey = `${scopeCol}_filter`;
-              const scopeVal = (typeof req.query[overrideKey] === "string" ? req.query[overrideKey] : null)
-                ?? scopeStr.slice(eqIdx + 1);
-              listQuery  = listQuery.where(scopeCol  as never, "=", scopeVal as never);
-              countQuery = countQuery.where(scopeCol as never, "=", scopeVal as never);
-              if (groupCountQuery) groupCountQuery = groupCountQuery.where(scopeCol as never, "=", scopeVal as never);
-            }
+          if (parentScope && queryableColumnNames.has(parentScope.column)) {
+            // Allow caller to override the entity's default parent_scope value via
+            // ?{col}_filter=X (e.g. ?owner_type_filter=business_partner). This lets
+            // polymorphic tables be queried from detail tabs without a separate
+            // entity registration for each owner kind.
+            const overrideKey = `${parentScope.column}_filter`;
+            const scopeVal = (typeof req.query[overrideKey] === "string" ? req.query[overrideKey] : null)
+              ?? parentScope.value;
+            listQuery  = listQuery.where(parentScope.column  as never, "=", scopeVal as never);
+            countQuery = countQuery.where(parentScope.column as never, "=", scopeVal as never);
+            if (groupCountQuery) groupCountQuery = groupCountQuery.where(parentScope.column as never, "=", scopeVal as never);
           }
         }
       }
 
-      // ── Company code scope filter ─────────────────────────────────────────────
-      // When listing company_code records, restrict to only the company codes the
-      // principal has been granted access to (via master.company_code_access).
-      // Tenants with no ACL rows configured are treated as unrestricted (backward
-      // compatible with simple single-company setups).
+      // Apply registry discriminator scope even for top-level list requests.
+      // Polymorphic backing tables share rows across owner/party types; without
+      // this guard, a business_partner_* entity can list supplier/customer/LE
+      // rows when no parent_id is provided.
+      if (!parentIdParam && parentScope && queryableColumnNames.has(parentScope.column)) {
+        listQuery  = listQuery.where(parentScope.column  as never, "=", parentScope.value as never);
+        countQuery = countQuery.where(parentScope.column as never, "=", parentScope.value as never);
+        if (groupCountQuery) groupCountQuery = groupCountQuery.where(parentScope.column as never, "=", parentScope.value as never);
+      }
+
+      // Owner-type scope for exposed polymorphic relation tables.
+      const requiresOwnerTypeScope = listTable.feature_flags["requires_owner_type_scope"] === true
+        || (
+          listTable.table_schema === "master"
+          && (listTable.table_name === "bank_account_link" || listTable.table_name === "commodity_classification")
+        );
+      if (requiresOwnerTypeScope) {
+        const ownerTypeColumn = typeof listTable.feature_flags["owner_type_column"] === "string"
+          ? listTable.feature_flags["owner_type_column"]
+          : "owner_type";
+
+        if (!queryableColumnNames.has(ownerTypeColumn)) {
+          res.status(500).json({
+            error: "ENTITY_SCOPE_MISCONFIGURED",
+            message: `Entity '${listCode}' requires owner_type scoping but '${ownerTypeColumn}' is not queryable`,
+          });
+          return;
+        }
+
+        const queryOwnerType = singleStringQueryParam(req.query[`${ownerTypeColumn}_filter`])
+          ?? singleStringQueryParam(req.query[ownerTypeColumn]);
+        const sigilOwnerType = singleStringFilterValue(sigilFilters[ownerTypeColumn]);
+        const legacyOwnerType = singleStringLegacyFilterValue(legacyFilters[ownerTypeColumn]);
+        const hasInvalidOwnerTypeFilter =
+          (!!sigilFilters[ownerTypeColumn] && !sigilOwnerType)
+          || (Object.prototype.hasOwnProperty.call(legacyFilters, ownerTypeColumn) && !legacyOwnerType);
+
+        if (hasInvalidOwnerTypeFilter) {
+          res.status(400).json({
+            error: "OWNER_TYPE_SCOPE_REQUIRED",
+            message: `${listCode} requires exactly one ${ownerTypeColumn} filter`,
+          });
+          return;
+        }
+
+        const ownerTypeValues = [queryOwnerType, sigilOwnerType, legacyOwnerType]
+          .filter((value): value is string => typeof value === "string" && value.length > 0);
+        const uniqueOwnerTypes = new Set(ownerTypeValues);
+        if (uniqueOwnerTypes.size > 1) {
+          res.status(400).json({
+            error: "OWNER_TYPE_SCOPE_CONFLICT",
+            message: `${listCode} received conflicting ${ownerTypeColumn} filters`,
+          });
+          return;
+        }
+
+        const ownerType = ownerTypeValues[0] ?? null;
+        if (!ownerType) {
+          res.status(400).json({
+            error: "OWNER_TYPE_SCOPE_REQUIRED",
+            message: `${listCode} requires ${ownerTypeColumn}_filter or filter.${ownerTypeColumn}`,
+          });
+          return;
+        }
+
+        listQuery  = listQuery.where(ownerTypeColumn  as never, "=", ownerType as never);
+        countQuery = countQuery.where(ownerTypeColumn as never, "=", ownerType as never);
+        if (groupCountQuery) groupCountQuery = groupCountQuery.where(ownerTypeColumn as never, "=", ownerType as never);
+        delete sigilFilters[ownerTypeColumn];
+        delete legacyFilters[ownerTypeColumn];
+      }
+
+      // Apply company-code ACL filtering after all explicit entity filters.
       if (entityCode === "company_code" && tenantId) {
         const sub = typeof claims.sub === "string" ? claims.sub : "";
         const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
@@ -795,16 +992,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const total = parseInt(String(countResult?.count ?? "0"), 10);
 
-      const reverseMap = new Map<string, string>();
-      for (const [fieldName, columnName] of fieldMap.entries()) {
-        reverseMap.set(columnName, fieldName);
-      }
       const remappedRows = (rows as Record<string, unknown>[]).map((row) => {
-        const out: Record<string, unknown> = {};
-        for (const [col, val] of Object.entries(row)) {
-          out[reverseMap.get(col) ?? col] = val;
-        }
-        return out;
+        return remapRecordRow(row, fieldMap);
       });
       const responseRows = isCertificationBackingTable(listTable)
         ? await enrichCertificationTypeDisplayFields(db, remappedRows)
@@ -949,19 +1138,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
 
-      // Build a reverse map: physical column_name → logical field name
-      // so the detail page can access data[field.name] correctly.
-      const reverseMap = new Map<string, string>();
-      for (const [fieldName, columnName] of fieldMap.entries()) {
-        reverseMap.set(columnName, fieldName);
-      }
-
-      // Remap DB row keys: column_name → field_name
-      const data: Record<string, unknown> = {};
-      for (const [col, val] of Object.entries(row)) {
-        const fieldName = reverseMap.get(col) ?? col;
-        data[fieldName] = val;
-      }
+      // Remap DB row keys and expose aliases for metadata-backed logical fields.
+      const data = remapRecordRow(row, fieldMap);
 
       // ── BP identity merge ────────────────────────────────────────────────────
       // When identity_via = 'business_partner', the role table (supplier/customer)
@@ -1068,11 +1246,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         const columnName = fieldMap.get(fieldName);
         // Skip undefined/null values so DB column defaults can apply
         if (columnName && value !== undefined && value !== null) {
-          mappedData[columnName] = value;
+          assignMappedValue(mappedData, columnName, value);
         }
       }
       coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
-      serializeJsonFields(mappedData, await resolveJsonColumns(db, entityCode));
+      const jsonColumns = await resolveJsonColumns(db, entityCode);
+      includeMappedJsonObjects(mappedData, jsonColumns);
+      serializeJsonFields(mappedData, jsonColumns);
 
       // Inject parent FK when entity is a child (feature_flags.parent_fk + parent_scope).
       // The caller passes parent_id in body.data; we resolve the physical FK column from
@@ -1243,13 +1423,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           // supplier_name: denormalized NOT NULL — resolve from master.supplier
           if (!mappedData["supplier_name"] && mappedData["supplier_id"]) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const vendor = await (db as any)
+            const supplierRow = await (db as any)
               .selectFrom("master.supplier as s")
               .select(["s.name"])
               .where("s.id",        "=", mappedData["supplier_id"])
               .where("s.tenant_id", "=", tenantId)
               .executeTakeFirst() as { name: string } | undefined;
-            mappedData["supplier_name"] = vendor?.name ?? "Unknown Supplier";
+            mappedData["supplier_name"] = supplierRow?.name ?? "Unknown Supplier";
           }
           if (!mappedData["supplier_name"]) mappedData["supplier_name"] = "Unknown Supplier";
 
@@ -1453,10 +1633,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const mappedData: Record<string, unknown> = {};
       for (const [fieldName, value] of Object.entries(inputData)) {
         const columnName = fieldMap.get(fieldName);
-        if (columnName && !IMMUTABLE_COLS.has(columnName)) mappedData[columnName] = value;
+        if (columnName && !IMMUTABLE_COLS.has(storageColumnName(columnName))) {
+          assignMappedValue(mappedData, columnName, value);
+        }
       }
       coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
-      serializeJsonFields(mappedData, await resolveJsonColumns(db, entityCode));
+      const jsonColumns = await resolveJsonColumns(db, entityCode);
+      includeMappedJsonObjects(mappedData, jsonColumns);
 
       // Resolve UUID from business key when caller passes a canonical key
       const physicalId = UUID_RE.test(id)
@@ -1529,6 +1712,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         .where("tenant_id", "=", tenantId)
         .executeTakeFirst()) as Record<string, unknown> | undefined;
 
+      mergeJsonColumnUpdates(mappedData, oldRow, jsonColumns);
+      serializeJsonFields(mappedData, jsonColumns);
+
       mappedData.updated_by = principalId ?? undefined;
       mappedData.updated_at = new Date().toISOString();
 
@@ -1565,7 +1751,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const diffAfter: Record<string, unknown>  = {};
       for (const [fieldName, newValue] of Object.entries(inputData)) {
         const colName  = fieldMap.get(fieldName) ?? fieldName;
-        const oldValue = oldRow?.[colName] ?? null;
+        const oldValue = oldRow ? readMappedValue(oldRow, colName) : null;
         if (String(oldValue ?? "") !== String(newValue ?? "")) {
           diffBefore[fieldName] = oldValue;
           diffAfter[fieldName]  = newValue;
@@ -1627,11 +1813,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const mappedData: Record<string, unknown> = {};
       for (const [fieldName, value] of Object.entries(inputData)) {
         const columnName = fieldMap.get(fieldName) ?? fieldName;
-        if (["id", "tenant_id", "created_by", "created_at", "row_version"].includes(columnName)) continue;
-        mappedData[columnName] = value;
+        if (["id", "tenant_id", "created_by", "created_at", "row_version"].includes(storageColumnName(columnName))) continue;
+        assignMappedValue(mappedData, columnName, value);
       }
       coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
-      serializeJsonFields(mappedData, await resolveJsonColumns(db, entityCode));
+      const jsonColumns = await resolveJsonColumns(db, entityCode);
+      includeMappedJsonObjects(mappedData, jsonColumns);
 
       mappedData.updated_by = principalId ?? undefined;
       mappedData.updated_at = new Date().toISOString();
@@ -1688,6 +1875,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         .where("tenant_id", "=", tenantId)
         .executeTakeFirst()) as Record<string, unknown> | undefined;
 
+      mergeJsonColumnUpdates(mappedData, oldRow, jsonColumns);
+      serializeJsonFields(mappedData, jsonColumns);
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const row = await (db.updateTable(fullTable) as any)
         .set(mappedData)
@@ -1721,7 +1911,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const diffAfter: Record<string, unknown>  = {};
       for (const [fieldName, newValue] of Object.entries(inputData)) {
         const colName  = fieldMap.get(fieldName) ?? fieldName;
-        const oldValue = oldRow?.[colName] ?? null;
+        const oldValue = oldRow ? readMappedValue(oldRow, colName) : null;
         if (String(oldValue ?? "") !== String(newValue ?? "")) {
           diffBefore[fieldName] = oldValue;
           diffAfter[fieldName]  = newValue;

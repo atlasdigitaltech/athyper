@@ -71,8 +71,18 @@ export interface ScopeParams {
   period: number | null;
   bookId: string | null;
   currency: string | null;
+  transactionCurrency: string | null;
   comparative: boolean;
 }
+
+interface StatementDateRangeParams {
+  dateFrom: string;
+  dateTo: string;
+  datePreset: string | null;
+}
+
+type StatementGroupBy = "none" | "fiscal_year" | "fiscal_quarter" | "fiscal_period";
+type StatementBucketMode = Exclude<StatementGroupBy, "none">;
 
 export function parseScopeParams(query: Record<string, unknown>): ScopeParams | { error: string } {
   const scopeType = query["scopeType"] as string | undefined;
@@ -90,10 +100,82 @@ export function parseScopeParams(query: Record<string, unknown>): ScopeParams | 
     return { error: "period must be 0-16" };
   return {
     scopeType, scopeId, fiscalYear, period,
-    bookId:     (query["bookId"]   as string | undefined) ?? null,
-    currency:   (query["currency"] as string | undefined) ?? null,
+    bookId:              (query["bookId"]              as string | undefined) ?? null,
+    currency:            (query["currency"]            as string | undefined) ?? null,
+    transactionCurrency: (query["transactionCurrency"] as string | undefined)
+                      ?? (query["txnCurrency"]         as string | undefined)
+                      ?? null,
     comparative: query["comparative"] === "true",
   };
+}
+
+function parseDateOnlyParam(value: unknown): string | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? null : value;
+}
+
+function parseStatementDateRange(query: Record<string, unknown>): StatementDateRangeParams | { error: string } | null {
+  const dateFrom = parseDateOnlyParam(query["dateFrom"]);
+  const dateTo = parseDateOnlyParam(query["dateTo"]);
+  if (!dateFrom && !dateTo) return null;
+  if (!dateFrom || !dateTo) return { error: "dateFrom and dateTo are required for date range statements" };
+  if (dateFrom > dateTo) return { error: "dateFrom must be on or before dateTo" };
+  return {
+    dateFrom,
+    dateTo,
+    datePreset: typeof query["datePreset"] === "string" ? query["datePreset"] : null,
+  };
+}
+
+function parseStatementGroupBy(query: Record<string, unknown>): StatementGroupBy | { error: string } {
+  const raw = typeof query["groupBy"] === "string" ? query["groupBy"].trim().toLowerCase() : "";
+  switch (raw) {
+    case "":
+    case "none":
+    case "off":
+      return "none";
+    case "fy":
+    case "year":
+    case "years":
+    case "fiscal_year":
+      return "fiscal_year";
+    case "q":
+    case "quarter":
+    case "quarters":
+    case "fiscal_quarter":
+      return "fiscal_quarter";
+    case "p":
+    case "period":
+    case "periods":
+    case "month":
+    case "months":
+    case "fiscal_period":
+      return "fiscal_period";
+    default:
+      return { error: "groupBy must be none | fiscal_year | fiscal_quarter | fiscal_period" };
+  }
+}
+
+function parseStatementAccumulatedValues(query: Record<string, unknown>): boolean | { error: string } {
+  const rawValue = query["accumulatedValues"] ?? query["accumulated"];
+  if (rawValue === undefined) return true;
+  if (typeof rawValue !== "string") return { error: "accumulatedValues must be true or false" };
+
+  switch (rawValue.trim().toLowerCase()) {
+    case "1":
+    case "true":
+    case "yes":
+    case "on":
+      return true;
+    case "0":
+    case "false":
+    case "no":
+    case "off":
+      return false;
+    default:
+      return { error: "accumulatedValues must be true or false" };
+  }
 }
 
 // ── Scope resolver (calls master.fn_resolve_scope_companies) ─────────────────
@@ -128,6 +210,153 @@ interface GlBalance {
   closingCredit: number;
   /** closingDebit - closingCredit */
   net: number;
+}
+
+type RawGlBalanceRow = {
+  accountCode: string;
+  accountName: string;
+  accountClass: string;
+  openingDebit: string | number | null;
+  openingCredit: string | number | null;
+  movementDebit: string | number | null;
+  movementCredit: string | number | null;
+  closingDebit: string | number | null;
+  closingCredit: string | number | null;
+};
+
+function parseMoney(value: string | number | null | undefined): number {
+  const amount = typeof value === "number" ? value : parseFloat(value ?? "0");
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function mapGlBalanceRows(rows: RawGlBalanceRow[]): GlBalance[] {
+  return rows.map((r) => {
+    const cd = parseMoney(r.closingDebit);
+    const cc = parseMoney(r.closingCredit);
+    return {
+      accountCode:    r.accountCode,
+      accountName:    r.accountName,
+      accountClass:   r.accountClass,
+      openingDebit:   parseMoney(r.openingDebit),
+      openingCredit:  parseMoney(r.openingCredit),
+      movementDebit:  parseMoney(r.movementDebit),
+      movementCredit: parseMoney(r.movementCredit),
+      closingDebit:   cd,
+      closingCredit:  cc,
+      net:            cd - cc,
+    };
+  });
+}
+
+async function fetchLiveGlBalancesFromJournalLines(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  companyIds: string[],
+  params: ScopeParams,
+): Promise<GlBalance[]> {
+  if (companyIds.length === 0) return [];
+
+  const companyIdList = sql.join(companyIds.map((id) => sql`${id}::uuid`), sql`, `);
+  const period = params.period;
+  const openingDebit = period === null
+    ? sql<string>`0`
+    : sql<string>`COALESCE(SUM(CASE WHEN jl.period_number < ${period} THEN jl.base_debit ELSE 0 END), 0)`;
+  const openingCredit = period === null
+    ? sql<string>`0`
+    : sql<string>`COALESCE(SUM(CASE WHEN jl.period_number < ${period} THEN jl.base_credit ELSE 0 END), 0)`;
+  const movementDebit = period === null
+    ? sql<string>`COALESCE(SUM(jl.base_debit), 0)`
+    : sql<string>`COALESCE(SUM(CASE WHEN jl.period_number = ${period} THEN jl.base_debit ELSE 0 END), 0)`;
+  const movementCredit = period === null
+    ? sql<string>`COALESCE(SUM(jl.base_credit), 0)`
+    : sql<string>`COALESCE(SUM(CASE WHEN jl.period_number = ${period} THEN jl.base_credit ELSE 0 END), 0)`;
+  const closingDebit = period === null
+    ? sql<string>`COALESCE(SUM(jl.base_debit), 0)`
+    : sql<string>`COALESCE(SUM(CASE WHEN jl.period_number <= ${period} THEN jl.base_debit ELSE 0 END), 0)`;
+  const closingCredit = period === null
+    ? sql<string>`COALESCE(SUM(jl.base_credit), 0)`
+    : sql<string>`COALESCE(SUM(CASE WHEN jl.period_number <= ${period} THEN jl.base_credit ELSE 0 END), 0)`;
+  const bookFilter = params.bookId ? sql`AND jl.book_id = ${params.bookId}::uuid` : sql``;
+  const transactionCurrencyFilter = params.transactionCurrency
+    ? sql`AND jl.transaction_currency = ${params.transactionCurrency}`
+    : sql``;
+
+  const { rows } = await sql<RawGlBalanceRow>`
+    SELECT
+      ga.code            AS "accountCode",
+      ga.name            AS "accountName",
+      ga.account_class   AS "accountClass",
+      ${openingDebit}    AS "openingDebit",
+      ${openingCredit}   AS "openingCredit",
+      ${movementDebit}   AS "movementDebit",
+      ${movementCredit}  AS "movementCredit",
+      ${closingDebit}    AS "closingDebit",
+      ${closingCredit}   AS "closingCredit"
+    FROM document.journal_line jl
+    JOIN document.journal_entry je ON je.id = jl.journal_entry_id
+    JOIN master.gl_account ga ON ga.id = jl.gl_account_id
+    WHERE jl.tenant_id = ${tenantId}::uuid
+      AND jl.company_code_id = ANY(ARRAY[${companyIdList}])
+      AND jl.fiscal_year = ${params.fiscalYear}
+      AND je.status = 'posted'
+      ${bookFilter}
+      ${transactionCurrencyFilter}
+    GROUP BY ga.code, ga.name, ga.account_class
+    HAVING
+      ${openingDebit} <> 0 OR ${openingCredit} <> 0 OR
+      ${movementDebit} <> 0 OR ${movementCredit} <> 0 OR
+      ${closingDebit} <> 0 OR ${closingCredit} <> 0
+    ORDER BY ga.code
+  `.execute(db);
+
+  return mapGlBalanceRows(rows);
+}
+
+async function fetchLiveGlBalancesFromJournalLinesByPostingDate(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  companyIds: string[],
+  params: ScopeParams,
+  dateFrom: string,
+  dateTo: string,
+): Promise<GlBalance[]> {
+  if (companyIds.length === 0) return [];
+
+  const companyIdList = sql.join(companyIds.map((id) => sql`${id}::uuid`), sql`, `);
+  const bookFilter = params.bookId ? sql`AND jl.book_id = ${params.bookId}::uuid` : sql``;
+  const transactionCurrencyFilter = params.transactionCurrency
+    ? sql`AND jl.transaction_currency = ${params.transactionCurrency}`
+    : sql``;
+
+  const { rows } = await sql<RawGlBalanceRow>`
+    SELECT
+      ga.code            AS "accountCode",
+      ga.name            AS "accountName",
+      ga.account_class   AS "accountClass",
+      0                  AS "openingDebit",
+      0                  AS "openingCredit",
+      COALESCE(SUM(jl.base_debit), 0)  AS "movementDebit",
+      COALESCE(SUM(jl.base_credit), 0) AS "movementCredit",
+      COALESCE(SUM(jl.base_debit), 0)  AS "closingDebit",
+      COALESCE(SUM(jl.base_credit), 0) AS "closingCredit"
+    FROM document.journal_line jl
+    JOIN document.journal_entry je ON je.id = jl.journal_entry_id
+    JOIN master.gl_account ga ON ga.id = jl.gl_account_id
+    WHERE jl.tenant_id = ${tenantId}::uuid
+      AND jl.company_code_id = ANY(ARRAY[${companyIdList}])
+      AND je.status = 'posted'
+      AND je.posting_date >= ${dateFrom}::date
+      AND je.posting_date <= ${dateTo}::date
+      ${bookFilter}
+      ${transactionCurrencyFilter}
+    GROUP BY ga.code, ga.name, ga.account_class
+    HAVING COALESCE(SUM(jl.base_debit), 0) <> 0 OR COALESCE(SUM(jl.base_credit), 0) <> 0
+    ORDER BY ga.code
+  `.execute(db);
+
+  return mapGlBalanceRows(rows);
 }
 
 async function fetchGlBalances(
@@ -177,34 +406,30 @@ async function fetchGlBalances(
     query = query.where("glb.book_id", "=", params.bookId) as typeof query;
   }
 
-  const rows = await query.execute() as Array<{
-    accountCode: string;
-    accountName: string;
-    accountClass: string;
-    openingDebit: string;
-    openingCredit: string;
-    movementDebit: string;
-    movementCredit: string;
-    closingDebit: string;
-    closingCredit: string;
-  }>;
+  const rows = await query.execute() as RawGlBalanceRow[];
+  if (rows.length === 0) {
+    return fetchLiveGlBalancesFromJournalLines(db, tenantId, companyIds, params);
+  }
 
-  return rows.map((r) => {
-    const cd = parseFloat(r.closingDebit  ?? "0");
-    const cc = parseFloat(r.closingCredit ?? "0");
+  return mapGlBalanceRows(rows);
+}
+
+function normalizeProfitLossBalance(balance: GlBalance): GlBalance | null {
+  if (["revenue", "income", "contra_revenue"].includes(balance.accountClass)) {
     return {
-      accountCode:    r.accountCode,
-      accountName:    r.accountName,
-      accountClass:   r.accountClass,
-      openingDebit:   parseFloat(r.openingDebit  ?? "0"),
-      openingCredit:  parseFloat(r.openingCredit ?? "0"),
-      movementDebit:  parseFloat(r.movementDebit  ?? "0"),
-      movementCredit: parseFloat(r.movementCredit ?? "0"),
-      closingDebit:   cd,
-      closingCredit:  cc,
-      net:            cd - cc,
+      ...balance,
+      accountClass: "revenue",
+      net: balance.movementCredit - balance.movementDebit,
     };
-  });
+  }
+  if (["expense", "contra_expense"].includes(balance.accountClass)) {
+    return {
+      ...balance,
+      accountClass: "expense",
+      net: balance.movementDebit - balance.movementCredit,
+    };
+  }
+  return null;
 }
 
 // ── Grouping helpers for financial statements ─────────────────────────────────
@@ -212,9 +437,34 @@ async function fetchGlBalances(
 interface StatementSectionShape {
   code: string;
   label: string;
-  rows: Array<{ accountCode: string; accountName: string; current: number; prior?: number }>;
+  rows: Array<{
+    accountCode: string;
+    accountName: string;
+    current: number;
+    prior?: number;
+    buckets?: Record<string, number>;
+  }>;
   total: number;
   priorTotal?: number;
+  bucketTotals?: Record<string, number>;
+}
+
+interface StatementBucketShape {
+  key: string;
+  label: string;
+  fiscalYear: number;
+  period: number | null;
+  quarter?: number | null;
+  startDate: string;
+  endDate: string;
+}
+
+interface FiscalPeriodRow {
+  fiscalYear: number;
+  periodNumber: number;
+  periodType: string | null;
+  startDate: string | Date;
+  endDate: string | Date;
 }
 
 function buildSections(
@@ -253,6 +503,615 @@ function sumSections(sections: StatementSectionShape[]): number {
 function sumSectionsPrior(sections: StatementSectionShape[]): number | undefined {
   if (sections.every((s) => s.priorTotal === undefined)) return undefined;
   return sections.reduce((s, sec) => s + (sec.priorTotal ?? 0), 0);
+}
+
+function toDateOnly(value: string | Date): string {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
+}
+
+function shortMonthYear(dateValue: string): string {
+  const date = new Date(`${dateValue}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return dateValue;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function fiscalYearBucketLabel(fiscalYear: number, startDate: string, endDate: string): string {
+  void startDate;
+  void endDate;
+  return `FY ${fiscalYear}`;
+}
+
+function periodBucketLabel(row: FiscalPeriodRow): string {
+  if ((row.periodType ?? "").toLowerCase().includes("opening") || row.periodNumber === 0) return "Opening";
+  const startDate = toDateOnly(row.startDate);
+  if (row.periodNumber >= 1 && row.periodNumber <= 12) return shortMonthYear(startDate);
+  return `P${row.periodNumber}`;
+}
+
+function clampDateRange(
+  startDate: string,
+  endDate: string,
+  range?: StatementDateRangeParams | null,
+): { startDate: string; endDate: string } {
+  if (!range) return { startDate, endDate };
+  return {
+    startDate: startDate < range.dateFrom ? range.dateFrom : startDate,
+    endDate: endDate > range.dateTo ? range.dateTo : endDate,
+  };
+}
+
+function isStatementPeriod(row: FiscalPeriodRow): boolean {
+  return Number(row.periodNumber) > 0 && !(row.periodType ?? "").toLowerCase().includes("opening");
+}
+
+function quarterForPeriod(periodNumber: number): number {
+  if (periodNumber <= 0) return 1;
+  return Math.min(4, Math.max(1, Math.ceil(periodNumber / 3)));
+}
+
+function buildFiscalYearBuckets(
+  rows: FiscalPeriodRow[],
+  range?: StatementDateRangeParams | null,
+): StatementBucketShape[] {
+  const fiscalYears = Array.from(new Set(rows.map((row) => Number(row.fiscalYear)))).sort((a, b) => a - b);
+  return fiscalYears.map((fiscalYear) => {
+    const yearRows = rows.filter((row) => Number(row.fiscalYear) === fiscalYear);
+    const firstYearRow = yearRows[0];
+    if (!firstYearRow) {
+      return {
+        key: `fy-${fiscalYear}`,
+        label: `FY ${fiscalYear}`,
+        fiscalYear,
+        period: null,
+        startDate: range?.dateFrom ?? `${fiscalYear}-01-01`,
+        endDate: range?.dateTo ?? `${fiscalYear}-12-31`,
+      };
+    }
+
+    const startDate = yearRows.reduce((min, row) => {
+      const value = toDateOnly(row.startDate);
+      return value < min ? value : min;
+    }, toDateOnly(firstYearRow.startDate));
+    const endDate = yearRows.reduce((max, row) => {
+      const value = toDateOnly(row.endDate);
+      return value > max ? value : max;
+    }, toDateOnly(firstYearRow.endDate));
+    const statementRows = yearRows.filter(isStatementPeriod);
+    const periodRows = statementRows.length > 0 ? statementRows : yearRows;
+    const period = periodRows.reduce((max, row) => Math.max(max, Number(row.periodNumber)), 0);
+    const clipped = clampDateRange(startDate, endDate, range);
+
+    return {
+      key: `fy-${fiscalYear}`,
+      label: fiscalYearBucketLabel(fiscalYear, startDate, endDate),
+      fiscalYear,
+      period,
+      startDate: clipped.startDate,
+      endDate: clipped.endDate,
+    };
+  });
+}
+
+function buildFiscalQuarterBuckets(
+  rows: FiscalPeriodRow[],
+  range?: StatementDateRangeParams | null,
+): StatementBucketShape[] {
+  const groups = new Map<string, FiscalPeriodRow[]>();
+  for (const row of rows.filter(isStatementPeriod)) {
+    const fiscalYear = Number(row.fiscalYear);
+    const quarter = quarterForPeriod(Number(row.periodNumber));
+    const key = `fy-${fiscalYear}-q-${quarter}`;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+
+  return Array.from(groups.entries()).map(([key, groupRows]) => {
+    const firstRow = groupRows[0];
+    const fiscalYear = Number(firstRow?.fiscalYear ?? 0);
+    const quarter = quarterForPeriod(Number(firstRow?.periodNumber ?? 1));
+    const startDate = groupRows.reduce((min, row) => {
+      const value = toDateOnly(row.startDate);
+      return value < min ? value : min;
+    }, toDateOnly(firstRow!.startDate));
+    const endDate = groupRows.reduce((max, row) => {
+      const value = toDateOnly(row.endDate);
+      return value > max ? value : max;
+    }, toDateOnly(firstRow!.endDate));
+    const period = groupRows.reduce((max, row) => Math.max(max, Number(row.periodNumber)), 0);
+    const clipped = clampDateRange(startDate, endDate, range);
+
+    return {
+      key,
+      label: `FY ${fiscalYear} Q${quarter}`,
+      fiscalYear,
+      quarter,
+      period,
+      startDate: clipped.startDate,
+      endDate: clipped.endDate,
+    };
+  }).sort((a, b) => a.startDate.localeCompare(b.startDate));
+}
+
+function buildFiscalPeriodBuckets(
+  rows: FiscalPeriodRow[],
+  range?: StatementDateRangeParams | null,
+): StatementBucketShape[] {
+  const periodRows = rows.filter(isStatementPeriod);
+  const sourceRows = periodRows.length > 0 ? periodRows : rows;
+  return sourceRows.map((row) => {
+    const fiscalYear = Number(row.fiscalYear);
+    const periodNumber = Number(row.periodNumber);
+    const startDate = toDateOnly(row.startDate);
+    const endDate = toDateOnly(row.endDate);
+    const clipped = clampDateRange(startDate, endDate, range);
+    return {
+      key: `fy-${fiscalYear}-p-${periodNumber}`,
+      label: periodBucketLabel(row),
+      fiscalYear,
+      period: periodNumber,
+      startDate: clipped.startDate,
+      endDate: clipped.endDate,
+    };
+  });
+}
+
+async function buildStatementDateBuckets(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  companyId: string,
+  range: StatementDateRangeParams,
+  groupBy: StatementBucketMode,
+): Promise<StatementBucketShape[]> {
+  const rows = await db
+    .selectFrom("master.fiscal_period as fp")
+    .select([
+      "fp.fiscal_year as fiscalYear",
+      "fp.period_number as periodNumber",
+      "fp.period_type as periodType",
+      "fp.start_date as startDate",
+      "fp.end_date as endDate",
+    ])
+    .where("fp.tenant_id", "=", tenantId)
+    .where("fp.company_code_id", "=", companyId)
+    .where("fp.end_date", ">=", range.dateFrom)
+    .where("fp.start_date", "<=", range.dateTo)
+    .orderBy("fp.start_date", "asc")
+    .execute() as FiscalPeriodRow[];
+
+  if (rows.length === 0) {
+    return buildCalendarDateBuckets(range, groupBy);
+  }
+
+  if (groupBy === "fiscal_year") return buildFiscalYearBuckets(rows, range);
+  if (groupBy === "fiscal_quarter") return buildFiscalQuarterBuckets(rows, range);
+  return buildFiscalPeriodBuckets(rows, range);
+}
+
+async function buildStatementFiscalBuckets(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  companyId: string,
+  params: ScopeParams,
+  groupBy: StatementBucketMode,
+): Promise<StatementBucketShape[]> {
+  let query = db
+    .selectFrom("master.fiscal_period as fp")
+    .select([
+      "fp.fiscal_year as fiscalYear",
+      "fp.period_number as periodNumber",
+      "fp.period_type as periodType",
+      "fp.start_date as startDate",
+      "fp.end_date as endDate",
+    ])
+    .where("fp.tenant_id", "=", tenantId)
+    .where("fp.company_code_id", "=", companyId)
+    .where("fp.fiscal_year", "=", params.fiscalYear)
+    .orderBy("fp.start_date", "asc");
+
+  if (params.period !== null) {
+    query = query.where("fp.period_number", "<=", params.period) as typeof query;
+  }
+
+  const rows = await query.execute() as FiscalPeriodRow[];
+  if (rows.length === 0) return buildFallbackFiscalBuckets(params, groupBy);
+
+  if (groupBy === "fiscal_year") return buildFiscalYearBuckets(rows);
+  if (groupBy === "fiscal_quarter") return buildFiscalQuarterBuckets(rows);
+  return buildFiscalPeriodBuckets(rows);
+}
+
+async function buildSingleDateRangeBucket(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  companyId: string,
+  range: StatementDateRangeParams,
+): Promise<StatementBucketShape> {
+  const row = await db
+    .selectFrom("master.fiscal_period as fp")
+    .select([
+      "fp.fiscal_year as fiscalYear",
+      "fp.period_number as periodNumber",
+      "fp.period_type as periodType",
+      "fp.start_date as startDate",
+      "fp.end_date as endDate",
+    ])
+    .where("fp.tenant_id", "=", tenantId)
+    .where("fp.company_code_id", "=", companyId)
+    .where("fp.start_date", "<=", range.dateTo)
+    .where("fp.end_date", ">=", range.dateTo)
+    .orderBy("fp.start_date", "desc")
+    .executeTakeFirst() as FiscalPeriodRow | undefined;
+
+  if (!row) {
+    return {
+      key: "range",
+      label: "Range",
+      fiscalYear: Number(range.dateTo.slice(0, 4)),
+      period: null,
+      startDate: range.dateFrom,
+      endDate: range.dateTo,
+    };
+  }
+
+  return {
+    key: "range",
+    label: "Range",
+    fiscalYear: Number(row.fiscalYear),
+    period: Number(row.periodNumber),
+    startDate: range.dateFrom,
+    endDate: range.dateTo,
+  };
+}
+
+function buildCalendarDateBuckets(
+  range: StatementDateRangeParams,
+  groupBy: StatementBucketMode,
+): StatementBucketShape[] {
+  const start = new Date(`${range.dateFrom}T00:00:00Z`);
+  const end = new Date(`${range.dateTo}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+
+  if (groupBy === "fiscal_period") {
+    const buckets: StatementBucketShape[] = [];
+    let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+    while (cursor <= end) {
+      const year = cursor.getUTCFullYear();
+      const month = cursor.getUTCMonth();
+      const monthStart = new Date(Date.UTC(year, month, 1));
+      const monthEnd = new Date(Date.UTC(year, month + 1, 0));
+      const startDate = monthStart < start ? range.dateFrom : monthStart.toISOString().slice(0, 10);
+      const endDate = monthEnd > end ? range.dateTo : monthEnd.toISOString().slice(0, 10);
+      buckets.push({
+        key: `fy-${year}-p-${month + 1}`,
+        label: shortMonthYear(startDate),
+        fiscalYear: year,
+        period: month + 1,
+        startDate,
+        endDate,
+      });
+      cursor = new Date(Date.UTC(year, month + 1, 1));
+    }
+    return buckets;
+  }
+
+  if (groupBy === "fiscal_quarter") {
+    const buckets: StatementBucketShape[] = [];
+    let cursor = new Date(Date.UTC(start.getUTCFullYear(), Math.floor(start.getUTCMonth() / 3) * 3, 1));
+    while (cursor <= end) {
+      const year = cursor.getUTCFullYear();
+      const quarter = Math.floor(cursor.getUTCMonth() / 3) + 1;
+      const quarterStart = new Date(Date.UTC(year, (quarter - 1) * 3, 1));
+      const quarterEnd = new Date(Date.UTC(year, quarter * 3, 0));
+      const startDate = quarterStart < start ? range.dateFrom : quarterStart.toISOString().slice(0, 10);
+      const endDate = quarterEnd > end ? range.dateTo : quarterEnd.toISOString().slice(0, 10);
+      buckets.push({
+        key: `fy-${year}-q-${quarter}`,
+        label: `FY ${year} Q${quarter}`,
+        fiscalYear: year,
+        quarter,
+        period: quarter * 3,
+        startDate,
+        endDate,
+      });
+      cursor = new Date(Date.UTC(year, quarter * 3, 1));
+    }
+    return buckets;
+  }
+
+  const buckets: StatementBucketShape[] = [];
+  const startYear = Number(range.dateFrom.slice(0, 4));
+  const endYear = Number(range.dateTo.slice(0, 4));
+  for (let year = startYear; year <= endYear; year += 1) {
+    const startDate = year === startYear ? range.dateFrom : `${year}-01-01`;
+    const endDate = year === endYear ? range.dateTo : `${year}-12-31`;
+    buckets.push({
+      key: `fy-${year}`,
+      label: `FY ${year}`,
+      fiscalYear: year,
+      period: null,
+      startDate,
+      endDate,
+    });
+  }
+  return buckets;
+}
+
+function buildFallbackFiscalBuckets(
+  params: ScopeParams,
+  groupBy: StatementBucketMode,
+): StatementBucketShape[] {
+  const endPeriod = params.period ?? 12;
+  if (groupBy === "fiscal_period") {
+    return Array.from({ length: Math.max(endPeriod, 1) }, (_, index) => {
+      const period = index + 1;
+      return {
+        key: `fy-${params.fiscalYear}-p-${period}`,
+        label: `P${period}`,
+        fiscalYear: params.fiscalYear,
+        period,
+        startDate: `${params.fiscalYear}-01-01`,
+        endDate: `${params.fiscalYear}-12-31`,
+      };
+    });
+  }
+
+  if (groupBy === "fiscal_quarter") {
+    return Array.from({ length: Math.ceil(Math.max(endPeriod, 1) / 3) }, (_, index) => {
+      const quarter = index + 1;
+      return {
+        key: `fy-${params.fiscalYear}-q-${quarter}`,
+        label: `FY ${params.fiscalYear} Q${quarter}`,
+        fiscalYear: params.fiscalYear,
+        quarter,
+        period: Math.min(quarter * 3, endPeriod),
+        startDate: `${params.fiscalYear}-01-01`,
+        endDate: `${params.fiscalYear}-12-31`,
+      };
+    });
+  }
+
+  return [{
+    key: `fy-${params.fiscalYear}`,
+    label: `FY ${params.fiscalYear}`,
+    fiscalYear: params.fiscalYear,
+    period: params.period,
+    startDate: `${params.fiscalYear}-01-01`,
+    endDate: `${params.fiscalYear}-12-31`,
+  }];
+}
+
+function aggregateGlBalances(rows: GlBalance[]): GlBalance[] {
+  const byAccount = new Map<string, GlBalance>();
+
+  for (const row of rows) {
+    const current = byAccount.get(row.accountCode);
+    if (!current) {
+      byAccount.set(row.accountCode, { ...row });
+      continue;
+    }
+
+    current.openingDebit += row.openingDebit;
+    current.openingCredit += row.openingCredit;
+    current.movementDebit += row.movementDebit;
+    current.movementCredit += row.movementCredit;
+    current.closingDebit += row.closingDebit;
+    current.closingCredit += row.closingCredit;
+    current.net += row.net;
+  }
+
+  return Array.from(byAccount.values()).sort((a, b) => a.accountCode.localeCompare(b.accountCode));
+}
+
+function toMovementBalance(row: GlBalance): GlBalance {
+  return {
+    ...row,
+    closingDebit: row.movementDebit,
+    closingCredit: row.movementCredit,
+    net: row.movementDebit - row.movementCredit,
+  };
+}
+
+function accumulationStartForBucket(
+  buckets: StatementBucketShape[],
+  bucket: StatementBucketShape,
+): string {
+  const fiscalYearBucketStarts = buckets
+    .filter((item) => item.fiscalYear === bucket.fiscalYear && item.startDate <= bucket.startDate)
+    .map((item) => item.startDate)
+    .sort();
+  return fiscalYearBucketStarts[0] ?? bucket.startDate;
+}
+
+function attachBucketsToSections(
+  sections: StatementSectionShape[],
+  buckets: StatementBucketShape[],
+  bucketRows: Map<string, Map<string, number>>,
+): StatementSectionShape[] {
+  return sections.map((section) => {
+    const rows = section.rows.map((row) => {
+      const rowBuckets: Record<string, number> = {};
+      for (const bucket of buckets) {
+        rowBuckets[bucket.key] = bucketRows.get(bucket.key)?.get(row.accountCode) ?? 0;
+      }
+      return { ...row, buckets: rowBuckets };
+    });
+
+    const bucketTotals: Record<string, number> = {};
+    for (const bucket of buckets) {
+      bucketTotals[bucket.key] = rows.reduce((sum, row) => sum + (row.buckets?.[bucket.key] ?? 0), 0);
+    }
+
+    return { ...section, rows, bucketTotals };
+  });
+}
+
+function buildBucketRowsMap(
+  buckets: StatementBucketShape[],
+  rowsByBucket: Map<string, GlBalance[]>,
+): Map<string, Map<string, number>> {
+  const out = new Map<string, Map<string, number>>();
+  for (const bucket of buckets) {
+    const byAccount = new Map<string, number>();
+    for (const row of rowsByBucket.get(bucket.key) ?? []) {
+      byAccount.set(row.accountCode, row.net);
+    }
+    out.set(bucket.key, byAccount);
+  }
+  return out;
+}
+
+function sumBucketTotals(sections: StatementSectionShape[], bucketKey: string | undefined): number {
+  if (!bucketKey) return 0;
+  return sections.reduce((sum, section) => sum + (section.bucketTotals?.[bucketKey] ?? 0), 0);
+}
+
+function bucketModeFor(buckets: StatementBucketShape[]): StatementBucketMode {
+  if (buckets.some((bucket) => bucket.key.includes("-p-"))) return "fiscal_period";
+  if (buckets.some((bucket) => bucket.key.includes("-q-"))) return "fiscal_quarter";
+  return "fiscal_year";
+}
+
+function omitBucketColumns<T extends { buckets?: StatementBucketShape[]; bucketMode?: StatementBucketMode }>(
+  payload: T,
+): Omit<T, "buckets" | "bucketMode"> {
+  const rest = { ...payload };
+  delete rest.buckets;
+  delete rest.bucketMode;
+  return rest;
+}
+
+async function buildBalanceSheetDateRangePayload(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  companyIds: string[],
+  params: ScopeParams,
+  buckets: StatementBucketShape[],
+  range: StatementDateRangeParams | null,
+  accumulatedValues: boolean,
+) {
+  const bucketResults = await Promise.all(buckets.map(async (bucket) => {
+    let rows: GlBalance[];
+    if (accumulatedValues) {
+      rows = await fetchGlBalances(db, tenantId, companyIds, {
+        ...params,
+        fiscalYear: bucket.fiscalYear,
+        period: bucket.period,
+        comparative: false,
+      });
+    } else {
+      rows = await fetchLiveGlBalancesFromJournalLinesByPostingDate(
+        db,
+        tenantId,
+        companyIds,
+        { ...params, fiscalYear: bucket.fiscalYear, period: bucket.period, comparative: false },
+        bucket.startDate,
+        bucket.endDate,
+      );
+      if (rows.length === 0) {
+        rows = (await fetchGlBalances(db, tenantId, companyIds, {
+          ...params,
+          fiscalYear: bucket.fiscalYear,
+          period: bucket.period,
+          comparative: false,
+        })).map(toMovementBalance);
+      }
+    }
+    return {
+      bucket,
+      rows: rows.filter((row) => ["asset", "liability", "equity"].includes(row.accountClass)),
+    };
+  }));
+
+  const rowsByBucket = new Map(bucketResults.map((result) => [result.bucket.key, result.rows]));
+  const aggregateRows = aggregateGlBalances(bucketResults.flatMap((result) => result.rows));
+  const grouped = buildSections(aggregateRows, new Map());
+  const bucketMap = buildBucketRowsMap(buckets, rowsByBucket);
+
+  const assets = attachBucketsToSections(grouped.asset ?? [], buckets, bucketMap);
+  const liabilities = attachBucketsToSections(grouped.liability ?? [], buckets, bucketMap);
+  const equity = attachBucketsToSections(grouped.equity ?? [], buckets, bucketMap);
+  const lastBucketKey = buckets[buckets.length - 1]?.key;
+  const totalAssets = sumBucketTotals(assets, lastBucketKey);
+  const totalLiabilities = sumBucketTotals(liabilities, lastBucketKey);
+  const totalEquity = sumBucketTotals(equity, lastBucketKey);
+
+  return {
+    assets, liabilities, equity,
+    buckets,
+    bucketMode: bucketModeFor(buckets),
+    accumulatedValues,
+    dateRange: range ?? undefined,
+    totalAssets,
+    totalLiabilities,
+    totalEquity,
+    totalLiabilitiesAndEquity: totalLiabilities + totalEquity,
+    asAt: new Date().toISOString(), isLive: true,
+  };
+}
+
+async function buildProfitLossDateRangePayload(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  companyIds: string[],
+  params: ScopeParams,
+  buckets: StatementBucketShape[],
+  range: StatementDateRangeParams | null,
+  accumulatedValues: boolean,
+) {
+  const bucketResults = await Promise.all(buckets.map(async (bucket) => {
+    const startDate = accumulatedValues
+      ? accumulationStartForBucket(buckets, bucket)
+      : bucket.startDate;
+    const rows = await fetchLiveGlBalancesFromJournalLinesByPostingDate(
+      db,
+      tenantId,
+      companyIds,
+      { ...params, fiscalYear: bucket.fiscalYear, period: bucket.period, comparative: false },
+      startDate,
+      bucket.endDate,
+    );
+    return {
+      bucket,
+      rows: rows
+        .map(normalizeProfitLossBalance)
+        .filter((row): row is GlBalance => row !== null),
+    };
+  }));
+
+  const rowsByBucket = new Map(bucketResults.map((result) => [result.bucket.key, result.rows]));
+  const aggregateRows = aggregateGlBalances(bucketResults.flatMap((result) => result.rows));
+  const grouped = buildSections(aggregateRows, new Map());
+  const bucketMap = buildBucketRowsMap(buckets, rowsByBucket);
+
+  const revenue = attachBucketsToSections(grouped.revenue ?? [], buckets, bucketMap);
+  const expenses = attachBucketsToSections(grouped.expense ?? [], buckets, bucketMap);
+  const totalRevenue = sumSections(revenue);
+  const totalExpenses = sumSections(expenses);
+
+  return {
+    revenue,
+    costOfSales: [],
+    grossProfit: totalRevenue,
+    operatingExpenses: expenses,
+    operatingProfit: totalRevenue - totalExpenses,
+    otherIncome: [],
+    otherExpenses: [],
+    netProfit: totalRevenue - totalExpenses,
+    buckets,
+    bucketMode: bucketModeFor(buckets),
+    accumulatedValues,
+    dateRange: range ?? undefined,
+    asAt: new Date().toISOString(), isLive: true,
+  };
 }
 
 // ── User company-access resolver ──────────────────────────────────────────────
@@ -440,7 +1299,7 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
       const rows = await sql<{
         id: string; code: string; name: string;
         entityType: string; consolidationMethod: string | null;
-        parentEntityId: string | null; countryCode: string;
+        parentEntityId: string | null; countryCode: string; countryName: string | null;
         ownershipPct: number | null;
         functionalCurrency: string; reportingCurrency: string;
         companyCodes: string[];
@@ -451,6 +1310,7 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
           le.consolidation_method AS "consolidationMethod",
           le.parent_entity_id    AS "parentEntityId",
           le.country_code        AS "countryCode",
+          c.name                 AS "countryName",
           le.ownership_pct       AS "ownershipPct",
           le.functional_currency AS "functionalCurrency",
           le.reporting_currency  AS "reportingCurrency",
@@ -463,6 +1323,7 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
             '[]'::json
           ) AS "companyCodes"
         FROM   master.legal_entity le
+        LEFT JOIN shared.country c ON c.code = le.country_code
         WHERE  le.tenant_id = ${tenantId}::uuid
           AND  le.status    = 'active'
         ORDER  BY le.code
@@ -472,6 +1333,90 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
   }) as RequestHandler);
 
   // ── GET /api/finance/master/charts ────────────────────────────────────────
+  // ── GET /api/finance/master/ledger-books ─────────────────────────────────
+  router.get("/finance/master/ledger-books", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg = (req.headers["x-org"] as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.json([]); return; }
+
+      const scopeType = ((req.query["scopeType"] as string | undefined) ?? "").trim();
+      const scopeId = ((req.query["scopeId"] as string | undefined) ?? "").trim();
+      let companyIds: string[] | null = null;
+
+      if (scopeType || scopeId) {
+        if (!scopeType || !["company", "legal_entity", "group"].includes(scopeType) || !scopeId) {
+          res.status(400).json({ error: "scopeType and scopeId are required together" });
+          return;
+        }
+        const companies = await resolveCompanyIds(db, tenantId, { scopeType, scopeId });
+        companyIds = companies.map((company) => company.company_code_id);
+        if (companyIds.length === 0) { res.json([]); return; }
+      }
+
+      if (companyIds) {
+        const { rows } = await sql<{
+          id: string;
+          code: string;
+          name: string;
+          category: string | null;
+          reportingStandard: string | null;
+          baseCurrencyCode: string | null;
+          isPrimary: boolean;
+        }>`
+          SELECT
+            lb.id,
+            lb.code,
+            lb.name,
+            lb.category,
+            lb.reporting_standard AS "reportingStandard",
+            lb.base_currency_code AS "baseCurrencyCode",
+            lb.is_primary         AS "isPrimary"
+          FROM master.ledger_book lb
+          JOIN master.company_code_book_assignment ba
+            ON ba.book_id = lb.id
+           AND ba.tenant_id = lb.tenant_id
+          WHERE lb.tenant_id = ${tenantId}::uuid
+            AND lb.is_active = true
+            AND ba.is_active = true
+            AND ba.company_code_id = ANY(ARRAY[${sql.join(companyIds.map((id) => sql`${id}::uuid`), sql`, `)}])
+            AND (ba.effective_to IS NULL OR ba.effective_to >= CURRENT_DATE)
+          GROUP BY lb.id, lb.code, lb.name, lb.category, lb.reporting_standard, lb.base_currency_code, lb.is_primary, lb.sort_order
+          ORDER BY lb.is_primary DESC, MIN(ba.priority), lb.sort_order, lb.code
+        `.execute(db);
+        res.json(rows);
+        return;
+      }
+
+      const { rows } = await sql<{
+        id: string;
+        code: string;
+        name: string;
+        category: string | null;
+        reportingStandard: string | null;
+        baseCurrencyCode: string | null;
+        isPrimary: boolean;
+      }>`
+        SELECT
+          lb.id,
+          lb.code,
+          lb.name,
+          lb.category,
+          lb.reporting_standard AS "reportingStandard",
+          lb.base_currency_code AS "baseCurrencyCode",
+          lb.is_primary         AS "isPrimary"
+        FROM master.ledger_book lb
+        WHERE lb.tenant_id = ${tenantId}::uuid
+          AND lb.is_active = true
+        ORDER BY lb.is_primary DESC, lb.sort_order, lb.code
+      `.execute(db);
+      res.json(rows);
+    } catch (err) { logger?.error("finance_ledger_books_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
   router.get("/finance/master/charts", (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -897,6 +1842,9 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
       if (parsed.bookId) {
         linesQuery = linesQuery.where("jl.book_id", "=", parsed.bookId) as typeof linesQuery;
       }
+      if (parsed.transactionCurrency) {
+        linesQuery = linesQuery.where("jl.transaction_currency", "=", parsed.transactionCurrency) as typeof linesQuery;
+      }
 
       const lines = await linesQuery.execute() as Array<Record<string, unknown>>;
       let running = openingBalance;
@@ -934,9 +1882,61 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
       if (!tenantId) { res.status(404).json({ error: "NOT_FOUND" }); return; }
       const parsed = parseScopeParams(req.query as Record<string, unknown>);
       if ("error" in parsed) { res.status(400).json({ error: parsed.error }); return; }
+      const dateRange = parseStatementDateRange(req.query as Record<string, unknown>);
+      if (dateRange && "error" in dateRange) { res.status(400).json({ error: dateRange.error }); return; }
+      const groupBy = parseStatementGroupBy(req.query as Record<string, unknown>);
+      if (typeof groupBy !== "string") { res.status(400).json({ error: groupBy.error }); return; }
+      const accumulatedValues = parseStatementAccumulatedValues(req.query as Record<string, unknown>);
+      if (typeof accumulatedValues !== "boolean") { res.status(400).json({ error: accumulatedValues.error }); return; }
       const companies = await resolveCompanyIds(db, tenantId, parsed);
       if (companies.length === 0) { res.json(emptyBalanceSheet()); return; }
       const companyIds = companies.map((c) => c.company_code_id);
+
+      if (dateRange) {
+        const bucketCompanyId = companyIds[0];
+        if (!bucketCompanyId) { res.json(emptyBalanceSheet()); return; }
+        if (groupBy === "none") {
+          const bucket = await buildSingleDateRangeBucket(db, tenantId, bucketCompanyId, dateRange);
+          const payload = await buildBalanceSheetDateRangePayload(
+            db,
+            tenantId,
+            companyIds,
+            parsed,
+            [bucket],
+            dateRange,
+            accumulatedValues,
+          );
+          res.json(omitBucketColumns(payload));
+          return;
+        }
+        const buckets = await buildStatementDateBuckets(db, tenantId, bucketCompanyId, dateRange, groupBy);
+        res.json(await buildBalanceSheetDateRangePayload(
+          db,
+          tenantId,
+          companyIds,
+          parsed,
+          buckets,
+          dateRange,
+          accumulatedValues,
+        ));
+        return;
+      }
+
+      if (groupBy !== "none") {
+        const bucketCompanyId = companyIds[0];
+        if (!bucketCompanyId) { res.json(emptyBalanceSheet()); return; }
+        const buckets = await buildStatementFiscalBuckets(db, tenantId, bucketCompanyId, parsed, groupBy);
+        res.json(await buildBalanceSheetDateRangePayload(
+          db,
+          tenantId,
+          companyIds,
+          parsed,
+          buckets,
+          null,
+          accumulatedValues,
+        ));
+        return;
+      }
 
       const balances = await fetchGlBalances(db, tenantId, companyIds, parsed);
       const priorBalances = parsed.comparative
@@ -976,17 +1976,95 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
       if (!tenantId) { res.status(404).json({ error: "NOT_FOUND" }); return; }
       const parsed = parseScopeParams(req.query as Record<string, unknown>);
       if ("error" in parsed) { res.status(400).json({ error: parsed.error }); return; }
+      const dateRange = parseStatementDateRange(req.query as Record<string, unknown>);
+      if (dateRange && "error" in dateRange) { res.status(400).json({ error: dateRange.error }); return; }
+      const groupBy = parseStatementGroupBy(req.query as Record<string, unknown>);
+      if (typeof groupBy !== "string") { res.status(400).json({ error: groupBy.error }); return; }
+      const accumulatedValues = parseStatementAccumulatedValues(req.query as Record<string, unknown>);
+      if (typeof accumulatedValues !== "boolean") { res.status(400).json({ error: accumulatedValues.error }); return; }
       const companies = await resolveCompanyIds(db, tenantId, parsed);
       if (companies.length === 0) { res.json(emptyProfitLoss()); return; }
       const companyIds = companies.map((c) => c.company_code_id);
 
+      if (dateRange) {
+        const bucketCompanyId = companyIds[0];
+        if (!bucketCompanyId) { res.json(emptyProfitLoss()); return; }
+        if (groupBy === "none") {
+          const bucket = await buildSingleDateRangeBucket(db, tenantId, bucketCompanyId, dateRange);
+          const payload = await buildProfitLossDateRangePayload(
+            db,
+            tenantId,
+            companyIds,
+            parsed,
+            [bucket],
+            dateRange,
+            accumulatedValues,
+          );
+          res.json(omitBucketColumns(payload));
+          return;
+        }
+        const buckets = await buildStatementDateBuckets(db, tenantId, bucketCompanyId, dateRange, groupBy);
+        res.json(await buildProfitLossDateRangePayload(
+          db,
+          tenantId,
+          companyIds,
+          parsed,
+          buckets,
+          dateRange,
+          accumulatedValues,
+        ));
+        return;
+      }
+
+      if (groupBy !== "none") {
+        const bucketCompanyId = companyIds[0];
+        if (!bucketCompanyId) { res.json(emptyProfitLoss()); return; }
+        const buckets = await buildStatementFiscalBuckets(db, tenantId, bucketCompanyId, parsed, groupBy);
+        res.json(await buildProfitLossDateRangePayload(
+          db,
+          tenantId,
+          companyIds,
+          parsed,
+          buckets,
+          null,
+          accumulatedValues,
+        ));
+        return;
+      }
+
       const balances = await fetchGlBalances(db, tenantId, companyIds, parsed);
-      const priorBalances = parsed.comparative
+      let priorBalances = parsed.comparative
         ? await fetchGlBalances(db, tenantId, companyIds, { ...parsed, fiscalYear: parsed.fiscalYear - 1 })
         : [];
-      const priorMap = new Map(priorBalances.map((r) => [r.accountCode, r]));
+      let plBalances = balances
+        .map(normalizeProfitLossBalance)
+        .filter((r): r is GlBalance => r !== null);
+      let priorPlBalances = priorBalances
+        .map(normalizeProfitLossBalance)
+        .filter((r): r is GlBalance => r !== null);
 
-      const plBalances = balances.filter((r) => ["revenue", "expense"].includes(r.accountClass));
+      if (plBalances.length === 0) {
+        const liveBalances = await fetchLiveGlBalancesFromJournalLines(db, tenantId, companyIds, parsed);
+        const livePlBalances = liveBalances
+          .map(normalizeProfitLossBalance)
+          .filter((r): r is GlBalance => r !== null);
+        if (livePlBalances.length > 0) {
+          plBalances = livePlBalances;
+          if (parsed.comparative) {
+            priorBalances = await fetchLiveGlBalancesFromJournalLines(
+              db,
+              tenantId,
+              companyIds,
+              { ...parsed, fiscalYear: parsed.fiscalYear - 1 },
+            );
+            priorPlBalances = priorBalances
+              .map(normalizeProfitLossBalance)
+              .filter((r): r is GlBalance => r !== null);
+          }
+        }
+      }
+
+      const priorMap = new Map(priorPlBalances.map((r) => [r.accountCode, r]));
       const grouped = buildSections(plBalances, priorMap);
 
       const revenue  = grouped.revenue ?? [];

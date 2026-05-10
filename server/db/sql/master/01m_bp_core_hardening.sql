@@ -673,6 +673,12 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- BP service coverage retired; future coverage/capability belongs to Business Network.
 
 -- business_partner_relation → business_partner (both directions)
+-- Purge orphaned rows: master.business_partner is dropped and recreated by 01h.
+DELETE FROM master.business_partner_relation bpr
+WHERE NOT EXISTS (
+    SELECT 1 FROM master.business_partner bp
+    WHERE bp.tenant_id = bpr.tenant_id AND bp.id = bpr.from_bp_id
+);
 DO $$ BEGIN
     ALTER TABLE master.business_partner_relation
         ADD CONSTRAINT bpr_from_bp_fk
@@ -688,6 +694,12 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- supplier_spend_category → supplier
+-- Purge orphaned rows: master.supplier is dropped and recreated by 01h.
+DELETE FROM master.supplier_spend_category sscat
+WHERE NOT EXISTS (
+    SELECT 1 FROM master.supplier s
+    WHERE s.tenant_id = sscat.tenant_id AND s.id = sscat.supplier_id
+);
 DO $$ BEGIN
     ALTER TABLE master.supplier_spend_category
         ADD CONSTRAINT sscat_supplier_fk
@@ -704,6 +716,12 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- business_partner_network_capability → business_partner
+-- Purge orphaned rows: master.business_partner is dropped and recreated by 01h.
+DELETE FROM master.business_partner_network_capability bpnc
+WHERE NOT EXISTS (
+    SELECT 1 FROM master.business_partner bp
+    WHERE bp.tenant_id = bpnc.tenant_id AND bp.id = bpnc.business_partner_id
+);
 DO $$ BEGIN
     ALTER TABLE master.business_partner_network_capability
         ADD CONSTRAINT bpnc_bp_fk

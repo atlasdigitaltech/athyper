@@ -14,6 +14,7 @@
 import { AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { Badge, Skeleton } from "@athyper/ui/primitives";
 import { usePostingTrace, type PostingTraceLine } from "../hooks/usePostingTrace";
+import { openAppRecordFromContextMenu } from "../lib/recordLinks";
 import { fmtCurrency, fmtDate } from "../components/format";
 
 function statusBadge(status: string) {
@@ -43,8 +44,20 @@ function TraceRow({ line }: { line: PostingTraceLine }) {
     <tr className="hover:bg-muted/30 transition-colors">
       <td className="px-3 py-2 text-center text-xs text-muted-foreground tabular-nums">{line.lineNumber}</td>
       <td className="px-3 py-2">
-        <span className="font-mono text-xs font-medium">{line.accountCode}</span>
-        <span className="ml-2 text-xs text-muted-foreground">{line.accountName}</span>
+        <span
+          className="cursor-context-menu font-mono text-xs font-medium underline-offset-2 hover:underline"
+          title="Right-click to open this GL account."
+          onContextMenu={(event) => openAppRecordFromContextMenu(event, "gl_account", line.accountCode)}
+        >
+          {line.accountCode}
+        </span>
+        <span
+          className="ml-2 cursor-context-menu text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          title="Right-click to open this GL account."
+          onContextMenu={(event) => openAppRecordFromContextMenu(event, "gl_account", line.accountCode)}
+        >
+          {line.accountName}
+        </span>
       </td>
       <td className="px-3 py-2 text-center">
         <Badge variant="outline" className="text-doc-support px-1.5 py-0">{line.accountClass}</Badge>
@@ -103,7 +116,13 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-semibold">{je.jeNumber}</span>
+              <span
+                className="cursor-context-menu font-mono text-sm font-semibold underline-offset-2 hover:underline"
+                title="Right-click to open this journal entry."
+                onContextMenu={(event) => openAppRecordFromContextMenu(event, "journal_entry", je.jeNumber)}
+              >
+                {je.jeNumber}
+              </span>
               {statusBadge(je.status)}
               {je.reversalOf && (
                 <Badge variant="outline" className="text-doc-support">

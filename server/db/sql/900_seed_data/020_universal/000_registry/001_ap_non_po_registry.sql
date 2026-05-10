@@ -44,7 +44,7 @@ VALUES (
     ],
     'Complete Non-PO Accounts Payable cycle: invoice capture (plain, VAT, WHT, retention, advance-recovery) through approval, GL posting, settlement, and bank clearing. Delivers 4 accounting profiles, 6 engine rules, 5 new posting roles, extended entity_operation set for purchase_invoice and payment_entry, and the master.accounting_profile identity table.',
     jsonb_build_object(
-        'scenarios_covered', ARRAY['A1','A3','A4','A7','A8','vendor_advance'],
+        'scenarios_covered', ARRAY['A1','A3','A4','A7','A8','supplier_advance'],
         'modules',           ARRAY['ACC','PAY','TREASURY','BUDGET','PAYG'],
         'journal_events',    ARRAY['INVOICE_RECEIVED','ORDER_APPROVAL','SETTLEMENT',
                                     'ADVANCE_PAID','ADVANCE_RECOVERED','RETENTION_RELEASED'],

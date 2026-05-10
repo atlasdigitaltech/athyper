@@ -5,6 +5,16 @@ export type { FlowModalProps } from "./FlowModal";
 export { FlowStepNav } from "./FlowStepNav";
 export { FlowSummaryPanel } from "./FlowSummaryPanel";
 export { FlowFieldBinding } from "./FlowFieldBinding";
+export {
+  FlowPreflightChooser,
+  FlowPreflightLockedSummary,
+  FlowPreflightRestartButton,
+  getFlowPreflightConfig,
+} from "./FlowPreflightChooser";
+export type {
+  FlowPreflightConfig,
+  FlowPreflightSelection,
+} from "./FlowPreflightChooser";
 export { DerivedChip } from "./DerivedChip";
 export { useFlowEngine, canOverride } from "./useFlowEngine";
 export type { UseFlowEngineReturn, SummaryLine } from "./useFlowEngine";

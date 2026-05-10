@@ -22,7 +22,7 @@ export function AmountCell({
 }: AmountCellProps) {
   if (dashZero && value === 0) {
     return (
-      <span className={cn("font-mono text-muted-foreground/40 tabular-nums", className)}>
+      <span className={cn("tabular-nums text-muted-foreground/40", className)}>
         —
       </span>
     );
@@ -37,7 +37,7 @@ export function AmountCell({
     : "";
 
   return (
-    <span className={cn("font-mono tabular-nums", color, className)}>
+    <span className={cn("tabular-nums", color, className)}>
       {compact ? fmtCompact(value) : fmtFull(value)}
     </span>
   );

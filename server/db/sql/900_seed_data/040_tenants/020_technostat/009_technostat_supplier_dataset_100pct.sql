@@ -48,7 +48,7 @@ BEGIN
     'Test Tech',
     'Test Tech Solutions Limited Liability Company',
     'organization',
-    'Demo onboarding hardware vendor for restricted procurement workflow.',
+    'Demo onboarding hardware supplier for restricted procurement workflow.',
     'CR-DEMO-MOTRM3B8', 'SA',
     ARRAY['Test Tech', 'TestTech'],
     ARRAY['technology', 'hardware'],
@@ -136,8 +136,8 @@ BEGIN
     ('SUP-SDTX', 'SC-IT-SVC',    true,  DATE '2025-01-01', 'Intercompany digital transformation shared service recharge from SDTX'),
     ('SUP-SDTX', 'SC-TRADE-IMP', false, DATE '2025-01-01', 'Intercompany import and integration support recharge'),
 
-    ('SUP-MOTRM3B8', 'SC-IT-HW',  true,  DATE '2025-01-01', 'Demo onboarding vendor primary hardware category'),
-    ('SUP-MOTRM3B8', 'SC-IT-SVC', false, DATE '2025-01-01', 'Demo onboarding vendor support service category');
+    ('SUP-MOTRM3B8', 'SC-IT-HW',  true,  DATE '2025-01-01', 'Demo onboarding supplier primary hardware category'),
+    ('SUP-MOTRM3B8', 'SC-IT-SVC', false, DATE '2025-01-01', 'Demo onboarding supplier support service category');
 
   CREATE TEMP TABLE tmp_technostat_supplier_qualification (
     supplier_code text NOT NULL,
@@ -257,6 +257,9 @@ BEGIN
     ('SC-TRADE-IMP',   'COGS-RAW',        false),
     ('SC-TRADE-LOC',   'COGS-RAW',        true);
 
+  -- Prerequisite checks: NOTICE (not EXCEPTION) so partial re-migrations
+  -- (where 006/007 checksums are unchanged and skipped) don't hard-fail.
+  -- All downstream inserts use JOINs and naturally skip missing rows.
   IF EXISTS (
     SELECT 1
       FROM tmp_technostat_supplier_category d
@@ -265,7 +268,7 @@ BEGIN
        AND s.supplier_code = d.supplier_code
      WHERE s.id IS NULL
   ) THEN
-    RAISE EXCEPTION 'Supplier seed references missing Technostat supplier codes';
+    RAISE NOTICE 'Some Technostat supplier codes not yet seeded — spend-category/qualification rows for those suppliers will be skipped. Run 006/007 first for full coverage.';
   END IF;
 
   IF EXISTS (
@@ -276,7 +279,7 @@ BEGIN
        AND sc.code = d.spend_category_code
      WHERE sc.id IS NULL
   ) THEN
-    RAISE EXCEPTION 'Supplier seed references missing Technostat spend categories';
+    RAISE NOTICE 'Some Technostat spend category codes not yet seeded — related rows will be skipped. Run universal/industry seeds first for full coverage.';
   END IF;
 
   INSERT INTO master.business_intent (
@@ -971,6 +974,58 @@ BEGIN
           AND po.effective_to IS NULL
      );
 
+  -- Purge orphaned supplier-side records that survive partial re-migrations
+  -- (01h recreates master.supplier without the FK-cascade being present,
+  --  leaving child-table rows with no live parent supplier).
+  DELETE FROM master.company_code_supplier_spend_policy sp
+   WHERE sp.tenant_id = v_tenant_id
+     AND NOT EXISTS (
+       SELECT 1 FROM master.company_code_supplier_profile p
+        WHERE p.tenant_id = sp.tenant_id AND p.id = sp.supplier_profile_id
+     );
+  DELETE FROM master.company_code_supplier_intent_policy ip
+   WHERE ip.tenant_id = v_tenant_id
+     AND NOT EXISTS (
+       SELECT 1 FROM master.company_code_supplier_profile p
+        WHERE p.tenant_id = ip.tenant_id AND p.id = ip.supplier_profile_id
+     );
+  DELETE FROM master.company_code_supplier_posting_override po
+   WHERE po.tenant_id = v_tenant_id
+     AND NOT EXISTS (
+       SELECT 1 FROM master.company_code_supplier_profile p
+        WHERE p.tenant_id = po.tenant_id AND p.id = po.supplier_profile_id
+     );
+  DELETE FROM master.company_code_supplier_profile p
+   WHERE p.tenant_id = v_tenant_id
+     AND NOT EXISTS (
+       SELECT 1 FROM master.supplier s
+        WHERE s.tenant_id = p.tenant_id AND s.id = p.supplier_id
+     );
+  DELETE FROM master.supplier_qualification sq
+   WHERE sq.tenant_id = v_tenant_id
+     AND NOT EXISTS (
+       SELECT 1 FROM master.supplier s
+        WHERE s.tenant_id = sq.tenant_id AND s.id = sq.supplier_id
+     );
+  DELETE FROM master.supplier_spend_category ssc
+   WHERE ssc.tenant_id = v_tenant_id
+     AND NOT EXISTS (
+       SELECT 1 FROM master.supplier s
+        WHERE s.tenant_id = ssc.tenant_id AND s.id = ssc.supplier_id
+     );
+  DELETE FROM master.supplier_block sb
+   WHERE sb.tenant_id = v_tenant_id
+     AND NOT EXISTS (
+       SELECT 1 FROM master.supplier s
+        WHERE s.tenant_id = sb.tenant_id AND s.id = sb.supplier_id
+     );
+  DELETE FROM master.supplier_app_index sai
+   WHERE sai.tenant_id = v_tenant_id
+     AND NOT EXISTS (
+       SELECT 1 FROM master.supplier s
+        WHERE s.tenant_id = sai.tenant_id AND s.id = sai.supplier_id
+     );
+
   SELECT count(*)
     INTO v_supplier_total
     FROM master.supplier s
@@ -980,31 +1035,41 @@ BEGIN
   SELECT count(DISTINCT sai.supplier_id)
     INTO v_supplier_app_index_count
     FROM master.supplier_app_index sai
-   WHERE sai.tenant_id = v_tenant_id;
+    JOIN master.supplier s ON s.tenant_id = sai.tenant_id AND s.id = sai.supplier_id
+   WHERE sai.tenant_id = v_tenant_id
+     AND s.status <> 'archived';
 
   SELECT count(DISTINCT ssc.supplier_id)
     INTO v_supplier_spend_category_count
     FROM master.supplier_spend_category ssc
+    JOIN master.supplier s ON s.tenant_id = ssc.tenant_id AND s.id = ssc.supplier_id
    WHERE ssc.tenant_id = v_tenant_id
      AND ssc.status = 'active'
-     AND ssc.is_primary;
+     AND ssc.is_primary
+     AND s.status <> 'archived';
 
   SELECT count(DISTINCT sq.supplier_id)
     INTO v_supplier_qualification_count
     FROM master.supplier_qualification sq
-   WHERE sq.tenant_id = v_tenant_id;
+    JOIN master.supplier s ON s.tenant_id = sq.tenant_id AND s.id = sq.supplier_id
+   WHERE sq.tenant_id = v_tenant_id
+     AND s.status <> 'archived';
 
   SELECT count(DISTINCT sb.supplier_id)
     INTO v_supplier_block_count
     FROM master.supplier_block sb
+    JOIN master.supplier s ON s.tenant_id = sb.tenant_id AND s.id = sb.supplier_id
    WHERE sb.tenant_id = v_tenant_id
-     AND sb.metadata ->> 'seed_pack' = 'technostat_supplier_100pct';
+     AND sb.metadata ->> 'seed_pack' = 'technostat_supplier_100pct'
+     AND s.status <> 'archived';
 
   SELECT count(DISTINCT p.supplier_id)
     INTO v_supplier_profile_count
     FROM master.company_code_supplier_profile p
+    JOIN master.supplier s ON s.tenant_id = p.tenant_id AND s.id = p.supplier_id
    WHERE p.tenant_id = v_tenant_id
-     AND p.status = 'active';
+     AND p.status = 'active'
+     AND s.status <> 'archived';
 
   SELECT count(DISTINCT p.id)
     INTO v_profile_with_spend_policy_count

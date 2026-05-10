@@ -3,7 +3,7 @@
 -- §1: Deactivate stale AR-behavior fields (belong in company_code_customer_profile)
 -- §2: Fix tax_number column_name mapping (DB column is tax_id)
 -- §3: Add missing core identity/legal fields
--- §4: Add extended business profile fields (mirror of 002_vendor_ext_fields.sql)
+-- §4: Add extended business profile fields (mirror of 002_supplier_ext_fields.sql)
 -- Idempotent: UPDATE with WHERE clauses; ON CONFLICT DO NOTHING
 
 -- ── §1. Deactivate stale fields ───────────────────────────────────────────────

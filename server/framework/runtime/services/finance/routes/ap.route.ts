@@ -127,6 +127,9 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         .leftJoin("master.supplier as s", (jb) =>
           jb.onRef("s.id", "=", "pi.supplier_id").on("s.tenant_id", "=", tenantId),
         )
+        .leftJoin("master.business_partner as bp", (jb) =>
+          jb.onRef("bp.id", "=", "s.business_partner_id").on("bp.tenant_id", "=", tenantId),
+        )
         .select([
           "pi.id",
           "pi.invoice_number as invoiceNumber",
@@ -136,7 +139,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
           "pi.document_date as documentDate", "pi.posting_date as postingDate",
           "pi.due_date as dueDate", "pi.fiscal_year as fiscalYear",
           "pi.period_number as periodNumber",
-          "pi.invoice_date as invoiceDate",
+          sql<string>`COALESCE(pi.supplier_invoice_date, pi.document_date)`.as("invoiceDate"),
           "pi.currency_code as currencyCode",
           "pi.total_amount as totalAmount",
           "pi.subtotal_amount as subtotalAmount",
@@ -150,13 +153,15 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
           "pi.is_credit_note as isCreditNote", "pi.is_reversal as isReversal",
           "pi.line_count as lineCount",
           "pi.company_code_id as companyCodeId",
-          "s.code as supplierCode", "s.name as supplierName",
+          "s.supplier_code as supplierCode",
+          sql<string>`COALESCE(bp.display_name, bp.name, s.supplier_code)`.as("supplierName"),
         ])
         .where("pi.tenant_id", "=", tenantId)
         .where("pi.company_code_id", "in", companyIds)
         .where("pi.fiscal_year", "=", parsed.fiscalYear);
 
       if (parsed.period !== null) q = q.where("pi.period_number", "=", parsed.period) as typeof q;
+      if (parsed.transactionCurrency) q = q.where("pi.currency_code", "=", parsed.transactionCurrency) as typeof q;
       if (status) q = q.where("pi.status", "=", status) as typeof q;
       if (supplierId) q = q.where("pi.supplier_id", "=", supplierId) as typeof q;
 
@@ -169,6 +174,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
           .where("pi.company_code_id", "in", companyIds)
           .where("pi.fiscal_year", "=", parsed.fiscalYear)
           .$if(parsed.period !== null, (qb) => qb.where("pi.period_number", "=", parsed.period as number))
+          .$if(!!parsed.transactionCurrency, (qb) => qb.where("pi.currency_code", "=", parsed.transactionCurrency as string))
           .$if(!!status, (qb) => qb.where("pi.status", "=", status as string))
           .$if(!!supplierId, (qb) => qb.where("pi.supplier_id", "=", supplierId as string))
           .executeTakeFirst(),
@@ -194,8 +200,14 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         .leftJoin("master.supplier as s", (jb) =>
           jb.onRef("s.id", "=", "pi.supplier_id").on("s.tenant_id", "=", tenantId),
         )
+        .leftJoin("master.business_partner as bp", (jb) =>
+          jb.onRef("bp.id", "=", "s.business_partner_id").on("bp.tenant_id", "=", tenantId),
+        )
         .selectAll("pi")
-        .select(["s.code as supplierCode", "s.name as supplierName"])
+        .select([
+          "s.supplier_code as supplierCode",
+          sql<string>`COALESCE(bp.display_name, bp.name, s.supplier_code)`.as("supplierName"),
+        ])
         .where("pi.tenant_id", "=", tenantId)
         .where("pi.id", "=", invoiceId)
         .executeTakeFirst();
@@ -270,6 +282,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         .where("pe.fiscal_year", "=", parsed.fiscalYear);
 
       if (parsed.period !== null) q = q.where("pe.period_number", "=", parsed.period) as typeof q;
+      if (parsed.transactionCurrency) q = q.where("pe.currency_code", "=", parsed.transactionCurrency) as typeof q;
       if (status) q = q.where("pe.status", "=", status) as typeof q;
 
       const [items, countRow] = await Promise.all([
@@ -339,6 +352,9 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         .leftJoin("master.supplier as s", (jb) =>
           jb.onRef("s.id", "=", "pi.supplier_id").on("s.tenant_id", "=", tenantId),
         )
+        .leftJoin("master.business_partner as bp", (jb) =>
+          jb.onRef("bp.id", "=", "s.business_partner_id").on("bp.tenant_id", "=", tenantId),
+        )
         .select([
           "pi.id",
           "pi.company_code_id as companyCodeId",
@@ -348,7 +364,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
           "pi.fiscal_year     as fiscalYear",
           "pi.period_number   as periodNumber",
           "pi.status",
-          "s.name             as supplierName",
+          sql<string>`COALESCE(bp.display_name, bp.name, s.supplier_code)`.as("supplierName"),
         ])
         .where("pi.id",        "=", invoiceId)
         .where("pi.tenant_id", "=", tenantId)
@@ -533,8 +549,8 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       }>`
         SELECT
           pi.supplier_id,
-          s.code AS supplier_code,
-          s.name AS supplier_name,
+          s.supplier_code AS supplier_code,
+          COALESCE(bp.display_name, bp.name, s.supplier_code) AS supplier_name,
           COALESCE(SUM(pi.outstanding_amount) FILTER (
             WHERE pi.due_date IS NULL OR pi.due_date >= CURRENT_DATE), 0) AS current_amount,
           COALESCE(SUM(pi.outstanding_amount) FILTER (
@@ -552,11 +568,14 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         FROM document.purchase_invoice pi
         LEFT JOIN master.supplier s
           ON s.id = pi.supplier_id AND s.tenant_id = pi.tenant_id
+        LEFT JOIN master.business_partner bp
+          ON bp.id = s.business_partner_id AND bp.tenant_id = s.tenant_id
         WHERE pi.tenant_id = ${tenantId}::uuid
           AND pi.company_code_id = ANY(ARRAY[${sql.join(companyIds.map((id) => sql`${id}::uuid`), sql`, `)}])
+          ${parsed.transactionCurrency ? sql`AND pi.currency_code = ${parsed.transactionCurrency}` : sql``}
           AND pi.outstanding_amount > 0
           AND pi.status NOT IN ('cancelled', 'reversed', 'rejected', 'draft')
-        GROUP BY pi.supplier_id, s.code, s.name
+        GROUP BY pi.supplier_id, s.supplier_code, bp.display_name, bp.name
         ORDER BY total_outstanding DESC
       `.execute(db);
 
@@ -617,6 +636,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         .where("pe.fiscal_year", "=", parsed.fiscalYear);
 
       if (parsed.period !== null) q = q.where("pe.period_number", "=", parsed.period) as typeof q;
+      if (parsed.transactionCurrency) q = q.where("pe.currency_code", "=", parsed.transactionCurrency) as typeof q;
       if (status) q = q.where("pe.status", "=", status) as typeof q;
 
       const [items, countRow] = await Promise.all([
@@ -681,6 +701,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
                ON c.id = si.customer_id AND c.tenant_id = si.tenant_id
         WHERE si.tenant_id       = ${tenantId}::uuid
           AND si.company_code_id = ANY(ARRAY[${sql.join(companyIds.map((id) => sql`${id}::uuid`), sql`, `)}])
+          ${parsed.transactionCurrency ? sql`AND si.currency_code = ${parsed.transactionCurrency}` : sql``}
           AND si.outstanding_amount > 0
           AND si.status NOT IN ('cancelled', 'reversed', 'rejected', 'draft')
         GROUP  BY si.customer_id, c.code, c.name
@@ -763,6 +784,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         WHERE si.tenant_id       = ${tenantId}::uuid
           AND si.company_code_id = ANY(ARRAY[${sql.join(companyIds.map((id) => sql`${id}::uuid`), sql`, `)}])
           AND si.fiscal_year     = ${parsed.fiscalYear}
+          ${parsed.transactionCurrency ? sql`AND si.currency_code = ${parsed.transactionCurrency}` : sql``}
           ${status ? sql`AND si.status = ${status}` : sql``}
         ORDER BY si.posting_date DESC, si.invoice_number DESC
         LIMIT  ${limit}
@@ -775,6 +797,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         WHERE si.tenant_id       = ${tenantId}::uuid
           AND si.company_code_id = ANY(ARRAY[${sql.join(companyIds.map((id) => sql`${id}::uuid`), sql`, `)}])
           AND si.fiscal_year     = ${parsed.fiscalYear}
+          ${parsed.transactionCurrency ? sql`AND si.currency_code = ${parsed.transactionCurrency}` : sql``}
           ${status ? sql`AND si.status = ${status}` : sql``}
       `.execute(db);
 

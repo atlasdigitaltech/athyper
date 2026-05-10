@@ -40,7 +40,6 @@ import {
   LayoutList,
   LayoutGrid,
   Trash2,
-  Download,
   Filter as FilterIcon,
   Kanban,
   BarChart2,
@@ -127,6 +126,7 @@ export interface EntityListPageProps {
 }
 
 type ViewMode = "list" | "board" | "compact" | "dashboard" | "excel";
+type EntityListArchetype = "simple" | "rich" | "doc";
 
 // Maps display_config v2 canonical view-mode names → legacy EntityListPage ViewMode names.
 const B5_TO_LEGACY_MODE: Record<string, ViewMode> = {
@@ -172,6 +172,69 @@ function entityTypeLabel(entity: CompiledEntity): string {
     entity.display_config.master_config?.type_label ??
     entity.entity_name;
   return label.replace(/_/g, " ").toUpperCase();
+}
+
+function resolveEntityListArchetype(entity: CompiledEntity): EntityListArchetype {
+  const renderer = entity.display_config.detail_renderer;
+  const profile = entity.display_config.detail_profile;
+
+  if (
+    renderer === "document" ||
+    entity.entity_class === "DOCUMENT" ||
+    entity.feature_flags.is_approvable
+  ) {
+    return "doc";
+  }
+
+  if (
+    profile === "simple" ||
+    profile === "read-only" ||
+    entity.entity_class === "REFERENCE" ||
+    entity.entity_class === "CONTROL"
+  ) {
+    return "simple";
+  }
+
+  return "rich";
+}
+
+function archetypeLabel(archetype: EntityListArchetype): "Simple" | "Rich" | "Doc" {
+  if (archetype === "doc") return "Doc";
+  if (archetype === "simple") return "Simple";
+  return "Rich";
+}
+
+function archetypeBadgeVariant(archetype: EntityListArchetype): "muted" | "info" | "warning" {
+  if (archetype === "doc") return "warning";
+  if (archetype === "simple") return "muted";
+  return "info";
+}
+
+function restrictViewModesForArchetype(
+  modes: ViewMode[] | undefined,
+  archetype: EntityListArchetype,
+): ViewMode[] | undefined {
+  if (!modes || modes.length === 0) {
+    if (archetype === "simple") return ["list", "excel"];
+    if (archetype === "doc") return ["list", "compact", "board", "excel"];
+    return undefined;
+  }
+
+  const allowed = archetype === "simple"
+    ? modes.filter((mode) => mode === "list" || mode === "excel")
+    : archetype === "doc"
+      ? modes.filter((mode) => mode !== "dashboard")
+      : modes;
+
+  return allowed.length > 0 ? allowed : ["list"];
+}
+
+function EntityArchetypeBadge({ archetype }: { archetype: EntityListArchetype }) {
+  return (
+    <Badge variant={archetypeBadgeVariant(archetype)} size="sm">
+      {archetypeLabel(archetype)}
+    </Badge>
+  );
 }
 
 function getStatusValue(row: Record<string, unknown>, statusFieldNames: string[] = []): string {
@@ -1146,11 +1209,13 @@ function BulkActionDialog({
   selectedIds,
   operations,
   onClear,
+  onComplete,
 }: {
   entityCode:  string;
   selectedIds: string[];
   operations:  EntityOperation[];
   onClear:     () => void;
+  onComplete?: () => void;
 }) {
   const [phase,        setPhase]        = useState<BulkPhase | null>(null);
   const [preflight,    setPreflight]    = useState<BulkPreflightResult | null>(null);
@@ -1176,7 +1241,7 @@ function BulkActionDialog({
     const bulkRecordOps = resolveActionsForSurface(operations, "DETAIL").filter(
       (a) => a.requiresRecord && a.handlerType !== "NAVIGATE",
     );
-    const all = [...bulkListOps, ...bulkRecordOps].slice(0, 6);
+    const all = [...bulkListOps, ...bulkRecordOps];
     if (all.length > 0) return all;
     // Fallback when no ops seeded
     return [{ permissionCode: "export", label: "Export", handlerType: "API" as const, icon: null, handlerTarget: null, placement: "TOOLBAR" as const, requiresRecord: false, sortOrder: 0 }];
@@ -1200,10 +1265,10 @@ function BulkActionDialog({
       Promise.all(
         displayOpCodes.map(async (actionCode) => {
           try {
-            const res = await fetch(`/api/records/${entityCode}/bulk-preflight`, {
+            const res = await fetch(`/api/relay/api/records/${entityCode}/bulk-preflight`, {
               method:  "POST",
               headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-              body:    JSON.stringify({ action: actionCode, recordIds: selectedIds }),
+              body:    JSON.stringify({ action: actionCode, ids: selectedIds, recordIds: selectedIds }),
             });
             if (!res.ok) return [actionCode, null] as const;
             const data = (await res.json()) as BulkPreflightResult;
@@ -1231,10 +1296,10 @@ function BulkActionDialog({
     setPhase("preflight");
     setError(null);
     try {
-      const res = await fetch(`/api/records/${entityCode}/bulk-preflight`, {
+      const res = await fetch(`/api/relay/api/records/${entityCode}/bulk-preflight`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-        body:    JSON.stringify({ action, recordIds: selectedIds }),
+        body:    JSON.stringify({ action, ids: selectedIds, recordIds: selectedIds }),
       });
       if (!res.ok) throw new Error(`Preflight failed: ${res.status}`);
       const data = (await res.json()) as BulkPreflightResult;
@@ -1265,15 +1330,16 @@ function BulkActionDialog({
     setPhase("executing");
     setError(null);
     try {
-      const res = await fetch(`/api/records/${entityCode}/bulk-action`, {
+      const res = await fetch(`/api/relay/api/records/${entityCode}/bulk-action`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-        body:    JSON.stringify({ action: activeAction, recordIds: selectedIds }),
+        body:    JSON.stringify({ action: activeAction, ids: selectedIds, recordIds: selectedIds }),
       });
       if (!res.ok) throw new Error(`Action failed: ${res.status}`);
       const data = (await res.json()) as BulkActionResult;
       setResult(data);
       setPhase("done");
+      onComplete?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Action failed");
       setPhase("confirm"); // keep confirm open so user can retry
@@ -1309,6 +1375,7 @@ function BulkActionDialog({
             // Disable when preflight confirms 0 eligible records
             const isIneligible = !preflightLoading && pf?.canProceed === false;
             const isRunningThis = phase === "preflight" && activeAction === actionCode;
+            const Icon = isDestruct ? Trash2 : getActionIcon(op.icon ?? actionCode);
             return (
               <Button
                 key={op.permissionCode}
@@ -1323,9 +1390,7 @@ function BulkActionDialog({
               >
                 {isRunningThis
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  : isDestruct
-                  ? <Trash2 className="h-3.5 w-3.5" />
-                  : <Download className="h-3.5 w-3.5" />}
+                  : <Icon className="h-3.5 w-3.5" />}
                 {op.label}{countSuffix}
               </Button>
             );
@@ -1733,13 +1798,23 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     [entity],
   );
 
+  const entityArchetype = useMemo<EntityListArchetype>(
+    () => entity ? resolveEntityListArchetype(entity) : "rich",
+    [entity],
+  );
+
   const availableViewModes = useMemo<ViewMode[] | undefined>(
-    () => displayConfig?.view_modes?.map((m) => B5_TO_LEGACY_MODE[m] ?? (m as ViewMode)),
-    [displayConfig],
+    () => {
+      const metadataModes = displayConfig?.view_modes?.map((m) => B5_TO_LEGACY_MODE[m] ?? (m as ViewMode));
+      return restrictViewModesForArchetype(metadataModes, entityArchetype);
+    },
+    [displayConfig, entityArchetype],
   );
 
   const responsiveDefaultViewMode = useMemo<ViewMode>(() => {
-    const responsiveDefault = isDesktopViewport === false ? "compact" : "list";
+    const responsiveDefault = entityArchetype === "simple"
+      ? "list"
+      : isDesktopViewport === false ? "compact" : "list";
     const metadataDefault = displayConfig?.list_renderer
       ? (B5_TO_LEGACY_MODE[displayConfig.list_renderer] ?? "list")
       : "list";
@@ -1749,11 +1824,14 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       "list",
       "compact",
     ]);
-  }, [availableViewModes, displayConfig?.list_renderer, isDesktopViewport]);
+  }, [availableViewModes, displayConfig?.list_renderer, entityArchetype, isDesktopViewport]);
 
   // Active view mode: URL/saved view state wins; otherwise compact below desktop,
   // list at desktop and up. Unknown viewport starts as list to keep hydration stable.
-  const viewMode = (state.viewMode ?? responsiveDefaultViewMode) as ViewMode;
+  const requestedViewMode = (state.viewMode ?? responsiveDefaultViewMode) as ViewMode;
+  const viewMode = availableViewModes?.includes(requestedViewMode)
+    ? requestedViewMode
+    : responsiveDefaultViewMode;
   const effectiveDensity = state.density ?? "compact";
 
   // Resolve active sort: URL state → metadata default → undefined
@@ -2088,6 +2166,14 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
         if (colPres?.semanticResolver && typeof value === "string" && value) {
           return <RuntimeStatusText value={value} resolverName={colPres.semanticResolver} />;
         }
+        // Code/identifier column — muted + tabular-nums to match detail header treatment.
+        if (field.name === codeFieldName && field.data_type === "text" && value != null && value !== "") {
+          return (
+            <span className="text-xs font-medium tabular-nums text-muted-foreground">
+              {String(value)}
+            </span>
+          );
+        }
         const Renderer = resolveFieldRenderer(field);
         return <Renderer value={value} field={field} mode="view" density="table" />;
       },
@@ -2140,7 +2226,6 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   };
 
   const listEntityTypeLabel = entityTypeLabel(entity);
-
   return (
     <PageShell
       header={
@@ -2148,6 +2233,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
           typeChip={listEntityTypeLabel}
           onBack={() => router.back()}
           actionsLayout="adaptive"
+          statusSlot={<EntityArchetypeBadge archetype={entityArchetype} />}
           primaryActions={
             <>
               {operations ? (
@@ -2287,7 +2373,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       {/* Content area */}
       <div className="space-y-3">
           {/* Quick status filter pills — shown when facets are loaded */}
-          {statusFieldName && Object.keys(facetData).length > 0 && (
+          {entityArchetype !== "doc" && statusFieldName && Object.keys(facetData).length > 0 && (
             <QuickStatusBar
               statusField={statusFieldName}
               facets={facetData}
@@ -2435,6 +2521,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               selectedIds={selectedIds}
               operations={operations ?? []}
               onClear={() => setRowSelection({})}
+              onComplete={refetchList}
             />
           )}
 

@@ -3,7 +3,7 @@
  *
  * Three-way match: purchase_invoice_line ↔ commitment_line ↔ goods_receipt_line
  * Two-way match:   purchase_invoice_line ↔ commitment_line (no GR required)
- * No-match:        unverified (non_po / one_time_vendor invoices)
+ * No-match:        unverified (non_po / one_time_supplier invoices)
  *
  * Writes results to document.invoice_match_case and document.match_exception.
  * Updates purchase_invoice_line.match_status and purchase_invoice.match_status.
@@ -141,7 +141,7 @@ export async function matchInvoice(
   const invoiceSource = String(invoice["invoice_source"] ?? "non_po");
 
   // Non-PO invoices have no commitment to match against
-  if (matchType === "no_match" || invoiceSource === "non_po" || invoiceSource === "one_time_vendor") {
+  if (matchType === "no_match" || invoiceSource === "non_po" || invoiceSource === "one_time_supplier") {
     await sql`
       UPDATE document.purchase_invoice
          SET match_status = 'unmatched', updated_at = now()

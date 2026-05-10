@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { LegalEntity } from "../data/types";
+import type { FinanceScope } from "../lib/scope";
 
 export function useLegalEntities() {
   return useQuery<LegalEntity[]>({
@@ -12,7 +13,7 @@ export function useLegalEntities() {
       const rows = await res.json() as Array<{
         id: string; code: string; name: string;
         entityType: string; consolidationMethod: string | null;
-        parentEntityId: string | null; countryCode: string;
+        parentEntityId: string | null; countryCode: string; countryName?: string | null;
         ownershipPct: number | null;
         functionalCurrency: string; reportingCurrency: string;
         companyCodes: string[];
@@ -25,13 +26,36 @@ export function useLegalEntities() {
         entityType:           r.entityType as LegalEntity["entityType"],
         consolidationMethod:  r.consolidationMethod as LegalEntity["consolidationMethod"],
         ownershipPct:         r.ownershipPct,
-        country:              r.countryCode,
+        country:              r.countryName ?? r.countryCode,
         functionalCurrency:   r.functionalCurrency ?? "",
         reportingCurrency:    r.reportingCurrency ?? "",
         companyCodes:         r.companyCodes ?? [],
         status:               "active" as const,
       }));
     },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+async function fetchLedgerBookOptions(
+  scope?: Pick<FinanceScope, "scopeType" | "scopeId">,
+): Promise<LedgerBookOption[]> {
+  const params = new URLSearchParams();
+  if (scope?.scopeId) {
+    params.set("scopeType", scope.scopeType);
+    params.set("scopeId", scope.scopeId);
+  }
+
+  const query = params.toString();
+  const res = await fetch(`/api/finance/master/ledger-books${query ? `?${query}` : ""}`);
+  if (!res.ok) throw new Error("Failed to load ledger books");
+  return res.json() as Promise<LedgerBookOption[]>;
+}
+
+export function useLedgerBookOptions(scope?: FinanceScope) {
+  return useQuery({
+    queryKey: ["finance", "master", "ledger-books", scope?.scopeType ?? "all", scope?.scopeId ?? "all"],
+    queryFn: () => fetchLedgerBookOptions(scope),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -54,11 +78,25 @@ export interface EntityOption {
   consolidationMethod: string | null;
   parentEntityId: string | null;
   countryCode: string;
+  countryName?: string | null;
+  functionalCurrency: string;
+  reportingCurrency: string;
+  companyCodes: string[];
 }
 
 export interface ScopeOptionsData {
   companies: CompanyOption[];
   entities: EntityOption[];
+}
+
+export interface LedgerBookOption {
+  id: string;
+  code: string;
+  name: string;
+  category: string | null;
+  reportingStandard: string | null;
+  baseCurrencyCode: string | null;
+  isPrimary: boolean;
 }
 
 async function fetchScopeOptions(): Promise<ScopeOptionsData> {

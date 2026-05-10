@@ -170,7 +170,7 @@ BEGIN
 
     -- ── GPS: Historical all-types block (lifted 2020-09-15) ──────────────────
     -- Initial group-wide security and background check vetting during onboarding.
-    -- Lifted after satisfactory completion of the group vendor due-diligence review.
+    -- Lifted after satisfactory completion of the group supplier due-diligence review.
     IF v_gps IS NOT NULL THEN
         INSERT INTO master.supplier_block
             (tenant_id, supplier_id, block_type, block_reason,
@@ -178,7 +178,7 @@ BEGIN
              notes, metadata, status, created_by)
         SELECT
             v_tid, v_gps, 'all',
-            'Initial Technostat Group vendor onboarding hold. Full procurement, '
+            'Initial Technostat Group supplier onboarding hold. Full procurement, '
             'invoice, and payment block applied pending completion of group security '
             'and background check review for new international supplier.',
             '2020-06-01 08:00+03'::timestamptz, v_sys,
@@ -186,7 +186,7 @@ BEGIN
             'Group Security and Compliance review passed. EY third-party due diligence '
             'report accepted. Technostat Group CFO approved onboarding. All blocks lifted. '
             'GPS approved as strategic global professional services supplier.',
-            'Block duration: 106 days. Standard group vendor onboarding hold — '
+            'Block duration: 106 days. Standard group supplier onboarding hold — '
             'applied to all new suppliers above SAR 5M annual spend threshold.',
             v_meta, 'lifted', v_sys
         WHERE NOT EXISTS (

@@ -213,7 +213,7 @@ BEGIN
     END LOOP;
 
     -- ════════════════════════════════════════════════════════════════════════
-    -- AP_ADVANCE_VENDOR · ADVANCE_PAID
+    -- AP_ADVANCE_SUPPLIER · ADVANCE_PAID
     -- Dr AP Advance (asset) / Cr Bank Clearing
     -- ════════════════════════════════════════════════════════════════════════
     FOR v_event IN
@@ -221,7 +221,7 @@ BEGIN
           FROM control.acct_profile_event ape
           JOIN control.acct_profile_config apc ON apc.id = ape.profile_config_id
           JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
-         WHERE ap.code = 'AP_ADVANCE_VENDOR'
+         WHERE ap.code = 'AP_ADVANCE_SUPPLIER'
            AND ape.event_code = 'ADVANCE_PAID'
            AND ape.is_active = true
     LOOP
@@ -232,7 +232,7 @@ BEGIN
             status, created_by
         ) VALUES
             (v_event.tenant_id, v_event.event_id, 10,
-             'Dr AP Advance (vendor prepayment asset)',
+             'Dr AP Advance (supplier prepayment asset)',
              'DEBIT', 'POSTING_ROLE', 'ap_advance_recovery', 'IFRS-A-AP-ADVANCE',
              'ADVANCE_AMOUNT', false, 10, 'active', v_sys),
 
@@ -244,7 +244,7 @@ BEGIN
     END LOOP;
 
     -- ════════════════════════════════════════════════════════════════════════
-    -- AP_ADVANCE_VENDOR · ADVANCE_RECOVERED
+    -- AP_ADVANCE_SUPPLIER · ADVANCE_RECOVERED
     -- Dr AP Trade Payable / Cr AP Advance (reduces both)
     -- Triggered by downstream invoice that has advance_deduction_amount > 0
     -- ════════════════════════════════════════════════════════════════════════
@@ -253,7 +253,7 @@ BEGIN
           FROM control.acct_profile_event ape
           JOIN control.acct_profile_config apc ON apc.id = ape.profile_config_id
           JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
-         WHERE ap.code = 'AP_ADVANCE_VENDOR'
+         WHERE ap.code = 'AP_ADVANCE_SUPPLIER'
            AND ape.event_code = 'ADVANCE_RECOVERED'
            AND ape.is_active = true
     LOOP
@@ -312,5 +312,5 @@ BEGIN
            JOIN control.acct_profile_config apc ON apc.id = ape.profile_config_id
            JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
           WHERE ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                            'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE'));
+                            'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE'));
 END $seed_ap_templates$;

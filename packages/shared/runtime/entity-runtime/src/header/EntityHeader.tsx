@@ -88,6 +88,10 @@ export interface EntityHeaderProps {
   activePlatformIcon?: string;
   /** Arbitrary content rendered below the identity bar — visible in all modes. */
   extensionSlot?: ReactNode;
+  /** Compact contextual content rendered in the identity row beside status. */
+  identitySlot?: ReactNode;
+  /** Compact action content rendered immediately before the standard action cluster. */
+  actionLeadingSlot?: ReactNode;
   className?: string;
 }
 
@@ -124,6 +128,8 @@ export function EntityHeader({
   onPlatformIconClick,
   activePlatformIcon,
   extensionSlot,
+  identitySlot,
+  actionLeadingSlot,
   className,
 }: EntityHeaderProps) {
   const [mode, setMode] = useState<HeaderMode>(initialMode);
@@ -151,7 +157,7 @@ export function EntityHeader({
         className,
       )}>
         {editMode && <div className="h-[2px] bg-primary/70" />}
-        <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} mobileActionsSlot={mobileActionsSlot} amountSummary={amountSummary} editMode={editMode} />
+        <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} mobileActionsSlot={mobileActionsSlot} amountSummary={amountSummary} editMode={editMode} identitySlot={identitySlot} actionLeadingSlot={actionLeadingSlot} />
         {extensionSlot && (
           <div className="border-t border-border/60 px-4 py-2 sm:px-5 lg:px-[22px]">
             {extensionSlot}
@@ -185,7 +191,7 @@ export function EntityHeader({
     )}>
       {editMode && <div className="h-[2px] bg-primary/70" />}
       {/* P1 — always visible */}
-      <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} mobileActionsSlot={mobileActionsSlot} amountSummary={amountSummary} editMode={editMode} />
+      <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} mobileActionsSlot={mobileActionsSlot} amountSummary={amountSummary} editMode={editMode} identitySlot={identitySlot} actionLeadingSlot={actionLeadingSlot} />
 
       {/* Extension slot — always visible when present */}
       {extensionSlot && (

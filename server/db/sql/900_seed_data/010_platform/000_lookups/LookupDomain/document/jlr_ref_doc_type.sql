@@ -19,7 +19,7 @@ FROM (VALUES
     ('sales_invoice',    'Sales Invoice',    'document.jlr_ref_doc_type', 'Reference to a sales invoice or invoice line', 100),
     ('salary_run',       'Salary Run',       'document.jlr_ref_doc_type', 'Reference to a payroll/salary run or employee salary line', 110),
     ('travel_expense',   'Travel Expense',   'document.jlr_ref_doc_type', 'Reference to a travel expense claim or line', 120),
-    ('advance',          'Advance',          'document.jlr_ref_doc_type', 'Reference to employee, vendor, or customer advance', 130),
+    ('advance',          'Advance',          'document.jlr_ref_doc_type', 'Reference to employee, supplier, or customer advance', 130),
     ('retention',        'Retention',        'document.jlr_ref_doc_type', 'Reference to a retention obligation or release', 140),
     ('tax_document',     'Tax Document',     'document.jlr_ref_doc_type', 'Reference to a tax return, tax invoice, or adjustment', 150),
     ('withholding_tax',  'Withholding Tax',  'document.jlr_ref_doc_type', 'Reference to a withholding tax certificate or settlement', 160)

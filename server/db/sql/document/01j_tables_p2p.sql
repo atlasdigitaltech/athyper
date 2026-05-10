@@ -238,9 +238,9 @@ CREATE TABLE IF NOT EXISTS document.purchase_order_confirmation (
     commitment_id           uuid            NOT NULL,
     supplier_id             uuid            NOT NULL,
 
-    -- Vendor details
-    vendor_reference_number text,
-    vendor_confirmation_date date,
+    -- Supplier details
+    supplier_reference_number text,
+    supplier_confirmation_date date,
     confirmation_type       text            NOT NULL DEFAULT 'FULL_CONFIRM',
 
     -- Document date + amounts
@@ -274,7 +274,7 @@ CREATE TABLE IF NOT EXISTS document.purchase_order_confirmation (
 
 COMMENT ON TABLE document.purchase_order_confirmation IS
     'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Supplier acknowledgement of a PO. Not approvable. '
-    'Vendor change proposals route approval through a commitment amendment, not this table.';
+    'Supplier change proposals route approval through a commitment amendment, not this table.';
 
 
 -- ============================================================================
@@ -304,7 +304,7 @@ CREATE TABLE IF NOT EXISTS document.purchase_order_confirmation_line (
 
     -- Line status
     line_status             text            NOT NULL DEFAULT 'confirmed',
-    vendor_notes            text,
+    supplier_notes          text,
 
     -- Metadata
     metadata                jsonb           NOT NULL DEFAULT '{}'::jsonb,
@@ -347,9 +347,9 @@ CREATE TABLE IF NOT EXISTS document.delivery_note (
     commitment_id           uuid            NOT NULL,
     supplier_id             uuid            NOT NULL,
 
-    -- Vendor references
-    vendor_delivery_note_no text,
-    vendor_dispatch_date    date,
+    -- Supplier references
+    supplier_delivery_note_no text,
+    supplier_dispatch_date    date,
     bill_of_lading_no       text,
     tracking_number         text,
 

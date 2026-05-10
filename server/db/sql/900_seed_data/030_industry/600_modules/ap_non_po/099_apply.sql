@@ -40,14 +40,14 @@ BEGIN
       FROM master.accounting_profile
      WHERE tenant_id = v_tid
        AND code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                    'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE');
+                    'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE');
 
     SELECT count(*) INTO v_config_count
       FROM control.acct_profile_config apc
       JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
      WHERE ap.tenant_id = v_tid
        AND ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                       'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE')
+                       'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE')
        AND apc.is_active;
 
     SELECT count(*) INTO v_event_count
@@ -56,7 +56,7 @@ BEGIN
       JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
      WHERE ap.tenant_id = v_tid
        AND ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                       'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE');
+                       'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE');
 
     SELECT count(*) INTO v_tpl_count
       FROM control.acct_profile_entry_template apet
@@ -65,7 +65,7 @@ BEGIN
       JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
      WHERE ap.tenant_id = v_tid
        AND ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                       'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE');
+                       'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE');
 
     SELECT count(*) INTO v_rule_count
       FROM control.classification_to_intent_rule
@@ -81,7 +81,7 @@ BEGIN
       JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
      WHERE iprr.tenant_id = v_tid
        AND ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                       'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE');
+                       'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE');
 
     SELECT count(*) INTO v_psr_count
       FROM control.payment_settlement_rule

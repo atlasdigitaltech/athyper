@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
 import { Button, Skeleton } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import type { FinanceScope } from "../lib/scope";
@@ -9,15 +8,41 @@ import type { AccountClass } from "../data/types";
 import { useTrialBalance } from "../hooks/useTrialBalance";
 import { AccountClassBadge, AccountClassDot } from "../components/ChartBadge";
 import { BalanceCard } from "../components/BalanceCard";
+import { PeriodStatusBar } from "../components/PeriodStatusBar";
+import { ReportHeaderRow, ReportLiveBadge } from "../components/ReportScaffold";
+import { openAppRecordFromContextMenu } from "../lib/recordLinks";
 import { fmtFull } from "../components/format";
+import { usePeriodStatus } from "../hooks/usePeriodStatus";
+import { useStatementReportingLens } from "../hooks/useStatementReportingLens";
 
 interface TrialBalanceViewProps {
   scope: FinanceScope;
+  viewMode?: TrialBalanceViewMode;
+  onViewModeChange?: (mode: TrialBalanceViewMode) => void;
+  hideViewModeToggle?: boolean;
+  showReportHeader?: boolean;
 }
 
-export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
-  const [viewMode, setViewMode] = useState<"summary" | "detailed">("summary");
+export type TrialBalanceViewMode = "summary" | "detailed";
+
+export function TrialBalanceView({
+  scope,
+  viewMode,
+  onViewModeChange,
+  hideViewModeToggle = false,
+  showReportHeader = false,
+}: TrialBalanceViewProps) {
+  const [localViewMode, setLocalViewMode] = useState<TrialBalanceViewMode>("summary");
+  const activeViewMode = viewMode ?? localViewMode;
   const { data, isLoading, isError } = useTrialBalance(scope);
+  const { data: periodData } = usePeriodStatus(scope);
+  const reportingLens = useStatementReportingLens(scope);
+  const effectiveStatus = periodData?.[0]?.effectiveStatus ?? null;
+
+  function setViewMode(nextViewMode: TrialBalanceViewMode) {
+    if (viewMode === undefined) setLocalViewMode(nextViewMode);
+    onViewModeChange?.(nextViewMode);
+  }
 
   if (!scope.scopeId) {
     return (
@@ -54,6 +79,22 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
   const totalCr = rows.reduce((s, r) => s + r.closingCredit, 0);
   const balanced = Math.abs(totalDr - totalCr) < 0.01;
 
+  const viewModeButtons = !hideViewModeToggle ? (
+    <div className="flex shrink-0 items-center gap-1">
+      {(["summary", "detailed"] as const).map((v) => (
+        <Button
+          key={v}
+          variant={activeViewMode === v ? "primary" : "outline"}
+          size="sm"
+          className="h-8 rounded-md px-3 text-sm capitalize"
+          onClick={() => setViewMode(v)}
+        >
+          {v}
+        </Button>
+      ))}
+    </div>
+  ) : null;
+
   // Group by accountClass for the summary view
   const classMap = new Map<string, { debit: number; credit: number; count: number }>();
   for (const row of rows) {
@@ -68,35 +109,51 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 text-sm text-foreground">
       {/* Header bar */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-doc-support text-muted-foreground">
+      {showReportHeader && (
+        <ReportHeaderRow
+          title="Trial Balance"
+          meta={
+            <>
+              <PeriodStatusBar
+                fiscalYear={scope.fiscalYear}
+                period={scope.period}
+                status={reportingLens.isFiscalLens ? effectiveStatus : null}
+                companyCode={scope.scopeType === "company" ? scope.scopeId : undefined}
+                displayLabel={reportingLens.headerLabel}
+              />
+              <ReportLiveBadge live={data.isLive} />
+            </>
+          }
+          actions={viewModeButtons}
+        />
+      )}
+      <div className={cn("flex justify-end", showReportHeader && "hidden")}>
+        <span className="hidden">
           Source: ledger.gl_balance
           {data.asAt && ` · As at ${new Date(data.asAt).toLocaleString()}`}
           {data.isLive && (
             <span className="ml-1.5 text-success font-medium">● Live</span>
           )}
         </span>
+        {!hideViewModeToggle && (
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             {(["summary", "detailed"] as const).map((v) => (
               <Button
                 key={v}
-                variant={viewMode === v ? "primary" : "outline"}
+                variant={activeViewMode === v ? "primary" : "outline"}
                 size="sm"
-                className="h-7 text-doc-support px-2.5 capitalize"
+                className="h-8 px-3 text-sm capitalize"
                 onClick={() => setViewMode(v)}
               >
                 {v}
               </Button>
             ))}
           </div>
-          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs">
-            <Download size={12} />
-            Export
-          </Button>
         </div>
+        )}
       </div>
 
       {/* Balance summary cards */}
@@ -107,22 +164,22 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
       </div>
 
       {rows.length === 0 && (
-        <div className="flex items-center justify-center h-32 text-sm text-muted-foreground rounded-xl border border-dashed">
+        <div className="flex h-32 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
           No balances found for the selected scope and period.
         </div>
       )}
 
       {/* Summary view — grouped by account class */}
-      {viewMode === "summary" && rows.length > 0 && (
-        <div className="rounded-xl border overflow-hidden">
-          <table className="w-full text-xs">
+      {activeViewMode === "summary" && rows.length > 0 && (
+        <div className="overflow-hidden rounded-lg border">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted/50 border-b">
-                <th className="py-2 px-3 text-left font-medium text-muted-foreground">Class</th>
-                <th className="py-2 px-3 text-right font-medium text-muted-foreground">Debit</th>
-                <th className="py-2 px-3 text-right font-medium text-muted-foreground">Credit</th>
-                <th className="py-2 px-3 text-right font-medium text-muted-foreground">Net</th>
-                <th className="py-2 px-3 text-right font-medium text-muted-foreground"># Accts</th>
+              <tr className="border-b bg-muted/50">
+                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Class</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Debit</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Credit</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Net</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground"># Accts</th>
               </tr>
             </thead>
             <tbody>
@@ -131,31 +188,31 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
                 const net = debit - credit;
                 return (
                   <tr key={cls} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="py-2 px-3">
+                    <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
                         <AccountClassDot cls={accountCls} />
                         <span className="font-medium capitalize">{cls.replace(/_/g, " ")}</span>
                       </div>
                     </td>
-                    <td className="py-2 px-3 text-right font-mono">{fmtFull(debit)}</td>
-                    <td className="py-2 px-3 text-right font-mono">{fmtFull(credit)}</td>
-                    <td className={cn("py-2 px-3 text-right font-mono font-medium", net >= 0 ? "" : "text-destructive")}>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmtFull(debit)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmtFull(credit)}</td>
+                    <td className={cn("px-3 py-2 text-right font-medium tabular-nums", net >= 0 ? "" : "text-destructive")}>
                       {fmtFull(Math.abs(net))}{net < 0 ? " CR" : ""}
                     </td>
-                    <td className="py-2 px-3 text-right text-muted-foreground">{count}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{count}</td>
                   </tr>
                 );
               })}
             </tbody>
             <tfoot>
-              <tr className="bg-muted/50 border-t-2">
-                <td className="py-2 px-3 font-medium">Total</td>
-                <td className="py-2 px-3 text-right font-mono font-medium">{fmtFull(totalDr)}</td>
-                <td className="py-2 px-3 text-right font-mono font-medium">{fmtFull(totalCr)}</td>
-                <td className={cn("py-2 px-3 text-right font-mono font-bold", balanced ? "text-success" : "text-destructive")}>
+              <tr className="border-t-2 bg-muted/50">
+                <td className="px-3 py-2 font-medium">Total</td>
+                <td className="px-3 py-2 text-right font-medium tabular-nums">{fmtFull(totalDr)}</td>
+                <td className="px-3 py-2 text-right font-medium tabular-nums">{fmtFull(totalCr)}</td>
+                <td className={cn("px-3 py-2 text-right font-semibold tabular-nums", balanced ? "text-success" : "text-destructive")}>
                   {balanced ? "✓" : fmtFull(totalDr - totalCr)}
                 </td>
-                <td className="py-2 px-3 text-right text-muted-foreground">{rows.length}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{rows.length}</td>
               </tr>
             </tfoot>
           </table>
@@ -163,17 +220,17 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
       )}
 
       {/* Detailed view — individual accounts */}
-      {viewMode === "detailed" && rows.length > 0 && (
-        <div className="rounded-xl border overflow-hidden">
-          <table className="w-full text-xs">
+      {activeViewMode === "detailed" && rows.length > 0 && (
+        <div className="overflow-hidden rounded-lg border">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted/50 border-b">
-                <th className="py-2 px-3 text-left font-medium text-muted-foreground">Account</th>
-                <th className="py-2 px-3 text-left font-medium text-muted-foreground">Name</th>
-                <th className="py-2 px-3 text-left font-medium text-muted-foreground">Class</th>
-                <th className="py-2 px-3 text-right font-medium text-muted-foreground">Closing DR</th>
-                <th className="py-2 px-3 text-right font-medium text-muted-foreground">Closing CR</th>
-                <th className="py-2 px-3 text-right font-medium text-muted-foreground">Net</th>
+              <tr className="border-b bg-muted/50">
+                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Account</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Name</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Class</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Closing DR</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Closing CR</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Net</th>
               </tr>
             </thead>
             <tbody>
@@ -181,16 +238,32 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
                 const net = row.closingDebit - row.closingCredit;
                 return (
                   <tr key={row.accountCode} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="py-1.5 px-3 font-mono text-muted-foreground">{row.accountCode}</td>
-                    <td className="py-1.5 px-3">{row.accountName}</td>
-                    <td className="py-1.5 px-3"><AccountClassBadge cls={row.accountClass as AccountClass} /></td>
-                    <td className="py-1.5 px-3 text-right font-mono">
+                    <td className="px-3 py-2 text-muted-foreground">
+                      <span
+                        className="cursor-context-menu underline-offset-2 hover:text-foreground hover:underline"
+                        title="Right-click to open this GL account."
+                        onContextMenu={(event) => openAppRecordFromContextMenu(event, "gl_account", row.accountCode)}
+                      >
+                        {row.accountCode}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className="cursor-context-menu underline-offset-2 hover:underline"
+                        title="Right-click to open this GL account."
+                        onContextMenu={(event) => openAppRecordFromContextMenu(event, "gl_account", row.accountCode)}
+                      >
+                        {row.accountName}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2"><AccountClassBadge cls={row.accountClass as AccountClass} /></td>
+                    <td className="px-3 py-2 text-right tabular-nums">
                       {row.closingDebit ? fmtFull(row.closingDebit) : "—"}
                     </td>
-                    <td className="py-1.5 px-3 text-right font-mono">
+                    <td className="px-3 py-2 text-right tabular-nums">
                       {row.closingCredit ? fmtFull(row.closingCredit) : "—"}
                     </td>
-                    <td className={cn("py-1.5 px-3 text-right font-mono font-medium", net >= 0 ? "" : "text-destructive")}>
+                    <td className={cn("px-3 py-2 text-right font-medium tabular-nums", net >= 0 ? "" : "text-destructive")}>
                       {fmtFull(Math.abs(net))}{net < 0 ? " CR" : ""}
                     </td>
                   </tr>
@@ -198,11 +271,11 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
               })}
             </tbody>
             <tfoot>
-              <tr className="bg-muted/50 border-t-2">
-                <td colSpan={3} className="py-2 px-3 font-medium">Total</td>
-                <td className="py-2 px-3 text-right font-mono font-medium">{fmtFull(totalDr)}</td>
-                <td className="py-2 px-3 text-right font-mono font-medium">{fmtFull(totalCr)}</td>
-                <td className={cn("py-2 px-3 text-right font-mono font-bold", balanced ? "text-success" : "text-destructive")}>
+              <tr className="border-t-2 bg-muted/50">
+                <td colSpan={3} className="px-3 py-2 font-medium">Total</td>
+                <td className="px-3 py-2 text-right font-medium tabular-nums">{fmtFull(totalDr)}</td>
+                <td className="px-3 py-2 text-right font-medium tabular-nums">{fmtFull(totalCr)}</td>
+                <td className={cn("px-3 py-2 text-right font-semibold tabular-nums", balanced ? "text-success" : "text-destructive")}>
                   {balanced ? "✓" : fmtFull(totalDr - totalCr)}
                 </td>
               </tr>
@@ -210,6 +283,21 @@ export function TrialBalanceView({ scope }: TrialBalanceViewProps) {
           </table>
         </div>
       )}
+
+      <div className="flex justify-end">
+        <span className="inline-flex max-w-full items-center gap-1 rounded-full border bg-background px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground shadow-sm">
+          <span className="truncate">
+            Source: ledger.gl_balance
+            {data.asAt && ` \u00b7 As at ${new Date(data.asAt).toLocaleString()}`}
+          </span>
+          {data.isLive && (
+            <span className="inline-flex shrink-0 items-center gap-0.5 font-medium text-success">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" />
+              Live
+            </span>
+          )}
+        </span>
+      </div>
     </div>
   );
 }

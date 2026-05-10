@@ -39,9 +39,14 @@ DO $guard$ BEGIN
                            WHERE bp.tenant_id = master.legal_entity_business_partner_link.tenant_id
                              AND bp.id = master.legal_entity_business_partner_link.business_partner_id);
 
-    -- intercompany_trading_pair — null out FK refs to dropped supplier/customer profiles
+    -- intercompany_trading_pair — null out FK refs to dropped supplier/customer profiles.
+    -- Disable trg_ictp_profile_gate during cleanup: the profile tables were just rebuilt
+    -- destructively (DROP TABLE CASCADE in 01h), so all profile refs appear orphaned.
+    -- The trigger would reject nulling out refs on active rows; the cleanup must win here
+    -- so the FK constraints below can be added cleanly.  Seed data restores the profiles.
     IF EXISTS (SELECT 1 FROM information_schema.tables
                WHERE table_schema = 'master' AND table_name = 'intercompany_trading_pair') THEN
+        ALTER TABLE master.intercompany_trading_pair DISABLE TRIGGER trg_ictp_profile_gate;
         UPDATE master.intercompany_trading_pair SET counterparty_supplier_profile_id = NULL
             WHERE counterparty_supplier_profile_id IS NOT NULL
               AND NOT EXISTS (SELECT 1 FROM master.company_code_supplier_profile p
@@ -52,12 +57,44 @@ DO $guard$ BEGIN
               AND NOT EXISTS (SELECT 1 FROM master.company_code_customer_profile p
                                WHERE p.tenant_id = master.intercompany_trading_pair.tenant_id
                                  AND p.id = master.intercompany_trading_pair.mirror_customer_profile_id);
+        ALTER TABLE master.intercompany_trading_pair ENABLE TRIGGER trg_ictp_profile_gate;
     END IF;
 
-    -- asset table — nullable vendor_id, NULL it out rather than deleting the asset
-    UPDATE master.asset SET vendor_id = NULL
-        WHERE vendor_id IS NOT NULL
-          AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.tenant_id = master.asset.tenant_id AND s.id = master.asset.vendor_id);
+    -- asset table — nullable supplier_id (renamed from vendor_id in P3 migration).
+    -- Handle both old (vendor_id) and new (supplier_id) column names: the DDL uses
+    -- CREATE TABLE IF NOT EXISTS so the column name depends on whether the P3 migration
+    -- has run yet.  Use dynamic SQL so the column name is resolved at runtime.
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema = 'master' AND table_name = 'asset'
+                 AND column_name = 'supplier_id') THEN
+        UPDATE master.asset SET supplier_id = NULL
+            WHERE supplier_id IS NOT NULL
+              AND NOT EXISTS (SELECT 1 FROM master.supplier s
+                               WHERE s.tenant_id = master.asset.tenant_id
+                                 AND s.id = master.asset.supplier_id);
+    ELSIF EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema = 'master' AND table_name = 'asset'
+                    AND column_name = 'vendor_id') THEN
+        UPDATE master.asset SET vendor_id = NULL
+            WHERE vendor_id IS NOT NULL
+              AND NOT EXISTS (SELECT 1 FROM master.supplier s
+                               WHERE s.tenant_id = master.asset.tenant_id
+                                 AND s.id = master.asset.vendor_id);
+    END IF;
+
+    -- risk tables: all rows are orphaned because business_partner was rebuilt empty
+    -- by 01h.  These tables form a web of composite (tenant_id, x) FKs, several of
+    -- which are ON DELETE SET NULL — meaning a cascade UPDATE would try to null out
+    -- tenant_id, violating its NOT NULL constraint.  A single multi-table TRUNCATE
+    -- lets PostgreSQL resolve intra-list FK dependencies itself without firing
+    -- row-level triggers.  Seed phase re-populates everything.
+    TRUNCATE master.party_risk_mitigation,
+             master.party_risk_driver,
+             master.party_risk_dimension_score,
+             master.party_risk_review_event,
+             master.party_risk_assessment,
+             master.party_risk_evidence,
+             master.party_governance_relation;
 END $guard$;
 
 -- 06_constraints/003a_master_identity.sql
@@ -1887,8 +1924,19 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.asset ADD CONSTRAINT asset_site_fk
     FOREIGN KEY (tenant_id, site_id) REFERENCES master.site (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.asset ADD CONSTRAINT asset_vendor_fk
-    FOREIGN KEY (tenant_id, vendor_id) REFERENCES master.supplier (tenant_id, id);
+DO $$ BEGIN
+    -- Column renamed vendor_id → supplier_id by P3 migration; handle both names.
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema = 'master' AND table_name = 'asset'
+                 AND column_name = 'supplier_id') THEN
+        ALTER TABLE master.asset ADD CONSTRAINT asset_supplier_fk
+            FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier (tenant_id, id);
+    ELSIF EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema = 'master' AND table_name = 'asset'
+                    AND column_name = 'vendor_id') THEN
+        ALTER TABLE master.asset ADD CONSTRAINT asset_vendor_fk
+            FOREIGN KEY (tenant_id, vendor_id) REFERENCES master.supplier (tenant_id, id);
+    END IF;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.asset ADD CONSTRAINT asset_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code);

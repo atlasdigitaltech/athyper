@@ -65,6 +65,10 @@ export interface EntityIdentityBarProps {
   amountSummary?: AmountSummary;
   /** When true, shows the "Editing" badge next to the status badge. */
   editMode?: boolean;
+  /** Inline contextual content rendered beside the status badge. */
+  identitySlot?: ReactNode;
+  /** Action content rendered immediately before the standard action cluster. */
+  actionLeadingSlot?: ReactNode;
   onBack?: () => void;
   /**
    * When provided, the type chip renders as a button that calls this handler
@@ -80,6 +84,8 @@ export function EntityIdentityBar({
   mobileActionsSlot,
   amountSummary,
   editMode = false,
+  identitySlot,
+  actionLeadingSlot,
   onBack,
   onTypeClick,
   className,
@@ -264,8 +270,14 @@ export function EntityIdentityBar({
 
         {statusBadge}
         {editingBadge}
+        {identitySlot && (
+          <div className="flex min-w-0 items-center gap-2">
+            {identitySlot}
+          </div>
+        )}
 
         <div className="ml-auto flex items-center gap-4 min-w-0">
+          {actionLeadingSlot}
           {actionsSlot}
           {amountSummary && (
             <div className="flex flex-col items-end gap-0.5 min-w-0 shrink-0">
@@ -304,6 +316,7 @@ export function EntityIdentityBar({
           {chipEl}
           <div className="flex-1" />
           <div className="flex items-center gap-1.5 shrink-0">
+            {actionLeadingSlot}
             {mobileActionsSlot ?? actionsSlot}
           </div>
         </div>
@@ -318,6 +331,11 @@ export function EntityIdentityBar({
           <span onContextMenu={handleIdentityContextMenu}>{codeSecondary}</span>
           {statusBadge}
           {editingBadge}
+          {identitySlot && (
+            <div className="flex min-w-0 items-center gap-2">
+              {identitySlot}
+            </div>
+          )}
         </div>
 
         {/* Row 4: amount (documents / invoices) */}

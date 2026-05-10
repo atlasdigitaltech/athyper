@@ -10,7 +10,7 @@
 -- Rule 2: ADMIN + NON_PO + STANDARD      → AP_NON_PO_STANDARD (same profile)
 -- Rule 3: OPEX  + NON_PO + CREDIT_NOTE   → AP_NON_PO_STANDARD
 -- Rule 4: CAPEX + NON_PO + STANDARD      → AP_NON_PO_CAPEX
--- Rule 5: OPEX  + any    + ADVANCE       → AP_ADVANCE_VENDOR
+-- Rule 5: OPEX  + any    + ADVANCE       → AP_ADVANCE_SUPPLIER
 -- Rule 6: OPEX  + any    + RETENTION_RELEASE → AP_RETENTION_RELEASE
 --
 -- Priority: 100=most specific (advance, retention) ... 500=general fallbacks.
@@ -28,7 +28,7 @@ DECLARE
 
     v_apc_std    uuid;  -- AP_NON_PO_STANDARD config id
     v_apc_capex  uuid;  -- AP_NON_PO_CAPEX config id
-    v_apc_adv    uuid;  -- AP_ADVANCE_VENDOR config id
+    v_apc_adv    uuid;  -- AP_ADVANCE_SUPPLIER config id
     v_apc_ret    uuid;  -- AP_RETENTION_RELEASE config id
 BEGIN
     FOR v_tenant IN
@@ -63,7 +63,7 @@ BEGIN
           FROM control.acct_profile_config apc
           JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
          WHERE ap.tenant_id = v_tenant.tenant_id
-           AND ap.code = 'AP_ADVANCE_VENDOR'
+           AND ap.code = 'AP_ADVANCE_SUPPLIER'
            AND apc.is_active = true
          LIMIT 1;
 
@@ -163,7 +163,7 @@ BEGIN
             );
         END IF;
 
-        -- ── Rule 5: OPEX + any + ADVANCE → AP_ADVANCE_VENDOR ─────────────────
+        -- ── Rule 5: OPEX + any + ADVANCE → AP_ADVANCE_SUPPLIER ─────────────────
         -- NULL flow_code = wildcard, matches NON_PO, PURCHASE_CONTRACT, DIRECT_PURCHASE
         IF v_bi_opex IS NOT NULL AND v_apc_adv IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
@@ -174,7 +174,7 @@ BEGIN
             )
             SELECT v_tenant.tenant_id, 'INBOUND', v_bi_opex, 'OPEX',
                    NULL, 'ADVANCE', v_apc_adv,
-                   'Vendor advance payment → AP_ADVANCE_VENDOR', 0.99, 100,
+                   'Supplier advance payment → AP_ADVANCE_SUPPLIER', 0.99, 100,
                    CURRENT_DATE, 'active', v_sys
             WHERE NOT EXISTS (
                 SELECT 1 FROM control.intent_to_accounting_profile_rule

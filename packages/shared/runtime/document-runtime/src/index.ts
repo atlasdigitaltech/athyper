@@ -61,6 +61,10 @@ export {
   FlowStepNav,
   FlowSummaryPanel,
   FlowFieldBinding,
+  FlowPreflightChooser,
+  FlowPreflightLockedSummary,
+  FlowPreflightRestartButton,
+  getFlowPreflightConfig,
   DerivedChip,
   useFlowEngine,
   canOverride,
@@ -68,6 +72,8 @@ export {
   isTruthy,
   type UseFlowEngineReturn,
   type SummaryLine,
+  type FlowPreflightConfig,
+  type FlowPreflightSelection,
   type RuleContext,
 } from "./intake";
 

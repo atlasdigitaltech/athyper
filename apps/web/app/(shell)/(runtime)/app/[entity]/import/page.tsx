@@ -12,7 +12,7 @@ import { resolveCapabilities } from "@/lib/entity-capabilities";
  *
  * Gated by feature_flags.is_importable — notFound() when disabled.
  *
- * [entity] = canonical entity code (e.g. "vendor", "item")
+ * [entity] = canonical entity code (e.g. "supplier", "item")
  */
 export default async function AppEntityImportRoute({
   params,

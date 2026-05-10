@@ -16,7 +16,7 @@ DO $scenario_a8$
 DECLARE
     v_tenant_id    uuid;
     v_cc_id        uuid;
-    v_vendor_id    uuid;
+    v_supplier_id    uuid;
     v_sys          uuid := '00000000-0000-0000-0000-000000000000';
     v_invoice_id   uuid := '00000001-0000-0000-0001-000000000008';  -- INV-A8-0001 (pinned)
     v_sc_opex_id   uuid;
@@ -25,7 +25,7 @@ BEGIN
     SELECT id INTO v_tenant_id FROM master.tenant WHERE code = 'athyper';
     SELECT id INTO v_cc_id FROM master.company_code
       WHERE tenant_id = v_tenant_id AND code = 'AUIC';
-    SELECT id INTO v_vendor_id FROM master.supplier
+    SELECT id INTO v_supplier_id FROM master.supplier
       WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US';
 
     SELECT id INTO v_sc_opex_id FROM master.spend_category
@@ -63,7 +63,7 @@ BEGIN
         v_tenant_id, v_cc_id,
         'INV-A8-0001', 'Non-PO Invoice with 10% Retention',
         'INV-A8-0001', 'non_po', 'standard',
-        v_vendor_id, 'ACME-2026-00108', CURRENT_DATE,
+        v_supplier_id, 'ACME-2026-00108', CURRENT_DATE,
         CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
         'USD', 'USD', 1.0,
         10000.00, 0.00, 0.00,

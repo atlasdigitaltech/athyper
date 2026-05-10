@@ -70,6 +70,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
         .where("bal.owner_type", "=", "company_code")
         .where("bal.owner_id", "in", companyIds)
         .where("ba.status", "=", "active")
+        .$if(!!parsed.transactionCurrency, (qb) => qb.where("ba.currency_code", "=", parsed.transactionCurrency as string))
         .where((eb) =>
           eb.or([
             eb("bal.effective_until", "is", null),
@@ -133,6 +134,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
 
       if (companyIds.length > 0) q = q.where("pe.company_code_id", "in", companyIds) as typeof q;
       if (parsed.period !== null) q = q.where("pe.period_number", "=", parsed.period) as typeof q;
+      if (parsed.transactionCurrency) q = q.where("pe.currency_code", "=", parsed.transactionCurrency) as typeof q;
 
       const items = await q.orderBy("pe.value_date", "desc").orderBy("pe.payment_number", "desc")
         .limit(limit).offset(offset).execute();
@@ -189,6 +191,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
 
       if (companyIds.length > 0) q = q.where("pe.company_code_id", "in", companyIds) as typeof q;
       if (parsed.period !== null) q = q.where("pe.period_number", "=", parsed.period) as typeof q;
+      if (parsed.transactionCurrency) q = q.where("pe.currency_code", "=", parsed.transactionCurrency) as typeof q;
 
       const items = await q.orderBy("pe.value_date", "asc").execute();
       res.json({

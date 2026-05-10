@@ -1362,7 +1362,7 @@ BEGIN
     INSERT INTO master.address (tenant_id,code,name,address_type,attention_line,line1,line2,city,region,postal_code,country_code,formatted_address,metadata,status,created_by)
     SELECT v_tid,code,name,atype,attn,l1,l2,city,reg,pc,cc,fmt,'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys
     FROM (VALUES
-        ('addr-ards-hq','Al Rajhi Digital HQ','commercial','Attn: Vendor Management',
+        ('addr-ards-hq','Al Rajhi Digital HQ','commercial','Attn: Supplier Management',
          'Al Rajhi Tower, King Abdulaziz Road','Digital Innovation Centre, 18th Floor',
          'Riyadh','Riyadh Region','11535','SA',
          'Al Rajhi Tower, 18F, King Abdulaziz Road, Riyadh 11535, Saudi Arabia'),
@@ -1442,7 +1442,7 @@ BEGIN
     RETURNING id INTO v_cp1;
 
     INSERT INTO master.party_contact_person (tenant_id,party_type,party_id,company_code_id,contact_name,business_title,is_primary,metadata,status,created_by)
-    SELECT v_tid,'business_partner',v_bp,NULL,'Mona Al-Rashidi','Vendor Relations Manager',false,'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys
+    SELECT v_tid,'business_partner',v_bp,NULL,'Mona Al-Rashidi','Supplier Relations Manager',false,'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys
     WHERE NOT EXISTS (SELECT 1 FROM master.party_contact_person WHERE tenant_id=v_tid AND party_type='business_partner' AND party_id=v_bp AND contact_name='Mona Al-Rashidi')
     RETURNING id INTO v_cp2;
 

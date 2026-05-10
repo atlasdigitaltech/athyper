@@ -10,13 +10,13 @@
 --   include them in numerical order, then run this file last.
 --
 --   In a psql session the full sequence is:
---     \i demo/001_vendor_supplier_profile.sql
+--     \i demo/001_supplier_profile.sql
 --     \i demo/002_scenario_a1_plain_non_po.sql
 --     \i demo/003_scenario_a3_non_po_wht.sql
 --     \i demo/004_scenario_a4_non_po_wht_vat.sql
 --     \i demo/005_scenario_a7_advance_recovery.sql
 --     \i demo/006_scenario_a8_retention.sql
---     \i demo/007_scenario_vendor_advance.sql
+--     \i demo/007_scenario_supplier_advance.sql
 --     \i demo/008_scenario_a1_workflow_approvers.sql
 --     \i demo/009_activity_log.sql
 --     \i demo/099_demo_apply.sql
@@ -26,7 +26,7 @@ DO $demo_summary$
 DECLARE
     v_tenant_id    uuid;
     v_cc_id        uuid;
-    v_vendor_cnt   integer;
+    v_supplier_cnt   integer;
     v_scp_cnt      integer;
     v_pm_cnt       integer;
     v_link_cnt     integer;
@@ -45,7 +45,7 @@ BEGIN
     END IF;
 
     -- ── Verify demo prerequisites ──────────────────────────────────────────
-    SELECT count(*) INTO v_vendor_cnt FROM master.supplier
+    SELECT count(*) INTO v_supplier_cnt FROM master.supplier
      WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US';
 
     SELECT count(*) INTO v_scp_cnt FROM master.company_code_supplier_profile scp
@@ -95,8 +95,8 @@ BEGIN
     RAISE NOTICE '════════════════════════════════════════════════════════════════';
     RAISE NOTICE '';
     RAISE NOTICE '  Master data:';
-    RAISE NOTICE '    vendor (ACME-CONSULT-US)           : %', v_vendor_cnt;
-    RAISE NOTICE '    supplier_profile (vendor × AUIC)   : %', v_scp_cnt;
+    RAISE NOTICE '    supplier (ACME-CONSULT-US)          : %', v_supplier_cnt;
+    RAISE NOTICE '    supplier_profile (ACME × AUIC)     : %', v_scp_cnt;
     RAISE NOTICE '    payment_method (WIRE-USD)          : %', v_pm_cnt;
     RAISE NOTICE '    bank_account_link (disbursement)   : %', v_link_cnt;
     RAISE NOTICE '    tax_group (VAT + WHT)              : % (of 2)', v_tg_cnt;

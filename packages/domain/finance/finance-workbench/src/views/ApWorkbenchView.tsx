@@ -362,7 +362,7 @@ function NewInvoiceDialog({
               <option value="non_po">Non-PO (direct)</option>
               <option value="po_based">PO-Based</option>
               <option value="contract_based">Contract-Based</option>
-              <option value="one_time_vendor">One-Time Vendor</option>
+              <option value="one_time_supplier">One-Time Supplier</option>
             </select>
           </div>
 

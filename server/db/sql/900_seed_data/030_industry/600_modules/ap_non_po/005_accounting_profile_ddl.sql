@@ -67,7 +67,7 @@ COMMENT ON COLUMN master.accounting_profile.direction IS
     'INBOUND=AP (supplier-facing), OUTBOUND=AR (customer-facing), BILATERAL=both sides.';
 COMMENT ON COLUMN master.accounting_profile.subledger_type IS
     'Must match the subledger_type on the corresponding acct_profile_config. '
-    'AP for vendor flows, AR for customer flows, ASSET for fixed-asset profiles.';
+    'AP for supplier flows, AR for customer flows, ASSET for fixed-asset profiles.';
 COMMENT ON COLUMN master.accounting_profile.domain_hint IS
     'Optional classification hint (OPEX/CAPEX/ADMIN/...). Informational only; '
     'actual routing is driven by business_intent via Engine 4.13 rules.';

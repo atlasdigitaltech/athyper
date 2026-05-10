@@ -591,6 +591,182 @@ COMMENT ON VIEW master.v_supplier_bank_account IS
     'links. New code should use master.v_business_partner_bank_account.';
 
 -- ============================================================================
+-- BP app index
+-- ============================================================================
+
+DROP VIEW IF EXISTS master.v_business_partner_app_index;
+CREATE OR REPLACE VIEW master.v_business_partner_app_index AS
+WITH supplier_role AS (
+    SELECT
+        s.tenant_id,
+        s.business_partner_id,
+        s.id AS supplier_id,
+        s.supplier_code,
+        s.supplier_type,
+        s.status AS supplier_status,
+        s.is_active AS supplier_is_active,
+        COALESCE(s.is_payment_ready, false) AS is_payment_ready,
+        COUNT(scp.id)::integer AS supplier_company_scope_count,
+        (COUNT(scp.id) FILTER (WHERE scp.is_active))::integer AS supplier_active_scope_count,
+        (COUNT(scp.id) FILTER (WHERE scp.is_blocked))::integer AS supplier_blocked_scope_count,
+        MAX(scp.updated_at) AS supplier_scope_updated_at,
+        s.created_at AS supplier_created_at,
+        s.updated_at AS supplier_updated_at
+    FROM master.supplier s
+    LEFT JOIN master.company_code_supplier_profile scp
+      ON scp.tenant_id = s.tenant_id
+     AND scp.supplier_id = s.id
+    GROUP BY
+        s.tenant_id,
+        s.business_partner_id,
+        s.id,
+        s.supplier_code,
+        s.supplier_type,
+        s.status,
+        s.is_active,
+        s.is_payment_ready,
+        s.created_at,
+        s.updated_at
+),
+customer_role AS (
+    SELECT
+        c.tenant_id,
+        c.business_partner_id,
+        c.id AS customer_id,
+        c.customer_code,
+        c.customer_type,
+        c.status AS customer_status,
+        c.is_active AS customer_is_active,
+        COALESCE(c.is_key_account, false) AS is_key_account,
+        c.risk_rating,
+        COUNT(ccp.id)::integer AS customer_company_scope_count,
+        (COUNT(ccp.id) FILTER (WHERE ccp.is_active))::integer AS customer_active_scope_count,
+        (COUNT(ccp.id) FILTER (WHERE ccp.is_blocked))::integer AS customer_blocked_scope_count,
+        MAX(ccp.updated_at) AS customer_scope_updated_at,
+        c.created_at AS customer_created_at,
+        c.updated_at AS customer_updated_at
+    FROM master.customer c
+    LEFT JOIN master.company_code_customer_profile ccp
+      ON ccp.tenant_id = c.tenant_id
+     AND ccp.customer_id = c.id
+    GROUP BY
+        c.tenant_id,
+        c.business_partner_id,
+        c.id,
+        c.customer_code,
+        c.customer_type,
+        c.status,
+        c.is_active,
+        c.is_key_account,
+        c.risk_rating,
+        c.created_at,
+        c.updated_at
+)
+SELECT
+    bp.id,
+    bp.tenant_id,
+    bp.code,
+    bp.name,
+    bp.display_name,
+    bp.partner_category,
+    bp.legal_name,
+    bp.legal_form,
+    bp.registration_no,
+    bp.registration_country_code,
+    bp.tax_residence_country_code,
+    bp.website_url,
+    bp.parent_business_partner_id,
+    bp.description,
+    bp.long_description,
+    bp.aliases,
+    bp.tags,
+    bp.business_types,
+    bp.founded_year,
+    bp.employee_count_band,
+    bp.annual_revenue_band,
+    bp.incorporation_date,
+    bp.effective_from,
+    bp.effective_until,
+    bp.external_ref,
+    bp.status,
+    bp.is_active,
+    sr.supplier_id,
+    sr.supplier_code,
+    sr.supplier_type,
+    sr.supplier_status,
+    sr.supplier_is_active,
+    sr.is_payment_ready,
+    cr.customer_id,
+    cr.customer_code,
+    cr.customer_type,
+    cr.customer_status,
+    cr.customer_is_active,
+    cr.is_key_account,
+    cr.risk_rating,
+    (sr.supplier_id IS NOT NULL) AS has_supplier_role,
+    (cr.customer_id IS NOT NULL) AS has_customer_role,
+    (sr.supplier_id IS NOT NULL AND cr.customer_id IS NOT NULL) AS is_dual_role,
+    ((sr.supplier_id IS NOT NULL)::integer + (cr.customer_id IS NOT NULL)::integer) AS role_count,
+    array_remove(ARRAY[
+        CASE WHEN sr.supplier_id IS NOT NULL THEN 'supplier' END,
+        CASE WHEN cr.customer_id IS NOT NULL THEN 'customer' END
+    ], NULL)::text[] AS role_kinds,
+    NULLIF(concat_ws(' / ', sr.supplier_code, cr.customer_code), '') AS role_codes,
+    CASE
+        WHEN sr.supplier_id IS NOT NULL AND cr.customer_id IS NOT NULL THEN 'Supplier + Customer'
+        WHEN sr.supplier_id IS NOT NULL THEN 'Supplier'
+        WHEN cr.customer_id IS NOT NULL THEN 'Customer'
+        WHEN bp.partner_category = 'internal' THEN 'Internal'
+        ELSE 'Identity'
+    END AS role_summary,
+    COALESCE(sr.supplier_company_scope_count, 0) + COALESCE(cr.customer_company_scope_count, 0) AS company_scope_count,
+    COALESCE(sr.supplier_active_scope_count, 0) + COALESCE(cr.customer_active_scope_count, 0) AS active_scope_count,
+    COALESCE(sr.supplier_blocked_scope_count, 0) + COALESCE(cr.customer_blocked_scope_count, 0) AS blocked_scope_count,
+    (
+        COALESCE(sr.supplier_blocked_scope_count, 0) > 0
+        OR COALESCE(cr.customer_blocked_scope_count, 0) > 0
+        OR sr.supplier_status IN ('on_hold', 'suspended')
+        OR cr.customer_status IN ('on_hold', 'credit_hold')
+        OR bp.status IN ('on_hold', 'blocked')
+    ) AS is_blocked,
+    lower(concat_ws(' ',
+        bp.code,
+        bp.name,
+        bp.display_name,
+        bp.legal_name,
+        bp.registration_no,
+        bp.external_ref,
+        sr.supplier_code,
+        sr.supplier_type,
+        cr.customer_code,
+        cr.customer_type,
+        array_to_string(bp.aliases, ' '),
+        array_to_string(bp.business_types, ' ')
+    )) AS search_text,
+    bp.created_at,
+    bp.created_by,
+    GREATEST(
+        COALESCE(bp.updated_at, bp.created_at),
+        COALESCE(sr.supplier_updated_at, sr.supplier_created_at, bp.created_at),
+        COALESCE(sr.supplier_scope_updated_at, bp.created_at),
+        COALESCE(cr.customer_updated_at, cr.customer_created_at, bp.created_at),
+        COALESCE(cr.customer_scope_updated_at, bp.created_at)
+    ) AS updated_at,
+    bp.updated_by
+FROM master.business_partner bp
+LEFT JOIN supplier_role sr
+  ON sr.tenant_id = bp.tenant_id
+ AND sr.business_partner_id = bp.id
+LEFT JOIN customer_role cr
+  ON cr.tenant_id = bp.tenant_id
+ AND cr.business_partner_id = bp.id;
+
+COMMENT ON VIEW master.v_business_partner_app_index IS
+    'BP meta-entity list read model. One row per business_partner with canonical '
+    'identity fields plus supplier/customer role presence, role codes, company-scope '
+    'counts, block posture, and search text. Detail pages still read master.business_partner.';
+
+-- ============================================================================
 -- BP role summary
 -- ============================================================================
 

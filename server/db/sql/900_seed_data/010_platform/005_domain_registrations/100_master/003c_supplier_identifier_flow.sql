@@ -12,7 +12,7 @@
 --   is_primary       → boolean      (required)
 --   status           → chip/readonly (set to ACTIVE on create via lifecycle)
 --
--- Depends on: 003_vendor_identifier.sql
+-- Depends on: 003_supplier_identifier.sql
 -- Idempotent: WHERE NOT EXISTS for flow, ON CONFLICT DO UPDATE for step,
 --             DELETE+INSERT for field bindings.
 -- =============================================================================

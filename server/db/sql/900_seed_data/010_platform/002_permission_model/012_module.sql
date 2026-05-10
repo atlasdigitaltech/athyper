@@ -49,7 +49,7 @@ on conflict (code) do update set
 -- ============================================================================
 insert into shared.module (code, name, description, config, created_by) values
   ('SRM',       'Supplier Relationship Management', 'Supplier Lifecycle and Performance Management',                             '{"tier":"Base","dependencies":["REL","WFL","AUD"]}'::jsonb,        '00000000-0000-0000-0000-000000000000'),
-  ('SOURCE',    'Sourcing',                         'RFQs, bids, vendor selection',                                             '{"tier":"Base","dependencies":["REL","WFL","DOC","NTF"]}'::jsonb,  '00000000-0000-0000-0000-000000000000'),
+  ('SOURCE',    'Sourcing',                         'RFQs, bids, supplier selection',                                           '{"tier":"Base","dependencies":["REL","WFL","DOC","NTF"]}'::jsonb,  '00000000-0000-0000-0000-000000000000'),
   ('CONTRACT',  'Contract Management',              'Commercial contracts, terms, obligations',                                  '{"tier":"Base","dependencies":["REL","WFL","DOC","NTF"]}'::jsonb,  '00000000-0000-0000-0000-000000000000'),
   ('BUY',       'Procurement',                      'Purchasing, requisitions, POs',                                            '{"tier":"Base","dependencies":["FND","REL"]}'::jsonb,               '00000000-0000-0000-0000-000000000000'),
   ('INVENTORY', 'Inventory Management',             'Inventory, valuation, movements',                                          '{"tier":"Base","dependencies":["FND","REL","ACC"]}'::jsonb,         '00000000-0000-0000-0000-000000000000'),

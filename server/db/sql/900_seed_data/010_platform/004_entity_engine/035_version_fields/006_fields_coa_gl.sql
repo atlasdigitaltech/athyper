@@ -1,7 +1,7 @@
 -- 035_version_fields/006_fields_coa_gl.sql
 -- Version-bound entity_field rows for COA/GL entities (55–60)
 -- Entities: chart_of_account, gl_account_type, gl_account,
---           gl_account_hierarchy, company_code_gl_config, company_code_book_assignment
+--           gl_account_hierarchy, company_code_gl_account, company_code_book_assignment
 -- Idempotent: ON CONFLICT DO NOTHING
 
 DO $$
@@ -25,10 +25,11 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'coa_type',            'framework',           'COA Type',          'enum',   'select', 'one','standard',true, true,  true,  false,110,v_su),
-            (v_ev,'base_currency_id',    'base_currency_id',    'Base Currency',     'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'account_level_count', 'account_level_count', 'Hierarchy Levels',  'integer','number', 'one','standard',false,false, false, false,130,v_su),
-            (v_ev,'is_default',          'is_default',          'Default COA',       'boolean','hidden', 'one','standard',true, true,  false, false,140,v_su)
+            (v_ev,'coa_type',      'framework',     'COA Type',      'enum',   'select',  'one','standard',true, true,  true,  false,110,v_su),
+            (v_ev,'country_code',  'country_code',  'Country',       'string', 'text',    'one','standard',false,true,  true,  false,120,v_su),
+            (v_ev,'account_range', 'account_range', 'Account Range', 'string', 'text',    'one','standard',false,false, false, false,130,v_su),
+            (v_ev,'version',       'version',       'Version',       'integer','number',  'one','standard',true, true,  true,  false,140,v_su),
+            (v_ev,'is_locked',     'is_locked',     'Locked',        'boolean','checkbox','one','standard',false,true,  true,  false,150,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -75,16 +76,15 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
             (v_ev,'chart_of_account_id','chart_of_account_id','Chart of Accounts','uuid','reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'account_type_id',    'account_type_id',    'Account Type',     'uuid','reference','one','standard',true, true,  true,  false,120,v_su),
-            (v_ev,'parent_id',          'parent_id',          'Parent Account',   'uuid','reference','one','standard',false,true,  false, false,130,v_su),
-            (v_ev,'account_nature',     'account_class',      'Nature',           'enum','select',  'one','standard',true, true,  true,  false,140,v_su),
+            (v_ev,'parent_id',          'parent_id',          'Parent Account',   'uuid','reference','one','standard',false,true,  false, false,120,v_su),
+            (v_ev,'account_nature',     'account_class',      'Nature',           'enum','select',  'one','standard',true, true,  true,  false,130,v_su),
+            (v_ev,'node_type',          'node_type',          'Node Type',        'enum','select',  'one','standard',true, true,  true,  false,140,v_su),
             (v_ev,'normal_balance',     'normal_balance',     'Normal Balance',   'enum','select',  'one','standard',true, true,  true,  false,150,v_su),
-            (v_ev,'currency_id',        'currency_code',      'Currency',         'uuid','reference','one','standard',false,true,  false, false,160,v_su),
-            (v_ev,'is_reconciling',     'is_reconciling',     'Reconciling',      'boolean','hidden','one','standard',false,true,  false, false,170,v_su),
-            (v_ev,'is_blocked',         'is_blocked',         'Blocked',          'boolean','hidden','one','standard',false,true,  false, false,180,v_su),
-            (v_ev,'posting_level',      'posting_level',      'Posting Level',    'enum','select',  'one','standard',true, true,  true,  false,190,v_su),
-            (v_ev,'account_level',      'level_no',           'Level',            'integer','number','one','standard',false,true,  true,  false,200,v_su),
-            (v_ev,'account_path',       'path',               'Account Path',     'string','text',  'one','system',  false,false, false, true, 210,v_su)
+            (v_ev,'subledger_type',     'subledger_type',     'Subledger Type',   'string','text',  'one','standard',false,true,  true,  false,160,v_su),
+            (v_ev,'currency_code',      'currency_code',      'Currency',         'string','currency','one','standard',false,true, false, false,170,v_su),
+            (v_ev,'account_level',      'level_no',           'Level',            'integer','number','one','standard',false,true,  true,  false,180,v_su),
+            (v_ev,'account_path',       'path',               'Account Path',     'string','text',  'one','system',  false,false, false, true, 190,v_su),
+            (v_ev,'sort_order',         'sort_order',         'Sort Order',       'integer','number','one','standard',false,false, true,  false,200,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -147,7 +147,7 @@ FROM (VALUES
 
     SELECT ev.id INTO v_ev FROM control.entity_version ev
     JOIN control.entity e ON e.id = ev.entity_id
-    WHERE e.name = 'company_code_gl_config' AND ev.version_no = 1;
+    WHERE e.name = 'company_code_gl_account' AND ev.version_no = 1;
 
     IF v_ev IS NOT NULL THEN
         INSERT INTO control.entity_field (
@@ -159,9 +159,18 @@ SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     is_searchable, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'company_code_id', 'company_code_id', 'Company Code', 'uuid',  'reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'config_key',      'config_key',      'Config Key',   'string','text',     'one','standard',true, true,  true,  true, 120,v_su),
-            (v_ev,'config_value',    'config_value',    'Config Value', 'json',  'json-editor','one','standard',true,false, false, false,130,v_su)
+            (v_ev,'company_code_id',        'company_code_id',        'Company Code',           'uuid',   'reference','one','standard',true, true,  false, false,110,v_su),
+            (v_ev,'gl_account_id',          'gl_account_id',          'GL Account',             'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
+            (v_ev,'is_posting_allowed',     'posting_allowed',        'Posting Allowed',        'boolean','checkbox', 'one','standard',true, true,  true,  false,130,v_su),
+            (v_ev,'is_blocked_for_manual',  'blocked_for_manual',     'Blocked for Manual',     'boolean','checkbox', 'one','standard',true, true,  true,  false,140,v_su),
+            (v_ev,'is_blocked_for_auto',    'blocked_for_auto',       'Blocked for Auto',       'boolean','checkbox', 'one','standard',true, true,  true,  false,150,v_su),
+            (v_ev,'requires_cost_center',   'requires_cost_center',   'Requires Cost Center',   'boolean','checkbox', 'one','standard',true, true,  true,  false,160,v_su),
+            (v_ev,'requires_profit_center', 'requires_profit_center', 'Requires Profit Center', 'boolean','checkbox', 'one','standard',true, true,  true,  false,170,v_su),
+            (v_ev,'requires_project',       'requires_project',       'Requires Project',       'boolean','checkbox', 'one','standard',true, true,  true,  false,180,v_su),
+            (v_ev,'default_cost_center_id', 'default_cost_center_id', 'Default Cost Center',    'uuid',   'reference','one','standard',false,true,  false, false,190,v_su),
+            (v_ev,'default_site_id',        'default_site_id',        'Default Site',           'uuid',   'reference','one','standard',false,true,  false, false,200,v_su),
+            (v_ev,'tax_category',           'tax_category',           'Tax Category',           'string', 'text',     'one','standard',false,true,  true,  false,210,v_su),
+            (v_ev,'reconciliation_type',    'reconciliation_type',    'Reconciliation Type',    'string', 'text',     'one','standard',false,true,  true,  false,220,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)

@@ -1,7 +1,7 @@
 -- 100_finance/900_operations/001_fin_operations.sql
 -- Purpose: control.entity_operation registrations for all 6 finance entities
---          Vendor, Customer, Invoice, Purchase Order, Journal Entry, Payment Entry
--- Depends on: 100_master/001_vendor.sql, 003_customer.sql
+--          Supplier, Customer, Invoice, Purchase Order, Journal Entry, Payment Entry
+-- Depends on: 100_master/001_supplier.sql, 003_customer.sql
 --             200_document/001_invoice.sql, 004_purchase_order.sql, 007_journal_entry.sql,
 --             200_document/010_payment_entry.sql
 -- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
@@ -22,12 +22,12 @@ JOIN (VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
--- Vendor operations
+-- Supplier operations
 -- permission_codes must reference shared.permission.code
 -- Master lifecycle actions map to: cancel (deactivate/block), close (archive)
 -- ══════════════════════════════════════════════════════════════════════════════
 
--- Remove stale rows inserted under the old 'vendor' entity name.
+-- Remove stale rows inserted under the old entity name (before supplier rename).
 DELETE FROM control.entity_operation WHERE entity_name = 'vendor' AND tenant_id IS NULL;
 
 INSERT INTO control.entity_operation
@@ -178,6 +178,21 @@ VALUES
     (NULL, 'journal_entry', 'copy',     'DETAIL', 'OVERFLOW', 'API',      'copy',                              true,  80, '00000000-0000-0000-0000-000000000000'),
     (NULL, 'journal_entry', 'export',   'LIST',   'TOOLBAR',  'API',      'export',                            false, 90, '00000000-0000-0000-0000-000000000000')
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
+
+UPDATE control.entity_operation
+   SET placement = 'TOOLBAR',
+       handler_type = 'API',
+       handler_target = 'copy',
+       is_record_required = true,
+       sort_order = 65,
+       label_override = 'Copy',
+       icon_override = 'copy',
+       is_enabled = true,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+ WHERE tenant_id IS NULL
+   AND entity_name = 'journal_entry'
+   AND permission_code = 'copy';
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Payment Entry operations

@@ -39,7 +39,7 @@ SELECT t.code AS tenant, ap.code AS profile_code, ap.name, ap.subledger_type
   FROM master.accounting_profile ap
   JOIN master.tenant t ON t.id = ap.tenant_id
  WHERE ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                   'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE')
+                   'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE')
  ORDER BY t.code, ap.sort_order;
 
 \echo ''
@@ -57,7 +57,7 @@ SELECT t.code AS tenant,
   JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
   JOIN master.tenant t ON t.id = ap.tenant_id
  WHERE ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                   'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE')
+                   'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE')
  ORDER BY t.code, ap.sort_order;
 
 \echo ''
@@ -71,7 +71,7 @@ SELECT t.code AS tenant,
   JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
   JOIN master.tenant t ON t.id = iprr.tenant_id
  WHERE ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                   'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE')
+                   'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE')
    AND iprr.is_active
  ORDER BY t.code, iprr.priority, iprr.intent_domain;
 

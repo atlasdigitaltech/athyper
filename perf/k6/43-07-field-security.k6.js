@@ -42,7 +42,7 @@
  *     (e.g. 'cost_center', 'department', or any entity without PII fields)
  *   • POLICY_ENTITY must exist WITH at least one field_security_policy row
  *     covering at least one field on the entity
- *     (e.g. 'customer' with email/phone masked, or 'vendor' with bank_account masked)
+ *     (e.g. 'customer' with email/phone masked, or 'supplier' with bank_account masked)
  *   • Principal used (TOKEN_TENANT_A) must NOT be in the access_roles list so
  *     masking IS applied (verifies the hot path, not the short-circuit exit)
  *   • Server running, field-security middleware mounted on records routes

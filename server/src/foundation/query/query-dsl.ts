@@ -15,11 +15,11 @@
  *   QueryCache     — caches compiled join plans in Redis (5-min TTL)
  *
  * Usage:
- *   const qb = new QueryBuilder("master.vendor");
+ *   const qb = new QueryBuilder("master.supplier");
  *   const result = await qb
  *     .select(["id", "code", "name", "status"])
  *     .where({ tenant_id: tenantId, status: "active" })
- *     .join("master.vendor_bank_account", "vendor_id")
+ *     .join("master.supplier_bank_account", "supplier_id")
  *     .paginate({ limit, offset })
  *     .execute(db);
  */
@@ -37,8 +37,8 @@ export interface WhereClause {
 }
 
 export interface JoinSpec {
-  table:    string;   // e.g. "master.vendor_bank_account"
-  on:       string;   // local FK column (e.g. "vendor_id")
+  table:    string;   // e.g. "master.supplier_bank_account"
+  on:       string;   // local FK column (e.g. "supplier_id")
   type?:    "inner" | "left" | "right";  // default "left"
   alias?:   string;   // auto-generated if omitted
 }

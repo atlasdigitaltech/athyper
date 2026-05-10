@@ -71,21 +71,23 @@ COMMENT ON TABLE aggregate.tax_credit_summary IS
 
 
 -- ============================================================================
--- aggregate.wht_vendor_accumulator — per-vendor YTD WHT accumulation
+-- aggregate.wht_supplier_accumulator — per-supplier YTD WHT accumulation
 -- ============================================================================
--- R7-B: tracks YTD payment totals per vendor per jurisdiction+tax_type per period.
+-- Idempotency: drop old table name if it still exists (renamed from wht_vendor_accumulator)
+DROP TABLE IF EXISTS aggregate.wht_vendor_accumulator CASCADE;
+-- R7-B: tracks YTD payment totals per supplier per jurisdiction+tax_type per period.
 -- Required for threshold-based WHT activation (India TDS section-wise,
 -- Philippines EWT, etc.) where WHT only applies after cumulative payments
 -- exceed the control.wht_threshold_config.threshold_amount.
 -- Updated atomically when payments post; version column provides optimistic lock.
-CREATE TABLE IF NOT EXISTS aggregate.wht_vendor_accumulator (
+CREATE TABLE IF NOT EXISTS aggregate.wht_supplier_accumulator (
     -- Identity
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid        NOT NULL,
 
     -- Accumulation key
     company_code_id     uuid        NOT NULL,
-    counterparty_id     uuid        NOT NULL,   -- FK → master.principal (vendor principal)
+    counterparty_id     uuid        NOT NULL,   -- FK → master.principal (supplier principal)
     jurisdiction_id     uuid        NOT NULL,
     tax_type_id         uuid        NOT NULL,
     section_code        text,                   -- NULL = applies to all sections
@@ -118,9 +120,9 @@ CREATE TABLE IF NOT EXISTS aggregate.wht_vendor_accumulator (
     CONSTRAINT wva_year_chk         CHECK (fiscal_year BETWEEN 2000 AND 2099)
 );
 
-COMMENT ON TABLE aggregate.wht_vendor_accumulator IS
+COMMENT ON TABLE aggregate.wht_supplier_accumulator IS
     'ARCHETYPE=C;SCOPE=T. Pure accumulator — no status/lifecycle. '
-    'R7-B: per-vendor per-fiscal-year WHT accumulator. '
+    'R7-B: per-supplier per-fiscal-year WHT accumulator. '
     'Tracks YTD payments and WHT deducted to determine when threshold-based WHT activates '
     '(control.wht_threshold_config). Updated atomically on payment posting. '
     'version column provides optimistic concurrency lock for concurrent payment batches.';

@@ -21,6 +21,9 @@ export const IDLE_WARNING_SECONDS = 120;
 /** Client heartbeat throttle while the user is active: 5 minutes. */
 export const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
 
+/** Smallest client activity heartbeat interval we use after policy clamping. */
+export const MIN_EFFECTIVE_HEARTBEAT_INTERVAL_MS = 5_000;
+
 /** Client token refresh lead time before access token expiry: 90 seconds. */
 export const CLIENT_REFRESH_BEFORE_EXPIRY_SECONDS = 90;
 
@@ -64,3 +67,21 @@ export const DEFAULT_PUBLIC_SESSION_POLICY: PublicSessionPolicy = {
   mfaPendingTtlSeconds: MFA_PENDING_TTL_SECONDS,
   trustedDeviceTtlDays: TRUSTED_DEVICE_TTL_DAYS,
 };
+
+/**
+ * Bound client activity heartbeat lag so Redis lastSeenAt cannot fall behind
+ * the browser idle countdown by more than half of the warning window.
+ */
+export function effectiveHeartbeatIntervalMs(
+  policy: Pick<PublicSessionPolicy, "heartbeatIntervalMs" | "idleWarningSeconds">,
+): number {
+  const warningWindowMs = Math.max(1, policy.idleWarningSeconds) * 1000;
+  const warningBoundMs = Math.max(
+    MIN_EFFECTIVE_HEARTBEAT_INTERVAL_MS,
+    Math.floor(warningWindowMs / 2),
+  );
+  return Math.max(
+    MIN_EFFECTIVE_HEARTBEAT_INTERVAL_MS,
+    Math.min(policy.heartbeatIntervalMs, warningBoundMs),
+  );
+}

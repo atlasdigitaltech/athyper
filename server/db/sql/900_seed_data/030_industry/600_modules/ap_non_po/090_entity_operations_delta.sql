@@ -18,7 +18,7 @@
 --   release_hold         — release payment hold
 --   propose_payment      — navigate to payment_entry/new pre-filled with invoice
 --   view_je              — navigate to source journal entry
---   match_advance        — manually match existing vendor advance to invoice
+--   match_advance        — manually match existing supplier advance to invoice
 --   allocate_payment     — manual allocation UI for partial payments
 --
 -- payment_entry:
@@ -91,7 +91,7 @@ VALUES
      true, 140, '00000000-0000-0000-0000-000000000000'),
 
     (NULL, 'purchase_invoice', 'match_advance',
-     'DETAIL', 'OVERFLOW', 'MODAL', 'match_vendor_advance',
+     'DETAIL', 'OVERFLOW', 'MODAL', 'match_supplier_advance',
      true, 150, '00000000-0000-0000-0000-000000000000'),
 
     (NULL, 'purchase_invoice', 'allocate_payment',

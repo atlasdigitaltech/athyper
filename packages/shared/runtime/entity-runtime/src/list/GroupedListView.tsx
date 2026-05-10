@@ -130,8 +130,9 @@ export function GroupedListView({
     return orderGroups(map, groupCounts, columnOrder);
   }, [rows, groupFieldName, groupCounts, columnOrder]);
 
-  const cellCls  = DENSITY_CELL[density] ?? DENSITY_CELL["comfortable"]!;
-  const colCount = visibleDescriptorFields.length + (rowActions ? 1 : 0);
+  const cellCls    = DENSITY_CELL[density] ?? DENSITY_CELL["comfortable"]!;
+  const colCount   = visibleDescriptorFields.length + (rowActions ? 1 : 0);
+  const codeFieldName = entity.display_config.code_field ?? "code";
 
   // Derive the group field object for its label
   const groupFieldObj = entity.fields.find((f) => f.name === groupFieldName);
@@ -253,6 +254,10 @@ export function GroupedListView({
                             >
                               {colPres?.semanticResolver && typeof value === "string" && value ? (
                                 <RuntimeStatusText value={value} resolverName={colPres.semanticResolver} />
+                              ) : field.name === codeFieldName && field.data_type === "text" && value != null && value !== "" ? (
+                                <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                                  {String(value)}
+                                </span>
                               ) : (
                                 (() => {
                                   const Renderer = resolveFieldRenderer(field);

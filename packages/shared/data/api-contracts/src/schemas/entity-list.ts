@@ -320,7 +320,7 @@ export const EntityListQueryStateSchema = z.object({
 
   /**
    * surface_code scoping — ties the state to a specific list surface.
-   * E.g. "journal_entry.list", "vendor.list".
+   * E.g. "journal_entry.list", "supplier.list".
    * Optional: defaults to "<entity>.list" when absent.
    */
   surface: z.string().optional(),

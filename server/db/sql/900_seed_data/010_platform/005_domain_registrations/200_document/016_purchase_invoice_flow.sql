@@ -3,7 +3,7 @@
 -- Standard 'create' flow for document.purchase_invoice (3-step wizard).
 -- VERSION 2 — redesigned Step 2 (source-aware, 4 sections, tax_mode, §stage2).
 -- Changes from v1:
---   - Field names fixed: total_amount (was gross_amount), supplier_invoice_number (was vendor_invoice_ref)
+--   - Field names fixed: total_amount (was gross_amount), supplier_invoice_number
 --   - Step 2 restructured with entity_flow_section groupings
 --   - tax_mode binding added (Step 2, amount_basis section)
 --   - payment_method_id relocated from Step 2 → Step 3
@@ -59,7 +59,7 @@ BEGIN
         'trigger_fields', jsonb_build_array('supplier_id','supplier_invoice_number','supplier_invoice_date')),
       'assist', jsonb_build_object(
         'budget_precheck', true, 'ocr_prefill', true,
-        'vendor_enrichment', true, 'po_prefill', true),
+        'supplier_enrichment', true, 'po_prefill', true),
       'layout', 'wizard_with_summary'),
     1, 'active', now(), v_su
   WHERE NOT EXISTS (
@@ -82,7 +82,7 @@ BEGIN
          'trigger_fields', jsonb_build_array('supplier_id','supplier_invoice_number','supplier_invoice_date')),
        'assist', jsonb_build_object(
          'budget_precheck', true, 'ocr_prefill', true,
-         'vendor_enrichment', true, 'po_prefill', true),
+         'supplier_enrichment', true, 'po_prefill', true),
        'layout', 'wizard_with_summary')
    WHERE entity_version_id = v_ev_id
      AND flow_code = 'create' AND tenant_id IS NULL AND version_no = 1;
@@ -210,10 +210,10 @@ BEGIN
       'Required for PO-based and contract-based invoices.', 50),
     ('supplier_invoice_number', 'required', 'manual',
       NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1,
-      'Number printed on the vendor''s invoice. Triggers duplicate detection.', 60),
+      'Number printed on the supplier''s invoice. Triggers duplicate detection.', 60),
     ('supplier_invoice_date', 'required',  'manual',
       NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1,
-      'Date printed on the vendor''s invoice.', 70),
+      'Date printed on the supplier''s invoice.', 70),
     ('posting_date',          'required',  'derived_overrideable',
       NULL, NULL, NULL, 'today()',
       'ap.override_posting_date', NULL, NULL, 1,
@@ -224,15 +224,15 @@ BEGIN
       NULL, NULL, NULL, NULL, NULL, NULL, NULL, 3, 'Short name for this invoice — makes it easy to find and reference later. You can also edit it directly from the invoice header.', 100),
     ('currency_code',         'chip',      'derived_overrideable',
       NULL, NULL, NULL,
-      'vendor.default_currency(supplier_id)', 'ap.override_currency',
-      'meta', 'chip', 1, 'Derived from vendor master. Override requires permission.', 200),
+      'supplier.default_currency(supplier_id)', 'ap.override_currency',
+      'meta', 'chip', 1, 'Derived from supplier profile. Override requires permission.', 200),
     ('match_type',            'chip',      'derived_locked',
       NULL, NULL, NULL,
       'matching.match_type_from_source(invoice_source)', NULL,
       'meta', 'chip', 1, 'Determined by invoice source.', 210),
     ('payment_term_id',       'chip',      'derived_overrideable',
       NULL, NULL, NULL,
-      'vendor.default_payment_term(supplier_id, company_code_id)', 'ap.override_payment_term',
+      'supplier.default_payment_term(supplier_id, company_code_id)', 'ap.override_payment_term',
       'meta', 'chip', 1, NULL, 220),
     ('fiscal_year',           'chip',      'derived_locked',
       NULL, NULL, NULL,
@@ -267,14 +267,14 @@ BEGIN
     -- ── amount_basis ──────────────────────────────────────────────────────────
     ('currency_code',           'chip',         'derived_overrideable',
       NULL::text, NULL::text,
-      NULL, 'vendor.default_currency(supplier_id)', 'ap.override_currency',
+      NULL, 'supplier.default_currency(supplier_id)', 'ap.override_currency',
       NULL, 'chip', 1, 'standard', 'amount_basis', NULL, 5),
 
     ('total_amount',            'summary_only', 'derived_locked',
       NULL, NULL,
       NULL, 'lines.sum(gross_amount)', NULL,
       'total', 'money_big', 2, 'prominent', 'amount_basis',
-      'Invoice Total — what the vendor''s document shows. For PO/contract sources, derived from commitment lines (override with permission). For Non-PO/One-Time, enter directly.',
+      'Invoice Total — what the supplier''s document shows. For PO/contract sources, derived from commitment lines (override with permission). For Non-PO/One-Time, enter directly.',
       10),
 
     ('tax_mode',                'required',     'derived_overrideable',
@@ -301,7 +301,7 @@ BEGIN
     -- ── settlement_terms ──────────────────────────────────────────────────────
     ('payment_term_id',         'editable',     'derived_overrideable',
       NULL, NULL,
-      NULL, 'vendor.default_payment_term(supplier_id, company_code_id)', 'ap.override_payment_term',
+      NULL, 'supplier.default_payment_term(supplier_id, company_code_id)', 'ap.override_payment_term',
       NULL, 'inline_search', 1, 'standard', 'settlement_terms', NULL, 110),
 
     ('baseline_date',           'editable',     'derived_overrideable',
@@ -413,7 +413,7 @@ BEGIN
       NULL, 'chip', 1, NULL, 40),
     ('payment_method_id',    'editable',  'derived_overrideable',
       NULL, NULL, NULL,
-      'vendor.default_payment_method(supplier_id)', 'ap.override_payment_method',
+      'supplier.default_payment_method(supplier_id)', 'ap.override_payment_method',
       NULL, 'inline_search', 1, NULL, 80),
     ('is_on_hold',           'editable',  'manual',
       NULL, NULL, 'const:false', NULL, NULL, NULL, NULL, 1, NULL, 100),

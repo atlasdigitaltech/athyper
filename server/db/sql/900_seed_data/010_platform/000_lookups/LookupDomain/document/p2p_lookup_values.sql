@@ -16,11 +16,11 @@ FROM (VALUES
     ('delivery_note',               'Delivery Note',              'control.document_sequence_doc_type', 'Inbound logistics delivery artifact',       65),
     ('goods_receipt',               'Goods Receipt',              'control.document_sequence_doc_type', 'Approvable goods receipt posting',          68),
     ('service_entry_sheet',         'Service Entry Sheet',        'control.document_sequence_doc_type', 'Approvable service completion sheet',       72),
-    ('purchase_order_confirmation', 'PO Confirmation',            'control.document_sequence_doc_type', 'Vendor PO acknowledgement artifact',        82),
+    ('purchase_order_confirmation', 'PO Confirmation',            'control.document_sequence_doc_type', 'Supplier PO acknowledgement artifact',      82),
     ('purchase_invoice',            'Purchase Invoice',           'control.document_sequence_doc_type', 'Approvable AP invoice',                     85),
     ('invoice_match_case',          'Invoice Match Case',         'control.document_sequence_doc_type', 'Invoice reconciliation case header',        87),
     ('payment_entry',               'Payment Entry',              'control.document_sequence_doc_type', 'Approvable outbound payment',               90),
-    ('payment_remittance_output',   'Payment Remittance Output',  'control.document_sequence_doc_type', 'Remittance advice output to vendor',        95)
+    ('payment_remittance_output',   'Payment Remittance Output',  'control.document_sequence_doc_type', 'Remittance advice output to supplier',      95)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x
@@ -69,26 +69,27 @@ WHERE NOT EXISTS (
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Purchase invoice source
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Normalise legacy codes first so WHERE NOT EXISTS below sees the final codes,
+-- preventing INSERT→UPDATE duplicate-key collisions on re-runs.
+UPDATE control.lookup_value SET code = 'po_based'          WHERE domain_code = 'document.purchase_invoice_source' AND code = 'PO_BASED'                          AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'contract_based'    WHERE domain_code = 'document.purchase_invoice_source' AND code = 'CONTRACT_BASED'                    AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'non_po'            WHERE domain_code = 'document.purchase_invoice_source' AND code = 'NON_PO'                            AND tenant_id IS NULL;
+UPDATE control.lookup_value SET code = 'one_time_supplier' WHERE domain_code = 'document.purchase_invoice_source' AND code IN ('ONE_TIME_VENDOR','one_time_vendor') AND tenant_id IS NULL;
+
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,
        true, 'active', '00000000-0000-0000-0000-000000000000'
 FROM (VALUES
-    ('po_based',        'PO-Based',           'document.purchase_invoice_source', 'Invoice matched to a purchase order',        10),
-    ('contract_based',  'Contract-Based',     'document.purchase_invoice_source', 'Invoice matched to a contract',              20),
-    ('non_po',          'Non-PO',             'document.purchase_invoice_source', 'Invoice with no prior commitment',           30),
-    ('one_time_vendor', 'One-Time Vendor',    'document.purchase_invoice_source', 'Invoice from a non-registered vendor',       40)
+    ('po_based',          'PO-Based',           'document.purchase_invoice_source', 'Invoice matched to a purchase order',    10),
+    ('contract_based',    'Contract-Based',     'document.purchase_invoice_source', 'Invoice matched to a contract',          20),
+    ('non_po',            'Non-PO',             'document.purchase_invoice_source', 'Invoice with no prior commitment',       30),
+    ('one_time_supplier', 'One-Time Supplier',  'document.purchase_invoice_source', 'Invoice from a non-registered supplier', 40)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x
     WHERE x.domain_code = v.domain_code AND x.code = v.code AND x.tenant_id IS NULL
 );
-
--- Fix any already-seeded uppercase codes → lowercase (idempotent)
-UPDATE control.lookup_value SET code = 'po_based'        WHERE domain_code = 'document.purchase_invoice_source' AND code = 'PO_BASED'        AND tenant_id IS NULL;
-UPDATE control.lookup_value SET code = 'contract_based'  WHERE domain_code = 'document.purchase_invoice_source' AND code = 'CONTRACT_BASED'  AND tenant_id IS NULL;
-UPDATE control.lookup_value SET code = 'non_po'          WHERE domain_code = 'document.purchase_invoice_source' AND code = 'NON_PO'          AND tenant_id IS NULL;
-UPDATE control.lookup_value SET code = 'one_time_vendor' WHERE domain_code = 'document.purchase_invoice_source' AND code = 'ONE_TIME_VENDOR' AND tenant_id IS NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Purchase invoice type
@@ -104,7 +105,7 @@ FROM (VALUES
     ('advance',            'Advance',               'document.purchase_invoice_type', 'Advance payment invoice',                     40),
     ('retention_release',  'Retention Release',     'document.purchase_invoice_type', 'Release of withheld retention amount',        50),
     ('proforma',           'Pro-forma',             'document.purchase_invoice_type', 'Proforma invoice (not posted)',               60),
-    ('self_billed',        'Self-Billed',           'document.purchase_invoice_type', 'Buyer-created invoice on behalf of vendor',   70),
+    ('self_billed',        'Self-Billed',           'document.purchase_invoice_type', 'Buyer-created invoice on behalf of supplier', 70),
     ('final',              'Final',                 'document.purchase_invoice_type', 'Final invoice closing the commitment',        90)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (

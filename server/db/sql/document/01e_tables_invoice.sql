@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
         'draft','pending_approval','approved','posted','partially_paid',
         'fully_paid','on_hold','reversed','cancelled','rejected')),
     CONSTRAINT pi_source_chk        CHECK (invoice_source IN (
-        'po_based','contract_based','non_po','one_time_vendor')),
+        'po_based','contract_based','non_po','one_time_supplier')),
     CONSTRAINT pi_type_chk          CHECK (invoice_type IN (
         'standard','credit_note','debit_note','advance','retention_release',
         'proforma','self_billed','down_payment','final')),
@@ -176,8 +176,8 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
 );
 
 COMMENT ON TABLE document.purchase_invoice IS
-    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''pending_approval'',''approved'',''posted'',''partially_paid'',''on_hold'')). Approvable AP invoice. Four sources: PO_BASED, CONTRACT_BASED, NON_PO, ONE_TIME_VENDOR. '
-    'Vendor identity frozen in invoice_party_snapshot + invoice_address_snapshot + invoice_bank_snapshot. '
+    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''pending_approval'',''approved'',''posted'',''partially_paid'',''on_hold'')). Approvable AP invoice. Four sources: PO_BASED, CONTRACT_BASED, NON_PO, ONE_TIME_SUPPLIER. '
+    'Supplier identity frozen in invoice_party_snapshot + invoice_address_snapshot + invoice_bank_snapshot. '
     'Tax determined by existing engine; tax_amount is a display cache. '
     'Retention creates AP Retention Payable (liability), not a receivable asset.';
 
@@ -325,7 +325,7 @@ CREATE TABLE IF NOT EXISTS document.invoice_party_snapshot (
     legal_entity_name   text,
     country_code        character(2),
 
-    is_one_time_vendor  boolean         NOT NULL DEFAULT false,
+    is_one_time_supplier boolean        NOT NULL DEFAULT false,
 
     -- Contact
     contact_name        text,
@@ -343,7 +343,7 @@ CREATE TABLE IF NOT EXISTS document.invoice_party_snapshot (
 );
 
 COMMENT ON TABLE document.invoice_party_snapshot IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable vendor identity frozen at invoice time. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable supplier identity frozen at invoice time. '
     'One row per invoice (1:1 UNIQUE). Append-only.';
 
 
@@ -417,7 +417,7 @@ CREATE TABLE IF NOT EXISTS document.invoice_bank_snapshot (
 );
 
 COMMENT ON TABLE document.invoice_bank_snapshot IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable vendor bank details frozen at invoice time. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable supplier bank details frozen at invoice time. '
     'One row per invoice (1:1 UNIQUE). Append-only.';
 
 
@@ -732,7 +732,7 @@ COMMENT ON TABLE document.payment_term_application IS
 -- ============================================================================
 -- document.wht_certificate — WHT certificate issuance lifecycle
 -- ============================================================================
--- R7-C: certificate issued to a vendor documenting WHT deducted during a period.
+-- R7-C: certificate issued to a supplier documenting WHT deducted during a period.
 -- Required for IN-TDS (Form 16A) and PH-EWT (BIR Form 2307) and similar regimes.
 -- source_transaction_ids: array of payment / JE UUIDs contributing to this cert.
 -- Lifecycle: draft → issued → voided. Corrections create a new cert (void + reissue).
@@ -745,7 +745,7 @@ CREATE TABLE IF NOT EXISTS document.wht_certificate (
 
     -- Issuer + recipient
     company_code_id         uuid        NOT NULL,
-    counterparty_id         uuid        NOT NULL,   -- vendor / principal receiving cert
+    counterparty_id         uuid        NOT NULL,   -- supplier / principal receiving cert
 
     -- Tax classification
     tax_type_id             uuid        NOT NULL,
@@ -798,7 +798,7 @@ CREATE TABLE IF NOT EXISTS document.wht_certificate (
 
 COMMENT ON TABLE document.wht_certificate IS
     'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. R7-C: WHT certificate lifecycle (India Form 16A, Philippines BIR 2307, etc.). '
-    'Issued by company to vendor documenting WHT deducted in period_from–period_to. '
+    'Issued by company to supplier documenting WHT deducted in period_from–period_to. '
     'Corrections: void existing cert (status=voided, void_reason) then create new cert '
     'with superseded_by_id pointing back to the voided cert. '
     'source_transaction_ids: payment / JE UUIDs contributing WHT to this certificate.';

@@ -14,7 +14,7 @@
 -- AP_NON_PO_CAPEX:
 --   Same 3 events — only the entry templates differ (Dr Fixed Asset vs Dr Expense)
 --
--- AP_ADVANCE_VENDOR:
+-- AP_ADVANCE_SUPPLIER:
 --   ADVANCE_PAID       → creates_je=true  (advance post — AP Advance asset created)
 --
 -- AP_RETENTION_RELEASE:
@@ -94,13 +94,13 @@ BEGIN
     END LOOP;
 
     -- ────────────────────────────────────────────────────────────────────────
-    -- AP_ADVANCE_VENDOR events
+    -- AP_ADVANCE_SUPPLIER events
     -- ────────────────────────────────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
           JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
-         WHERE ap.code = 'AP_ADVANCE_VENDOR'
+         WHERE ap.code = 'AP_ADVANCE_SUPPLIER'
            AND apc.is_active = true
     LOOP
         INSERT INTO control.acct_profile_event (
@@ -109,7 +109,7 @@ BEGIN
             status, created_by, metadata
         ) VALUES
             (v_cfg.tenant_id, v_cfg.config_id,
-             'ADVANCE_PAID', 'Advance payment to vendor',
+             'ADVANCE_PAID', 'Advance payment to supplier',
              true, 'NONE', 10, 'active', v_sys,
              '{"description":"Posts: Dr AP Advance (asset) / Cr Bank Clearing"}'::jsonb),
 
@@ -136,7 +136,7 @@ BEGIN
             status, created_by, metadata
         ) VALUES
             (v_cfg.tenant_id, v_cfg.config_id,
-             'RETENTION_RELEASED', 'Retention released to vendor',
+             'RETENTION_RELEASED', 'Retention released to supplier',
              true, 'NONE', 10, 'active', v_sys,
              '{"description":"Posts: Dr AP Retention Payable / Cr Bank Clearing"}'::jsonb)
         ON CONFLICT (profile_config_id, event_code) DO NOTHING;
@@ -147,9 +147,9 @@ BEGIN
            JOIN control.acct_profile_config apc ON apc.id = ape.profile_config_id
            JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
           WHERE ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                            'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE')),
+                            'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE')),
         (SELECT count(*) FROM control.acct_profile_config apc
            JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
           WHERE ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
-                            'AP_ADVANCE_VENDOR','AP_RETENTION_RELEASE'));
+                            'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE'));
 END $seed_ap_events$;

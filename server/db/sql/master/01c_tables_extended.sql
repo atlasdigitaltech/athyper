@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS master.asset (
     site_id                  uuid,
     location_description     text,
     custodian_id             uuid,
-    vendor_id                uuid,
+    supplier_id              uuid,
     commitment_id            uuid,
 
     -- Table-specific (physical tracking)
@@ -1564,7 +1564,7 @@ COMMENT ON COLUMN master.bank_account.account_last4 IS
     'Alphanumeric (A-Z, 0-9) to support IBAN-derived and local formats.';
 COMMENT ON COLUMN master.bank_account.verification_method IS
     'How the bank details were verified. '
-    'MICRO_DEPOSIT, BANK_LETTER, CANCELLED_CHEQUE, VENDOR_PORTAL, MANUAL, API_VALIDATION.';
+    'MICRO_DEPOSIT, BANK_LETTER, CANCELLED_CHEQUE, SUPPLIER_PORTAL, MANUAL, API_VALIDATION.';
 COMMENT ON COLUMN master.bank_account.account_nature IS
     'Nature of the account. Lookup: master.bank_account_nature. '
     'DIRECT = real account at the institution (DEFAULT for new rows). '

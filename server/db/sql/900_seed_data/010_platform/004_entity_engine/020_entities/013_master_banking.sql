@@ -42,7 +42,7 @@ BEGIN
     VALUES (v_pay, 'bank_account_link', 'BKACCL', 'bank_account_link', 'RELATION', 'system', 'ent', 'table',
         'full', 'tenant_critical', 'controlled', 'master', 'bank_account_link',
         'Bank Account Link', 'Bank Account Links', 'link', 'blue',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        false, '{"requires_owner_type_scope":true,"owner_type_column":"owner_type"}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- â”€â”€ 89b. business_partner_bank_account (view entity) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

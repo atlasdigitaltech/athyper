@@ -25,7 +25,7 @@ import type { V4Session } from "@/lib/auth/types";
  * No body required — auth is via the httpOnly neon_sid cookie.
  * Returns 200 { ok: true } silently; errors are non-fatal for the caller.
  */
-export async function POST() {
+export async function POST(req: Request) {
   const sid = await getSessionId();
   if (!sid) return NextResponse.json({ ok: false }, { status: 401 });
 
@@ -40,8 +40,24 @@ export async function POST() {
     const policy = await resolveSessionPolicy(session);
     const lastSeenAt =
       typeof session.lastSeenAt === "number" ? session.lastSeenAt : 0;
+    const idleAgeSeconds = lastSeenAt > 0 ? now - lastSeenAt : 0;
+    const heartbeatLagSeconds = Math.max(
+      0,
+      Math.ceil(policy.heartbeatIntervalMs / 1000),
+    );
+    const isContinueRequest = req.headers.get("x-session-continue") === "1";
+    // The browser may have real activity that Redis has not seen yet because
+    // normal activity touches are throttled. Allow the explicit continue action
+    // to recover only inside that heartbeat-lag window.
+    const withinContinueGrace =
+      isContinueRequest &&
+      idleAgeSeconds <= policy.idleTimeoutSeconds + heartbeatLagSeconds;
 
-    if (lastSeenAt > 0 && now - lastSeenAt >= policy.idleTimeoutSeconds) {
+    if (
+      lastSeenAt > 0 &&
+      idleAgeSeconds >= policy.idleTimeoutSeconds &&
+      !withinContinueGrace
+    ) {
       await redis.del(sessKey(sessionNamespace, sid));
       if (session.userId) {
         await redis.sRem(userSessionsKey(sessionNamespace, session.userId), sid).catch(() => {});

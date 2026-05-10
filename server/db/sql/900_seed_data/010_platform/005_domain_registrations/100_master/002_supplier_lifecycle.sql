@@ -1,7 +1,7 @@
--- 100_finance/100_master/002_vendor_lifecycle.sql
+-- 100_master/002_supplier_lifecycle.sql
 -- Purpose: control.lifecycle + 5 states + 7 transitions + entity_lifecycle binding
 --          for the Supplier (master.supplier) entity
--- Depends on: 001_vendor.sql
+-- Depends on: 001_supplier.sql
 -- Idempotent: ON CONFLICT DO NOTHING throughout
 
 DO $$ DECLARE
@@ -10,7 +10,7 @@ DO $$ DECLARE
 BEGIN
 
 -- ── 1. control.lifecycle ─────────────────────────────────────────────────────
--- Rename old lifecycle code 'vendor' → 'supplier' on already-seeded rows
+-- Rename old lifecycle code 'supplier' (was 'vendor') on already-seeded rows
 UPDATE control.lifecycle
 SET code = 'supplier', name = 'Supplier Lifecycle'
 WHERE code = 'vendor' AND tenant_id IS NULL;
@@ -52,7 +52,7 @@ VALUES
 ON CONFLICT (lifecycle_id, from_state_id, to_state_id) DO NOTHING;
 
 -- ── 4. control.entity_lifecycle binding ──────────────────────────────────────
--- Idempotency fix: migrate old binding if it was inserted as 'vendor'
+-- Idempotency fix: migrate old binding if it was inserted as 'supplier' (was 'vendor')
 UPDATE control.entity_lifecycle
 SET entity_name = 'supplier'
 WHERE entity_name = 'vendor' AND lifecycle_id = v_lc_id AND tenant_id IS NULL;

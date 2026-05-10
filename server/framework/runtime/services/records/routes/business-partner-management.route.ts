@@ -885,7 +885,7 @@ async function ensureSupplierRole(
     .values({
       business_partner_id: businessPartnerId,
       supplier_code: supplierCode,
-      supplier_type: str(supplierInput["supplier_type"]) ?? "vendor",
+      supplier_type: str(supplierInput["supplier_type"]) ?? "general",
       spend_category_id: supplierInput["spend_category_id"] ?? null,
       payment_term_id: supplierInput["payment_term_id"] ?? null,
       payment_method_id: supplierInput["payment_method_id"] ?? null,

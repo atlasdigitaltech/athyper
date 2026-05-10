@@ -25,7 +25,7 @@ FROM (VALUES
     ('sales_invoice',    'Sales Invoice',    'document.je_source_doc_type', 'Originated from a sales invoice',       160),
     ('payroll',          'Payroll',          'document.je_source_doc_type', 'Originated from salary or payroll processing', 170),
     ('travel_expense',   'Travel Expense',   'document.je_source_doc_type', 'Originated from travel expense processing', 180),
-    ('advance',          'Advance',          'document.je_source_doc_type', 'Originated from employee, customer, or vendor advance processing', 190),
+    ('advance',          'Advance',          'document.je_source_doc_type', 'Originated from employee, customer, or supplier advance processing', 190),
     ('retention',        'Retention',        'document.je_source_doc_type', 'Originated from retention accrual or release', 200),
     ('tax_engine',       'Tax Engine',       'document.je_source_doc_type', 'Originated from VAT, WHT, or tax adjustment processing', 210),
     ('import',           'Import',           'document.je_source_doc_type', 'Imported journal entry',                220)

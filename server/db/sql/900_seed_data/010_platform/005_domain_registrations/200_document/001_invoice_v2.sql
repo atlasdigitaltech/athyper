@@ -3,7 +3,7 @@
 -- Purpose: Fix entity_field name mismatches and add new fields for purchase_invoice.
 -- §G0: Drop any non-standard triggers on entity_field (defensive cleanup)
 -- §F1: Rename gross_amount → total_amount
--- §F2: Rename vendor_invoice_ref → supplier_invoice_number
+-- §F2: Rename supplier_invoice_number (was vendor_invoice_ref)
 -- §F3: Add tax_mode field registration
 -- §F4: Add tax_mode_source field registration
 -- §F5: Patch Step 1 + Step 2 advance_rules to use corrected field names
@@ -62,7 +62,7 @@ UPDATE control.entity_field ef
    AND ef.tenant_id  IS NULL;
 
 -- ---------------------------------------------------------------------------
--- §F2  Rename vendor_invoice_ref → supplier_invoice_number
+-- §F2  Rename supplier_invoice_number (was vendor_invoice_ref)
 -- ---------------------------------------------------------------------------
 
 UPDATE control.entity_field ef
@@ -148,7 +148,7 @@ WHERE e.table_schema = 'document'
 
 -- ---------------------------------------------------------------------------
 -- §F5  Patch advance_rules: correct field names in the create flow steps
---      Fix Step 1: vendor_invoice_ref → supplier_invoice_number
+--      Fix Step 1: supplier_invoice_number (was vendor_invoice_ref)
 -- ---------------------------------------------------------------------------
 
 UPDATE control.entity_flow_step efs

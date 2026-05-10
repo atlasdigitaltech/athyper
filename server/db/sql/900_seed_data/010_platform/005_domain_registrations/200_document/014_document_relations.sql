@@ -38,13 +38,13 @@ BEGIN
 
         -- ── purchase_invoice ──────────────────────────────────────────────────
         --
-        --  belongs_to vendor     : supplier_id → master.vendor
+        --  belongs_to supplier   : supplier_id → master.supplier
         --  belongs_to po         : commitment_id → document.purchase_order (optional)
         --  has_many   lines      : 1:N to purchase_invoice_line
         --  belongs_to journal    : ap_je_id → document.journal_entry (optional)
         --  has_many   snapshots  : 1:1 party + address + bank snapshots (cascade)
         --
-        ('purchase_invoice', 'vendor',             'belongs_to', 'vendor',                  'supplier_id',          'restrict'),
+        ('purchase_invoice', 'supplier',            'belongs_to', 'supplier',                'supplier_id',          'restrict'),
         ('purchase_invoice', 'purchase_order',     'belongs_to', 'purchase_order',           'commitment_id',        'set_null'),
         ('purchase_invoice', 'lines',              'has_many',   'purchase_invoice_line',    'purchase_invoice_id',  'cascade'),
         ('purchase_invoice', 'journal_entry',      'belongs_to', 'journal_entry',            'ap_je_id',             'set_null'),

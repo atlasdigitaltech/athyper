@@ -2,17 +2,26 @@
 -- Seed: Product workspaces
 -- Schema: shared | Table: workspace
 -- Idempotent: on conflict (code) do update
+--
+-- Canonical workspace set (7 user-facing):
+--   FIN  Finance                      Accounting, payments, treasury, and budgeting
+--   SCM  Supply Chain                 Suppliers, sourcing, contracts, procurement, inventory, warehousing, quality, demand planning, and logistics
+--   COM  Sales & CRM                  Customer relationships, opportunities, sales orders, and invoicing
+--   PPL  People                       Employee lifecycle and payroll
+--   PRS  Projects & Services          Projects, costing, tasks, and service desk
+--   OPS  Manufacturing & Maintenance  Production, BOMs, work orders, MRP, and maintenance
+--   AST  Assets & Facilities          Fixed assets, real estate, leases, and facilities
+--
+-- CORE and PTR are not managed here — their rows are owned by their respective seed scripts.
 
 insert into shared.workspace (code, name, description, sort_order, created_by) values
-  ('CORE', 'Core Platform',         'Cross-cutting platform infrastructure and shared services',              10, '00000000-0000-0000-0000-000000000000'),
-  ('FIN',  'Finance',               'Financial accounting, payments, treasury, and budgeting',               20, '00000000-0000-0000-0000-000000000000'),
-  ('SCM',  'Supply Chain',          'Procurement, inventory, warehousing, and logistics',                    30, '00000000-0000-0000-0000-000000000000'),
-  ('COM',  'Commercial',            'Sales, customer relationship management, and commercial operations',    40, '00000000-0000-0000-0000-000000000000'),
-  ('PPL',  'People',                'Human resources and payroll',                                           50, '00000000-0000-0000-0000-000000000000'),
-  ('PRS',  'Projects & Services',   'Projects, tasks, and service management',                               60, '00000000-0000-0000-0000-000000000000'),
-  ('OPS',  'Operations',            'Manufacturing, maintenance, and production operations',                 70, '00000000-0000-0000-0000-000000000000'),
-  ('AST',  'Assets & Facilities',   'Fixed assets, real estate, and facility management',                   80, '00000000-0000-0000-0000-000000000000'),
-  ('PTR',  'Partner Collaboration', 'Partner portals, collaborative ordering, invoicing, and logistics exchange', 90, '00000000-0000-0000-0000-000000000000')
+  ('FIN',  'Finance',                    'Accounting, payments, treasury, and budgeting',                                                                        20, '00000000-0000-0000-0000-000000000000'),
+  ('SCM',  'Supply Chain',               'Suppliers, sourcing, contracts, procurement, inventory, warehousing, quality, demand planning, and logistics',          30, '00000000-0000-0000-0000-000000000000'),
+  ('COM',  'Sales & CRM',                'Customer relationships, opportunities, sales orders, and invoicing',                                                    40, '00000000-0000-0000-0000-000000000000'),
+  ('PPL',  'People',                     'Employee lifecycle and payroll',                                                                                        50, '00000000-0000-0000-0000-000000000000'),
+  ('PRS',  'Projects & Services',        'Projects, costing, tasks, and service desk',                                                                           60, '00000000-0000-0000-0000-000000000000'),
+  ('OPS',  'Manufacturing & Maintenance','Production, BOMs, work orders, MRP, and maintenance',                                                                  70, '00000000-0000-0000-0000-000000000000'),
+  ('AST',  'Assets & Facilities',        'Fixed assets, real estate, leases, and facilities',                                                                    80, '00000000-0000-0000-0000-000000000000')
 on conflict (code) do update set
     name        = excluded.name,
     description = excluded.description,

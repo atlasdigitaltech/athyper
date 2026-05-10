@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, Suspense } from "react";
+import { usePathname } from "next/navigation";
 import { FinanceContextBar } from "@athyper/finance-workbench/components";
 
 /**
@@ -33,12 +34,17 @@ import { FinanceContextBar } from "@athyper/finance-workbench/components";
  * Both resolve correctly via Next.js route groups — no URL conflict.
  */
 export default function FinanceWorkbenchLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const showContextBar = pathname !== "/finance/gl" && pathname !== "/finance/reports";
+
   return (
     <div className="flex h-full flex-col">
-      <Suspense fallback={<div className="h-9 shrink-0 border-b bg-muted/30" />}>
-        <FinanceContextBar />
-      </Suspense>
-      <div className="min-h-0 flex-1 overflow-auto">
+      {showContextBar && (
+        <Suspense fallback={<div className="h-9 shrink-0 border-b bg-muted/30" />}>
+          <FinanceContextBar />
+        </Suspense>
+      )}
+      <div className={showContextBar ? "min-h-0 flex-1 overflow-auto" : "min-h-0 flex-1 overflow-hidden"}>
         {children}
       </div>
     </div>

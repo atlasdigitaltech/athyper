@@ -56,7 +56,7 @@ BEGIN
   -- Standard flow (flow_code = 'create', is_default = true)
   UPDATE control.entity_flow
      SET label       = 'Standard Invoice',
-         description = 'Bookable AP invoice. Posts to GL, dedup on, 3 steps.'
+         description = 'Bookable Supplier invoice on 3 Steps'
    WHERE entity_version_id = v_ev_id
      AND flow_code          = 'create'
      AND tenant_id          IS NULL;
@@ -64,7 +64,7 @@ BEGIN
   -- Proforma flow (flow_code = 'create_proforma', is_default = false)
   UPDATE control.entity_flow
      SET label       = 'Proforma Invoice',
-         description = 'Indicative totals only. No GL posting, dedup off. Promote to invoice when vendor confirms.'
+         description = 'Indicative totals only. No GL posting, dedup off. Promote to invoice when supplier confirms.'
    WHERE entity_version_id = v_ev_id
      AND flow_code          = 'create_proforma'
      AND tenant_id          IS NULL;

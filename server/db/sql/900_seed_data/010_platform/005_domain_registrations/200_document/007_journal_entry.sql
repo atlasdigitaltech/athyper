@@ -734,3 +734,147 @@ JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND 
 ON CONFLICT (entity_version_id, name) DO NOTHING;
 
 END $$;
+
+-- Copy behavior for Journal Entry is intentionally metadata-owned:
+-- entity.display_config enables copy, entity_relation decides which children
+-- copy, and entity_field.ui_hint.copy_policy decides per-column treatment.
+DO $$
+DECLARE
+    v_su uuid := '00000000-0000-0000-0000-000000000000';
+BEGIN
+    UPDATE control.entity
+       SET display_config = COALESCE(display_config, '{}'::jsonb)
+           || jsonb_build_object(
+                'copy', jsonb_build_object(
+                    'enabled', true,
+                    'target_status', 'created',
+                    'child_relations', jsonb_build_array('lines'),
+                    'numbering_source', 'entity_naming_policy',
+                    'sequence_padding', 5
+                )
+              ),
+           updated_at = now(),
+           updated_by = v_su
+     WHERE entity_code = 'journal_entry'
+       AND tenant_id IS NULL;
+
+    UPDATE control.entity_relation er
+       SET ui_behavior = COALESCE(er.ui_behavior, '{}'::jsonb)
+           || jsonb_build_object('copy', true, 'copy_strategy', 'clone_children'),
+           updated_at = now(),
+           updated_by = v_su
+      FROM control.entity e
+      JOIN control.entity_version ev ON ev.entity_id = e.id
+     WHERE e.entity_code = 'journal_entry'
+       AND e.tenant_id IS NULL
+       AND ev.version_no = 1
+       AND ev.tenant_id IS NULL
+       AND er.entity_version_id = ev.id
+       AND er.name = 'lines';
+
+    WITH policies(entity_code, field_name, policy) AS (
+        VALUES
+        -- Header identity/lifecycle/audit
+        ('journal_entry','id','reset'),
+        ('journal_entry','tenant_id','reset'),
+        ('journal_entry','code','regenerate'),
+        ('journal_entry','name','derive'),
+        ('journal_entry','document_no','regenerate'),
+        ('journal_entry','status','target_status'),
+        ('journal_entry','is_active','derive'),
+        ('journal_entry','created_at','reset'),
+        ('journal_entry','created_by','reset'),
+        ('journal_entry','updated_at','reset'),
+        ('journal_entry','updated_by','reset'),
+        ('journal_entry','status_changed_at','reset'),
+        ('journal_entry','status_changed_by','reset'),
+
+        -- Header business fields
+        ('journal_entry','company_code_id','preserve'),
+        ('journal_entry','book_id','preserve'),
+        ('journal_entry','fiscal_period_id','preserve'),
+        ('journal_entry','fiscal_year','derive'),
+        ('journal_entry','period_number','derive'),
+        ('journal_entry','document_date','preserve'),
+        ('journal_entry','posting_date','preserve'),
+        ('journal_entry','source_type','default'),
+        ('journal_entry','source_doc_id','exclude'),
+        ('journal_entry','transaction_currency','preserve'),
+        ('journal_entry','base_currency','derive'),
+        ('journal_entry','total_debit','reset'),
+        ('journal_entry','total_credit','reset'),
+        ('journal_entry','line_count','reset'),
+        ('journal_entry','description','preserve'),
+        ('journal_entry','is_reversal','default'),
+        ('journal_entry','reversal_of_id','exclude'),
+        ('journal_entry','reversed_by_id','exclude'),
+        ('journal_entry','is_auto_reverse','preserve'),
+        ('journal_entry','auto_reverse_date','preserve'),
+        ('journal_entry','derived_from_je_id','exclude'),
+        ('journal_entry','posting_rule_id','exclude'),
+        ('journal_entry','book_idempotency_key','exclude'),
+        ('journal_entry','is_prior_period','preserve'),
+        ('journal_entry','original_period_year','preserve'),
+        ('journal_entry','original_period_number','preserve'),
+        ('journal_entry','close_override_id','preserve'),
+        ('journal_entry','posted_at','reset'),
+        ('journal_entry','posted_by','reset'),
+        ('journal_entry','tags','preserve'),
+        ('journal_entry','metadata','default'),
+
+        -- Line identity/parent/audit
+        ('journal_line','id','reset'),
+        ('journal_line','tenant_id','reset'),
+        ('journal_line','journal_entry_id','reparent'),
+        ('journal_line','created_at','reset'),
+        ('journal_line','created_by','reset'),
+        ('journal_line','updated_at','reset'),
+        ('journal_line','updated_by','reset'),
+
+        -- Line header-denormalized/system fields
+        ('journal_line','company_code_id','derive'),
+        ('journal_line','book_id','derive'),
+        ('journal_line','fiscal_period_id','derive'),
+        ('journal_line','fiscal_year','derive'),
+        ('journal_line','period_number','derive'),
+        ('journal_line','posting_date','derive'),
+        ('journal_line','base_currency','derive'),
+        ('journal_line','dimension_set_id','derive'),
+        ('journal_line','source_doc_line_id','exclude'),
+        ('journal_line','posted_at','reset'),
+        ('journal_line','posted_by','reset'),
+        ('journal_line','metadata','default'),
+
+        -- Line business fields
+        ('journal_line','line_no','preserve'),
+        ('journal_line','gl_account_id','preserve'),
+        ('journal_line','transaction_currency','preserve'),
+        ('journal_line','transaction_debit','preserve'),
+        ('journal_line','transaction_credit','preserve'),
+        ('journal_line','base_debit','preserve'),
+        ('journal_line','base_credit','preserve'),
+        ('journal_line','exchange_rate','preserve'),
+        ('journal_line','cost_center_id','preserve'),
+        ('journal_line','profit_center_id','preserve'),
+        ('journal_line','project_id','preserve'),
+        ('journal_line','site_id','preserve'),
+        ('journal_line','party_type','preserve'),
+        ('journal_line','party_id','preserve'),
+        ('journal_line','subledger_type','preserve'),
+        ('journal_line','description','preserve'),
+        ('journal_line','tags','preserve')
+    )
+    UPDATE control.entity_field ef
+       SET ui_hint = COALESCE(ef.ui_hint, '{}'::jsonb)
+           || jsonb_build_object('copy_policy', p.policy),
+           updated_at = now(),
+           updated_by = v_su
+      FROM policies p
+      JOIN control.entity e ON e.entity_code = p.entity_code
+                            AND e.tenant_id IS NULL
+      JOIN control.entity_version ev ON ev.entity_id = e.id
+                                    AND ev.version_no = 1
+                                    AND ev.tenant_id IS NULL
+     WHERE ef.entity_version_id = ev.id
+       AND ef.name = p.field_name;
+END $$;

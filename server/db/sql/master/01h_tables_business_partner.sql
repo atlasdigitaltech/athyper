@@ -249,16 +249,17 @@ CREATE TABLE master.supplier (
     supplier_code        text     NOT NULL,
 
     -- AP role attributes
-    supplier_type        text     NOT NULL DEFAULT 'vendor',
-        -- 'vendor' | 'contractor' | 'manufacturer' | 'service' | 'utility' | 'intercompany'
+    supplier_type        text     NOT NULL DEFAULT 'general',
+        -- 'general' | 'contractor' | 'manufacturer' | 'service' | 'utility' | 'intercompany'
     account_manager_id   uuid,
     spend_category_id    uuid,
     payment_term_id      uuid,
     payment_method_id    uuid,
-    is_payment_ready     boolean      NOT NULL DEFAULT false,
-    payment_ready_at     timestamptz,
-    payment_ready_by     uuid,
-    payment_ready_reason text,
+    is_payment_ready         boolean  NOT NULL DEFAULT false,
+    payment_ready_at         timestamptz,
+    payment_ready_by         uuid,
+    payment_ready_reason     text,
+    anticipated_risk_tier    text,
 
     -- Metadata
     metadata             jsonb    NOT NULL DEFAULT '{}'::jsonb,
@@ -281,7 +282,7 @@ CREATE TABLE master.supplier (
     CONSTRAINT supplier_bp_uq            UNIQUE (tenant_id, business_partner_id),
     CONSTRAINT supplier_code_nonempty     CHECK (btrim(supplier_code) <> ''),
     CONSTRAINT supplier_type_chk          CHECK (supplier_type IN (
-                                              'vendor', 'contractor', 'manufacturer',
+                                              'general', 'contractor', 'manufacturer',
                                               'service', 'utility', 'intercompany')),
     CONSTRAINT supplier_status_chk        CHECK (status IN (
                                               'onboarding', 'active', 'on_hold',

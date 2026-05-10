@@ -9,6 +9,7 @@ interface PeriodStatusBarProps {
   status: FiscalPeriodStatus | null;
   companyCode?: string;
   className?: string;
+  displayLabel?: string;
 }
 
 export function PeriodStatusBar({
@@ -17,19 +18,20 @@ export function PeriodStatusBar({
   status,
   companyCode,
   className,
+  displayLabel,
 }: PeriodStatusBarProps) {
-  const label = period !== null && period !== undefined
+  const label = displayLabel ?? (period !== null && period !== undefined
     ? periodLabel(fiscalYear, period)
-    : `FY ${fiscalYear}`;
+    : `FY ${fiscalYear}`);
 
   return (
-    <div className={cn("flex items-center gap-1.5 text-doc-support", className)}>
+    <div className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", className)}>
       {companyCode && (
-        <span className="font-mono text-muted-foreground">{companyCode}</span>
+        <span>{companyCode}</span>
       )}
-      <span className="text-muted-foreground">{label}</span>
+      <span>{label}</span>
       {status && (
-        <span className={cn("px-1.5 py-0 rounded border text-doc-label font-medium", periodStatusColor(status))}>
+        <span className={cn("rounded-full border px-2 py-0.5 font-medium leading-none", periodStatusColor(status))}>
           {periodStatusLabel(status)}
         </span>
       )}

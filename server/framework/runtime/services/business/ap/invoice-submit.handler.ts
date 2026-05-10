@@ -238,7 +238,7 @@ export async function handleSubmitForApproval(
     // Auto-resolve match_status for non-PO invoices (sets match_status = 'unmatched').
     // PO-based invoices are matched at post time; non-PO invoices have no PO to match against.
     const invoiceSource = String(invoice["invoice_source"] ?? "");
-    if (invoiceSource === "non_po" || invoiceSource === "one_time_vendor") {
+    if (invoiceSource === "non_po" || invoiceSource === "one_time_supplier") {
       await matchInvoice(trx, tenantId, invoiceId, principalId, logger);
     }
 

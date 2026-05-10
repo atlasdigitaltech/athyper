@@ -443,7 +443,7 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
         if (mappedData.status !== "proforma") {
           res.status(422).json({
             error: "VALIDATION_ERROR",
-            errors: [{ field: "supplier_invoice_number", message: "Vendor Invoice Number is required" }],
+            errors: [{ field: "supplier_invoice_number", message: "Supplier Invoice Number is required" }],
           });
           return;
         }

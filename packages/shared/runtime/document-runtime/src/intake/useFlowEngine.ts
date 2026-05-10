@@ -10,13 +10,13 @@
  *   - Tracks which derived fields have been manually overridden
  *   - Builds the summary panel lines from fields with summary_role set
  *   - Resolves synchronous derive_expressions reactively (match_type, fiscal dates)
- *   - Resolves async derive_expressions via fetch (vendor currency, payment terms)
+ *   - Resolves async derive_expressions via fetch (supplier currency, payment terms)
  *
  * Supported derive_expression patterns:
- *   ctx.user.<key>                            — seeded from userCtx
- *   vendor.default_currency(supplier_id)      — async: fetch /records/vendor/:id
- *   vendor.default_payment_term(...)          — async: same vendor fetch
- *   vendor.default_payment_method(...)        — async: same vendor fetch
+ *   ctx.user.<key>                              — seeded from userCtx
+ *   supplier.default_currency(supplier_id)      — async: fetch /records/company_code_supplier_profile
+ *   supplier.default_payment_term(...)          — async: same supplier profile fetch
+ *   supplier.default_payment_method(...)        — async: same supplier profile fetch
  *   company_code.base_currency(company_code_id) — async: fetch /records/company_code/:id → functional_currency
  *   matching.match_type_from_source(...)      — sync: map invoice_source → match type
  *   fiscal.year_from(posting_date, ...)       — sync: extract year from date
@@ -27,6 +27,7 @@
  *   today()                                   — today's ISO date string
  *   lookup.<domain_path>.<code>               — seed as the code string
  *   field.<field_name>                        — copy from another draft field
+ *   sequence.prefix(<prefix>)                 — lightweight client-side draft reference
  */
 
 import { useState, useCallback, useMemo, useEffect } from "react";
@@ -404,7 +405,7 @@ const SOURCE_TO_MATCH_TYPE: Record<string, string> = {
   po_based:       "three_way",
   contract_based: "two_way",
   non_po:         "no_match",
-  one_time_vendor:"no_match",
+  one_time_supplier:"no_match",
 };
 
 /**
@@ -437,6 +438,14 @@ function evalSyncDerivation(
     return new Date(d).getMonth() + 1;
   }
 
+  if (expr === "tax.mode_for_invoice_type(invoice_type, supplier_id, tax_group_id, company_code_id)") {
+    const invoiceType = String(draft["invoice_type"] ?? "");
+    if (invoiceType === "advance" || invoiceType === "retention_release") {
+      return "no_tax";
+    }
+    return undefined;
+  }
+
   return undefined; // not a sync pattern
 }
 
@@ -455,6 +464,26 @@ function companyCurrency(row: Record<string, unknown> | null | undefined): strin
     stringValue(row?.["base_currency_code"]) ??
     stringValue(row?.["currency_code"])
   )?.toUpperCase() ?? null;
+}
+
+function shouldSeedDefault(
+  field: FlowFieldBinding,
+  draft: Record<string, unknown>,
+  userCtx?: Record<string, unknown>,
+): boolean {
+  if (field.visible_when == null) return true;
+  return isTruthy(field.visible_when, makeCtx(draft, userCtx));
+}
+
+function sequenceDefaultValue(defaultSource: string): string | null {
+  const match = /^sequence\.prefix\(([^)]+)\)$/.exec(defaultSource.trim());
+  if (!match) return null;
+  const prefix = match[1]?.trim().replace(/^['"]|['"]$/g, "").toUpperCase();
+  if (!prefix) return null;
+  const now = new Date();
+  const yyyymm = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `${prefix}-${yyyymm}-${rand}`;
 }
 
 function rowLabel(row: Record<string, unknown>): string {
@@ -578,6 +607,7 @@ function buildInitialDraft(
   for (const step of steps) {
     for (const f of step.fields) {
       if (draft[f.field_name] !== undefined) continue; // already set by initialValues
+      if (!shouldSeedDefault(f, draft, userCtx)) continue;
 
       if (f.default_source?.startsWith("const:")) {
         const raw = f.default_source.slice(6);
@@ -591,6 +621,9 @@ function buildInitialDraft(
         if (lastDot > 7) {
           draft[f.field_name] = f.default_source.slice(lastDot + 1);
         }
+      } else if (f.default_source?.startsWith("sequence.prefix(")) {
+        const value = sequenceDefaultValue(f.default_source);
+        if (value) draft[f.field_name] = value;
       }
 
       // ctx.user.* derive_expression — seed synchronously if userCtx available
@@ -605,6 +638,7 @@ function buildInitialDraft(
   for (const step of steps) {
     for (const f of step.fields) {
       if (f.default_source?.startsWith("field.") && draft[f.field_name] === undefined) {
+        if (!shouldSeedDefault(f, draft, userCtx)) continue;
         const sourceField = f.default_source.slice(6);
         if (draft[sourceField] !== undefined) {
           draft[f.field_name] = draft[sourceField];
@@ -665,6 +699,7 @@ export function useFlowEngine(
   // ── Sync reactive derivations ─────────────────────────────────────────────
   // Re-runs only when the specific trigger fields change to avoid loops.
   const invoiceSource = state.draft["invoice_source"] as string | undefined;
+  const invoiceType   = state.draft["invoice_type"]   as string | undefined;
   const postingDate   = state.draft["posting_date"]   as string | undefined;
 
   useEffect(() => {
@@ -685,9 +720,9 @@ export function useFlowEngine(
     });
   // Only re-run when the trigger fields actually change
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceSource, postingDate, sortedSteps]);
+  }, [invoiceSource, invoiceType, postingDate, sortedSteps]);
 
-  // ── Async derivation: vendor lookup ──────────────────────────────────────
+  // ── Async derivation: supplier lookup ────────────────────────────────────
   // Watches supplier_id; fetches company_code_supplier_profile to derive
   // currency_code, payment_term_id (UUID FK), and payment_method_id.
   //
@@ -698,7 +733,7 @@ export function useFlowEngine(
 
   useEffect(() => {
     if (!supplierId) {
-      // Clear vendor-derived values when supplier is deselected
+      // Clear supplier-derived values when supplier is deselected
       setState((prev) => {
         const newDraft = { ...prev.draft };
         let changed = false;
@@ -923,9 +958,16 @@ export function useFlowEngine(
   // field and must not be permanently blocked.
   const canAdvance = useMemo(() => {
     const boundFieldNames = new Set(currentStep.fields.map((f) => f.field_name));
-    const required = (currentStep.advance_rule.required_fields ?? []).filter((fn) =>
+    const explicitRequired = (currentStep.advance_rule.required_fields ?? []).filter((fn) =>
       boundFieldNames.has(fn),
     );
+    const visibleRequired = visibleFields
+      .filter((f) =>
+        f.mode === "required" ||
+        (f.required_when != null && isTruthy(f.required_when, ruleCtx)),
+      )
+      .map((f) => f.field_name);
+    const required = Array.from(new Set([...explicitRequired, ...visibleRequired]));
     const allFilled = required.every((fieldName) => {
       const v = state.draft[fieldName];
       return v !== null && v !== undefined && v !== "";
@@ -938,7 +980,7 @@ export function useFlowEngine(
       return Boolean(evaluateRule(currentStep.advance_rule.predicate, ruleCtx));
     }
     return true;
-  }, [currentStep, state.draft, ruleCtx]);
+  }, [currentStep, visibleFields, state.draft, ruleCtx]);
 
   // Summary panel lines: collect metadata-marked fields across ALL steps.
   const summaryLines = useMemo<SummaryLine[]>(() => {

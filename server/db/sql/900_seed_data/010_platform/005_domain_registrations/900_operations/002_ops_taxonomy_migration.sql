@@ -178,8 +178,8 @@ RAISE NOTICE 'Supplier ops renamed: % rows', v_rows;
 --
 -- Sort orders slot between deactivate_supplier (30) and archive_supplier (40).
 -- handler_target maps to control.lifecycle_transition.operation_code:
---   'block'   → active → blocked  (seeded in 002_vendor_lifecycle.sql)
---   'unblock' → blocked → active  (seeded in 002_vendor_lifecycle.sql)
+--   'block'   → active → blocked  (seeded in 002_supplier_lifecycle.sql)
+--   'unblock' → blocked → active  (seeded in 002_supplier_lifecycle.sql)
 -- ══════════════════════════════════════════════════════════════════════════════
 
 INSERT INTO control.entity_operation

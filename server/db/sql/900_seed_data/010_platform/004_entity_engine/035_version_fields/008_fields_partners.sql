@@ -19,24 +19,21 @@ BEGIN
         INSERT INTO control.entity_field (
             entity_version_id, name, column_name, label, data_type, ui_type,
             cardinality, origin, is_required, is_filterable, is_sortable,
-            is_searchable, sort_order, created_by, enum_config)
+            is_searchable, validation, sort_order, created_by, enum_config)
 SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     cardinality, origin, is_required, is_filterable, is_sortable,
-    is_searchable, sort_order, created_by,
+    is_searchable, validation, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'legal_name',       'legal_name',       'Legal Name',        'string', 'text',     'one','standard',true, true,  true,  true, 110,v_su),
-            (v_ev,'customer_type',    'customer_type',    'Type',              'enum',   'select',   'one','standard',true, true,  true,  false,120,v_su),
-            (v_ev,'tax_identifier',   'tax_id',           'Tax ID',            'string', 'text',     'one','standard',false,true,  false, true, 130,v_su),
-            (v_ev,'credit_limit',     'credit_limit',     'Credit Limit',      'money',  'money',    'one','standard',false,true,  true,  false,140,v_su),
-            (v_ev,'credit_currency_id','credit_currency_id','Credit Currency', 'uuid',   'reference','one','standard',false,true,  false, false,150,v_su),
-            (v_ev,'payment_term_id',  'payment_term_id',  'Payment Terms',     'uuid',   'reference','one','standard',false,true,  false, false,160,v_su),
-            (v_ev,'account_manager_id','account_manager_id','Account Manager', 'uuid',   'reference','one','standard',false,true,  false, false,170,v_su),
-            (v_ev,'risk_rating',      'risk_rating',      'Risk Rating',       'enum',   'select',   'one','standard',false,true,  true,  false,180,v_su),
-            (v_ev,'is_key_account',   'is_key_account',   'Key Account',       'boolean','hidden',   'one','standard',false,true,  false, false,190,v_su)
+            (v_ev,'business_partner_id','business_partner_id','Business Partner', 'uuid',   'reference','one','standard',true, true,  false, false,'{"ref_entity":"business_partner"}'::jsonb,110,v_su),
+            (v_ev,'customer_code',      'customer_code',      'Customer Code',    'string', 'text',     'one','standard',true, true,  true,  true, NULL::jsonb,120,v_su),
+            (v_ev,'customer_type',      'customer_type',      'Type',             'enum',   'select',   'one','standard',true, true,  true,  false,NULL::jsonb,130,v_su),
+            (v_ev,'account_manager_id', 'account_manager_id', 'Account Manager',  'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"principal"}'::jsonb,140,v_su),
+            (v_ev,'risk_rating',        'risk_rating',        'Risk Rating',      'string', 'text',     'one','standard',false,true,  true,  false,NULL::jsonb,150,v_su),
+            (v_ev,'is_key_account',     'is_key_account',     'Key Account',      'boolean','checkbox', 'one','standard',false,true,  true,  false,NULL::jsonb,160,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
-       is_searchable, sort_order, created_by)
+       is_searchable, validation, sort_order, created_by)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -56,22 +53,23 @@ FROM (VALUES
         INSERT INTO control.entity_field (
             entity_version_id, name, column_name, label, data_type, ui_type,
             cardinality, origin, is_required, is_filterable, is_sortable,
-            is_searchable, sort_order, created_by, enum_config)
+            is_searchable, validation, sort_order, created_by, enum_config)
 SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     cardinality, origin, is_required, is_filterable, is_sortable,
-    is_searchable, sort_order, created_by,
+    is_searchable, validation, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'legal_name',        'legal_name',        'Legal Name',      'string', 'text',     'one','standard',true, true,  true,  true, 110,v_su),
-            (v_ev,'supplier_type',     'supplier_type',     'Type',            'enum',   'select',   'one','standard',true, true,  true,  false,120,v_su),
-            (v_ev,'tax_identifier',    'tax_id',            'Tax ID',          'string', 'text',     'one','standard',false,true,  false, true, 130,v_su),
-            (v_ev,'payment_term_id',   'payment_term_id',   'Payment Terms',   'uuid',   'reference','one','standard',false,true,  false, false,140,v_su),
-            (v_ev,'payment_method_id', 'payment_method_id', 'Payment Method',  'uuid',   'reference','one','standard',false,true,  false, false,150,v_su),
-            (v_ev,'account_manager_id','account_manager_id','Account Manager', 'uuid',   'reference','one','standard',false,true,  false, false,160,v_su),
-            (v_ev,'spend_category_id', 'spend_category_id', 'Spend Category',  'uuid',   'reference','one','standard',false,true,  false, false,170,v_su)
+            (v_ev,'business_partner_id','business_partner_id','Business Partner','uuid',   'reference','one','standard',true, true,  false, false,'{"ref_entity":"business_partner"}'::jsonb,110,v_su),
+            (v_ev,'supplier_code',      'supplier_code',      'Supplier Code',   'string', 'text',     'one','standard',true, true,  true,  true, NULL::jsonb,120,v_su),
+            (v_ev,'supplier_type',      'supplier_type',      'Type',            'enum',   'select',   'one','standard',true, true,  true,  false,NULL::jsonb,130,v_su),
+            (v_ev,'payment_term_id',    'payment_term_id',    'Payment Terms',   'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"payment_term"}'::jsonb,140,v_su),
+            (v_ev,'payment_method_id',  'payment_method_id',  'Payment Method',  'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"payment_method"}'::jsonb,150,v_su),
+            (v_ev,'account_manager_id', 'account_manager_id', 'Account Manager', 'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"principal"}'::jsonb,160,v_su),
+            (v_ev,'spend_category_id',  'spend_category_id',  'Spend Category',  'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"spend_category"}'::jsonb,170,v_su),
+            (v_ev,'is_payment_ready',   'is_payment_ready',   'Payment Ready',   'boolean','checkbox', 'one','standard',false,true,  true,  false,NULL::jsonb,180,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
-       is_searchable, sort_order, created_by)
+       is_searchable, validation, sort_order, created_by)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -84,25 +82,29 @@ FROM (VALUES
         INSERT INTO control.entity_field (
             entity_version_id, name, column_name, label, data_type, ui_type,
             cardinality, origin, is_required, is_filterable, is_sortable,
-            is_searchable, sort_order, created_by, enum_config)
+            is_searchable, validation, sort_order, created_by, enum_config)
 SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     cardinality, origin, is_required, is_filterable, is_sortable,
-    is_searchable, sort_order, created_by,
+    is_searchable, validation, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'legal_name',     'legal_name',     'Legal Name',    'string', 'text',     'one','standard',true, true,  true,  true, 110,v_su),
-            (v_ev,'date_of_birth',  'date_of_birth',  'Date of Birth', 'date',   'date',     'one','standard',false,false, false, false,120,v_su),
-            (v_ev,'national_identifier','national_id',    'National ID',   'string', 'text',     'one','standard',false,false, false, false,130,v_su),
-            (v_ev,'department_id',  'department_id',  'Department',    'uuid',   'reference','one','standard',false,true,  false, false,140,v_su),
-            (v_ev,'position_title', 'position_title', 'Position',      'string', 'text',     'one','standard',false,true,  true,  true, 150,v_su),
-            (v_ev,'hire_date',      'hire_date',      'Hire Date',     'date',   'date',     'one','standard',false,true,  true,  false,160,v_su),
-            (v_ev,'salary',         'salary',         'Salary',        'money',  'money',    'one','standard',false,false, false, false,170,v_su),
-            (v_ev,'salary_currency_id','salary_currency_id','Currency','uuid',   'reference','one','standard',false,false, false, false,180,v_su),
-            (v_ev,'manager_id',     'manager_id',     'Manager',       'uuid',   'reference','one','standard',false,true,  false, false,190,v_su),
-            (v_ev,'principal_id',   'principal_id',   'User Account',  'uuid',   'reference','one','standard',false,true,  false, false,200,v_su)
+            (v_ev,'employee_number', 'employee_number', 'Employee Number', 'string','text',     'one','standard',true, true,  true,  true, NULL::jsonb,110,v_su),
+            (v_ev,'principal_id',    'principal_id',    'User Account',    'uuid',  'reference','one','standard',false,true,  false, false,'{"ref_entity":"principal"}'::jsonb,120,v_su),
+            (v_ev,'first_name',      'first_name',      'First Name',      'string','text',     'one','standard',true, false, true,  true, NULL::jsonb,130,v_su),
+            (v_ev,'last_name',       'last_name',       'Last Name',       'string','text',     'one','standard',true, false, true,  true, NULL::jsonb,140,v_su),
+            (v_ev,'display_name',    'display_name',    'Display Name',    'string','text',     'one','standard',false,false, true,  true, NULL::jsonb,150,v_su),
+            (v_ev,'email',           'email',           'Email',           'string','email',    'one','standard',false,true,  true,  true, NULL::jsonb,160,v_su),
+            (v_ev,'phone',           'phone',           'Phone',           'string','phone',    'one','standard',false,false, false, true, NULL::jsonb,170,v_su),
+            (v_ev,'employment_type', 'employment_type', 'Employment Type', 'enum',  'select',   'one','standard',true, true,  true,  false,NULL::jsonb,180,v_su),
+            (v_ev,'department',      'department',      'Department',      'string','text',     'one','standard',false,true,  true,  true, NULL::jsonb,190,v_su),
+            (v_ev,'title',           'title',           'Title',           'string','text',     'one','standard',false,true,  true,  true, NULL::jsonb,200,v_su),
+            (v_ev,'manager_id',      'manager_id',      'Manager',         'uuid',  'reference','one','standard',false,true,  false, false,'{"ref_entity":"employee"}'::jsonb,210,v_su),
+            (v_ev,'company_code_id', 'company_code_id', 'Company Code',    'uuid',  'reference','one','standard',false,true,  false, false,'{"ref_entity":"company_code"}'::jsonb,220,v_su),
+            (v_ev,'hire_date',       'hire_date',       'Hire Date',       'date',  'date',     'one','standard',false,true,  true,  false,NULL::jsonb,230,v_su),
+            (v_ev,'termination_date','termination_date','Termination Date', 'date',  'date',     'one','standard',false,true,  true,  false,NULL::jsonb,240,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
-       is_searchable, sort_order, created_by)
+       is_searchable, validation, sort_order, created_by)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -115,31 +117,31 @@ FROM (VALUES
         INSERT INTO control.entity_field (
             entity_version_id, name, column_name, label, data_type, ui_type,
             cardinality, origin, is_required, is_filterable, is_sortable,
-            is_searchable, sort_order, created_by, enum_config)
+            is_searchable, validation, sort_order, created_by, enum_config)
 SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     cardinality, origin, is_required, is_filterable, is_sortable,
-    is_searchable, sort_order, created_by,
+    is_searchable, validation, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'customer_id',                   'customer_id',                   'Customer',            'uuid',   'reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'company_code_id',               'company_code_id',               'Company Code',        'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'credit_limit',                  'credit_limit',                  'Credit Limit',        'money',  'money',    'one','standard',false,true,  true,  false,130,v_su),
-            (v_ev,'credit_limit_currency_code',    'credit_limit_currency_code',    'Credit Currency',     'string', 'text',     'one','standard',false,true,  false, false,140,v_su),
-            (v_ev,'credit_rating',                 'credit_rating',                 'Credit Rating',       'string', 'text',     'one','standard',false,true,  true,  false,150,v_su),
-            (v_ev,'is_blocked',                    'is_blocked',                    'Blocked',             'boolean','toggle',   'one','standard',false,true,  true,  false,160,v_su),
-            (v_ev,'block_reason',                  'block_reason',                  'Block Reason',        'string', 'text',     'one','standard',false,false, false, false,170,v_su),
-            (v_ev,'default_accounting_profile_id', 'default_accounting_profile_id', 'Accounting Profile',  'uuid',   'reference','one','standard',false,true,  false, false,180,v_su),
-            (v_ev,'tax_group_id',                  'tax_group_id',                  'Tax Group',           'uuid',   'reference','one','standard',false,true,  false, false,190,v_su),
-            (v_ev,'default_receipt_method_id',     'default_receipt_method_id',     'Receipt Method',      'uuid',   'reference','one','standard',false,true,  false, false,200,v_su),
-            (v_ev,'default_dimension_set_id',      'default_dimension_set_id',      'Dimension Set',       'uuid',   'reference','one','standard',false,true,  false, false,210,v_su),
-            (v_ev,'payment_term_id',               'payment_term_id',               'Payment Terms',       'uuid',   'reference','one','standard',false,true,  false, false,220,v_su),
-            (v_ev,'currency_code',                 'currency_code',                 'Currency',            'string', 'text',     'one','standard',false,true,  false, false,230,v_su),
-            (v_ev,'statement_cycle_code',          'statement_cycle_code',          'Statement Cycle',     'string', 'text',     'one','standard',false,true,  false, false,240,v_su),
-            (v_ev,'dunning_policy_id',             'dunning_policy_id',             'Dunning Policy',      'uuid',   'reference','one','standard',false,true,  false, false,250,v_su),
-            (v_ev,'status',                        'status',                        'Status',              'lifecycle_state','select','one','standard',true,true,true,false,260,v_su)
+            (v_ev,'customer_id',                   'customer_id',                   'Customer',            'uuid',   'reference','one','standard',true, true,  false, false,'{"ref_entity":"customer"}'::jsonb,110,v_su),
+            (v_ev,'company_code_id',               'company_code_id',               'Company Code',        'uuid',   'reference','one','standard',true, true,  false, false,'{"ref_entity":"company_code"}'::jsonb,120,v_su),
+            (v_ev,'credit_limit',                  'credit_limit',                  'Credit Limit',        'money',  'money',    'one','standard',false,true,  true,  false,NULL::jsonb,130,v_su),
+            (v_ev,'credit_limit_currency_code',    'credit_limit_currency_code',    'Credit Currency',     'string', 'text',     'one','standard',false,true,  false, false,NULL::jsonb,140,v_su),
+            (v_ev,'credit_rating',                 'credit_rating',                 'Credit Rating',       'string', 'text',     'one','standard',false,true,  true,  false,NULL::jsonb,150,v_su),
+            (v_ev,'is_blocked',                    'is_blocked',                    'Blocked',             'boolean','toggle',   'one','standard',false,true,  true,  false,NULL::jsonb,160,v_su),
+            (v_ev,'block_reason',                  'block_reason',                  'Block Reason',        'string', 'text',     'one','standard',false,false, false, false,NULL::jsonb,170,v_su),
+            (v_ev,'default_accounting_profile_id', 'default_accounting_profile_id', 'Accounting Profile',  'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"accounting_profile"}'::jsonb,180,v_su),
+            (v_ev,'tax_group_id',                  'tax_group_id',                  'Tax Group',           'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"tax_group"}'::jsonb,190,v_su),
+            (v_ev,'default_receipt_method_id',     'default_receipt_method_id',     'Receipt Method',      'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"payment_method"}'::jsonb,200,v_su),
+            (v_ev,'default_dimension_set_id',      'default_dimension_set_id',      'Dimension Set',       'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"dimension_set"}'::jsonb,210,v_su),
+            (v_ev,'payment_term_id',               'payment_term_id',               'Payment Terms',       'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"payment_term"}'::jsonb,220,v_su),
+            (v_ev,'currency_code',                 'currency_code',                 'Currency',            'string', 'text',     'one','standard',false,true,  false, false,NULL::jsonb,230,v_su),
+            (v_ev,'statement_cycle_code',          'statement_cycle_code',          'Statement Cycle',     'string', 'text',     'one','standard',false,true,  false, false,NULL::jsonb,240,v_su),
+            (v_ev,'dunning_policy_id',             'dunning_policy_id',             'Dunning Policy',      'uuid',   'reference','one','standard',false,true,  false, false,NULL::jsonb,250,v_su),
+            (v_ev,'status',                        'status',                        'Status',              'lifecycle_state','select','one','standard',true,true,true,false,NULL::jsonb,260,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
-       is_searchable, sort_order, created_by)
+       is_searchable, validation, sort_order, created_by)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -152,29 +154,29 @@ FROM (VALUES
         INSERT INTO control.entity_field (
             entity_version_id, name, column_name, label, data_type, ui_type,
             cardinality, origin, is_required, is_filterable, is_sortable,
-            is_searchable, sort_order, created_by, enum_config)
+            is_searchable, validation, sort_order, created_by, enum_config)
 SELECT entity_version_id, name, column_name, label, data_type, ui_type,
     cardinality, origin, is_required, is_filterable, is_sortable,
-    is_searchable, sort_order, created_by,
+    is_searchable, validation, sort_order, created_by,
     CASE WHEN data_type = 'enum' THEN '{}'::jsonb END
 FROM (VALUES
-            (v_ev,'supplier_id',                      'supplier_id',                      'Supplier',             'uuid',   'reference','one','standard',true, true,  false, false,110,v_su),
-            (v_ev,'company_code_id',                  'company_code_id',                  'Company Code',         'uuid',   'reference','one','standard',true, true,  false, false,120,v_su),
-            (v_ev,'is_blocked',                       'is_blocked',                       'Blocked',              'boolean','toggle',   'one','standard',false,true,  true,  false,130,v_su),
-            (v_ev,'block_reason',                     'block_reason',                     'Block Reason',         'string', 'text',     'one','standard',false,false, false, false,140,v_su),
-            (v_ev,'currency_code',                    'currency_code',                    'Currency',             'string', 'text',     'one','standard',false,true,  false, false,150,v_su),
-            (v_ev,'default_accounting_profile_id',    'default_accounting_profile_id',    'Accounting Profile',   'uuid',   'reference','one','standard',false,true,  false, false,160,v_su),
-            (v_ev,'payment_term_id',                  'payment_term_id',                  'Payment Terms',        'uuid',   'reference','one','standard',false,true,  false, false,170,v_su),
-            (v_ev,'payment_method_id',                'payment_method_id',                'Payment Method',       'uuid',   'reference','one','standard',false,true,  false, false,180,v_su),
-            (v_ev,'preferred_remittance_bank_link_id','preferred_remittance_bank_link_id','Remittance Bank',      'uuid',   'reference','one','standard',false,true,  false, false,190,v_su),
-            (v_ev,'tax_group_id',                     'tax_group_id',                     'Tax Group',            'uuid',   'reference','one','standard',false,true,  false, false,200,v_su),
-            (v_ev,'default_wht_tax_group_id',         'default_wht_tax_group_id',         'Default WHT Group',    'uuid',   'reference','one','standard',false,true,  false, false,210,v_su),
-            (v_ev,'default_dimension_set_id',         'default_dimension_set_id',         'Dimension Set',        'uuid',   'reference','one','standard',false,true,  false, false,220,v_su),
-            (v_ev,'invoice_hold_policy_id',           'invoice_hold_policy_id',           'Invoice Hold Policy',  'uuid',   'reference','one','standard',false,true,  false, false,230,v_su),
-            (v_ev,'status',                           'status',                           'Status',               'lifecycle_state','select','one','standard',true,true,true,false,240,v_su)
+            (v_ev,'supplier_id',                      'supplier_id',                      'Supplier',             'uuid',   'reference','one','standard',true, true,  false, false,'{"ref_entity":"supplier"}'::jsonb,110,v_su),
+            (v_ev,'company_code_id',                  'company_code_id',                  'Company Code',         'uuid',   'reference','one','standard',true, true,  false, false,'{"ref_entity":"company_code"}'::jsonb,120,v_su),
+            (v_ev,'is_blocked',                       'is_blocked',                       'Blocked',              'boolean','toggle',   'one','standard',false,true,  true,  false,NULL::jsonb,130,v_su),
+            (v_ev,'block_reason',                     'block_reason',                     'Block Reason',         'string', 'text',     'one','standard',false,false, false, false,NULL::jsonb,140,v_su),
+            (v_ev,'currency_code',                    'currency_code',                    'Currency',             'string', 'text',     'one','standard',false,true,  false, false,NULL::jsonb,150,v_su),
+            (v_ev,'default_accounting_profile_id',    'default_accounting_profile_id',    'Accounting Profile',   'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"accounting_profile"}'::jsonb,160,v_su),
+            (v_ev,'payment_term_id',                  'payment_term_id',                  'Payment Terms',        'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"payment_term"}'::jsonb,170,v_su),
+            (v_ev,'payment_method_id',                'payment_method_id',                'Payment Method',       'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"payment_method"}'::jsonb,180,v_su),
+            (v_ev,'preferred_remittance_bank_link_id','preferred_remittance_bank_link_id','Remittance Bank',      'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"business_partner_bank_account"}'::jsonb,190,v_su),
+            (v_ev,'tax_group_id',                     'tax_group_id',                     'Tax Group',            'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"tax_group"}'::jsonb,200,v_su),
+            (v_ev,'default_wht_tax_group_id',         'default_wht_tax_group_id',         'Default WHT Group',    'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"tax_group"}'::jsonb,210,v_su),
+            (v_ev,'default_dimension_set_id',         'default_dimension_set_id',         'Dimension Set',        'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"dimension_set"}'::jsonb,220,v_su),
+            (v_ev,'invoice_hold_policy_id',           'invoice_hold_policy_id',           'Invoice Hold Policy',  'uuid',   'reference','one','standard',false,true,  false, false,NULL::jsonb,230,v_su),
+            (v_ev,'status',                           'status',                           'Status',               'lifecycle_state','select','one','standard',true,true,true,false,NULL::jsonb,240,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
-       is_searchable, sort_order, created_by)
+       is_searchable, validation, sort_order, created_by)
         ON CONFLICT DO NOTHING;
     END IF;
 

@@ -65,6 +65,58 @@ export interface BulkPreflightRouteDeps {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const BULK_MAX_IDS = 500;
+const TARGET_STATUS: Record<string, string> = {
+  submit:  "pending_approval",
+  approve: "approved",
+  deny:    "rejected",
+  reject:  "rejected",
+  post:    "posted",
+  cancel:  "cancelled",
+  void:    "cancelled",
+  close:   "closed",
+  archive: "archived",
+};
+
+function requestIds(body: Record<string, unknown>): string[] {
+  const raw = Array.isArray(body["ids"])
+    ? body["ids"]
+    : Array.isArray(body["recordIds"])
+    ? body["recordIds"]
+    : [];
+  return raw.map(String);
+}
+
+async function operationEnabled(
+  db: AnyDb,
+  tenantId: string,
+  entityCode: string,
+  action: string,
+): Promise<boolean> {
+  const operation = await db
+    .selectFrom("control.entity_operation as eo")
+    .select(["eo.is_enabled"] as never[])
+    .where("eo.entity_name" as never, "=", entityCode as never)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .where((eb: any) =>
+      eb.or([
+        eb("eo.permission_code" as never, "=", action as never),
+        eb("eo.handler_target" as never, "=", action as never),
+        eb("eo.permission_code" as never, "like", (`%.${action}`) as never),
+      ]),
+    )
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .where((eb: any) =>
+      eb.or([
+        eb("eo.tenant_id" as never, "is", null),
+        eb("eo.tenant_id" as never, "=", tenantId as never),
+      ]),
+    )
+    .orderBy("eo.tenant_id" as never, "desc")
+    .limit(1)
+    .executeTakeFirst() as { is_enabled: boolean } | undefined;
+
+  return operation?.is_enabled === true;
+}
 
 // ─── Lifecycle helpers (read-only mirrors of bulk-action.route.ts) ─────────────
 
@@ -185,6 +237,25 @@ async function classifyTransition(
   return { recordId: id, status: "eligible", currentState };
 }
 
+async function classifyCopy(
+  db: AnyDb,
+  tenantId: string,
+  fullTable: `${string}.${string}`,
+  id: string,
+): Promise<EntityActionEligibility> {
+  const current = await db
+    .selectFrom(fullTable)
+    .select(["id", "status"] as never[])
+    .where("id" as never, "=", id as never)
+    .where("tenant_id" as never, "=", tenantId as never)
+    .executeTakeFirst() as { id: string; status?: string | null } | undefined;
+
+  if (!current) {
+    return { recordId: id, status: "denied", reason: "Record not found" };
+  }
+  return { recordId: id, status: "eligible", currentState: current.status ?? undefined };
+}
+
 // ─── Route factory ─────────────────────────────────────────────────────────────
 
 export function createBulkPreflightRoute(router: Router, deps: BulkPreflightRouteDeps): Router {
@@ -205,8 +276,8 @@ export function createBulkPreflightRoute(router: Router, deps: BulkPreflightRout
 
       const body         = req.body as Record<string, unknown>;
       const action       = String(body["action"] ?? "");
-      const ids          = Array.isArray(body["ids"]) ? (body["ids"] as unknown[]).map(String) : [];
-      const targetStatus = String(body["targetStatus"] ?? "");
+      const ids          = requestIds(body);
+      const targetStatus = String(body["targetStatus"] ?? TARGET_STATUS[action] ?? "");
 
       // ── Validate ────────────────────────────────────────────────────────────
 
@@ -226,12 +297,16 @@ export function createBulkPreflightRoute(router: Router, deps: BulkPreflightRout
         res.status(400).json({ error: "INVALID_IDS", message: "All ids must be valid UUIDs" });
         return;
       }
-      if (action === "status_transition" && !targetStatus) {
+      if ((action === "status_transition" || TARGET_STATUS[action]) && !targetStatus) {
         res.status(400).json({ error: "MISSING_TARGET_STATUS", message: "'targetStatus' is required for status_transition" });
         return;
       }
-      if (action !== "status_transition") {
+      if (action !== "status_transition" && action !== "copy" && !TARGET_STATUS[action]) {
         res.status(400).json({ error: "UNSUPPORTED_ACTION", message: `Preflight for action '${action}' is not yet supported` });
+        return;
+      }
+      if (action === "copy" && !(await operationEnabled(db, tenantId, entityCode, action))) {
+        res.status(403).json({ error: "OPERATION_DISABLED", message: `Operation '${action}' is not enabled for '${entityCode}'` });
         return;
       }
 
@@ -260,9 +335,9 @@ export function createBulkPreflightRoute(router: Router, deps: BulkPreflightRout
 
       const records: EntityActionEligibility[] = [];
       for (const id of ids) {
-        const result = await classifyTransition(
-          db, entityCode, tenantId, fullTable, id, targetStatus, routeCache,
-        );
+        const result = action === "copy"
+          ? await classifyCopy(db, tenantId, fullTable, id)
+          : await classifyTransition(db, entityCode, tenantId, fullTable, id, targetStatus, routeCache);
         records.push(result);
       }
 

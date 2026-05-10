@@ -666,6 +666,7 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
 
       if (parsed.period !== null) q = q.where("je.period_number", "=", parsed.period) as typeof q;
       if (parsed.bookId) q = q.where("je.book_id", "=", parsed.bookId) as typeof q;
+      if (parsed.transactionCurrency) q = q.where("je.transaction_currency", "=", parsed.transactionCurrency) as typeof q;
       if (status) q = q.where("je.status", "=", status) as typeof q;
       if (sourceDocType) q = q.where("je.source_doc_type", "=", sourceDocType) as typeof q;
       if (search) {

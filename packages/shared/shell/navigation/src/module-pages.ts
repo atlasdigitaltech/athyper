@@ -85,7 +85,7 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
     { key: "bp",        label: "Business Partners", href: "/app/business_partner" },
     { key: "ap",        label: "AP workbench",      href: "/finance/ap" },
     { key: "ar",        label: "AR workbench",      href: "/finance/ar" },
-    { key: "journals",  label: "Journal entries",   href: "/finance/gl?tab=gl-detail" },
+    { key: "journals",  label: "Journal entries",   href: "/finance/gl?tab=journals" },
     { key: "gl",        label: "GL workbench",      href: "/finance/gl" },
     { key: "coa",       label: "Chart of accounts", href: "/finance/coa" },
   ],

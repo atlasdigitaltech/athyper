@@ -2,7 +2,21 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
 import { RUNTIME_API_URL, buildRuntimeHeaders, forwardSearchParams } from "@/lib/server/runtime-headers";
 
-const ALLOWED = ["scopeType", "scopeId", "fiscalYear", "period", "bookId", "currency", "comparative"] as const;
+const ALLOWED = [
+  "scopeType",
+  "scopeId",
+  "fiscalYear",
+  "period",
+  "bookId",
+  "currency",
+  "comparative",
+  "dateFrom",
+  "dateTo",
+  "datePreset",
+  "relativeRange",
+  "groupBy",
+  "accumulatedValues",
+] as const;
 
 export async function GET(req: Request) {
   const session = await getServerSession();

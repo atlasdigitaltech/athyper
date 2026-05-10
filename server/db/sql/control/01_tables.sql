@@ -2202,11 +2202,11 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     ),
     -- boolean naming convention
     CONSTRAINT ef_bool_naming_chk       CHECK (
-        data_type <> 'boolean' OR name ~ '^(is_|has_|can_|allow_|enable_)'
+        data_type <> 'boolean' OR name ~ '^(is_|has_|can_|allow_|enable_|supports_|requires_|override_)'
     ),
     -- _id suffix → uuid data type
     CONSTRAINT ef_id_suffix_chk         CHECK (
-        name NOT LIKE '%_id' OR data_type = ANY (ARRAY['uuid','reference','uuid[]'])
+        name NOT LIKE '%\_id' ESCAPE '\' OR data_type = ANY (ARRAY['uuid','reference','uuid_array','uuid[]'])
     ),
     CONSTRAINT ef_cardinality_chk       CHECK (
         cardinality = ANY (ARRAY['one','many','zero_or_one'])
@@ -4120,11 +4120,11 @@ COMMENT ON TABLE control.tax_group_component IS
 
 
 -- ── control.wht_threshold_config ─────────────────────────────────────────────
--- R7-A: per-vendor WHT activation threshold rules.
+-- R7-A: per-supplier WHT activation threshold rules.
 -- Jurisdiction-specific (e.g. IN-TDS section 194C, PH-EWT).
--- Answers: "does WHT apply before a vendor crosses X in payments this period?"
+-- Answers: "does WHT apply before a supplier crosses X in payments this period?"
 -- per_transaction=true → threshold applies per-payment (no accumulation needed).
--- per_transaction=false → threshold applies to YTD total; wht_vendor_accumulator tracks it.
+-- per_transaction=false → threshold applies to YTD total; wht_supplier_accumulator tracks it.
 CREATE TABLE IF NOT EXISTS control.wht_threshold_config (
     -- Identity
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -4163,9 +4163,9 @@ CREATE TABLE IF NOT EXISTS control.wht_threshold_config (
 );
 
 COMMENT ON TABLE control.wht_threshold_config IS
-    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status column). R7-A: per-vendor WHT activation thresholds (India TDS, Philippines EWT, etc.). '
-    'per_transaction=false: WHT only activates after vendor YTD payments exceed '
-    'threshold_amount in reset_period — accumulation tracked in aggregate.wht_vendor_accumulator. '
+    'ARCHETYPE=C;SCOPE=T;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (no status column). R7-A: per-supplier WHT activation thresholds (India TDS, Philippines EWT, etc.). '
+    'per_transaction=false: WHT only activates after supplier YTD payments exceed '
+    'threshold_amount in reset_period — accumulation tracked in aggregate.wht_supplier_accumulator. '
     'per_transaction=true: WHT applies per-payment regardless of prior payments.';
 
 

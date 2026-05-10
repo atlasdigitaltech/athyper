@@ -79,7 +79,7 @@ Relevant files:
 - `packages/shared/runtime/entity-runtime/src/detail/ChildSummaryCardsPanel.tsx`
 - `packages/shared/runtime/entity-runtime/src/detail/MasterDetailPage.tsx`
 - `server/db/sql/900_seed_data/010_platform/005_domain_registrations/100_master/000_business_partner.sql`
-- `server/db/sql/900_seed_data/010_platform/005_domain_registrations/100_master/008_vendor_governance.sql`
+- `server/db/sql/900_seed_data/010_platform/005_domain_registrations/100_master/008_supplier_governance.sql`
 
 ## Front-End UI Recommendation
 
@@ -414,7 +414,7 @@ Cons:
    - `authorized_representative`
    - `beneficial_controller`
    - `advisor`
-3. Update entity field metadata in `008_vendor_governance.sql`.
+3. Update entity field metadata in `008_supplier_governance.sql`.
 4. Update Governance tab config in `000_business_partner.sql`.
 5. Regenerate Prisma/Kysely types.
 

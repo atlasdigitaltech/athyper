@@ -250,7 +250,8 @@ export async function postInvoiceTaxCalculations(
   const now  = new Date();
 
   const hdrResult = await sql<{ invoice_date: string; tax_mode: string | null }>`
-    SELECT invoice_date, tax_mode
+    SELECT COALESCE(supplier_invoice_date, document_date) AS invoice_date,
+           tax_mode
       FROM document.purchase_invoice
      WHERE id = ${invoiceId} AND tenant_id = ${tenantId}
      LIMIT 1

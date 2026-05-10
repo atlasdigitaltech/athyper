@@ -359,7 +359,7 @@ BEGIN
     ('CST-A-MAT-CONS',      'Consumables & Spares',            'CST-A-MAT',  3, 'asset',        'posting', 'debit',  'inventory', 1420, 'GRP-A-INV-RAW', NULL),
     ('CST-A-MAT-TRANSIT',   'Materials in Transit',            'CST-A-MAT',  3, 'asset',        'posting', 'debit',  NULL,        1430, 'GRP-A-INV-RAW', NULL),
     ('CST-A-PRE-ADVSUB',    'Advances to Subcontractors',      'CST-A-PRE',  3, 'asset',        'posting', 'debit',  'ap',        1451, 'GRP-A-OAR-ADVANCE', NULL),
-    ('CST-A-PRE-ADVVEND',   'Advances to Vendors',             'CST-A-PRE',  3, 'asset',        'posting', 'debit',  'ap',        1452, 'GRP-A-OAR-ADVANCE', NULL),
+    ('CST-A-PRE-ADVVEND',   'Advances to Suppliers',           'CST-A-PRE',  3, 'asset',        'posting', 'debit',  'ap',        1452, 'GRP-A-OAR-ADVANCE', NULL),
     ('CST-A-PRE-BOND',      'Performance & Bid Bonds',         'CST-A-PRE',  3, 'asset',        'posting', 'debit',  NULL,        1455, 'GRP-A-OAR-DEPOSIT', NULL),
     ('CST-A-PRE-OTHER',     'Other Prepaid Expenses',          'CST-A-PRE',  3, 'asset',        'posting', 'debit',  NULL,        1459, 'GRP-A-OAR-PREPAY', NULL),
     ('CST-A-ICR-LN',        'IC Loans Receivable',             'CST-A-ICR',  3, 'asset',        'posting', 'debit',  NULL,        1481, 'GRP-A-IC-LN', NULL),
@@ -398,7 +398,7 @@ BEGIN
     -- ── LIABILITIES L3 ─────────────────────────────────────────────────────
     INSERT INTO tmp_gl_socpa (code, name, parent_code, level_no, account_class, node_type, normal_balance, subledger_type, sort_order, group_map) VALUES
     ('CST-L-AP-SUB',      'Subcontractor Payables',            'CST-L-AP',     3, 'liability', 'posting', 'credit', 'ap',   2110, 'GRP-L-AP-TRADE'),
-    ('CST-L-AP-VEND',     'Material & Equipment Vendors',      'CST-L-AP',     3, 'liability', 'posting', 'credit', 'ap',   2115, 'GRP-L-AP-TRADE'),
+    ('CST-L-AP-VEND',     'Material & Equipment Suppliers',    'CST-L-AP',     3, 'liability', 'posting', 'credit', 'ap',   2115, 'GRP-L-AP-TRADE'),
     ('CST-L-AP-UTIL',     'Utility & Service Payables',        'CST-L-AP',     3, 'liability', 'posting', 'credit', 'ap',   2120, 'GRP-L-AP-TRADE'),
     ('CST-L-CL-GOVT',     'Advance Billings — Government',     'CST-L-CL',     3, 'liability', 'posting', 'credit', NULL,   2210, 'GRP-L-CL-ADV'),
     ('CST-L-CL-PRIV',     'Advance Billings — Private',        'CST-L-CL',     3, 'liability', 'posting', 'credit', NULL,   2220, 'GRP-L-CL-ADV'),
@@ -641,7 +641,7 @@ BEGIN
     ('TRD-A-INV-TRANSIT', 'Goods in Transit',                  'TRD-A-INV',  3, 'asset',        'posting', 'debit',  NULL,        1315, 'GRP-A-INV-TRADE'),
     ('TRD-A-INV-WH',      'Goods in Warehouse',                'TRD-A-INV',  3, 'asset',        'posting', 'debit',  'inventory', 1320, 'GRP-A-INV-TRADE'),
     ('TRD-A-INV-PROV',    'Inventory Write-Down Provision',    'TRD-A-INV',  3, 'contra_asset', 'posting', 'credit', NULL,        1390, 'GRP-A-INV-RAW'),
-    ('TRD-A-PRE-ADVVEND', 'Advances to Vendors',               'TRD-A-PRE',  3, 'asset',        'posting', 'debit',  'ap',        1410, 'GRP-A-OAR-ADVANCE'),
+    ('TRD-A-PRE-ADVVEND', 'Advances to Suppliers',             'TRD-A-PRE',  3, 'asset',        'posting', 'debit',  'ap',        1410, 'GRP-A-OAR-ADVANCE'),
     ('TRD-A-PRE-CUSTOMS', 'Customs Duties Prepaid',            'TRD-A-PRE',  3, 'asset',        'posting', 'debit',  NULL,        1415, 'GRP-A-OAR-PREPAY'),
     ('TRD-A-PRE-VAT',     'VAT Input Recoverable',             'TRD-A-PRE',  3, 'asset',        'posting', 'debit',  NULL,        1420, 'GRP-L-TAX-VAT-IN'),
     ('TRD-A-PRE-OTHER',   'Other Prepaid Expenses',            'TRD-A-PRE',  3, 'asset',        'posting', 'debit',  NULL,        1430, 'GRP-A-OAR-PREPAY'),

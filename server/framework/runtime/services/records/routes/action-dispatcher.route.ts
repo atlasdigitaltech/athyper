@@ -54,6 +54,7 @@ import {
   handleVoidPayment,
 } from "../../business/ap/payment-posting.service.js";
 import { handleReverseJournalEntry } from "../../finance/routes/journal.route.js";
+import { copyRecordFromMetadata } from "../copy-record.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -345,6 +346,14 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
         return;
       }
 
+      if (target === "copy") {
+        const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
+        const copied = await copyRecordFromMetadata(db, tenantId, entityCode, recordId, actorId, logger);
+        logger?.info("action_dispatch_copy_metadata", { entity: entityCode, tenantId, recordId, newId: copied.id });
+        res.status(201).json({ ok: true, newRecord: { id: copied.id }, record: copied.record, copiedChildren: copied.copiedChildren });
+        return;
+      }
+
       // ── Dispatch: status transition ───────────────────────────────────────────
       const targetStatus = TARGET_STATUS[target];
       if (targetStatus) {
@@ -421,7 +430,7 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
       }
 
       // ── Dispatch: copy / reverse ──────────────────────────────────────────────
-      if (target === "copy" || target === "reverse") {
+      if (target === "reverse") {
         // Exclude system columns that must be fresh on the new record
         const EXCLUDE_COLS = new Set([
           "id", "tenant_id", "created_at", "created_by",

@@ -40,6 +40,7 @@ export interface InvoiceIntakeLinesGridProps {
   onValidationStatusChange?: (status: InvoiceLineValidationStatus) => void;
   currencyCode?: string;
   minRows?: number;
+  defaultRow?: unknown;
   error?: string | null;
 }
 
@@ -58,14 +59,29 @@ const LINE_HEADER_CELL = "px-2 py-2 text-xs font-medium text-muted-foreground";
 const LINE_BODY_CELL = "min-w-0 px-2 py-1.5";
 const LINE_ROWS_SCROLL_AREA = "max-h-[28rem] overflow-y-auto";
 
-function newDraftLine(): InvoiceLineDraft {
+function defaultRowValue(defaultRow: unknown, keys: string[], fallback: string): string {
+  if (!defaultRow || typeof defaultRow !== "object") return fallback;
+  const row = defaultRow as Record<string, unknown>;
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== null && value !== undefined && String(value).trim()) return String(value);
+  }
+  return fallback;
+}
+
+function defaultProcurementType(defaultRow: unknown): ProcurementType {
+  const value = defaultRowValue(defaultRow, ["procurement_type"], "services") as ProcurementType;
+  return PROCUREMENT_TYPES.some((type) => type.value === value) ? value : "services";
+}
+
+function newDraftLine(defaultRow?: unknown): InvoiceLineDraft {
   return {
     key:              `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    description:      "",
-    procurement_type: "services",
-    uom_code:         "EA",
-    quantity:         "1",
-    unit_price:       "",
+    description:      defaultRowValue(defaultRow, ["item_description", "description"], ""),
+    procurement_type: defaultProcurementType(defaultRow),
+    uom_code:         defaultRowValue(defaultRow, ["uom_code", "unit_code"], "EA"),
+    quantity:         defaultRowValue(defaultRow, ["quantity"], "1"),
+    unit_price:       defaultRowValue(defaultRow, ["unit_price", "gross_amount", "line_amount"], ""),
   };
 }
 
@@ -95,11 +111,11 @@ function payloadLineToDraft(line: unknown): InvoiceLineDraft | null {
   };
 }
 
-function normalizeDraftLines(value: unknown, minRows = 1): InvoiceLineDraft[] {
+function normalizeDraftLines(value: unknown, minRows = 1, defaultRow?: unknown): InvoiceLineDraft[] {
   const rows = Array.isArray(value)
     ? value.map(payloadLineToDraft).filter((line): line is InvoiceLineDraft => Boolean(line))
     : [];
-  while (rows.length < minRows) rows.push(newDraftLine());
+  while (rows.length < minRows) rows.push(newDraftLine(defaultRow));
   return rows;
 }
 
@@ -183,9 +199,10 @@ export function InvoiceIntakeLinesGrid({
   onValidationStatusChange,
   currencyCode = "USD",
   minRows = 1,
+  defaultRow,
   error,
 }: InvoiceIntakeLinesGridProps) {
-  const [draftLines, setDraftLines] = useState<InvoiceLineDraft[]>(() => normalizeDraftLines(value, minRows));
+  const [draftLines, setDraftLines] = useState<InvoiceLineDraft[]>(() => normalizeDraftLines(value, minRows, defaultRow));
   const onChangeRef = useRef(onChange);
   const onValidationStatusChangeRef = useRef(onValidationStatusChange);
 
@@ -215,7 +232,7 @@ export function InvoiceIntakeLinesGrid({
   }
 
   function addDraftLine() {
-    setDraftLines((prev) => [...prev, newDraftLine()]);
+    setDraftLines((prev) => [...prev, newDraftLine(defaultRow)]);
   }
 
   function removeDraftLine(key: string) {
@@ -223,7 +240,7 @@ export function InvoiceIntakeLinesGrid({
   }
 
   function resetDraftLines() {
-    setDraftLines(normalizeDraftLines(value, minRows));
+    setDraftLines(normalizeDraftLines(value, minRows, defaultRow));
   }
 
   const activeDraftLineCount = draftLines.filter((line) => !isBlankDraft(line)).length;

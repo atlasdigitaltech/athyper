@@ -291,7 +291,7 @@ END $p04$;
 -- ║  AP profiles (INBOUND/AP):                                               ║
 -- ║    AP_NON_PO_STANDARD   — OPEX Non-PO invoices                           ║
 -- ║    AP_NON_PO_CAPEX      — CAPEX Non-PO invoices                          ║
--- ║    AP_ADVANCE_VENDOR    — Vendor advance / prepayment                    ║
+-- ║    AP_ADVANCE_SUPPLIER  — Supplier advance / prepayment                  ║
 -- ║    AP_RETENTION_RELEASE — AP Retention Payable release                   ║
 -- ║                                                                          ║
 -- ║  AR profiles (OUTBOUND/AR):                                              ║
@@ -327,8 +327,8 @@ BEGIN
      'INBOUND', 'AP', 'CAPEX',
      'building', 'indigo', 110, 'active', v_su),
 
-    (v_tid, 'AP_ADVANCE_VENDOR',
-     'AP Advance — Vendor Level',
+    (v_tid, 'AP_ADVANCE_SUPPLIER',
+     'AP Advance — Supplier Level',
      'Standalone advance payment to supplier without a prior invoice. '
      'Dr AP Advance (asset) / Cr Bank Clearing on payment. '
      'Recovered by later invoices.',
@@ -639,7 +639,7 @@ BEGIN
     (v_tid, 'PM-LOCAL-TRF',
      'Local Bank Transfer',
      'Domestic electronic fund transfer (SARIE, ACH). '
-     'Standard AP payment method for routine vendor payments.',
+     'Standard AP payment method for routine supplier payments.',
      'outbound', 'bank_transfer',
      true,  true,  true,  false,
      true,  true,  true,  true,  false,
@@ -648,7 +648,7 @@ BEGIN
     -- Cheque
     (v_tid, 'PM-CHEQUE',
      'Cheque / Demand Draft',
-     'Paper cheque or demand draft issued to vendor. '
+     'Paper cheque or demand draft issued to supplier. '
      'Requires manual printing and dispatch.',
      'outbound', 'check',
      true,  false, false, true,

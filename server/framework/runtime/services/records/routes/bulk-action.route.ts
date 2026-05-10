@@ -38,7 +38,9 @@ import {
   resolvePrincipalIdOrNull,
   resolveFieldMap,
   extractOrgHeaders,
+  SYSTEM_PRINCIPAL_UUID,
 } from "@athyper/svc-shared";
+import { copyRecordFromMetadata } from "../copy-record.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -58,6 +60,49 @@ export interface BulkActionRouteDeps {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const BULK_MAX_IDS = 500;
+const TARGET_STATUS: Record<string, string> = {
+  submit:  "pending_approval",
+  approve: "approved",
+  deny:    "rejected",
+  reject:  "rejected",
+  post:    "posted",
+  cancel:  "cancelled",
+  void:    "cancelled",
+  close:   "closed",
+  archive: "archived",
+};
+
+type BulkActionRecordResult = {
+  id: string;
+  status: "success" | "skipped" | "denied" | "requires_workflow" | "error";
+  reason?: string;
+  policyAction?: "allow" | "deny" | "warn" | "require_workflow" | "escalate";
+};
+
+function requestIds(body: Record<string, unknown>): string[] {
+  const raw = Array.isArray(body["ids"])
+    ? body["ids"]
+    : Array.isArray(body["recordIds"])
+    ? body["recordIds"]
+    : [];
+  return raw.map(String);
+}
+
+function actionResult(action: string, total: number, records: BulkActionRecordResult[]) {
+  const success = records.filter((record) => record.status === "success").length;
+  const skipped = records.filter((record) => record.status === "skipped").length;
+  const denied = records.filter((record) => record.status === "denied").length;
+  const requiresWorkflow = records.filter((record) => record.status === "requires_workflow").length;
+  const error = records.filter((record) => record.status === "error").length;
+  return {
+    action,
+    total,
+    succeeded: success,
+    failed: denied + requiresWorkflow + error,
+    records,
+    summary: { success, skipped, denied, requiresWorkflow, error },
+  };
+}
 
 // ─── Lifecycle helpers ─────────────────────────────────────────────────────────
 
@@ -182,7 +227,7 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
 
       const body = req.body as Record<string, unknown>;
       const action      = String(body["action"] ?? "");
-      const ids         = Array.isArray(body["ids"]) ? (body["ids"] as unknown[]).map(String) : [];
+      const ids         = requestIds(body);
 
       if (!action) {
         res.status(400).json({ error: "MISSING_ACTION", message: "'action' is required" });
@@ -220,14 +265,43 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
       const succeeded: string[] = [];
       const failed: { id: string; reason: string }[] = [];
 
+      if (action === "copy") {
+        const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
+        const records: BulkActionRecordResult[] = [];
+        for (const id of ids) {
+          try {
+            const copied = await copyRecordFromMetadata(db, tenantId, entityCode, id, actorId, logger);
+            records.push({ id, status: "success", reason: `Copied to ${copied.id}` });
+          } catch (err) {
+            records.push({
+              id,
+              status: "error",
+              reason: err instanceof Error ? err.message.slice(0, 200) : String(err),
+            });
+          }
+        }
+
+        logger?.info("bulk_copy", {
+          entity: entityCode,
+          tenantId,
+          total: ids.length,
+          succeeded: records.filter((record) => record.status === "success").length,
+          failed: records.filter((record) => record.status === "error").length,
+        });
+
+        res.json(actionResult(action, ids.length, records));
+        return;
+      }
+
       // ── status_transition ─────────────────────────────────────────────────────
-      if (action === "status_transition") {
-        const targetStatus = String(body["targetStatus"] ?? "");
+      if (action === "status_transition" || TARGET_STATUS[action]) {
+        const targetStatus = String(body["targetStatus"] ?? TARGET_STATUS[action] ?? "");
         if (!targetStatus) {
           res.status(400).json({ error: "MISSING_TARGET_STATUS", message: "'targetStatus' is required for status_transition" });
           return;
         }
 
+        const records: BulkActionRecordResult[] = [];
         for (const id of ids) {
           try {
             // Fetch current status
@@ -240,10 +314,12 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
 
             if (!current) {
               failed.push({ id, reason: "RECORD_NOT_FOUND" });
+              records.push({ id, status: "error", reason: "RECORD_NOT_FOUND" });
               continue;
             }
 
             if (current.status === targetStatus) {
+              records.push({ id, status: "success", reason: "Already in target state" });
               succeeded.push(id); // already in target state — idempotent
               continue;
             }
@@ -254,27 +330,41 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
 
             if (!allowed) {
               failed.push({ id, reason: reason ?? "TRANSITION_NOT_ALLOWED" });
+              records.push({ id, status: "denied", reason: reason ?? "TRANSITION_NOT_ALLOWED" });
               continue;
+            }
+
+            const now = new Date();
+            const patch: Record<string, unknown> = {
+              status:            targetStatus,
+              status_changed_at: now,
+              status_changed_by: principalId,
+              updated_at:        now,
+              updated_by:        principalId,
+            };
+            if (entityCode === "journal_entry" && targetStatus === "posted") {
+              patch["posted_at"] = now;
+              patch["posted_by"] = principalId;
             }
 
             // Apply transition
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             await (db.updateTable(fullTable) as any)
-              .set({
-                status:             targetStatus,
-                status_changed_at:  new Date(),
-                status_changed_by:  principalId,
-                updated_at:         new Date(),
-                updated_by:         principalId,
-              })
+              .set(patch)
               .where("id", "=", id)
               .where("tenant_id", "=", tenantId)
               .where("status", "=", current.status) // optimistic lock
               .execute();
 
             succeeded.push(id);
+            records.push({ id, status: "success" });
           } catch (err) {
             failed.push({ id, reason: err instanceof Error ? err.message.slice(0, 200) : String(err) });
+            records.push({
+              id,
+              status: "error",
+              reason: err instanceof Error ? err.message.slice(0, 200) : String(err),
+            });
           }
         }
 
@@ -287,7 +377,7 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
           failed:        failed.length,
         });
 
-        res.json({ ok: true, action, succeeded, failed });
+        res.json(actionResult(action, ids.length, records));
         return;
       }
 
@@ -312,6 +402,7 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
           return;
         }
 
+        const records: BulkActionRecordResult[] = [];
         for (const id of ids) {
           try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -327,11 +418,18 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
 
             if (Number(result?.numUpdatedRows ?? 0) > 0) {
               succeeded.push(id);
+              records.push({ id, status: "success" });
             } else {
               failed.push({ id, reason: "RECORD_NOT_FOUND" });
+              records.push({ id, status: "error", reason: "RECORD_NOT_FOUND" });
             }
           } catch (err) {
             failed.push({ id, reason: err instanceof Error ? err.message.slice(0, 200) : String(err) });
+            records.push({
+              id,
+              status: "error",
+              reason: err instanceof Error ? err.message.slice(0, 200) : String(err),
+            });
           }
         }
 
@@ -345,11 +443,11 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
           failed:    failed.length,
         });
 
-        res.json({ ok: true, action, succeeded, failed });
+        res.json(actionResult(action, ids.length, records));
         return;
       }
 
-      res.status(400).json({ error: "UNKNOWN_ACTION", message: `Action '${action}' is not supported. Use: status_transition, set_field` });
+      res.status(400).json({ error: "UNKNOWN_ACTION", message: `Action '${action}' is not supported. Use: status_transition, copy, set_field` });
     } catch (err) {
       logger?.error("bulk_action_error", { err: String(err) });
       next(err);

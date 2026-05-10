@@ -65,7 +65,7 @@ const successRate       = new Rate('descriptor_success_rate');
 // Adjust to match your actual seeded entities.
 const ENTITY_POOL = [
   'journal_entry',
-  'vendor',
+  'supplier',
   'customer',
   'product',
   'purchase_order',

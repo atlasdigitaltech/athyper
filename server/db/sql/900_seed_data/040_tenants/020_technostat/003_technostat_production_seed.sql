@@ -413,7 +413,7 @@ BEGIN
     (v_tid, v_cc_tksa, 'CC-TKSA-FIN',   'Group Finance & Treasury', 'CFO, consolidation, treasury, IC',         'posting', 'admin',      12, v_meta, 'active', v_su),
     (v_tid, v_cc_tksa, 'CC-TKSA-HR',    'Group HR & Admin',         'Recruitment, payroll, admin, facilities',  'posting', 'admin',      13, v_meta, 'active', v_su),
     (v_tid, v_cc_tksa, 'CC-TKSA-LEGAL', 'Group Legal & Compliance', 'Legal, regulatory, governance',            'posting', 'admin',      14, v_meta, 'active', v_su),
-    (v_tid, v_cc_tksa, 'CC-TKSA-PROC',  'Group Procurement',        'Central sourcing, vendor management',      'posting', 'admin',      15, v_meta, 'active', v_su),
+    (v_tid, v_cc_tksa, 'CC-TKSA-PROC',  'Group Procurement',        'Central sourcing, supplier management',    'posting', 'admin',      15, v_meta, 'active', v_su),
     (v_tid, v_cc_tksa, 'CC-TKSA-IT',    'Group IT',                 'Internal IT, infrastructure, support',     'posting', 'production', 16, v_meta, 'active', v_su)
     ON CONFLICT (tenant_id, company_code_id, code) DO NOTHING;
 

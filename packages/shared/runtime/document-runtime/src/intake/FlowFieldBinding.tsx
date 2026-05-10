@@ -574,7 +574,7 @@ const PROVISIONAL_OPTIONS: Record<string, FieldOption[]> = {
     { code: "po_based",        name: "PO-Based"        },
     { code: "contract_based",  name: "Contract-Based"  },
     { code: "non_po",          name: "Non-PO"          },
-    { code: "one_time_vendor", name: "One-Time Vendor" },
+    { code: "one_time_supplier", name: "One-Time Supplier" },
   ],
   payment_type: [
     { code: "bank_transfer",   name: "Bank Transfer",   display_tier: "primary"  },

@@ -1,44 +1,41 @@
 "use client";
 
 /**
- * FinancialReportsWorkbench — /finance/reports
+ * FinancialReportsWorkbench - /finance/reports
  *
  * Report compositor. Routes ?report= to the appropriate view.
- * Reports with status="placeholder" render a coming-soon tile — no build gate.
- *
- * URL state: ?report=profit-loss&scopeType=company&scopeId=ADT-001
- *            &fiscalYear=2026&period=3&comparative=true
- *
- * Adding a new report:
- *   1. Set status="live" in REPORT_REGISTRY (reportRegistry.ts)
- *   2. Add the view component to REPORT_VIEWS below
- *   Placeholders auto-upgrade to live — no other changes needed.
+ * Reports with status="placeholder" render a coming-soon tile.
  */
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Download, FileBarChart2 } from "lucide-react";
+import { useState, type ComponentType } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Check, ChevronLeft, Download, FileBarChart2, MoreHorizontal } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { Button, Badge } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
 import {
-  REPORT_REGISTRY,
+  Badge,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@athyper/ui/primitives";
+import {
   REPORT_CODES,
-  parseReportCode,
+  REPORT_REGISTRY,
   type ReportCode,
 } from "../lib/reportRegistry";
-import { scopeToParams, type FinanceScope } from "../lib/scope";
-import { BalanceSheetView } from "./BalanceSheetView";
-import { ProfitLossView } from "./ProfitLossView";
-import { TrialBalanceView } from "./TrialBalanceView";
-import { CashFlowView } from "./CashFlowView";
+import { type FinanceScope } from "../lib/scope";
+import { FinanceContextBar } from "../components/FinanceContextBar";
+import { ReportChooserSuffix } from "../components/ReportScaffold";
+import { RecordLinkContextMenu } from "../components/RecordLinkContextMenu";
 import { ApAgingView } from "./ApAgingView";
 import { ArAgingView } from "./ArAgingView";
+import { BalanceSheetView } from "./BalanceSheetView";
+import { CashFlowView } from "./CashFlowView";
+import { ProfitLossView } from "./ProfitLossView";
+import { TrialBalanceView, type TrialBalanceViewMode } from "./TrialBalanceView";
 
-// ── Report → View map ─────────────────────────────────────────────────────────
-// Add entries here as new views are built. REPORT_REGISTRY.status="placeholder"
-// acts as the gate — views listed here are only rendered when status="live".
-
-const REPORT_VIEWS: Partial<Record<ReportCode, React.ComponentType<{ scope: FinanceScope }>>> = {
+const REPORT_VIEWS: Partial<Record<ReportCode, ComponentType<{ scope: FinanceScope }>>> = {
   "profit-loss":   ProfitLossView,
   "balance-sheet": BalanceSheetView,
   "trial-balance": TrialBalanceView,
@@ -47,27 +44,7 @@ const REPORT_VIEWS: Partial<Record<ReportCode, React.ComponentType<{ scope: Fina
   "ar-aging":      ArAgingView,
 };
 
-// ── Period label ──────────────────────────────────────────────────────────────
-
-const MONTH_NAMES = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function periodLabel(scope: FinanceScope, mode: "for-period" | "as-of"): string {
-  const month = scope.period != null && scope.period >= 1 && scope.period <= 12
-    ? MONTH_NAMES[scope.period]
-    : null;
-
-  if (mode === "as-of") {
-    return month
-      ? `As at ${month} ${scope.fiscalYear}`
-      : `As at FY${scope.fiscalYear}`;
-  }
-  return month
-    ? `For ${month} ${scope.fiscalYear}`
-    : `FY${scope.fiscalYear}`;
-}
-
-// ── Placeholder tile ──────────────────────────────────────────────────────────
+type ExportFormat = "csv" | "xlsx" | "pdf";
 
 function ReportPlaceholderTile({ code }: { code: ReportCode }) {
   const meta = REPORT_REGISTRY[code];
@@ -85,146 +62,213 @@ function ReportPlaceholderTile({ code }: { code: ReportCode }) {
   );
 }
 
-// ── Export button ─────────────────────────────────────────────────────────────
+export interface FinancialReportsWorkbenchProps {
+  scope:  FinanceScope;
+  report: ReportCode;
+}
 
-function ExportButton({ scope, report }: { scope: FinanceScope; report: ReportCode }) {
+interface FinancialReportsSwitcherProps {
+  report: ReportCode;
+  onReportChange: (code: ReportCode) => void;
+  onBack: () => void;
+}
+
+function FinancialReportsSwitcher({ report, onReportChange, onBack }: FinancialReportsSwitcherProps) {
+  return (
+    <DropdownMenu>
+      <div className="inline-flex h-8 shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground text-sm font-semibold tracking-wide text-background">
+        <button
+          type="button"
+          className="flex h-full w-9 items-center justify-center border-r border-background/20 bg-inherit text-inherit transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"
+          aria-label="Back to Finance"
+          onClick={onBack}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="flex h-full items-center gap-1.5 bg-inherit px-3 text-inherit transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"
+            aria-label="Switch financial report"
+          >
+            <span className="leading-none">FINANCIAL REPORTS</span>
+            <ReportChooserSuffix />
+          </button>
+        </DropdownMenuTrigger>
+      </div>
+      <DropdownMenuContent align="start" className="min-w-[240px]">
+        {REPORT_CODES.map((code) => {
+          const meta = REPORT_REGISTRY[code];
+          return (
+            <DropdownMenuItem
+              key={code}
+              onSelect={() => onReportChange(code)}
+              className={cn(
+                "flex items-center justify-between gap-3",
+                code === report && "font-medium",
+              )}
+            >
+              <span>{meta.label}</span>
+              {code === report && <Check className="h-4 w-4" />}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function FinancialReportsWorkbench({ scope, report }: FinancialReportsWorkbenchProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [trialBalanceViewMode, setTrialBalanceViewMode] = useState<TrialBalanceViewMode>("summary");
+
   const meta = REPORT_REGISTRY[report];
-  if (meta.supportsExport.length === 0) return null;
+  const View = REPORT_VIEWS[report];
+  const isLive = meta.status === "live" && !!View;
+  const isTrialBalance = report === "trial-balance";
+  const isProfitLoss = report === "profit-loss";
+  const isBalanceSheet = report === "balance-sheet";
+  const isCashFlow = report === "cash-flow";
+  const isGridReport = meta.displayType === "grid";
+  const isGraphCapableReport = isProfitLoss || isBalanceSheet || isCashFlow;
+  const moveReportingControlsToBody = isProfitLoss || isBalanceSheet || isCashFlow;
+  const hideTopHeaderGrouping = isGridReport || moveReportingControlsToBody;
+  const hideTopHeaderCompare = !meta.supportsCompare || moveReportingControlsToBody;
+  const displayGraph = isGraphCapableReport && searchParams.get("displayGraph") === "true";
+  const exportFormats = isLive ? meta.supportsExport : [];
 
-  async function handleExport(format: "csv" | "xlsx" | "pdf") {
+  function setReport(code: ReportCode) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("report", code);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  async function handleExport(format: ExportFormat) {
     const res = await fetch("/api/finance/reports/export", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reportCode: report, scope, format }),
     });
     if (!res.ok) return;
+
     const { downloadUrl } = await res.json() as { downloadUrl: string };
     window.open(downloadUrl, "_blank");
   }
 
-  if (meta.supportsExport.length === 1) {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 gap-1.5 text-xs"
-        onClick={() => void handleExport(meta.supportsExport[0]!)}
-      >
-        <Download className="h-3.5 w-3.5" />
-        Export {meta.supportsExport[0]!.toUpperCase()}
-      </Button>
-    );
+  function setStatementGraph(enabled: boolean) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (enabled) params.set("displayGraph", "true");
+    else params.delete("displayGraph");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
   return (
-    <div className="relative group">
-      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-        <Download className="h-3.5 w-3.5" />
-        Export
-      </Button>
-      <div className="absolute right-0 top-full z-10 mt-1 hidden min-w-[100px] rounded-lg border bg-popover p-1 shadow-md group-hover:block">
-        {meta.supportsExport.map((fmt) => (
-          <button
-            key={fmt}
-            onClick={() => void handleExport(fmt)}
-            className="w-full rounded px-3 py-1.5 text-left text-xs hover:bg-muted"
-          >
-            {fmt.toUpperCase()}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Props ─────────────────────────────────────────────────────────────────────
-
-export interface FinancialReportsWorkbenchProps {
-  scope:  FinanceScope;
-  report: ReportCode;
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
-
-export function FinancialReportsWorkbench({ scope, report }: FinancialReportsWorkbenchProps) {
-  const router      = useRouter();
-  const pathname    = usePathname();
-  const searchParams = useSearchParams();
-
-  const meta = REPORT_REGISTRY[report];
-  const View = REPORT_VIEWS[report];
-  const isLive = meta.status === "live" && !!View;
-
-  function setReport(code: ReportCode) {
-    const p = new URLSearchParams(searchParams.toString());
-    p.set("report", code);
-    router.replace(`${pathname}?${p.toString()}`);
-  }
-
-  function toggleCompare() {
-    const p = new URLSearchParams(searchParams.toString());
-    if (scope.comparative) p.delete("comparative");
-    else p.set("comparative", "true");
-    router.replace(`${pathname}?${p.toString()}`);
-  }
-
-  return (
-    <PageFrame
-      title="Financial Reports"
-      description={scope.scopeId ? `${scope.scopeId} · ${periodLabel(scope, meta.periodMode)}` : "Select a scope from the context bar"}
-      actions={
-        <div className="flex items-center gap-2">
-          {isLive && meta.supportsCompare && (
-            <Button
-              variant={scope.comparative ? "primary" : "outline"}
-              size="sm"
-              className="h-8 text-xs"
-              onClick={toggleCompare}
-            >
-              Compare prior year
-            </Button>
-          )}
-          {isLive && <ExportButton scope={scope} report={report} />}
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-y-auto sm:gap-3 sm:overflow-hidden">
+      <section className="shrink-0 overflow-hidden rounded-lg border bg-card shadow-sm">
+        <div className="flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1.5 px-2 py-1.5 text-sm text-muted-foreground sm:px-3">
+          <FinancialReportsSwitcher
+            report={report}
+            onReportChange={setReport}
+            onBack={() => router.push("/finance")}
+          />
+          <span className="hidden text-border/80 sm:inline">|</span>
+          <span className="order-1 shrink-0 sm:order-none">
+            {meta.label}
+          </span>
+          <span className="hidden text-border/80 sm:inline">/</span>
+          <FinanceContextBar
+            variant="inline"
+            className="order-3 w-full gap-x-2 sm:order-none sm:min-w-0 sm:flex-1"
+            hideGrouping={hideTopHeaderGrouping}
+            hideCompare={hideTopHeaderCompare}
+          />
+          <div className="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-none">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  title="More actions"
+                  aria-label="More actions"
+                >
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[170px]">
+                {exportFormats.length > 0 ? (
+                  exportFormats.map((format) => (
+                    <DropdownMenuItem
+                      key={format}
+                      onSelect={() => void handleExport(format)}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Export {format.toUpperCase()}
+                    </DropdownMenuItem>
+                  ))
+                ) : !isGraphCapableReport ? (
+                  <DropdownMenuItem disabled>No actions</DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      }
-    >
-      <div className="flex gap-0 h-[calc(100vh-14rem)] min-h-0">
+      </section>
 
-        {/* ── Left: Report catalog ──────────────────────────────────────── */}
-        <div className="w-52 shrink-0 border-r pr-3 space-y-0.5 overflow-auto">
-          {REPORT_CODES.map((code) => {
-            const m        = REPORT_REGISTRY[code];
-            const isActive = code === report;
-            return (
-              <button
-                key={code}
-                onClick={() => setReport(code)}
-                className={cn(
-                  "w-full text-left rounded-lg px-3 py-2.5 transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "hover:bg-muted/50 text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <div className="text-xs font-medium">{m.label}</div>
-                {m.status === "placeholder" && (
-                  <div className="text-doc-support text-muted-foreground/60">Coming soon</div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── Right: Active report ──────────────────────────────────────── */}
-        <div className="flex-1 min-w-0 overflow-auto pl-4">
+      <section className="flex min-h-0 flex-none flex-col overflow-visible rounded-lg border bg-card shadow-sm sm:flex-1 sm:overflow-hidden">
+        <div className="min-h-0 px-2 pb-3 pt-0 sm:flex-1 sm:overflow-auto sm:px-4 sm:pb-4">
           {isLive ? (
-            <View scope={scope} />
+            isTrialBalance ? (
+              <TrialBalanceView
+                scope={scope}
+                viewMode={trialBalanceViewMode}
+                onViewModeChange={setTrialBalanceViewMode}
+                showReportHeader
+              />
+            ) : isProfitLoss ? (
+              <ProfitLossView
+                scope={scope}
+                showGraph={displayGraph}
+                onShowGraphChange={setStatementGraph}
+                moveReportingControlsToHeader
+              />
+            ) : isBalanceSheet ? (
+              <BalanceSheetView
+                scope={scope}
+                showGraph={displayGraph}
+                onShowGraphChange={setStatementGraph}
+                moveReportingControlsToHeader
+              />
+            ) : isCashFlow ? (
+              <CashFlowView
+                scope={scope}
+                showGraph={displayGraph}
+                onShowGraphChange={setStatementGraph}
+                moveReportingControlsToHeader
+              />
+            ) : report === "ap-aging" ? (
+              <ApAgingView
+                scope={scope}
+                showReportHeader
+              />
+            ) : report === "ar-aging" ? (
+              <ArAgingView
+                scope={scope}
+                showReportHeader
+              />
+            ) : (
+              <View scope={scope} />
+            )
           ) : (
             <ReportPlaceholderTile code={report} />
           )}
         </div>
+      </section>
 
-      </div>
-    </PageFrame>
+      <RecordLinkContextMenu />
+    </div>
   );
 }

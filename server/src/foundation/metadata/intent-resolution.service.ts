@@ -21,7 +21,7 @@ import { sql } from "kysely";
 export interface IntentResolutionInput {
   tenantId:          string;
   documentTypeCode:  string;
-  vendorId?:         string;
+  supplierId?:         string;
   customerId?:       string;
   companyCodeId?:    string;
   legalEntityId?:    string;
@@ -78,7 +78,7 @@ export class IntentResolutionService {
         SELECT * FROM shared.resolve_business_intent(
           ${input.tenantId}::uuid,
           ${input.documentTypeCode}::text,
-          ${input.vendorId ?? null}::uuid,
+          ${input.supplierId ?? null}::uuid,
           ${input.customerId ?? null}::uuid,
           ${input.companyCodeId ?? null}::uuid,
           ${input.legalEntityId ?? null}::uuid,

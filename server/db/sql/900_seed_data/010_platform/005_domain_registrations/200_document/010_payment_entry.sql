@@ -41,7 +41,7 @@ WHERE  e.table_schema = 'document' AND e.table_name = 'payment_entry'
   AND  e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
 
--- ── 3. control.entity_field (12 fields) ──────────────────────────────────────
+-- ── 3. control.entity_field (14 fields) ──────────────────────────────────────
 INSERT INTO control.entity_field (
     entity_version_id, name, column_name, label, data_type,
     cardinality, origin, enum_domain_code, is_required, is_filterable,
@@ -59,7 +59,9 @@ CROSS JOIN (VALUES
     ('status',            'status',           'Status',            'lifecycle_state', 'one',   NULL::text,                                true,  true,  NULL::jsonb,                               20),
     ('payment_type',      'payment_type',     'Payment Type',      'text',      'one',         NULL::text,                                true,  true,  NULL::jsonb,                               30),
     ('payment_direction', 'payment_direction','Direction',         'text',      'one',         NULL::text,                                true,  true,  NULL::jsonb,                               40),
-    ('supplier_id',       'supplier_id',      'Vendor',            'reference', 'zero_or_one', NULL::text,                                false, true,  '{"ref_entity":"supplier"}'::jsonb,        50),
+    ('company_code_id',   'company_code_id',  'Company Code',      'reference', 'one',         NULL::text,                                true,  true,  '{"ref_entity":"company_code"}'::jsonb,    45),
+    ('supplier_id',       'supplier_id',      'Supplier',          'reference', 'zero_or_one', NULL::text,                                false, true,  '{"ref_entity":"supplier"}'::jsonb,        50),
+    ('payment_method_id', 'payment_method_id','Payment Method',    'reference', 'one',         NULL::text,                                true,  true,  '{"ref_entity":"payment_method"}'::jsonb, 55),
     ('document_date',     'document_date',    'Payment Date',      'date',      'one',         NULL::text,                                true,  true,  NULL::jsonb,                               60),
     ('posting_date',      'posting_date',     'Posting Date',      'date',      'one',         NULL::text,                                true,  true,  NULL::jsonb,                               70),
     ('value_date',        'value_date',       'Value Date',        'date',      'one',         NULL::text,                                true,  false, NULL::jsonb,                               80),
@@ -113,7 +115,7 @@ WHERE table_schema = 'document' AND table_name = 'payment_entry'
   AND tenant_id IS NULL
   AND feature_flags ? 'has_line_items';
 
--- ── 7. Fix ref_entity: "vendor" → "supplier" on already-seeded rows ──────────
+-- ── 7. Fix ref_entity: "supplier" on already-seeded rows (was "vendor") ──────
 UPDATE control.entity_field ef
 SET validation = '{"ref_entity":"supplier"}'::jsonb
 FROM control.entity_version ev

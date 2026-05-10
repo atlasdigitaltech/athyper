@@ -11,7 +11,7 @@ import { resolveCapabilities } from "@/lib/entity-capabilities";
  *
  * Gated by feature_flags.is_bulk_editable / is_exportable — notFound() when disabled.
  *
- * [entity] = canonical entity code (e.g. "vendor", "purchase-invoice")
+ * [entity] = canonical entity code (e.g. "supplier", "purchase-invoice")
  */
 export default async function AppEntityBulkRoute({
   params,

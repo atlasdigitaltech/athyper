@@ -84,7 +84,7 @@ export const REPORT_REGISTRY: Record<ReportCode, ReportMeta> = {
   "ap-aging": {
     code:            "ap-aging",
     label:           "AP Aging",
-    description:     "Outstanding payables by aging bucket per vendor",
+    description:     "Outstanding payables by aging bucket per supplier",
     periodMode:      "as-of",
     supportsCompare: false,
     supportsExport:  ["csv", "xlsx"],

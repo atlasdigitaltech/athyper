@@ -1,8 +1,17 @@
 "use client";
 
 import { fmtFull, fmtCompact } from "../components/format";
+import { PeriodStatusBar } from "../components/PeriodStatusBar";
+import {
+  ReportHeaderRow,
+  ReportLiveBadge,
+  ReportMetricCard,
+  ReportMetricGrid,
+} from "../components/ReportScaffold";
 import type { FinanceScope } from "../lib/scope";
 import { useArAging, type ArAgingRow } from "../hooks/useApWorkbench";
+import { usePeriodStatus } from "../hooks/usePeriodStatus";
+import { useStatementReportingLens } from "../hooks/useStatementReportingLens";
 
 // ── Bucket config ─────────────────────────────────────────────────────────────
 
@@ -16,10 +25,14 @@ const BUCKETS: { key: keyof ArAgingRow; label: string }[] = [
 
 interface ArAgingViewProps {
   scope: FinanceScope;
+  showReportHeader?: boolean;
 }
 
-export function ArAgingView({ scope }: ArAgingViewProps) {
+export function ArAgingView({ scope, showReportHeader = false }: ArAgingViewProps) {
   const { data, isLoading, isError } = useArAging(scope);
+  const { data: periodData } = usePeriodStatus(scope);
+  const reportingLens = useStatementReportingLens(scope);
+  const effectiveStatus = periodData?.[0]?.effectiveStatus ?? null;
 
   if (!scope.scopeId) {
     return (
@@ -56,9 +69,27 @@ export function ArAgingView({ scope }: ArAgingViewProps) {
 
   return (
     <div className="space-y-3">
+      {showReportHeader && (
+        <ReportHeaderRow
+          title="AR Aging"
+          meta={
+            <>
+              <PeriodStatusBar
+                fiscalYear={scope.fiscalYear}
+                period={scope.period}
+                status={reportingLens.isFiscalLens ? effectiveStatus : null}
+                companyCode={scope.scopeType === "company" ? scope.scopeId : undefined}
+                displayLabel={reportingLens.headerLabel}
+              />
+              <ReportLiveBadge />
+            </>
+          }
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <span className="text-doc-support text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           Source: fin.ar_invoice · As at {data.asAt ? new Date(data.asAt).toLocaleDateString() : "period end"}
         </span>
         <div className="flex gap-3 text-xs text-muted-foreground">
@@ -68,22 +99,22 @@ export function ArAgingView({ scope }: ArAgingViewProps) {
       </div>
 
       {/* Summary bucket cards */}
-      <div className="grid grid-cols-5 gap-2">
+      <ReportMetricGrid>
         {BUCKETS.map((b) => {
           const val = totals[b.key] ?? 0;
           const pct = grandTotal > 0 ? (val / grandTotal) * 100 : 0;
           const isOverdue = b.key !== "current";
           return (
-            <div key={b.key} className="rounded-lg border p-2.5 space-y-1">
-              <div className="text-doc-support text-muted-foreground">{b.label}</div>
-              <div className={`text-sm font-semibold font-mono ${isOverdue && val > 0 ? "text-warning" : ""}`}>
-                {fmtCompact(val)}
-              </div>
-              <div className="text-doc-support text-muted-foreground">{pct.toFixed(1)}%</div>
-            </div>
+            <ReportMetricCard
+              key={b.key}
+              label={b.label}
+              value={fmtCompact(val)}
+              detail={`${pct.toFixed(1)}%`}
+              tone={isOverdue && val > 0 ? "warning" : "neutral"}
+            />
           );
         })}
-      </div>
+      </ReportMetricGrid>
 
       {/* Aging grid */}
       {rows.length === 0 ? (
@@ -91,17 +122,17 @@ export function ArAgingView({ scope }: ArAgingViewProps) {
           No outstanding receivables for the selected scope.
         </div>
       ) : (
-        <div className="rounded-xl border overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="overflow-hidden rounded-lg border">
+          <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/50 border-b">
-                <th className="py-2 px-3 text-left font-medium text-muted-foreground">Customer</th>
+                <th className="py-2 px-3 text-left text-xs font-semibold text-muted-foreground">Customer</th>
                 {BUCKETS.map((b) => (
-                  <th key={b.key} className="py-2 px-3 text-right font-medium text-muted-foreground">
+                  <th key={b.key} className="py-2 px-3 text-right text-xs font-semibold text-muted-foreground">
                     {b.label}
                   </th>
                 ))}
-                <th className="py-2 px-3 text-right font-medium text-muted-foreground">Total</th>
+                <th className="py-2 px-3 text-right text-xs font-semibold text-muted-foreground">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -116,12 +147,12 @@ export function ArAgingView({ scope }: ArAgingViewProps) {
                   {BUCKETS.map((b) => {
                     const val = row[b.key] as number;
                     return (
-                      <td key={b.key} className={`py-1.5 px-3 text-right font-mono ${b.key !== "current" && val > 0 ? "text-warning" : ""}`}>
+                      <td key={b.key} className={`py-1.5 px-3 text-right tabular-nums ${b.key !== "current" && val > 0 ? "text-warning" : ""}`}>
                         {val ? fmtFull(val) : "—"}
                       </td>
                     );
                   })}
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold">
+                  <td className="py-1.5 px-3 text-right font-semibold tabular-nums">
                     {fmtFull(row.total)}
                   </td>
                 </tr>
@@ -131,11 +162,11 @@ export function ArAgingView({ scope }: ArAgingViewProps) {
               <tr className="bg-muted/50 border-t-2">
                 <td className="py-2 px-3 font-semibold">Total</td>
                 {BUCKETS.map((b) => (
-                  <td key={b.key} className="py-2 px-3 text-right font-mono font-semibold">
+                  <td key={b.key} className="py-2 px-3 text-right font-semibold tabular-nums">
                     {totals[b.key] ? fmtFull(totals[b.key]!) : "—"}
                   </td>
                 ))}
-                <td className="py-2 px-3 text-right font-mono font-bold">
+                <td className="py-2 px-3 text-right font-semibold tabular-nums">
                   {fmtFull(grandTotal)}
                 </td>
               </tr>

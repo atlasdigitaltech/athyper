@@ -774,8 +774,20 @@ CREATE INDEX IF NOT EXISTS asset_pc_idx          ON master.asset (tenant_id, pro
     WHERE profit_center_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS asset_project_idx     ON master.asset (tenant_id, project_id)
     WHERE project_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS asset_vendor_idx      ON master.asset (tenant_id, vendor_id)
-    WHERE vendor_id IS NOT NULL;
+DO $$ BEGIN
+    -- Column renamed vendor_id → supplier_id by P3 migration; handle both names.
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema = 'master' AND table_name = 'asset'
+                 AND column_name = 'supplier_id') THEN
+        CREATE INDEX IF NOT EXISTS asset_supplier_idx ON master.asset (tenant_id, supplier_id)
+            WHERE supplier_id IS NOT NULL;
+    ELSIF EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema = 'master' AND table_name = 'asset'
+                    AND column_name = 'vendor_id') THEN
+        CREATE INDEX IF NOT EXISTS asset_vendor_idx ON master.asset (tenant_id, vendor_id)
+            WHERE vendor_id IS NOT NULL;
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS asset_custodian_idx   ON master.asset (tenant_id, custodian_id)
     WHERE custodian_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS asset_barcode_uq

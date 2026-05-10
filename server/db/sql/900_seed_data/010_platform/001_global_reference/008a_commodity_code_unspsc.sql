@@ -76714,7 +76714,7 @@ VALUES
   ('unspsc', '78141501', 'Freight forwarders services', '78141500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
   ('unspsc', '78141502', 'Customs brokerage services', '78141500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
   ('unspsc', '78141503', 'Transportation industry tariff comparison or freight audit services', '78141500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
-  ('unspsc', '78141504', 'Supplier or vendor managed freight and rebilling', '78141500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
+  ('unspsc', '78141504', 'Supplier managed freight and rebilling', '78141500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
   ('unspsc', '78141505', 'Towing service for commercial and private vehicles', '78141500', 4, true, 'active', '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (domain_code, code) DO UPDATE SET
   name = excluded.name,
@@ -77943,7 +77943,7 @@ VALUES
   ('unspsc', '90101501', 'Restaurants', '90101500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
   ('unspsc', '90101502', 'Bars', '90101500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
   ('unspsc', '90101503', 'Fast food establishments', '90101500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
-  ('unspsc', '90101504', 'On street food vendors', '90101500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
+  ('unspsc', '90101504', 'On street food suppliers', '90101500', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
   ('unspsc', '90101601', 'Banquet facilities', '90101600', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
   ('unspsc', '90101602', 'Party tent services', '90101600', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),
   ('unspsc', '90101603', 'Catering services', '90101600', 4, true, 'active', '00000000-0000-0000-0000-000000000000'),

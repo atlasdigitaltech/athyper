@@ -6,7 +6,7 @@
  * Creates a new purchase_invoice in the appropriate initial status:
  *   - invoice_source = 'po_based' | 'contract_based' → status = 'proforma'
  *     (supplier_invoice_number/date deferred; promoted via promote_proforma flow)
- *   - invoice_source = 'non_po' | 'one_time_vendor'  → status = 'draft'
+ *   - invoice_source = 'non_po' | 'one_time_supplier'  → status = 'draft'
  *     (supplier_invoice_number, supplier_invoice_date, tax_mode required)
  *
  * Effective DDL (01f_tables_invoice_streamlining.sql):
@@ -32,7 +32,7 @@ export interface CreateInvoiceBody {
   company_code_id:          string;
   supplier_id?:             string;
   commitment_id?:           string;
-  // Required for non_po / one_time_vendor; null/absent for po_based / contract_based (proforma)
+  // Required for non_po / one_time_supplier; null/absent for po_based / contract_based (proforma)
   supplier_invoice_number?: string;
   supplier_invoice_date?:   string;
   // Date fields
@@ -56,7 +56,7 @@ interface HandlerResult {
   body:    Record<string, unknown>;
 }
 
-const VALID_SOURCES = new Set(["po_based", "contract_based", "non_po", "one_time_vendor"]);
+const VALID_SOURCES = new Set(["po_based", "contract_based", "non_po", "one_time_supplier"]);
 
 // Effective post-streamlining vocabulary — proforma and down_payment removed
 const VALID_TYPES = new Set([
@@ -80,7 +80,7 @@ export async function handleCreateApInvoice(
 
   // ── Source / type validation ───────────────────────────────────────────────
   if (!body.invoice_source || !VALID_SOURCES.has(body.invoice_source)) {
-    return { status: 400, body: { error: "VALIDATION_ERROR", message: "invoice_source must be one of: po_based, contract_based, non_po, one_time_vendor" } };
+    return { status: 400, body: { error: "VALIDATION_ERROR", message: "invoice_source must be one of: po_based, contract_based, non_po, one_time_supplier" } };
   }
   if (!body.company_code_id) {
     return { status: 400, body: { error: "VALIDATION_ERROR", message: "company_code_id is required" } };
@@ -106,13 +106,13 @@ export async function handleCreateApInvoice(
   //  only exempt proforma status — draft invoices must satisfy them)
   if (!isPOBased) {
     if (!body.supplier_invoice_number?.trim()) {
-      return { status: 400, body: { error: "VALIDATION_ERROR", message: "supplier_invoice_number is required for non_po and one_time_vendor invoices" } };
+      return { status: 400, body: { error: "VALIDATION_ERROR", message: "supplier_invoice_number is required for non_po and one_time_supplier invoices" } };
     }
     if (!body.supplier_invoice_date) {
-      return { status: 400, body: { error: "VALIDATION_ERROR", message: "supplier_invoice_date is required for non_po and one_time_vendor invoices" } };
+      return { status: 400, body: { error: "VALIDATION_ERROR", message: "supplier_invoice_date is required for non_po and one_time_supplier invoices" } };
     }
     if (!body.tax_mode || !VALID_TAX_MODES.has(body.tax_mode)) {
-      return { status: 400, body: { error: "VALIDATION_ERROR", message: "tax_mode is required for non_po and one_time_vendor invoices; must be: inclusive, exclusive, or no_tax" } };
+      return { status: 400, body: { error: "VALIDATION_ERROR", message: "tax_mode is required for non_po and one_time_supplier invoices; must be: inclusive, exclusive, or no_tax" } };
     }
     if (body.tax_mode_source && !VALID_TAX_MODE_SOURCES.has(body.tax_mode_source)) {
       return { status: 400, body: { error: "VALIDATION_ERROR", message: `tax_mode_source must be one of: ${[...VALID_TAX_MODE_SOURCES].join(", ")}` } };

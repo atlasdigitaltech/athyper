@@ -1,5 +1,6 @@
 import { GlWorkbench } from "@athyper/finance-workbench";
 import { PageFrame } from "@athyper/ui/layout";
+import { Suspense } from "react";
 
 /**
  * GL Workbench — /finance/gl
@@ -11,6 +12,7 @@ import { PageFrame } from "@athyper/ui/layout";
  *   /finance/gl?tab=balance-sheet
  *   /finance/gl?tab=profit-loss
  *   /finance/gl?tab=gl-detail
+ *   /finance/gl?tab=journals
  *   /finance/gl?tab=ap-ar
  *   /finance/gl?tab=bank-recon
  *   /finance/gl?tab=period-close
@@ -21,7 +23,7 @@ import { PageFrame } from "@athyper/ui/layout";
 
 const VALID_TABS = [
   "trial-balance", "balance-sheet", "profit-loss", "gl-detail",
-  "ap-ar", "bank-recon", "period-close",
+  "journals", "ap-ar", "bank-recon", "period-close",
 ] as const;
 
 type WorkbenchTab = typeof VALID_TABS[number];
@@ -40,8 +42,10 @@ export default async function GlWorkbenchPage({
   const defaultTab: WorkbenchTab = isValidTab(raw) ? raw : "trial-balance";
 
   return (
-    <PageFrame width="full">
-      <GlWorkbench defaultTab={defaultTab} />
+    <PageFrame width="full" className="h-full min-h-0">
+      <Suspense fallback={<div className="h-full min-h-0 rounded-lg border bg-card" />}>
+        <GlWorkbench defaultTab={defaultTab} />
+      </Suspense>
     </PageFrame>
   );
 }

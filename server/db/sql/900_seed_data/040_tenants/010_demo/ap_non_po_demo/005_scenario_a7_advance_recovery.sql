@@ -21,7 +21,7 @@ DO $scenario_a7$
 DECLARE
     v_tenant_id    uuid;
     v_cc_id        uuid;
-    v_vendor_id    uuid;
+    v_supplier_id    uuid;
     v_sys          uuid := '00000000-0000-0000-0000-000000000000';
     v_invoice_id   uuid := '00000001-0000-0000-0001-000000000007';  -- INV-A7-0001 (pinned)
     v_advance_id   uuid := '00000002-0000-0000-0002-000000000007';  -- ADV-A7-0001 (pinned)
@@ -33,7 +33,7 @@ BEGIN
     SELECT id INTO v_tenant_id FROM master.tenant WHERE code = 'athyper';
     SELECT id INTO v_cc_id FROM master.company_code
       WHERE tenant_id = v_tenant_id AND code = 'AUIC';
-    SELECT id INTO v_vendor_id FROM master.supplier
+    SELECT id INTO v_supplier_id FROM master.supplier
       WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US';
 
     SELECT id INTO v_sc_opex_id FROM master.spend_category
@@ -70,14 +70,14 @@ BEGIN
         ) VALUES (
             v_advance_id,
             v_tenant_id, v_cc_id,
-            'ADV-A7-0001', 'Vendor Advance — A7 Step 1',
+            'ADV-A7-0001', 'Supplier Advance — A7 Step 1',
             'ADV-A7-0001', 'advance', 'OUTBOUND',
-            v_vendor_id, 'Acme Consulting LLC',
+            v_supplier_id, 'Acme Consulting LLC',
             v_pm_wire_id, v_house_bank_id,
             CURRENT_DATE - 14, CURRENT_DATE - 14,
             'USD', 'USD', 1.0,
             500.00,
-            'Scenario A7 — Step 1: Advance payment to vendor',
+            'Scenario A7 — Step 1: Advance payment to supplier',
             'draft', v_sys,
             extract(year FROM CURRENT_DATE)::smallint,
             extract(month FROM CURRENT_DATE)::smallint
@@ -108,7 +108,7 @@ BEGIN
             v_tenant_id, v_cc_id,
             'INV-A7-0001', 'Invoice with Advance Recovery (A7 Step 2)',
             'INV-A7-0001', 'non_po', 'standard',
-            v_vendor_id, 'ACME-2026-00107', CURRENT_DATE,
+            v_supplier_id, 'ACME-2026-00107', CURRENT_DATE,
             CURRENT_DATE, CURRENT_DATE, CURRENT_DATE,
             'USD', 'USD', 1.0,
             1000.00, 0.00, 0.00,

@@ -82,7 +82,6 @@ function resolveIdentitySubtitle(
     "supplier_name",
     "customer_name",
     "party_name",
-    "vendor_name",
   ]);
 
   if (!title || title === number) return number;

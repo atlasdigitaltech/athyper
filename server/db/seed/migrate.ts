@@ -12,12 +12,12 @@
 //   shared.uuidv7() bootstrap dependency.
 //
 // Phase 2 – System Seed: Platform-wide reference and control data
-//   Directory: 900_seed_data/010_platform/**
+//   Directory: 900_seed_data_backup/010_platform/**
 //
 // Phase 3 – Blueprint + Tenant Seed
-//   Directories: 900_seed_data/020_universal/**   (TIER 1 foundation + TIER 2a COA)
-//                900_seed_data/030_industry/**    (TIER 2b industry packs + TIER 3 modules)
-//                900_seed_data/040_tenants/**     (per-client onboarding)
+//   Directories: 900_seed_data_backup/020_universal/**   (TIER 1 foundation + TIER 2a COA)
+//                900_seed_data_backup/030_industry/**    (TIER 2b industry packs + TIER 3 modules)
+//                900_seed_data_backup/040_tenants/**     (per-client onboarding)
 //
 // Usage:
 //   tsx db/seed/migrate.ts                   # Run all three stages (default)
@@ -35,6 +35,7 @@
 //                                             # Use when a dev reset dropped tables but left
 //                                             # schema_provisions rows intact.
 //   tsx db/seed/migrate.ts --stage=1         # Low-level: explicit stage number(s)
+//   tsx db/seed/migrate.ts --phase=1         # Alias for --stage=1
 //   tsx db/seed/migrate.ts --stage=1 --stage=2  # Multiple stages
 //
 // Environment variables:
@@ -59,7 +60,7 @@ const __dirname = dirname(__filename);
 const SQL_DIR = join(__dirname, "../sql");
 
 /** Seed data root directory within sql/ */
-const SEED_DATA_DIR = "900_seed_data";
+const SEED_DATA_DIR = "900_seed_data_backup";
 
 /** Subdirectory prefixes within 900_seed_data/ */
 const SYSTEM_PREFIX = "010_platform";
@@ -300,6 +301,13 @@ function checksum(sql: string): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
+function shouldAlwaysRunSeedFile(file: SqlFile): boolean {
+  // Repair seeds are idempotent health checks, not one-time migrations. They
+  // restore tenant lookup/list surfaces when rows were truncated after the
+  // original seed was marked executed in public.schema_provisions.
+  return file.phase === 3 && /_repair$/i.test(file.key);
+}
+
 // ---------------------------------------------------------------------------
 // Tracking Table
 // ---------------------------------------------------------------------------
@@ -416,8 +424,9 @@ async function runPhases(
           const row = await client.query<{ id: string }>(
             `SELECT id::text FROM master.tenant WHERE code = 'athyper' LIMIT 1`,
           );
-          if (row.rows.length > 0) {
-            const resolvedId = row.rows[0].id;
+          const firstRow = row.rows[0];
+          if (firstRow) {
+            const resolvedId = firstRow.id;
             await client.query(`SET app.seed_tenant_id = '${resolvedId}'`);
             log({ msg: "migrate_seed_tenant_resolved", tenantId: resolvedId });
           }
@@ -435,9 +444,33 @@ async function runPhases(
         //    enforce entity_code existence in control.entity — valid at runtime but
         //    too strict during trusted initial seeding.
         await client.query(`
-          ALTER TABLE control.entity_lifecycle DISABLE TRIGGER trg_el_validate_entity_binding;
-          ALTER TABLE control.entity_operation  DISABLE TRIGGER trg_eo_validate_entity_binding;
-          ALTER TABLE control.entity_relation   DISABLE TRIGGER trg_er_validate_target_entity;
+          DO $seed_trigger_setup$
+          BEGIN
+            IF EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgrelid = 'control.entity_lifecycle'::regclass
+                AND tgname = 'trg_el_validate_entity_binding'
+            ) THEN
+              ALTER TABLE control.entity_lifecycle DISABLE TRIGGER trg_el_validate_entity_binding;
+            END IF;
+
+            IF EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgrelid = 'control.entity_operation'::regclass
+                AND tgname = 'trg_eo_validate_entity_binding'
+            ) THEN
+              ALTER TABLE control.entity_operation DISABLE TRIGGER trg_eo_validate_entity_binding;
+            END IF;
+
+            IF EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgrelid = 'control.entity_relation'::regclass
+                AND tgname = 'trg_er_validate_target_entity'
+            ) THEN
+              ALTER TABLE control.entity_relation DISABLE TRIGGER trg_er_validate_target_entity;
+            END IF;
+          END
+          $seed_trigger_setup$;
         `);
 
         // 2. Install a temporary BEFORE INSERT trigger on control.entity that
@@ -469,8 +502,9 @@ async function runPhases(
       const sql = readFileSync(file.absPath, "utf-8");
       const hash = checksum(sql);
       const prev = executed.get(file.key);
+      const alwaysRun = shouldAlwaysRunSeedFile(file);
 
-      if (prev === hash && !opts.force) {
+      if (prev === hash && !opts.force && !alwaysRun) {
         log({ msg: "migrate_skip", file: file.key, reason: "already_executed" });
         continue;
       }
@@ -482,6 +516,7 @@ async function runPhases(
         phaseLabel: file.phaseLabel,
         file: file.key,
         changed: prev != null && prev !== hash,
+        alwaysRun,
       });
 
       try {
@@ -556,9 +591,33 @@ async function runPhases(
     // Tear down seed-phase setup (only if it was actually applied).
     if (seedSetupApplied) {
       await client.query(`
-        ALTER TABLE control.entity_lifecycle ENABLE TRIGGER trg_el_validate_entity_binding;
-        ALTER TABLE control.entity_operation  ENABLE TRIGGER trg_eo_validate_entity_binding;
-        ALTER TABLE control.entity_relation   ENABLE TRIGGER trg_er_validate_target_entity;
+        DO $seed_trigger_teardown$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM pg_trigger
+            WHERE tgrelid = 'control.entity_lifecycle'::regclass
+              AND tgname = 'trg_el_validate_entity_binding'
+          ) THEN
+            ALTER TABLE control.entity_lifecycle ENABLE TRIGGER trg_el_validate_entity_binding;
+          END IF;
+
+          IF EXISTS (
+            SELECT 1 FROM pg_trigger
+            WHERE tgrelid = 'control.entity_operation'::regclass
+              AND tgname = 'trg_eo_validate_entity_binding'
+          ) THEN
+            ALTER TABLE control.entity_operation ENABLE TRIGGER trg_eo_validate_entity_binding;
+          END IF;
+
+          IF EXISTS (
+            SELECT 1 FROM pg_trigger
+            WHERE tgrelid = 'control.entity_relation'::regclass
+              AND tgname = 'trg_er_validate_target_entity'
+          ) THEN
+            ALTER TABLE control.entity_relation ENABLE TRIGGER trg_er_validate_target_entity;
+          END IF;
+        END
+        $seed_trigger_teardown$;
 
         DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity;
         DROP FUNCTION IF EXISTS control.trg_fn_seed_entity_code_default();
@@ -740,7 +799,7 @@ async function main(): Promise<void> {
   const runAll     = args.includes("--all");
 
   // Low-level --stage=N flag(s) — all occurrences are collected
-  const stageArgs  = args.filter((a) => a.startsWith("--stage="));
+  const stageArgs  = args.filter((a) => a.startsWith("--stage=") || a.startsWith("--phase="));
 
   // Tenant UUID for Stage 3 blueprint/tenant provisioning.
   // CLI flag takes precedence over environment variable.
@@ -789,7 +848,7 @@ async function main(): Promise<void> {
       if (parsed.some((n) => n !== 1 && n !== 2 && n !== 3)) {
         logError({
           msg: "migrate_error",
-          error: "--stage must be 1, 2, or 3",
+          error: "--stage/--phase must be 1, 2, or 3",
         });
         process.exit(1);
       }

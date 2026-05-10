@@ -1,7 +1,7 @@
 -- ============================================================================
--- FILE: demo/007_scenario_vendor_advance.sql
--- Scenario VA: Standalone vendor-level advance (no invoice yet)
--- This is the pure "advance on vendor account" case: Finance cuts a prepayment
+-- FILE: demo/007_scenario_supplier_advance.sql
+-- Scenario VA: Standalone supplier-level advance (no invoice yet)
+-- This is the pure "advance on supplier account" case: Finance cuts a prepayment
 -- to the supplier ahead of any invoice. The advance sits as AP Advance (asset)
 -- on the balance sheet until a future invoice consumes it.
 --
@@ -16,11 +16,11 @@
 -- Produces: ADV-VA-0001 (payment_entry, type=ADVANCE, no allocations)
 -- ============================================================================
 
-DO $scenario_vendor_advance$
+DO $scenario_supplier_advance$
 DECLARE
     v_tenant_id     uuid;
     v_cc_id         uuid;
-    v_vendor_id     uuid;
+    v_supplier_id     uuid;
     v_sys           uuid := '00000000-0000-0000-0000-000000000000';
     v_advance_id    uuid := '00000002-0000-0000-0002-000000000020';  -- ADV-VA-0001 (pinned)
     v_pm_wire_id    uuid;
@@ -29,7 +29,7 @@ BEGIN
     SELECT id INTO v_tenant_id FROM master.tenant WHERE code = 'athyper';
     SELECT id INTO v_cc_id FROM master.company_code
       WHERE tenant_id = v_tenant_id AND code = 'AUIC';
-    SELECT id INTO v_vendor_id FROM master.supplier
+    SELECT id INTO v_supplier_id FROM master.supplier
       WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US';
     SELECT id INTO v_pm_wire_id FROM master.payment_method
       WHERE tenant_id = v_tenant_id AND code = 'WIRE-USD';
@@ -65,22 +65,22 @@ BEGIN
     ) VALUES (
         v_advance_id,
         v_tenant_id, v_cc_id,
-        'ADV-VA-0001', 'Standalone Vendor Advance',
+        'ADV-VA-0001', 'Standalone Supplier Advance',
         'ADV-VA-0001', 'advance', 'OUTBOUND',
-        v_vendor_id, 'Acme Consulting LLC',
+        v_supplier_id, 'Acme Consulting LLC',
         v_pm_wire_id, v_house_bank_id,
         CURRENT_DATE, CURRENT_DATE,
         'USD', 'USD', 1.0,
         2500.00,
-        'Scenario VA: Standalone vendor-level advance (no invoice)',
+        'Scenario VA: Standalone supplier-level advance (no invoice)',
         'draft', v_sys,
         extract(year FROM CURRENT_DATE)::smallint,
         extract(month FROM CURRENT_DATE)::smallint,
         jsonb_build_object(
-            'scenario',           'vendor_advance_standalone',
+            'scenario',           'supplier_advance_standalone',
             'no_invoice_link',    true,
             'recovery_strategy',  'open_ended_multi_invoice',
-            'expected_profile',   'AP_ADVANCE_VENDOR',
+            'expected_profile',   'AP_ADVANCE_SUPPLIER',
             'expected_event',     'ADVANCE_PAID')
     );
 
@@ -89,4 +89,4 @@ BEGIN
     -- invoices match against this open advance balance.
 
     RAISE NOTICE 'demo/007 scenario VA: ADV-VA-0001 created (USD 2,500 standalone advance, no invoice)';
-END $scenario_vendor_advance$;
+END $scenario_supplier_advance$;

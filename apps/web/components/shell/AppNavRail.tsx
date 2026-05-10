@@ -37,19 +37,29 @@ export function AppNavRail({
 
   const workspaces = runtime ? deriveNavTree(runtime.modules) : [];
   const hasPlatform = (runtime?.platform?.length ?? 0) > 0;
+  const workspaceKeys = new Set(workspaces.map((ws) => ws.key));
+
+  function routeWorkspaceKey(path: string): NavRailKey | null {
+    const entry = Object.entries(WORKSPACE_HREF_MAP).find(([, href]) =>
+      path === href || path.startsWith(`${href}/`),
+    );
+    if (entry) return entry[0];
+    if (path === "/core" || path.startsWith("/core/")) return "core";
+    return null;
+  }
 
   // Derive the active rail key:
   // - workspace clicks → workspace key (panel open)
   // - route-driven → global key derived from pathname
   const routeKey: NavRailKey | null =
     activeWorkspaceKey ??
-    (pathname === "/home" || pathname === "/"
+    (pathname === "/home" || pathname === "/dashboard" || pathname === "/"
       ? "home"
       : pathname.startsWith("/inbox")
         ? "inbox"
         : pathname.startsWith("/settings")
           ? "settings"
-          : null);
+          : routeWorkspaceKey(pathname));
 
   const handleSelect = useCallback(
     (key: NavRailKey) => {
@@ -77,12 +87,24 @@ export function AppNavRail({
           onWorkspaceChange("recent");
           break;
         default:
-          // Workspace or platform key
+          if (key === "core") {
+            onWorkspaceChange(key);
+            router.push("/core");
+            break;
+          }
+
+          if (workspaceKeys.has(key)) {
+            onWorkspaceChange(key);
+            const href = WORKSPACE_HREF_MAP[key];
+            if (href) router.push(href);
+            break;
+          }
+
           onWorkspaceChange(key === activeWorkspaceKey ? null : key);
           break;
       }
     },
-    [activeWorkspaceKey, onWorkspaceChange, router],
+    [activeWorkspaceKey, onWorkspaceChange, router, workspaceKeys],
   );
 
   return (

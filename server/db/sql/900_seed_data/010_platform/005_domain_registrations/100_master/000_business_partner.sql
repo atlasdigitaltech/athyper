@@ -29,6 +29,7 @@ SELECT
       "allow_address": true,
       "allow_contact": true,
       "is_readonly": false,
+      "list_entity_code": "business_partner_app_index",
       "duplicate_check": {
         "hard_gate": true,
         "block_on_exact": true,
@@ -57,6 +58,7 @@ WHERE NOT EXISTS (
 UPDATE control.entity
 SET feature_flags = COALESCE(feature_flags, '{}'::jsonb) || '{
       "is_readonly": false,
+      "list_entity_code": "business_partner_app_index",
       "duplicate_check": {
         "hard_gate": true,
         "block_on_exact": true,
@@ -128,6 +130,47 @@ CROSS JOIN (VALUES
     ('metadata',                   'metadata',                   'Metadata',                  'jsonb',         'zero_or_one', NULL::text,                          false, false, NULL::jsonb,                220)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
        is_required, is_filterable, validation, sort_order)
+WHERE e.table_schema = 'master' AND e.table_name = 'business_partner'
+  AND e.tenant_id IS NULL AND ev.version_no = 1
+ON CONFLICT DO NOTHING;
+
+-- BP meta-list projection fields. These are sourced from
+-- master.v_business_partner_app_index for list/search only; detail and writes
+-- still use the canonical master.business_partner table.
+INSERT INTO control.entity_field (
+    entity_version_id, name, column_name, label, data_type,
+    cardinality, origin, enum_domain_code, is_required, is_filterable,
+    is_searchable, validation, sort_order, created_by)
+SELECT ev.id,
+       f.name, f.column_name, f.label, f.data_type,
+       f.cardinality, 'system', f.enum_domain_code,
+       f.is_required, f.is_filterable, f.is_searchable,
+       NULL::jsonb, f.sort_order,
+       '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+CROSS JOIN (VALUES
+    ('role_summary',        'role_summary',        'Roles',           'text',            'one',         NULL::text,                   true,  true,  true,   35),
+    ('role_count',          'role_count',          'Role Count',      'integer',         'one',         NULL::text,                   true,  true,  false,  36),
+    ('role_kinds',          'role_kinds',          'Role Kinds',      'text_array',      'many',        NULL::text,                   false, true,  true,   37),
+    ('role_codes',          'role_codes',          'Role Codes',      'text',            'zero_or_one', NULL::text,                   false, true,  true,   38),
+    ('has_supplier_role',   'has_supplier_role',   'Supplier',        'boolean',         'one',         NULL::text,                   true,  true,  false,  39),
+    ('has_customer_role',   'has_customer_role',   'Customer',        'boolean',         'one',         NULL::text,                   true,  true,  false,  40),
+    ('is_dual_role',        'is_dual_role',        'Dual Role',       'boolean',         'one',         NULL::text,                   true,  true,  false,  41),
+    ('supplier_code',       'supplier_code',       'Supplier Code',   'text',            'zero_or_one', NULL::text,                   false, true,  true,  170),
+    ('supplier_status',     'supplier_status',     'Supplier Status', 'lifecycle_state', 'zero_or_one', NULL::text,                   false, true,  false, 171),
+    ('is_payment_ready',    'is_payment_ready',    'Payment Ready',   'boolean',         'zero_or_one', NULL::text,                   false, true,  false, 172),
+    ('customer_code',       'customer_code',       'Customer Code',   'text',            'zero_or_one', NULL::text,                   false, true,  true,  180),
+    ('customer_status',     'customer_status',     'Customer Status', 'lifecycle_state', 'zero_or_one', NULL::text,                   false, true,  false, 181),
+    ('is_key_account',      'is_key_account',      'Key Account',     'boolean',         'zero_or_one', NULL::text,                   false, true,  false, 182),
+    ('risk_rating',         'risk_rating',         'Risk Rating',     'enum',            'zero_or_one', 'master.credit_rating'::text, false, true,  false, 183),
+    ('company_scope_count', 'company_scope_count', 'Company Scopes',  'integer',         'one',         NULL::text,                   true,  true,  false, 184),
+    ('active_scope_count',  'active_scope_count',  'Active Scopes',   'integer',         'one',         NULL::text,                   true,  true,  false, 185),
+    ('blocked_scope_count', 'blocked_scope_count', 'Blocked Scopes',  'integer',         'one',         NULL::text,                   true,  true,  false, 186),
+    ('is_blocked',          'is_blocked',          'Blocked',         'boolean',         'one',         NULL::text,                   true,  true,  false, 187),
+    ('search_text',         'search_text',         'Search',          'text',            'one',         NULL::text,                   true,  false, true,  900)
+) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
+       is_required, is_filterable, is_searchable, sort_order)
 WHERE e.table_schema = 'master' AND e.table_name = 'business_partner'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
@@ -719,13 +762,13 @@ DO $dc$ DECLARE
         'code_field',         'code',
         'title_field',        'name',
         'subtitle_field',     'legal_name',
-        'search_fields',      jsonb_build_array('code','name','legal_name','registration_no','external_ref'),
+        'search_fields',      jsonb_build_array('search_text','code','name','legal_name','registration_no','external_ref','role_codes'),
         'default_sort_field', 'name',
         'default_sort_dir',   'asc',
         'default_sort_order', 'asc',
-        'list_columns',       jsonb_build_array('code','name','registration_country_code','legal_form','status'),
+        'list_columns',       jsonb_build_array('code','name','role_summary','role_codes','registration_country_code','legal_form','status'),
         'compact_card',       jsonb_build_object(
-            'bottom_fields',  jsonb_build_array('registration_country_code','legal_form')),
+            'bottom_fields',  jsonb_build_array('role_summary','registration_country_code')),
         'intake_modes',       v_intake_modes
     );
 BEGIN
@@ -741,13 +784,13 @@ BEGIN
             'code_field',         'code',
             'title_field',        'name',
             'subtitle_field',     'legal_name',
-            'search_fields',      jsonb_build_array('code','name','legal_name','registration_no','external_ref'),
+            'search_fields',      jsonb_build_array('search_text','code','name','legal_name','registration_no','external_ref','role_codes'),
             'default_sort_field', 'name',
             'default_sort_dir',   'asc',
             'default_sort_order', 'asc',
-            'list_columns',       jsonb_build_array('code','name','registration_country_code','legal_form','status'),
+            'list_columns',       jsonb_build_array('code','name','role_summary','role_codes','registration_country_code','legal_form','status'),
             'compact_card',       jsonb_build_object(
-                'bottom_fields',  jsonb_build_array('registration_country_code','legal_form')),
+                'bottom_fields',  jsonb_build_array('role_summary','registration_country_code')),
             'intake_modes',       v_intake_modes,
             'master_config',   v_rmc)
     WHERE table_schema = 'master' AND table_name = 'business_partner'
@@ -784,6 +827,18 @@ BEGIN
             ('partner_category', 'status_workflow', jsonb_build_object(
                 'section_key','status_workflow','section_label','Status & Workflow','section_order',10,
                 'control_type','facet_multi_select','quick_filter',false)),
+            ('role_summary', 'status_workflow', jsonb_build_object(
+                'section_key','status_workflow','section_label','Status & Workflow','section_order',10,
+                'control_type','facet_multi_select','quick_filter',true,'quick_label','Role','quick_order',25)),
+            ('has_supplier_role', 'status_workflow', jsonb_build_object(
+                'section_key','status_workflow','section_label','Status & Workflow','section_order',10,
+                'control_type','boolean','quick_filter',false)),
+            ('has_customer_role', 'status_workflow', jsonb_build_object(
+                'section_key','status_workflow','section_label','Status & Workflow','section_order',10,
+                'control_type','boolean','quick_filter',false)),
+            ('is_dual_role', 'status_workflow', jsonb_build_object(
+                'section_key','status_workflow','section_label','Status & Workflow','section_order',10,
+                'control_type','boolean','quick_filter',false)),
             ('code', 'identification', jsonb_build_object(
                 'section_key','identification','section_label','Identification','section_order',20,
                 'control_type','text_search','quick_filter',false)),
@@ -825,8 +880,11 @@ BEGIN
             'quick_filters', jsonb_build_array(
                 jsonb_build_object('key','__bookmarked','label','Favourites','value',true,'sort_order',10),
                 jsonb_build_object('key','__created_by','label','My documents','value','me','sort_order',20),
-                jsonb_build_object('key','partner_category.organization','field','partner_category','label','Organizations','value','organization','sort_order',30),
-                jsonb_build_object('key','partner_category.internal','field','partner_category','label','Internal BPs','value','internal','sort_order',40)
+                jsonb_build_object('key','role.supplier','field','has_supplier_role','label','Suppliers','value',true,'sort_order',30),
+                jsonb_build_object('key','role.customer','field','has_customer_role','label','Customers','value',true,'sort_order',40),
+                jsonb_build_object('key','role.dual','field','is_dual_role','label','Dual role','value',true,'sort_order',50),
+                jsonb_build_object('key','partner_category.organization','field','partner_category','label','Organizations','value','organization','sort_order',60),
+                jsonb_build_object('key','partner_category.internal','field','partner_category','label','Internal BPs','value','internal','sort_order',70)
             ),
             'sections', jsonb_build_array(
                 jsonb_build_object('key','status_workflow','label','Status & Workflow','sort_order',10),
@@ -847,6 +905,7 @@ SET natural_key_fields = ARRAY['code'],
     display_config     = display_config || '{"default_sort_field":"name"}'::jsonb,
     feature_flags      = COALESCE(feature_flags, '{}'::jsonb) || '{
       "is_readonly": false,
+      "list_entity_code": "business_partner_app_index",
       "duplicate_check": {
         "hard_gate": true,
         "block_on_exact": true,

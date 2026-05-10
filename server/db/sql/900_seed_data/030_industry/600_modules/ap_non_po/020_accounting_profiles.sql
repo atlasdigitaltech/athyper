@@ -11,7 +11,7 @@
 -- 4 profiles created:
 --   AP_NON_PO_STANDARD   — OPEX Non-PO invoices (consulting, utilities, etc.)
 --   AP_NON_PO_CAPEX      — CAPEX Non-PO invoices (IT equipment, furniture, etc.)
---   AP_ADVANCE_VENDOR    — Vendor-level advance (prepayment; no invoice yet)
+--   AP_ADVANCE_SUPPLIER    — Supplier-level advance (prepayment; no invoice yet)
 --   AP_RETENTION_RELEASE — Release of AP Retention Payable on milestone
 -- ============================================================================
 
@@ -50,8 +50,8 @@ BEGIN
          'active', v_sys),
 
         (v_tenant.tenant_id,
-         'AP_ADVANCE_VENDOR',
-         'AP Advance — Vendor Level',
+         'AP_ADVANCE_SUPPLIER',
+         'AP Advance — Supplier Level',
          'Standalone advance payment to supplier without a prior invoice. '
          'Produces Dr AP Advance (asset) / Cr Bank Clearing on payment. '
          'Recovered by later invoices via ADVANCE_RECOVERED event.',

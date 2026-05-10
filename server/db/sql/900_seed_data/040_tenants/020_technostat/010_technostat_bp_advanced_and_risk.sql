@@ -711,7 +711,7 @@ BEGIN
     END IF;
 
     IF v_prof IS NOT NULL AND v_gl_vnd IS NOT NULL THEN
-        -- Materials vendor posting (separate from subcontractor services)
+        -- Materials supplier posting (separate from subcontractor services)
         INSERT INTO master.company_code_supplier_posting_override
             (tenant_id, supplier_profile_id, posting_role_code, gl_account_id, book_code,
              effective_from, reason, metadata, status, created_by)

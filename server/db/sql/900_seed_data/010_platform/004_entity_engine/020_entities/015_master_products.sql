@@ -56,7 +56,7 @@ BEGIN
     VALUES (v_rel, 'commodity_classification', 'COMCL', 'commodity_classification', 'RELATION', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'commodity_classification',
         'Commodity Classification', 'Commodity Classifications', 'tags', 'rose',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        false, '{"requires_owner_type_scope":true,"owner_type_column":"owner_type"}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 101. spend_category ──────────────────────────────────────────────────

@@ -2,19 +2,19 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const aclTemplate = new URL("../../../stack/config/memorycache/redis-acl.conf.tpl", import.meta.url);
+const aclConfig = new URL("../../../stack/config/memorycache/redis-acl.conf", import.meta.url);
 const stagingConfig = new URL("../../../stack/config/memorycache/environments/cache.staging.conf", import.meta.url);
 const productionConfig = new URL("../../../stack/config/memorycache/environments/cache.production.conf", import.meta.url);
 
-function appAclTokens(): Set<string> {
-  const raw = readFileSync(aclTemplate, "utf8");
+function appAclTokens(aclFile: URL): Set<string> {
+  const raw = readFileSync(aclFile, "utf8");
   const appLine = raw.split(/\r?\n/).find((line) => line.startsWith("user app "));
-  if (!appLine) throw new Error("redis-acl.conf.tpl is missing the app user");
+  if (!appLine) throw new Error(`${aclFile.pathname} is missing the app user`);
   return new Set(appLine.split(/\s+/));
 }
 
 describe("Redis ACL contract", () => {
   it("allows every active app cache keyspace", () => {
-    const tokens = appAclTokens();
     const requiredPatterns = [
       "~session:*",
       "~principal_sessions:*",
@@ -38,19 +38,24 @@ describe("Redis ACL contract", () => {
       "~__health_probe__",
     ];
 
-    for (const pattern of requiredPatterns) {
-      expect(tokens.has(pattern), `missing Redis ACL key pattern ${pattern}`).toBe(true);
+    for (const aclFile of [aclTemplate, aclConfig]) {
+      const tokens = appAclTokens(aclFile);
+      for (const pattern of requiredPatterns) {
+        expect(tokens.has(pattern), `${aclFile.pathname} missing Redis ACL key pattern ${pattern}`).toBe(true);
+      }
     }
   });
 
   it("allows collab activity pubsub only on activity channels", () => {
-    const tokens = appAclTokens();
+    for (const aclFile of [aclTemplate, aclConfig]) {
+      const tokens = appAclTokens(aclFile);
 
-    expect(tokens.has("&activity:*")).toBe(true);
-    expect(tokens.has("+publish")).toBe(true);
-    expect(tokens.has("+subscribe")).toBe(true);
-    expect(tokens.has("+unsubscribe")).toBe(true);
-    expect(tokens.has("-@pubsub")).toBe(false);
+      expect(tokens.has("&activity:*"), `${aclFile.pathname} missing activity channel pattern`).toBe(true);
+      expect(tokens.has("+publish"), `${aclFile.pathname} missing publish command`).toBe(true);
+      expect(tokens.has("+subscribe"), `${aclFile.pathname} missing subscribe command`).toBe(true);
+      expect(tokens.has("+unsubscribe"), `${aclFile.pathname} missing unsubscribe command`).toBe(true);
+      expect(tokens.has("-@pubsub"), `${aclFile.pathname} should not deny the pubsub category`).toBe(false);
+    }
   });
 
   it("keeps environment configs from declaring a duplicate aclfile", () => {

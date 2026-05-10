@@ -27,6 +27,7 @@ import { FlowSummaryPanel } from "./FlowSummaryPanel";
 import { FlowFieldBinding } from "./FlowFieldBinding";
 import { useFlowEngine } from "./useFlowEngine";
 import { mapFlowHeaderModel } from "./mapFlowHeaderModel";
+import { isTruthy } from "./evaluateRule";
 import { JournalIntakeLinesGrid, type JournalExchangeRateStatus } from "../items/JournalLinesGrid";
 import { InvoiceIntakeLinesGrid, type InvoiceLineValidationStatus } from "../items/InvoiceIntakeLinesGrid";
 
@@ -43,8 +44,12 @@ export interface FlowWizardProps {
   userCtx?: Record<string, unknown>;
   /** Pre-populated field values (e.g. from a source document like an AP invoice). */
   initialValues?: Record<string, unknown>;
-  /** Rendered below the identity bar (e.g. flow-type switcher). */
+  /** Compact context rendered in the identity row beside status. */
   headerAction?: React.ReactNode;
+  /** Compact action rendered immediately before the standard header actions. */
+  headerLeadingAction?: React.ReactNode;
+  /** Field names accepted before the wizard and shown elsewhere as locked context. */
+  lockedFieldNames?: string[];
 }
 
 type IntakeFlowSection = {
@@ -54,6 +59,8 @@ type IntakeFlowSection = {
   entity_code?: string | null;
   payload_key?: string | null;
   min_rows?: number | null;
+  visible_when?: unknown;
+  default_row?: unknown;
 };
 
 function flowSections(step: unknown): IntakeFlowSection[] {
@@ -90,6 +97,8 @@ export function FlowWizard({
   userCtx,
   initialValues,
   headerAction,
+  headerLeadingAction,
+  lockedFieldNames = [],
 }: FlowWizardProps) {
   const engine = useFlowEngine(bundle, userPermissions, userCtx, initialValues);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -112,10 +121,20 @@ export function FlowWizard({
     validateStep,
   } = engine;
 
-  const chipFields  = visibleFields.filter((f) => f.mode === "chip");
-  const gridFields  = visibleFields.filter((f) => f.mode !== "chip");
-  const lineSections = flowSections(currentStep).filter(isJournalLineSection);
-  const invoiceLineSections = flowSections(currentStep).filter(isInvoiceLineSection);
+  const lockedFieldSet = React.useMemo(() => new Set(lockedFieldNames), [lockedFieldNames]);
+  const renderFields = visibleFields.filter((f) => !lockedFieldSet.has(f.field_name));
+  const chipFields  = renderFields.filter((f) => f.mode === "chip");
+  const gridFields  = renderFields.filter((f) => f.mode !== "chip");
+  const sectionRuleCtx = React.useMemo(() => ({
+    draft: state.draft,
+    ctx:   { today: new Date().toISOString().slice(0, 10) },
+    meta:  {},
+  }), [state.draft]);
+  const visibleSections = flowSections(currentStep).filter((section) =>
+    isTruthy(section.visible_when ?? null, sectionRuleCtx),
+  );
+  const lineSections = visibleSections.filter(isJournalLineSection);
+  const invoiceLineSections = visibleSections.filter(isInvoiceLineSection);
   const currentLineFxBlocking = lineSections.some((section) =>
     Boolean(lineFxStatuses[sectionPayloadKey(section)]?.blocking),
   );
@@ -153,7 +172,8 @@ export function FlowWizard({
       <EntityHeader
         model={entityHeaderModel}
         onBack={onCancel}
-        extensionSlot={headerAction}
+        identitySlot={headerAction}
+        actionLeadingSlot={headerLeadingAction}
       />
 
       {submitError && (
@@ -258,6 +278,7 @@ export function FlowWizard({
                       error={state.errors[payloadKey]}
                       currencyCode={currencyCode || "USD"}
                       minRows={section.min_rows ?? 1}
+                      defaultRow={section.default_row}
                       onValidationStatusChange={(status) => {
                         setInvoiceLineStatuses((prev) => ({ ...prev, [payloadKey]: status }));
                       }}

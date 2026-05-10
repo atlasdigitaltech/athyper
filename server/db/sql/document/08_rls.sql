@@ -327,3 +327,104 @@ CREATE POLICY tenant_read   ON document.bank_recon_case_line FOR SELECT USING   
 CREATE POLICY tenant_insert ON document.bank_recon_case_line FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON document.bank_recon_case_line FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON document.bank_recon_case_line FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ============================================================================
+-- Entity-engine coverage hardening: commitment, matching, payment allocation
+-- ============================================================================
+
+-- document.commitment: mutable document header; correction via lifecycle/status.
+ALTER TABLE document.commitment ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.commitment FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.commitment;
+DROP POLICY IF EXISTS tenant_insert ON document.commitment;
+DROP POLICY IF EXISTS tenant_update ON document.commitment;
+DROP POLICY IF EXISTS admin_read    ON document.commitment;
+DROP POLICY IF EXISTS admin_write   ON document.commitment;
+CREATE POLICY tenant_read   ON document.commitment FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.commitment FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.commitment FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.commitment FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.commitment FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- document.commitment_procurement: 1:1 procurement child of commitment.
+ALTER TABLE document.commitment_procurement ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.commitment_procurement FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.commitment_procurement;
+DROP POLICY IF EXISTS tenant_insert ON document.commitment_procurement;
+DROP POLICY IF EXISTS tenant_update ON document.commitment_procurement;
+DROP POLICY IF EXISTS admin_read    ON document.commitment_procurement;
+DROP POLICY IF EXISTS admin_write   ON document.commitment_procurement;
+CREATE POLICY tenant_read   ON document.commitment_procurement FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.commitment_procurement FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.commitment_procurement FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.commitment_procurement FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.commitment_procurement FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- document.commitment_line: mutable operational line while commitment is editable.
+ALTER TABLE document.commitment_line ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.commitment_line FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.commitment_line;
+DROP POLICY IF EXISTS tenant_insert ON document.commitment_line;
+DROP POLICY IF EXISTS tenant_update ON document.commitment_line;
+DROP POLICY IF EXISTS admin_read    ON document.commitment_line;
+DROP POLICY IF EXISTS admin_write   ON document.commitment_line;
+CREATE POLICY tenant_read   ON document.commitment_line FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.commitment_line FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.commitment_line FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.commitment_line FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.commitment_line FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- document.commitment_release_allocation: mutable status/correction record.
+ALTER TABLE document.commitment_release_allocation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.commitment_release_allocation FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.commitment_release_allocation;
+DROP POLICY IF EXISTS tenant_insert ON document.commitment_release_allocation;
+DROP POLICY IF EXISTS tenant_update ON document.commitment_release_allocation;
+DROP POLICY IF EXISTS admin_read    ON document.commitment_release_allocation;
+DROP POLICY IF EXISTS admin_write   ON document.commitment_release_allocation;
+CREATE POLICY tenant_read   ON document.commitment_release_allocation FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.commitment_release_allocation FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.commitment_release_allocation FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.commitment_release_allocation FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.commitment_release_allocation FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- document.invoice_match_case: matching result envelope; status updates allowed.
+ALTER TABLE document.invoice_match_case ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.invoice_match_case FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.invoice_match_case;
+DROP POLICY IF EXISTS tenant_insert ON document.invoice_match_case;
+DROP POLICY IF EXISTS tenant_update ON document.invoice_match_case;
+DROP POLICY IF EXISTS admin_read    ON document.invoice_match_case;
+DROP POLICY IF EXISTS admin_write   ON document.invoice_match_case;
+CREATE POLICY tenant_read   ON document.invoice_match_case FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.invoice_match_case FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.invoice_match_case FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.invoice_match_case FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.invoice_match_case FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- document.match_exception: exception workflow state and resolution notes.
+ALTER TABLE document.match_exception ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.match_exception FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.match_exception;
+DROP POLICY IF EXISTS tenant_insert ON document.match_exception;
+DROP POLICY IF EXISTS tenant_update ON document.match_exception;
+DROP POLICY IF EXISTS admin_read    ON document.match_exception;
+DROP POLICY IF EXISTS admin_write   ON document.match_exception;
+CREATE POLICY tenant_read   ON document.match_exception FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.match_exception FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.match_exception FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.match_exception FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.match_exception FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- document.payment_entry_allocation: append-only allocation lines.
+ALTER TABLE document.payment_entry_allocation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.payment_entry_allocation FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.payment_entry_allocation;
+DROP POLICY IF EXISTS tenant_insert ON document.payment_entry_allocation;
+DROP POLICY IF EXISTS admin_read    ON document.payment_entry_allocation;
+DROP POLICY IF EXISTS admin_write   ON document.payment_entry_allocation;
+CREATE POLICY tenant_read   ON document.payment_entry_allocation FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.payment_entry_allocation FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.payment_entry_allocation FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.payment_entry_allocation FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

@@ -395,7 +395,7 @@ BEGIN
         supplier_type, status, created_by
     )
     SELECT v_tenant_id, v_sup_bp_id, 'SUP-ATHQ-GCM-001',
-           'vendor', 'active', v_sys
+           'general', 'active', v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.supplier
          WHERE tenant_id = v_tenant_id AND supplier_code = 'SUP-ATHQ-GCM-001'

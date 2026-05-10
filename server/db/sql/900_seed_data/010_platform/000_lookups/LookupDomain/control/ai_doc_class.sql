@@ -12,7 +12,7 @@ FROM (VALUES
     ('purchase_invoice',
      'Purchase Invoice',
      'control.ai_doc_class',
-     'AP vendor invoice. Maps to document.purchase_invoice. '
+     'AP supplier invoice. Maps to document.purchase_invoice. '
      'Financial posting document — all AI actions capped at assist.',
      10),
 

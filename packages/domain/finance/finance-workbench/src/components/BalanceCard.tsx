@@ -27,11 +27,11 @@ export function BalanceCard({ label, value, variant = "neutral", compact = false
     : (compact ? fmtCompact(value) : fmtFull(value));
 
   return (
-    <div className={cn("rounded-md px-2.5 py-2", bg)}>
-      <div className="text-doc-label font-medium uppercase tracking-wider text-muted-foreground mb-0.5">
+    <div className={cn("rounded-lg px-3 py-2.5", bg)}>
+      <div className="mb-1 text-xs font-medium text-muted-foreground">
         {label}
       </div>
-      <span className={cn("text-base font-semibold font-mono", textColor)}>
+      <span className={cn("text-sm font-semibold tabular-nums", textColor)}>
         {displayValue}
       </span>
     </div>

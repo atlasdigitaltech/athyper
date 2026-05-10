@@ -46,7 +46,7 @@ import { cn } from "@athyper/theme/utils";
 
 // ── TypeChip ─────────────────────────────────────────────────────────────────
 
-/** Inverted-fill chip labelling the document family ("Invoice", "Vendor"). */
+/** Inverted-fill chip labelling the document family ("Invoice", "Supplier"). */
 export function TypeChip({
   children,
   onBack,
@@ -214,7 +214,7 @@ export function PageHeader({
       {(actions || (!stackedActions && primaryActions)) && (
         <div
           className={cn(
-            "flex w-full min-w-0 items-center gap-1.5 overflow-x-auto scrollbar-none",
+            "flex w-full min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
             actionsLayout === "inline" && "sm:w-auto sm:shrink-0",
             adaptiveActions && "xl:w-auto xl:shrink-0",
           )}

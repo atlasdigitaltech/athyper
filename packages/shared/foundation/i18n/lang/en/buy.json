@@ -8,8 +8,8 @@
   "buy.purchase_orders": "Purchase Orders",
   "buy.goods_receipt": "Goods Receipt",
   "buy.goods_receipts": "Goods Receipts",
-  "buy.vendor_invoice": "Vendor Invoice",
-  "buy.vendor_invoices": "Vendor Invoices",
+  "buy.supplier_invoice": "Supplier Invoice",
+  "buy.supplier_invoices": "Supplier Invoices",
 
   "buy.requisition_number": "Requisition Number",
   "buy.po_number": "PO Number",
@@ -18,9 +18,9 @@
 
   "buy.requester": "Requester",
   "buy.buyer": "Buyer",
-  "buy.vendor": "Vendor",
-  "buy.vendor_name": "Vendor Name",
-  "buy.vendor_code": "Vendor Code",
+  "buy.supplier": "Supplier",
+  "buy.supplier_name": "Supplier Name",
+  "buy.supplier_code": "Supplier Code",
   "buy.delivery_address": "Delivery Address",
   "buy.ship_to": "Ship To",
 

@@ -49,7 +49,7 @@ BEGIN
       'dedup', jsonb_build_object('enabled', false),
       'assist', jsonb_build_object(
         'budget_precheck', 'advisory', 'ocr_prefill', true,
-        'vendor_enrichment', true, 'po_prefill', true),
+        'supplier_enrichment', true, 'po_prefill', true),
       'layout', 'wizard_with_summary'),
     1, 'active', now(), v_su
   WHERE NOT EXISTS (
@@ -137,11 +137,11 @@ BEGIN
       NULL, NULL, NULL, NULL, NULL, NULL, NULL, 3, NULL, 100),
     ('currency_code',          'chip',     'derived_overrideable',
       NULL, NULL, NULL,
-      'vendor.default_currency(supplier_id)', 'ap.override_currency',
+      'supplier.default_currency(supplier_id)', 'ap.override_currency',
       'meta', 'chip', 1, NULL, 200),
     ('payment_term_id',        'chip',     'derived_overrideable',
       NULL, NULL, NULL,
-      'vendor.default_payment_term(supplier_id, company_code_id)', 'ap.override_payment_term',
+      'supplier.default_payment_term(supplier_id, company_code_id)', 'ap.override_payment_term',
       'meta', 'chip', 1, NULL, 220)
     -- posting_date, received_date, match_type, fiscal_year, period_number: hidden — omitted
   ) AS v(field_name, mode, derivation_mode, visible_when, required_when,
@@ -169,7 +169,7 @@ BEGIN
   JOIN (VALUES
     ('currency_code',       'chip',         'derived_overrideable',
       NULL::text, NULL::text,
-      NULL, 'vendor.default_currency(supplier_id)', 'ap.override_currency',
+      NULL, 'supplier.default_currency(supplier_id)', 'ap.override_currency',
       NULL, 'chip', 1, 'standard', NULL, 5),
     ('total_amount',        'required',     'derived_overrideable',
       NULL, NULL,

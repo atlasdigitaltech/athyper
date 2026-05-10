@@ -14,7 +14,7 @@
  * Examples:
  *   /app/purchase_invoice/new  → IntentScreen → FlowWizard (Standard or Proforma)
  *   /app/journal_entry/new     → FlowWizard (when flow is seeded)
- *   /app/vendor/new            → EntityForm  (master record, flat form)
+ *   /app/supplier/new          → EntityForm  (master record, flat form)
  *
  * Entity naming convention: purchase_invoice (underscore), matching the DB
  * table name. Never use hyphens in entity codes.
@@ -30,12 +30,19 @@ import {
   type EntityIntakeMode,
 } from "@athyper/entity-runtime/intake";
 import { useCreateEntity, useEntityFlow, useCompiledEntity } from "@athyper/query";
-import { FlowWizard, FlowWizardSkeleton } from "@athyper/document-runtime/intake";
+import {
+  FlowPreflightChooser,
+  FlowPreflightLockedSummary,
+  FlowWizard,
+  FlowWizardSkeleton,
+  getFlowPreflightConfig,
+  type FlowPreflightSelection,
+} from "@athyper/document-runtime/intake";
 import { bffFetch } from "@/lib/bff-fetch";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
 import EntityModeFlow from "../../_components/EntityModeFlow";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
-import type { EntityCreateRedirect } from "@athyper/api-contracts/metadata";
+import type { CompiledEntity, EntityCreateRedirect } from "@athyper/api-contracts/metadata";
 
 export default function AppEntityNewRoute({
   params,
@@ -49,6 +56,7 @@ export default function AppEntityNewRoute({
   const createMutation = useCreateEntity(entity);
   const [journalSubmitting, setJournalSubmitting] = useState(false);
   const [purchaseInvoiceSubmitting, setPurchaseInvoiceSubmitting] = useState(false);
+  const [preflightSelection, setPreflightSelection] = useState<FlowPreflightSelection | null>(null);
   const requestedMode = searchParams.get("mode") ?? searchParams.get("role");
   const businessPartnerId = searchParams.get("bp");
 
@@ -92,6 +100,12 @@ export default function AppEntityNewRoute({
     return Object.keys(values).length > 0 ? values : undefined;
   }, [businessPartnerId, requestedMode, sourceInvoice, sourceInvoiceId]);
 
+  const wizardInitialValues = useMemo<Record<string, unknown> | undefined>(() => {
+    const selectedValues = preflightSelection?.values ?? {};
+    const values = { ...(initialValues ?? {}), ...selectedValues };
+    return Object.keys(values).length > 0 ? values : undefined;
+  }, [initialValues, preflightSelection]);
+
   // Default flow (is_default=true, trigger=new)
   const { data: defaultBundle, isLoading: flowLoading } = useEntityFlow(entity, "new");
 
@@ -100,6 +114,10 @@ export default function AppEntityNewRoute({
   // We eagerly fetch all alternate bundles so their labels are available before
   // the user interacts with the switcher.
   const { data: compiledEntity, isLoading: metaLoading } = useCompiledEntity(entity);
+  const entityDisplayLabel = useMemo(
+    () => resolveEntityDisplayLabel(compiledEntity, entity),
+    [compiledEntity, entity],
+  );
   const createRedirectHref = useMemo(
     () => resolveCreateRedirect(
       compiledEntity?.display_config.create_redirect as EntityCreateRedirect | undefined,
@@ -152,7 +170,15 @@ export default function AppEntityNewRoute({
   const [activeFlowCode, setActiveFlowCode] = useState<string | null | undefined>(undefined);
 
   const needsAlternates = alternateFlowCodes.length > 0;
-  const needsIntentScreen = needsAlternates && activeFlowCode === undefined;
+  const defaultPreflightConfig = useMemo(
+    () => getFlowPreflightConfig(defaultBundle),
+    [defaultBundle],
+  );
+  const preflightSuppressesAlternateLauncher = Boolean(defaultPreflightConfig?.suppress_alternate_flow_launcher);
+  const needsIntentScreen =
+    needsAlternates &&
+    activeFlowCode === undefined &&
+    !preflightSuppressesAlternateLauncher;
 
   // Resolved bundle — undefined when intent screen is shown or while loading
   const bundle = needsIntentScreen
@@ -235,7 +261,7 @@ export default function AppEntityNewRoute({
       <EntityModeFlow
         mode={activeIntakeMode}
         hostEntityCode={entity}
-        hostEntityLabel={formatEntityLabel(entity)}
+        hostEntityLabel={entityDisplayLabel}
         initialValues={initialValues}
         roleModeCodes={intakeRoleModeCodes}
       />
@@ -243,15 +269,14 @@ export default function AppEntityNewRoute({
   }
 
   if (intakeModes.length > 0) {
-    const label = formatEntityLabel(entity);
     return (
       <EntityIntakeLauncher
         entityCode={entity}
-        title={`${label} Management`}
-        description={`Create and extend ${label.toLowerCase()} records`}
+        title={`${entityDisplayLabel} Management`}
+        description={`Create and extend ${entityDisplayLabel.toLowerCase()} records`}
         modes={intakeModes}
         listHref={`/app/${entity}`}
-        listLabel={`View ${label}s`}
+        listLabel={`View ${entityDisplayLabel}s`}
         baseNewHref={`/app/${entity}/new`}
       />
     );
@@ -297,15 +322,42 @@ export default function AppEntityNewRoute({
     );
   }
 
+  const activePreflightConfig = getFlowPreflightConfig(bundle);
+  if (bundle && activePreflightConfig && !preflightSelection) {
+    return (
+      <FlowPreflightChooser
+        bundle={bundle}
+        entityLabel={entityDisplayLabel}
+        onCancel={() => router.push(`/app/${entity}`)}
+        onContinue={setPreflightSelection}
+      />
+    );
+  }
+
   if (bundle) {
+    const handlePreflightRestart = () => {
+      if (window.confirm("Restarting will clear the current draft and return to the chooser.")) {
+        setPreflightSelection(null);
+      }
+    };
+    const headerLeadingAction = preflightSelection ? (
+      <FlowPreflightLockedSummary
+        selection={preflightSelection}
+        onRestart={handlePreflightRestart}
+      />
+    ) : undefined;
+
     return (
       <FlowWizard
         bundle={bundle}
         userPermissions={bundle.user_permissions}
         userCtx={userCtx}
-        initialValues={initialValues}
+        initialValues={wizardInitialValues}
         onSubmit={handleSubmit}
+        entityLabel={entityDisplayLabel}
         entityCode={entity}
+        headerLeadingAction={headerLeadingAction}
+        lockedFieldNames={preflightSelection?.lockedFields}
         onCancel={() => router.push(`/app/${entity}`)}
         submitting={
           entity === "journal_entry"
@@ -327,6 +379,11 @@ export default function AppEntityNewRoute({
       submitting={createMutation.isPending}
     />
   );
+}
+
+function resolveEntityDisplayLabel(entityMeta: CompiledEntity | null | undefined, entityCode: string): string {
+  const label = entityMeta?.entity_name?.trim();
+  return label || formatEntityLabel(entityCode);
 }
 
 function looksLikeUuid(value: string): boolean {
