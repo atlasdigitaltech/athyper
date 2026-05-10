@@ -12,12 +12,12 @@
 //   shared.uuidv7() bootstrap dependency.
 //
 // Phase 2 – System Seed: Platform-wide reference and control data
-//   Directory: 900_seed_data_backup/010_platform/**
+//   Directory: 900_seed_data/010_platform/**
 //
 // Phase 3 – Blueprint + Tenant Seed
-//   Directories: 900_seed_data_backup/020_universal/**   (TIER 1 foundation + TIER 2a COA)
-//                900_seed_data_backup/030_industry/**    (TIER 2b industry packs + TIER 3 modules)
-//                900_seed_data_backup/040_tenants/**     (per-client onboarding)
+//   Directories: 900_seed_data/020_universal/**   (TIER 1 foundation + TIER 2a COA)
+//                900_seed_data/030_industry/**    (TIER 2b industry packs + TIER 3 modules)
+//                900_seed_data/040_tenants/**     (per-client onboarding)
 //
 // Usage:
 //   tsx db/seed/migrate.ts                   # Run all three stages (default)
@@ -60,7 +60,7 @@ const __dirname = dirname(__filename);
 const SQL_DIR = join(__dirname, "../sql");
 
 /** Seed data root directory within sql/ */
-const SEED_DATA_DIR = "900_seed_data_backup";
+const SEED_DATA_DIR = "900_seed_data";
 
 /** Subdirectory prefixes within 900_seed_data/ */
 const SYSTEM_PREFIX = "010_platform";

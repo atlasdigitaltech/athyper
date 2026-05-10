@@ -321,11 +321,26 @@ async function handlePostInvoiceInner(
       return { status: 422, body: { error: "NO_OPEN_PERIOD", message: "No open fiscal period for the invoice posting date" } };
     }
 
-    // Resolve ledger book: prefer company.default_ledger_book_id, fall back to
-    // highest-priority statutory assignment from company_code_book_assignment.
+    // Resolve ledger book for AP postings. company.default_ledger_book_id may
+    // point at a management book, so only use it when it is an active statutory
+    // assignment; otherwise fall back to the active statutory assignment.
     const bookRes = await sql<{ book_id: string }>`
       SELECT COALESCE(
-        cc.default_ledger_book_id,
+        (SELECT cc.default_ledger_book_id
+         FROM   master.company_code cc
+         JOIN   master.company_code_book_assignment dba
+                ON dba.tenant_id       = cc.tenant_id
+               AND dba.company_code_id = cc.id
+               AND dba.book_id         = cc.default_ledger_book_id
+               AND dba.status          = 'active'
+         JOIN   master.ledger_book dlb
+                ON dlb.id        = cc.default_ledger_book_id
+               AND dlb.tenant_id = cc.tenant_id
+         WHERE  cc.id        = ${companyId}
+           AND  cc.tenant_id = ${tenantId}
+           AND  dlb.category = 'statutory'
+           AND  dlb.status   = 'active'
+         LIMIT  1),
         (SELECT ba.book_id
          FROM   master.company_code_book_assignment ba
          JOIN   master.ledger_book lb ON lb.id = ba.book_id AND lb.tenant_id = ba.tenant_id
@@ -334,11 +349,9 @@ async function handlePostInvoiceInner(
            AND  ba.status         = 'active'
            AND  lb.category       = 'statutory'
            AND  lb.status         = 'active'
-         ORDER  BY ba.priority DESC
+         ORDER  BY ba.priority ASC
          LIMIT  1)
       ) AS book_id
-      FROM   master.company_code cc
-      WHERE  cc.id = ${companyId} AND cc.tenant_id = ${tenantId}
     `.execute(trx);
     const bookId = bookRes.rows[0]?.book_id ?? null;
     if (!bookId) {

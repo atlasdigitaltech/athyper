@@ -49,8 +49,7 @@ export const financeWorkspaceModel: WorkspaceDashboardModel = {
       sections: [
         section("work", "Work", [
           { label: "Journal Entries", href: "/app/journal_entry", archetype: "Doc", description: "Manual journals with workflow approval and posting.", primaryAction: "Create / post" },
-          { label: "GL Workbench", href: "/finance/gl", archetype: "Rich", description: "Journal review, posting context, period filters, and drill-through." },
-          { label: "Trial Balance", href: "/finance/views/trial-balance", archetype: "Rich", description: "Period balances with account-level drill-through." },
+          { label: "Purchase Invoice", href: "/app/purchase_invoice", archetype: "Doc", description: "Invoice matching, approval, posting, and holds." },
           { label: "Financial Reports", href: "/finance/reports", archetype: "Rich", description: "P&L, balance sheet, cash flow, and exports." },
         ]),
         section("masterData", "Master Data", [
