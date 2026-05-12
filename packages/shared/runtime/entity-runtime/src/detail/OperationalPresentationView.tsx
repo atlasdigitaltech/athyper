@@ -14,12 +14,6 @@ import {
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
-  BADGE_KIND_LABEL,
-  BADGE_KIND_VARIANT,
-  type BadgeKind,
-} from "@athyper/theme/record-badge";
-import {
-  Badge,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +30,7 @@ import {
   entityRowToPickerOption,
   resolveEntityPickerOptionConfig,
 } from "@athyper/runtime-shared/entity-search";
+import { resolveRuntimeStatusColors, runtimeStatusBarClass } from "../list/listPresentation";
 
 type ChildRecord = Record<string, unknown>;
 type OperationalPresentationName = Exclude<NonNullable<SummaryCardsConfig["presentation"]>, "cards">;
@@ -88,43 +83,6 @@ const DisplayMetadataContext = createContext<{
   fieldMap: new Map<string, EntityField>(),
   settings: {},
 });
-
-const STATUS_TO_KIND: Record<string, BadgeKind> = {
-  active: "active",
-  inactive: "inactive",
-  archived: "archived",
-  draft: "draft",
-  pending: "pending",
-  blocked: "blocked",
-  on_hold: "on_hold",
-  "on-hold": "on_hold",
-  sanctioned: "sanctioned",
-  expired: "expired",
-  verified: "verified",
-  unverified: "unverified",
-  rejected: "rejected",
-  clear: "verified",
-  valid: "verified",
-  approved: "verified",
-  allowed: "verified",
-  open: "verified",
-  qualified: "verified",
-  live: "verified",
-  current: "verified",
-  preferred: "primary",
-  default: "primary",
-  review: "pending",
-  in_review: "pending",
-  scheduled: "pending",
-  expiring: "expiring_soon",
-  conditional: "pending",
-  lifted: "inactive",
-  closed: "inactive",
-  superseded: "inactive",
-  denied: "blocked",
-  failed: "rejected",
-  revoked: "rejected",
-};
 
 export function supportsOperationalPresentation(
   value: SummaryCardsConfig["presentation"],
@@ -255,16 +213,6 @@ function humanizeIfCode(str: string): string {
 }
 
 function preferredDisplayValue(rec: ChildRecord, field: string): unknown {
-  const candidates = [`${field}_display`, `${field}_label`];
-  if (field.endsWith("_id")) {
-    const base = field.slice(0, -3);
-    candidates.push(`${base}_display`, `${base}_label`, `${base}_name`, `${base}_code`);
-  }
-
-  for (const candidate of candidates) {
-    const value = rec[candidate];
-    if (value !== null && value !== undefined && value !== "") return value;
-  }
   return rec[field];
 }
 
@@ -317,13 +265,11 @@ function displayFieldValue(rec: ChildRecord, field: string): string {
   return formatOperationalValue(preferredDisplayValue(rec, field));
 }
 
-function roleAppHref(rec: ChildRecord): string | null {
-  const entityCode = typeof rec.role_entity_code === "string" ? rec.role_entity_code.trim() : "";
-  const recordId = typeof rec.role_record_id === "string"
-    ? rec.role_record_id.trim()
-    : typeof rec.id === "string"
-      ? rec.id.trim()
-      : "";
+function roleAppHref(rec: ChildRecord, settings: PresentationSettings): string | null {
+  const entityField = stringSetting(settings, "link_entity_field", "");
+  const recordField = stringSetting(settings, "link_record_field", "");
+  const entityCode = entityField && typeof rec[entityField] === "string" ? rec[entityField].trim() : "";
+  const recordId = recordField && typeof rec[recordField] === "string" ? rec[recordField].trim() : "";
   if (!entityCode || !recordId) return null;
   return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`;
 }
@@ -448,12 +394,10 @@ function percentFieldValue(rec: ChildRecord, field: string): number | null {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function statusKindForValue(value: unknown): BadgeKind {
-  if (typeof value === "boolean") return value ? "verified" : "inactive";
-  const normalized = String(value ?? "").trim().toLowerCase().replace(/\s+/g, "_");
-  if (!normalized) return "inactive";
-  if (normalized.includes("block")) return "blocked";
-  return STATUS_TO_KIND[normalized] ?? "active";
+function statusColorValue(value: unknown): string {
+  if (typeof value === "boolean") return value ? "active" : "inactive";
+  const normalized = String(value ?? "").trim();
+  return normalized || "unknown";
 }
 
 function statusLabelForValue(value: unknown, fallback?: string): string {
@@ -463,30 +407,30 @@ function statusLabelForValue(value: unknown, fallback?: string): string {
 }
 
 function StatusPill({ value, label }: { value: unknown; label?: string }) {
-  const kind = statusKindForValue(value);
+  const { settings } = useContext(DisplayMetadataContext);
+  const resolverName = stringSetting(settings, "status_resolver", "") || undefined;
+  const colors = resolveRuntimeStatusColors(statusColorValue(value), resolverName);
   return (
-    <Badge variant={BADGE_KIND_VARIANT[kind]} size="sm">
-      {statusLabelForValue(value, label) || BADGE_KIND_LABEL[kind]}
-    </Badge>
+    <span className={cn("inline-flex h-5 items-center rounded-full border px-2 text-doc-badge font-medium leading-none", colors.subtleBadge)}>
+      {statusLabelForValue(value, label)}
+    </span>
   );
 }
 
-function statusBarClass(value: unknown): string {
-  const kind = statusKindForValue(value);
-  if (kind === "verified" || kind === "active" || kind === "primary") return "bg-success";
-  if (kind === "pending" || kind === "on_hold" || kind === "expiring_soon") return "bg-warning";
-  if (kind === "blocked" || kind === "rejected" || kind === "expired" || kind === "sanctioned") return "bg-destructive";
-  return "bg-muted-foreground";
+function statusBarClass(value: unknown, resolverName?: string): string {
+  return runtimeStatusBarClass(statusColorValue(value), resolverName);
 }
 
 function activeLike(rec: ChildRecord, statusField: string, blockedField?: string): boolean {
   if (blockedField && rec[blockedField] === true) return false;
+  if (!statusField) return false;
   const status = String(rec[statusField] ?? "").toLowerCase();
   return status === "" || ["active", "approved", "live", "current", "effective"].includes(status);
 }
 
 function blockedLike(rec: ChildRecord, statusField: string, blockedField?: string): boolean {
   if (blockedField && rec[blockedField] === true) return true;
+  if (!statusField) return false;
   const status = String(rec[statusField] ?? "").toLowerCase();
   return status.includes("block") || status === "rejected" || status === "failed";
 }
@@ -545,6 +489,13 @@ function ActionMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function primaryAction(settings: PresentationSettings, rec: ChildRecord, canEdit: boolean, onMarkPrimary: (rec: ChildRecord) => void) {
+  const primaryField = stringSetting(settings, "primary_field", "");
+  return primaryField && rec[primaryField] !== true && canEdit
+    ? () => onMarkPrimary(rec)
+    : undefined;
 }
 
 function AddTile({ label, onAdd }: { label: string; onAdd: () => void }) {
@@ -649,7 +600,7 @@ function ScorecardPresentation(props: OperationalPresentationProps) {
             <ActionMenu
               onEdit={canEdit ? () => onEdit(rec) : undefined}
               onDelete={canEdit ? () => onDelete(rec) : undefined}
-              onMarkPrimary={"is_primary" in rec && rec.is_primary !== true && canEdit ? () => onMarkPrimary(rec) : undefined}
+              onMarkPrimary={primaryAction(settings, rec, canEdit, onMarkPrimary)}
             />
           </div>
         </div>
@@ -713,10 +664,10 @@ function TimelinePresentation(props: OperationalPresentationProps) {
   const settings = presentationSettings(config);
   const titleField = stringSetting(settings, "title_field", config.title);
   const descriptionField = stringSetting(settings, "description_field", config.facts?.[0] ?? "");
-  const startField = stringSetting(settings, "start_field", "created_at");
+  const startField = stringSetting(settings, "start_field", "");
   const endField = stringSetting(settings, "end_field", "");
   const activeField = stringSetting(settings, "active_field", "");
-  const statusField = stringSetting(settings, "status_field", "status");
+  const statusField = stringSetting(settings, "status_field", "");
   const activeRecords = records.filter((rec) => {
     if (activeField) return rec[activeField] === true;
     if (endField && hasFieldValue(rec, endField)) return false;
@@ -796,7 +747,7 @@ function TimelinePresentation(props: OperationalPresentationProps) {
                     <ActionMenu
                       onEdit={canEdit ? () => onEdit(rec) : undefined}
                       onDelete={canEdit ? () => onDelete(rec) : undefined}
-                      onMarkPrimary={"is_primary" in rec && rec.is_primary !== true && canEdit ? () => onMarkPrimary(rec) : undefined}
+                      onMarkPrimary={primaryAction(settings, rec, canEdit, onMarkPrimary)}
                     />
                   </div>
                 </div>
@@ -814,8 +765,8 @@ function ProfileCardsPresentation(props: OperationalPresentationProps) {
   const router = useRouter();
   const settings = presentationSettings(config);
   const [filter, setFilter] = useState<string>("");
-  const statusField = stringSetting(settings, "status_field", "status");
-  const blockedField = stringSetting(settings, "blocked_field", "is_blocked");
+  const statusField = stringSetting(settings, "status_field", "");
+  const blockedField = stringSetting(settings, "blocked_field", "");
   const codeField = stringSetting(settings, "code_field", config.title);
   const titleField = stringSetting(settings, "title_field", config.title);
   const primaryFields = fieldSpecs(settings, "primary_fields", config.facts ?? []);
@@ -853,7 +804,7 @@ function ProfileCardsPresentation(props: OperationalPresentationProps) {
         {visible.map((rec) => {
           const isBlocked = blockedLike(rec, statusField, blockedField);
           const isActive = activeLike(rec, statusField, blockedField);
-          const appHref = roleAppHref(rec);
+          const appHref = roleAppHref(rec, settings);
           const openRecord = () => {
             if (appHref) {
               router.push(appHref);
@@ -895,7 +846,7 @@ function ProfileCardsPresentation(props: OperationalPresentationProps) {
                     <ActionMenu
                       onEdit={canEdit ? () => onEdit(rec) : undefined}
                       onDelete={canEdit ? () => onDelete(rec) : undefined}
-                      onMarkPrimary={"is_primary" in rec && rec.is_primary !== true && canEdit ? () => onMarkPrimary(rec) : undefined}
+                      onMarkPrimary={primaryAction(settings, rec, canEdit, onMarkPrimary)}
                     />
                   )}
                 </div>
@@ -988,12 +939,11 @@ function AbilityCardsPresentation(props: OperationalPresentationProps) {
   const settings = presentationSettings(config);
   const [filter, setFilter] = useState<string>("");
   const filterField = stringSetting(settings, "filter_field", "");
-  const modeField = stringSetting(settings, "mode_field", "mapping_mode");
-  const defaultField = stringSetting(settings, "default_field", "is_default");
+  const modeField = stringSetting(settings, "mode_field", "");
+  const defaultField = stringSetting(settings, "default_field", "");
   const descriptionField = stringSetting(settings, "description_field", "");
   const titleField = stringSetting(settings, "title_field", config.title);
-  const capabilityFallback = (config.facts ?? []).filter((field) => field.startsWith("is_") && field !== defaultField);
-  const capabilityFields = fieldSpecs(settings, "capability_fields", capabilityFallback);
+  const capabilityFields = fieldSpecs(settings, "capability_fields");
   const filterValues = uniqueFieldValues(records, filterField);
   const visible = filter && filterField ? records.filter((rec) => String(rec[filterField]) === filter) : records;
 
@@ -1040,7 +990,7 @@ function AbilityCardsPresentation(props: OperationalPresentationProps) {
                 <ActionMenu
                   onEdit={canEdit ? () => onEdit(rec) : undefined}
                   onDelete={canEdit ? () => onDelete(rec) : undefined}
-                  onMarkPrimary={"is_primary" in rec && rec.is_primary !== true && canEdit ? () => onMarkPrimary(rec) : undefined}
+                  onMarkPrimary={primaryAction(settings, rec, canEdit, onMarkPrimary)}
                 />
               </div>
             </div>
@@ -1074,13 +1024,14 @@ function TemporalRulesPresentation(props: OperationalPresentationProps) {
   const filterField = stringSetting(settings, "filter_field", "");
   const roleField = stringSetting(settings, "role_field", config.title);
   const targetField = stringSetting(settings, "target_field", config.facts?.[0] ?? "");
-  const startField = stringSetting(settings, "start_field", "effective_from");
-  const endField = stringSetting(settings, "end_field", "effective_to");
-  const statusField = stringSetting(settings, "status_field", "status");
+  const startField = stringSetting(settings, "start_field", "");
+  const endField = stringSetting(settings, "end_field", "");
+  const statusField = stringSetting(settings, "status_field", "");
+  const statusResolverName = stringSetting(settings, "status_resolver", "") || undefined;
   const columns = fieldSpecs(
     settings,
     "columns",
-    [roleField, targetField, filterField, startField, endField, "reason", statusField].filter(Boolean),
+    [roleField, targetField, filterField, startField, endField, statusField].filter(Boolean),
   );
   const filterValues = uniqueFieldValues(records, filterField);
   const visible = filter && filterField ? records.filter((rec) => String(rec[filterField]) === filter) : records;
@@ -1124,7 +1075,7 @@ function TemporalRulesPresentation(props: OperationalPresentationProps) {
                 </span>
                 <span className="relative h-7 rounded bg-muted/60">
                   <span
-                    className={cn("absolute top-1.5 h-4 rounded", statusBarClass(rec[statusField]))}
+                    className={cn("absolute top-1.5 h-4 rounded", statusBarClass(rec[statusField], statusResolverName))}
                     style={{ left: `${left}%`, width: `${width}%` }}
                   />
                   <span
@@ -1223,6 +1174,7 @@ function DataTable({
   onDelete: (rec: ChildRecord) => void;
   onMarkPrimary: (rec: ChildRecord) => void;
 }) {
+  const context = useContext(DisplayMetadataContext);
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-card">
       <table className="min-w-full text-left text-sm">
@@ -1243,7 +1195,7 @@ function DataTable({
             >
               {columns.map((column) => {
                 const value = preferredDisplayValue(rec, column.field);
-                const isStatus = column.field === statusField || column.kind === "status" || column.field.endsWith("_status") || column.field === "status";
+                const isStatus = column.field === statusField || column.kind === "status";
                 return (
                   <td key={column.field} className="whitespace-nowrap px-4 py-3 align-top">
                     {isStatus ? (
@@ -1265,7 +1217,7 @@ function DataTable({
                 <ActionMenu
                   onEdit={canEdit ? () => onEdit(rec) : undefined}
                   onDelete={canEdit ? () => onDelete(rec) : undefined}
-                  onMarkPrimary={"is_primary" in rec && rec.is_primary !== true && canEdit ? () => onMarkPrimary(rec) : undefined}
+                  onMarkPrimary={primaryAction(context.settings, rec, canEdit, onMarkPrimary)}
                 />
               </td>
             </tr>

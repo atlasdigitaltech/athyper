@@ -131,6 +131,17 @@ FROM (VALUES
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, validation, sort_order, created_by)
         ON CONFLICT DO NOTHING;
+
+        UPDATE control.entity_field ef
+           SET lookup_config = v.lookup_config,
+               updated_at = now(),
+               updated_by = v_su
+          FROM (VALUES
+            ('profit_center_id'::text, '{"search_fields":["code","name"],"filters":{"status":"active"},"dependent_filter":{"source_field":"company_code_id","target_field":"company_code_id","empty_behavior":"empty"}}'::jsonb),
+            ('site_id'::text,          '{"search_fields":["code","name"],"filters":{"status":"active"},"dependent_filter":{"source_field":"company_code_id","target_field":"company_code_id","empty_behavior":"empty"}}'::jsonb)
+          ) AS v(field_name, lookup_config)
+         WHERE ef.entity_version_id = v_ev
+           AND ef.name = v.field_name;
     END IF;
 
     -- ── profit_center ─────────────────────────────────────────────────────────

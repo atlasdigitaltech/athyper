@@ -206,26 +206,68 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
 
       // ── Server-side cache check ───────────────────────────────────────────
       // Only use cache when tenantId is known — prevents v1-style cross-tenant leakage.
-      // Two-level lookup: pointer (desc:v2:{tenantId}:{entityCode}:ptr) → compiledHash
+      // Two-level lookup: pointer (desc:v2:{tenantId}:{entityCode}:ptr) → JSON fingerprint
       //                   payload (desc:v2:{tenantId}:{entityCode}:{compiledHash})
+      //
+      // The pointer stores a JSON fingerprint: {compiledHash, versionHash, displayConfigHash}.
+      // On each cache hit we run one lightweight DB query (display_config + version_hash only,
+      // no field join) to validate the fingerprint before serving the cached payload.
+      // If the fingerprint mismatches (post-reseed or display_config patch) we delete the
+      // stale pointer and fall through to the full compile path.
       if (cache && tenantId) {
         try {
-          const ptr = await cache.get(descriptorCachePointerKey(tenantId, entityCode));
-          if (ptr) {
-            const cached = await cache.get(descriptorCacheKey(tenantId, entityCode, ptr));
-            if (cached) {
-              const payload = JSON.parse(cached) as Record<string, unknown>;
-              const etagValue = `"ced-${payload["compiled_hash"]}"`;
-              res.setHeader("ETag", etagValue);
-              res.setHeader("Cache-Control", "no-cache");
-              res.setHeader("X-Cache", "HIT");
+          const ptrRaw = await cache.get(descriptorCachePointerKey(tenantId, entityCode));
+          if (ptrRaw) {
+            // Parse fingerprint — old-format pointer (plain hash string) always fails JSON.parse
+            // and is treated as a cache miss, causing a fresh compile + write.
+            let fingerprint: { compiledHash: string; versionHash: string; displayConfigHash: string } | null = null;
+            try { fingerprint = JSON.parse(ptrRaw); } catch { /* old format — fall through */ }
 
-              if (req.headers["if-none-match"] === etagValue) {
-                res.status(304).end();
-                return;
+            if (fingerprint?.compiledHash && fingerprint.versionHash && fingerprint.displayConfigHash) {
+              // Lightweight validation query — only display_config + version columns, no field join.
+              let fpQuery = db
+                .selectFrom("control.entity as e")
+                .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+                .select([
+                  "e.display_config",
+                  sql<number>`ev.version_no`.as("version_no"),
+                  sql<string | null>`ev.version_hash`.as("version_hash"),
+                  sql<string>`e.id::text`.as("entity_id"),
+                ])
+                .where(sql`COALESCE(e.entity_code, e.name)`, "=", entityCode)
+                .where("ev.status", "=", "EFFECTIVE");
+              if (tenantId) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                fpQuery = fpQuery.where((eb: any) => eb.or([eb("e.tenant_id", "=", tenantId), eb("e.tenant_id", "is", null)])).orderBy(sql`e.tenant_id NULLS LAST`);
+              } else {
+                fpQuery = fpQuery.where("e.tenant_id", "is", null);
               }
-              res.json(payload);
-              return;
+              const fpRow = await fpQuery.limit(1).executeTakeFirst();
+
+              if (fpRow) {
+                const currentDC = (fpRow.display_config ?? {}) as Record<string, unknown>;
+                const currentVH = fpRow.version_hash ?? simpleHash(`${fpRow.entity_id}-v${fpRow.version_no}`);
+                const currentDCH = simpleHash(JSON.stringify(currentDC));
+                const fpValid = currentVH === fingerprint.versionHash && currentDCH === fingerprint.displayConfigHash;
+
+                if (fpValid) {
+                  const cached = await cache.get(descriptorCacheKey(tenantId, entityCode, fingerprint.compiledHash));
+                  if (cached) {
+                    const payload = JSON.parse(cached) as Record<string, unknown>;
+                    const etagValue = `"ced-${payload["compiled_hash"]}"`;
+                    res.setHeader("ETag", etagValue);
+                    res.setHeader("Cache-Control", "no-cache");
+                    res.setHeader("X-Cache", "HIT");
+                    if (req.headers["if-none-match"] === etagValue) { res.status(304).end(); return; }
+                    res.json(payload);
+                    return;
+                  }
+                } else {
+                  // Fingerprint mismatch — display_config or version changed since last cache write.
+                  // Delete the stale pointer so the next request re-populates cleanly.
+                  await cache.del(descriptorCachePointerKey(tenantId, entityCode));
+                }
+              }
             }
           }
         } catch (cacheErr) {
@@ -331,12 +373,15 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         detail_profile:     (dbDisplayConfig["detail_profile"] ?? undefined) as string | undefined,
         document_header:    (dbDisplayConfig["document_header"] ?? undefined) as Record<string, unknown> | undefined,
         journal_editor:     (dbDisplayConfig["journal_editor"] ?? undefined) as Record<string, unknown> | undefined,
+        journal_line_fields:(dbDisplayConfig["journal_line_fields"] ?? undefined) as Record<string, unknown> | undefined,
+        line_grid:          (dbDisplayConfig["line_grid"] ?? undefined) as Record<string, unknown> | undefined,
         master_config:      masterConfigValue,
         // Lines section — null = entity has no line items; string = registered renderer key.
         // "lines_renderer" in check preserves explicit null (no lines) vs. absent (also no lines).
         lines_renderer:     "lines_renderer" in dbDisplayConfig
           ? (dbDisplayConfig["lines_renderer"] as string | null)
           : null,
+        line_entity_code:   (dbDisplayConfig["line_entity_code"] ?? undefined) as string | undefined,
         list_renderer:      (dbDisplayConfig["list_renderer"] ?? undefined) as string | undefined,
         view_modes:         (dbDisplayConfig["view_modes"] ?? undefined) as string[] | undefined,
         status_field_names: (dbDisplayConfig["status_field_names"] ?? undefined) as string[] | undefined,
@@ -347,6 +392,9 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         create_redirect:    (dbDisplayConfig["create_redirect"] ?? undefined) as Record<string, unknown> | undefined,
         action_groups:      (dbDisplayConfig["action_groups"] ?? undefined) as Record<string, unknown> | undefined,
         status_resolver:    (dbDisplayConfig["status_resolver"] ?? undefined) as string | undefined,
+        // Procurement line-sheet variant switcher + layout config
+        line_ui_variant:    (dbDisplayConfig["line_ui_variant"] ?? undefined) as string | undefined,
+        procure_line:       (dbDisplayConfig["procure_line"] ?? undefined) as Record<string, unknown> | undefined,
       };
 
       // ── Build feature_flags ───────────────────────────────────────────────
@@ -393,13 +441,13 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       }
 
       // Populate server-side cache (best-effort; do not block response).
-      // Write both the content-addressed payload and the pointer.
-      // Deleting the pointer (invalidateDescriptorCache) is sufficient to invalidate;
-      // the old content-addressed entry expires naturally after TTL.
+      // Pointer stores a JSON fingerprint {compiledHash, versionHash, displayConfigHash}
+      // so the read path can validate against current DB state with one lightweight query.
       if (cache && tenantId) {
+        const pointerFingerprint = JSON.stringify({ compiledHash, versionHash, displayConfigHash });
         Promise.all([
           cache.set(descriptorCacheKey(tenantId, entityCode, compiledHash), JSON.stringify(payload), DESCRIPTOR_CACHE_TTL_S),
-          cache.set(descriptorCachePointerKey(tenantId, entityCode), compiledHash, DESCRIPTOR_CACHE_TTL_S),
+          cache.set(descriptorCachePointerKey(tenantId, entityCode), pointerFingerprint, DESCRIPTOR_CACHE_TTL_S),
         ]).catch((err) => logger?.warn("compiled_entity_cache_write_failed", { entityCode, tenantId, err: String(err) }));
       }
 

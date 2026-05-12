@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useId, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { ChevronDown, X } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
@@ -11,6 +11,53 @@ import {
   type AdvancedEntityChooserOption,
 } from "./AdvancedEntityChooser";
 
+// localStorage helpers
+
+const STORAGE_PREFIX = "athyper:picker-size:";
+const PANEL_SELECTOR = "[data-advanced-entity-chooser-panel]";
+const LIST_SELECTOR = "[data-advanced-entity-chooser-list]";
+const MIN_PANEL_WIDTH = 220;
+const MAX_PANEL_WIDTH = 1100;
+const MIN_LIST_HEIGHT = 120;
+const MAX_LIST_HEIGHT = 900;
+
+function loadSize(key: string | null | undefined): { w: number; h: number } | null {
+  if (!key || typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed !== null && typeof parsed === "object" &&
+      typeof (parsed as Record<string, unknown>).w === "number" &&
+      typeof (parsed as Record<string, unknown>).h === "number"
+    ) {
+      return parsed as { w: number; h: number };
+    }
+  } catch { /* ignore quota/parse errors */ }
+  return null;
+}
+
+function saveSize(key: string | null | undefined, w: number, h: number): void {
+  if (!key || typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify({ w, h }));
+  } catch { /* ignore quota errors */ }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+// Density fallbacks used for resize origin calculation
+
+const DENSITY_DEFAULTS: Record<string, { w: number; h: number }> = {
+  mini:        { w: 300, h: 190 },
+  compact:     { w: 340, h: 250 },
+  comfortable: { w: 390, h: 310 },
+  mobile:      { w: 400, h: 300 },
+};
+
 function viewportAwareListHeight(maxListHeight: AdvancedEntityChooserMetaConfig["maxListHeight"]): string {
   const availableHeight = "max(128px, calc(var(--radix-popover-content-available-height) - 104px))";
   if (typeof maxListHeight === "number") return `min(${maxListHeight}px, ${availableHeight})`;
@@ -19,6 +66,20 @@ function viewportAwareListHeight(maxListHeight: AdvancedEntityChooserMetaConfig[
   }
   return availableHeight;
 }
+
+// Types
+
+type InteractionState = {
+  type: "drag" | "resize";
+  startX: number;
+  startY: number;
+  /** Drag: committed offset at drag start. Resize: unused. */
+  originOffsetX: number;
+  originOffsetY: number;
+  /** Resize: panel dimensions at resize start. Drag: unused. */
+  originW: number;
+  originH: number;
+};
 
 export interface AdvancedEntityComboboxProps {
   value?: string | null;
@@ -43,6 +104,12 @@ export interface AdvancedEntityComboboxProps {
   loadMoreLoading?: boolean;
   activeControlValue?: string | null;
   onControlChange?: (control: AdvancedEntityChooserControl, query: string) => void;
+  /**
+   * Key used to persist the user's resized panel dimensions in localStorage.
+   * Pass the entity code (e.g. "gl_account", "supplier") so each entity
+   * remembers its own preferred size independently.
+   */
+  storageKey?: string | null;
 }
 
 export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityComboboxProps>(
@@ -70,6 +137,7 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
       loadMoreLoading,
       activeControlValue,
       onControlChange,
+      storageKey,
     },
     ref,
   ) => {
@@ -79,13 +147,130 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
     const [query, setQuery] = useState("");
     const [instantSearch, setInstantSearch] = useState(false);
     const triggerRef = useRef<HTMLDivElement | null>(null);
-    const viewportAwareMeta = useMemo<AdvancedEntityChooserMetaConfig>(
-      () => ({
-        ...meta,
-        maxListHeight: viewportAwareListHeight(meta?.maxListHeight),
-      }),
-      [meta],
+
+    // Drag & resize state
+
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [userSize, setUserSize] = useState<{ w: number; h: number } | null>(
+      () => loadSize(storageKey),
     );
+
+    // Refs for reading latest values in stable event-handler closures.
+    const dragOffsetRef = useRef(dragOffset);
+    const userSizeRef   = useRef(userSize);
+    useEffect(() => { dragOffsetRef.current = dragOffset; }, [dragOffset]);
+    useEffect(() => { userSizeRef.current   = userSize;   }, [userSize]);
+
+    const interactionRef = useRef<InteractionState | null>(null);
+
+    useEffect(() => {
+      const nextSize = loadSize(storageKey);
+      userSizeRef.current = nextSize;
+      setUserSize(nextSize);
+    }, [storageKey]);
+
+    const handleDragStart = useCallback((e: React.MouseEvent) => {
+      e.preventDefault();
+      interactionRef.current = {
+        type: "drag",
+        startX: e.clientX,
+        startY: e.clientY,
+        originOffsetX: dragOffsetRef.current.x,
+        originOffsetY: dragOffsetRef.current.y,
+        originW: 0,
+        originH: 0,
+      };
+      document.body.style.cursor     = "grabbing";
+      document.body.style.userSelect = "none";
+    }, []);
+
+    const handleResizeStart = useCallback((e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const density = meta?.density ?? "compact";
+      const fallback = DENSITY_DEFAULTS[density] ?? { w: 340, h: 250 };
+      const handle = e.currentTarget as HTMLElement;
+      const panelElement = handle.closest<HTMLElement>(PANEL_SELECTOR);
+      const listElement = panelElement?.querySelector<HTMLElement>(LIST_SELECTOR);
+      const measuredWidth = panelElement?.getBoundingClientRect().width;
+      const measuredHeight = listElement?.getBoundingClientRect().height;
+      const fallbackWidth = userSizeRef.current?.w ?? (typeof meta?.width === "number" ? meta.width : fallback.w);
+      const fallbackHeight = userSizeRef.current?.h ?? (typeof meta?.maxListHeight === "number" ? meta.maxListHeight : fallback.h);
+      const originW = measuredWidth && Number.isFinite(measuredWidth) ? measuredWidth : fallbackWidth;
+      const originH = measuredHeight && Number.isFinite(measuredHeight) ? measuredHeight : fallbackHeight;
+      interactionRef.current = {
+        type: "resize",
+        startX: e.clientX,
+        startY: e.clientY,
+        originOffsetX: 0,
+        originOffsetY: 0,
+        originW,
+        originH,
+      };
+      document.body.style.cursor     = "se-resize";
+      document.body.style.userSelect = "none";
+    }, [meta?.density, meta?.maxListHeight, meta?.width]);
+
+    useEffect(() => {
+      const onMouseMove = (e: MouseEvent) => {
+        const state = interactionRef.current;
+        if (!state) return;
+        const dx = e.clientX - state.startX;
+        const dy = e.clientY - state.startY;
+        if (state.type === "drag") {
+          const nextOffset = { x: state.originOffsetX + dx, y: state.originOffsetY + dy };
+          dragOffsetRef.current = nextOffset;
+          setDragOffset(nextOffset);
+        } else {
+          const nextSize = {
+            w: clamp(state.originW + dx, MIN_PANEL_WIDTH, MAX_PANEL_WIDTH),
+            h: clamp(state.originH + dy, MIN_LIST_HEIGHT, MAX_LIST_HEIGHT),
+          };
+          userSizeRef.current = nextSize;
+          setUserSize(nextSize);
+        }
+      };
+
+      const onMouseUp = () => {
+        if (!interactionRef.current) return;
+        if (interactionRef.current.type === "resize") {
+          const size = userSizeRef.current;
+          if (size) saveSize(storageKey, size.w, size.h);
+        }
+        interactionRef.current = null;
+        document.body.style.cursor     = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup",   onMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup",   onMouseUp);
+        if (interactionRef.current) {
+          interactionRef.current = null;
+          document.body.style.cursor     = "";
+          document.body.style.userSelect = "";
+        }
+      };
+    }, [storageKey]);
+
+    // Meta override with user size
+
+    const viewportAwareMeta = useMemo<AdvancedEntityChooserMetaConfig>(
+      () => {
+        const resizedListHeight = userSize ? viewportAwareListHeight(userSize.h) : undefined;
+        return {
+          ...meta,
+          width:         userSize?.w ?? meta?.width,
+          listHeight:    resizedListHeight ?? meta?.listHeight,
+          maxListHeight: viewportAwareListHeight(userSize?.h ?? meta?.maxListHeight),
+        };
+      },
+      [meta, userSize],
+    );
+
+    // Popover handlers
 
     const handleOpenChange = (next: boolean) => {
       setOpen(next);
@@ -94,6 +279,7 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
       } else {
         setQuery("");
         onQueryChange?.("");
+        setDragOffset({ x: 0, y: 0 });
       }
     };
 
@@ -181,7 +367,7 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
 
           <Popover.Portal>
             <Popover.Content
-              className="z-50 max-h-[var(--radix-popover-content-available-height)] overflow-visible animate-in fade-in-0 zoom-in-95"
+              className="z-popover max-h-[var(--radix-popover-content-available-height)] overflow-visible animate-in fade-in-0 zoom-in-95"
               align="start"
               side="bottom"
               sideOffset={6}
@@ -190,26 +376,39 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
               sticky="partial"
               onOpenAutoFocus={(event) => event.preventDefault()}
             >
-              <AdvancedEntityChooserPanel
-                query={query}
-                onQueryChange={handleQueryChange}
-                activeControlValue={activeControlValue}
-                onControlChange={(control) => onControlChange?.(control, query)}
-                selectedValue={value ?? null}
-                onSelect={handleSelect}
-                options={options}
-                loading={loading}
-                meta={viewportAwareMeta}
-                optionActionLabel={optionActionLabel}
-                instantSearch={instantSearch}
-                onInstantSearchToggle={handleInstantSearchToggle}
-                loadedCount={loadedCount}
-                totalCount={totalCount}
-                resultLabel={resultLabel}
-                onLoadMore={onLoadMore}
-                loadMoreLoading={loadMoreLoading}
-                emptyMessage={query || activeControlValue ? "No matches" : "Type to search"}
-              />
+              {/* Separate wrapper so our drag transform doesn't conflict with Radix's positioning transform */}
+              <div
+                style={
+                  dragOffset.x !== 0 || dragOffset.y !== 0
+                    ? { transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }
+                    : undefined
+                }
+              >
+                <AdvancedEntityChooserPanel
+                  query={query}
+                  onQueryChange={handleQueryChange}
+                  activeControlValue={activeControlValue}
+                  onControlChange={(control) => onControlChange?.(control, query)}
+                  selectedValue={value ?? null}
+                  onSelect={handleSelect}
+                  options={options}
+                  loading={loading}
+                  meta={viewportAwareMeta}
+                  optionActionLabel={optionActionLabel}
+                  instantSearch={instantSearch}
+                  onInstantSearchToggle={handleInstantSearchToggle}
+                  loadedCount={loadedCount}
+                  totalCount={totalCount}
+                  resultLabel={resultLabel}
+                  onLoadMore={onLoadMore}
+                  loadMoreLoading={loadMoreLoading}
+                  emptyMessage={query || activeControlValue ? "No matches" : "Type to search"}
+                  draggable
+                  onDragHandleMouseDown={handleDragStart}
+                  resizable
+                  onResizeHandleMouseDown={handleResizeStart}
+                />
+              </div>
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>

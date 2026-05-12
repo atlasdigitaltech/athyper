@@ -12,6 +12,7 @@
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import { cn } from "@athyper/theme/utils";
 import { listTypography, runtimeStatusBarClass, runtimeStatusDotClass } from "./listPresentation";
+import { configuredAuditFieldNames, configuredStatusFieldNames, fieldByName, fieldValue } from "../metadata/fieldSemantics";
 
 // ── Numeric data types ────────────────────────────────────────────────────────
 
@@ -160,15 +161,15 @@ export interface DashboardViewProps {
 export function DashboardView({ rows, entity }: DashboardViewProps) {
   const total  = rows.length;
   const today  = new Date().toISOString().slice(0, 10);
+  const auditFields = configuredAuditFieldNames(entity);
+  const createdAtField = fieldByName(entity, auditFields.createdAt);
 
   const todayCount = rows.filter((r) => {
-    const d = r.created_at ?? r.inserted_at;
+    const d = fieldValue(r, createdAtField);
     return d && String(d).startsWith(today);
   }).length;
 
-  // Status-like field for distribution
-  const STATUS_NAMES = ["status", "record_status", "state", "lifecycle_state"];
-  const statusField  = entity.fields.find((f) => STATUS_NAMES.includes(f.name));
+  const statusField  = fieldByName(entity, configuredStatusFieldNames(entity)[0]);
   const statusGroups = new Map<string, number>();
   if (statusField) {
     for (const row of rows) {
@@ -176,9 +177,6 @@ export function DashboardView({ rows, entity }: DashboardViewProps) {
       statusGroups.set(s, (statusGroups.get(s) ?? 0) + 1);
     }
   }
-
-  const activeCount  = statusGroups.get("active")   ?? statusGroups.get("approved")  ?? 0;
-  const pendingCount = statusGroups.get("pending")   ?? statusGroups.get("draft")     ?? 0;
 
   // Numeric aggregate fields
   const numericFields = entity.fields.filter(
@@ -194,25 +192,11 @@ export function DashboardView({ rows, entity }: DashboardViewProps) {
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatTile label="Total Records" value={total.toLocaleString()} />
-          <StatTile
-            label="Added Today"
-            value={todayCount.toLocaleString()}
-            accent={todayCount > 0 ? "emerald" : "default"}
-          />
-          {activeCount > 0 && (
+          {createdAtField && (
             <StatTile
-              label="Active / Approved"
-              value={activeCount.toLocaleString()}
-              accent="emerald"
-              sub={total > 0 ? `${Math.round((activeCount / total) * 100)}% of total` : undefined}
-            />
-          )}
-          {pendingCount > 0 && (
-            <StatTile
-              label="Pending / Draft"
-              value={pendingCount.toLocaleString()}
-              accent="amber"
-              sub={total > 0 ? `${Math.round((pendingCount / total) * 100)}% of total` : undefined}
+              label="Added Today"
+              value={todayCount.toLocaleString()}
+              accent={todayCount > 0 ? "emerald" : "default"}
             />
           )}
         </div>

@@ -33,7 +33,7 @@ export interface ResolvedDisplayConfig {
   lines_renderer: string | null;
 
   // ── Status / lifecycle ───────────────────────────────────────────────────
-  /** Fields whose value is fed to statusToIntent(). Default: ["status"]. */
+  /** Fields whose value is fed to statusToIntent(). Empty until metadata maps them. */
   status_field_names: string[];
 
   // ── Alternate flows ───────────────────────────────────────────────────────
@@ -63,10 +63,10 @@ export const DEFAULT_DISPLAY_CONFIG: ResolvedDisplayConfig = {
   detail_profile:     "simple",
   list_renderer:      "table",
   view_modes:         ["table", "compact", "kanban", "dashboard", "spreadsheet"],
-  list_columns:       ["code", "name", "status"],
-  default_sort_field: "updated_at",
+  list_columns:       [],
+  default_sort_field: "",
   default_sort_order: "desc",
   lines_renderer:     null,
-  status_field_names: ["status"],
+  status_field_names: [],
   alternate_flows:    [],
 };

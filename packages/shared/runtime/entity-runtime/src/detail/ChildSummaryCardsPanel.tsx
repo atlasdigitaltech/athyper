@@ -23,10 +23,18 @@ import {
 import { FilterPillBar, SearchInput } from "@athyper/ui/composites";
 import { RowCard } from "@athyper/ui/data";
 import type { SummaryCardsConfig, MasterTab } from "@athyper/metadata-client/compiled-reader";
+import type { CompiledEntity } from "@athyper/api-contracts/metadata";
+import { useCompiledEntity } from "@athyper/query";
 import { EntityForm, type EntityFormHandle } from "../form/EntityForm";
 import { titleCase } from "@athyper/runtime-shared/core";
 import { BankingSummaryPanel } from "./BankingSummaryPanel";
 import { TaxProfileSummaryPanel } from "./TaxProfileSummaryPanel";
+import {
+  configuredAuditFieldNames,
+  configuredStatusFieldNames,
+  fieldByName,
+  fieldHiddenInSurface,
+} from "../metadata/fieldSemantics";
 import {
   OperationalDisplayMetadataProvider,
   OperationalFieldLabel,
@@ -77,13 +85,6 @@ function maskIfNumeric(str: string): string {
   }
   return str;
 }
-
-const SYSTEM_FIELDS = new Set([
-  "id", "tenant_id", "parent_id", "owner_id", "owner_type",
-  "entity_code", "created_by", "updated_by",
-]);
-
-const AUDIT_FIELDS = new Set(["created_at", "updated_at", "status_changed_at"]);
 
 // Humanize enum-code-shaped strings ("billing" → "Billing", "legal_compliance" → "Legal Compliance").
 // Leaves already-readable strings (mixed case, spaces) unchanged.
@@ -150,6 +151,57 @@ function applyScopeFilters(
     ...(ownerTypeFilter ? { owner_type: ownerTypeFilter } : {}),
     ...(partyTypeFilter ? { party_type: partyTypeFilter } : {}),
   };
+}
+
+function asPlainRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function stringArraySetting(settings: Record<string, unknown>, key: string): string[] {
+  const value = settings[key];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+}
+
+function summaryPresentationSettings(config: SummaryCardsConfig): Record<string, unknown> {
+  return asPlainRecord(config.presentation_config) ?? {};
+}
+
+function configuredDetailAuditFields(config: SummaryCardsConfig, entity?: CompiledEntity): Set<string> {
+  const settings = summaryPresentationSettings(config);
+  const auditFieldNames = entity ? configuredAuditFieldNames(entity) : undefined;
+  return new Set([
+    ...stringArraySetting(settings, "audit_fields"),
+    ...Object.values(auditFieldNames ?? {}).filter((name): name is string => Boolean(name)),
+  ]);
+}
+
+function configuredDetailHiddenFields(config: SummaryCardsConfig, entity?: CompiledEntity): Set<string> {
+  const settings = summaryPresentationSettings(config);
+  const configured = [
+    ...stringArraySetting(settings, "hidden_fields"),
+    ...stringArraySetting(settings, "detail_hidden_fields"),
+    ...stringArraySetting(settings, "detail_excluded_fields"),
+  ];
+  const metadataHidden = (entity?.fields ?? [])
+    .filter((field) => field.origin === "system" || fieldHiddenInSurface(field, "detail"))
+    .map((field) => field.name);
+  return new Set([...configured, ...metadataHidden]);
+}
+
+function configuredDetailFieldVisible(
+  key: string,
+  value: unknown,
+  config: SummaryCardsConfig,
+  entity?: CompiledEntity,
+): boolean {
+  if (value === null || value === undefined || value === "") return false;
+  if (configuredDetailHiddenFields(config, entity).has(key)) return false;
+  const field = entity ? fieldByName(entity, key) : undefined;
+  return !(field && (field.origin === "system" || fieldHiddenInSurface(field, "detail")));
 }
 
 // ── Badge evaluators ──────────────────────────────────────────────────────────
@@ -1341,6 +1393,7 @@ function RecordDetailDrawer({
   rec,
   entityTypeLabel,
   entityCode,
+  entity,
   config,
   displayFields,
   onEdit,
@@ -1351,9 +1404,10 @@ function RecordDetailDrawer({
   rec:             ChildRecord | null;
   entityTypeLabel: string;
   entityCode:      string;
+  entity?:         CompiledEntity;
   config:          SummaryCardsConfig;
   /** Ordered whitelist from tab.display_fields. When supplied, only these fields
-   *  are shown. Audit fields (created_at, updated_at) are moved to a collapsed section. */
+   *  are shown. Metadata audit fields are moved to a collapsed section. */
   displayFields?:  string[];
   onEdit:          () => void;
   canEdit:         boolean;
@@ -1369,24 +1423,22 @@ function RecordDetailDrawer({
 
   let mainEntries: [string, unknown][];
   let auditEntries: [string, unknown][];
+  const auditFields = configuredDetailAuditFields(config, entity);
+  const isVisible = (k: string, v: unknown) => configuredDetailFieldVisible(k, v, config, entity);
 
   if (displayFields && displayFields.length > 0) {
     // Respect the explicit field whitelist — show only listed fields in listed order.
-    const mainKeys  = displayFields.filter((k) => !AUDIT_FIELDS.has(k));
-    const auditKeys = displayFields.filter((k) => AUDIT_FIELDS.has(k));
-    const isVisible = (k: string, v: unknown) =>
-      !SYSTEM_FIELDS.has(k) && v !== null && v !== undefined && v !== "";
+    const mainKeys  = displayFields.filter((k) => !auditFields.has(k));
+    const auditKeys = displayFields.filter((k) => auditFields.has(k));
     mainEntries  = mainKeys.filter((k) => isVisible(k, rec[k])).map((k) => [k, rec[k]]);
     auditEntries = auditKeys.filter((k) => isVisible(k, rec[k])).map((k) => [k, rec[k]]);
   } else {
     // Fallback: all non-system, non-empty fields. Audit fields split to bottom section.
     const all = Object.entries(rec).filter(([k, v]) => {
-      if (SYSTEM_FIELDS.has(k)) return false;
-      if (k.endsWith("_id") && k !== "bank_account_id") return false;
-      return v !== null && v !== undefined && v !== "";
+      return isVisible(k, v);
     });
-    mainEntries  = all.filter(([k]) => !AUDIT_FIELDS.has(k));
-    auditEntries = all.filter(([k]) =>  AUDIT_FIELDS.has(k));
+    mainEntries  = all.filter(([k]) => !auditFields.has(k));
+    auditEntries = all.filter(([k]) =>  auditFields.has(k));
   }
 
   return (
@@ -1742,6 +1794,7 @@ export function ChildSummaryCardsPanel({
   const createEntityCode = tab.create_entity_code ?? entityCode;
   const mutationEntityCode = tab.link_entity_code ?? createEntityCode;
   const config           = tab.config ?? { title: tab.display_fields?.[0] ?? "id" };
+  const { data: childEntity } = useCompiledEntity(entityCode);
 
   const queryClient = useQueryClient();
 
@@ -1963,6 +2016,7 @@ export function ChildSummaryCardsPanel({
           rec={activeRecord}
           entityTypeLabel={tab.label}
           entityCode={entityCode}
+          entity={childEntity}
           config={config}
           displayFields={tab.display_fields}
           onEdit={() => { if (activeRecord) handleEditRecord(activeRecord); }}
@@ -2043,6 +2097,8 @@ export function ChildSummaryCardsPanel({
         <TaxProfileSummaryPanel
           records={records}
           tab={tab}
+          auditFields={childEntity ? configuredAuditFieldNames(childEntity) : undefined}
+          statusFields={childEntity ? configuredStatusFieldNames(childEntity) : undefined}
           canAdd={canAdd}
           canEdit={canEdit}
           onAdd={handleAddNew}
@@ -2099,6 +2155,7 @@ export function ChildSummaryCardsPanel({
           rec={activeRecord}
           entityTypeLabel={tab.label}
           entityCode={entityCode}
+          entity={childEntity}
           config={config}
           displayFields={tab.display_fields}
           onEdit={() => { if (activeRecord) handleEditRecord(activeRecord); }}
@@ -2153,6 +2210,7 @@ export function ChildSummaryCardsPanel({
           rec={activeRecord}
           entityTypeLabel={tab.label}
           entityCode={entityCode}
+          entity={childEntity}
           config={config}
           displayFields={tab.display_fields}
           onEdit={() => { if (activeRecord) handleEditRecord(activeRecord); }}
@@ -2275,6 +2333,7 @@ export function ChildSummaryCardsPanel({
         rec={activeRecord}
         entityTypeLabel={tab.label}
         entityCode={entityCode}
+        entity={childEntity}
         config={config}
         displayFields={tab.display_fields}
         onEdit={() => { if (activeRecord) handleEditRecord(activeRecord); }}

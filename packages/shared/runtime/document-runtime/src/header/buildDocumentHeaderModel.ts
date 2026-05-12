@@ -24,16 +24,16 @@ import type {
   HeaderProgressStage,
 } from "@athyper/entity-runtime/header";
 import { statusToIntent, fmtDate, fmtMoneyNumber } from "@athyper/runtime-shared/core";
+import {
+  DEFAULT_LIFECYCLE_STAGES,
+  asConfigRecord,
+  normalizeStatusKey,
+  stringArrayMapConfig,
+  stringMapConfig,
+  textConfig,
+} from "../documentRuntimeDefaults";
 
 // ── Stage constants (standard AP/document lifecycle) ─────────────────────────
-
-const DEFAULT_LIFECYCLE_STAGES: Array<{ key: string; label: string }> = [
-  { key: "draft",            label: "Draft" },
-  { key: "pending_approval", label: "Submitted" },
-  { key: "approved",         label: "Approved" },
-  { key: "posted",           label: "Posted" },
-  { key: "paid",             label: "Paid" },
-];
 
 function readLifecycleStages(entity: CompiledEntity): Array<{ key: string; label: string }> {
   const raw =
@@ -55,10 +55,18 @@ function readLifecycleStages(entity: CompiledEntity): Array<{ key: string; label
   return stages.length > 0 ? stages : DEFAULT_LIFECYCLE_STAGES;
 }
 
-function normaliseStageKey(s: string): string {
-  const k = s.toLowerCase().replace(/[\s-]/g, "_");
-  if (k === "fully_paid" || k === "partially_paid") return "paid";
-  return k;
+function normaliseStageKey(s: string, aliases: Record<string, string> = {}): string {
+  const k = normalizeStatusKey(s);
+  return aliases[k] ? normalizeStatusKey(aliases[k]) : k;
+}
+
+function readStageKeyAliases(entity: CompiledEntity): Record<string, string> {
+  const headerConfig = asConfigRecord(entity.display_config?.document_header);
+  const rootConfig = asConfigRecord(entity.display_config);
+  return {
+    ...(stringMapConfig(headerConfig?.["stage_key_aliases"]) ?? {}),
+    ...(stringMapConfig(rootConfig?.["stage_key_aliases"]) ?? {}),
+  };
 }
 
 function readFirstPresent(data: Record<string, unknown>, ...fieldNames: Array<string | undefined>): unknown {
@@ -94,37 +102,33 @@ function fillSkippedCompletedStageDates(values: unknown[], effectiveIndex: numbe
   });
 }
 
-function timelineDateValueForStage(
-  data: Record<string, unknown>,
+type DocumentHeaderConfig = NonNullable<CompiledEntity["display_config"]["document_header"]> & Record<string, unknown>;
+
+function configuredStageDateFields(
+  dh: DocumentHeaderConfig | undefined,
   stageKey: string,
   isCurrent: boolean,
-  statusChangedAtField?: string,
-): unknown {
-  const currentStatusField = isCurrent ? statusChangedAtField : undefined;
-  const currentStatusFallback = isCurrent ? "status_changed_at" : undefined;
+  stageKeyAliases: Record<string, string>,
+): string[] {
+  const headerConfig = asConfigRecord(dh);
+  const stageDateFields = stringArrayMapConfig(headerConfig?.["stage_date_fields"]);
+  const normalizedKey = normaliseStageKey(stageKey, stageKeyAliases);
+  const configuredFields = stageDateFields?.[stageKey] ?? stageDateFields?.[normalizedKey] ?? [];
+  const legacyField = textConfig(headerConfig?.["stage_date_field"]);
+  const fields = configuredFields.length > 0 ? configuredFields : legacyField ? [legacyField] : [];
+  const statusChangedAtField = isCurrent ? textConfig(headerConfig?.["status_changed_at_field"]) : undefined;
+  return statusChangedAtField ? [...fields, statusChangedAtField] : fields;
+}
 
-  switch (normaliseStageKey(stageKey)) {
-    case "draft":
-      return readFirstPresent(data, "created_at", "created_on");
-    case "created":
-    case "ready":
-      return readFirstPresent(data, "ready_at", "prepared_at", currentStatusField, currentStatusFallback);
-    case "pending_approval":
-    case "submitted":
-      return readFirstPresent(data, "submitted_at", "submission_at", currentStatusField, currentStatusFallback);
-    case "approved":
-      return readFirstPresent(data, "approved_at", currentStatusField, currentStatusFallback);
-    case "posted":
-      return readFirstPresent(data, "posted_at", currentStatusField, currentStatusFallback);
-    case "paid":
-      return readFirstPresent(data, "paid_at", "settled_at", currentStatusField, currentStatusFallback);
-    case "reversed":
-      return readFirstPresent(data, "reversed_at", currentStatusField, currentStatusFallback);
-    case "rejected":
-      return readFirstPresent(data, "rejected_at", currentStatusField, currentStatusFallback);
-    default:
-      return isCurrent ? readFirstPresent(data, currentStatusField, currentStatusFallback) : undefined;
-  }
+function timelineDateValueForStage(
+  data: Record<string, unknown>,
+  dh: DocumentHeaderConfig | undefined,
+  stageKey: string,
+  isCurrent: boolean,
+  stageKeyAliases: Record<string, string>,
+): unknown {
+  const fields = configuredStageDateFields(dh, stageKey, isCurrent, stageKeyAliases);
+  return fields.length > 0 ? readFirstPresent(data, ...fields) : undefined;
 }
 
 // ── Duration label ────────────────────────────────────────────────────────────
@@ -228,11 +232,14 @@ export function buildDocumentHeaderModel(
 ): EntityHeaderModel {
   const dh    = entity.display_config?.document_header;
   const flags = entity.feature_flags ?? {};
+  const stageKeyAliases = readStageKeyAliases(entity);
 
   // ── Identity ────────────────────────────────────────────────────────────────
 
-  const rawStatus  = dh?.status_field ? data[dh.status_field] : data["status"];
-  const statusStr  = rawStatus != null ? String(rawStatus) : "draft";
+  const lifecycleStages = readLifecycleStages(entity);
+  const defaultStatus = textConfig(asConfigRecord(dh)?.["default_status"]) ?? lifecycleStages[0]?.key ?? "";
+  const rawStatus  = dh?.status_field ? data[dh.status_field] : undefined;
+  const statusStr  = rawStatus != null && String(rawStatus).trim() ? String(rawStatus) : defaultStatus;
   const statusLabel = statusStr
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -323,15 +330,13 @@ export function buildDocumentHeaderModel(
 
   // ── Progress rail (lifecycle kind) ───────────────────────────────────────────
 
-  const lifecycleStages = readLifecycleStages(entity);
-  const stageKey  = normaliseStageKey(statusStr);
-  const stepIndex = lifecycleStages.findIndex((s) => s.key === stageKey);
+  const stageKey  = normaliseStageKey(statusStr, stageKeyAliases);
+  const stepIndex = lifecycleStages.findIndex((s) => normaliseStageKey(s.key, stageKeyAliases) === stageKey);
   const effectiveIndex = stepIndex === -1 ? 0 : stepIndex;
-  const currentKey = stepIndex === -1 ? "draft" : stageKey;
+  const currentKey = stepIndex === -1 ? defaultStatus : stageKey;
 
-  const createdAtValue       = readFirstPresent(data, dh?.created_at_field, "created_at");
-  const statusChangedAtField = dh?.status_changed_at_field ?? "status_changed_at";
-  const statusChangedAtValue = readFirstPresent(data, statusChangedAtField, "status_changed_at");
+  const createdAtValue       = readFirstPresent(data, dh?.created_at_field);
+  const statusChangedAtValue = readFirstPresent(data, dh?.status_changed_at_field);
   const createdAtIso         = createdAtValue ? String(createdAtValue) : undefined;
   const statusChangedAtIso   = statusChangedAtValue ? String(statusChangedAtValue) : undefined;
 
@@ -342,7 +347,13 @@ export function buildDocumentHeaderModel(
     if (!isPast && !isCurrent) return undefined;
     if (i === 0) return createdAtValue;
 
-    return timelineDateValueForStage(data, stage.key, isCurrent, statusChangedAtField);
+    return timelineDateValueForStage(
+      data,
+      dh as DocumentHeaderConfig | undefined,
+      stage.key,
+      isCurrent,
+      stageKeyAliases,
+    );
   });
   const stageReachedAtValues = fillSkippedCompletedStageDates(rawStageReachedAtValues, effectiveIndex);
 

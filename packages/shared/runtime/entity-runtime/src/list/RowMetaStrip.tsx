@@ -13,8 +13,10 @@ import { RelativeTimeCell } from "@athyper/ui/primitives";
 export interface RowMetaStripProps {
   row:                Record<string, unknown>;
   entityCode:         string;
-  /** Active visible column names — suppresses relative time when updated_at is a column. */
+  /** Active visible column names; suppresses relative time when the configured audit column is visible. */
   visibleColumnNames: string[];
+  updatedAtFieldName?: string;
+  attachmentCountFieldName?: string;
   bookmarked:         boolean;
   commentCount:       number;
   commentHasOpen:     boolean;
@@ -34,6 +36,8 @@ export function RowMetaStrip({
   row,
   entityCode,
   visibleColumnNames,
+  updatedAtFieldName,
+  attachmentCountFieldName,
   bookmarked,
   commentCount,
   commentHasOpen,
@@ -44,10 +48,11 @@ export function RowMetaStrip({
 }: RowMetaStripProps) {
   const router     = useRouter();
   const recordId   = String(row.id ?? "");
-  const updatedAt  = row.updated_at as string | undefined;
-  const attachCount = typeof row.attachment_count === "number" ? row.attachment_count : 0;
+  const updatedAt  = updatedAtFieldName ? row[updatedAtFieldName] as string | undefined : undefined;
+  const attachRaw  = attachmentCountFieldName ? row[attachmentCountFieldName] : undefined;
+  const attachCount = typeof attachRaw === "number" ? attachRaw : undefined;
 
-  const suppressTime = visibleColumnNames.includes("updated_at");
+  const suppressTime = updatedAtFieldName ? visibleColumnNames.includes(updatedAtFieldName) : true;
 
   return (
     <div className="flex items-center justify-end gap-0.5">
@@ -64,7 +69,7 @@ export function RowMetaStrip({
         onClick={() => router.push(`/app/${entityCode}/${encodeURIComponent(recordNavId ?? recordId)}#comments`)}
       />
 
-      <AttachmentCountBadge count={attachCount} />
+      {attachCount !== undefined && <AttachmentCountBadge count={attachCount} />}
 
       <BookmarkToggle
         bookmarked={bookmarked}

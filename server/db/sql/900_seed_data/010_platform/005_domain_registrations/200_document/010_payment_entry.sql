@@ -85,6 +85,20 @@ SET display_config = jsonb_build_object(
     'list_columns',       '["document_no","status","payment_type","payment_direction","document_date","payment_amount","currency_code"]'::jsonb,
     'default_sort_field', 'document_date',
     'default_sort_order', 'desc',
+    'allocation_primary_label', 'Invoice',
+    'allocation_primary_field', 'invoice_number',
+    'allocation_primary_source', 'data',
+    'allocation_primary_fallback_fields', '["item_code","description"]'::jsonb,
+    'allocation_empty_primary_label', 'On Account',
+    'allocation_display_labels', jsonb_build_array(
+        jsonb_build_object('key','invoice_date',      'label','Invoice Date', 'field','invoice_date',             'source','data', 'role','subtitle'),
+        jsonb_build_object('key','allocated',         'label','Allocated',    'field','allocated_amount',        'source','data', 'role','amount'),
+        jsonb_build_object('key','discount',          'label','Discount',     'field','discount_amount',         'source','data', 'role','deduction', 'hide_when_zero', true),
+        jsonb_build_object('key','withholding_tax',   'label','WHT',          'field','withholding_tax_amount',  'source','data', 'role','deduction', 'hide_when_zero', true),
+        jsonb_build_object('key','advance_recovery',  'label','Adv. Rec.',    'field','advance_recovery_amount', 'source','data', 'role','deduction', 'hide_when_zero', true),
+        jsonb_build_object('key','retention',         'label','Retention',    'field','retention_amount',         'source','data', 'role','deduction', 'hide_when_zero', true),
+        jsonb_build_object('key','net_payment',       'label','Net Payment',  'field','net_payment_amount',      'source','data', 'role','net')
+    ),
     'document_header', jsonb_build_object(
         'number_field',   'document_no',
         'status_field',   'status',
@@ -100,6 +114,32 @@ SET display_config = jsonb_build_object(
 WHERE table_schema = 'document' AND table_name = 'payment_entry'
   AND tenant_id IS NULL
   AND display_config = '{}'::jsonb;
+
+-- Ensure existing payment_entry metadata has the payment allocation renderer contract.
+UPDATE control.entity
+SET display_config = jsonb_build_object(
+    'allocation_primary_label', 'Invoice',
+    'allocation_primary_field', 'invoice_number',
+    'allocation_primary_source', 'data',
+    'allocation_primary_fallback_fields', '["item_code","description"]'::jsonb,
+    'allocation_empty_primary_label', 'On Account',
+    'allocation_display_labels', jsonb_build_array(
+        jsonb_build_object('key','invoice_date',      'label','Invoice Date', 'field','invoice_date',             'source','data', 'role','subtitle'),
+        jsonb_build_object('key','allocated',         'label','Allocated',    'field','allocated_amount',        'source','data', 'role','amount'),
+        jsonb_build_object('key','discount',          'label','Discount',     'field','discount_amount',         'source','data', 'role','deduction', 'hide_when_zero', true),
+        jsonb_build_object('key','withholding_tax',   'label','WHT',          'field','withholding_tax_amount',  'source','data', 'role','deduction', 'hide_when_zero', true),
+        jsonb_build_object('key','advance_recovery',  'label','Adv. Rec.',    'field','advance_recovery_amount', 'source','data', 'role','deduction', 'hide_when_zero', true),
+        jsonb_build_object('key','retention',         'label','Retention',    'field','retention_amount',         'source','data', 'role','deduction', 'hide_when_zero', true),
+        jsonb_build_object('key','net_payment',       'label','Net Payment',  'field','net_payment_amount',      'source','data', 'role','net')
+    )
+) || COALESCE(display_config, '{}'::jsonb)
+WHERE table_schema = 'document' AND table_name = 'payment_entry'
+  AND tenant_id IS NULL
+  AND (
+      NOT (COALESCE(display_config, '{}'::jsonb) ? 'allocation_display_labels')
+      OR NOT (COALESCE(display_config, '{}'::jsonb) ? 'allocation_primary_label')
+      OR NOT (COALESCE(display_config, '{}'::jsonb) ? 'allocation_primary_field')
+  );
 
 -- ── 5. Natural key ────────────────────────────────────────────────────────────
 UPDATE control.entity

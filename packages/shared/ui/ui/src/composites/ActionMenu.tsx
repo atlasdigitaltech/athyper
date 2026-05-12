@@ -57,7 +57,7 @@ export function ActionMenu({
         <DropdownMenu.Content
           align={align}
           sideOffset={4}
-          className="z-50 min-w-[10rem] overflow-hidden rounded-md border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95"
+          className="z-popover min-w-[10rem] overflow-hidden rounded-md border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95"
         >
           {items.map((item) => (
             <span key={item.key}>

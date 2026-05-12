@@ -59,6 +59,8 @@ export interface AddLineBody {
   // Retention — from payment term clause or manual override
   retention_pct?:             number;
   retention_amount?:          number;
+  metadata?:                  Record<string, unknown> | null;
+  data?:                      Record<string, unknown> | null;
   // Concurrency — optional; enforced when present
   lock_token?:                string;
 }
@@ -103,6 +105,15 @@ async function nextLineNo(trx: AnyDb, invoiceId: string): Promise<number> {
     .where("pil.purchase_invoice_id", "=", invoiceId)
     .executeTakeFirst() as { max_line: number | null } | undefined;
   return (result?.max_line ?? 0) + 10;
+}
+
+function plainRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function lineMetadataPatch(body: AddLineBody | UpdateLineBody): Record<string, unknown> | null {
+  return plainRecord(body.metadata) ?? plainRecord(body.data);
 }
 
 // ── Fetch parent row_version after a line mutation ────────────────────────────
@@ -175,6 +186,8 @@ export async function handleAddInvoiceLine(
     return { status: lockCheck.status, body: { error: lockCheck.error, reason: lockCheck.reason } };
   }
 
+  const metadata = lineMetadataPatch(body);
+
   try {
     const result = await (db as unknown as { transaction(): { execute<T>(fn: (trx: AnyDb) => Promise<T>): Promise<T> } })
       .transaction()
@@ -234,6 +247,7 @@ export async function handleAddInvoiceLine(
             goods_receipt_line_id:    body.goods_receipt_line_id ?? null,
             ses_line_id:              body.ses_line_id ?? null,
             notes:                    body.notes ?? null,
+            metadata:                 metadata ?? {},
             created_by:               principalId ?? "00000000-0000-0000-0000-000000000000",
             created_at:               now,
           } as never)
@@ -315,6 +329,8 @@ export async function handleUpdateInvoiceLine(
     return { status: lockCheck.status, body: { error: lockCheck.error, reason: lockCheck.reason } };
   }
 
+  const metadata = lineMetadataPatch(body);
+
   try {
     const result = await (db as unknown as { transaction(): { execute<T>(fn: (trx: AnyDb) => Promise<T>): Promise<T> } })
       .transaction()
@@ -383,6 +399,18 @@ export async function handleUpdateInvoiceLine(
           .executeTakeFirst() as Record<string, unknown> | undefined;
 
         if (!updated) return { notFound: true as const };
+
+        if (metadata) {
+          const patchedMetadata = await sql<{ metadata: Record<string, unknown> }>`
+            UPDATE document.purchase_invoice_line
+               SET metadata   = jsonb_strip_nulls(COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify(metadata)}::jsonb),
+                   updated_at = ${new Date()},
+                   updated_by = ${principalId}
+             WHERE id = ${lineId} AND tenant_id = ${tenantId}
+             RETURNING metadata
+          `.execute(trx);
+          updated["metadata"] = patchedMetadata.rows[0]?.metadata ?? updated["metadata"];
+        }
 
         // Recompute tax whenever any price or group field changes
         const taxAffecting = [

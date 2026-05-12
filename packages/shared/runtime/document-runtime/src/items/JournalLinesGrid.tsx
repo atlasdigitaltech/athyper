@@ -6,17 +6,13 @@
  * Columns: #, GL Account, Description, Subledger, Debit, Credit
  * Financial footer: Total Debit | Total Credit
  *
- * Data arrives via the GET /records/journal_entry/:id/lines endpoint which
- * normalises document.journal_line rows into DocumentLine format:
- *   item_code        = gl_account.code
- *   description      = journal_line.description
- *   data.gl_account_name  = gl_account.name
- *   data.transaction_debit / data.transaction_credit
+ * Data arrives as DocumentLine rows. Field names for accounts, currencies,
+ * references, and signed amounts are resolved from metadata config.
  *   data.subledger_type
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Link2, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { AlertCircle, Link2, Plus, RotateCcw, Save, Search, Trash2, X } from "lucide-react";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import {
@@ -26,13 +22,10 @@ import {
 import { fetchLatestFxRate, relayMutate } from "@athyper/runtime-shared/client";
 import {
   EntityPicker,
+  GlAccountPicker,
   entityRowToPickerOption,
-  readLookupFilters,
   resolveEntityPickerOptionConfig,
-  searchLookupOptions,
   type EntityPickerOption,
-  type EntityPickerSearchContext,
-  type LookupFilterValue,
 } from "@athyper/runtime-shared/entity-search";
 import {
   fmtMoney,
@@ -43,6 +36,11 @@ import {
   type CurrencyCodePosition,
 } from "@athyper/runtime-shared/core";
 import { cn } from "@athyper/theme/utils";
+import {
+  asConfigRecord,
+  stringArrayConfig,
+  textConfig,
+} from "../documentRuntimeDefaults";
 
 type JournalLineDraft = {
   key: string;
@@ -52,6 +50,7 @@ type JournalLineDraft = {
   transaction_currency: string;
   debit: string;
   credit: string;
+  subledger_type?: string | null;
   reference: JournalLineReferenceDraft;
 };
 
@@ -66,14 +65,7 @@ type JournalLineReferenceDraft = {
   ref_doc_number: string;
 };
 
-export type JournalLineGridPayload = {
-  gl_account_code: string;
-  transaction_currency?: string;
-  debit?: number;
-  credit?: number;
-  item_text?: string;
-  reference?: Record<string, unknown>;
-};
+export type JournalLineGridPayload = Record<string, unknown>;
 
 type CurrencyOption = {
   code: string;
@@ -102,39 +94,6 @@ type JournalReferenceTarget = {
 };
 
 const NO_REFERENCE = "__none";
-
-const DEFAULT_REFERENCE_TARGETS: JournalReferenceTarget[] = [
-  {
-    key: "purchase_invoice",
-    label: "Invoice",
-    entity: "purchase_invoice",
-    ref_doc_type: "purchase_invoice",
-    default_ref_type: "invoice_adjustment",
-    line_selection: true,
-    display_fields: ["invoice_number", "document_no", "code", "name"],
-    search_fields: ["invoice_number", "document_no", "supplier_invoice_number", "description"],
-  },
-  {
-    key: "payment_entry",
-    label: "Receipt / Payment",
-    entity: "payment_entry",
-    ref_doc_type: "payment_entry",
-    default_ref_type: "receipt_adjustment",
-    line_selection: true,
-    display_fields: ["payment_number", "document_no", "code", "name"],
-    search_fields: ["payment_number", "document_no", "description"],
-  },
-  {
-    key: "journal_entry",
-    label: "Journal Entry",
-    entity: "journal_entry",
-    ref_doc_type: "journal_entry",
-    default_ref_type: "manual_adjustment",
-    line_selection: true,
-    display_fields: ["je_number", "document_no", "description"],
-    search_fields: ["je_number", "document_no", "description"],
-  },
-];
 
 function emptyReference(): JournalLineReferenceDraft {
   return {
@@ -399,14 +358,26 @@ function newDraftLine(currencyCode = ""): JournalLineDraft {
   };
 }
 
-function payloadLineToDraft(line: unknown, minorUnits = 2, fallbackCurrencyCode = ""): JournalLineDraft | null {
+function payloadLineToDraft(
+  line: unknown,
+  minorUnits = 2,
+  fallbackCurrencyCode = "",
+  fieldNames: JournalLineFieldNames = {},
+): JournalLineDraft | null {
   if (!line || typeof line !== "object") return null;
   const row = line as Record<string, unknown>;
-  const code = String(row["gl_account_code"] ?? "").trim();
-  const description = String(row["item_text"] ?? row["description"] ?? "").trim();
-  const debit = fmtInputAmount(row["debit"] ?? row["transaction_debit"], minorUnits);
-  const credit = fmtInputAmount(row["credit"] ?? row["transaction_credit"], minorUnits);
-  const transactionCurrency = normalizeCurrencyCode(row["transaction_currency"] ?? row["currency_code"] ?? fallbackCurrencyCode);
+  const accountField = fieldNames.accountCodePayloadField ?? fieldNames.accountField;
+  const descriptionField = fieldNames.descriptionPayloadField;
+  const debitField = fieldNames.debitPayloadField ?? fieldNames.debitField;
+  const creditField = fieldNames.creditPayloadField ?? fieldNames.creditField;
+  const transactionCurrencyField = fieldNames.transactionCurrencyPayloadField ?? fieldNames.transactionCurrencyField;
+  const code = String(accountField ? row[accountField] : "").trim();
+  const description = String(descriptionField ? row[descriptionField] : "").trim();
+  const debit = fmtInputAmount(debitField ? row[debitField] : undefined, minorUnits);
+  const credit = fmtInputAmount(creditField ? row[creditField] : undefined, minorUnits);
+  const transactionCurrency = normalizeCurrencyCode(
+    (transactionCurrencyField ? row[transactionCurrencyField] : undefined) ?? fallbackCurrencyCode,
+  );
   if (!code && !description && !debit && !credit && !transactionCurrency) return null;
 
   return {
@@ -421,29 +392,35 @@ function payloadLineToDraft(line: unknown, minorUnits = 2, fallbackCurrencyCode 
   };
 }
 
-function normalizeDraftLines(value: unknown, minRows = 2, minorUnits = 2, fallbackCurrencyCode = ""): JournalLineDraft[] {
+function normalizeDraftLines(
+  value: unknown,
+  minRows = 2,
+  minorUnits = 2,
+  fallbackCurrencyCode = "",
+  fieldNames: JournalLineFieldNames = {},
+): JournalLineDraft[] {
   const rows = Array.isArray(value)
-    ? value.map((line) => payloadLineToDraft(line, minorUnits, fallbackCurrencyCode)).filter((line): line is JournalLineDraft => Boolean(line))
+    ? value.map((line) => payloadLineToDraft(line, minorUnits, fallbackCurrencyCode, fieldNames)).filter((line): line is JournalLineDraft => Boolean(line))
     : [];
   while (rows.length < minRows) rows.push(newDraftLine(fallbackCurrencyCode));
   return rows;
 }
 
 function readReferenceTargets(entity?: CompiledEntity): JournalReferenceTarget[] {
-  const raw = (entity?.display_config as Record<string, unknown> | undefined)?.["journal_editor"];
-  const journalEditor = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
-  const configured = journalEditor["reference_targets"];
-  if (!Array.isArray(configured)) return DEFAULT_REFERENCE_TARGETS;
+  const display = asConfigRecord(entity?.display_config);
+  const journalEditor = asConfigRecord(display?.["journal_editor"]);
+  const configured = display?.["journal_reference_targets"] ?? journalEditor?.["reference_targets"];
+  if (!Array.isArray(configured)) return [];
 
   const parsed = configured
     .map((entry): JournalReferenceTarget | null => {
-      if (!entry || typeof entry !== "object") return null;
-      const row = entry as Record<string, unknown>;
-      const key = String(row["key"] ?? row["ref_doc_type"] ?? "").trim();
-      const entityCode = String(row["entity"] ?? "").trim();
-      const refDocType = String(row["ref_doc_type"] ?? key).trim();
-      const label = String(row["label"] ?? key).trim();
-      const defaultRefType = String(row["default_ref_type"] ?? "manual_adjustment").trim();
+      const row = asConfigRecord(entry);
+      if (!row) return null;
+      const key = textConfig(row["key"]) ?? textConfig(row["ref_doc_type"]);
+      const entityCode = textConfig(row["entity"]);
+      const refDocType = textConfig(row["ref_doc_type"]) ?? key;
+      const label = textConfig(row["label"]) ?? key;
+      const defaultRefType = textConfig(row["default_ref_type"]);
       if (!key || !entityCode || !refDocType || !label || !defaultRefType) return null;
       return {
         key,
@@ -452,23 +429,65 @@ function readReferenceTargets(entity?: CompiledEntity): JournalReferenceTarget[]
         ref_doc_type: refDocType,
         default_ref_type: defaultRefType,
         line_selection: row["line_selection"] !== false,
-        display_fields: Array.isArray(row["display_fields"]) ? row["display_fields"].map(String) : undefined,
-        search_fields:  Array.isArray(row["search_fields"])  ? row["search_fields"].map(String)  : undefined,
+        display_fields: stringArrayConfig(row["display_fields"]),
+        search_fields:  stringArrayConfig(row["search_fields"]),
       };
     })
     .filter((target): target is JournalReferenceTarget => Boolean(target));
 
-  return parsed.length > 0 ? parsed : DEFAULT_REFERENCE_TARGETS;
+  return parsed;
 }
 
 function readJournalLineEntityCode(entity?: CompiledEntity): string {
-  const raw = (entity?.display_config as Record<string, unknown> | undefined)?.["journal_editor"];
-  const journalEditor = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
-  const configured = journalEditor["line_entity"];
-  return typeof configured === "string" && configured.trim() ? configured.trim() : "journal_line";
+  const display = asConfigRecord(entity?.display_config);
+  const journalEditor = asConfigRecord(display?.["journal_editor"]);
+  return textConfig(journalEditor?.["line_entity"])
+    ?? textConfig(display?.["line_entity_code"])
+    ?? "";
 }
 
-function fieldByName(entity: CompiledEntity | null | undefined, name: string): EntityField | null {
+type JournalLineFieldNames = {
+  accountField?: string;
+  debitField?: string;
+  creditField?: string;
+  transactionCurrencyField?: string;
+  accountCodePayloadField?: string;
+  debitPayloadField?: string;
+  creditPayloadField?: string;
+  transactionCurrencyPayloadField?: string;
+  descriptionPayloadField?: string;
+  referencePayloadField?: string;
+};
+
+function readJournalLineFieldNames(
+  documentEntity?: CompiledEntity,
+  lineEntity?: CompiledEntity | null,
+): JournalLineFieldNames {
+  const documentDisplay = asConfigRecord(documentEntity?.display_config);
+  const journalEditor = asConfigRecord(documentDisplay?.["journal_editor"]);
+  const lineDisplay = asConfigRecord(lineEntity?.display_config);
+  const fields =
+    asConfigRecord(lineDisplay?.["journal_line_fields"]) ??
+    asConfigRecord(lineDisplay?.["line_fields"]) ??
+    asConfigRecord(documentDisplay?.["journal_line_fields"]) ??
+    asConfigRecord(journalEditor?.["fields"]) ??
+    {};
+  return {
+    accountField: textConfig(fields["account_field"]),
+    debitField:   textConfig(fields["debit_field"]),
+    creditField:  textConfig(fields["credit_field"]),
+    transactionCurrencyField: textConfig(fields["transaction_currency_field"]),
+    accountCodePayloadField: textConfig(fields["account_code_payload_field"]),
+    debitPayloadField: textConfig(fields["debit_payload_field"]),
+    creditPayloadField: textConfig(fields["credit_payload_field"]),
+    transactionCurrencyPayloadField: textConfig(fields["transaction_currency_payload_field"]),
+    descriptionPayloadField: textConfig(fields["description_payload_field"]),
+    referencePayloadField: textConfig(fields["reference_payload_field"]),
+  };
+}
+
+function fieldByName(entity: CompiledEntity | null | undefined, name?: string): EntityField | null {
+  if (!name) return null;
   return entity?.fields.find((field) => field.name === name) ?? null;
 }
 
@@ -494,9 +513,9 @@ function lineReferencesEnabled(entity?: CompiledEntity): boolean {
   const featureFlags = entity?.feature_flags as Record<string, unknown> | undefined;
   if (featureFlags?.["line_references"] === false) return false;
 
-  const raw = (entity?.display_config as Record<string, unknown> | undefined)?.["journal_editor"];
-  const journalEditor = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
-  const strategy = String(journalEditor["line_reference_strategy"] ?? "").trim().toLowerCase();
+  const display = asConfigRecord(entity?.display_config);
+  const journalEditor = asConfigRecord(display?.["journal_editor"]);
+  const strategy = String(journalEditor?.["line_reference_strategy"] ?? "").trim().toLowerCase();
   return strategy !== "none";
 }
 
@@ -506,6 +525,7 @@ function useCompiledEntityMetadata(entityCode: string): CompiledEntity | null {
   useEffect(() => {
     let cancelled = false;
     setCompiledEntity(null);
+    if (!entityCode.trim()) return () => { cancelled = true; };
 
     void fetch(`/api/relay/api/metadata/entities/${encodeURIComponent(entityCode)}/compiled`)
       .then((res) => res.ok ? res.json() as Promise<CompiledEntity> : null)
@@ -538,64 +558,6 @@ function textFromValue(value: unknown): string | undefined {
   return undefined;
 }
 
-function recordFromValue(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function lookupFilterValue(value: unknown): LookupFilterValue | null {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-  }
-  if (typeof value === "number" || typeof value === "boolean") return value;
-  if (Array.isArray(value)) {
-    const values = value.filter(
-      (item): item is string | number | boolean =>
-        typeof item === "string" || typeof item === "number" || typeof item === "boolean",
-    );
-    return values.length > 0 ? values : null;
-  }
-  return null;
-}
-
-function contextValueAtPath(
-  data: Record<string, unknown> | null | undefined,
-  path: string,
-): unknown {
-  return path.split(".").reduce<unknown>((current, segment) => {
-    const record = recordFromValue(current);
-    return record ? record[segment] : undefined;
-  }, data);
-}
-
-function firstLookupContextValue(
-  data: Record<string, unknown> | null | undefined,
-  paths: string[],
-): LookupFilterValue | null {
-  for (const path of paths) {
-    const value = lookupFilterValue(contextValueAtPath(data, path));
-    if (value !== null) return value;
-  }
-  return null;
-}
-
-function lookupConfigWithFilter(
-  lookupConfig: Record<string, unknown> | null | undefined,
-  fieldName: string,
-  value: LookupFilterValue,
-): Record<string, unknown> {
-  const root = recordFromValue(lookupConfig) ?? {};
-  return {
-    ...root,
-    filters: {
-      ...readLookupFilters(root),
-      [fieldName]: value,
-    },
-  };
-}
-
 function referenceTargetEntity(field?: EntityField | null): string {
   const targetEntity = field?.reference_config?.target_entity;
   return typeof targetEntity === "string" && targetEntity.trim() ? targetEntity.trim() : "gl_account";
@@ -609,11 +571,6 @@ function referenceDisplayField(field?: EntityField | null): string | undefined {
 function referenceTargetField(field?: EntityField | null): string {
   const targetField = field?.reference_config?.target_field;
   return typeof targetField === "string" && targetField.trim() ? targetField.trim() : "id";
-}
-
-function glAccountValueField(field?: EntityField | null): string {
-  const optionConfig = resolveEntityPickerOptionConfig(field?.reference_config);
-  return optionConfig?.codeField ?? referenceDisplayField(field) ?? "code";
 }
 
 function normalizeEntityCode(value: string): string {
@@ -695,15 +652,12 @@ function referenceSummaryFromLine(
 }
 
 function labelFromRow(row: Record<string, unknown>, target: JournalReferenceTarget): string {
-  const fields = target.display_fields?.length
-    ? target.display_fields
-    : ["document_no", "invoice_number", "payment_number", "je_number", "code", "name", "description", "id"];
+  const fields = target.display_fields ?? [];
   for (const field of fields) {
     const value = row[field];
     if (typeof value === "string" && value.trim()) return value.trim();
   }
-  const id = row["id"];
-  return typeof id === "string" ? id.slice(0, 8) : target.label;
+  return target.label;
 }
 
 function referenceFromLine(line: DocumentLine, targets: JournalReferenceTarget[]): JournalLineReferenceDraft {
@@ -726,16 +680,29 @@ function referenceFromLine(line: DocumentLine, targets: JournalReferenceTarget[]
   };
 }
 
-function lineToDraft(line: DocumentLine, targets: JournalReferenceTarget[], minorUnits = 2): JournalLineDraft {
+function lineToDraft(
+  line: DocumentLine,
+  targets: JournalReferenceTarget[],
+  minorUnits = 2,
+  fieldNames: JournalLineFieldNames = {},
+  accountField?: EntityField | null,
+): JournalLineDraft {
   const d = line.data as Record<string, unknown> | null | undefined ?? {};
+  const accountSummary = referenceSummaryFromLine(line, accountField);
+  const accountCode = String(line.item_code ?? (fieldNames.accountField ? d[fieldNames.accountField] : "") ?? "").trim();
+  const accountLabel = [accountSummary.primary ?? accountCode, accountSummary.secondary]
+    .filter(Boolean)
+    .map(String)
+    .join(" - ");
   return {
     key:             line.id,
-    gl_account_code: String(line.item_code ?? d["gl_account_code"] ?? "").trim(),
-    gl_account_label: [line.item_code, d["gl_account_name"]].filter(Boolean).map(String).join(" - "),
+    gl_account_code: accountCode,
+    gl_account_label: accountLabel,
     description:     String(line.description ?? "").trim(),
-    transaction_currency: normalizeCurrencyCode(d["transaction_currency"]),
-    debit:           fmtInputAmount(d["transaction_debit"], minorUnits),
-    credit:          fmtInputAmount(d["transaction_credit"], minorUnits),
+    transaction_currency: normalizeCurrencyCode(fieldNames.transactionCurrencyField ? d[fieldNames.transactionCurrencyField] : undefined),
+    debit:           fmtInputAmount(fieldNames.debitField ? d[fieldNames.debitField] : undefined, minorUnits),
+    credit:          fmtInputAmount(fieldNames.creditField ? d[fieldNames.creditField] : undefined, minorUnits),
+    subledger_type:  (d["subledger_type"] as string | null | undefined) ?? null,
     reference:        referenceFromLine(line, targets),
   };
 }
@@ -751,7 +718,13 @@ function parseDraftAmount(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function validateDraftLines(lines: JournalLineDraft[], includeReferences: boolean, minRows = 2, minorUnits = 2) {
+function validateDraftLines(
+  lines: JournalLineDraft[],
+  includeReferences: boolean,
+  minRows = 2,
+  minorUnits = 2,
+  fieldNames: JournalLineFieldNames = {},
+) {
   const active = lines.filter((line) => !isBlankDraft(line));
   const payload: JournalLineGridPayload[] = [];
   let totalDebit = 0;
@@ -765,6 +738,12 @@ function validateDraftLines(lines: JournalLineDraft[], includeReferences: boolea
     const glAccountCode = line.gl_account_code.trim();
     if (!glAccountCode) {
       return { ok: false, totalDebit, totalCredit, payload, message: "GL Account is required on every line." };
+    }
+    const accountPayloadField = fieldNames.accountCodePayloadField ?? fieldNames.accountField;
+    const debitPayloadField = fieldNames.debitPayloadField ?? fieldNames.debitField;
+    const creditPayloadField = fieldNames.creditPayloadField ?? fieldNames.creditField;
+    if (!accountPayloadField || !debitPayloadField || !creditPayloadField) {
+      return { ok: false, totalDebit, totalCredit, payload, message: "Journal line field mapping is missing." };
     }
 
     const debit = parseDraftAmount(line.debit);
@@ -789,14 +768,17 @@ function validateDraftLines(lines: JournalLineDraft[], includeReferences: boolea
           ref_doc_line_label: line.reference.ref_doc_line_label || null,
         }
       : undefined;
-    payload.push({
-      gl_account_code: glAccountCode,
-      transaction_currency: line.transaction_currency || undefined,
-      debit:           debit > 0 ? debit : undefined,
-      credit:          credit > 0 ? credit : undefined,
-      item_text:       line.description.trim() || undefined,
-      ...(reference ? { reference } : {}),
-    });
+    const next: Record<string, unknown> = {
+      [accountPayloadField]: glAccountCode,
+      [debitPayloadField]:   debit > 0 ? debit : undefined,
+      [creditPayloadField]:  credit > 0 ? credit : undefined,
+    };
+    const currencyPayloadField = fieldNames.transactionCurrencyPayloadField ?? fieldNames.transactionCurrencyField;
+    const descriptionPayloadField = fieldNames.descriptionPayloadField;
+    if (currencyPayloadField) next[currencyPayloadField] = line.transaction_currency || undefined;
+    if (descriptionPayloadField) next[descriptionPayloadField] = line.description.trim() || undefined;
+    if (reference && fieldNames.referencePayloadField) next[fieldNames.referencePayloadField] = reference;
+    payload.push(next);
   }
 
   if (Math.abs(totalDebit - totalCredit) > 0.001 || totalDebit <= 0) {
@@ -810,117 +792,6 @@ function validateDraftLines(lines: JournalLineDraft[], includeReferences: boolea
   }
 
   return { ok: true, totalDebit, totalCredit, payload, message: null };
-}
-
-function glAccountOptionFromMetadata(
-  row: Record<string, unknown>,
-  entityCode: string,
-  optionConfig: ReturnType<typeof resolveEntityPickerOptionConfig>,
-  valueField: string,
-): EntityPickerOption | null {
-  const base = entityRowToPickerOption(row, entityCode, optionConfig);
-  const value = textFromRecord(row, valueField)
-    ?? textFromRecord(row, optionConfig?.codeField)
-    ?? textFromRecord(row, "code")
-    ?? textFromRecord(row, "id");
-  if (!value) return null;
-
-  return {
-    ...base,
-    value,
-    code:     base.code ?? textFromRecord(row, optionConfig?.codeField) ?? textFromRecord(row, "code"),
-    recordId: textFromRecord(row, "id") ?? base.recordId,
-  };
-}
-
-function GlAccountPicker({
-  line,
-  field,
-  formData,
-  disabled,
-  onChange,
-}: {
-  line: JournalLineDraft;
-  field?: EntityField | null;
-  formData?: Record<string, unknown> | null;
-  disabled?: boolean;
-  onChange: (patch: Partial<JournalLineDraft>) => void;
-}) {
-  const labelCache = useRef<Map<string, string>>(new Map());
-  const formDataRef = useRef<Record<string, unknown> | null | undefined>(formData);
-  const targetEntity = referenceTargetEntity(field);
-  const optionConfig = useMemo(
-    () => resolveEntityPickerOptionConfig(field?.reference_config),
-    [field?.reference_config],
-  );
-  const valueField = useMemo(() => glAccountValueField(field), [field]);
-
-  useEffect(() => { formDataRef.current = formData; }, [formData]);
-
-  const search = useCallback(async (
-    query: string,
-    context?: EntityPickerSearchContext,
-  ) => {
-    try {
-      const chartOfAccountId = targetEntity === "gl_account"
-        ? firstLookupContextValue(formDataRef.current, [
-            "chart_of_account_id",
-            "chartOfAccountId",
-            "coa_id",
-            "coaId",
-            "data.chart_of_account_id",
-            "metadata.chart_of_account_id",
-          ])
-        : null;
-      const lookupConfig = chartOfAccountId !== null
-        ? lookupConfigWithFilter(field?.lookup_config, "chart_of_account_id", chartOfAccountId)
-        : field?.lookup_config;
-      const result = await searchLookupOptions({
-        entityCode: targetEntity,
-        query,
-        lookupConfig,
-        formData: formDataRef.current,
-        optionConfig,
-        context,
-        rowToOption: (row, entityCode, config) =>
-          glAccountOptionFromMetadata(row, entityCode, config, valueField),
-      });
-      result.options.forEach((option) => labelCache.current.set(option.value, option.label));
-      return result;
-    } catch {
-      return { options: [] };
-    }
-  }, [field?.lookup_config, optionConfig, targetEntity, valueField]);
-
-  return (
-    <EntityPicker
-      value={line.gl_account_code || null}
-      displayLabel={line.gl_account_label || line.gl_account_code || null}
-      onChange={(value) => {
-        const code = value ?? "";
-        onChange({
-          gl_account_code:  code,
-          gl_account_label: code ? (labelCache.current.get(code) ?? code) : "",
-        });
-      }}
-      onOptionSelect={(option) => {
-        if (option) labelCache.current.set(option.value, option.label);
-      }}
-      entityCode={targetEntity}
-      search={search}
-      optionConfig={optionConfig}
-      getOptionHref={(option) => {
-        const recordId = option.recordId ?? option.value;
-        return `/app/${encodeURIComponent(targetEntity)}/${encodeURIComponent(recordId)}`;
-      }}
-      optionActionLabel={optionConfig?.optionActionLabel ?? "Open record"}
-      loadOnOpen
-      placeholder={`Search ${field?.label ?? "GL account"}...`}
-      disabled={disabled}
-      clearable
-      className="w-full min-w-0"
-    />
-  );
 }
 
 function ReferencePicker({
@@ -1240,7 +1111,7 @@ function CurrencyAmountInput({
   return (
     <div
       className={cn(
-        "flex h-7 w-full min-w-0 overflow-hidden rounded-md border border-input bg-background text-xs shadow-sm",
+        "flex h-7 w-full min-w-0 overflow-hidden rounded-md border border-input bg-card text-xs shadow-sm",
         "focus-within:ring-2 focus-within:ring-ring",
         disabled && "opacity-50",
       )}
@@ -1295,9 +1166,9 @@ function ReferenceSummaryCell({
 
 function AmtCell({ value, side, minorUnits }: { value: unknown; side: "debit" | "credit"; minorUnits: number }) {
   const n = Number(value);
-  if (!n) return <span className={cn(READONLY_PRIMARY_TEXT, "text-muted-foreground/30")}>-</span>;
+  if (!n) return <span className="text-sm tabular-nums text-muted-foreground/30">-</span>;
   return (
-    <span className={cn(READONLY_PRIMARY_TEXT, "tabular-nums", side === "debit" ? "text-foreground" : "text-foreground")}>
+    <span className={cn("text-sm tabular-nums font-medium", side === "debit" ? "text-foreground" : "text-foreground")}>
       {fmtAmt(n, minorUnits)}
     </span>
   );
@@ -1313,13 +1184,13 @@ function SubledgerBadge({ type }: { type: string | null | undefined }) {
 }
 
 const LINE_EDITOR_COLUMNS =
-  "2rem minmax(0,1.25fr) minmax(0,1.65fr) minmax(9rem,.8fr) minmax(9rem,.8fr) 2.25rem";
+  "2rem minmax(0,1.25fr) minmax(0,1.65fr) minmax(5.5rem,0.4fr) minmax(9rem,.8fr) minmax(9rem,.8fr) 2.25rem";
 
 const LINE_EDITOR_COLUMNS_WITH_REFERENCE =
-  "2rem minmax(0,1.1fr) minmax(0,1.4fr) minmax(0,1.15fr) minmax(9rem,.75fr) minmax(9rem,.75fr) 2.25rem";
+  "2rem minmax(0,1.1fr) minmax(0,1.4fr) minmax(0,1.15fr) minmax(5.5rem,0.4fr) minmax(9rem,.75fr) minmax(9rem,.75fr) 2.25rem";
 
-const LINE_HEADER_CELL = "px-2 py-2 text-xs font-medium text-muted-foreground";
-const LINE_BODY_CELL = "min-w-0 px-2 py-1.5";
+const LINE_HEADER_CELL = "px-3 py-2.5 text-xs font-medium text-muted-foreground";
+const LINE_BODY_CELL = "min-w-0 px-3 py-1.5";
 const LINE_ROWS_SCROLL_AREA = "max-h-[28rem] overflow-y-auto";
 
 export interface JournalIntakeLinesGridProps {
@@ -1353,7 +1224,7 @@ export function JournalIntakeLinesGrid({
   onTransactionCurrencyCodeChange,
   currencySelectorEditable,
   currencyMinorUnits,
-  lineEntityCode = "journal_line",
+  lineEntityCode,
   minRows = 2,
   error,
 }: JournalIntakeLinesGridProps) {
@@ -1366,10 +1237,18 @@ export function JournalIntakeLinesGrid({
     transactionCurrency || currencyCode,
   );
   const amountPlaceholder = (0).toFixed(amountScale);
-  const journalLineEntity = useCompiledEntityMetadata(lineEntityCode);
-  const glAccountField = useMemo(() => fieldByName(journalLineEntity, "gl_account_id"), [journalLineEntity]);
-  const debitField = useMemo(() => fieldByName(journalLineEntity, "transaction_debit"), [journalLineEntity]);
-  const creditField = useMemo(() => fieldByName(journalLineEntity, "transaction_credit"), [journalLineEntity]);
+  const journalLineEntity = useCompiledEntityMetadata(lineEntityCode ?? "");
+  const journalLineFieldNames = useMemo(
+    () => readJournalLineFieldNames(undefined, journalLineEntity),
+    [journalLineEntity],
+  );
+  const glAccountField = useMemo(() => (
+    fieldByName(journalLineEntity, journalLineFieldNames.accountField) ??
+    journalLineEntity?.fields.find((f) => f.reference_config?.target_entity === "gl_account") ??
+    null
+  ), [journalLineEntity, journalLineFieldNames.accountField]);
+  const debitField = useMemo(() => fieldByName(journalLineEntity, journalLineFieldNames.debitField), [journalLineEntity, journalLineFieldNames.debitField]);
+  const creditField = useMemo(() => fieldByName(journalLineEntity, journalLineFieldNames.creditField), [journalLineEntity, journalLineFieldNames.creditField]);
   const debitMoneyFormat = useMemo(
     () => resolveMoneyFieldFormat(debitField?.money_config, {
       header: headerContext,
@@ -1392,7 +1271,7 @@ export function JournalIntakeLinesGrid({
   const amountCurrencyPosition = debitMoneyFormat.currencyCodePosition ?? creditMoneyFormat.currencyCodePosition ?? "prefix";
   const amountUsesItemCurrency = moneyConfigUsesItemCurrency(debitField) || moneyConfigUsesItemCurrency(creditField);
   const [draftLines, setDraftLines] = useState<JournalLineDraft[]>(() =>
-    normalizeDraftLines(value, minRows, amountScale, transactionCurrency || currencyCode),
+    normalizeDraftLines(value, minRows, amountScale, transactionCurrency || currencyCode, journalLineFieldNames),
   );
   const onChangeRef = useRef(onChange);
 
@@ -1401,8 +1280,8 @@ export function JournalIntakeLinesGrid({
   }, [onChange]);
 
   const draftValidation = useMemo(
-    () => validateDraftLines(draftLines, false, minRows, amountScale),
-    [draftLines, minRows, amountScale],
+    () => validateDraftLines(draftLines, false, minRows, amountScale, journalLineFieldNames),
+    [draftLines, minRows, amountScale, journalLineFieldNames],
   );
 
   useEffect(() => {
@@ -1422,7 +1301,7 @@ export function JournalIntakeLinesGrid({
   }
 
   function resetDraftLines() {
-    setDraftLines(normalizeDraftLines(value, minRows, amountScale, transactionCurrency || currencyCode));
+    setDraftLines(normalizeDraftLines(value, minRows, amountScale, transactionCurrency || currencyCode, journalLineFieldNames));
   }
 
   function changeTransactionCurrency(nextCurrencyCode: string) {
@@ -1464,7 +1343,7 @@ export function JournalIntakeLinesGrid({
     <div className="overflow-hidden rounded-lg border border-border bg-background">
       <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-muted/40 border-b border-border/40">
         <span className="text-xs font-semibold text-foreground">
-          {activeDraftLineCount} line{activeDraftLineCount !== 1 ? "s" : ""}
+          {activeDraftLineCount} {journalLineEntity?.entity_name ?? "Journal Line"}{activeDraftLineCount !== 1 ? "s" : ""}
         </span>
         <div className="flex items-center gap-1.5">
           <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={addDraftLine}>
@@ -1508,12 +1387,13 @@ export function JournalIntakeLinesGrid({
 
       <div className="overflow-hidden">
         <div
-          className="grid items-center border-b bg-muted/40 text-sm"
+          className="grid items-center border-b bg-muted/50 text-sm"
           style={{ gridTemplateColumns: LINE_EDITOR_COLUMNS }}
         >
           <div className={cn(LINE_HEADER_CELL, "text-center")}>#</div>
           <div className={cn(LINE_HEADER_CELL, "text-left")}>GL Account</div>
           <div className={cn(LINE_HEADER_CELL, "text-left")}>Description</div>
+          <div className={cn(LINE_HEADER_CELL, "text-center")}>Subledger</div>
           <div className={cn(LINE_HEADER_CELL, "text-right")}>Debit</div>
           <div className={cn(LINE_HEADER_CELL, "text-right")}>Credit</div>
           <div className="px-2 py-2" />
@@ -1541,24 +1421,32 @@ export function JournalIntakeLinesGrid({
             return (
             <div
               key={line.key}
-              className="grid items-center bg-background text-sm"
+              className="grid items-center bg-card text-sm"
               style={{ gridTemplateColumns: LINE_EDITOR_COLUMNS }}
             >
-              <div className="px-2 py-2 text-center text-xs text-muted-foreground tabular-nums">{index + 1}</div>
+              <div className="px-3 py-2 text-center text-sm text-muted-foreground tabular-nums">{index + 1}</div>
               <div className={LINE_BODY_CELL}>
                 <GlAccountPicker
-                  line={line}
+                  value={line.gl_account_code || null}
+                  displayLabel={line.gl_account_label || line.gl_account_code || null}
                   field={glAccountField}
                   formData={headerContext}
-                  onChange={(patch) => updateDraftLine(line.key, patch)}
+                  onChange={(code, label) => updateDraftLine(line.key, {
+                    gl_account_code:  code ?? "",
+                    gl_account_label: code ? (label ?? code) : "",
+                  })}
+                  className="w-full min-w-0"
                 />
               </div>
               <div className={LINE_BODY_CELL}>
                 <Input
-                  className="h-8 w-full min-w-0 text-xs"
+                  className="h-8 w-full min-w-0 text-sm"
                   value={line.description}
                   onChange={(e) => updateDraftLine(line.key, { description: e.target.value })}
                 />
+              </div>
+              <div className="px-3 py-1.5 flex items-center justify-center">
+                <SubledgerBadge type={line.subledger_type} />
               </div>
               <div className={LINE_BODY_CELL}>
                 <CurrencyAmountInput
@@ -1664,9 +1552,17 @@ export function JournalLinesGrid({
   const amountPlaceholder = (0).toFixed(amountScale);
   const journalLineEntityCode = useMemo(() => readJournalLineEntityCode(entity), [entity]);
   const journalLineEntity = useCompiledEntityMetadata(journalLineEntityCode);
-  const glAccountField = useMemo(() => fieldByName(journalLineEntity, "gl_account_id"), [journalLineEntity]);
-  const debitField = useMemo(() => fieldByName(journalLineEntity, "transaction_debit"), [journalLineEntity]);
-  const creditField = useMemo(() => fieldByName(journalLineEntity, "transaction_credit"), [journalLineEntity]);
+  const journalLineFieldNames = useMemo(
+    () => readJournalLineFieldNames(entity, journalLineEntity),
+    [entity, journalLineEntity],
+  );
+  const glAccountField = useMemo(() => (
+    fieldByName(journalLineEntity, journalLineFieldNames.accountField) ??
+    journalLineEntity?.fields.find((f) => f.reference_config?.target_entity === "gl_account") ??
+    null
+  ), [journalLineEntity, journalLineFieldNames.accountField]);
+  const debitField = useMemo(() => fieldByName(journalLineEntity, journalLineFieldNames.debitField), [journalLineEntity, journalLineFieldNames.debitField]);
+  const creditField = useMemo(() => fieldByName(journalLineEntity, journalLineFieldNames.creditField), [journalLineEntity, journalLineFieldNames.creditField]);
   const debitMoneyFormat = useMemo(
     () => resolveMoneyFieldFormat(debitField?.money_config, {
       header: record,
@@ -1690,7 +1586,9 @@ export function JournalLinesGrid({
     [entity, showLineReferences],
   );
   const [draftLines, setDraftLines] = useState<JournalLineDraft[]>(() =>
-    lines.length > 0 ? lines.map((line) => lineToDraft(line, referenceTargets, amountScale)) : [newDraftLine(activeCurrencyCode), newDraftLine(activeCurrencyCode)],
+    lines.length > 0
+      ? lines.map((line) => lineToDraft(line, referenceTargets, amountScale, journalLineFieldNames, glAccountField))
+      : [newDraftLine(activeCurrencyCode), newDraftLine(activeCurrencyCode)],
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -1705,7 +1603,9 @@ export function JournalLinesGrid({
   const [exchangeRateInput, setExchangeRateInput] = useState(initialExchangeRate);
 
   useEffect(() => {
-    setDraftLines(lines.length > 0 ? lines.map((line) => lineToDraft(line, referenceTargets, amountScale)) : [newDraftLine(activeCurrencyCode), newDraftLine(activeCurrencyCode)]);
+    setDraftLines(lines.length > 0
+      ? lines.map((line) => lineToDraft(line, referenceTargets, amountScale, journalLineFieldNames, glAccountField))
+      : [newDraftLine(activeCurrencyCode), newDraftLine(activeCurrencyCode)]);
     setSaveError(null);
   // Keep unsaved amount edits intact when only the selected currency scale changes.
   // Server/refreshed lines still reset the draft from persisted data.
@@ -1721,8 +1621,8 @@ export function JournalLinesGrid({
   }, [initialExchangeRate]);
 
   const draftValidation = useMemo(
-    () => validateDraftLines(draftLines, showLineReferences, 2, amountScale),
-    [draftLines, showLineReferences, amountScale],
+    () => validateDraftLines(draftLines, showLineReferences, 2, amountScale, journalLineFieldNames),
+    [draftLines, showLineReferences, amountScale, journalLineFieldNames],
   );
   const exchangeRateNumber = Number(exchangeRateInput);
   const hasExchangeRateInput = exchangeRateInput.trim().length > 0;
@@ -1738,6 +1638,20 @@ export function JournalLinesGrid({
     },
   });
   const exchangeRateValidationMessage = exchangeRateStatus.message;
+
+  const [readOnlySearch, setReadOnlySearch] = useState("");
+  const filteredLines = useMemo(() => {
+    if (!readOnlySearch.trim()) return lines;
+    const q = readOnlySearch.trim().toLowerCase();
+    return lines.filter((l) => {
+      const d = (l.data ?? {}) as Record<string, unknown>;
+      return (
+        String(l.description ?? "").toLowerCase().includes(q) ||
+        String(d["gl_account_code"] ?? d["account_code"] ?? "").toLowerCase().includes(q) ||
+        (journalLineFieldNames.accountField ? String(d[journalLineFieldNames.accountField] ?? "").toLowerCase().includes(q) : false)
+      );
+    });
+  }, [lines, readOnlySearch, journalLineFieldNames.accountField]);
 
   function updateDraftLine(key: string, patch: Partial<JournalLineDraft>) {
     setDraftLines((prev) => prev.map((line) => line.key === key ? { ...line, ...patch } : line));
@@ -1755,7 +1669,9 @@ export function JournalLinesGrid({
   }
 
   function resetDraftLines() {
-    setDraftLines(lines.length > 0 ? lines.map((line) => lineToDraft(line, referenceTargets, amountScale)) : [newDraftLine(activeCurrencyCode), newDraftLine(activeCurrencyCode)]);
+    setDraftLines(lines.length > 0
+      ? lines.map((line) => lineToDraft(line, referenceTargets, amountScale, journalLineFieldNames, glAccountField))
+      : [newDraftLine(activeCurrencyCode), newDraftLine(activeCurrencyCode)]);
     setDraftCurrencyCode(recordCurrencyCode);
     setSaveError(null);
   }
@@ -1835,12 +1751,13 @@ export function JournalLinesGrid({
     const totalCredit = draftValidation.totalCredit;
     const activeDraftLineCount = draftLines.filter((line) => !isBlankDraft(line)).length;
     const editorColumns = showLineReferences ? LINE_EDITOR_COLUMNS_WITH_REFERENCE : LINE_EDITOR_COLUMNS;
+    const editLineEntityName = journalLineEntity?.entity_name ?? "Journal Line";
 
     return (
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-muted/40 border-b border-border/40">
           <span className="text-xs font-semibold text-foreground">
-            {activeDraftLineCount} line{activeDraftLineCount !== 1 ? "s" : ""}
+            {activeDraftLineCount} {editLineEntityName}{activeDraftLineCount !== 1 ? "s" : ""}
           </span>
           <div className="flex items-center gap-1.5">
             <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" onClick={addDraftLine}>
@@ -1894,7 +1811,7 @@ export function JournalLinesGrid({
 
         <div className="overflow-hidden">
           <div
-            className="grid items-center border-b bg-muted/40 text-sm"
+            className="grid items-center border-b bg-muted/50 text-sm"
             style={{ gridTemplateColumns: editorColumns }}
           >
             <div className={cn(LINE_HEADER_CELL, "text-center")}>#</div>
@@ -1903,6 +1820,7 @@ export function JournalLinesGrid({
             {showLineReferences && (
               <div className={cn(LINE_HEADER_CELL, "text-left")}>Reference</div>
             )}
+            <div className={cn(LINE_HEADER_CELL, "text-center")}>Subledger</div>
             <div className={cn(LINE_HEADER_CELL, "text-right")}>Debit</div>
             <div className={cn(LINE_HEADER_CELL, "text-right")}>Credit</div>
             <div className="px-2 py-2" />
@@ -1920,22 +1838,27 @@ export function JournalLinesGrid({
               return (
               <div
                 key={line.key}
-                className="grid items-center bg-background text-sm"
+                className="grid items-center bg-card text-sm"
                 style={{ gridTemplateColumns: editorColumns }}
               >
-                <div className="px-2 py-2 text-center text-xs text-muted-foreground tabular-nums">{index + 1}</div>
+                <div className="px-3 py-2 text-center text-sm text-muted-foreground tabular-nums">{index + 1}</div>
                 <div className={LINE_BODY_CELL}>
                   <GlAccountPicker
-                    line={line}
+                    value={line.gl_account_code || null}
+                    displayLabel={line.gl_account_label || line.gl_account_code || null}
                     field={glAccountField}
                     formData={record}
                     disabled={saving}
-                    onChange={(patch) => updateDraftLine(line.key, patch)}
+                    onChange={(code, label) => updateDraftLine(line.key, {
+                      gl_account_code:  code ?? "",
+                      gl_account_label: code ? (label ?? code) : "",
+                    })}
+                    className="w-full min-w-0"
                   />
                 </div>
                 <div className={LINE_BODY_CELL}>
                   <Input
-                    className="h-8 w-full min-w-0 text-xs"
+                    className="h-8 w-full min-w-0 text-sm"
                     value={line.description}
                     onChange={(e) => updateDraftLine(line.key, { description: e.target.value })}
                   />
@@ -1950,6 +1873,9 @@ export function JournalLinesGrid({
                     />
                   </div>
                 )}
+                <div className="px-3 py-1.5 flex items-center justify-center">
+                  <SubledgerBadge type={line.subledger_type} />
+                </div>
                 <div className={LINE_BODY_CELL}>
                   <CurrencyAmountInput
                     ariaLabel={`Debit amount for line ${index + 1}`}
@@ -2017,18 +1943,33 @@ export function JournalLinesGrid({
     );
   }
 
-  const totalDebit  = lines.reduce((s, l) => s + (Number(l.data?.transaction_debit)  || 0), 0);
-  const totalCredit = lines.reduce((s, l) => s + (Number(l.data?.transaction_credit) || 0), 0);
+  const totalDebit  = lines.reduce((s, l) => s + (Number(journalLineFieldNames.debitField ? l.data?.[journalLineFieldNames.debitField] : 0)  || 0), 0);
+  const totalCredit = lines.reduce((s, l) => s + (Number(journalLineFieldNames.creditField ? l.data?.[journalLineFieldNames.creditField] : 0) || 0), 0);
   const hasReadOnlyLines = lines.length > 0;
   const readOnlyBalanced = hasReadOnlyLines && totalDebit > 0 && Math.abs(totalDebit - totalCredit) < 0.001;
+  const lineEntityName = journalLineEntity?.entity_name ?? "Journal Line";
 
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-3.5 py-2 bg-muted/40 border-b border-border/40">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-muted/40 border-b border-border/40">
         <span className="text-xs font-semibold text-foreground">
-          {lines.length} line{lines.length !== 1 ? "s" : ""}
+          {lines.length} {lineEntityName}{lines.length !== 1 ? "s" : ""}
         </span>
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
+          <input
+            value={readOnlySearch}
+            onChange={(e) => setReadOnlySearch(e.target.value)}
+            placeholder="Search"
+            className="h-7 w-44 rounded-md border border-border/60 bg-background pl-7 pr-7 text-xs outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-ring/50 focus:ring-1 focus:ring-ring/30"
+          />
+          {readOnlySearch && (
+            <button type="button" onClick={() => setReadOnlySearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground" aria-label="Clear search">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </label>
       </div>
 
       {/* Table */}
@@ -2043,35 +1984,36 @@ export function JournalLinesGrid({
             <col style={{ width: 110 }} />
             <col style={{ width: 110 }} />
           </colgroup>
-          <thead className="sticky top-0 z-10 border-b bg-muted/40">
+          <thead className="sticky top-0 z-10 border-b bg-muted">
             <tr>
-              <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center">#</th>
-              <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-left">GL Account</th>
-              <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-left">Description</th>
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-center">#</th>
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-left">GL Account</th>
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-left">Description</th>
               {showLineReferences && (
-                <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-left">Reference</th>
+                <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-left">Reference</th>
               )}
-              <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-center">Subledger</th>
-              <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-right">Debit</th>
-              <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-right">Credit</th>
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-center">Subledger</th>
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-right">Debit</th>
+              <th className="px-3 py-2.5 text-xs font-medium text-muted-foreground text-right">Credit</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/40">
-            {lines.length === 0 ? (
+          <tbody className="divide-y divide-border/50">
+            {filteredLines.length === 0 ? (
               <tr>
                 <td colSpan={showLineReferences ? 7 : 6}>
-                  <div className="flex flex-col items-center gap-2 py-10 text-center">
-                    <p className="text-sm text-muted-foreground">No journal lines</p>
+                  <div className="flex flex-col items-center gap-2 py-12 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      {readOnlySearch ? "No lines match your search" : "No journal lines"}
+                    </p>
                   </div>
                 </td>
               </tr>
             ) : (
-              lines.map((line) => {
+              filteredLines.map((line) => {
                 const d = line.data as Record<string, unknown> | null | undefined ?? {};
-                const isDebit = Boolean(d["is_debit"]);
                 return (
-                  <tr key={line.id} className={cn("hover:bg-muted/20 transition-colors", isDebit ? "" : "bg-muted/5")}>
-                    <td className="px-3 py-2.5 text-center text-xs text-muted-foreground tabular-nums">
+                  <tr key={line.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-3 py-2.5 text-center text-sm text-muted-foreground tabular-nums">
                       {line.line_number}
                     </td>
                     <td className="px-3 py-2.5 min-w-0">
@@ -2089,10 +2031,10 @@ export function JournalLinesGrid({
                       <SubledgerBadge type={d["subledger_type"] as string | null | undefined} />
                     </td>
                     <td className="px-3 py-2.5 text-right">
-                      <AmtCell value={d["transaction_debit"]} side="debit" minorUnits={amountScale} />
+                      <AmtCell value={journalLineFieldNames.debitField ? d[journalLineFieldNames.debitField] : undefined} side="debit" minorUnits={amountScale} />
                     </td>
                     <td className="px-3 py-2.5 text-right">
-                      <AmtCell value={d["transaction_credit"]} side="credit" minorUnits={amountScale} />
+                      <AmtCell value={journalLineFieldNames.creditField ? d[journalLineFieldNames.creditField] : undefined} side="credit" minorUnits={amountScale} />
                     </td>
                   </tr>
                 );

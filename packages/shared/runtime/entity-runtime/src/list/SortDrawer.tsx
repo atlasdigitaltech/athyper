@@ -210,8 +210,6 @@ export function SortDrawer({
   }, [width, onWidthChange]);
 
   // ── Most-used opt-in gate ─────────────────────────────────────────────────────
-  // Shown when entity has opted in via view_count field (Sprint 2.D DDL).
-  const hasMostUsed = entity.fields.some((f) => f.name === "view_count");
   const mostUsedActive = draft.some((e) => e.key === "__most_used");
 
   // ── Field label helper ────────────────────────────────────────────────────────
@@ -357,19 +355,6 @@ export function SortDrawer({
               </button>
             </div>
           ))}
-
-          {/* Most used — special sort, gated on view_count opt-in */}
-          {hasMostUsed && !mostUsedActive && (
-            <div className="pt-1">
-              <button
-                onClick={() => setDraft([{ key: "__most_used", dir: "desc" }])}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowDown className="h-3.5 w-3.5" />
-                Sort by most used
-              </button>
-            </div>
-          )}
 
           {/* Add field section */}
           {availableFields.length > 0 && !mostUsedActive && (

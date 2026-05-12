@@ -21,17 +21,65 @@ import type { MasterTab } from "@athyper/metadata-client/compiled-reader";
 type BankingRecord = Record<string, unknown>;
 
 interface BankingSummaryPanelProps {
-  records:       BankingRecord[];
-  tab:           MasterTab;
-  editMode:      boolean;
-  canAdd:        boolean;
-  canEdit:       boolean;
-  onAdd:         () => void;
-  onEdit:        (rec: BankingRecord) => void;
-  onMarkPrimary: (rec: BankingRecord) => void;
+  records:            BankingRecord[];
+  tab:                MasterTab;
+  fieldMap?:          BankingFieldMap;
+  fieldMapDefaults?:  BankingFieldMap;
+  editMode:           boolean;
+  canAdd:             boolean;
+  canEdit:            boolean;
+  onAdd:              () => void;
+  onEdit:             (rec: BankingRecord) => void;
+  onMarkPrimary:      (rec: BankingRecord) => void;
 }
 
 type DetailTab = "details" | "linkages" | "verification" | "activity" | "audit";
+
+type BankingFieldKey =
+  | "recordId"
+  | "bankAccountId"
+  | "bankName"
+  | "bankNameOverride"
+  | "bankInstitutionType"
+  | "institutionType"
+  | "bic"
+  | "bicOverride"
+  | "bankCountryCode"
+  | "bankCountryOverride"
+  | "countryCode"
+  | "branchName"
+  | "bankBranchName"
+  | "nationalBankCode"
+  | "accountNumber"
+  | "accountIdValue"
+  | "accountIdValueMasked"
+  | "accountLast4"
+  | "accountHolderName"
+  | "accountIdType"
+  | "accountNature"
+  | "currencyCode"
+  | "currencyName"
+  | "companyCode"
+  | "companyCodeName"
+  | "companyCodeDisplay"
+  | "purpose"
+  | "ownerType"
+  | "status"
+  | "effectiveFrom"
+  | "effectiveUntil"
+  | "isPrimary"
+  | "isVerified"
+  | "verificationMethod"
+  | "verifiedAt"
+  | "verifiedBy"
+  | "supportsSwift"
+  | "supportsLocalClearing"
+  | "supportsSepa"
+  | "supportsAch"
+  | "createdAt"
+  | "updatedAt";
+
+export type BankingFieldMap = Partial<Record<BankingFieldKey, string | string[]>>;
 
 const CURRENCY_NAMES: Record<string, string> = {
   AED: "UAE Dirham",
@@ -42,6 +90,55 @@ const CURRENCY_NAMES: Record<string, string> = {
   SAR: "Saudi Riyal",
   USD: "US Dollar",
 };
+
+function asPlainRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function normalizeFieldMap(raw: unknown): BankingFieldMap {
+  const source = asPlainRecord(raw);
+  if (!source) return {};
+  const entries = Object.entries(source).filter((entry): entry is [BankingFieldKey, string | string[]] => {
+    const value = entry[1];
+    return typeof value === "string"
+      || (Array.isArray(value) && value.every((item) => typeof item === "string"));
+  });
+  return Object.fromEntries(entries) as BankingFieldMap;
+}
+
+function bankingFieldMapFromTab(tab: MasterTab, defaults?: BankingFieldMap, override?: BankingFieldMap): BankingFieldMap {
+  const settings = asPlainRecord(tab.config?.presentation_config) ?? {};
+  const configured = normalizeFieldMap(settings.banking_field_map ?? settings.field_map);
+  return {
+    ...(defaults ?? {}),
+    ...configured,
+    ...(override ?? {}),
+  };
+}
+
+function fieldNames(fieldMap: BankingFieldMap, key: BankingFieldKey): string[] {
+  const value = fieldMap[key];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return typeof value === "string" && value.trim() ? [value.trim()] : [];
+}
+
+function fieldValue(rec: BankingRecord, fieldMap: BankingFieldMap, key: BankingFieldKey): unknown {
+  for (const fieldName of fieldNames(fieldMap, key)) {
+    const value = rec[fieldName];
+    if (value !== null && value !== undefined && value !== "") return value;
+  }
+  return undefined;
+}
+
+function firstFieldValue(rec: BankingRecord, fieldMap: BankingFieldMap, keys: BankingFieldKey[]): unknown {
+  for (const key of keys) {
+    const value = fieldValue(rec, fieldMap, key);
+    if (value !== null && value !== undefined && value !== "") return value;
+  }
+  return undefined;
+}
 
 function stringValue(value: unknown): string {
   return value === null || value === undefined ? "" : String(value);
@@ -72,79 +169,80 @@ function formatDate(value: unknown): string {
   }).format(date);
 }
 
-function formatRange(rec: BankingRecord): string {
-  const from = formatDate(rec.effective_from);
-  const until = stringValue(rec.effective_until) ? formatDate(rec.effective_until) : "open";
+function formatRange(rec: BankingRecord, fieldMap: BankingFieldMap): string {
+  const from = formatDate(fieldValue(rec, fieldMap, "effectiveFrom"));
+  const untilValue = fieldValue(rec, fieldMap, "effectiveUntil");
+  const until = stringValue(untilValue) ? formatDate(untilValue) : "open";
   return `${from} - ${until}`;
 }
 
-function isActiveLink(rec: BankingRecord): boolean {
-  const status = stringValue(rec.status).toLowerCase();
+function isActiveLink(rec: BankingRecord, fieldMap: BankingFieldMap): boolean {
+  const status = stringValue(fieldValue(rec, fieldMap, "status")).toLowerCase();
   if (status === "inactive" || status === "archived") return false;
-  const until = stringValue(rec.effective_until);
+  const until = stringValue(fieldValue(rec, fieldMap, "effectiveUntil"));
   if (!until) return true;
   return new Date(until).getTime() > Date.now();
 }
 
-function bankName(rec: BankingRecord): string {
+function bankName(rec: BankingRecord, fieldMap: BankingFieldMap): string {
   return (
-    stringValue(rec.bank_name) ||
-    stringValue(rec.bank_name_override) ||
+    stringValue(fieldValue(rec, fieldMap, "bankName")) ||
+    stringValue(fieldValue(rec, fieldMap, "bankNameOverride")) ||
     "Bank account"
   );
 }
 
-function accountNumber(rec: BankingRecord): string {
+function accountNumber(rec: BankingRecord, fieldMap: BankingFieldMap): string {
   return (
-    stringValue(rec.account_number) ||
-    stringValue(rec.account_id_value) ||
-    stringValue(rec.account_id_value_masked)
+    stringValue(fieldValue(rec, fieldMap, "accountNumber")) ||
+    stringValue(fieldValue(rec, fieldMap, "accountIdValue")) ||
+    stringValue(fieldValue(rec, fieldMap, "accountIdValueMasked"))
   );
 }
 
-function last4(rec: BankingRecord): string {
-  const explicit = stringValue(rec.account_last4);
+function last4(rec: BankingRecord, fieldMap: BankingFieldMap): string {
+  const explicit = stringValue(fieldValue(rec, fieldMap, "accountLast4"));
   if (explicit) return explicit;
-  const compact = accountNumber(rec).replace(/[^A-Za-z0-9]/g, "");
+  const compact = accountNumber(rec, fieldMap).replace(/[^A-Za-z0-9]/g, "");
   return compact.slice(-4);
 }
 
-function maskedAccount(rec: BankingRecord): string {
-  const masked = stringValue(rec.account_id_value_masked);
+function maskedAccount(rec: BankingRecord, fieldMap: BankingFieldMap): string {
+  const masked = stringValue(fieldValue(rec, fieldMap, "accountIdValueMasked"));
   if (masked) return masked;
-  const raw = accountNumber(rec);
-  const tail = last4(rec);
+  const raw = accountNumber(rec, fieldMap);
+  const tail = last4(rec, fieldMap);
   if (!raw) return "-";
   if (!tail) return raw;
   const prefix = raw.slice(0, Math.max(0, raw.length - tail.length));
   return `${prefix.replace(/[A-Za-z0-9]/g, "*")}${tail}`;
 }
 
-function currencyLabel(rec: BankingRecord): string {
-  const code = stringValue(rec.currency_code).toUpperCase();
+function currencyLabel(rec: BankingRecord, fieldMap: BankingFieldMap): string {
+  const code = stringValue(fieldValue(rec, fieldMap, "currencyCode")).toUpperCase();
   if (!code) return "-";
-  const name = stringValue(rec.currency_name) || CURRENCY_NAMES[code];
+  const name = stringValue(fieldValue(rec, fieldMap, "currencyName")) || CURRENCY_NAMES[code];
   return name ? `${code} - ${name}` : code;
 }
 
-function companyScopeLabel(rec: BankingRecord): string {
-  const code = stringValue(rec.company_code);
-  const name = stringValue(rec.company_code_name) || stringValue(rec.company_code_display);
+function companyScopeLabel(rec: BankingRecord, fieldMap: BankingFieldMap): string {
+  const code = stringValue(fieldValue(rec, fieldMap, "companyCode"));
+  const name = stringValue(fieldValue(rec, fieldMap, "companyCodeName")) || stringValue(fieldValue(rec, fieldMap, "companyCodeDisplay"));
   if (name && code) return `${name} (${code})`;
   if (name) return name;
   if (code) return code;
   return "All company codes";
 }
 
-function bicValue(rec: BankingRecord): string {
-  return stringValue(rec.bic) || stringValue(rec.bic_override) || "-";
+function bicValue(rec: BankingRecord, fieldMap: BankingFieldMap): string {
+  return stringValue(fieldValue(rec, fieldMap, "bic")) || stringValue(fieldValue(rec, fieldMap, "bicOverride")) || "-";
 }
 
-function bankCountry(rec: BankingRecord): string {
+function bankCountry(rec: BankingRecord, fieldMap: BankingFieldMap): string {
   return (
-    stringValue(rec.bank_country_code) ||
-    stringValue(rec.bank_country_override) ||
-    stringValue(rec.country_code) ||
+    stringValue(fieldValue(rec, fieldMap, "bankCountryCode")) ||
+    stringValue(fieldValue(rec, fieldMap, "bankCountryOverride")) ||
+    stringValue(fieldValue(rec, fieldMap, "countryCode")) ||
     "-"
   );
 }
@@ -158,41 +256,41 @@ function initials(label: string): string {
   return `${first[0] ?? ""}${second[0] ?? ""}`.toUpperCase();
 }
 
-function verificationLabel(rec: BankingRecord): string {
-  if (boolValue(rec.is_verified)) return "Verified";
+function verificationLabel(rec: BankingRecord, fieldMap: BankingFieldMap): string {
+  if (boolValue(fieldValue(rec, fieldMap, "isVerified"))) return "Verified";
   return "Pending Verification";
 }
 
-function verificationVariant(rec: BankingRecord): "success" | "warning" {
-  return boolValue(rec.is_verified) ? "success" : "warning";
+function verificationVariant(rec: BankingRecord, fieldMap: BankingFieldMap): "success" | "warning" {
+  return boolValue(fieldValue(rec, fieldMap, "isVerified")) ? "success" : "warning";
 }
 
-function accountStatusLabel(rec: BankingRecord): string {
-  return isActiveLink(rec) ? "Active" : "Inactive";
+function accountStatusLabel(rec: BankingRecord, fieldMap: BankingFieldMap): string {
+  return isActiveLink(rec, fieldMap) ? "Active" : "Inactive";
 }
 
-function accountStatusVariant(rec: BankingRecord): "success" | "muted" {
-  return isActiveLink(rec) ? "success" : "muted";
+function accountStatusVariant(rec: BankingRecord, fieldMap: BankingFieldMap): "success" | "muted" {
+  return isActiveLink(rec, fieldMap) ? "success" : "muted";
 }
 
-function searchHaystack(rec: BankingRecord): string {
+function searchHaystack(rec: BankingRecord, fieldMap: BankingFieldMap): string {
   return [
-    bankName(rec),
-    accountNumber(rec),
-    maskedAccount(rec),
-    last4(rec),
-    rec.account_holder_name,
-    rec.currency_code,
-    rec.account_id_type,
-    rec.account_nature,
-    rec.purpose,
-    bicValue(rec),
-    companyScopeLabel(rec),
+    bankName(rec, fieldMap),
+    accountNumber(rec, fieldMap),
+    maskedAccount(rec, fieldMap),
+    last4(rec, fieldMap),
+    fieldValue(rec, fieldMap, "accountHolderName"),
+    fieldValue(rec, fieldMap, "currencyCode"),
+    fieldValue(rec, fieldMap, "accountIdType"),
+    fieldValue(rec, fieldMap, "accountNature"),
+    fieldValue(rec, fieldMap, "purpose"),
+    bicValue(rec, fieldMap),
+    companyScopeLabel(rec, fieldMap),
   ].filter(Boolean).join(" ").toLowerCase();
 }
 
-function copyAccountNumber(rec: BankingRecord) {
-  const value = accountNumber(rec);
+function copyAccountNumber(rec: BankingRecord, fieldMap: BankingFieldMap) {
+  const value = accountNumber(rec, fieldMap);
   if (!value || typeof navigator === "undefined" || !navigator.clipboard) return;
   void navigator.clipboard.writeText(value);
 }
@@ -229,23 +327,23 @@ function MetricCard({
   );
 }
 
-function BankAccountAvatar({ rec, size = "md" }: { rec: BankingRecord; size?: "sm" | "md" }) {
+function BankAccountAvatar({ rec, fieldMap, size = "md" }: { rec: BankingRecord; fieldMap: BankingFieldMap; size?: "sm" | "md" }) {
   return (
     <div className={cn(
       "flex shrink-0 select-none items-center justify-center rounded-full bg-foreground font-semibold text-background",
       size === "sm" ? "size-8 text-doc-subtitle" : "size-9 text-xs",
     )}>
-      {initials(bankName(rec))}
+      {initials(bankName(rec, fieldMap))}
     </div>
   );
 }
 
-function AccountIdentity({ rec }: { rec: BankingRecord }) {
-  const name = bankName(rec);
-  const isPrimary = boolValue(rec.is_primary);
+function AccountIdentity({ rec, fieldMap }: { rec: BankingRecord; fieldMap: BankingFieldMap }) {
+  const name = bankName(rec, fieldMap);
+  const isPrimary = boolValue(fieldValue(rec, fieldMap, "isPrimary"));
   return (
     <div className="flex min-w-0 items-start gap-3">
-      <BankAccountAvatar rec={rec} />
+      <BankAccountAvatar rec={rec} fieldMap={fieldMap} />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className={cn("truncate", BANK_ITEM_TITLE_CLASS)}>{name}</p>
@@ -254,18 +352,18 @@ function AccountIdentity({ rec }: { rec: BankingRecord }) {
               Primary
             </Badge>
           )}
-          <Badge variant={accountStatusVariant(rec)} size="sm" className="rounded-full px-2">
-            {accountStatusLabel(rec)}
+          <Badge variant={accountStatusVariant(rec, fieldMap)} size="sm" className="rounded-full px-2">
+            {accountStatusLabel(rec, fieldMap)}
           </Badge>
-          <Badge variant={verificationVariant(rec)} size="sm" className="rounded-full px-2">
-            {verificationLabel(rec)}
+          <Badge variant={verificationVariant(rec, fieldMap)} size="sm" className="rounded-full px-2">
+            {verificationLabel(rec, fieldMap)}
           </Badge>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          <span>BIC: {bicValue(rec)}</span>
-          <span>Branch: {stringValue(rec.branch_name) || stringValue(rec.bank_branch_name) || "-"}</span>
-          {stringValue(rec.national_bank_code) && (
-            <span>National code: {stringValue(rec.national_bank_code)}</span>
+          <span>BIC: {bicValue(rec, fieldMap)}</span>
+          <span>Branch: {stringValue(firstFieldValue(rec, fieldMap, ["branchName", "bankBranchName"])) || "-"}</span>
+          {stringValue(fieldValue(rec, fieldMap, "nationalBankCode")) && (
+            <span>National code: {stringValue(fieldValue(rec, fieldMap, "nationalBankCode"))}</span>
           )}
         </div>
       </div>
@@ -275,6 +373,7 @@ function AccountIdentity({ rec }: { rec: BankingRecord }) {
 
 function BankAccountCard({
   rec,
+  fieldMap,
   selected,
   canEdit,
   onSelect,
@@ -282,14 +381,15 @@ function BankAccountCard({
   onMarkPrimary,
 }: {
   rec:           BankingRecord;
+  fieldMap:      BankingFieldMap;
   selected:      boolean;
   canEdit:       boolean;
   onSelect:      () => void;
   onEdit:        () => void;
   onMarkPrimary: () => void;
 }) {
-  const isPrimary = boolValue(rec.is_primary);
-  const pending = !boolValue(rec.is_verified);
+  const isPrimary = boolValue(fieldValue(rec, fieldMap, "isPrimary"));
+  const pending = !boolValue(fieldValue(rec, fieldMap, "isVerified"));
 
   return (
     <div
@@ -308,14 +408,14 @@ function BankAccountCard({
       )}
     >
       <div className="px-4 py-3">
-        <AccountIdentity rec={rec} />
+        <AccountIdentity rec={rec} fieldMap={fieldMap} />
       </div>
 
       <div className="grid border-y border-border bg-muted/20 sm:grid-cols-4">
-        <FieldBlock label={`Account number (${stringValue(rec.account_id_type) || "ID"})`}>
-          <span>{maskedAccount(rec)}</span>
-          {last4(rec) && (
-            <span className="ml-1 rounded bg-muted px-1 text-foreground">{last4(rec)}</span>
+        <FieldBlock label={`Account number (${stringValue(fieldValue(rec, fieldMap, "accountIdType")) || "ID"})`}>
+          <span>{maskedAccount(rec, fieldMap)}</span>
+          {last4(rec, fieldMap) && (
+            <span className="ml-1 rounded bg-muted px-1 text-foreground">{last4(rec, fieldMap)}</span>
           )}
           <span className="ml-2 inline-flex gap-1 align-middle">
             <span className="inline-flex size-5 items-center justify-center rounded border border-border bg-background text-muted-foreground">
@@ -325,12 +425,12 @@ function BankAccountCard({
               role="button"
               tabIndex={0}
               className="inline-flex size-5 items-center justify-center rounded border border-border bg-background text-muted-foreground"
-              onClick={(event) => { event.stopPropagation(); copyAccountNumber(rec); }}
+              onClick={(event) => { event.stopPropagation(); copyAccountNumber(rec, fieldMap); }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   event.stopPropagation();
-                  copyAccountNumber(rec);
+                  copyAccountNumber(rec, fieldMap);
                 }
               }}
             >
@@ -338,16 +438,16 @@ function BankAccountCard({
             </span>
           </span>
         </FieldBlock>
-        <FieldBlock label="Holder">{stringValue(rec.account_holder_name) || "-"}</FieldBlock>
-        <FieldBlock label="Currency">{currencyLabel(rec)}</FieldBlock>
-        <FieldBlock label="ID type">{humanize(rec.account_id_type)}</FieldBlock>
+        <FieldBlock label="Holder">{stringValue(fieldValue(rec, fieldMap, "accountHolderName")) || "-"}</FieldBlock>
+        <FieldBlock label="Currency">{currencyLabel(rec, fieldMap)}</FieldBlock>
+        <FieldBlock label="ID type">{humanize(fieldValue(rec, fieldMap, "accountIdType"))}</FieldBlock>
       </div>
 
       <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>Purpose: <strong className="font-medium text-foreground">{humanize(rec.purpose)}</strong></span>
-          <span>Scope: <strong className="font-medium text-foreground">{companyScopeLabel(rec)}</strong></span>
-          <span>Effective: <strong className="font-medium text-foreground">{formatRange(rec)}</strong></span>
+          <span>Purpose: <strong className="font-medium text-foreground">{humanize(fieldValue(rec, fieldMap, "purpose"))}</strong></span>
+          <span>Scope: <strong className="font-medium text-foreground">{companyScopeLabel(rec, fieldMap)}</strong></span>
+          <span>Effective: <strong className="font-medium text-foreground">{formatRange(rec, fieldMap)}</strong></span>
         </div>
         <div className="flex shrink-0 items-center justify-end gap-2" onClick={(event) => event.stopPropagation()}>
           {pending && canEdit && (
@@ -413,10 +513,12 @@ function DetailSection({
 
 function DetailPanel({
   rec,
+  fieldMap,
   detailTab,
   onDetailTabChange,
 }: {
   rec: BankingRecord | null;
+  fieldMap: BankingFieldMap;
   detailTab: DetailTab;
   onDetailTabChange: (tab: DetailTab) => void;
 }) {
@@ -439,11 +541,11 @@ function DetailPanel({
   return (
     <aside className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex items-start gap-3 border-b border-border px-4 py-3">
-        <BankAccountAvatar rec={rec} size="sm" />
+        <BankAccountAvatar rec={rec} fieldMap={fieldMap} size="sm" />
         <div className="min-w-0 flex-1">
           <p className={BANK_FIELD_LABEL_CLASS}>Bank account detail</p>
           <p className={cn("mt-1 truncate", BANK_ITEM_TITLE_CLASS)}>
-            {bankName(rec)} {last4(rec) ? `...${last4(rec)}` : ""}
+            {bankName(rec, fieldMap)} {last4(rec, fieldMap) ? `...${last4(rec, fieldMap)}` : ""}
           </p>
         </div>
       </div>
@@ -470,23 +572,23 @@ function DetailPanel({
       </div>
 
       <div className="max-h-[650px] overflow-y-auto px-4 py-4">
-        {detailTab === "details" && <DetailsTab rec={rec} />}
-        {detailTab === "linkages" && <LinkagesTab rec={rec} />}
-        {detailTab === "verification" && <VerificationTab rec={rec} />}
+        {detailTab === "details" && <DetailsTab rec={rec} fieldMap={fieldMap} />}
+        {detailTab === "linkages" && <LinkagesTab rec={rec} fieldMap={fieldMap} />}
+        {detailTab === "verification" && <VerificationTab rec={rec} fieldMap={fieldMap} />}
         {detailTab === "activity" && <EmptyDetailTab label="No activity events for this account." />}
-        {detailTab === "audit" && <AuditTab rec={rec} />}
+        {detailTab === "audit" && <AuditTab rec={rec} fieldMap={fieldMap} />}
       </div>
     </aside>
   );
 }
 
-function DetailsTab({ rec }: { rec: BankingRecord }) {
-  const verified = boolValue(rec.is_verified);
+function DetailsTab({ rec, fieldMap }: { rec: BankingRecord; fieldMap: BankingFieldMap }) {
+  const verified = boolValue(fieldValue(rec, fieldMap, "isVerified"));
   const networkOptions: Array<[string, unknown]> = [
-    ["SWIFT", rec.supports_swift],
-    ["Local clearing", rec.supports_local_clearing],
-    ["SEPA", rec.supports_sepa],
-    ["ACH", rec.supports_ach],
+    ["SWIFT", fieldValue(rec, fieldMap, "supportsSwift")],
+    ["Local clearing", fieldValue(rec, fieldMap, "supportsLocalClearing")],
+    ["SEPA", fieldValue(rec, fieldMap, "supportsSepa")],
+    ["ACH", fieldValue(rec, fieldMap, "supportsAch")],
   ];
   const networks = networkOptions.filter(([, enabled]) => boolValue(enabled));
 
@@ -508,11 +610,11 @@ function DetailsTab({ rec }: { rec: BankingRecord }) {
               {verified ? "Verified" : "Pending verification"}
             </p>
             <p className={cn("mt-1", BANK_ITEM_TITLE_CLASS)}>
-              {verified ? humanize(rec.verification_method || "Verified") : "Action required"}
+              {verified ? humanize(fieldValue(rec, fieldMap, "verificationMethod") || "Verified") : "Action required"}
             </p>
             <p className={cn("mt-1", BANK_FIELD_HELPER_CLASS)}>
               {verified
-                ? `Verified on ${formatDate(rec.verified_at)}`
+                ? `Verified on ${formatDate(fieldValue(rec, fieldMap, "verifiedAt"))}`
                 : "Upload or confirm verification evidence before payment use."}
             </p>
           </div>
@@ -521,12 +623,12 @@ function DetailsTab({ rec }: { rec: BankingRecord }) {
 
       <DetailSection title="Bank institution" icon={<Landmark className="size-3.5" />}>
         <dl className="grid grid-cols-2 gap-3">
-          <DetailRow label="Bank name" value={bankName(rec)} />
-          <DetailRow label="Institution type" value={humanize(rec.institution_type || rec.bank_institution_type || "bank")} />
-          <DetailRow label="BIC / SWIFT" value={bicValue(rec)} />
-          <DetailRow label="Country" value={bankCountry(rec)} />
-          <DetailRow label="Branch" value={stringValue(rec.branch_name) || stringValue(rec.bank_branch_name) || "-"} />
-          <DetailRow label="National code" value={stringValue(rec.national_bank_code) || "-"} />
+          <DetailRow label="Bank name" value={bankName(rec, fieldMap)} />
+          <DetailRow label="Institution type" value={humanize(firstFieldValue(rec, fieldMap, ["institutionType", "bankInstitutionType"]) || "bank")} />
+          <DetailRow label="BIC / SWIFT" value={bicValue(rec, fieldMap)} />
+          <DetailRow label="Country" value={bankCountry(rec, fieldMap)} />
+          <DetailRow label="Branch" value={stringValue(firstFieldValue(rec, fieldMap, ["branchName", "bankBranchName"])) || "-"} />
+          <DetailRow label="National code" value={stringValue(fieldValue(rec, fieldMap, "nationalBankCode")) || "-"} />
         </dl>
         {networks.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -541,42 +643,42 @@ function DetailsTab({ rec }: { rec: BankingRecord }) {
 
       <DetailSection title="Account identity" icon={<CreditCard className="size-3.5" />}>
         <dl className="grid grid-cols-2 gap-3">
-          <DetailRow label="Account holder" value={stringValue(rec.account_holder_name) || "-"} />
-          <DetailRow label="Currency" value={currencyLabel(rec)} />
-          <DetailRow label="ID type" value={humanize(rec.account_id_type)} />
-          <DetailRow label="Account nature" value={humanize(rec.account_nature)} />
-          <DetailRow label="Account number" value={maskedAccount(rec)} />
-          <DetailRow label="Last 4" value={last4(rec) || "-"} />
+          <DetailRow label="Account holder" value={stringValue(fieldValue(rec, fieldMap, "accountHolderName")) || "-"} />
+          <DetailRow label="Currency" value={currencyLabel(rec, fieldMap)} />
+          <DetailRow label="ID type" value={humanize(fieldValue(rec, fieldMap, "accountIdType"))} />
+          <DetailRow label="Account nature" value={humanize(fieldValue(rec, fieldMap, "accountNature"))} />
+          <DetailRow label="Account number" value={maskedAccount(rec, fieldMap)} />
+          <DetailRow label="Last 4" value={last4(rec, fieldMap) || "-"} />
         </dl>
       </DetailSection>
 
-      <LinkagesTab rec={rec} compact />
+      <LinkagesTab rec={rec} fieldMap={fieldMap} compact />
     </div>
   );
 }
 
-function LinkagesTab({ rec, compact = false }: { rec: BankingRecord; compact?: boolean }) {
+function LinkagesTab({ rec, fieldMap, compact = false }: { rec: BankingRecord; fieldMap: BankingFieldMap; compact?: boolean }) {
   return (
     <DetailSection title={compact ? "Linkages" : "Linkages - how this account is used"} icon={<Star className="size-3.5" />}>
       <div className="rounded-lg border border-border bg-muted/20 px-3 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className={BANK_ITEM_TITLE_CLASS}>
-              {boolValue(rec.is_primary) ? "Primary" : "Secondary"} - {humanize(rec.purpose)}
+              {boolValue(fieldValue(rec, fieldMap, "isPrimary")) ? "Primary" : "Secondary"} - {humanize(fieldValue(rec, fieldMap, "purpose"))}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Owner: {humanize(rec.owner_type || "business_partner")} - Scope: {companyScopeLabel(rec)}
+              Owner: {humanize(fieldValue(rec, fieldMap, "ownerType") || "business_partner")} - Scope: {companyScopeLabel(rec, fieldMap)}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">Effective: {formatRange(rec)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Effective: {formatRange(rec, fieldMap)}</p>
           </div>
           <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-            {boolValue(rec.is_primary) && (
+            {boolValue(fieldValue(rec, fieldMap, "isPrimary")) && (
               <Badge variant="outline" size="sm" className="bg-muted/40 text-muted-foreground">
                 Primary
               </Badge>
             )}
-            <Badge variant={accountStatusVariant(rec)} size="sm" className="rounded-full px-2">
-              {accountStatusLabel(rec)}
+            <Badge variant={accountStatusVariant(rec, fieldMap)} size="sm" className="rounded-full px-2">
+              {accountStatusLabel(rec, fieldMap)}
             </Badge>
           </div>
         </div>
@@ -585,27 +687,27 @@ function LinkagesTab({ rec, compact = false }: { rec: BankingRecord; compact?: b
   );
 }
 
-function VerificationTab({ rec }: { rec: BankingRecord }) {
+function VerificationTab({ rec, fieldMap }: { rec: BankingRecord; fieldMap: BankingFieldMap }) {
   return (
     <DetailSection title="Verification" icon={<ShieldCheck className="size-3.5" />}>
       <dl className="grid grid-cols-2 gap-3">
-        <DetailRow label="Status" value={verificationLabel(rec)} />
-        <DetailRow label="Method" value={humanize(rec.verification_method)} />
-        <DetailRow label="Verified at" value={formatDate(rec.verified_at)} />
-        <DetailRow label="Verified by" value={stringValue(rec.verified_by) || "-"} />
+        <DetailRow label="Status" value={verificationLabel(rec, fieldMap)} />
+        <DetailRow label="Method" value={humanize(fieldValue(rec, fieldMap, "verificationMethod"))} />
+        <DetailRow label="Verified at" value={formatDate(fieldValue(rec, fieldMap, "verifiedAt"))} />
+        <DetailRow label="Verified by" value={stringValue(fieldValue(rec, fieldMap, "verifiedBy")) || "-"} />
       </dl>
     </DetailSection>
   );
 }
 
-function AuditTab({ rec }: { rec: BankingRecord }) {
+function AuditTab({ rec, fieldMap }: { rec: BankingRecord; fieldMap: BankingFieldMap }) {
   return (
     <DetailSection title="Audit" icon={<CreditCard className="size-3.5" />}>
       <dl className="grid grid-cols-2 gap-3">
-        <DetailRow label="Created" value={formatDate(rec.created_at)} />
-        <DetailRow label="Updated" value={formatDate(rec.updated_at)} />
-        <DetailRow label="Link ID" value={stringValue(rec.id) || "-"} />
-        <DetailRow label="Account ID" value={stringValue(rec.bank_account_id) || "-"} />
+        <DetailRow label="Created" value={formatDate(fieldValue(rec, fieldMap, "createdAt"))} />
+        <DetailRow label="Updated" value={formatDate(fieldValue(rec, fieldMap, "updatedAt"))} />
+        <DetailRow label="Link ID" value={stringValue(fieldValue(rec, fieldMap, "recordId")) || "-"} />
+        <DetailRow label="Account ID" value={stringValue(fieldValue(rec, fieldMap, "bankAccountId")) || "-"} />
       </dl>
     </DetailSection>
   );
@@ -622,6 +724,8 @@ function EmptyDetailTab({ label }: { label: string }) {
 export function BankingSummaryPanel({
   records,
   tab,
+  fieldMap: fieldMapOverride,
+  fieldMapDefaults,
   editMode,
   canAdd,
   canEdit,
@@ -629,31 +733,35 @@ export function BankingSummaryPanel({
   onEdit,
   onMarkPrimary,
 }: BankingSummaryPanelProps) {
+  const fieldMap = useMemo(
+    () => bankingFieldMapFromTab(tab, fieldMapDefaults, fieldMapOverride),
+    [tab, fieldMapDefaults, fieldMapOverride],
+  );
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState(() => stringValue(records[0]?.id));
+  const [selectedId, setSelectedId] = useState(() => stringValue(records[0] ? fieldValue(records[0], fieldMap, "recordId") : ""));
   const [detailTab, setDetailTab] = useState<DetailTab>("details");
 
   const normalizedSearch = search.trim().toLowerCase();
   const filteredRecords = useMemo(
     () => normalizedSearch
-      ? records.filter((rec) => searchHaystack(rec).includes(normalizedSearch))
+      ? records.filter((rec) => searchHaystack(rec, fieldMap).includes(normalizedSearch))
       : records,
-    [normalizedSearch, records],
+    [normalizedSearch, records, fieldMap],
   );
 
   const selectedRecord =
-    records.find((rec) => stringValue(rec.id) === selectedId) ??
+    records.find((rec) => stringValue(fieldValue(rec, fieldMap, "recordId")) === selectedId) ??
     filteredRecords[0] ??
     records[0] ??
     null;
 
-  const activeRecords = records.filter(isActiveLink);
-  const verifiedCount = records.filter((rec) => boolValue(rec.is_verified)).length;
-  const primaryCount = records.filter((rec) => boolValue(rec.is_primary)).length;
+  const activeRecords = records.filter((rec) => isActiveLink(rec, fieldMap));
+  const verifiedCount = records.filter((rec) => boolValue(fieldValue(rec, fieldMap, "isVerified"))).length;
+  const primaryCount = records.filter((rec) => boolValue(fieldValue(rec, fieldMap, "isPrimary"))).length;
   const pendingCount = Math.max(records.length - verifiedCount, 0);
-  const currencies = Array.from(new Set(records.map((rec) => stringValue(rec.currency_code)).filter(Boolean))).sort();
-  const purposes = Array.from(new Set(records.filter((rec) => boolValue(rec.is_primary)).map((rec) => stringValue(rec.purpose)).filter(Boolean)));
-  const companyScopes = Array.from(new Set(records.map(companyScopeLabel))).filter(Boolean);
+  const currencies = Array.from(new Set(records.map((rec) => stringValue(fieldValue(rec, fieldMap, "currencyCode"))).filter(Boolean))).sort();
+  const purposes = Array.from(new Set(records.filter((rec) => boolValue(fieldValue(rec, fieldMap, "isPrimary"))).map((rec) => stringValue(fieldValue(rec, fieldMap, "purpose"))).filter(Boolean)));
+  const companyScopes = Array.from(new Set(records.map((rec) => companyScopeLabel(rec, fieldMap)))).filter(Boolean);
   const canMutate = editMode && canEdit;
   const canCreate = editMode && canAdd;
 
@@ -698,12 +806,13 @@ export function BankingSummaryPanel({
         <div className="space-y-3">
           {filteredRecords.length > 0 ? (
             filteredRecords.map((rec) => {
-              const recId = stringValue(rec.id);
+              const recId = stringValue(fieldValue(rec, fieldMap, "recordId"));
               return (
                 <BankAccountCard
-                  key={recId || `${bankName(rec)}-${accountNumber(rec)}`}
+                  key={recId || `${bankName(rec, fieldMap)}-${accountNumber(rec, fieldMap)}`}
                   rec={rec}
-                  selected={selectedRecord ? stringValue(selectedRecord.id) === recId : false}
+                  fieldMap={fieldMap}
+                  selected={selectedRecord ? stringValue(fieldValue(selectedRecord, fieldMap, "recordId")) === recId : false}
                   canEdit={canMutate}
                   onSelect={() => {
                     setSelectedId(recId);
@@ -723,6 +832,7 @@ export function BankingSummaryPanel({
 
         <DetailPanel
           rec={selectedRecord}
+          fieldMap={fieldMap}
           detailTab={detailTab}
           onDetailTabChange={setDetailTab}
         />

@@ -22,6 +22,7 @@ import { cn } from "@athyper/theme/utils";
 import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
 import { kanbanStatusIntent } from "@athyper/theme/domain-intents";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
+import { configuredStatusFieldNames, displayConfigRecord, fieldValue } from "../metadata/fieldSemantics";
 
 function colColor(status: string): string {
   const { subtleBadge } = resolveSemanticColors(kanbanStatusIntent(status));
@@ -30,18 +31,27 @@ function colColor(status: string): string {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const STATUS_NAMES = ["status", "record_status", "state", "lifecycle_state"];
 const UNASSIGNED   = "__unassigned__";
 
 export function findKanbanGroupField(entity: CompiledEntity): EntityField | undefined {
+  const rawKanbanConfig = displayConfigRecord(entity).kanban;
+  const kanbanConfig = rawKanbanConfig && typeof rawKanbanConfig === "object" && !Array.isArray(rawKanbanConfig)
+    ? rawKanbanConfig as Record<string, unknown>
+    : {};
+  const configuredGroupField = typeof kanbanConfig.group_field === "string"
+    ? entity.fields.find((f) => f.name === kanbanConfig.group_field && f.is_groupable)
+    : undefined;
+  if (configuredGroupField) return configuredGroupField;
+
+  const configuredStatus = configuredStatusFieldNames(entity);
   return (
-    entity.fields.find((f) => STATUS_NAMES.includes(f.name) && f.is_groupable) ??
+    entity.fields.find((f) => configuredStatus.includes(f.name) && f.is_groupable) ??
     entity.fields.find((f) => f.is_groupable)
   );
 }
 
 function fieldVal(row: Record<string, unknown>, field: EntityField): string {
-  const v = row[field.name] ?? row[field.column_name];
+  const v = fieldValue(row, field);
   // F6: null/undefined/empty → sentinel for Unassigned column
   if (v === null || v === undefined || v === "") return UNASSIGNED;
   return String(v);
@@ -152,18 +162,22 @@ function KanbanCard({
   groupField,
   entityCode,
   onRowClick,
+  onRowContextMenu,
+  onIdentityCellContextMenu,
 }: {
-  row:         Record<string, unknown>;
-  titleKey:    string;
-  subtitleKey: string | undefined;
-  allStatuses: string[];
-  groupField:  EntityField;
-  entityCode:  string;
-  onRowClick?: (row: Record<string, unknown>) => void;
+  row:                          Record<string, unknown>;
+  titleKey?:                    string;
+  subtitleKey:                  string | undefined;
+  allStatuses:                  string[];
+  groupField:                   EntityField;
+  entityCode:                   string;
+  onRowClick?:                  (row: Record<string, unknown>) => void;
+  onRowContextMenu?:            (row: Record<string, unknown>, e: React.MouseEvent) => void;
+  onIdentityCellContextMenu?:   (row: Record<string, unknown>, e: React.MouseEvent) => void;
 }) {
   const qc      = useQueryClient();
   const id      = String(row.id ?? "");
-  const title   = String(row[titleKey] ?? row.name ?? row.code ?? id);
+  const title   = String((titleKey ? row[titleKey] : undefined) ?? id);
   const sub     = subtitleKey ? (row[subtitleKey] != null ? String(row[subtitleKey]) : null) : null;
   const current = fieldVal(row, groupField);
 
@@ -185,12 +199,20 @@ function KanbanCard({
   return (
     <div
       onClick={() => onRowClick?.(row)}
+      onContextMenu={(e) => onRowContextMenu?.(row, e)}
       className={cn(
         "rounded-lg border bg-card p-3 shadow-xs transition-all hover:shadow-sm space-y-1.5",
         onRowClick && "cursor-pointer",
       )}
     >
-      <p className="text-sm font-medium leading-snug line-clamp-2">{title}</p>
+      <p
+        className="text-sm font-medium leading-snug line-clamp-2 cursor-context-menu"
+        onContextMenu={onIdentityCellContextMenu
+          ? (e) => { e.stopPropagation(); onIdentityCellContextMenu(row, e); }
+          : undefined}
+      >
+        {title}
+      </p>
 
       {sub && (
         <p className="text-xs text-muted-foreground line-clamp-1">{sub}</p>
@@ -220,9 +242,11 @@ function KanbanCard({
 export interface KanbanViewProps {
   rows:               Record<string, unknown>[];
   entity:             CompiledEntity;
-  titleKey:           string;
+  titleKey?:          string;
   entityCode:         string;
   onRowClick?:        (row: Record<string, unknown>) => void;
+  onRowContextMenu?:  (row: Record<string, unknown>, e: React.MouseEvent) => void;
+  onIdentityCellContextMenu?: (row: Record<string, unknown>, e: React.MouseEvent) => void;
   /**
    * Override which field is used for grouping.
    * Must be a field where EntityField.is_groupable = true.
@@ -249,6 +273,8 @@ export function KanbanView({
   titleKey,
   entityCode,
   onRowClick,
+  onRowContextMenu,
+  onIdentityCellContextMenu,
   groupFieldOverride,
   columnOrder,
   groupCounts,
@@ -330,6 +356,8 @@ export function KanbanView({
                   groupField={groupField}
                   entityCode={entityCode}
                   onRowClick={onRowClick}
+                  onRowContextMenu={onRowContextMenu}
+                  onIdentityCellContextMenu={onIdentityCellContextMenu}
                 />
               ))}
             </div>

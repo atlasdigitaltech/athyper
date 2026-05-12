@@ -27,6 +27,7 @@ import { resolveRuntimeStatusColors, RuntimeStatusText, listTypography } from ".
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import type { ColumnPresentation } from "@athyper/api-contracts/entity-list";
 import { resolveFieldRenderer } from "../field-renderers/registry";
+import { configuredCodeFieldName, configuredTitleFieldName } from "../metadata/fieldSemantics";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -90,9 +91,10 @@ export interface GroupedListViewProps {
   columnOrder?:            string[];
   loading?:                boolean;
   density?:                "compact" | "comfortable" | "spacious";
-  onRowClick?:             (row: Record<string, unknown>) => void;
-  onRowContextMenu?:       (row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => void;
-  rowActions?:             (row: Record<string, unknown>) => React.ReactNode;
+  onRowClick?:                  (row: Record<string, unknown>) => void;
+  onRowContextMenu?:            (row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => void;
+  onIdentityCellContextMenu?:   (row: Record<string, unknown>, e: React.MouseEvent) => void;
+  rowActions?:                  (row: Record<string, unknown>) => React.ReactNode;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -109,6 +111,7 @@ export function GroupedListView({
   density = "comfortable",
   onRowClick,
   onRowContextMenu,
+  onIdentityCellContextMenu,
   rowActions,
 }: GroupedListViewProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -130,9 +133,10 @@ export function GroupedListView({
     return orderGroups(map, groupCounts, columnOrder);
   }, [rows, groupFieldName, groupCounts, columnOrder]);
 
-  const cellCls    = DENSITY_CELL[density] ?? DENSITY_CELL["comfortable"]!;
-  const colCount   = visibleDescriptorFields.length + (rowActions ? 1 : 0);
-  const codeFieldName = entity.display_config.code_field ?? "code";
+  const cellCls       = DENSITY_CELL[density] ?? DENSITY_CELL["comfortable"]!;
+  const colCount      = visibleDescriptorFields.length + (rowActions ? 1 : 0);
+  const codeFieldName  = configuredCodeFieldName(entity);
+  const titleFieldName = configuredTitleFieldName(entity) ?? visibleDescriptorFields[0]?.name;
 
   // Derive the group field object for its label
   const groupFieldObj = entity.fields.find((f) => f.name === groupFieldName);
@@ -247,6 +251,12 @@ export function GroupedListView({
                             (c) => c.fieldName === field.name,
                           );
                           const value = row[field.name];
+                          const isIdentity =
+                            (field.name === codeFieldName && field.data_type === "text") ||
+                            field.name === titleFieldName;
+                          const identityHandler = isIdentity && onIdentityCellContextMenu
+                            ? (e: React.MouseEvent) => { e.stopPropagation(); onIdentityCellContextMenu(row, e); }
+                            : undefined;
                           return (
                             <td
                               key={field.name}
@@ -255,13 +265,22 @@ export function GroupedListView({
                               {colPres?.semanticResolver && typeof value === "string" && value ? (
                                 <RuntimeStatusText value={value} resolverName={colPres.semanticResolver} />
                               ) : field.name === codeFieldName && field.data_type === "text" && value != null && value !== "" ? (
-                                <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                                <span
+                                  className="text-xs font-medium tabular-nums text-muted-foreground cursor-context-menu"
+                                  onContextMenu={identityHandler}
+                                >
                                   {String(value)}
                                 </span>
                               ) : (
                                 (() => {
                                   const Renderer = resolveFieldRenderer(field);
-                                  return <Renderer value={value} field={field} mode="view" density="table" />;
+                                  return identityHandler ? (
+                                    <span className="cursor-context-menu" onContextMenu={identityHandler}>
+                                      <Renderer value={value} field={field} mode="view" density="table" />
+                                    </span>
+                                  ) : (
+                                    <Renderer value={value} field={field} mode="view" density="table" />
+                                  );
                                 })()
                               )}
                             </td>

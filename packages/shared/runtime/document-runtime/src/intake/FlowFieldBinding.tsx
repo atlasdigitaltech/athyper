@@ -97,6 +97,7 @@ const INLINE_SEARCH_ENTITY_MAP: Record<string, string> = {
   ledger_book_id:  "ledger_book",
   supplier_id:     "supplier",
   vendor_id:       "supplier",
+  customer_id:     "customer",
   commitment_id:   "purchase_order",
   contract_id:     "contract",
   party_id:        "supplier",
@@ -1342,7 +1343,7 @@ function FieldLabel({
 }) {
   return (
     <div className="flex items-baseline gap-1">
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+      <label className="text-xs font-medium text-muted-foreground leading-normal">
         {label}
         {required && <span className="ml-0.5 text-destructive">*</span>}
       </label>

@@ -52,19 +52,21 @@ export function EntityDetailPage({
   const isEntityReadOnly = entity?.feature_flags?.is_readonly === true;
   const canEdit = !isEntityReadOnly && (
     !operations || operations.length === 0
-    || operations.some(
-        op => op.is_enabled &&
-              (
-                ["edit", "update"].includes(op.permission_code) ||
-                (
-                  op.handler_type === "NAVIGATE" &&
-                  (
-                    (op.handler_target ?? "").includes("mode=edit") ||
-                    (op.handler_target ?? "").includes("/edit")
-                  )
-                )
-              ),
-      )
+    || operations.some(op => {
+        const code = op.permission_code.includes(".")
+          ? op.permission_code.split(".").pop()!
+          : op.permission_code;
+        return op.is_enabled && (
+          ["edit", "update"].includes(code) ||
+          (
+            op.handler_type === "NAVIGATE" &&
+            (
+              (op.handler_target ?? "").includes("mode=edit") ||
+              (op.handler_target ?? "").includes("/edit")
+            )
+          )
+        );
+      })
   );
   const effectiveEditMode = editMode && canEdit;
 

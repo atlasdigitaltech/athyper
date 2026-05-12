@@ -134,6 +134,13 @@ export const athyperTheme = {
         to: { transform: "scale(1)", opacity: "1" },
       },
       spinner: { to: { transform: "rotate(360deg)" } },
+      "pencil-write": {
+        "0%, 100%": { transform: "rotate(0deg)" },
+        "20%": { transform: "rotate(-12deg) translate(-0.5px, 0.5px)" },
+        "40%": { transform: "rotate(2deg)" },
+        "60%": { transform: "rotate(-12deg) translate(0.5px, -0.5px)" },
+        "80%": { transform: "rotate(2deg)" },
+      },
       "accordion-down": {
         from: { height: "0" },
         to: { height: "var(--radix-accordion-content-height)" },
@@ -151,6 +158,7 @@ export const athyperTheme = {
       "slide-in-up": "slide-in-up 200ms ease-out",
       "scale-in": "scale-in 200ms ease-out",
       spinner: "spinner 600ms linear infinite",
+      "pencil-write": "pencil-write 1.6s ease-in-out infinite",
       "accordion-down": "accordion-down 200ms ease-out",
       "accordion-up": "accordion-up 200ms ease-out",
     },

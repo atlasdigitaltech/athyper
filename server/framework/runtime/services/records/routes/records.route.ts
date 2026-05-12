@@ -219,6 +219,12 @@ function parseFeatureScope(scope: unknown): { column: string; value: string } | 
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function rejectInvalidUuidParam(res: Response, value: string, label: string): boolean {
+  if (UUID_RE.test(value)) return false;
+  res.status(400).json({ error: "INVALID_ID", message: `${label} must be a valid UUID` });
+  return true;
+}
+
 function isCertificationBackingTable(table: EntityTableInfo): boolean {
   return table.table_schema === "master" && table.table_name === "certification";
 }
@@ -2096,6 +2102,48 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     }
   };
 
+  // ── GET /:entity/:id/lines/:lineId/distributions — per-line distributions ───────
+  const lineDistributionsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const id     = req.params["id"]     as string;
+      const lineId = req.params["lineId"] as string;
+
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+
+      let rows: Record<string, unknown>[] = [];
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let q: any = (db as any)
+          .selectFrom("document.accounting_distribution")
+          .selectAll()
+          .where("source_doc_id",  "=", id)
+          .where("source_line_id", "=", lineId);
+        if (tenantId !== null) q = q.where("tenant_id", "=", tenantId);
+        q = q.orderBy("distribution_no", "asc");
+        rows = await q.execute();
+      } catch {
+        rows = [];
+      }
+
+      res.json({ data: rows });
+    } catch (err) {
+      logger?.error("records_line_distributions_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // ── GET /:entity/:id/workflow — document.workflow_request + stages ─────────────
   const workflowHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -2372,6 +2420,141 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     return false;
   }
 
+  const LINE_PRICE_FIELDS = ["quantity", "unit_price", "price_unit"];
+  const LINE_AMOUNT_DERIVATION_FIELDS = [
+    ...LINE_PRICE_FIELDS,
+    "discount_pct",
+    "discount_amount",
+    "tax_amount",
+    "withholding_tax_amount",
+    "retention_pct",
+    "retention_amount",
+  ];
+
+  function hasOwnBodyField(body: Record<string, unknown>, key: string): boolean {
+    return Object.prototype.hasOwnProperty.call(body, key);
+  }
+
+  function isEmptyAmountValue(value: unknown): boolean {
+    return value == null || (typeof value === "string" && value.trim() === "");
+  }
+
+  function explicitLineAmount(body: Record<string, unknown>): number | null {
+    const raw = hasOwnBodyField(body, "gross_amount") && !isEmptyAmountValue(body["gross_amount"])
+      ? body["gross_amount"]
+      : hasOwnBodyField(body, "line_amount") && !isEmptyAmountValue(body["line_amount"])
+      ? body["line_amount"]
+      : undefined;
+    if (raw === undefined) return null;
+    const amount = Number(raw);
+    return Number.isFinite(amount) ? amount : null;
+  }
+
+  function finiteNumber(value: unknown, fallback: number): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function lineGrossAmount(
+    quantity: unknown,
+    unitPrice: unknown,
+    priceUnit: unknown,
+  ): number {
+    const qty   = finiteNumber(quantity, 1);
+    const price = finiteNumber(unitPrice, 0);
+    const unit  = finiteNumber(priceUnit, 1);
+    return (qty * price) / (unit || 1);
+  }
+
+  function applyDerivedCreateLineAmounts(
+    row:  Record<string, unknown>,
+    body: Record<string, unknown>,
+  ): void {
+    const amount = explicitLineAmount(body);
+    if (amount !== null) {
+      row["quantity"]     = 1;
+      row["unit_price"]   = amount;
+      row["price_unit"]   = 1;
+      row["gross_amount"] = amount;
+      if (!row["uom_code"]) row["uom_code"] = "EA";
+      return;
+    }
+    row["gross_amount"] = lineGrossAmount(
+      row["quantity"],
+      row["unit_price"],
+      row["price_unit"] ?? 1,
+    );
+  }
+
+  async function applyDerivedPatchLineAmounts(
+    linesTable: `${string}.${string}`,
+    fkCol: string,
+    parentId: string,
+    lineId: string,
+    tenantId: string | null,
+    body: Record<string, unknown>,
+    patchRow: Record<string, unknown>,
+  ): Promise<void> {
+    const hasDerivedInputChange = LINE_AMOUNT_DERIVATION_FIELDS.some((field) => hasOwnBodyField(body, field));
+    const amount = hasDerivedInputChange ? null : explicitLineAmount(body);
+    if (amount !== null) {
+      patchRow["quantity"]     = 1;
+      patchRow["unit_price"]   = amount;
+      patchRow["price_unit"]   = 1;
+      patchRow["gross_amount"] = amount;
+      if (hasOwnBodyField(body, "uom_code") && isEmptyAmountValue(body["uom_code"])) {
+        delete patchRow["uom_code"];
+      }
+      return;
+    }
+
+    const priceFieldChanged = LINE_PRICE_FIELDS.some((field) => hasOwnBodyField(body, field));
+    if (!priceFieldChanged) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: any = (db as any)
+      .selectFrom(linesTable)
+      .select(["quantity", "unit_price", "price_unit"] as never[])
+      .where("id" as never, "=", lineId as never)
+      .where(fkCol as never, "=", parentId as never);
+    if (tenantId) q = q.where("tenant_id" as never, "=", tenantId as never);
+
+    const current = await q.executeTakeFirst() as Record<string, unknown> | undefined;
+    if (!current) return;
+
+    patchRow["gross_amount"] = lineGrossAmount(
+      hasOwnBodyField(body, "quantity")   ? body["quantity"]   : current["quantity"],
+      hasOwnBodyField(body, "unit_price") ? body["unit_price"] : current["unit_price"],
+      hasOwnBodyField(body, "price_unit") ? body["price_unit"] : current["price_unit"],
+    );
+  }
+
+  async function mergePatchLineMetadata(
+    linesTable: `${string}.${string}`,
+    fkCol: string,
+    parentId: string,
+    lineId: string,
+    tenantId: string | null,
+    patchRow: Record<string, unknown>,
+  ): Promise<void> {
+    const metadataPatch = patchRow["metadata"];
+    if (!metadataPatch || typeof metadataPatch !== "object" || Array.isArray(metadataPatch)) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: any = (db as any)
+      .selectFrom(linesTable)
+      .select(["metadata"] as never[])
+      .where("id" as never, "=", lineId as never)
+      .where(fkCol as never, "=", parentId as never);
+    if (tenantId) q = q.where("tenant_id" as never, "=", tenantId as never);
+
+    const current = await q.executeTakeFirst() as Record<string, unknown> | undefined;
+    patchRow["metadata"] = {
+      ...asPlainObject(current?.["metadata"]),
+      ...(metadataPatch as Record<string, unknown>),
+    };
+  }
+
   /** Maps a DocumentLine-shaped request body to the DB column set for the line table. */
   function lineBodyToDb(
     body: Record<string, unknown>,
@@ -2382,6 +2565,40 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     const row: Record<string, unknown> = {};
     if (tenantId)                              row["tenant_id"]      = tenantId;
     row[fkCol]                                                       = parentId;
+    const directColumns = [
+      "line_no",
+      "item_description",
+      "procurement_type",
+      "item_id",
+      "spend_category_id",
+      "business_intent_id",
+      "uom_code",
+      "quantity",
+      "unit_price",
+      "price_unit",
+      "gross_amount",
+      "tax_group_id",
+      "withholding_tax_group_id",
+      "tax_amount",
+      "withholding_tax_amount",
+      "discount_pct",
+      "discount_amount",
+      "retention_pct",
+      "retention_amount",
+      "cost_center_id",
+      "profit_center_id",
+      "project_id",
+      "site_id",
+      "match_status",
+      "matched_quantity",
+      "is_asset",
+      "asset_category_id",
+    ];
+
+    for (const column of directColumns) {
+      if (body[column] !== undefined) row[column] = body[column];
+    }
+
     if (body["line_number"] != null)           row["line_no"]        = Number(body["line_number"]);
     if (body["description"]   !== undefined)   row["item_description"] = body["description"] ?? "";
     if (body["unit_code"]     !== undefined)   row["uom_code"]       = body["unit_code"]   ?? "EA";
@@ -2394,13 +2611,28 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     if (body["withholding_tax_amount"] !== undefined) row["withholding_tax_amount"] = body["withholding_tax_amount"] ?? 0;
     if (body["discount_pct"]  !== undefined)   row["discount_pct"]   = body["discount_pct"]  ?? 0;
     if (body["discount_amount"] !== undefined) row["discount_amount"] = body["discount_amount"] ?? 0;
-    // item_code and tax_code have no dedicated DB column — persist in metadata
-    const existingMeta = (body["data"] as Record<string, unknown> | undefined) ?? {};
-    row["metadata"] = {
-      ...existingMeta,
-      ...(body["item_code"] !== undefined ? { item_code: body["item_code"] } : {}),
-      ...(body["tax_code"]  !== undefined ? { tax_code:  body["tax_code"]  } : {}),
-    };
+    if (hasOwnBodyField(body, "gross_amount") && isEmptyAmountValue(body["gross_amount"])) {
+      delete row["gross_amount"];
+    }
+    if (hasOwnBodyField(body, "line_amount") && isEmptyAmountValue(body["line_amount"])) {
+      delete row["gross_amount"];
+    }
+    // Metadata-backed logical fields have no dedicated DB column.
+    const data = body["data"];
+    const hasData = data && typeof data === "object" && !Array.isArray(data);
+    const metadataAliases = ["item_code", "tax_code", "unspsc_code", "hs_code", "trade_code"];
+    const hasMetaAliases = metadataAliases.some((alias) => body[alias] !== undefined);
+    if (hasData || hasMetaAliases) {
+      const aliasData = Object.fromEntries(
+        metadataAliases
+          .filter((alias) => body[alias] !== undefined)
+          .map((alias) => [alias, body[alias]]),
+      );
+      row["metadata"] = {
+        ...(hasData ? data as Record<string, unknown> : {}),
+        ...aliasData,
+      };
+    }
     return row;
   }
 
@@ -2418,8 +2650,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       gross_amount:            r["gross_amount"] ?? null,
       item_code:               meta["item_code"] ?? r["item_code"]   ?? null,
       tax_code:                meta["tax_code"]  ?? r["tax_code"]    ?? null,
+      unspsc_code:             meta["unspsc_code"] ?? r["unspsc_code"] ?? null,
+      hs_code:                 meta["hs_code"] ?? meta["trade_code"] ?? r["hs_code"] ?? null,
+      trade_code:              meta["trade_code"] ?? meta["hs_code"] ?? r["trade_code"] ?? null,
       discount_pct:            r["discount_pct"]            ?? null,
       discount_amount:         r["discount_amount"]          ?? null,
+      tax_amount:              r["tax_amount"]               ?? null,
       retention_pct:           r["retention_pct"]            ?? null,
       retention_amount:        r["retention_amount"]         ?? null,
       withholding_tax_amount:  r["withholding_tax_amount"]   ?? null,
@@ -2475,6 +2711,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       if (!insertRow["uom_code"])         insertRow["uom_code"]         = "EA";
       if (!insertRow["quantity"])          insertRow["quantity"]         = 1;
       if (insertRow["unit_price"] == null) insertRow["unit_price"]      = 0;
+      applyDerivedCreateLineAmounts(insertRow, body);
       const principalId = sub && tenantId
         ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
         : sub;
@@ -2523,6 +2760,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Remove identity columns from patch
       delete patchRow["tenant_id"];
       delete patchRow[fkCol];
+      await applyDerivedPatchLineAmounts(linesTable, fkCol, id, lineId, tenantId, body, patchRow);
+      await mergePatchLineMetadata(linesTable, fkCol, id, lineId, tenantId, patchRow);
 
       if (Object.keys(patchRow).length === 0) {
         res.status(400).json({ error: "EMPTY_PATCH", message: "No updatable fields supplied" });
@@ -2610,6 +2849,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
 
+      if (rejectInvalidUuidParam(res, id, "Record id")) return;
+      if (rejectInvalidUuidParam(res, lineId, "Line id")) return;
+
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
@@ -2681,6 +2923,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const lineId  = req.params["lineId"] as string;
       const distId  = req.params["distId"] as string;
 
+      if (rejectInvalidUuidParam(res, lineId, "Line id")) return;
+      if (rejectInvalidUuidParam(res, distId, "Distribution id")) return;
+
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
@@ -2726,6 +2971,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const lineId  = req.params["lineId"] as string;
       const distId  = req.params["distId"] as string;
+
+      if (rejectInvalidUuidParam(res, lineId, "Line id")) return;
+      if (rejectInvalidUuidParam(res, distId, "Distribution id")) return;
 
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
@@ -2969,6 +3217,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         // Discount
         discount_pct:      r["discount_pct"]    ?? null,
         discount_amount:   r["discount_amount"] ?? null,
+        // Tax
+        tax_amount:        r["tax_amount"]      ?? null,
         // Retention
         retention_pct:     r["retention_pct"]    ?? null,
         retention_amount:  r["retention_amount"] ?? null,
@@ -3320,6 +3570,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   router.post("/records/:entity/:id/lines",                                     createLineHandler);
   router.patch("/records/:entity/:id/lines/:lineId",                            patchLineHandler);
   router.delete("/records/:entity/:id/lines/:lineId",                           deleteLineHandler);
+  router.get("/records/:entity/:id/lines/:lineId/distributions",                lineDistributionsHandler);
   router.post("/records/:entity/:id/lines/:lineId/distributions",               createDistributionHandler);
   router.patch("/records/:entity/:id/lines/:lineId/distributions/:distId",      patchDistributionHandler);
   router.delete("/records/:entity/:id/lines/:lineId/distributions/:distId",     deleteDistributionHandler);

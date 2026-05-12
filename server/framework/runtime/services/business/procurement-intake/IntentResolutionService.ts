@@ -94,6 +94,25 @@ const PROFILE_FAILED: ProfileResult = {
   method: "FAILED", rule_id: null, confidence: 0, explanation: null,
 };
 
+function metadataText(metadata: Record<string, unknown> | null | undefined, key: string): string | null {
+  const value = metadata?.[key];
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text ? text : null;
+}
+
+function lineCommodityCodeFromMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+): ClassificationDecision["selected"]["line_commodity_code"] {
+  const hsCode = metadataText(metadata, "hs_code");
+  if (hsCode) return { domain_code: "hs", code: hsCode, label: hsCode };
+
+  const unspscCode = metadataText(metadata, "unspsc_code");
+  if (unspscCode) return { domain_code: "unspsc", code: unspscCode, label: unspscCode };
+
+  return null;
+}
+
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
 export async function resolveLineClassification(
@@ -126,6 +145,7 @@ export async function resolveLineClassification(
     withholding_tax_group_id: string | null;
     cost_center_id:           string | null;
     profit_center_id:         string | null;
+    line_metadata:            Record<string, unknown> | null;
   }>`
     SELECT
       pil.item_description,
@@ -141,18 +161,20 @@ export async function resolveLineClassification(
       pi.company_code_id,
       pi.invoice_source,
       pi.invoice_type,
-      sup.registration_country_code  AS supplier_country,
+      bp.registration_country_code   AS supplier_country,
       le.country_code                AS company_country,
       pil.tax_group_id,
       pil.withholding_tax_group_id,
       pil.cost_center_id,
-      pil.profit_center_id
+      pil.profit_center_id,
+      pil.metadata AS line_metadata
     FROM  document.purchase_invoice_line pil
     JOIN  document.purchase_invoice      pi
           ON  pi.id = pil.purchase_invoice_id AND pi.tenant_id = pil.tenant_id
-    LEFT JOIN master.supplier    sup ON sup.id = pi.supplier_id
-    LEFT JOIN master.company_code cc ON cc.id  = pi.company_code_id
-    LEFT JOIN master.legal_entity le ON le.id  = cc.legal_entity_id
+    LEFT JOIN master.supplier         sup ON sup.id = pi.supplier_id AND sup.tenant_id = pi.tenant_id
+    LEFT JOIN master.business_partner bp  ON bp.id = sup.business_partner_id AND bp.tenant_id = sup.tenant_id
+    LEFT JOIN master.company_code     cc  ON cc.id  = pi.company_code_id
+    LEFT JOIN master.legal_entity     le  ON le.id  = cc.legal_entity_id
     WHERE pil.id        = ${lineId}
       AND pil.tenant_id = ${tenantId}
       AND pi.id         = ${invoiceId}
@@ -171,6 +193,7 @@ export async function resolveLineClassification(
   const isCrossBorder  = !!(ctx.supplier_country && ctx.company_country &&
                             ctx.supplier_country !== ctx.company_country);
   const isIntercompany = false; // Phase 3: check sister-company supplier
+  const lineCommodityCode = lineCommodityCodeFromMetadata(ctx.line_metadata);
 
   // Derive routing discriminants from invoice fields (used in Steps 3 & 4)
   const flowCode = ctx.invoice_source ? ctx.invoice_source.toUpperCase() : null;
@@ -293,7 +316,7 @@ export async function resolveLineClassification(
     blockers.push({ code: "CLASSIFICATION_MISSING", field: "spend_category_id",
       message: "Spend category classification is required" });
   }
-  if (policy.hs_required) {
+  if (policy.hs_required && !lineCommodityCode) {
     blockers.push({ code: "HS_MISSING", field: "line_commodity_code",
       message: "HS / commodity code is required for this category" });
   }
@@ -318,7 +341,7 @@ export async function resolveLineClassification(
       spend_category_id:   ctx.spend_category_id,
       business_intent_id:  resolvedIntentId,
       profile_config_id:   profile.profile_config_id,
-      line_commodity_code: null,
+      line_commodity_code: lineCommodityCode,
     },
 
     resolved: {

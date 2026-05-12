@@ -1,203 +1,361 @@
 "use client";
 
 import React from "react";
-import { FileText, SplitSquareHorizontal } from "lucide-react";
+import { FileText } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
-
-// ── Column registry ───────────────────────────────────────────────────────────
+import type { AccountingDistribution, DocumentLine } from "@athyper/api-contracts/documents";
+import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
+import {
+  type LineRecord,
+  type MetaLineAlign,
+  type MetaLineColumn,
+  fieldLabel,
+  formatFieldValue,
+  recordId,
+  recordValue,
+  resolveLineColumns,
+} from "./metaLineRuntime";
 
 export type ItemsGridColumn =
-  | "lineNumber"
-  | "itemCode"
-  | "description"
-  | "quantity"
-  | "unitCode"
-  | "unitPrice"
-  | "lineAmount"
-  | "taxCode"
-  | "taxAmount"
-  | "allocatedTo";
-
-const COLUMN_LABELS: Record<ItemsGridColumn, string> = {
-  lineNumber:  "#",
-  itemCode:    "Item",
-  description: "Description",
-  quantity:    "Qty",
-  unitCode:    "Unit",
-  unitPrice:   "Unit Price",
-  lineAmount:  "Amount",
-  taxCode:     "Tax Code",
-  taxAmount:   "Tax Amount",
-  allocatedTo: "Allocated To",
-};
-
-const COLUMN_ALIGN: Record<ItemsGridColumn, "left" | "right" | "center"> = {
-  lineNumber:  "center",
-  itemCode:    "left",
-  description: "left",
-  quantity:    "right",
-  unitCode:    "center",
-  unitPrice:   "right",
-  lineAmount:  "right",
-  taxCode:     "center",
-  taxAmount:   "right",
-  allocatedTo: "left",
-};
-
-const DEFAULT_COLUMNS: ItemsGridColumn[] = [
-  "lineNumber", "itemCode", "description", "quantity", "unitCode", "unitPrice", "lineAmount",
-];
-
-// ── Cell renderer ─────────────────────────────────────────────────────────────
-
-function fmtNum(v: unknown, decimals = 2): string {
-  const n = Number(v);
-  return isNaN(n) ? "—" : n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-}
-
-function cellValue(line: DocumentLine, col: ItemsGridColumn, lineDists?: AccountingDistribution[]): React.ReactNode {
-  switch (col) {
-    case "lineNumber":  return String(line.line_number);
-    case "itemCode":    return line.item_code    ?? "—";
-    case "description": return line.description  ?? "—";
-    case "quantity":    return line.quantity   != null ? fmtNum(line.quantity, 0) : "—";
-    case "unitCode":    return line.unit_code   ?? "—";
-    case "unitPrice":   return line.unit_price  != null ? fmtNum(line.unit_price)  : "—";
-    case "lineAmount":  return line.line_amount != null ? fmtNum(line.line_amount) : "—";
-    case "taxCode":     return line.tax_code ?? "—";
-    case "taxAmount":   return line.tax_amount  != null ? fmtNum(line.tax_amount)  : "—";
-    case "allocatedTo": {
-      if (!lineDists || lineDists.length === 0) return <span className="text-muted-foreground/50">—</span>;
-      if (lineDists.length === 1) {
-        const d = lineDists[0];
-        const label = d!.account_code ?? (d!.cost_center_id ? "CC" : d!.spend_category_id ? "CAT" : "DIST");
-        return (
-          <span className="inline-flex items-center h-[18px] px-[6px] rounded-[4px] text-2xs font-mono font-semibold bg-muted border border-border/60 text-muted-foreground leading-none">
-            {label}
-          </span>
-        );
-      }
-      return (
-        <span className="inline-flex items-center gap-1 h-[18px] px-[6px] rounded-[4px] text-2xs font-semibold bg-info/10 border border-info/20 text-info leading-none">
-          <SplitSquareHorizontal className="h-[10px] w-[10px]" />
-          {lineDists.length} splits
-        </span>
-      );
-    }
-  }
-}
-
-// ── Public component ──────────────────────────────────────────────────────────
+  | string
+  | {
+      field: string;
+      label?: string;
+      align?: MetaLineAlign;
+      width?: string | number;
+      path?: string;
+      aggregate?: "sum" | "count";
+    };
 
 export interface ItemsGridProps {
   lines: DocumentLine[];
   columns?: ItemsGridColumn[];
-  /** Currency code shown in header for amount columns */
+  entity?: CompiledEntity | null;
+  fields?: EntityField[];
   currencyCode?: string;
-  /** Accounting distributions for all lines — enables Allocated To column */
   distributions?: AccountingDistribution[];
-  /** Currently selected line ID */
   selectedLineId?: string;
-  /** Called when user clicks a row */
+  selectedIds?: Set<string>;
+  selectable?: boolean;
+  allSelected?: boolean;
+  onToggleLine?: (lineId: string) => void;
+  onToggleAll?: () => void;
   onLineSelect?: (line: DocumentLine) => void;
+}
+
+function alignForField(field?: EntityField): MetaLineAlign {
+  if (!field) return "left";
+  if (["integer", "bigint", "decimal", "numeric", "money"].includes(field.data_type)) return "right";
+  if (field.data_type === "boolean") return "center";
+  return "left";
+}
+
+function normalizeColumns(
+  columns: ItemsGridColumn[] | undefined,
+  entity: CompiledEntity | null | undefined,
+  fields: EntityField[] | undefined,
+): MetaLineColumn[] {
+  if (columns?.length) {
+    const fieldsByName = new Map((fields ?? entity?.fields ?? []).map((field) => [field.name, field]));
+    return columns.flatMap((column, index): MetaLineColumn[] => {
+      const config = typeof column === "string" ? { field: column } : column;
+      const field = fieldsByName.get(config.field);
+      if (field) {
+        return [{
+          key: field.name,
+          field,
+          label: config.label ?? fieldLabel(field),
+          align: config.align ?? alignForField(field),
+          width: config.width,
+          valuePath: config.path,
+          aggregate: config.aggregate ?? (field.is_aggregatable ? "sum" : undefined),
+          sortOrder: index,
+        }];
+      }
+
+      const syntheticField = {
+        id: config.field,
+        name: config.field,
+        column_name: config.field,
+        label: config.label ?? config.field,
+        description: null,
+        data_type: "string",
+        ui_type: null,
+        format: null,
+        unit: null,
+        cardinality: "one",
+        origin: "business",
+        is_required: false,
+        is_readonly: false,
+        is_unique: false,
+        is_searchable: false,
+        is_filterable: false,
+        is_sortable: false,
+        is_groupable: false,
+        is_aggregatable: false,
+        is_pii: false,
+        default_value: null,
+        validation_rules: null,
+        enum_domain_code: null,
+        reference_config: null,
+        sort_order: index,
+        group_key: null,
+        i18n_key: null,
+      } satisfies EntityField;
+
+      return [{
+        key: config.field,
+        field: syntheticField,
+        label: config.label ?? config.field,
+        align: config.align ?? "left",
+        width: config.width,
+        valuePath: config.path,
+        aggregate: config.aggregate,
+        sortOrder: index,
+      }];
+    });
+  }
+
+  if (entity) return resolveLineColumns(entity);
+  if (fields?.length) {
+    return fields
+      .map((field, index) => ({
+        key: field.name,
+        field,
+        label: fieldLabel(field),
+        align: alignForField(field),
+        aggregate: field.is_aggregatable ? "sum" as const : undefined,
+        sortOrder: field.sort_order ?? index,
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  return [];
+}
+
+function isDescriptionColumn(column: MetaLineColumn): boolean {
+  const name = column.field.name.toLowerCase();
+  const label = column.label.toLowerCase();
+  return name.includes("description") || label.includes("description");
+}
+
+function isLineNumberColumn(column: MetaLineColumn): boolean {
+  const name = column.field.name.toLowerCase();
+  return name === "line_number" || name === "line_no" || name === "line_num" || column.label === "#";
+}
+
+const LINE_NUMBER_MIN_WIDTH_REM = 3.75;
+
+function firstTrackToken(width: string): string | undefined {
+  const normalized = width.trim();
+  const minmaxMatch = normalized.match(/^minmax\(([^,]+),/i);
+  if (minmaxMatch?.[1]) return minmaxMatch[1].trim();
+  const clampMatch = normalized.match(/^clamp\(([^,]+),/i);
+  if (clampMatch?.[1]) return clampMatch[1].trim();
+  return normalized;
+}
+
+function remFromWidthHint(width: string): number | undefined {
+  const token = firstTrackToken(width);
+  if (!token) return undefined;
+  if (token.endsWith("rem")) return Number.parseFloat(token);
+  if (token.endsWith("px")) return Number.parseFloat(token) / 16;
+  if (token.endsWith("ch")) return Number.parseFloat(token) * 0.5;
+  return undefined;
+}
+
+function defaultColumnWidth(column: MetaLineColumn): string | undefined {
+  if (column.width != null) {
+    const parsedWidthRem = typeof column.width === "number"
+      ? column.width / 16
+      : remFromWidthHint(column.width);
+    if (isLineNumberColumn(column) && parsedWidthRem != null && parsedWidthRem < LINE_NUMBER_MIN_WIDTH_REM) {
+      return `${LINE_NUMBER_MIN_WIDTH_REM}rem`;
+    }
+    if (typeof column.width === "number") return `${column.width}px`;
+    return firstTrackToken(column.width);
+  }
+  if (isLineNumberColumn(column)) return "4rem";
+  if (isDescriptionColumn(column)) return undefined;
+  if (column.align === "right") return "9rem";
+  if (column.align === "center") return "7rem";
+  return "12rem";
+}
+
+function defaultColumnMinRem(column: MetaLineColumn): number {
+  if (column.width != null) {
+    if (typeof column.width === "number") return Math.max(4, column.width / 16);
+    const parsed = remFromWidthHint(column.width);
+    if (parsed != null && Number.isFinite(parsed)) return Math.max(4, parsed);
+  }
+  if (isLineNumberColumn(column)) return 4;
+  if (isDescriptionColumn(column)) return 18;
+  if (column.align === "right") return 9;
+  if (column.align === "center") return 7;
+  return 12;
+}
+
+function alignClass(align: MetaLineAlign): string {
+  if (align === "right") return "text-right";
+  if (align === "center") return "text-center";
+  return "text-left";
+}
+
+function columnValue(line: DocumentLine, column: MetaLineColumn): unknown {
+  return recordValue(line as LineRecord, column.valuePath ?? column.field);
+}
+
+function ColumnHeader({ column, currencyCode }: { column: MetaLineColumn; currencyCode?: string }) {
+  const label = column.field.data_type === "money" && currencyCode
+    ? `${column.label} (${currencyCode})`
+    : column.label;
+  return (
+    <th
+      className={cn(
+        "min-w-0 overflow-hidden px-3 py-2.5 text-xs font-medium text-muted-foreground",
+        alignClass(column.align),
+      )}
+      style={{ width: defaultColumnWidth(column) }}
+    >
+      <div className="truncate" title={label}>{label}</div>
+    </th>
+  );
 }
 
 export function ItemsGrid({
   lines,
-  columns = DEFAULT_COLUMNS,
+  columns,
+  entity,
+  fields,
   currencyCode,
-  distributions,
   selectedLineId,
+  selectedIds,
+  selectable,
+  allSelected,
+  onToggleLine,
+  onToggleAll,
   onLineSelect,
 }: ItemsGridProps) {
-  // Resolve effective columns — inject allocatedTo after description when distributions are passed.
-  // Must happen before early returns so column logic is consistent.
-  const effectiveCols: ItemsGridColumn[] = React.useMemo(() => {
-    if (!distributions) return columns;
-    if (columns.includes("allocatedTo")) return columns;
-    const descIdx = columns.indexOf("description");
-    const insertAt = descIdx >= 0 ? descIdx + 1 : columns.length;
-    return [...columns.slice(0, insertAt), "allocatedTo", ...columns.slice(insertAt)];
-  }, [columns, distributions]);
+  const effectiveColumns = React.useMemo(
+    () => normalizeColumns(columns, entity, fields),
+    [columns, entity, fields],
+  );
 
   if (lines.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-12 text-center">
         <FileText className="h-8 w-8 text-muted-foreground/30" />
-        <p className="text-sm text-muted-foreground">No line items</p>
+        <p className="text-sm text-muted-foreground">No records</p>
       </div>
     );
   }
 
-  // Build distribution map keyed by source_line_id for O(1) lookup
-  const distByLine = new Map<string, AccountingDistribution[]>();
-  if (distributions) {
-    for (const d of distributions) {
-      const key = d.source_line_id;
-      const arr = distByLine.get(key) ?? [];
-      arr.push(d);
-      distByLine.set(key, arr);
-    }
+  if (effectiveColumns.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-12 text-center">
+        <FileText className="h-8 w-8 text-muted-foreground/30" />
+        <p className="text-sm text-muted-foreground">No line columns are configured.</p>
+      </div>
+    );
   }
 
-  // Footer totals for numeric columns
-  const amountCols: ItemsGridColumn[] = ["lineAmount", "taxAmount"];
-  const colTotals = new Map<ItemsGridColumn, number>();
-  for (const col of amountCols) {
-    if (!effectiveCols.includes(col)) continue;
-    const field = col === "lineAmount" ? "line_amount" : "tax_amount";
-    const sum = lines.reduce((acc, l) => acc + (Number(l[field as keyof DocumentLine]) || 0), 0);
-    colTotals.set(col, sum);
+  const totals = new Map<string, number>();
+  for (const column of effectiveColumns) {
+    if (column.aggregate !== "sum") continue;
+    totals.set(
+      column.key,
+      lines.reduce((sum, line) => sum + (Number(columnValue(line, column)) || 0), 0),
+    );
   }
-  const hasFooter = colTotals.size > 0;
-  const isInteractive = !!onLineSelect;
+
+  const hasFooter = totals.size > 0;
+  const isInteractive = Boolean(onLineSelect);
+  const footerLabel = `${lines.length} record${lines.length !== 1 ? "s" : ""}`;
+  const firstTotalColumnIndex = effectiveColumns.findIndex((column) => totals.has(column.key));
+  const footerLeadingColSpan = firstTotalColumnIndex > 0 ? firstTotalColumnIndex : 1;
+  const footerTotalColumns = effectiveColumns.slice(firstTotalColumnIndex > 0 ? firstTotalColumnIndex : 1);
+  const tableMinWidthRem = Math.max(
+    36,
+    (selectable ? 3 : 0) + effectiveColumns.reduce((sum, column) => sum + defaultColumnMinRem(column), 0),
+  );
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="border-b bg-muted/50">
+    <div className="min-w-0 overflow-x-auto">
+      <table className="w-full table-fixed text-sm" style={{ minWidth: `${tableMinWidthRem}rem` }}>
+        <colgroup>
+          {selectable && <col style={{ width: "3rem" }} />}
+          {effectiveColumns.map((column) => (
+            <col key={column.key} style={{ width: defaultColumnWidth(column) }} />
+          ))}
+        </colgroup>
+        <thead className="sticky top-0 z-10 border-b bg-muted">
           <tr>
-            {effectiveCols.map((col) => (
-              <th
-                key={col}
-                className={`px-3 py-2.5 text-${COLUMN_ALIGN[col]} text-xs font-medium text-muted-foreground whitespace-nowrap`}
-              >
-                {col === "lineAmount" && currencyCode
-                  ? `Amount (${currencyCode})`
-                  : COLUMN_LABELS[col]}
+            {selectable && (
+              <th className="w-12 px-3 py-2.5" onClick={(event) => event.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(allSelected)}
+                  onChange={() => onToggleAll?.()}
+                  className="h-3.5 w-3.5 rounded border-border"
+                  aria-label="Select all"
+                />
               </th>
+            )}
+            {effectiveColumns.map((column) => (
+              <ColumnHeader key={column.key} column={column} currencyCode={currencyCode} />
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-border/50">
           {lines.map((line) => {
-            const isSelected = selectedLineId === line.id;
-            const lineDists  = distByLine.get(line.id);
+            const lineKey = recordId(line as LineRecord);
+            const isSelected = selectedLineId === lineKey || selectedIds?.has(lineKey);
             return (
               <tr
-                key={line.id}
-                onClick={isInteractive ? () => onLineSelect(line) : undefined}
+                key={lineKey}
+                onClick={isInteractive ? () => onLineSelect?.(line) : undefined}
                 className={cn(
                   "transition-colors",
                   isInteractive && "cursor-pointer",
-                  isSelected
-                    ? "bg-accent/50 hover:bg-accent/60"
-                    : "hover:bg-muted/30",
+                  isSelected ? "bg-accent/50 hover:bg-accent/60" : "hover:bg-muted/30",
                 )}
               >
-                {effectiveCols.map((col) => (
-                  <td
-                    key={col}
-                    className={`px-3 py-2.5 text-${COLUMN_ALIGN[col]} text-sm ${
-                      col === "itemCode"   ? "font-mono text-xs" :
-                      col === "lineNumber" ? "text-muted-foreground tabular-nums" :
-                      col === "lineAmount" || col === "taxAmount" || col === "unitPrice" ? "tabular-nums font-medium" : ""
-                    }`}
-                  >
-                    {cellValue(line, col, lineDists)}
+                {selectable && (
+                  <td className="w-12 px-3 py-2.5" onClick={(event) => event.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(selectedIds?.has(lineKey))}
+                      onChange={() => onToggleLine?.(lineKey)}
+                      className="h-3.5 w-3.5 rounded border-border"
+                    />
                   </td>
-                ))}
+                )}
+                {effectiveColumns.map((column) => {
+                  const value = columnValue(line, column);
+                  const displayValue = formatFieldValue(value, column.field, currencyCode);
+                  const wrapsDescription = isDescriptionColumn(column);
+                  return (
+                    <td
+                      key={column.key}
+                      className={cn(
+                        "min-w-0 overflow-hidden px-3 py-2.5 align-middle text-sm",
+                        alignClass(column.align),
+                        column.align === "right" && "tabular-nums font-medium",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          wrapsDescription
+                            ? "whitespace-normal break-words leading-5"
+                            : "truncate",
+                        )}
+                        title={displayValue === "-" ? undefined : displayValue}
+                      >
+                        {displayValue}
+                      </div>
+                    </td>
+                  );
+                })}
               </tr>
             );
           })}
@@ -205,15 +363,26 @@ export function ItemsGrid({
         {hasFooter && (
           <tfoot className="border-t bg-muted/30">
             <tr>
-              {effectiveCols.map((col, i) => (
+              {selectable && <td className="w-12 px-3 py-2.5" />}
+              <td
+                colSpan={footerLeadingColSpan}
+                className="min-w-0 overflow-hidden px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground"
+              >
+                <div className="truncate" title={footerLabel}>{footerLabel}</div>
+              </td>
+              {footerTotalColumns.map((column) => (
                 <td
-                  key={col}
-                  className={`px-3 py-2.5 text-${COLUMN_ALIGN[col]} text-xs font-semibold tabular-nums`}
+                  key={column.key}
+                  className={cn(
+                    "min-w-0 overflow-hidden px-3 py-2.5 text-xs font-semibold tabular-nums",
+                    alignClass(column.align),
+                  )}
                 >
-                  {i === 0 ? `${lines.length} item${lines.length !== 1 ? "s" : ""}` :
-                   colTotals.has(col)
-                     ? fmtNum(colTotals.get(col)!)
-                     : ""}
+                  <div className="truncate">
+                    {totals.has(column.key)
+                      ? formatFieldValue(totals.get(column.key), column.field, currencyCode)
+                      : ""}
+                  </div>
                 </td>
               ))}
             </tr>

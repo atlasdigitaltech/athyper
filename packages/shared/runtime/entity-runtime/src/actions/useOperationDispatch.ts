@@ -42,6 +42,8 @@ export interface UseOperationDispatchOptions {
   recordId: string;
   /** Actual UUID of the record — required for direct action API calls. */
   recordUuid?: string;
+  /** Metadata-configured status field to patch into the local detail cache. */
+  statusFieldName?: string;
   /** User permissions used to gate the MODAL flow overrides. */
   userPermissions?: string[];
 }
@@ -63,10 +65,11 @@ function extractFlowCode(handlerTarget: string | null | undefined): string | nul
   return m?.[1] ?? null;
 }
 
-function getRecordStatus(body: Record<string, unknown>): string | null {
+function getRecordStatus(body: Record<string, unknown>, statusFieldName?: string): string | null {
+  if (!statusFieldName) return null;
   const record = body["record"];
   if (!record || typeof record !== "object") return null;
-  const status = (record as Record<string, unknown>)["status"];
+  const status = (record as Record<string, unknown>)[statusFieldName];
   return typeof status === "string" ? status : null;
 }
 
@@ -74,6 +77,7 @@ export function useOperationDispatch({
   entityCode,
   recordId,
   recordUuid,
+  statusFieldName,
   userPermissions = [],
 }: UseOperationDispatchOptions): UseOperationDispatchReturn {
   const qc = useQueryClient();
@@ -84,23 +88,22 @@ export function useOperationDispatch({
   const [isModalOpen,  setIsModalOpen]    = useState(false);
 
   const applyStatusToDetailCache = useCallback((status: string | null) => {
-    if (!status) return;
+    if (!status || !statusFieldName) return;
     qc.setQueryData(
       queryKeys.entityDetail.byId(entityCode, recordId),
       (current: unknown) => {
         if (!current || typeof current !== "object") return current;
-        const record = current as { status?: string; data?: Record<string, unknown> };
+        const record = current as { data?: Record<string, unknown> };
         return {
           ...record,
-          status,
           data: {
             ...(record.data ?? {}),
-            status,
+            [statusFieldName]: status,
           },
         };
       },
     );
-  }, [entityCode, recordId, qc]);
+  }, [entityCode, recordId, qc, statusFieldName]);
 
   const refreshRecordQueries = useCallback(async () => {
     const detailKey = queryKeys.entityDetail.byId(entityCode, recordId);
@@ -180,14 +183,14 @@ export function useOperationDispatch({
             throw new Error(msg);
           }
           const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-          applyStatusToDetailCache(getRecordStatus(body));
+          applyStatusToDetailCache(getRecordStatus(body, statusFieldName));
           await refreshRecordQueries();
         } finally {
           setIsSubmitting(false);
         }
       })();
     },
-    [entityCode, recordId, recordUuid, userPermissions, applyStatusToDetailCache, refreshRecordQueries],
+    [entityCode, recordId, recordUuid, statusFieldName, userPermissions, applyStatusToDetailCache, refreshRecordQueries],
   );
 
   const submitModal = useCallback(
@@ -210,7 +213,7 @@ export function useOperationDispatch({
           throw new Error(msg);
         }
         const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-        applyStatusToDetailCache(getRecordStatus(body));
+        applyStatusToDetailCache(getRecordStatus(body, statusFieldName));
         await refreshRecordQueries();
         setIsModalOpen(false);
         setActiveOpCode(null);
@@ -219,7 +222,7 @@ export function useOperationDispatch({
         setIsSubmitting(false);
       }
     },
-    [activeOpCode, entityCode, recordId, recordUuid, applyStatusToDetailCache, refreshRecordQueries],
+    [activeOpCode, entityCode, recordId, recordUuid, statusFieldName, applyStatusToDetailCache, refreshRecordQueries],
   );
 
   return {

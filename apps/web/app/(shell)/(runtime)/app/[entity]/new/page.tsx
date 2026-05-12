@@ -469,6 +469,7 @@ function formatEntityLabel(entityCode: string): string {
 type PurchaseInvoiceLineInput = {
   item_description?: unknown;
   description?: unknown;
+  item_id?: unknown;
   procurement_type?: unknown;
   uom_code?: unknown;
   quantity?: unknown;
@@ -500,6 +501,7 @@ function normalizePurchaseInvoiceLine(line: PurchaseInvoiceLineInput, headerData
 
   return {
     item_description: itemDescription,
+    item_id: invoiceLineText(line.item_id) || null,
     procurement_type: procurementType,
     uom_code: uomCode,
     quantity,

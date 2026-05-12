@@ -24,7 +24,7 @@ SELECT
     'Purchase Invoice', 'Purchase Invoices', 'file-text', 'violet',
     true,
     '{"prefix":"INV","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
-    '{"is_approvable":true,"document_category":"payables","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
+    '{"is_approvable":true,"document_category":"payables","allow_on_behalf_of":false,"has_lines":true,"catalog_feature_enabled":false,"auto_number":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
@@ -205,6 +205,7 @@ WHERE ef.entity_version_id = ev.id
 UPDATE control.entity
 SET display_config = jsonb_build_object(
     'detail_renderer', 'document',
+    'line_entity_code','purchase_invoice_line',
     'title_field',     'document_no',
     'subtitle_field',  'supplier_id',
     'list_columns',    '["document_no","status","supplier_id","invoice_date","due_date","total_amount","currency_code"]'::jsonb,
@@ -255,6 +256,18 @@ WHERE table_schema = 'document'
   AND tenant_id IS NULL
   AND display_config IS NOT NULL
   AND COALESCE(display_config -> 'document_header' ->> 'type_label', '') <> 'PURCHASE INVOICE';
+
+UPDATE control.entity
+SET display_config = jsonb_set(
+    COALESCE(display_config, '{}'::jsonb),
+    '{line_entity_code}',
+    '"purchase_invoice_line"'::jsonb,
+    true
+)
+WHERE table_schema = 'document'
+  AND table_name = 'purchase_invoice'
+  AND tenant_id IS NULL
+  AND (display_config ->> 'line_entity_code') IS NULL;
 
 -- ── 4b. Patch: add title_field to document_header on already-seeded databases ──
 -- The initial UPDATE (above) only fires on a fresh DB (display_config = '{}').
@@ -363,6 +376,8 @@ SET feature_flags = jsonb_build_object(
     'auto_number',                 true,
     -- Lines tab
     'has_lines',                   true,
+    -- Catalog item add action (default: disabled / No)
+    'catalog_feature_enabled',      false,
     -- AI classification panel in LineEditorSheet
     'has_ai_classification',       true,
     -- LineComposerSheet for AI-assisted line intake

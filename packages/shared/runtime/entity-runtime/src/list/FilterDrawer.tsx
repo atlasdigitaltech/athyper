@@ -29,9 +29,6 @@ import {
   Star,
   BookmarkPlus,
   Bookmark,
-  FileText,
-  Building2,
-  ShieldCheck,
   Filter,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
@@ -75,62 +72,6 @@ function setEntry(
 // Used when entity.field_groups is empty or fields have no group_key.
 // Groups by data_type + name patterns so the drawer always has meaningful
 // sections rather than one giant "Other" bucket.
-
-const SEMANTIC_GROUPS: { key: string; label: string; test: (f: EntityField) => boolean }[] = [
-  {
-    key: "status",
-    label: "Status & Workflow",
-    test: (f) =>
-      f.data_type === "enum" ||
-      f.data_type === "lifecycle_state" ||
-      /\b(status|state|stage|phase|lifecycle)\b/.test(f.name),
-  },
-  {
-    key: "identification",
-    label: "Identification",
-    test: (f) =>
-      f.data_type === "string" &&
-      /(_no|_number|_code|_ref|_id|^code$|^name$|^title$|^reference)/.test(f.name),
-  },
-  {
-    key: "dates",
-    label: "Dates",
-    test: (f) =>
-      f.data_type === "date" || f.data_type === "datetime" || f.data_type === "timestamptz",
-  },
-  {
-    key: "amounts",
-    label: "Amounts",
-    test: (f) =>
-      f.data_type === "money" ||
-      f.data_type === "decimal" ||
-      f.data_type === "numeric" ||
-      ((f.data_type === "integer" || f.data_type === "bigint") &&
-        /\b(amount|total|value|price|cost|sum|balance|rate)\b/.test(f.name)),
-  },
-  {
-    key: "parties",
-    label: "Parties",
-    test: (f) =>
-      f.data_type === "reference" &&
-      /\b(vendor|supplier|customer|client|company|contact|partner|payee|payer)\b/.test(f.name),
-  },
-  {
-    key: "dimensions",
-    label: "Dimensions",
-    test: (f) =>
-      /\b(cost_cent(re|er)|project|department|division|site|branch|region|segment|gl_account|account)\b/.test(
-        f.name,
-      ),
-  },
-];
-
-function semanticGroupKey(f: EntityField): string {
-  for (const g of SEMANTIC_GROUPS) {
-    if (g.test(f)) return g.key;
-  }
-  return "__general";
-}
 
 type FieldFilterMeta = NonNullable<EntityField["filter_config"]>;
 type MetadataQuickFilter = {
@@ -199,11 +140,6 @@ function quickFilterActive(draft: EntityListFilters, filter: MetadataQuickFilter
 function QuickFilterIcon({ filter, active }: { filter: MetadataQuickFilter; active: boolean }) {
   const cls = cn("h-3 w-3 shrink-0", active && "fill-current");
   if (filter.key === "__bookmarked") return <Star className={cls} />;
-  if (filter.key === "__created_by") return <FileText className="h-3 w-3 shrink-0" />;
-  if (filter.key.includes("internal")) return <ShieldCheck className="h-3 w-3 shrink-0" />;
-  if (filter.key.includes("organization") || filter.field === "partner_category") {
-    return <Building2 className="h-3 w-3 shrink-0" />;
-  }
   return <Filter className="h-3 w-3 shrink-0" />;
 }
 
@@ -377,7 +313,6 @@ export function FilterDrawer({
 
     const defaults: MetadataQuickFilter[] = [
       { key: "__bookmarked", label: "Favourites", value: true, sort_order: 10 },
-      { key: "__created_by", label: "My documents", value: "me", sort_order: 20 },
     ];
 
     const seen = new Set<string>();
@@ -464,24 +399,9 @@ export function FilterDrawer({
       return result;
     }
 
-    // Semantic fallback: group by data_type + name patterns
-    const buckets = new Map<string, typeof filterableFields>();
-    for (const f of filterableFields) {
-      const key = semanticGroupKey(f);
-      if (!buckets.has(key)) buckets.set(key, []);
-      buckets.get(key)!.push(f);
-    }
-
-    const result: { key: string; label: string; fields: typeof filterableFields }[] = [];
-    for (const g of SEMANTIC_GROUPS) {
-      const fields = buckets.get(g.key);
-      if (fields && fields.length > 0) result.push({ key: g.key, label: g.label, fields });
-    }
-    const general = buckets.get("__general");
-    if (general && general.length > 0) {
-      result.push({ key: "__general", label: "General", fields: general });
-    }
-    return result;
+    return filterableFields.length > 0
+      ? [{ key: "__general", label: "General", fields: filterableFields }]
+      : [];
   }, [entity.field_groups, filterableFields, metadataSections]);
 
   // Collapse state: all expanded by default

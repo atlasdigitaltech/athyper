@@ -400,8 +400,10 @@ function ReferenceFilter({
   entry:    FilterEntry | undefined;
   onChange: (next: FilterEntry | undefined) => void;
 }) {
-  const targetEntity  = field.reference_config?.target_entity ?? "";
-  const displayField  = field.reference_config?.display_field;
+  const referenceConfig = field.reference_config;
+  const targetEntity    = referenceConfig?.target_entity ?? "";
+  const displayField    = referenceConfig?.display_field ?? referenceConfig?.label_field ?? referenceConfig?.code_field;
+  const recordIdField   = referenceConfig?.record_id_field;
 
   const [term, setTerm]         = useState("");
   const [results, setResults]   = useState<{ id: string; label: string }[]>([]);
@@ -422,8 +424,8 @@ function ReferenceFilter({
         if (cancelled) return;
         const rows = data.data ?? [];
         const mapped = rows.map((row) => ({
-          id:    String(row.id ?? ""),
-          label: String(row[displayField ?? ""] ?? row["name"] ?? row["code"] ?? row["id"] ?? ""),
+          id:    String((recordIdField ? row[recordIdField] : undefined) ?? row.id ?? ""),
+          label: String((displayField ? row[displayField] : undefined) ?? ((recordIdField ? row[recordIdField] : undefined) ?? row.id ?? "")),
         }));
         setResults(mapped);
         const newMap: Record<string, string> = {};
@@ -433,7 +435,7 @@ function ReferenceFilter({
       .catch(() => { if (!cancelled) setResults([]); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [debouncedTerm, targetEntity, displayField]);
+  }, [debouncedTerm, targetEntity, displayField, recordIdField]);
 
   const toggle = (id: string, label: string) => {
     const next = selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id];

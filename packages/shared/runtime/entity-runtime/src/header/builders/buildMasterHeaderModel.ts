@@ -10,6 +10,12 @@ import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 import type { CompiledEntity, EntityField, EntityOperation, StatusDimensionConfig } from "@athyper/api-contracts/metadata";
 import type { EntityHeaderModel, HeaderAction, HeaderFact, HeaderStatusDimension, HeaderTab } from "../types";
 import { titleCase, fmtDateTime } from "@athyper/runtime-shared/core";
+import {
+  configuredCodeFieldName,
+  configuredStatusFieldNames,
+  configuredTitleFieldName,
+  fieldValueByName,
+} from "../../metadata/fieldSemantics";
 
 // ── Placement map: entity_operation.placement → HeaderAction.placement ────────
 
@@ -145,8 +151,11 @@ export function buildMasterHeaderModel(
   editMode:   boolean,
   isDirty:    boolean,
 ): EntityHeaderModel {
-  const statusField  = entity.display_config.status_field_names?.[0] ?? "status";
-  const statusVal    = String(data[statusField] ?? "active").toLowerCase();
+  const statusField  = configuredStatusFieldNames(entity)[0];
+  const statusRaw    = statusField ? fieldValueByName(entity, data, statusField) : undefined;
+  const statusVal    = statusRaw === undefined || statusRaw === null || statusRaw === ""
+    ? "unspecified"
+    : String(statusRaw).toLowerCase();
   const statusIntent = adminStatusIntent(statusVal);
 
   // Inline classification: driven by config.classification_field, no hardcoding
@@ -159,12 +168,14 @@ export function buildMasterHeaderModel(
   const classification  = classRawVal ? formatValue(classRawVal, classField) : undefined;
 
   // P1 identity — all slots driven by display_config field pointers
-  const codeFieldName  = entity.display_config.code_field ?? "code";
-  const titleFieldName = entity.display_config.title_field;
+  const codeFieldName  = configuredCodeFieldName(entity);
+  const titleFieldName = configuredTitleFieldName(entity);
 
-  const codeNumber  = data[codeFieldName] ? String(data[codeFieldName]) : recordId;
-  const entityName  = titleFieldName && data[titleFieldName]
-    ? String(data[titleFieldName])
+  const codeValue   = fieldValueByName(entity, data, codeFieldName);
+  const titleValue  = fieldValueByName(entity, data, titleFieldName);
+  const codeNumber  = codeValue ? String(codeValue) : recordId;
+  const entityName  = titleValue
+    ? String(titleValue)
     : undefined;
   const typeLabel = config.type_label
     ?? entity.entity_name.toUpperCase().replace(/_/g, " ");

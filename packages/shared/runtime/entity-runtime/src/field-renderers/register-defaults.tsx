@@ -11,6 +11,14 @@ import { Input, Checkbox, Badge, Select, SelectTrigger, SelectValue, SelectConte
 import { DatePicker, AsyncCombobox } from "@athyper/ui/composites";
 import {
   EntityPicker,
+  DimensionPicker,
+  SupplierPicker,
+  CustomerPicker,
+  CostCenterPicker,
+  ProjectPicker,
+  SpendCategoryPicker,
+  BusinessIntentPicker,
+  ItemPicker,
   entityRowToPickerOption,
   hasLookupDependency,
   readLookupFilters,
@@ -336,6 +344,119 @@ function ReferenceRenderer({ value, field, mode, density, formData, onChange, er
       <span className={cn(viewIdClass(density), "font-mono")}>
         {String(value).slice(0, 8)}…
       </span>
+    );
+  }
+
+  if (entityCode === "supplier") {
+    return (
+      <SupplierPicker
+        value={uuid}
+        displayLabel={pickerDisplayLabel}
+        field={field}
+        formData={formData}
+        onChange={(id) => onChange?.(id ?? "")}
+        disabled={disabled}
+        error={error}
+      />
+    );
+  }
+
+  if (entityCode === "customer") {
+    return (
+      <CustomerPicker
+        value={uuid}
+        displayLabel={pickerDisplayLabel}
+        field={field}
+        formData={formData}
+        onChange={(id) => onChange?.(id ?? "")}
+        disabled={disabled}
+        error={error}
+      />
+    );
+  }
+
+  if (entityCode === "cost_center") {
+    return (
+      <CostCenterPicker
+        value={uuid}
+        displayLabel={pickerDisplayLabel}
+        field={field}
+        formData={formData}
+        onChange={(id) => onChange?.(id ?? "")}
+        disabled={disabled}
+        error={error}
+      />
+    );
+  }
+
+  if (entityCode === "project") {
+    return (
+      <ProjectPicker
+        value={uuid}
+        displayLabel={pickerDisplayLabel}
+        field={field}
+        formData={formData}
+        onChange={(id) => onChange?.(id ?? "")}
+        disabled={disabled}
+        error={error}
+      />
+    );
+  }
+
+  if (entityCode === "profit_center" || entityCode === "site") {
+    return (
+      <DimensionPicker
+        entityCode={entityCode}
+        value={uuid}
+        displayLabel={pickerDisplayLabel}
+        field={field}
+        formData={formData}
+        onChange={(id) => onChange?.(id ?? "")}
+        disabled={disabled}
+        error={error}
+      />
+    );
+  }
+
+  if (entityCode === "spend_category") {
+    return (
+      <SpendCategoryPicker
+        value={uuid}
+        displayLabel={pickerDisplayLabel}
+        field={field}
+        formData={formData}
+        onChange={(id) => onChange?.(id ?? "")}
+        disabled={disabled}
+        error={error}
+      />
+    );
+  }
+
+  if (entityCode === "business_intent") {
+    return (
+      <BusinessIntentPicker
+        value={uuid}
+        displayLabel={pickerDisplayLabel}
+        field={field}
+        formData={formData}
+        onChange={(id) => onChange?.(id ?? "")}
+        disabled={disabled}
+        error={error}
+      />
+    );
+  }
+
+  if (entityCode === "item") {
+    return (
+      <ItemPicker
+        value={uuid}
+        displayLabel={pickerDisplayLabel}
+        field={field}
+        formData={formData}
+        onChange={(id) => onChange?.(id ?? "")}
+        disabled={disabled}
+        error={error}
+      />
     );
   }
 

@@ -16,39 +16,36 @@ import { cn } from "@athyper/theme/utils";
 import { type SemanticIntent, resolveSemanticColors } from "@athyper/theme/semantic-colors";
 import { Badge } from "@athyper/ui/primitives";
 import { MoneySummary } from "@athyper/domain-widgets";
-import { type ProcessChain, type ProcessChainNode, type ChainNodeType } from "@athyper/api-contracts/documents";
+import { type ProcessChain } from "@athyper/api-contracts/documents";
+import { statusToIntent } from "@athyper/runtime-shared/core";
+import {
+  normalizeStatusKey,
+  renderTemplate,
+  resolveProcessChainPresentation,
+} from "../documentRuntimeDefaults";
 
 export interface ProcessChainRibbonProps {
   chain: ProcessChain;
+  displayConfig?: Record<string, unknown> | null;
   className?: string;
 }
 
-const NODE_LABELS: Record<ChainNodeType, string> = {
-  PR: "Requisition", RFX: "RFx", CONTRACT: "Contract",
-  PO: "Purchase Order", GR: "Goods Receipt", SES: "Service Entry",
-  INV: "Invoice", CN: "Credit Note", DN: "Debit Note",
-  PAY: "Payment", ADVANCE: "Advance", RETENTION: "Retention",
-};
-
-const NODE_SHORT: Record<ChainNodeType, string> = {
-  PR: "PR", RFX: "RFx", CONTRACT: "CTR",
-  PO: "PO", GR: "GR", SES: "SES",
-  INV: "INV", CN: "CN", DN: "DN",
-  PAY: "PAY", ADVANCE: "ADV", RETENTION: "RET",
-};
-
-function statusToIntent(status: string | null): SemanticIntent {
-  if (!status) return "neutral";
-  const s = status.toLowerCase();
-  if (["posted", "approved", "completed", "paid", "fully_received", "fully_invoiced", "closed"].includes(s)) return "success";
-  if (["pending", "pending_approval", "in_review", "partially_received", "partially_invoiced"].includes(s)) return "warning";
-  if (["rejected", "cancelled", "reversed", "on_hold"].includes(s)) return "error";
-  if (["draft"].includes(s)) return "muted";
-  return "info";
+function chainNodeHref(
+  nodeType: string,
+  documentId: string | null,
+  template: string | undefined,
+): string | null {
+  if (!documentId || !template) return null;
+  return renderTemplate(template, {
+    node_type: nodeType,
+    node_type_lower: nodeType.toLowerCase(),
+    document_id: documentId,
+  });
 }
 
-export function ProcessChainRibbon({ chain, className }: ProcessChainRibbonProps) {
+export function ProcessChainRibbon({ chain, displayConfig, className }: ProcessChainRibbonProps) {
   const router = useRouter();
+  const presentation = resolveProcessChainPresentation(displayConfig);
 
   if (chain.nodes.length === 0) return null;
 
@@ -57,8 +54,13 @@ export function ProcessChainRibbon({ chain, className }: ProcessChainRibbonProps
       <div className="flex items-center gap-1 overflow-x-auto">
         {chain.nodes.map((node, i) => {
           const isCurrent = node.node_type === chain.current_node_type;
-          const intent = statusToIntent(node.status);
+          const statusKey = normalizeStatusKey(node.status);
+          const intent: SemanticIntent = presentation.statusIntents[statusKey] ?? statusToIntent(node.status);
           const colors = resolveSemanticColors(intent);
+          const nodeLabel = presentation.nodeLabels[node.node_type] ?? node.node_type;
+          const nodeShortLabel = presentation.nodeShortLabels[node.node_type] ?? node.node_type;
+          const routeTemplate = presentation.routeTemplatesByNode[node.node_type] ?? presentation.routeTemplate;
+          const href = isCurrent ? null : chainNodeHref(node.node_type, node.document_id, routeTemplate);
 
           return (
             <div key={`${node.node_type}-${i}`} className="flex items-center gap-1">
@@ -82,11 +84,10 @@ export function ProcessChainRibbon({ chain, className }: ProcessChainRibbonProps
               {/* Node */}
               <button
                 onClick={() => {
-                  if (node.document_id && !isCurrent) {
-                    router.push(`/document/${node.node_type.toLowerCase()}/${node.document_id}`);
-                  }
+                  if (href) router.push(href);
                 }}
-                disabled={!node.document_id || isCurrent}
+                disabled={!href}
+                title={nodeLabel}
                 className={cn(
                   "flex flex-col items-center rounded-lg border px-3 py-2 text-center transition-colors min-w-[90px]",
                   isCurrent
@@ -97,7 +98,7 @@ export function ProcessChainRibbon({ chain, className }: ProcessChainRibbonProps
               >
                 <div className="flex items-center gap-1.5">
                   <span className={cn("h-2 w-2 rounded-full", colors.dot)} />
-                  <span className="text-xs font-semibold">{NODE_SHORT[node.node_type]}</span>
+                  <span className="text-xs font-semibold">{nodeShortLabel}</span>
                   {node.count > 1 && (
                     <Badge variant="outline" className="h-4 px-1 text-2xs">×{node.count}</Badge>
                   )}

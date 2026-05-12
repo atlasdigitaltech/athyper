@@ -84,6 +84,8 @@ export interface EntityPickerOptionConfig {
   recentLimit?: number;
   optionActionLabel?: string;
   resultLabel?: string;
+  /** ID of the control tab that should be active on first open. Defaults to the first control. */
+  defaultControl?: string;
   controls?: EntityPickerControlConfig[];
   sections?: EntityPickerSectionConfig[];
   badges?: EntityPickerBadgeConfig[];
@@ -256,6 +258,7 @@ export function resolveEntityPickerOptionConfig(referenceConfig: unknown): Entit
     recentLimit:      numberConfig(picker?.["recent_limit"] ?? picker?.["recentLimit"]),
     optionActionLabel: textConfig(picker?.["option_action_label"] ?? picker?.["optionActionLabel"]),
     resultLabel:      textConfig(picker?.["result_label"] ?? picker?.["resultLabel"]),
+    defaultControl:   textConfig(picker?.["default_control"] ?? picker?.["defaultControl"] ?? config["default_control"]),
     controls:         controlsConfig(picker?.["controls"]),
     sections:         sectionsConfig(picker?.["sections"]),
     badges:           badgesConfig(picker?.["badges"]),
@@ -480,7 +483,7 @@ export const EntityPicker = forwardRef<HTMLDivElement, EntityPickerProps>(
     const pageIncrement = 20;
     const resultLimit = pageIncrement;
     const [activeControlValue, setActiveControlValue] = useState<string | null>(
-      optionConfig?.controls?.[0]?.value ?? null,
+      optionConfig?.defaultControl ?? optionConfig?.controls?.[0]?.value ?? null,
     );
     const [advancedQuery, setAdvancedQuery] = useState("");
     const [controlSearchRevision, setControlSearchRevision] = useState(0);
@@ -794,6 +797,7 @@ export const EntityPicker = forwardRef<HTMLDivElement, EntityPickerProps>(
           loadMoreLoading={loading}
           activeControlValue={activeControlValue}
           onControlChange={handleAdvancedControlChange}
+          storageKey={entityCode ?? undefined}
         />
       );
     }

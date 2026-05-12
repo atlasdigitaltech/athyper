@@ -240,8 +240,8 @@ export function EntityIdentityBar({
 
   // ── Edit-mode indicator — shown only when actively editing ────────────────
   const editingBadge = editMode ? (
-    <span className="inline-flex items-center gap-1.5 rounded border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-semibold leading-none text-primary shrink-0">
-      <Pencil className="h-2.5 w-2.5" />
+    <span className="inline-flex items-center gap-1.5 rounded border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-semibold leading-none text-primary shrink-0 animate-pulse">
+      <Pencil className="h-2.5 w-2.5 animate-pencil-write" />
       Editing
     </span>
   ) : null;

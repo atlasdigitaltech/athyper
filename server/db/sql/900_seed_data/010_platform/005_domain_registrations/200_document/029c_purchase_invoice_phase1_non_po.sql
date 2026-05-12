@@ -201,6 +201,43 @@ BEGIN
      AND ef.name = v.name
      AND ef.tenant_id IS NULL;
 
+  -- Stamp ui_hint.visible_when on invoice-type-specific fields so the overview and
+  -- edit panels hide them when irrelevant (evaluated via evaluateRule in the UI).
+  UPDATE control.entity_field ef
+     SET ui_hint = v.ui_hint::jsonb,
+         updated_at = now(),
+         updated_by = v_su
+    FROM (VALUES
+      -- credit note fields
+      ('credited_invoice_id',       '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
+      ('credit_reason',             '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
+      ('credit_reference',          '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
+      ('credit_note_date',          '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
+      ('credit_note_name',          '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
+      ('application_strategy',      '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
+      -- debit note fields
+      ('debited_invoice_id',        '{"visible_when":{"==":[{"var":"invoice_type"},"debit_note"]}}'),
+      ('debit_reason',              '{"visible_when":{"==":[{"var":"invoice_type"},"debit_note"]}}'),
+      ('debit_note_number',         '{"visible_when":{"==":[{"var":"invoice_type"},"debit_note"]}}'),
+      ('debit_note_date',           '{"visible_when":{"==":[{"var":"invoice_type"},"debit_note"]}}'),
+      ('debit_note_name',           '{"visible_when":{"==":[{"var":"invoice_type"},"debit_note"]}}'),
+      -- advance fields
+      ('advance_type',              '{"visible_when":{"==":[{"var":"invoice_type"},"advance"]}}'),
+      ('recovery_method',           '{"visible_when":{"==":[{"var":"invoice_type"},"advance"]}}'),
+      ('advance_request_reference', '{"visible_when":{"==":[{"var":"invoice_type"},"advance"]}}'),
+      ('advance_request_date',      '{"visible_when":{"==":[{"var":"invoice_type"},"advance"]}}'),
+      ('advance_name',              '{"visible_when":{"==":[{"var":"invoice_type"},"advance"]}}'),
+      -- retention release fields
+      ('retention_invoice_id',      '{"visible_when":{"==":[{"var":"invoice_type"},"retention_release"]}}'),
+      ('release_type',              '{"visible_when":{"==":[{"var":"invoice_type"},"retention_release"]}}'),
+      ('release_request_reference', '{"visible_when":{"==":[{"var":"invoice_type"},"retention_release"]}}'),
+      ('release_date',              '{"visible_when":{"==":[{"var":"invoice_type"},"retention_release"]}}'),
+      ('release_name',              '{"visible_when":{"==":[{"var":"invoice_type"},"retention_release"]}}')
+    ) AS v(name, ui_hint)
+   WHERE ef.entity_version_id = v_ev_id
+     AND ef.name = v.name
+     AND ef.tenant_id IS NULL;
+
   -- Base Identify bindings only show for standard-like invoices; type variants provide their own labels.
   UPDATE control.entity_flow_field eff
      SET visible_when = '{"in":[{"var":"invoice_type"},["standard","final","self_billed"]]}'::jsonb

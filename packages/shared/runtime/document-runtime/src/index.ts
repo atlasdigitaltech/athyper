@@ -26,12 +26,6 @@ export {
   type JournalLineGridPayload,
   type JournalLinesGridProps,
 } from "./items/JournalLinesGrid";
-export {
-  InvoiceIntakeLinesGrid,
-  type InvoiceIntakeLinesGridProps,
-  type InvoiceLineGridPayload,
-  type InvoiceLineValidationStatus,
-} from "./items/InvoiceIntakeLinesGrid";
 export { PaymentAllocationLinesGrid, type PaymentAllocationLinesGridProps } from "./items/PaymentAllocationLinesGrid";
 export {
   ClassificationDecisionPanel,

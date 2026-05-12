@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { Clock3, ExternalLink, List, Loader2, X, Zap } from "lucide-react";
+import { Clock3, ExternalLink, GripHorizontal, List, Loader2, X, Zap } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { SearchInput } from "./SearchInput";
 
@@ -56,6 +56,7 @@ export interface AdvancedEntityChooserMetaConfig {
   density?: AdvancedEntityChooserDensity;
   placeholder?: string;
   width?: number | string;
+  listHeight?: number | string;
   maxListHeight?: number | string;
   controls?: AdvancedEntityChooserControl[];
   sections?: AdvancedEntityChooserSection[];
@@ -86,6 +87,12 @@ export interface AdvancedEntityChooserPanelProps {
   onClose?: () => void;
   emptyMessage?: string;
   className?: string;
+  /** Show a drag-grip strip at the top so the panel can be repositioned. */
+  draggable?: boolean;
+  onDragHandleMouseDown?: (e: React.MouseEvent) => void;
+  /** Show a resize handle at the bottom-right corner. */
+  resizable?: boolean;
+  onResizeHandleMouseDown?: (e: React.MouseEvent) => void;
 }
 
 const DENSITY = {
@@ -160,6 +167,11 @@ const BADGE_TONE: Record<AdvancedEntityChooserTone, string> = {
   info: "border-info/20 bg-info/15 text-info",
 };
 
+function cssLength(value: number | string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return typeof value === "number" ? `${value}px` : value;
+}
+
 export function AdvancedEntityChooserPanel({
   query = "",
   onQueryChange,
@@ -182,6 +194,10 @@ export function AdvancedEntityChooserPanel({
   onClose,
   emptyMessage = "No matches",
   className,
+  draggable,
+  onDragHandleMouseDown,
+  resizable,
+  onResizeHandleMouseDown,
 }: AdvancedEntityChooserPanelProps) {
   const density = meta?.density ?? "compact";
   const d = DENSITY[density];
@@ -192,6 +208,7 @@ export function AdvancedEntityChooserPanel({
   );
   const sections = meta?.sections ?? deriveSections(displayOptions);
   const width = meta?.width ?? d.defaultWidth;
+  const listHeight = meta?.listHeight;
   const maxListHeight = meta?.maxListHeight ?? d.defaultMaxHeight;
   const hasHeaderTitle = !!title || !!onClose;
   const resolvedOptionActionLabel = optionActionLabel ?? meta?.optionActionLabel ?? "View record";
@@ -201,9 +218,20 @@ export function AdvancedEntityChooserPanel({
 
   return (
     <div
-      className={cn("overflow-hidden border bg-popover font-sans text-popover-foreground", d.panel, className)}
-      style={{ width: typeof width === "number" ? `${width}px` : width }}
+      data-advanced-entity-chooser-panel="true"
+      className={cn("relative overflow-hidden border bg-popover font-sans text-popover-foreground", d.panel, className)}
+      style={{ width: cssLength(width) }}
     >
+      {draggable && (
+        <div
+          onMouseDown={onDragHandleMouseDown}
+          title="Drag to reposition"
+          className="group flex cursor-grab items-center justify-center border-b py-0.5 select-none transition-colors duration-150 hover:bg-muted/50 active:cursor-grabbing active:bg-muted/70"
+        >
+          <GripHorizontal className="size-3 text-muted-foreground/30 transition-all duration-150 group-hover:scale-110 group-hover:text-muted-foreground/70 group-active:scale-90 group-active:text-muted-foreground/90" />
+        </div>
+      )}
+
       {hasHeaderTitle && (
         <div className="flex items-center justify-between border-b px-3 py-2">
           <p className="text-sm font-semibold">{title}</p>
@@ -270,7 +298,14 @@ export function AdvancedEntityChooserPanel({
         )}
       </div>
 
-      <div className="overflow-y-auto" style={{ maxHeight: maxListHeight }}>
+      <div
+        data-advanced-entity-chooser-list="true"
+        className="overflow-y-auto"
+        style={{
+          height: cssLength(listHeight),
+          maxHeight: cssLength(maxListHeight),
+        }}
+      >
         {loading ? (
           <div className="flex items-center justify-center px-3 py-8 text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
@@ -360,6 +395,23 @@ export function AdvancedEntityChooserPanel({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {resizable && (
+        <div
+          onMouseDown={onResizeHandleMouseDown}
+          title="Drag to resize"
+          className="group absolute bottom-0 right-0 size-5 cursor-se-resize select-none flex items-end justify-end p-1"
+        >
+          <svg
+            width="9" height="9" viewBox="0 0 9 9"
+            className="text-muted-foreground/35 transition-all duration-150 group-hover:scale-125 group-hover:text-primary/60 group-active:scale-110 group-active:text-primary/80"
+          >
+            <circle cx="7.5" cy="7.5" r="1.1" fill="currentColor" />
+            <circle cx="4"   cy="7.5" r="1.1" fill="currentColor" />
+            <circle cx="7.5" cy="4"   r="1.1" fill="currentColor" />
+          </svg>
         </div>
       )}
     </div>

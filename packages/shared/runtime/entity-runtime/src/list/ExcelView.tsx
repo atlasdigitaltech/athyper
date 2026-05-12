@@ -20,6 +20,7 @@ import { cn } from "@athyper/theme/utils";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import type { ColumnPresentation } from "@athyper/api-contracts/entity-list";
 import { listTypography } from "./listPresentation";
+import { configuredCodeFieldName, configuredTitleFieldName } from "../metadata/fieldSemantics";
 
 // ── Column width defaults by data_type ────────────────────────────────────────
 
@@ -47,9 +48,10 @@ export interface ExcelViewProps {
   /** Ordered list of visible field names. When empty, all entity fields are shown. */
   visibleColumns?:       string[];
   presentationConfig?:   { columns: ColumnPresentation[] };
-  onRowClick?:           (row: Record<string, unknown>) => void;
-  onRowContextMenu?:     (row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => void;
-  aggregations?:         Record<string, number | null>;
+  onRowClick?:                  (row: Record<string, unknown>) => void;
+  onRowContextMenu?:            (row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => void;
+  onIdentityCellContextMenu?:   (row: Record<string, unknown>, e: React.MouseEvent) => void;
+  aggregations?:                Record<string, number | null>;
   loading?:              boolean;
   /** Pinned (frozen) column names — render first and stay sticky. From URL state. */
   pinnedCols?:           string[];
@@ -66,11 +68,15 @@ export function ExcelView({
   presentationConfig,
   onRowClick,
   onRowContextMenu,
+  onIdentityCellContextMenu,
   aggregations,
   loading = false,
   pinnedCols = [],
   onPinnedColsChange,
 }: ExcelViewProps) {
+
+  const codeFieldName  = configuredCodeFieldName(entity);
+  const titleFieldName = configuredTitleFieldName(entity);
 
   // ── Field resolution ───────────────────────────────────────────────────────
   const allFields = [...entity.fields].sort((a, b) => a.sort_order - b.sort_order);
@@ -357,6 +363,9 @@ export function ExcelView({
                 {displayFields.map((field) => {
                   const { isPinned, leftOffset, separatorShadow } = colCls(field.name);
                   const cellText = formatCell(row[field.name], field.name);
+                  const isIdentity =
+                    field.name === codeFieldName ||
+                    field.name === titleFieldName;
                   return (
                     <td
                       key={field.name}
@@ -371,7 +380,14 @@ export function ExcelView({
                           && "text-right tabular-nums",
                       )}
                     >
-                      <span className="block truncate">{cellText}</span>
+                      <span
+                        className={cn("block truncate", isIdentity && onIdentityCellContextMenu && "cursor-context-menu")}
+                        onContextMenu={isIdentity && onIdentityCellContextMenu
+                          ? (e) => { e.stopPropagation(); onIdentityCellContextMenu(row, e); }
+                          : undefined}
+                      >
+                        {cellText}
+                      </span>
                     </td>
                   );
                 })}

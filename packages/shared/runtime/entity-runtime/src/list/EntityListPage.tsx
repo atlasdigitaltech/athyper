@@ -115,6 +115,13 @@ import { RowMetaStrip } from "./RowMetaStrip";
 import { ColumnFilterHeader } from "./ColumnFilterHeader";
 import { describeVirtualFilter, isVirtualFilter } from "./virtualFilterLabels";
 import { RuntimeStatusText, listTypography, runtimeStatusDotClass } from "./listPresentation";
+import {
+  configuredAuditFieldNames,
+  configuredCodeFieldName,
+  configuredStatusFieldNames,
+  configuredTitleFieldName,
+  fieldValueByName,
+} from "../metadata/fieldSemantics";
 
 function getCsrfToken(): string {
   const m = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
@@ -238,13 +245,7 @@ function EntityArchetypeBadge({ archetype }: { archetype: EntityListArchetype })
 }
 
 function getStatusValue(row: Record<string, unknown>, statusFieldNames: string[] = []): string {
-  const fieldNames = uniqueFieldNames([
-    ...statusFieldNames,
-    "status",
-    "record_status",
-    "state",
-  ]);
-  for (const fieldName of fieldNames) {
+  for (const fieldName of uniqueFieldNames(statusFieldNames)) {
     const value = row[fieldName];
     if (value !== undefined && value !== null && value !== "") return String(value);
   }
@@ -331,7 +332,7 @@ function compactCardConfig(entity: CompiledEntity): CompactCardConfig | undefine
 }
 
 function isStatusFieldName(fieldName: string, statusFieldNames: string[]): boolean {
-  return statusFieldNames.includes(fieldName) || ["status", "record_status", "state", "lifecycle_state"].includes(fieldName);
+  return statusFieldNames.includes(fieldName);
 }
 
 function isCompactBottomCandidate(field: EntityField): boolean {
@@ -362,18 +363,10 @@ function compactMetaValue(field: EntityField, value: unknown): string | undefine
   if (typeof value === "number" || typeof value === "bigint") return String(value);
   const raw = String(value).trim();
   if (!raw) return undefined;
-  if (field.ui_type === "country" || field.name.endsWith("_country_code")) {
+  if (field.ui_type === "country") {
     return compactCountryLabel(raw);
   }
   return humanizeCompactToken(raw);
-}
-
-function compactAuditFieldNames(entity: CompiledEntity): { createdAt: string; updatedAt: string } {
-  const documentHeader = entity.display_config.document_header;
-  return {
-    createdAt: documentHeader?.created_at_field ?? "created_at",
-    updatedAt: documentHeader?.updated_at_field ?? "updated_at",
-  };
 }
 
 function compactAuditTime(value: unknown): string | undefined {
@@ -415,12 +408,12 @@ function CompactView({
   onRowContextMenu,
   statusResolverName,
   compactColumns,
-  density = "compact",
+  density = "comfortable",
 }: {
   rows:               Record<string, unknown>[];
   entity:             CompiledEntity;
-  codeFieldName:      string;
-  titleFieldName:     string;
+  codeFieldName?:     string;
+  titleFieldName?:    string;
   statusFieldNames:   string[];
   onRowClick?:        (row: Record<string, unknown>) => void;
   onRowContextMenu?:  (row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => void;
@@ -437,7 +430,7 @@ function CompactView({
 
   const d = COMPACT_DENSITY[density] ?? COMPACT_DENSITY.comfortable;
   const fieldByName = new Map(entity.fields.map((field) => [field.name, field]));
-  const auditFields = compactAuditFieldNames(entity);
+  const auditFields = configuredAuditFieldNames(entity);
   const configuredBottomFields = uniqueFieldNames(compactCardConfig(entity)?.bottom_fields ?? []);
   const fallbackBottomFields = uniqueFieldNames([
     ...(entity.display_config.list_columns ?? []),
@@ -454,14 +447,18 @@ function CompactView({
     <div className={d.grid}>
       {rows.map((row) => {
         const id     = String(row.id ?? "");
-        const code   = String(row[codeFieldName] ?? row.code ?? row[titleFieldName] ?? id);
-        const title  = String(row[titleFieldName] ?? row.name ?? row[codeFieldName] ?? id);
+        const codeValue = fieldValueByName(entity, row, codeFieldName)
+          ?? fieldValueByName(entity, row, titleFieldName);
+        const titleValue = fieldValueByName(entity, row, titleFieldName)
+          ?? fieldValueByName(entity, row, codeFieldName);
+        const code   = String(codeValue ?? id);
+        const title  = String(titleValue ?? id);
         const status = getStatusValue(row, statusFieldNames);
         const metaValues = bottomFields
           .map((field) => compactMetaValue(field, row[field.name]))
           .filter((value): value is string => !!value);
-        const createdAt = compactAuditTime(row[auditFields.createdAt]);
-        const updatedAt = compactAuditTime(row[auditFields.updatedAt]);
+        const createdAt = auditFields.createdAt ? compactAuditTime(row[auditFields.createdAt]) : undefined;
+        const updatedAt = auditFields.updatedAt ? compactAuditTime(row[auditFields.updatedAt]) : undefined;
         return (
           <div
             key={id}
@@ -1769,6 +1766,11 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const { data: savedViews = [] }                                       = useSavedViews(entityCode);
 
   // A1 — Kanban column order: lifecycle state order takes priority; enum sort_order is fallback.
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    tableContainerRef.current?.scrollTo({ top: 0 });
+  }, [state.page]);
+
   // Both hooks are unconditional (Rules of Hooks); enabled guards prevent unnecessary fetches.
   const kanbanGroupField   = entity ? findKanbanGroupField(entity) : undefined;
   const kanbanDomainCode   = kanbanGroupField?.enum_domain_code ?? null;
@@ -1832,7 +1834,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const viewMode = availableViewModes?.includes(requestedViewMode)
     ? requestedViewMode
     : responsiveDefaultViewMode;
-  const effectiveDensity = state.density ?? "compact";
+  const effectiveDensity = state.density ?? "comfortable";
 
   // Resolve active sort: URL state → metadata default → undefined
   const activeSort = (state.sort && state.sort.length > 0) ? state.sort : presentationConfig?.defaultSort;
@@ -1996,6 +1998,8 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
 
   const [rowCtxMenu, setRowCtxMenu] = useState<{ row: Record<string, unknown>; x: number; y: number } | null>(null);
   const [ctxCopied, setCtxCopied] = useState<string | null>(null);
+  const [cellCtxMenu, setCellCtxMenu] = useState<{ row: Record<string, unknown>; x: number; y: number } | null>(null);
+  const [cellCtxCopied, setCellCtxCopied] = useState<string | null>(null);
 
   const handleRowContextMenu = useCallback((row: Record<string, unknown>, e: { clientX: number; clientY: number; preventDefault(): void }) => {
     e.preventDefault();
@@ -2012,6 +2016,37 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       }, 1200);
     });
   }, []);
+
+  const handleCellContextMenu = useCallback((row: Record<string, unknown>, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCellCtxCopied(null);
+    setCellCtxMenu({ row, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handleCellCtxCopy = useCallback((key: string, value: string) => {
+    void navigator.clipboard.writeText(value).then(() => {
+      setCellCtxCopied(key);
+      setTimeout(() => {
+        setCellCtxCopied(null);
+        setCellCtxMenu(null);
+      }, 1200);
+    });
+  }, []);
+
+  // Cell-level context menu copy items: focused Code + Name only (mirrors EntityIdentityBar).
+  const cellCtxCopyItems = useMemo(() => {
+    if (!cellCtxMenu || !entity) return [];
+    const code  = configuredCodeFieldName(entity);
+    const title = configuredTitleFieldName(entity) ?? resolveListConfig(entity).columns[0]?.name;
+    const fmt   = (raw: unknown) => (raw == null ? "" : String(raw));
+    const items: { key: string; label: string; value: string }[] = [];
+    const codeVal  = code  ? fmt(cellCtxMenu.row[code])  : "";
+    const titleVal = title ? fmt(cellCtxMenu.row[title]) : "";
+    if (codeVal)                        items.push({ key: "code",  label: "Code",  value: codeVal  });
+    if (titleVal && titleVal !== codeVal) items.push({ key: "name",  label: "Name",  value: titleVal });
+    return items;
+  }, [cellCtxMenu, entity]);
 
   // Build per-field copy items — self-contained so it can live before the early returns.
   // Uses entity + state.columns directly rather than the post-guard allDescriptorColumns.
@@ -2075,25 +2110,17 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   }
 
   const listConfig   = resolveListConfig(entity);
-  const titleKey     = listConfig.columns[0]?.name ?? "name";
-  const codeFieldName = entity.display_config.code_field
-    ?? entity.display_config.document_header?.number_field
-    ?? "code";
-  const compactTitleFieldName = entity.display_config.title_field
-    ?? titleKey
-    ?? "name";
-  const statusFieldNames = displayConfig?.status_field_names ?? ["status"];
+  const titleKey     = listConfig.columns[0]?.name;
+  const codeFieldName = configuredCodeFieldName(entity);
+  const compactTitleFieldName = configuredTitleFieldName(entity) ?? titleKey;
+  const statusFieldNames = configuredStatusFieldNames(entity);
+  const auditFieldNames = configuredAuditFieldNames(entity);
   const hasGroupable = !!findKanbanGroupField(entity);
   const navFieldNames = uniqueFieldNames([
-    entity.display_config.code_field,
-    entity.display_config.document_header?.number_field,
-    entity.display_config.title_field,
+    codeFieldName,
+    compactTitleFieldName,
     titleKey,
-    "document_no",
-    "document_number",
-    "number",
-    "code",
-    "name",
+    ...listConfig.columns.map((column) => column.name),
   ]);
 
   // Status field resolver from presentation config (for compact view badges)
@@ -2161,20 +2188,37 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
             />
           )
         : (field.label ?? field.name),
-      cell: ({ getValue }: { getValue: () => unknown }) => {
+      cell: ({ getValue, row }: { getValue: () => unknown; row: { original: Record<string, unknown> } }) => {
         const value = getValue();
+        const isIdentityField =
+          (field.name === codeFieldName && field.data_type === "text") ||
+          field.name === compactTitleFieldName ||
+          field.name === titleKey;
         if (colPres?.semanticResolver && typeof value === "string" && value) {
           return <RuntimeStatusText value={value} resolverName={colPres.semanticResolver} />;
         }
         // Code/identifier column — muted + tabular-nums to match detail header treatment.
         if (field.name === codeFieldName && field.data_type === "text" && value != null && value !== "") {
           return (
-            <span className="text-xs font-medium tabular-nums text-muted-foreground">
+            <span
+              className="text-xs font-medium tabular-nums text-muted-foreground cursor-context-menu"
+              onContextMenu={(e) => handleCellContextMenu(row.original, e)}
+            >
               {String(value)}
             </span>
           );
         }
         const Renderer = resolveFieldRenderer(field);
+        if (isIdentityField) {
+          return (
+            <span
+              className="cursor-context-menu"
+              onContextMenu={(e) => handleCellContextMenu(row.original, e)}
+            >
+              <Renderer value={value} field={field} mode="view" density="table" />
+            </span>
+          );
+        }
         return <Renderer value={value} field={field} mode="view" density="table" />;
       },
     };
@@ -2543,6 +2587,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               data={allRows}
               loading={dataLoading}
               tableContainerClassName="overflow-auto min-h-[50dvh] max-h-[calc(100dvh-10rem)]"
+              tableContainerRef={tableContainerRef}
               selectable
               rowSelection={rowSelection}
               onRowSelectionChange={setRowSelection}
@@ -2563,22 +2608,18 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                 const rid    = String(r.id ?? "");
                 const navId  = resolveRecordNavId(r, navFieldNames);
                 const displayName =
-                  normalizeNavValue(r[compactTitleFieldName]) ??
-                  normalizeNavValue(r.name) ??
-                  normalizeNavValue(r[titleKey]) ??
-                  normalizeNavValue(r[codeFieldName]) ??
+                  normalizeNavValue(fieldValueByName(entity, r, compactTitleFieldName)) ??
+                  normalizeNavValue(fieldValueByName(entity, r, titleKey)) ??
+                  normalizeNavValue(fieldValueByName(entity, r, codeFieldName)) ??
                   rid;
                 const recordCode =
-                  normalizeNavValue(r[codeFieldName]) ??
-                  normalizeNavValue(r.code) ??
-                  normalizeNavValue(r.document_no) ??
-                  normalizeNavValue(r.document_number) ??
-                  normalizeNavValue(r.number);
+                  normalizeNavValue(fieldValueByName(entity, r, codeFieldName));
                 return (
                   <RowMetaStrip
                     row={r}
                     entityCode={entityCode}
                     visibleColumnNames={visibleColumnNames}
+                    updatedAtFieldName={auditFieldNames.updatedAt}
                     bookmarked={bookmarkedIds.has(rid)}
                     commentCount={commentCountMap[rid]?.total ?? 0}
                     commentHasOpen={commentCountMap[rid]?.hasOpen ?? false}
@@ -2605,6 +2646,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               density={effectiveDensity}
               onRowClick={handleRowClick}
               onRowContextMenu={(row, e) => handleRowContextMenu(row, e)}
+              onIdentityCellContextMenu={handleCellContextMenu}
               rowActions={operations && operations.length > 0
                 ? (row) => (
                     <RowActionMenu
@@ -2624,6 +2666,8 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               titleKey={titleKey}
               entityCode={entityCode}
               onRowClick={handleRowClick}
+              onRowContextMenu={handleRowContextMenu}
+              onIdentityCellContextMenu={handleCellContextMenu}
               groupFieldOverride={state.group ?? undefined}
               columnOrder={kanbanColumnOrder}
               groupCounts={groupCounts}
@@ -2664,6 +2708,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               presentationConfig={presentationConfig ?? undefined}
               onRowClick={handleRowClick}
               onRowContextMenu={handleRowContextMenu}
+              onIdentityCellContextMenu={handleCellContextMenu}
               aggregations={aggregations}
               loading={dataLoading}
               pinnedCols={state.pinnedCols ?? []}
@@ -2736,6 +2781,71 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                     </button>
                   ))}
                 </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Cell-level context menu (code / name columns) — mirrors EntityIdentityBar */}
+      {cellCtxMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setCellCtxMenu(null)}
+            onContextMenu={(e) => { e.preventDefault(); setCellCtxMenu(null); }}
+          />
+          <div
+            className="fixed z-50 min-w-[260px] max-w-[320px] rounded-lg border bg-popover py-1 shadow-md"
+            style={{ top: cellCtxMenu.y, left: cellCtxMenu.x }}
+          >
+            <button
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted transition-colors"
+              onClick={() => {
+                const href = getRecordHref(cellCtxMenu.row);
+                if (href) window.open(href, "_blank", "noopener,noreferrer");
+                setCellCtxMenu(null);
+              }}
+            >
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              Open in new tab
+            </button>
+            <button
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted transition-colors"
+              onClick={() => {
+                const href = getRecordHref(cellCtxMenu.row);
+                if (href) window.open(href, "_blank", "noopener,noreferrer,width=1280,height=800");
+                setCellCtxMenu(null);
+              }}
+            >
+              <AppWindow className="h-3.5 w-3.5 shrink-0" />
+              Open in new window
+            </button>
+            {cellCtxCopyItems.length > 0 && (
+              <>
+                <div className="my-1 h-px bg-border" />
+                <div className="px-3 pb-0.5 pt-1 text-doc-support font-semibold uppercase tracking-wider text-muted-foreground/50">
+                  Copy field
+                </div>
+                {cellCtxCopyItems.map((item) => (
+                  <button
+                    key={item.key}
+                    className="flex w-full items-center gap-2 px-3 py-1 text-left hover:bg-muted transition-colors"
+                    onClick={() => handleCellCtxCopy(item.key, item.value)}
+                  >
+                    <span className="w-[90px] shrink-0 truncate text-xs text-muted-foreground">{item.label}</span>
+                    {cellCtxCopied === item.key ? (
+                      <span className="flex items-center gap-1 text-xs text-success">
+                        <Check className="h-3 w-3" />Copied!
+                      </span>
+                    ) : (
+                      <span className="flex-1 truncate text-xs font-medium">{item.value}</span>
+                    )}
+                    {cellCtxCopied !== item.key && (
+                      <Copy className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+                    )}
+                  </button>
+                ))}
               </>
             )}
           </div>

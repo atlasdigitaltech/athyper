@@ -9,6 +9,27 @@ export {
 export { resolvePresentationConfig } from "./displayConfig.resolve";
 
 export {
+  configuredAuditFieldNames,
+  configuredCodeFieldName,
+  configuredIdentityFieldNames,
+  configuredListColumnNames,
+  configuredStatusFieldNames,
+  configuredSubtitleFieldName,
+  configuredTitleFieldName,
+  displayConfigRecord,
+  documentHeaderRecord,
+  editableEntityField,
+  fieldByName,
+  fieldExcludedFromCopy,
+  fieldHiddenInSurface,
+  fieldSettingRecord,
+  fieldValue,
+  fieldValueByName,
+  uniqueFieldNames,
+  type EntityAuditFieldNames,
+} from "./fieldSemantics";
+
+export {
   detailRendererMap,
   listRendererMap,
   registerLinesRenderer,

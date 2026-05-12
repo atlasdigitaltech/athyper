@@ -161,7 +161,7 @@ export const AsyncCombobox = forwardRef<HTMLDivElement, AsyncComboboxProps>(
 
           <Popover.Portal>
             <Popover.Content
-              className="z-50 w-[var(--radix-popover-trigger-width)] rounded-md border bg-popover shadow-md animate-in fade-in-0 zoom-in-95"
+              className="z-popover w-[var(--radix-popover-trigger-width)] rounded-md border bg-popover shadow-md animate-in fade-in-0 zoom-in-95"
               align="start"
               sideOffset={4}
               onOpenAutoFocus={(e) => {

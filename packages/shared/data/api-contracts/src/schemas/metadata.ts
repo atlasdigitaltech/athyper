@@ -15,7 +15,7 @@
  * entity engine DDL must revalidate these schemas. See docs/api/contract-sync.md.
  */
 import { z } from "zod";
-import { UuidSchema } from "./common";
+import { SemanticIntentSchema, UuidSchema } from "./common";
 import type { EntityClass } from "../enums";
 
 // ═══════════════════════════════════════════════════════════════
@@ -554,6 +554,13 @@ export const CompiledEntitySchema = z.object({
      */
     lines_renderer: z.string().nullable().optional(),
     /**
+     * Document renderer family exposed as first-class metadata.
+     * "default" resolves to the registered generic line renderer.
+     */
+    document_lines_renderer: z.enum(["default", "journal", "payment"]).optional(),
+    /** Child entity code used by generic document line renderers. */
+    line_entity_code: z.string().optional(),
+    /**
      * Field names carrying the entity's primary lifecycle status.
      * Drives statusToIntent() calls in orchestrator/header builders.
      * Default: ["status"].
@@ -567,6 +574,8 @@ export const CompiledEntitySchema = z.object({
       key: z.string(),
       label: z.string(),
     })).optional(),
+    /** Status/stage aliases used by document progress renderers. */
+    stage_key_aliases: z.record(z.string(), z.string()).optional(),
     /**
      * Alternate intake flow codes available for this entity.
      * Each code maps to a flow definition in entity_flow.
@@ -597,6 +606,10 @@ export const CompiledEntitySchema = z.object({
       name_field: z.string().optional(),
       /** Status field, e.g. "status" */
       status_field: z.string().optional(),
+      /** Default lifecycle status when the status field is absent. */
+      default_status: z.string().optional(),
+      /** Status values where inline draft editing is allowed. */
+      editable_statuses: z.array(z.string()).optional(),
       /** Human-readable type chip, e.g. "INVOICE" */
       type_label: z.string().optional(),
       /** Header money label, e.g. "INVOICE TOTAL" */
@@ -607,6 +620,8 @@ export const CompiledEntitySchema = z.object({
       party_name_field: z.string().optional(),
       /** Field holding the party FK / id, e.g. "supplier_id" */
       party_id_field: z.string().optional(),
+      /** Field holding company-code reference id for scoped documents. */
+      company_code_field: z.string().optional(),
       /** Gross / total amount field, e.g. "gross_amount" */
       amount_field: z.string().optional(),
       /** Net / subtotal amount field, e.g. "net_amount" */
@@ -633,6 +648,29 @@ export const CompiledEntitySchema = z.object({
       status_changed_at_field: z.string().optional(),
       /** Lifecycle: status_changed_by user field */
       status_changed_by_field: z.string().optional(),
+      /** Per-stage timestamp fields, keyed by lifecycle stage key. */
+      stage_date_fields: z.record(z.string(), z.array(z.string())).optional(),
+      /** Status/stage aliases scoped to this header presentation. */
+      stage_key_aliases: z.record(z.string(), z.string()).optional(),
+      /** Legacy singleton stage timestamp field. Prefer stage_date_fields. */
+      stage_date_field: z.string().optional(),
+      /** Line aggregates projected onto header fields. */
+      line_aggregates: z.array(z.object({
+        target_field: z.string(),
+        source_field: z.string().optional(),
+        aggregate: z.enum(["sum", "count"]).optional(),
+      })).optional(),
+      /** Non-editable field overrides for document edit mode. */
+      edit_excluded_fields: z.array(z.string()).optional(),
+      /** Accounting status field used by generic status dimensions. */
+      accounting_posted_field: z.string().optional(),
+      /** Payment amount fields used by generic settlement status dimensions. */
+      paid_amount_field: z.string().optional(),
+      payable_amount_field: z.string().optional(),
+      outstanding_amount_field: z.string().optional(),
+      outstanding_label: z.string().optional(),
+      /** Match/reconciliation status field used by generic status dimensions. */
+      match_status_field: z.string().optional(),
       /** Document/status progress stages scoped to this header presentation. */
       lifecycle_stages: z.array(z.object({
         key: z.string(),
@@ -645,6 +683,32 @@ export const CompiledEntitySchema = z.object({
      * hardcoding those choices in the renderer.
      */
     journal_editor: z.record(z.string(), z.unknown()).optional(),
+    /** Field name mappings for the journal line intake/edit grid (account, debit, credit, etc.). */
+    journal_line_fields: z.record(z.string(), z.unknown()).optional(),
+    /** Journal reference targets consumed by journal line renderers. */
+    journal_reference_targets: z.array(z.record(z.string(), z.unknown())).optional(),
+    /** Metadata-driven classification presentation and endpoint config. */
+    classification_config: z.record(z.string(), z.unknown()).optional(),
+    /** Metadata-driven procurement intake field map, keyed by display role. */
+    intake_fields: z.record(z.string(), z.unknown()).optional(),
+    /** Payment/allocation amount columns and labels. */
+    allocation_display_labels: z.array(z.record(z.string(), z.unknown())).optional(),
+    /** Payment/allocation primary column presentation. */
+    allocation_primary_label: z.string().optional(),
+    allocation_primary_field: z.string().optional(),
+    allocation_primary_source: z.enum(["data", "line"]).optional(),
+    allocation_primary_fallback_fields: z.array(z.string()).optional(),
+    allocation_empty_primary_label: z.string().optional(),
+    /** Accounting distribution field map and basis presentation. */
+    accounting_distribution_config: z.record(z.string(), z.unknown()).optional(),
+    /** Version history labels, badge variants, icons, and action state. */
+    version_presentation: z.record(z.string(), z.unknown()).optional(),
+    /**
+     * Document line-grid metadata. The concrete line entity owns this config so
+     * reusable line renderers can derive toolbar, organizer, and column behavior
+     * from entity fields rather than per-document UI code.
+     */
+    line_grid: z.record(z.string(), z.unknown()).optional(),
     /**
      * Semantic resolver key for status-field badge coloring in list/detail views.
      * When set, overrides the heuristic detection in resolvePresentationConfig.
@@ -669,9 +733,60 @@ export const CompiledEntitySchema = z.object({
         output:  z.array(z.string()).optional(),
       }),
     ).optional(),
+    /**
+     * Default status-driven action grouping for document entities. Used when
+     * action_groups is absent; entity metadata can override the shared defaults.
+     */
+    default_action_groups_by_status: z.record(
+      z.string(),
+      z.object({
+        primary: z.array(z.string()).optional(),
+        working: z.array(z.string()).optional(),
+        output:  z.array(z.string()).optional(),
+      }),
+    ).optional(),
+    action_label_overrides: z.record(z.string(), z.string()).optional(),
+    action_confirm_codes: z.array(z.string()).optional(),
+    action_destructive_codes: z.array(z.string()).optional(),
+    output_action_codes: z.array(z.string()).optional(),
+    action_code_aliases: z.record(z.string(), z.array(z.string())).optional(),
+    action_placement_groups: z.record(z.string(), z.string()).optional(),
+    document_action_handlers: z.record(
+      z.string(),
+      z.object({
+        endpoint_template: z.string().optional(),
+        endpoint: z.string().optional(),
+        url_template: z.string().optional(),
+        url: z.string().optional(),
+        route_template: z.string().optional(),
+        route: z.string().optional(),
+        method: z.string().optional(),
+      }),
+    ).optional(),
+
+    /** Process-chain presentation and navigation metadata. */
+    chain_node_labels: z.record(z.string(), z.string()).optional(),
+    chain_node_short_labels: z.record(z.string(), z.string()).optional(),
+    chain_status_intents: z.record(z.string(), SemanticIntentSchema).optional(),
+    chain_node_route_template: z.string().optional(),
+    chain_node_route_templates: z.record(z.string(), z.string()).optional(),
 
     /** Config for detail_profile="rich" master entities. Fully typed via MasterConfigSchema. */
     master_config: MasterConfigSchema.optional(),
+
+    /**
+     * Sheet variant selector for line-item editors.
+     * "procure" → ProcureLineEditorSheet / ProcureLineComposerSheet (accordion + tabs).
+     * Absence or "generic" → LineEditorSheet / LineComposerSheet (flat MetaLineForm).
+     */
+    line_ui_variant: z.string().optional(),
+
+    /**
+     * Procurement line UI layout config consumed by ProcureLineEditorSheet and
+     * ProcureLineComposerSheet.  Defines composer_sections (accordion), editor_tabs,
+     * reference_tab links, and the primary amount field for the footer calculation.
+     */
+    procure_line: z.record(z.string(), z.unknown()).optional(),
   }),
 
   feature_flags: z.object({

@@ -21,18 +21,21 @@ import {
 import { cn } from "@athyper/theme/utils";
 import { Badge, Button, Switch } from "@athyper/ui/primitives";
 import type { MasterTab } from "@athyper/metadata-client/compiled-reader";
+import type { EntityAuditFieldNames } from "../metadata";
 
 type TaxRecord = Record<string, unknown>;
 type HealthTone = "success" | "warning" | "destructive" | "muted";
 
 interface TaxProfileSummaryPanelProps {
-  records:  TaxRecord[];
-  tab:      MasterTab;
-  canAdd:   boolean;
-  canEdit:  boolean;
-  onAdd:    () => void;
-  onEdit:   (rec: TaxRecord) => void;
-  onDelete: (rec: TaxRecord) => void;
+  records:     TaxRecord[];
+  tab:         MasterTab;
+  auditFields?: EntityAuditFieldNames;
+  statusFields?: string[];
+  canAdd:      boolean;
+  canEdit:     boolean;
+  onAdd:       () => void;
+  onEdit:      (rec: TaxRecord) => void;
+  onDelete:    (rec: TaxRecord) => void;
 }
 
 interface Requirement {
@@ -118,6 +121,18 @@ const TAX_KPI_VALUE_CLASS = "text-xl font-semibold leading-none text-foreground"
 
 function stringValue(value: unknown): string {
   return value === null || value === undefined ? "" : String(value);
+}
+
+function configuredValue(rec: TaxRecord, fieldName?: string): unknown {
+  return fieldName ? rec[fieldName] : undefined;
+}
+
+function firstConfiguredValue(rec: TaxRecord, fieldNames?: string[]): unknown {
+  for (const fieldName of fieldNames ?? []) {
+    const value = configuredValue(rec, fieldName);
+    if (value !== null && value !== undefined && value !== "") return value;
+  }
+  return undefined;
 }
 
 function firstValue(rec: TaxRecord, keys: string[]): unknown {
@@ -721,7 +736,7 @@ function TextBlock({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RequirementsRail({ rec }: { rec: TaxRecord }) {
+function RequirementsRail({ rec, auditFields }: { rec: TaxRecord; auditFields?: EntityAuditFieldNames }) {
   const requirements = requirementStatus(rec);
   const code = countryCode(rec);
 
@@ -744,8 +759,8 @@ function RequirementsRail({ rec }: { rec: TaxRecord }) {
           ))}
         </div>
       </RailBox>
-      <AuditRail rec={rec} />
-      <ActivityRail rec={rec} />
+      <AuditRail rec={rec} auditFields={auditFields} />
+      <ActivityRail rec={rec} auditFields={auditFields} />
     </aside>
   );
 }
@@ -772,13 +787,13 @@ function RailBox({
   );
 }
 
-function AuditRail({ rec }: { rec: TaxRecord }) {
+function AuditRail({ rec, auditFields }: { rec: TaxRecord; auditFields?: EntityAuditFieldNames }) {
   return (
     <RailBox title="Record Audit" badge="META">
       <dl className="space-y-3">
-        <AuditRow label="Created" value={formatAuditValue(rec.created_at, rec.created_by)} />
-        <AuditRow label="Last updated" value={formatAuditValue(rec.updated_at, rec.updated_by)} />
-        <AuditRow label="Status changed" value={formatAuditValue(rec.status_changed_at, rec.status_changed_by)} />
+        <AuditRow label="Created" value={formatAuditValue(configuredValue(rec, auditFields?.createdAt), configuredValue(rec, auditFields?.createdBy))} />
+        <AuditRow label="Last updated" value={formatAuditValue(configuredValue(rec, auditFields?.updatedAt), configuredValue(rec, auditFields?.updatedBy))} />
+        <AuditRow label="Status changed" value={formatAuditValue(configuredValue(rec, auditFields?.statusChangedAt), configuredValue(rec, auditFields?.statusChangedBy))} />
         <AuditRow label="Profile ID" value={shortId(firstString(rec, ["id"]))} />
       </dl>
     </RailBox>
@@ -806,12 +821,14 @@ function AuditRow({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function ActivityRail({ rec }: { rec: TaxRecord }) {
+function ActivityRail({ rec, auditFields }: { rec: TaxRecord; auditFields?: EntityAuditFieldNames }) {
+  const createdAt = configuredValue(rec, auditFields?.createdAt);
+  const updatedAt = configuredValue(rec, auditFields?.updatedAt);
   const activity = [
-    rec.created_at ? { label: "Profile created", date: rec.created_at } : null,
-    vatRegistered(rec) ? { label: "VAT / GST registration captured", date: rec.updated_at ?? rec.created_at } : null,
+    createdAt ? { label: "Profile created", date: createdAt } : null,
+    vatRegistered(rec) ? { label: "VAT / GST registration captured", date: updatedAt ?? createdAt } : null,
     hasTaxClearance(rec) ? { label: "Tax clearance tracked", date: rec.tax_clearance_expiry_date } : null,
-    rec.updated_at ? { label: "Profile updated", date: rec.updated_at } : null,
+    updatedAt ? { label: "Profile updated", date: updatedAt } : null,
   ].filter(Boolean) as Array<{ label: string; date: unknown }>;
 
   return (
@@ -843,6 +860,8 @@ function shortId(id: string): string {
 export function TaxProfileSummaryPanel({
   records,
   tab,
+  auditFields,
+  statusFields,
   canAdd,
   canEdit,
   onAdd,
@@ -860,7 +879,7 @@ export function TaxProfileSummaryPanel({
     null;
 
   const vatCount = records.filter(vatRegistered).length;
-  const activeCount = records.filter((rec) => stringValue(rec.status).toLowerCase() === "active").length;
+  const activeCount = records.filter((rec) => stringValue(firstConfiguredValue(rec, statusFields)).toLowerCase() === "active").length;
   const docGaps = records.filter((rec) => missingVatDocument(rec) || missingClearanceFields(rec)).length;
   const clearanceRisk = records.filter((rec) => {
     const tone = clearanceTone(rec);
@@ -921,7 +940,7 @@ export function TaxProfileSummaryPanel({
           <NotesPanel rec={selectedRecord} />
         </div>
 
-        <RequirementsRail rec={selectedRecord} />
+        <RequirementsRail rec={selectedRecord} auditFields={auditFields} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3">

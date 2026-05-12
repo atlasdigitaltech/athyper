@@ -45,6 +45,17 @@ import { ChildSummaryCardsPanel, type ViewOnlyReason } from "./ChildSummaryCards
 import { ContactsChannelPanel } from "./ContactsChannelPanel";
 import { AddressesPanel } from "./AddressesPanel";
 import { SupplierCcExtensionTab } from "./SupplierCcExtensionTab";
+import {
+  configuredAuditFieldNames,
+  configuredIdentityFieldNames,
+  configuredStatusFieldNames,
+  displayConfigRecord,
+  documentHeaderRecord,
+  editableEntityField,
+  fieldExcludedFromCopy,
+  fieldHiddenInSurface,
+  fieldValueByName,
+} from "../metadata/fieldSemantics";
 
 // ── Public props ──────────────────────────────────────────────────────────────
 
@@ -64,6 +75,98 @@ const DETAIL_FIELD_LABEL_CLASS = "text-xs font-medium leading-normal text-muted-
 const DETAIL_FIELD_VALUE_CLASS = "text-sm leading-snug text-foreground";
 const DETAIL_ITEM_TITLE_CLASS = "text-sm font-semibold leading-snug text-foreground";
 const RECENT_RECORD_SNAPSHOT_EVENT = "athyper:recent-record-snapshot";
+
+function plainRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function textConfig(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function stringArrayConfig(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+}
+
+function booleanConfig(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function normalizeLifecycleValue(value: unknown): string {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+function configuredLifecycleStages(entity: CompiledEntity): Record<string, unknown>[] {
+  const displayConfig = displayConfigRecord(entity);
+  const documentHeader = documentHeaderRecord(entity);
+  const rawStages = Array.isArray(documentHeader.lifecycle_stages)
+    ? documentHeader.lifecycle_stages
+    : displayConfig.lifecycle_stages;
+  return Array.isArray(rawStages)
+    ? rawStages.map(plainRecord).filter((stage): stage is Record<string, unknown> => Boolean(stage))
+    : [];
+}
+
+function lifecycleStageValue(stage: Record<string, unknown>): string | undefined {
+  return textConfig(stage.key)
+    ?? textConfig(stage.code)
+    ?? textConfig(stage.value)
+    ?? textConfig(stage.status);
+}
+
+function lifecycleStageEditable(stage: Record<string, unknown>): boolean | undefined {
+  const explicitEditable =
+    booleanConfig(stage.editable)
+    ?? booleanConfig(stage.is_editable)
+    ?? booleanConfig(stage.allows_edit)
+    ?? booleanConfig(stage.allow_edit);
+  if (explicitEditable !== undefined) return explicitEditable;
+
+  const mutability = normalizeLifecycleValue(stage.mutability);
+  if (mutability === "immutable" || mutability === "readonly" || mutability === "read_only") return false;
+  if (mutability === "mutable" || mutability === "editable") return true;
+  return undefined;
+}
+
+function configuredEditableLifecycleStatuses(entity: CompiledEntity): string[] {
+  const displayConfig = displayConfigRecord(entity);
+  const documentHeader = documentHeaderRecord(entity);
+  return stringArrayConfig(documentHeader.editable_statuses ?? displayConfig.editable_statuses)
+    .map(normalizeLifecycleValue)
+    .filter(Boolean);
+}
+
+function immutableLifecycleViewOnlyReason(
+  entity: CompiledEntity,
+  data: Record<string, unknown>,
+): ViewOnlyReason | null {
+  const statusValue = configuredStatusFieldNames(entity)
+    .map((fieldName) => fieldValueByName(entity, data, fieldName))
+    .find((value) => value !== undefined && value !== null && value !== "");
+  const normalizedStatus = normalizeLifecycleValue(statusValue);
+  if (!normalizedStatus) return null;
+
+  const stages = configuredLifecycleStages(entity);
+  const stage = stages.find((item) => normalizeLifecycleValue(lifecycleStageValue(item)) === normalizedStatus);
+  const stageEditable = stage ? lifecycleStageEditable(stage) : undefined;
+  const editableStatuses = configuredEditableLifecycleStatuses(entity);
+  const editableByConfiguredSet = editableStatuses.length > 0
+    ? editableStatuses.includes(normalizedStatus)
+    : undefined;
+
+  if (stageEditable !== false && editableByConfiguredSet !== false) return null;
+
+  const label = textConfig(stage?.label) ?? titleCase(normalizedStatus.replace(/_/g, " "));
+  const entityLabel = entity.entity_name.replace(/_/g, " ");
+  return {
+    label:   `${label} - view only`,
+    tooltip: `${label} ${entityLabel} cannot be edited in its current lifecycle state.`,
+  };
+}
 
 function recentEntityLabel(entity: CompiledEntity): string {
   return titleCase((entity.entity_name || entity.entity_code).replace(/[_-]+/g, " ").toLowerCase());
@@ -138,7 +241,7 @@ function OverviewRenderer({
 }) {
   const kpiItems = (config.header_facts ?? []).slice(0, 4).map((fieldName) => {
     const field      = entity.fields.find((f) => f.name === fieldName);
-    const fieldValue = data[fieldName] ?? (field?.column_name ? data[field.column_name] : undefined);
+    const fieldValue = field ? extractFieldValue(data, field) : data[fieldName];
     return {
       label: field?.label ?? titleCase(fieldName),
       value: formatValue(fieldValue, field),
@@ -255,8 +358,13 @@ function OverviewRenderer({
 
 // ── Fields renderer — view mode (read-only field grid) ────────────────────────
 
-const VIEW_SKIP_FIELD_NAMES = new Set(["code", "name", "status"]);
-const EDIT_SKIP_FIELD_NAMES = new Set(["code", "status"]);
+function configuredDetailSkipNames(entity: CompiledEntity): Set<string> {
+  const audit = configuredAuditFieldNames(entity);
+  return new Set([
+    ...configuredIdentityFieldNames(entity),
+    ...Object.values(audit).filter((value): value is string => typeof value === "string"),
+  ]);
+}
 
 function FieldsRenderer({
   entity,
@@ -268,10 +376,12 @@ function FieldsRenderer({
   displayFieldNames?:  string[];
 }) {
   const { field_groups, fields } = entity;
+  const skipNames = configuredDetailSkipNames(entity);
 
   const displayFields = fields
     .filter((f) =>
-      !VIEW_SKIP_FIELD_NAMES.has(f.name) &&
+      !skipNames.has(f.name) &&
+      !fieldHiddenInSurface(f, "detail") &&
       f.origin !== "system" &&
       f.data_type !== "lifecycle_state" &&
       (displayFieldNames ? displayFieldNames.includes(f.name) : true),
@@ -317,7 +427,7 @@ function FieldsRenderer({
                   <FieldCell
                     key={field.name}
                     field={field}
-                    value={data[field.name] ?? data[field.column_name ?? ""]}
+                    value={extractFieldValue(data, field)}
                   />
                 ))}
               </div>
@@ -332,7 +442,7 @@ function FieldsRenderer({
                   <FieldCell
                     key={field.name}
                     field={field}
-                    value={data[field.name] ?? data[field.column_name ?? ""]}
+                    value={extractFieldValue(data, field)}
                   />
                 ))}
               </div>
@@ -352,7 +462,7 @@ function FieldsRenderer({
               <FieldCell
                 key={field.name}
                 field={field}
-                value={data[field.name] ?? data[field.column_name ?? ""]}
+                value={extractFieldValue(data, field)}
               />
             ))}
           </div>
@@ -360,6 +470,26 @@ function FieldsRenderer({
       </Card>
     </div>
   );
+}
+
+/**
+ * Extracts the raw field value from a record, correctly handling fields whose
+ * physical column_name is "metadata" (JSONB). For those fields the logical
+ * field.name is the key inside the metadata object, not a top-level key.
+ */
+function extractFieldValue(data: Record<string, unknown>, field: EntityField): unknown {
+  const direct = data[field.name];
+  if (direct !== undefined) return direct;
+
+  if (field.column_name === "metadata") {
+    const meta = data["metadata"];
+    if (meta !== null && typeof meta === "object" && !Array.isArray(meta)) {
+      return (meta as Record<string, unknown>)[field.name] ?? null;
+    }
+    return null;
+  }
+
+  return data[field.column_name ?? ""] ?? null;
 }
 
 function FieldCell({ field, value }: { field: EntityField; value: unknown }) {
@@ -390,6 +520,7 @@ function InlineEditSection({
   displayFieldNames?: string[];
 }) {
   const { fields, field_groups } = entity;
+  const skipNames = configuredDetailSkipNames(entity);
 
   const editableFields = fields
     .filter(
@@ -397,7 +528,8 @@ function InlineEditSection({
         !f.is_readonly &&
         f.origin !== "system" &&
         f.data_type !== "lifecycle_state" &&
-        !EDIT_SKIP_FIELD_NAMES.has(f.name) &&
+        !skipNames.has(f.name) &&
+        !fieldHiddenInSurface(f, "edit") &&
         (displayFieldNames ? displayFieldNames.includes(f.name) : true),
     )
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
@@ -426,7 +558,7 @@ function InlineEditSection({
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {flds.map((field) => {
         const Renderer = resolveFieldRenderer(field);
-        const val = formData[field.name] ?? formData[field.column_name ?? ""];
+        const val = extractFieldValue(formData, field);
         return (
           <div key={field.name} className="space-y-1.5">
             <Label>
@@ -556,8 +688,7 @@ function ChildEntityPanel({
       }
       const created = await res.json() as Record<string, unknown>;
 
-      // Step 2 (two-step only): create the polymorphic link record.
-      // e.g. bank_account_link with owner_type='supplier', owner_id=supplierUuid, bank_account_id=newId
+      // Step 2 (two-step only): create the configured polymorphic link record.
       if (linkEntityCode && linkOwnerType) {
         const newId   = String(created["id"] ?? "");
         const linkRes = await fetch(`/api/relay/api/records/${encodeURIComponent(linkEntityCode)}`, {
@@ -1147,6 +1278,7 @@ export function MasterDetailPage({
 }: MasterDetailPageProps) {
   const router         = useRouter();
   const data           = record.data;
+  const auditFieldNames = configuredAuditFieldNames(entity);
   const updateMutation = useUpdateEntity(entity.entity_code, recordId);
   const config         = resolveMasterConfig(entity);
   const formRef        = useRef<EntityFormHandle>(null);
@@ -1167,6 +1299,9 @@ export function MasterDetailPage({
   // Checked once here; passed to every content renderer.
   const viewOnlyReason = useMemo((): ViewOnlyReason | null => {
     if (editMode) return null;
+    const lifecycleReason = immutableLifecycleViewOnlyReason(entity, data);
+    if (lifecycleReason) return lifecycleReason;
+
     const editOp = (operations ?? []).find(
       (op) =>
         (op.surface === "DETAIL" || op.surface === "BOTH") &&
@@ -1174,17 +1309,7 @@ export function MasterDetailPage({
     );
     if (editOp?.is_enabled) return null;
 
-    const statusField = entity.display_config.status_field_names?.[0] ?? "status";
-    const statusVal   = String(data[statusField] ?? "active").toLowerCase();
-    const IMMUTABLE   = new Set(["archived", "inactive", "cancelled", "closed", "terminated", "voided", "deleted"]);
     const entityLabel = entity.entity_name.replace(/_/g, " ");
-
-    if (IMMUTABLE.has(statusVal)) {
-      return {
-        label:   `${titleCase(statusVal)} · view only`,
-        tooltip: `${titleCase(statusVal)} ${entityLabel} cannot be edited. Reactivate to make changes.`,
-      };
-    }
     return {
       label:   "View only",
       tooltip: `You do not have permission to edit this ${entityLabel}.`,
@@ -1307,6 +1432,7 @@ export function MasterDetailPage({
     entityCode: entity.entity_code,
     recordId,
     recordUuid: record.id,
+    statusFieldName: configuredStatusFieldNames(entity)[0],
   });
 
   function handleAction(actionId: string) {
@@ -1321,6 +1447,7 @@ export function MasterDetailPage({
         const activeTabDef = rawTabs.find((t) => t.id === activeTab);
         if (activeTabDef?.renderer === "composite") {
           // Composite tabs use lifted editFormData — submit directly.
+          const skipNames = configuredDetailSkipNames(entity);
           const editableNames = new Set(
             entity.fields
               .filter(
@@ -1328,7 +1455,8 @@ export function MasterDetailPage({
                   !f.is_readonly &&
                   f.origin !== "system" &&
                   f.data_type !== "lifecycle_state" &&
-                  !EDIT_SKIP_FIELD_NAMES.has(f.name),
+                  !skipNames.has(f.name) &&
+                  !fieldHiddenInSurface(f, "edit"),
               )
               .map((f) => f.name),
           );
@@ -1665,10 +1793,10 @@ export function MasterDetailPage({
           {activePanel === "activity" && (
             <>
               <AuditMetaCard
-                createdAt={data["created_at"]}
-                createdBy={data["created_by"]}
-                updatedAt={data["updated_at"]}
-                updatedBy={data["updated_by"]}
+                createdAt={auditFieldNames.createdAt ? data[auditFieldNames.createdAt] : undefined}
+                createdBy={auditFieldNames.createdBy ? data[auditFieldNames.createdBy] : undefined}
+                updatedAt={auditFieldNames.updatedAt ? data[auditFieldNames.updatedAt] : undefined}
+                updatedBy={auditFieldNames.updatedBy ? data[auditFieldNames.updatedBy] : undefined}
               />
               <EventsPanel
                 entityCode={entity.entity_code}
@@ -1700,8 +1828,14 @@ export function SimpleDetailPage({
 }: SimpleDetailPageProps) {
   const router         = useRouter();
   const updateMutation = useUpdateEntity(entityCode, recordId);
-  const opDispatch     = useOperationDispatch({ entityCode, recordId, recordUuid: record.id });
+  const opDispatch     = useOperationDispatch({
+    entityCode,
+    recordId,
+    recordUuid: record.id,
+    statusFieldName: configuredStatusFieldNames(entity)[0],
+  });
   const data         = record.data as Record<string, unknown>;
+  const auditFieldNames = configuredAuditFieldNames(entity);
   const masterConfig = resolveMasterConfig(entity);
   const formConfig   = resolveFormConfig(entity);
   // Single Overview tab — all fields displayed together
@@ -1818,11 +1952,11 @@ export function SimpleDetailPage({
     }
 
     if (id === "__copy") {
-      const SKIP = new Set(["id", "code", "status", "created_at", "updated_at", "created_by", "updated_by"]);
+      const skipNames = configuredDetailSkipNames(entity);
       const copyData = Object.fromEntries(
         entity.fields
-          .filter((f) => f.origin !== "system" && !f.is_readonly && f.data_type !== "lifecycle_state" && !SKIP.has(f.name))
-          .map((f) => [f.name, data[f.name] ?? data[f.column_name ?? ""]])
+          .filter((f) => editableEntityField(f) && !skipNames.has(f.name) && !fieldExcludedFromCopy(f))
+          .map((f) => [f.name, extractFieldValue(data, f)])
           .filter(([, v]) => v !== undefined && v !== null),
       );
       void (async () => {
@@ -1833,7 +1967,7 @@ export function SimpleDetailPage({
         });
         if (!res.ok) return;
         const created = await res.json() as Record<string, unknown>;
-        const newId = String(created["code"] ?? created["id"] ?? "");
+        const newId = String(created["id"] ?? "");
         router.push(newId ? `/app/${entityCode}/${encodeURIComponent(newId)}` : `/app/${entityCode}`);
       })();
       return;
@@ -1912,7 +2046,7 @@ export function SimpleDetailPage({
                           </p>
                           <div className="text-sm text-foreground leading-snug">
                             <Renderer
-                              value={data[field.name] ?? data[field.column_name ?? ""]}
+                              value={extractFieldValue(data, field)}
                               field={field}
                               mode="view"
                             />
@@ -1945,10 +2079,10 @@ export function SimpleDetailPage({
           {activePanel === "activity" && (
             <>
               <AuditMetaCard
-                createdAt={data["created_at"]}
-                createdBy={data["created_by"]}
-                updatedAt={data["updated_at"]}
-                updatedBy={data["updated_by"]}
+                createdAt={auditFieldNames.createdAt ? data[auditFieldNames.createdAt] : undefined}
+                createdBy={auditFieldNames.createdBy ? data[auditFieldNames.createdBy] : undefined}
+                updatedAt={auditFieldNames.updatedAt ? data[auditFieldNames.updatedAt] : undefined}
+                updatedBy={auditFieldNames.updatedBy ? data[auditFieldNames.updatedBy] : undefined}
               />
               <EventsPanel entityCode={entityCode} recordId={recordId} recordUuid={record.id} />
             </>

@@ -5,6 +5,12 @@ import { Lock } from "lucide-react";
 import { DrawerShell } from "@athyper/ui/primitives";
 import { formatBytes } from "@athyper/runtime-shared/core";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
+import {
+  configuredCodeFieldName,
+  configuredSubtitleFieldName,
+  configuredTitleFieldName,
+  fieldValueByName,
+} from "../metadata/fieldSemantics";
 
 const PANEL_LABELS: Record<string, string> = {
   comments:    "Comments",
@@ -45,44 +51,19 @@ function titleCaseEntityName(entityName: string): string {
   return entityName.toUpperCase().replace(/_/g, " ");
 }
 
-function firstText(data: Record<string, unknown>, fieldNames: Array<string | undefined>): string | undefined {
-  for (const fieldName of fieldNames) {
-    if (!fieldName) continue;
-    const value = text(data[fieldName]);
-    if (value) return value;
-  }
-  return undefined;
-}
-
 function resolveIdentitySubtitle(
   entity: CompiledEntity,
   data: Record<string, unknown>,
   recordId: string,
   identityName?: string | null,
 ): string {
-  const displayConfig = entity.display_config;
-  const documentHeader = displayConfig?.document_header;
-
-  const numberField = documentHeader?.number_field ?? displayConfig?.code_field;
-  const number = firstText(data, [
-    numberField,
-    "document_no",
-    "code",
-    "number",
-  ]) ?? recordId;
-
-  const title = text(identityName) ?? firstText(data, [
-    documentHeader?.title_field,
-    documentHeader?.party_name_field,
-    displayConfig?.title_field !== numberField ? displayConfig?.title_field : undefined,
-    displayConfig?.subtitle_field,
-    "name",
-    "display_name",
-    "description",
-    "supplier_name",
-    "customer_name",
-    "party_name",
-  ]);
+  const numberField = configuredCodeFieldName(entity);
+  const titleField = configuredTitleFieldName(entity);
+  const subtitleField = configuredSubtitleFieldName(entity);
+  const number = text(fieldValueByName(entity, data, numberField)) ?? recordId;
+  const title = text(identityName)
+    ?? text(fieldValueByName(entity, data, titleField !== numberField ? titleField : undefined))
+    ?? text(fieldValueByName(entity, data, subtitleField));
 
   if (!title || title === number) return number;
   return `${number} · ${title}`;

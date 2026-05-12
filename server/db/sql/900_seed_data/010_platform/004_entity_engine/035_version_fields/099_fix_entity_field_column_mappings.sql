@@ -694,6 +694,23 @@ WHERE  ef.entity_version_id = ev.id
   AND  ev.version_no = 1
   AND  ef.name = fu.field_name;
 
+WITH cost_center_dimension_lookup(field_name, lookup_config) AS (
+  VALUES
+    ('profit_center_id'::text, '{"search_fields":["code","name"],"filters":{"status":"active"},"dependent_filter":{"source_field":"company_code_id","target_field":"company_code_id","empty_behavior":"empty"}}'::jsonb),
+    ('site_id'::text,          '{"search_fields":["code","name"],"filters":{"status":"active"},"dependent_filter":{"source_field":"company_code_id","target_field":"company_code_id","empty_behavior":"empty"}}'::jsonb)
+)
+UPDATE control.entity_field ef
+SET    lookup_config = ccd.lookup_config,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+FROM   control.entity_version ev
+JOIN   control.entity e ON e.id = ev.entity_id
+JOIN   cost_center_dimension_lookup ccd ON true
+WHERE  ef.entity_version_id = ev.id
+  AND  e.tenant_id IS NULL
+  AND  e.name = 'cost_center'
+  AND  ev.version_no = 1
+  AND  ef.name = ccd.field_name;
 
 RAISE NOTICE '035_version_fields/099_fix_entity_field_column_mappings: done';
 END $$;

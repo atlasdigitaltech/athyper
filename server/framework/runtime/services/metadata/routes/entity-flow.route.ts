@@ -429,6 +429,9 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
               help_text:            sec.help_text ? String(sec.help_text) : null,
               fields:               sectionFields,
               child_fields:         childFields,
+              // field_codes exposed as intake_fields so InvoiceIntakeLinesGrid
+              // knows which columns to render in the inline grid.
+              intake_fields:        rawFieldCodes.length > 0 ? rawFieldCodes : null,
             };
           });
 

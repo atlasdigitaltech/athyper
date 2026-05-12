@@ -26,56 +26,22 @@ import type {
 } from "@athyper/api-contracts/documents";
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 import { POSITIVE, IN_FLIGHT, NEGATIVE, statusToIntent, titleCase } from "@athyper/runtime-shared/core";
+import {
+  asConfigRecord,
+  normalizeStatusKey,
+  resolveDocumentActionPresentation,
+  textConfig,
+  type DocumentActionPresentationConfig,
+} from "../documentRuntimeDefaults";
 
 type Intent = SemanticIntent | "primary" | "accent" | "muted";
 
 // ── Action code heuristics ──────────────────────────────────────────────────
 
-const DESTRUCTIVE_CODES = new Set([
-  "cancel", "reverse", "void", "delete", "archive", "remove",
-  "reject", "deny", "revoke", "suspend",
-  "cancel_document", "reverse_document", "void_document",
-]);
-
-const CONFIRMATION_CODES = new Set([
-  "submit", "approve", "deny", "reject", "post", "reverse",
-  "cancel", "void", "delete", "hold", "release_hold",
-  "cancel_document", "reverse_document", "void_document",
-]);
-
-const PLACEMENT_TO_GROUP: Record<string, ActionBundleGroup> = {
-  PRIMARY: "primary",
-  TOOLBAR: "working",
-  OVERFLOW: "overflow",
-  CONTEXT: "overflow",
-};
-
-const ACTION_LABEL_OVERRIDES: Record<string, string> = {
-  update:           "Edit",
-  cancel_document:  "Cancel",
-  reverse_document: "Reverse",
-  void_document:    "Void",
-};
-
 // ── Built-in status-driven action groups ────────────────────────────────────
 // Applied automatically for any entity with detail_renderer = "document"
 // when no entity-specific action_groups is found in display_config.
 // Entity-specific config (display_config.action_groups) overrides this entirely.
-
-const DOCUMENT_STATUS_GROUPS: ActionGroupsConfig = {
-  draft:            { primary: ["edit", "submit"],          working: ["cancel_document"] },
-  submitted:        { primary: ["approve", "reject"],       working: ["cancel_document"] },
-  pending_approval: { primary: ["approve", "reject"],       working: ["cancel_document"] },
-  in_review:        { primary: ["approve", "reject"],       working: ["cancel_document"] },
-  on_hold:          { primary: ["release_hold"],            working: ["cancel_document"] },
-  approved:         { primary: ["post"],                    working: ["propose_payment", "cancel_document"], output: ["view_je"] },
-  posted:           { primary: ["propose_payment"],         working: ["allocate_payment"],          output: ["view_je"] },
-  partially_paid:   { primary: ["propose_payment"],         working: ["allocate_payment"],          output: ["view_je"] },
-  paid:             { output: ["view_je"] },
-  cancelled:        {},
-  rejected:         { working: ["copy"] },
-  reversed:         { working: ["copy"] },
-};
 
 // ── Amount coercion (val → number for arithmetic, not display) ───────────────
 
@@ -93,6 +59,16 @@ export interface OrchestratorData {
   actionBundle: ActionBundleItem[];
   validationNotices: ValidationNotice[];
   blockedReasons: string[];
+}
+
+type DocumentHeaderConfig = CompiledEntity["display_config"]["document_header"] & Record<string, unknown>;
+
+function headerField(dh: DocumentHeaderConfig | undefined, key: string): string | undefined {
+  return textConfig(asConfigRecord(dh)?.[key]);
+}
+
+function hasConfiguredValue(data: Record<string, unknown>, fieldName: string | undefined): boolean {
+  return Boolean(fieldName) && data[fieldName!] !== undefined && data[fieldName!] !== null;
 }
 
 // ── Main builder ────────────────────────────────────────────────────────────
@@ -113,12 +89,13 @@ export function buildOrchestratorFromRecord(
 ): OrchestratorData {
   const dh = entity.display_config.document_header;
   const flags = entity.feature_flags ?? {};
+  const displayConfig = entity.display_config as Record<string, unknown>;
 
   // Resolve the canonical status value
   const statusRaw = recordStatus
     ?? (dh?.status_field ? String(data[dh.status_field] ?? "") : "")
     ?? "";
-  const statusNorm = statusRaw.toLowerCase().replace(/[\s-]/g, "_");
+  const statusNorm = normalizeStatusKey(statusRaw);
 
   // ── Status Dimensions ───────────────────────────────────────────────────
   const statusDimensions = buildStatusDimensions(statusNorm, flags, data, dh);
@@ -130,9 +107,11 @@ export function buildOrchestratorFromRecord(
   const amountBreakdown = buildAmountBreakdown(data, dh);
 
   // ── Action Bundle ───────────────────────────────────────────────────────
-  const actionGroups = (entity.display_config.action_groups as ActionGroupsConfig | undefined)
-    ?? (entity.display_config.detail_renderer === "document" ? DOCUMENT_STATUS_GROUPS : undefined);
-  const actionBundle = buildActionBundle(operations, statusNorm, actionGroups);
+  const actionPresentation = resolveDocumentActionPresentation(
+    displayConfig,
+    entity.display_config.detail_renderer === "document",
+  );
+  const actionBundle = buildActionBundle(operations, statusNorm, actionPresentation);
 
   return {
     statusDimensions,
@@ -150,7 +129,7 @@ function buildStatusDimensions(
   statusNorm: string,
   flags: CompiledEntity["feature_flags"],
   data: Record<string, unknown>,
-  dh: CompiledEntity["display_config"]["document_header"],
+  dh: DocumentHeaderConfig | undefined,
 ): StatusDimension[] {
   const dims: StatusDimension[] = [];
 
@@ -164,8 +143,10 @@ function buildStatusDimensions(
   });
 
   // 2. Accounting — when entity has accounting distributions
-  if (flags?.has_accounting_distribution || POSITIVE.has("posted") && data["is_posted"] != null) {
-    const isPosted = data["is_posted"] === true || data["is_posted"] === "true";
+  const accountingPostedField = headerField(dh, "accounting_posted_field");
+  if (flags?.has_accounting_distribution || hasConfiguredValue(data, accountingPostedField)) {
+    const rawPosted = accountingPostedField ? data[accountingPostedField] : undefined;
+    const isPosted = rawPosted === undefined ? POSITIVE.has(statusNorm) : rawPosted === true || rawPosted === "true";
     dims.push({
       dimension: "accounting",
       label: "Accounting",
@@ -176,10 +157,17 @@ function buildStatusDimensions(
   }
 
   // 3. Settlement — when entity has payment fields
-  if (flags?.has_payment_schedule || data["paid_amount"] != null || data["outstanding_amount"] != null) {
-    const paid = coerceAmount(data["paid_amount"]);
-    const payable = coerceAmount(data["payable_amount"]);
-    const outstanding = coerceAmount(data["outstanding_amount"]);
+  const paidAmountField = headerField(dh, "paid_amount_field");
+  const payableAmountField = headerField(dh, "payable_amount_field");
+  const outstandingAmountField = headerField(dh, "outstanding_amount_field");
+  if (
+    flags?.has_payment_schedule ||
+    hasConfiguredValue(data, paidAmountField) ||
+    hasConfiguredValue(data, outstandingAmountField)
+  ) {
+    const paid = coerceAmount(paidAmountField ? data[paidAmountField] : undefined);
+    const payable = coerceAmount(payableAmountField ? data[payableAmountField] : undefined);
+    const outstanding = coerceAmount(outstandingAmountField ? data[outstandingAmountField] : undefined);
 
     let settlementCode = "unpaid";
     let settlementLabel = "Unpaid";
@@ -205,8 +193,9 @@ function buildStatusDimensions(
   }
 
   // 4. Matching — when entity has match status
-  if (data["match_status"] != null) {
-    const matchStatus = String(data["match_status"]).toLowerCase().replace(/[\s-]/g, "_");
+  const matchStatusField = headerField(dh, "match_status_field");
+  if (hasConfiguredValue(data, matchStatusField)) {
+    const matchStatus = normalizeStatusKey(data[matchStatusField!]);
     dims.push({
       dimension: "matching",
       label: "Reconciliation",
@@ -282,11 +271,11 @@ function buildHealthTiles(
 
 function buildAmountBreakdown(
   data: Record<string, unknown>,
-  dh: CompiledEntity["display_config"]["document_header"],
+  dh: DocumentHeaderConfig | undefined,
 ): AmountBreakdownLine[] {
   if (!dh) return [];
 
-  const currency = dh.currency_field ? String(data[dh.currency_field] ?? "USD") : "USD";
+  const currency = dh.currency_field ? String(data[dh.currency_field] ?? "") : "";
   const lines: AmountBreakdownLine[] = [];
 
   // Subtotal
@@ -322,11 +311,11 @@ function buildAmountBreakdown(
     });
   }
 
-  // Outstanding (common DDL pattern)
-  if (data["outstanding_amount"] != null) {
-    const outstanding = coerceAmount(data["outstanding_amount"]);
+  const outstandingAmountField = headerField(dh, "outstanding_amount_field");
+  if (hasConfiguredValue(data, outstandingAmountField)) {
+    const outstanding = coerceAmount(data[outstandingAmountField!]);
     lines.push({
-      label: "Outstanding",
+      label: headerField(dh, "outstanding_label") ?? "Outstanding",
       amount: outstanding,
       currency_code: currency,
       is_total: false,
@@ -340,31 +329,11 @@ function buildAmountBreakdown(
 
 // ── Action Bundle ────────────────────────────────────────────────────────────
 
-type ActionGroupsConfig = Record<string, {
-  primary?: string[];
-  working?: string[];
-  output?: string[];
-}>;
-
-const ACTION_CODE_ALIASES: Record<string, string[]> = {
-  complete:         ["submit"],
-  update:           ["edit"],
-  edit:             ["update"],
-  cancel:           ["cancel_document"],
-  cancel_document:  ["cancel"],
-  deny:             ["reject"],
-  reject:           ["deny"],
-  reverse:          ["reverse_document"],
-  reverse_document: ["reverse"],
-  void:             ["void_document"],
-  void_document:    ["void"],
-};
-
-function expandActionCodes(codes: string[] | undefined): Set<string> {
+function expandActionCodes(codes: string[] | undefined, aliases: Record<string, string[]>): Set<string> {
   const expanded = new Set<string>();
   for (const code of codes ?? []) {
     expanded.add(code);
-    for (const alias of ACTION_CODE_ALIASES[code] ?? []) {
+    for (const alias of aliases[code] ?? []) {
       expanded.add(alias);
     }
   }
@@ -374,7 +343,7 @@ function expandActionCodes(codes: string[] | undefined): Set<string> {
 function buildActionBundle(
   operations: EntityOperation[],
   statusNorm: string,
-  actionGroups?: ActionGroupsConfig,
+  actionPresentation: DocumentActionPresentationConfig,
 ): ActionBundleItem[] {
   const items: ActionBundleItem[] = operations
     .filter((op) => op.is_enabled)
@@ -386,33 +355,33 @@ function buildActionBundle(
         ? op.permission_code.split(".").pop()!
         : op.permission_code;
 
-      const isOutputAction = ["export", "print"].includes(code);
+      const isOutputAction = actionPresentation.outputCodes.has(code);
       const group: ActionBundleGroup =
         isOutputAction && op.placement === "TOOLBAR"
           ? "output"
-          : PLACEMENT_TO_GROUP[op.placement] ?? "overflow";
+          : actionPresentation.placementToGroup[op.placement] ?? "overflow";
 
       return {
         action_code: code,
-        label: op.label_override ?? ACTION_LABEL_OVERRIDES[code] ?? titleCase(code),
+        label: op.label_override ?? actionPresentation.labelOverrides[code] ?? titleCase(code),
         group,
         icon_key: op.icon_override,
-        is_destructive: DESTRUCTIVE_CODES.has(code),
+        is_destructive: actionPresentation.destructiveCodes.has(code),
         is_disabled: false,
         disabled_reason: null,
         sort_order: op.sort_order,
-        requires_confirmation: CONFIRMATION_CODES.has(code) || op.handler_type === "MODAL",
+        requires_confirmation: actionPresentation.confirmationCodes.has(code) || op.handler_type === "MODAL",
       };
     });
 
   // Apply status-driven group override when action_groups config is present.
   // Operations not listed for the current status are demoted to "overflow".
-  const statusConfig = actionGroups?.[statusNorm];
+  const statusConfig = actionPresentation.groupsByStatus?.[statusNorm];
   if (!statusConfig) return items;
 
-  const primaryCodes = expandActionCodes(statusConfig.primary);
-  const workingCodes = expandActionCodes(statusConfig.working);
-  const outputCodes  = expandActionCodes(statusConfig.output);
+  const primaryCodes = expandActionCodes(statusConfig.primary, actionPresentation.aliases);
+  const workingCodes = expandActionCodes(statusConfig.working, actionPresentation.aliases);
+  const outputCodes  = expandActionCodes(statusConfig.output, actionPresentation.aliases);
   const allListed    = new Set([...primaryCodes, ...workingCodes, ...outputCodes]);
 
   return items

@@ -3,12 +3,12 @@
 /**
  * ClassificationDecisionPanel
  *
- * Renders the full classification_decision JSONB result for a purchase invoice
- * or requisition line. Shows:
- *   • Status badge (resolved / needs_review / blocked)
+ * Renders the configured classification decision JSONB result for a document
+ * line. Shows:
+ *   • Metadata-configured status badge
  *   • Suggestion chips
  *   • Resolved domain / intent / profile / confidence
- *   • Policy flags (CAPEX threshold, HS, cross-border, regulated)
+ *   • Metadata-configured policy flags
  *   • Blockers banner
  *   • Explanations
  *   • Override entries
@@ -16,67 +16,57 @@
  *   • Inline override-reason dialog
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
 import {
-  CheckCircle2, AlertTriangle, XCircle, Zap,
+  AlertTriangle, CheckCircle2, XCircle, Zap,
   ChevronRight, RefreshCw, Pencil, Info,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { relayMutate } from "@athyper/runtime-shared/client";
+import {
+  CLASSIFICATION_FALLBACK_DOMAIN_CLASS,
+  classificationMethodPresentation,
+  classificationStatusPresentation,
+  resolveClassificationConfig,
+  type ClassificationConfig,
+  type ClassificationPolicyBadgeVariant,
+  type ClassificationStatusIconKey,
+} from "./classificationPresentation";
 
 // ── Types (mirrors ClassificationDecision.zod.ts — no runtime dep on server Zod) ─
 
-type DecisionStatus = "resolved" | "needs_review" | "blocked";
-type Domain = "OPEX" | "CAPEX" | "REVENUE" | "COST_OF_SALES"
-            | "TRANSFER" | "REGULATORY" | "ADMIN" | "DEFERRED_REVENUE";
+type DecisionStatus = string;
+type Domain = string;
 
 interface Suggestion {
-  field: "spend_category_id";
+  field: string;
   id: string;
   code: string;
   name: string;
   confidence: number;
-  source: "item" | "commodity" | "trigram" | "history";
+  source: string;
 }
-
-interface LineCommodityCode { domain_code: string; code: string; label: string; }
 
 interface ClassificationDecision {
   version: 1;
   status: DecisionStatus;
   pipeline_id: string;
-  mode: "preview" | "save";
+  mode: string;
   flow_code: string | null;
   document_type: string;
   suggestions: Suggestion[];
-  selected: {
-    spend_category_id: string | null;
-    business_intent_id: string | null;
-    profile_config_id: string | null;
-    line_commodity_code: LineCommodityCode | null;
-  };
+  selected: Record<string, unknown>;
   resolved: {
     domain: Domain | null;
-    intent_method: "RULE_MATCH" | "CLASSIFICATION_DEFAULT" | "FAILED";
+    intent_method: string;
     intent_rule_id: string | null;
-    profile_method: "OVERRIDE" | "RULE_MATCH" | "FAILED";
+    profile_method: string;
     profile_rule_id: string | null;
     confidence: number;
     tax_group_resolved_via: string;
     wht_group_resolved_via: string;
   };
-  policy: {
-    mapping_mode: "ALLOW" | "DENY";
-    visibility: string;
-    classification_required: boolean;
-    hs_required: boolean;
-    is_regulated: boolean;
-    is_cross_border: boolean;
-    asset_tagging_required: boolean;
-    capex_threshold: number | null;
-    capex_threshold_breached: boolean;
-    source_company_code_id: string | null;
-  };
+  policy: Record<string, unknown>;
   explanations: string[];
   overrides: Array<{
     field: string;
@@ -101,7 +91,7 @@ function isFullDecision(d: unknown): d is ClassificationDecision {
 // ── Prop types ────────────────────────────────────────────────────────────────
 
 export interface ClassificationDecisionPanelProps {
-  /** Raw line record — classification_decision lives here. */
+  /** Raw line record; persisted decision field is configured by metadata. */
   line: Record<string, unknown>;
   entityCode: string;
   recordId: string;
@@ -111,41 +101,16 @@ export interface ClassificationDecisionPanelProps {
   previewDecision?: Record<string, unknown> | null;
   /** If true, a preview call is in flight. */
   isPreviewing?: boolean;
+  classificationConfig?: ClassificationConfig | Record<string, unknown> | null;
+  decisionField?: string;
+  lineIdField?: string;
+  classificationRequiredField?: string;
+  classifyEndpointTemplate?: string;
+  saveMode?: string;
+  previewMode?: string;
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
-
-const STATUS_CFG = {
-  resolved: {
-    icon: CheckCircle2,
-    label: "Resolved",
-    pill: "bg-success/10 text-success border-success/20",
-    iconCls: "text-success",
-  },
-  needs_review: {
-    icon: AlertTriangle,
-    label: "Needs review",
-    pill: "bg-warning/10 text-warning border-warning/20",
-    iconCls: "text-warning",
-  },
-  blocked: {
-    icon: XCircle,
-    label: "Blocked",
-    pill: "bg-destructive/10 text-destructive border-destructive/20",
-    iconCls: "text-destructive",
-  },
-} as const;
-
-const DOMAIN_COLORS: Record<string, string> = {
-  OPEX:           "bg-info/10 text-info border-info/20",
-  CAPEX:          "bg-accent/20 text-accent-foreground border-accent/30",
-  REGULATORY:     "bg-warning/10 text-warning border-warning/20",
-  COST_OF_SALES:  "bg-muted text-foreground border-border/60",
-  TRANSFER:       "bg-muted text-foreground border-border/60",
-  REVENUE:        "bg-success/10 text-success border-success/20",
-  ADMIN:          "bg-muted text-muted-foreground border-border/50",
-  DEFERRED_REVENUE: "bg-muted text-muted-foreground border-border/50",
-};
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
@@ -166,7 +131,7 @@ function ConfidenceBar({ value }: { value: number }) {
 
 function PolicyTag({ label, active, variant = "muted" }: {
   label: string; active: boolean;
-  variant?: "muted" | "warn" | "alert";
+  variant?: ClassificationPolicyBadgeVariant;
 }) {
   if (!active) return null;
   const cls = {
@@ -181,17 +146,19 @@ function PolicyTag({ label, active, variant = "muted" }: {
   );
 }
 
-function MethodBadge({ method }: { method: string }) {
-  const m = method.toLowerCase();
-  const cls = m === "rule_match"   ? "text-success/80"
-            : m === "override"     ? "text-accent-foreground"
-            : m.includes("default") ? "text-warning/80"
-            : "text-destructive/70";
-  const label = m === "rule_match"           ? "Rule match"
-              : m === "classification_default" ? "Category default"
-              : m === "override"              ? "Override"
-              : "Failed";
-  return <span className={cn("text-2xs font-semibold", cls)}>{label}</span>;
+function classificationIcon(icon: ClassificationStatusIconKey) {
+  if (icon === "check") return CheckCircle2;
+  if (icon === "x") return XCircle;
+  return AlertTriangle;
+}
+
+function policyBadgeActive(policy: Record<string, unknown>, key: string, value: unknown): boolean {
+  return value === undefined ? Boolean(policy[key]) : policy[key] === value;
+}
+
+function MethodBadge({ method, config }: { method: string; config: ClassificationConfig }) {
+  const methodConfig = classificationMethodPresentation(config, method);
+  return <span className={cn("text-2xs font-semibold", methodConfig.className)}>{methodConfig.label}</span>;
 }
 
 // ── Override reason dialog ────────────────────────────────────────────────────
@@ -220,7 +187,7 @@ function OverrideReasonDialog({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}
-          placeholder="e.g. Agreed with finance controller — classify as CAPEX per policy memo dated 2026-04"
+          placeholder="Describe the business reason for this override"
           className={cn(
             "w-full px-3 py-2 text-xs border border-border/60 rounded-lg bg-transparent resize-none",
             "focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-transparent transition-colors",
@@ -244,28 +211,51 @@ function OverrideReasonDialog({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function ClassificationDecisionPanel({
-  line, entityCode, recordId, onRefresh, previewDecision, isPreviewing,
+  line,
+  entityCode,
+  recordId,
+  onRefresh,
+  previewDecision,
+  isPreviewing,
+  classificationConfig,
+  decisionField,
+  lineIdField,
+  classificationRequiredField,
+  classifyEndpointTemplate,
+  saveMode,
+  previewMode,
 }: ClassificationDecisionPanelProps) {
   const lineAny = line as Record<string, unknown>;
+  const resolvedConfig = resolveClassificationConfig(classificationConfig);
+  const resolvedDecisionField = decisionField ?? resolvedConfig.decisionField;
+  const resolvedLineIdField = lineIdField ?? resolvedConfig.lineIdField;
+  const resolvedRequiredField = classificationRequiredField ?? resolvedConfig.requiredInputField;
+  const resolvedEndpointTemplate = classifyEndpointTemplate ?? resolvedConfig.classifyEndpointTemplate;
+  const resolvedSaveMode = saveMode ?? resolvedConfig.saveMode;
+  const resolvedPreviewMode = previewMode ?? resolvedConfig.previewMode;
 
   // Prefer live preview decision; fall back to persisted decision on line object
-  const rawDecision = previewDecision ?? lineAny["classification_decision"];
+  const rawDecision = previewDecision ?? (resolvedDecisionField ? lineAny[resolvedDecisionField] : null);
   const decision = isFullDecision(rawDecision) ? rawDecision : null;
 
   const [classifying,  setClassifying]  = useState(false);
   const [classifyErr,  setClassifyErr]  = useState<string | null>(null);
-  const [overrideOpen, setOverrideOpen] = useState(false);
   const [showDetails,  setShowDetails]  = useState(false);
 
-  const lineId   = String(lineAny["id"] ?? "");
-  const hasLineId = lineId.length > 10;
+  const lineId   = resolvedLineIdField ? String(lineAny[resolvedLineIdField] ?? "") : "";
+  const hasLineId = lineId.trim().length > 0;
+  const canClassify = hasLineId && Boolean(resolvedEndpointTemplate);
 
-  function classifyUrl(mode: "preview" | "save") {
-    return `/api/finance/ap/invoices/${encodeURIComponent(recordId)}/lines/${encodeURIComponent(lineId)}/classify?mode=${mode}`;
+  function classifyUrl(mode?: string) {
+    return (resolvedEndpointTemplate ?? "")
+      .replace(/\{entityCode\}/g, encodeURIComponent(entityCode))
+      .replace(/\{recordId\}/g, encodeURIComponent(recordId))
+      .replace(/\{lineId\}/g, encodeURIComponent(lineId))
+      .replace(/\{mode\}/g, encodeURIComponent(mode ?? ""));
   }
 
-  async function runClassify(mode: "preview" | "save" = "save") {
-    if (!hasLineId) return;
+  async function runClassify(mode = resolvedSaveMode) {
+    if (!canClassify) return;
     setClassifying(true);
     setClassifyErr(null);
     try {
@@ -285,25 +275,25 @@ export function ClassificationDecisionPanel({
   // ── Nothing yet ──────────────────────────────────────────────────────────────
 
   if (!decision) {
-    const isEmpty = !lineAny["spend_category_id"];
+    const isEmpty = Boolean(resolvedRequiredField && !lineAny[resolvedRequiredField]);
     return (
       <div className="flex flex-col gap-3">
         <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center space-y-2">
           <Zap className="mx-auto h-5 w-5 text-muted-foreground/30" />
           <p className="text-sm font-medium text-muted-foreground">
-            {isEmpty ? "Set a spend category to classify" : "Not yet classified"}
+            {isEmpty ? "Complete the configured input to classify" : "Not yet classified"}
           </p>
           <p className="text-xs text-muted-foreground/60">
             {isEmpty
-              ? "Select a spend category on this line to trigger automatic intent and profile resolution."
+              ? "The classification pipeline is waiting for the required metadata field."
               : "The classification pipeline hasn't run on this line yet."}
           </p>
         </div>
 
-        {!isEmpty && hasLineId && (
+        {!isEmpty && canClassify && (
           <div className="flex justify-center">
             <button
-              onClick={() => void runClassify("save")}
+              onClick={() => void runClassify(resolvedSaveMode)}
               disabled={classifying}
               className="inline-flex items-center gap-1.5 h-8 px-4 text-xs font-semibold rounded-lg bg-foreground text-background hover:opacity-85 disabled:opacity-40 transition-opacity"
             >
@@ -323,9 +313,17 @@ export function ClassificationDecisionPanel({
     );
   }
 
-  const cfg = STATUS_CFG[decision.status];
-  const StatusIcon = cfg.icon;
-  const pct = Math.round(decision.resolved.confidence * 100);
+  const cfg = classificationStatusPresentation(resolvedConfig, decision.status);
+  const StatusIcon = classificationIcon(cfg.icon);
+  const policyRecord = decision.policy as unknown as Record<string, unknown>;
+  const activePolicyBadges = resolvedConfig.policyBadges.filter((badge) =>
+    policyBadgeActive(policyRecord, badge.key, badge.value),
+  );
+  const denyMappingBadge = resolvedConfig.denyMappingBadge;
+  const denyMappingActive = denyMappingBadge
+    ? policyBadgeActive(policyRecord, denyMappingBadge.key, denyMappingBadge.value)
+    : false;
+  const thresholdValue = resolvedConfig.thresholdField ? policyRecord[resolvedConfig.thresholdField] : undefined;
 
   return (
     <div className="space-y-3">
@@ -344,8 +342,8 @@ export function ClassificationDecisionPanel({
         </span>
 
         <button
-          onClick={() => void runClassify("save")}
-          disabled={classifying || isPreviewing}
+          onClick={() => void runClassify(resolvedSaveMode)}
+          disabled={!canClassify || classifying || isPreviewing}
           title="Re-run classification pipeline"
           className="inline-flex items-center gap-1 h-6 px-2 text-2xs font-semibold rounded border border-border/60 text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-40"
         >
@@ -373,7 +371,7 @@ export function ClassificationDecisionPanel({
       )}
 
       {/* ── Suggestions strip ────────────────────────────────────────────────── */}
-      {decision.suggestions.length > 0 && !decision.selected.spend_category_id && (
+      {decision.suggestions.length > 0 && !(resolvedRequiredField && (decision.selected as Record<string, unknown>)[resolvedRequiredField]) && (
         <div className="space-y-1.5">
           <span className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
             Suggested categories
@@ -400,7 +398,9 @@ export function ClassificationDecisionPanel({
             <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">Resolution</span>
             {decision.resolved.domain && (
               <span className={cn("inline-flex items-center h-5 px-2 rounded-sm text-2xs font-semibold border",
-                DOMAIN_COLORS[decision.resolved.domain] ?? "bg-muted text-foreground border-border/50"
+                resolvedConfig.domainClasses[decision.resolved.domain]
+                  ?? resolvedConfig.fallbackDomainClass
+                  ?? CLASSIFICATION_FALLBACK_DOMAIN_CLASS
               )}>
                 {decision.resolved.domain}
               </span>
@@ -411,11 +411,11 @@ export function ClassificationDecisionPanel({
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
               <div>
                 <span className="text-muted-foreground text-2xs block mb-0.5">Intent method</span>
-                <MethodBadge method={decision.resolved.intent_method} />
+                <MethodBadge method={decision.resolved.intent_method} config={resolvedConfig} />
               </div>
               <div>
                 <span className="text-muted-foreground text-2xs block mb-0.5">Profile method</span>
-                <MethodBadge method={decision.resolved.profile_method} />
+                <MethodBadge method={decision.resolved.profile_method} config={resolvedConfig} />
               </div>
               <div>
                 <span className="text-muted-foreground text-2xs block mb-0.5">Tax group via</span>
@@ -438,19 +438,26 @@ export function ClassificationDecisionPanel({
       )}
 
       {/* ── Policy badges ────────────────────────────────────────────────────── */}
-      {(decision.policy.is_cross_border || decision.policy.is_regulated ||
-        decision.policy.hs_required || decision.policy.asset_tagging_required ||
-        decision.policy.capex_threshold_breached || decision.policy.mapping_mode === "DENY") && (
+      {(activePolicyBadges.length > 0 || denyMappingActive || typeof thresholdValue === "number") && (
         <div className="flex flex-wrap gap-1.5">
-          <PolicyTag label="Cross-border" active={decision.policy.is_cross_border} variant="warn" />
-          <PolicyTag label="Regulated" active={decision.policy.is_regulated} variant="warn" />
-          <PolicyTag label="HS required" active={decision.policy.hs_required} variant="warn" />
-          <PolicyTag label="Asset tagging" active={decision.policy.asset_tagging_required} variant="muted" />
-          <PolicyTag label="CAPEX threshold ⚠" active={decision.policy.capex_threshold_breached} variant="alert" />
-          <PolicyTag label="DENY mapping" active={decision.policy.mapping_mode === "DENY"} variant="alert" />
-          {decision.policy.capex_threshold !== null && (
+          {activePolicyBadges.map((badge) => (
+            <PolicyTag
+              key={badge.key}
+              label={badge.label}
+              active
+              variant={badge.variant}
+            />
+          ))}
+          {denyMappingBadge && (
+            <PolicyTag
+              label={denyMappingBadge.label}
+              active={denyMappingActive}
+              variant={denyMappingBadge.variant}
+            />
+          )}
+          {resolvedConfig.thresholdLabel && typeof thresholdValue === "number" && (
             <span className="inline-flex items-center h-5 px-2 rounded-sm text-2xs font-semibold border bg-muted text-muted-foreground border-border/50">
-              CAPEX threshold {decision.policy.capex_threshold.toLocaleString()}
+              {resolvedConfig.thresholdLabel} {thresholdValue.toLocaleString()}
             </span>
           )}
         </div>
@@ -504,7 +511,7 @@ export function ClassificationDecisionPanel({
           {decision.pipeline_id.slice(0, 12)}…
         </span>
         <span className="text-2xs text-muted-foreground/40">
-          {decision.mode === "preview" ? "preview" : "persisted"}
+          {resolvedPreviewMode && decision.mode === resolvedPreviewMode ? resolvedPreviewMode : "persisted"}
         </span>
       </div>
 
@@ -523,10 +530,19 @@ export function ClassificationDecisionPanel({
 export interface ClassificationStatusBadgeProps {
   line: Record<string, unknown>;
   compact?: boolean;
+  classificationConfig?: ClassificationConfig | Record<string, unknown> | null;
+  decisionField?: string;
 }
 
-export function ClassificationStatusBadge({ line, compact }: ClassificationStatusBadgeProps) {
-  const raw = line["classification_decision"];
+export function ClassificationStatusBadge({
+  line,
+  compact,
+  classificationConfig,
+  decisionField,
+}: ClassificationStatusBadgeProps) {
+  const resolvedConfig = resolveClassificationConfig(classificationConfig);
+  const resolvedDecisionField = decisionField ?? resolvedConfig.decisionField;
+  const raw = resolvedDecisionField ? line[resolvedDecisionField] : null;
   if (!isFullDecision(raw)) {
     return compact ? null : (
       <span className="inline-flex items-center h-5 px-1.5 rounded text-2xs font-semibold bg-muted border border-border/50 text-muted-foreground/40 leading-none">
@@ -534,15 +550,14 @@ export function ClassificationStatusBadge({ line, compact }: ClassificationStatu
       </span>
     );
   }
-  const cfg = STATUS_CFG[raw.status];
-  const Icon = cfg.icon;
+  const cfg = classificationStatusPresentation(resolvedConfig, raw.status);
+  const Icon = classificationIcon(cfg.icon);
   if (compact) {
     return (
-      <span className={cn("inline-flex items-center justify-center w-5 h-5 rounded-full border",
-        raw.status === "resolved"     ? "bg-success/10 text-success border-success/20" :
-        raw.status === "needs_review" ? "bg-warning/10 text-warning border-warning/20"  :
-        "bg-destructive/10 text-destructive border-destructive/20",
-      )} title={cfg.label}>
+      <span
+        className={cn("inline-flex items-center justify-center w-5 h-5 rounded-full border", cfg.compactPill)}
+        title={cfg.label}
+      >
         <Icon className="h-2.5 w-2.5" />
       </span>
     );

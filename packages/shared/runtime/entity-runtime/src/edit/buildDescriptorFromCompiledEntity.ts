@@ -7,12 +7,19 @@
  *
  *   edit.fields    ← resolveFormConfig() → editable non-system fields
  *   identity       ← display_config (title_field, document_header, status_field_names)
- *   audit          ← display_config.document_header audit fields or common column names
+ *   audit          ← display_config.document_header audit fields
  *   hasLifecycle   ← feature_flags.has_lifecycle
  */
 
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import { resolveFormConfig } from "@athyper/metadata-client/compiled-reader";
+import {
+  configuredAuditFieldNames,
+  configuredCodeFieldName,
+  configuredStatusFieldNames,
+  configuredTitleFieldName,
+  editableEntityField,
+} from "../metadata/fieldSemantics";
 import type {
   EntityViewDescriptor,
   EntityAuditDescriptor,
@@ -51,63 +58,29 @@ function toTitleCase(fieldName: string): string {
 
 // ── Identity field detection ──────────────────────────────────────────────────
 
-// Generic identifier field names common across entity classes.
-// DOCUMENT entities always have display_config.document_header.number_field set —
-// these candidates only run for MASTER / REFERENCE / CONTROL entities.
-const NUMBER_FIELD_CANDIDATES = ["document_no", "code", "number", "name"];
-
 function detectNumberField(entity: CompiledEntity): string {
-  const dh = entity.display_config.document_header;
-  if (dh?.number_field) return dh.number_field;
+  const configured = configuredCodeFieldName(entity) ?? configuredTitleFieldName(entity);
+  if (configured) return configured;
 
-  const fieldNames = new Set(entity.fields.map((f) => f.name));
-  for (const candidate of NUMBER_FIELD_CANDIDATES) {
-    if (fieldNames.has(candidate)) return candidate;
-  }
-
-  if (entity.display_config.title_field) return entity.display_config.title_field;
-
-  const first = entity.fields.find((f) => f.origin !== "system" && !f.is_readonly);
+  const first = entity.fields.find(editableEntityField);
   return first?.name ?? "id";
 }
 
-const STATUS_FIELD_CANDIDATES = [
-  "status", "record_status", "lifecycle_state", "state",
-  "approval_status", "workflow_status",
-];
-
 function detectStatusField(entity: CompiledEntity): string | undefined {
-  const dh = entity.display_config.document_header;
-  if (dh?.status_field) return dh.status_field;
-
-  const names = entity.display_config.status_field_names;
-  if (names?.length) return names[0];
-
-  const fieldNames = new Set(entity.fields.map((f) => f.name));
-  return STATUS_FIELD_CANDIDATES.find((c) => fieldNames.has(c));
+  return configuredStatusFieldNames(entity)[0];
 }
 
 // ── Audit descriptor detection ────────────────────────────────────────────────
 
 function detectAuditFields(entity: CompiledEntity): EntityAuditDescriptor | undefined {
-  const dh = entity.display_config.document_header;
-
+  const configured = configuredAuditFieldNames(entity);
   const audit: EntityAuditDescriptor = {};
-
-  if (dh) {
-    if (dh.created_at_field)         audit.createdAtField         = dh.created_at_field;
-    if (dh.created_by_field)         audit.createdByField         = dh.created_by_field;
-    if (dh.updated_at_field)         audit.updatedAtField         = dh.updated_at_field;
-    if (dh.updated_by_field)         audit.updatedByField         = dh.updated_by_field;
-    if (dh.status_changed_at_field)  audit.statusChangedAtField   = dh.status_changed_at_field;
-    if (dh.status_changed_by_field)  audit.statusChangedByField   = dh.status_changed_by_field;
-  } else {
-    const fieldNames = new Set(entity.fields.map((f) => f.name));
-    if (fieldNames.has("created_at")) audit.createdAtField = "created_at";
-    if (fieldNames.has("created_by")) audit.createdByField = "created_by";
-    if (fieldNames.has("updated_at")) audit.updatedAtField = "updated_at";
-    if (fieldNames.has("updated_by")) audit.updatedByField = "updated_by";
-  }
+  if (configured.createdAt)       audit.createdAtField       = configured.createdAt;
+  if (configured.createdBy)       audit.createdByField       = configured.createdBy;
+  if (configured.updatedAt)       audit.updatedAtField       = configured.updatedAt;
+  if (configured.updatedBy)       audit.updatedByField       = configured.updatedBy;
+  if (configured.statusChangedAt) audit.statusChangedAtField = configured.statusChangedAt;
+  if (configured.statusChangedBy) audit.statusChangedByField = configured.statusChangedBy;
 
   return Object.keys(audit).length > 0 ? audit : undefined;
 }
@@ -138,7 +111,7 @@ export function buildDescriptorFromCompiledEntity(
       typeLabel:    entity.entity_name,
       numberField:  detectNumberField(entity),
       statusField:  detectStatusField(entity),
-      titleField:   entity.display_config.title_field,
+      titleField:   configuredTitleFieldName(entity),
       partyIdField: dh?.party_id_field,
     },
 

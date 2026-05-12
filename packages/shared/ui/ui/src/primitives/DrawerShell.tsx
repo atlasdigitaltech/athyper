@@ -31,8 +31,12 @@ export interface DrawerShellProps {
   resizable?: boolean;
   expandable?: boolean;
   // ── Header slots ──────────────────────────────────────────────────────────
-  /** Small uppercase chip shown before the title, e.g. "SUPPLIER" */
+  /** Small chip shown before the title, e.g. "SUPPLIER" */
   badge?: string;
+  /** Keep existing drawer badges uppercase by default; opt out for title-cased sheet headers. */
+  badgeUppercase?: boolean;
+  /** Optional detail rendered below the badge, e.g. line number navigation. */
+  badgeDetail?: ReactNode;
   title?: ReactNode;
   subtitle?: ReactNode;
   /** Slot rendered between title and the expand/close buttons. */
@@ -93,6 +97,8 @@ export function DrawerShell({
   resizable = true,
   expandable = false,
   badge,
+  badgeUppercase = true,
+  badgeDetail,
   title,
   subtitle,
   headerRight,
@@ -199,10 +205,20 @@ export function DrawerShell({
 
           {/* Header */}
           <div className="shrink-0 flex items-start gap-3 px-5 py-4 border-b border-border">
-            {badge && (
-              <span className="shrink-0 mt-0.5 inline-flex items-center rounded px-2 py-0.5 text-doc-badge font-semibold uppercase tracking-widest bg-muted text-muted-foreground border border-border/60">
-                {badge}
-              </span>
+            {(badge || badgeDetail) && (
+              <div className="shrink-0 mt-0.5 flex flex-col items-center gap-1">
+                {badge && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded px-2 py-0.5 text-doc-badge font-semibold bg-muted text-muted-foreground border border-border/60",
+                      badgeUppercase && "uppercase tracking-widest",
+                    )}
+                  >
+                    {badge}
+                  </span>
+                )}
+                {badgeDetail}
+              </div>
             )}
             <div className="flex-1 min-w-0">
               {title && (

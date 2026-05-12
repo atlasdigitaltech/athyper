@@ -83,6 +83,15 @@ interface AddressesResponse {
   summary:   { total_addresses: number; primary_count: number; geocoded_count: number };
 }
 
+interface AddressMetadataKeyMap {
+  district?: string;
+  zatcaRegion?: string;
+  taxJurisdiction?: string;
+  postalValid?: string;
+  geocodingAccuracy?: string;
+  geocodingAccuracyMeters?: string;
+}
+
 // ── Country name lookup (client-side; extends as needed) ──────────────────────
 
 const COUNTRY_NAMES: Record<string, string> = {
@@ -106,6 +115,37 @@ const ADDRESS_FIELD_LABEL_CLASS = "text-xs font-medium leading-normal text-muted
 const ADDRESS_FIELD_VALUE_CLASS = "text-sm leading-snug text-foreground";
 const ADDRESS_FIELD_HELPER_CLASS = "text-sm text-muted-foreground";
 const ADDRESS_ITEM_TITLE_CLASS = "text-sm font-semibold leading-snug text-foreground";
+
+function asPlainRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function textSetting(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function addressPresentationSettings(tab: MasterTab): Record<string, unknown> {
+  return asPlainRecord(tab.config?.presentation_config) ?? {};
+}
+
+function addressMetadataKeyMap(tab: MasterTab): AddressMetadataKeyMap {
+  const settings = addressPresentationSettings(tab);
+  const raw = asPlainRecord(settings.address_metadata_keys) ?? asPlainRecord(settings.metadata_keys) ?? {};
+  return {
+    district:                textSetting(raw.district),
+    zatcaRegion:             textSetting(raw.zatcaRegion ?? raw.zatca_region),
+    taxJurisdiction:         textSetting(raw.taxJurisdiction ?? raw.tax_jurisdiction),
+    postalValid:             textSetting(raw.postalValid ?? raw.postal_valid),
+    geocodingAccuracy:       textSetting(raw.geocodingAccuracy ?? raw.geocoding_accuracy),
+    geocodingAccuracyMeters: textSetting(raw.geocodingAccuracyMeters ?? raw.geocoding_accuracy_meters),
+  };
+}
+
+function metadataValue(addr: AddressGrouped, key?: string): unknown {
+  return key ? addr.metadata[key] : undefined;
+}
 
 function countryName(code: string | null): string {
   if (!code) return "";
@@ -168,8 +208,8 @@ function buildHeroAddress(addr: AddressGrouped): string {
   return [addr.line1, addr.line2, addr.line3].filter(Boolean).join(", ");
 }
 
-function buildSubLine(addr: AddressGrouped): string {
-  const district = addr.metadata["district"] as string | undefined;
+function buildSubLine(addr: AddressGrouped, metadataKeys: AddressMetadataKeyMap): string {
+  const district = metadataValue(addr, metadataKeys.district) as string | undefined;
   return [
     district,
     addr.city,
@@ -187,9 +227,9 @@ function buildAddressCopyText(addr: AddressGrouped): string {
   ].filter(Boolean).join("\n");
 }
 
-function geocodingLabel(addr: AddressGrouped): string {
-  const accuracy = addr.metadata["geocoding_accuracy"] ?? addr.metadata["geocode_accuracy"];
-  const meters = addr.metadata["geocoding_accuracy_m"] ?? addr.metadata["accuracy_meters"];
+function geocodingLabel(addr: AddressGrouped, metadataKeys: AddressMetadataKeyMap): string {
+  const accuracy = metadataValue(addr, metadataKeys.geocodingAccuracy);
+  const meters = metadataValue(addr, metadataKeys.geocodingAccuracyMeters);
   const accuracyText = typeof accuracy === "string" && accuracy
     ? titleCase(accuracy.replace(/_/g, " "))
     : (addr.latitude != null && addr.longitude != null ? "Geocoded" : "Not geocoded");
@@ -397,6 +437,7 @@ function EffectivePeriodBar({ from, until }: { from: string | null; until: strin
 
 function AddressCard({
   addr,
+  metadataKeys,
   expanded,
   onToggle,
   canMutate,
@@ -406,6 +447,7 @@ function AddressCard({
   endDating,
 }: {
   addr:           AddressGrouped;
+  metadataKeys:   AddressMetadataKeyMap;
   expanded:       boolean;
   onToggle:       () => void;
   canMutate:      boolean;
@@ -416,7 +458,7 @@ function AddressCard({
 }) {
   const isGeocoded = addr.latitude != null;
   const heroText   = buildHeroAddress(addr);
-  const subLine    = buildSubLine(addr);
+  const subLine    = buildSubLine(addr, metadataKeys);
 
   // Purpose pills: split into primary display + secondary tags
   const sortedLinks = [...addr.links].sort((a, b) => {
@@ -432,10 +474,10 @@ function AddressCard({
   const statusLabel = addressStatusLabel(addr);
 
   // Metadata extras
-  const district       = addr.metadata["district"]        as string | undefined;
-  const zatcaRegion    = addr.metadata["zatca_region"]     as string | undefined;
-  const taxJurisdiction = addr.metadata["tax_jurisdiction"] as string | undefined;
-  const postalValid    = addr.metadata["postal_valid"]     as boolean | undefined;
+  const district        = metadataValue(addr, metadataKeys.district) as string | undefined;
+  const zatcaRegion     = metadataValue(addr, metadataKeys.zatcaRegion) as string | undefined;
+  const taxJurisdiction = metadataValue(addr, metadataKeys.taxJurisdiction) as string | undefined;
+  const postalValid     = metadataValue(addr, metadataKeys.postalValid) as boolean | undefined;
 
   // The link to use for set-primary / end-date actions
   const actionLink = primaryLink(addr.links);
@@ -855,6 +897,7 @@ export function AddressesPanel({
 
   const addresses = data?.addresses ?? [];
   const summary   = data?.summary ?? { total_addresses: 0, primary_count: 0, geocoded_count: 0 };
+  const metadataKeys = addressMetadataKeyMap(tab);
 
   // Summary text
   function summaryText(): string {
@@ -908,6 +951,7 @@ export function AddressesPanel({
             <AddressCard
               key={addr.address_id}
               addr={addr}
+              metadataKeys={metadataKeys}
               expanded={expandedId === addr.address_id}
               onToggle={() => setExpandedId(expandedId === addr.address_id ? null : addr.address_id)}
               canMutate={canMutate}

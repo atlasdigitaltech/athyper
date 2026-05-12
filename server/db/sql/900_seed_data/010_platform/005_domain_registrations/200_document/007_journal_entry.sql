@@ -220,6 +220,7 @@ UPDATE control.entity
            'updated_by_field', 'updated_by',
            'status_changed_at_field', 'status_changed_at',
            'status_changed_by_field', 'status_changed_by',
+           'editable_statuses', '["draft","created"]'::jsonb,
            'lifecycle_stages', jsonb_build_array(
                jsonb_build_object('key','draft',            'label','Draft'),
                jsonb_build_object('key','created',          'label','Ready'),
@@ -501,7 +502,7 @@ WITH defs AS (
       ('site_id','site_id','Site','Site dimension.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"site","target_field":"id","display_field":"code"}'::jsonb,false,true,false,true,true,false,false,false,false,'{"ref_entity":"site"}'::jsonb,NULL::jsonb,'{"group_key":"dimensions","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active"}}'::jsonb,130),
       ('party_type','party_type','Party Type','Counterparty type.','enum','select','zero_or_one','document.jl_party_type',NULL::jsonb,false,true,false,false,true,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"party"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,140),
       ('party_id','party_id','Party','Counterparty reference; target depends on party type.','reference','entity_chooser','zero_or_one',NULL::text,'{"target_entity":"polymorphic_party","target_field":"id","display_field":"name"}'::jsonb,false,true,true,false,true,false,false,false,false,'{"ref_entity":"polymorphic_party"}'::jsonb,NULL::jsonb,'{"group_key":"party","chooser":"inline_search"}'::jsonb,'{"var":"party_type"}'::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"polymorphic_by":"party_type","targets":{"customer":"customer","supplier":"supplier","employee":"employee","company_code":"company_code","principal":"principal"}}'::jsonb,150),
-      ('subledger_type','subledger_type','Subledger','Subledger classification.','enum','select','zero_or_one','document.jl_subledger_type',NULL::jsonb,false,true,false,false,true,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"party"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,160),
+      ('subledger_type','subledger_type','Subledger','Subledger classification.','enum','select','zero_or_one','document.jl_subledger_type',NULL::jsonb,false,true,false,false,true,false,false,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"party","form":{"disabled_in":["compose","edit"]}}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,160),
       ('description','description','Line Text','Line-level narration.','text','textarea','zero_or_one',NULL::text,NULL::jsonb,false,false,true,false,false,false,false,false,false,'{"max_length":500}'::jsonb,NULL::jsonb,'{"group_key":"narrative","span":3}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,170),
       ('source_doc_line_id','source_doc_line_id','Source Line','Source document line id for generated entries.','uuid','hidden','zero_or_one',NULL::text,NULL::jsonb,false,false,false,false,false,false,true,false,false,NULL::jsonb,NULL::jsonb,'{"group_key":"source"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,180),
       ('tags','tags','Tags','Line tags.','jsonb','tags','zero_or_one',NULL::text,NULL::jsonb,false,true,true,false,true,false,false,false,false,NULL::jsonb,'[]'::jsonb,'{"group_key":"narrative"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,190),
@@ -536,7 +537,17 @@ UPDATE control.entity
        'list_columns', '["line_no","gl_account_id","description","transaction_debit","transaction_credit","cost_center_id","party_id"]'::jsonb,
        'default_sort_field', 'line_no',
        'default_sort_order', 'asc',
-       'reference_model', NULL
+       'reference_model', NULL,
+       'journal_line_fields', jsonb_build_object(
+           'account_field',                  'gl_account_code',
+           'debit_field',                    'transaction_debit',
+           'credit_field',                   'transaction_credit',
+           'transaction_currency_field',     'transaction_currency',
+           'account_code_payload_field',     'gl_account_code',
+           'debit_payload_field',            'debit',
+           'credit_payload_field',           'credit',
+           'description_payload_field',      'item_text'
+       )
    ),
    natural_key_fields = ARRAY['line_no']
  WHERE table_schema = 'document'

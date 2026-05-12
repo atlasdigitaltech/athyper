@@ -21,7 +21,7 @@ import React from "react";
 import { AlertCircle, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent, Skeleton } from "@athyper/ui/primitives";
-import type { FlowBundle } from "@athyper/api-contracts/documents";
+import type { DocumentLine, FlowBundle } from "@athyper/api-contracts/documents";
 import { EntityHeader } from "@athyper/entity-runtime/header";
 import { FlowSummaryPanel } from "./FlowSummaryPanel";
 import { FlowFieldBinding } from "./FlowFieldBinding";
@@ -29,7 +29,7 @@ import { useFlowEngine } from "./useFlowEngine";
 import { mapFlowHeaderModel } from "./mapFlowHeaderModel";
 import { isTruthy } from "./evaluateRule";
 import { JournalIntakeLinesGrid, type JournalExchangeRateStatus } from "../items/JournalLinesGrid";
-import { InvoiceIntakeLinesGrid, type InvoiceLineValidationStatus } from "../items/InvoiceIntakeLinesGrid";
+import { LinesGrid } from "../items/LinesGrid";
 
 export interface FlowWizardProps {
   bundle: FlowBundle;
@@ -57,11 +57,33 @@ type IntakeFlowSection = {
   label?: string;
   section_type?: string;
   entity_code?: string | null;
+  display_role?: string | null;
   payload_key?: string | null;
   min_rows?: number | null;
   visible_when?: unknown;
   default_row?: unknown;
+  intake_fields?: unknown;
+  display_config?: Record<string, unknown> | null;
 };
+
+const TEMP_PURCHASE_INVOICE_COMMERCIAL_HIDDEN_FIELDS = new Set([
+  "payment_term_id",
+  "baseline_date",
+  "due_date",
+  "discount_amount",
+  "freight_amount",
+  "misc_charges_amount",
+  "withholding_tax_amount",
+  "retention_amount",
+]);
+
+const TEMP_PURCHASE_INVOICE_COMMERCIAL_FX_FIELDS = new Set([
+  "currency_code",
+  "transaction_currency",
+  "base_currency_code",
+  "base_currency",
+  "exchange_rate",
+]);
 
 function flowSections(step: unknown): IntakeFlowSection[] {
   const sections = (step as { sections?: unknown }).sections;
@@ -80,9 +102,19 @@ function isJournalLineSection(section: IntakeFlowSection): boolean {
 }
 
 function isInvoiceLineSection(section: IntakeFlowSection): boolean {
+  if (section.section_type !== "repeater") return false;
+  // Explicit role takes precedence; fallback: any repeater whose entity_code is
+  // set and is not a journal entity (journal lines use JournalIntakeLinesGrid).
   return (
-    section.section_type === "repeater" &&
-    section.entity_code === "purchase_invoice_line"
+    section.display_role === "procurement_line_intake" ||
+    (!!section.entity_code && section.entity_code !== "journal_line")
+  );
+}
+
+function normalizeDraftLines(value: unknown): DocumentLine[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((line): line is DocumentLine =>
+    typeof line === "object" && line !== null,
   );
 }
 
@@ -103,7 +135,6 @@ export function FlowWizard({
   const engine = useFlowEngine(bundle, userPermissions, userCtx, initialValues);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [lineFxStatuses, setLineFxStatuses] = React.useState<Record<string, JournalExchangeRateStatus>>({});
-  const [invoiceLineStatuses, setInvoiceLineStatuses] = React.useState<Record<string, InvoiceLineValidationStatus>>({});
   const {
     state,
     currentStep,
@@ -122,7 +153,22 @@ export function FlowWizard({
   } = engine;
 
   const lockedFieldSet = React.useMemo(() => new Set(lockedFieldNames), [lockedFieldNames]);
-  const renderFields = visibleFields.filter((f) => !lockedFieldSet.has(f.field_name));
+  const normalizedEntityCode = entityCode?.replace(/-/g, "_");
+  const currentStepKey = (currentStep as { step_key?: string }).step_key ?? "";
+  const isTemporaryPurchaseInvoiceCommercialView =
+    normalizedEntityCode === "purchase_invoice" &&
+    currentStepKey.startsWith("commercial");
+  const transactionCurrencyCode = String(state.draft.transaction_currency ?? state.draft.currency_code ?? "");
+  const baseCurrencyCode = String(state.draft.base_currency_code ?? state.draft.base_currency ?? "");
+  const hasForeignCurrency =
+    transactionCurrencyCode.trim() !== "" &&
+    baseCurrencyCode.trim() !== "" &&
+    transactionCurrencyCode.toUpperCase() !== baseCurrencyCode.toUpperCase();
+  const renderFields = visibleFields.filter((f) =>
+    !lockedFieldSet.has(f.field_name) &&
+    (!isTemporaryPurchaseInvoiceCommercialView || !TEMP_PURCHASE_INVOICE_COMMERCIAL_HIDDEN_FIELDS.has(f.field_name)) &&
+    (!isTemporaryPurchaseInvoiceCommercialView || hasForeignCurrency || !TEMP_PURCHASE_INVOICE_COMMERCIAL_FX_FIELDS.has(f.field_name)),
+  );
   const chipFields  = renderFields.filter((f) => f.mode === "chip");
   const gridFields  = renderFields.filter((f) => f.mode !== "chip");
   const sectionRuleCtx = React.useMemo(() => ({
@@ -138,15 +184,18 @@ export function FlowWizard({
   const currentLineFxBlocking = lineSections.some((section) =>
     Boolean(lineFxStatuses[sectionPayloadKey(section)]?.blocking),
   );
-  const currentInvoiceLineBlocking = invoiceLineSections.some((section) =>
-    Boolean(invoiceLineStatuses[sectionPayloadKey(section)]?.blocking),
-  );
+  const currentInvoiceLineBlocking = invoiceLineSections.some((section) => {
+    const payloadKey = sectionPayloadKey(section);
+    const minRows = section.min_rows ?? 1;
+    return Boolean(state.errors[payloadKey]) || normalizeDraftLines(state.draft[payloadKey]).length < minRows;
+  });
   const currentLineBlocking = currentLineFxBlocking || currentInvoiceLineBlocking;
-  const transactionCurrencyCode = String(state.draft.transaction_currency ?? state.draft.currency_code ?? "");
-  const baseCurrencyCode = String(state.draft.base_currency_code ?? state.draft.base_currency ?? "");
   const currencyCode = transactionCurrencyCode || baseCurrencyCode;
   // Defer summary panel until step 2+ so step 1 doesn't show a column of zeros.
-  const showSummary = (summaryLines.length > 0 || summaryBalance) && state.currentStepIndex > 0;
+  const showSummary =
+    !isTemporaryPurchaseInvoiceCommercialView &&
+    (summaryLines.length > 0 || summaryBalance) &&
+    state.currentStepIndex > 0;
 
   const entityHeaderModel = mapFlowHeaderModel(bundle, state.currentStepIndex, {
     onCancel,
@@ -247,7 +296,7 @@ export function FlowWizard({
                       key={section.section_key}
                       value={state.draft[payloadKey]}
                       error={state.errors[payloadKey]}
-                      currencyCode={currencyCode || "USD"}
+                      currencyCode={currencyCode}
                       transactionCurrencyCode={transactionCurrencyCode}
                       baseCurrencyCode={baseCurrencyCode}
                       exchangeRate={state.draft.exchange_rate}
@@ -262,7 +311,7 @@ export function FlowWizard({
                       }}
                       currencySelectorEditable
                       headerContext={state.draft}
-                      lineEntityCode={section.entity_code?.trim() || "journal_line"}
+                      lineEntityCode={section.entity_code?.trim()}
                       minRows={section.min_rows ?? 2}
                       onChange={(lines) => setField(payloadKey, lines)}
                     />
@@ -272,17 +321,17 @@ export function FlowWizard({
                 {invoiceLineSections.map((section) => {
                   const payloadKey = sectionPayloadKey(section);
                   return (
-                    <InvoiceIntakeLinesGrid
+                    <LinesGrid
                       key={section.section_key}
-                      value={state.draft[payloadKey]}
-                      error={state.errors[payloadKey]}
-                      currencyCode={currencyCode || "USD"}
-                      minRows={section.min_rows ?? 1}
-                      defaultRow={section.default_row}
-                      onValidationStatusChange={(status) => {
-                        setInvoiceLineStatuses((prev) => ({ ...prev, [payloadKey]: status }));
-                      }}
-                      onChange={(lines) => setField(payloadKey, lines)}
+                      entityCode={normalizedEntityCode ?? entityCode ?? ""}
+                      recordId="__draft__"
+                      lineEntityCode={section.entity_code ?? undefined}
+                      lines={normalizeDraftLines(state.draft[payloadKey])}
+                      distributions={[]}
+                      currencyCode={currencyCode}
+                      editMode
+                      draftMode
+                      onDraftLinesChange={(lines) => setField(payloadKey, lines)}
                     />
                   );
                 })}

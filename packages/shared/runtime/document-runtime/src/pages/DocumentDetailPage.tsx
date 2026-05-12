@@ -18,7 +18,7 @@ import { queryKeys } from "@athyper/api-contracts/query-keys";
 import { buildOrchestratorFromRecord } from "../orchestrator";
 import { buildDocumentHeaderModel } from "../header";
 import { AmountSummaryCard } from "../amounts";
-import { FlowModal } from "../intake";
+import { FlowModal, evaluateRule } from "../intake";
 import { ValidationBanner } from "../validation";
 import { EntityHeader, EntityProgressRow, useRailState } from "@athyper/entity-runtime/header";
 import type { HeaderAction, PlatformPanelIcon } from "@athyper/entity-runtime/header";
@@ -34,7 +34,6 @@ import {
   validationSummaryMessage,
 } from "@athyper/runtime-shared/validation";
 import { normaliseCurrencyCode } from "@athyper/runtime-shared/core";
-import { resolvePresentationConfig as resolveDisplayConfig } from "@athyper/entity-runtime/metadata";
 import { useOperationDispatch } from "@athyper/entity-runtime/actions";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
 import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
@@ -55,6 +54,15 @@ import {
   EntityContextDrawer,
   DistributionsPanel,
 } from "@athyper/entity-runtime/panels";
+import {
+  asConfigRecord,
+  normalizeStatusKey,
+  renderTemplate,
+  resolveDocumentLinesRendererKey,
+  stringArrayConfig,
+  stringMapConfig,
+  textConfig,
+} from "../documentRuntimeDefaults";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -132,10 +140,8 @@ function LinesPanel({
   const RendererComponent = resolveLinesRenderer(linesRenderer);
   if (!RendererComponent) return null;
 
-  const currencyCode =
-    typeof record?.["transaction_currency"] === "string" ? record["transaction_currency"]
-    : typeof record?.["currency_code"]       === "string" ? record["currency_code"]
-    : "USD";
+  const currencyField = entity.display_config.document_header?.currency_field;
+  const currencyCode = currencyField ? normaliseCurrencyCode(record?.[currencyField]) ?? "" : "";
 
   return (
     <RendererComponent
@@ -160,23 +166,6 @@ function LinesPanel({
 
 // ── Versions panel ────────────────────────────────────────────────────────────
 
-function resolveDocumentLinesRenderer(
-  entityCode: string,
-  configuredRenderer: string | null,
-  hasLinesTab: boolean,
-): string | null {
-  const normalized = entityCode.replace(/-/g, "_");
-
-  if (normalized === "journal_entry" && (!configuredRenderer || configuredRenderer === "generic")) {
-    return "journal";
-  }
-  if (normalized === "payment_entry" && (!configuredRenderer || configuredRenderer === "generic")) {
-    return "payment";
-  }
-
-  return configuredRenderer ?? (hasLinesTab ? "generic" : null);
-}
-
 interface VersionListResponse {
   data: RecordVersionSummary[];
   current_version_no: number;
@@ -187,61 +176,94 @@ interface CurrencyRefRow {
   minor_units: number | null;
 }
 
-function numberFromLineData(line: DocumentLine, key: string): number {
-  const data = line.data as Record<string, unknown> | null | undefined ?? {};
-  const n = Number(data[key]);
-  return Number.isFinite(n) ? n : 0;
+type VersionBadgeVariant = "success" | "muted" | "destructive" | "secondary";
+
+interface VersionPresentationConfig {
+  changeTypeLabels: Record<string, string>;
+  statusVariants: Record<string, VersionBadgeVariant>;
+  changeTypeIcons: Record<string, string>;
+  amendableStatuses: string[];
 }
 
-function journalTotalsFromLines(lines: DocumentLine[]): { totalDebit: number; totalCredit: number; lineCount: number } {
+function readVersionPresentation(entity: CompiledEntity): VersionPresentationConfig {
+  const display = asConfigRecord(entity.display_config);
+  const raw =
+    asConfigRecord(display?.["version_presentation"]) ??
+    asConfigRecord(display?.["document_versions"]) ??
+    {};
   return {
-    totalDebit:  lines.reduce((sum, line) => sum + numberFromLineData(line, "transaction_debit"), 0),
-    totalCredit: lines.reduce((sum, line) => sum + numberFromLineData(line, "transaction_credit"), 0),
-    lineCount:   lines.length,
+    changeTypeLabels: stringMapConfig(raw["change_type_labels"]) ?? {},
+    statusVariants:  versionStatusVariantMap(raw["status_variants"]),
+    changeTypeIcons: stringMapConfig(raw["change_type_icons"]) ?? {},
+    amendableStatuses: stringArrayConfig(raw["amendable_statuses"]) ?? [],
   };
 }
 
-function versionChangeTypeLabel(t: RecordVersionSummary["change_type"]): string {
-  const map: Record<string, string> = {
-    original: "Original", amendment: "Amendment",
-    reversal: "Reversal", correction: "Correction",
-  };
-  return map[t] ?? t;
+function versionStatusVariantMap(value: unknown): Record<string, VersionBadgeVariant> {
+  const raw = stringMapConfig(value) ?? {};
+  return Object.fromEntries(
+    Object.entries(raw).filter((entry): entry is [string, VersionBadgeVariant] =>
+      entry[1] === "success" ||
+      entry[1] === "muted" ||
+      entry[1] === "destructive" ||
+      entry[1] === "secondary",
+    ),
+  );
+}
+
+function versionChangeTypeLabel(
+  t: RecordVersionSummary["change_type"],
+  presentation: VersionPresentationConfig,
+): string {
+  return presentation.changeTypeLabels[t] ?? titleizeToken(t);
 }
 
 function versionStatusVariant(
   s: RecordVersionSummary["status"],
-): "success" | "muted" | "destructive" | "secondary" {
-  switch (s) {
-    case "approved":   return "success";
-    case "superseded": return "muted";
-    case "cancelled":  return "destructive";
-    default:           return "secondary";
-  }
+  presentation: VersionPresentationConfig,
+): VersionBadgeVariant {
+  return presentation.statusVariants[s] ?? "secondary";
 }
 
-function VersionChangeTypeIcon({ type }: { type: RecordVersionSummary["change_type"] }) {
-  switch (type) {
-    case "amendment":  return <GitBranch    className="h-3.5 w-3.5" />;
-    case "reversal":   return <RotateCcw    className="h-3.5 w-3.5" />;
-    case "original":   return <CheckCircle2 className="h-3.5 w-3.5" />;
-    default:           return <Clock        className="h-3.5 w-3.5" />;
+function versionChangeTypeIconKey(
+  t: RecordVersionSummary["change_type"],
+  presentation: VersionPresentationConfig,
+): string | undefined {
+  return presentation.changeTypeIcons[t];
+}
+
+function titleizeToken(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function VersionChangeTypeIcon({ icon }: { icon?: string }) {
+  switch (icon) {
+    case "branch": return <GitBranch    className="h-3.5 w-3.5" />;
+    case "rotate": return <RotateCcw    className="h-3.5 w-3.5" />;
+    case "check":  return <CheckCircle2 className="h-3.5 w-3.5" />;
+    default:       return <Clock        className="h-3.5 w-3.5" />;
   }
 }
 
 function VersionCard({
   version, isLast, pinnedVersion,
-  onSelectCompare, onNavigateCompare, onAmend, isAmending,
+  presentation, onSelectCompare, onNavigateCompare, onAmend, isAmending,
 }: {
   version:           RecordVersionSummary;
   isLast:            boolean;
   pinnedVersion:     number | null;
+  presentation:      VersionPresentationConfig;
   onSelectCompare:   (vNo: number) => void;
   onNavigateCompare: (from: number, to: number) => void;
   onAmend:           () => void;
   isAmending:        boolean;
 }) {
-  const isCurrentAmendTarget = version.is_current && version.status === "approved";
+  const isCurrentAmendTarget = version.is_current &&
+    (presentation.amendableStatuses.length === 0 || presentation.amendableStatuses.includes(version.status));
   const isPinned     = pinnedVersion === version.version_no;
   const canCompareWith = pinnedVersion !== null && !isPinned;
 
@@ -276,10 +298,10 @@ function VersionCard({
         <div className="flex flex-wrap items-start gap-2">
           <div className="flex flex-1 flex-wrap items-center gap-2">
             <span className="flex items-center gap-1 text-sm font-medium">
-              <VersionChangeTypeIcon type={version.change_type} />
-              {versionChangeTypeLabel(version.change_type)}
+              <VersionChangeTypeIcon icon={versionChangeTypeIconKey(version.change_type, presentation)} />
+              {versionChangeTypeLabel(version.change_type, presentation)}
             </span>
-            <Badge variant={versionStatusVariant(version.status)} className="capitalize text-doc-support">
+            <Badge variant={versionStatusVariant(version.status, presentation)} className="capitalize text-doc-support">
               {version.status}
             </Badge>
             {version.is_current && <Badge variant="info" className="text-doc-support">Current</Badge>}
@@ -358,10 +380,11 @@ function VersionCard({
   );
 }
 
-function VersionsPanel({ entityCode, recordId }: { entityCode: string; recordId: string }) {
+function VersionsPanel({ entity, entityCode, recordId }: { entity: CompiledEntity; entityCode: string; recordId: string }) {
   const router = useRouter();
   const qc = useQueryClient();
   const [pinnedVersion, setPinnedVersion] = useState<number | null>(null);
+  const versionPresentation = useMemo(() => readVersionPresentation(entity), [entity]);
 
   const { data, isLoading, isError } = useQuery<VersionListResponse>({
     queryKey: ["record-versions", entityCode, recordId],
@@ -438,6 +461,7 @@ function VersionsPanel({ entityCode, recordId }: { entityCode: string; recordId:
           version={version}
           isLast={idx === sorted.length - 1}
           pinnedVersion={pinnedVersion}
+          presentation={versionPresentation}
           onSelectCompare={(vNo) => setPinnedVersion((prev) => (prev === vNo ? null : vNo))}
           onNavigateCompare={(from, to) =>
             router.push(
@@ -515,31 +539,80 @@ const DOCUMENT_FIELD_GROUP_ORDER: Record<string, number> = {
   system:       920,
 };
 
-const DOCUMENT_EDIT_SKIP_FIELDS = new Set([
-  "document_no", "status", "code", "name",
-  "created_at", "created_by", "updated_at", "updated_by",
-  "approved_at", "approved_by", "posted_at", "posted_by",
-  "status_changed_at", "status_changed_by",
-  "workflow_request_id", "ap_je_id",
-]);
+const DOCUMENT_HEADER_FIELD_CONFIG_KEYS = [
+  "number_field",
+  "name_field",
+  "status_field",
+  "party_name_field",
+  "party_id_field",
+  "amount_field",
+  "subtotal_field",
+  "tax_field",
+  "currency_field",
+  "date_field",
+  "due_date_field",
+  "title_field",
+  "created_at_field",
+  "created_by_field",
+  "updated_at_field",
+  "updated_by_field",
+  "status_changed_at_field",
+  "status_changed_by_field",
+  "company_code_field",
+] as const;
 
-function normaliseStatusValue(value: unknown): string {
-  return String(value ?? "draft").toLowerCase().replace(/[\s-]/g, "_");
+function defaultDocumentStatus(entity: CompiledEntity): string {
+  const dh = asConfigRecord(entity.display_config.document_header);
+  const headerStages = Array.isArray(dh?.["lifecycle_stages"]) ? dh?.["lifecycle_stages"] : undefined;
+  const displayStages = Array.isArray(entity.display_config.lifecycle_stages) ? entity.display_config.lifecycle_stages : undefined;
+  const firstStage = (headerStages ?? displayStages)?.[0];
+  const firstStageKey = asConfigRecord(firstStage)?.["key"];
+  return textConfig(dh?.["default_status"]) ?? textConfig(firstStageKey) ?? "draft";
+}
+
+function normaliseStatusValue(value: unknown, fallback: string): string {
+  return normalizeStatusKey(value ?? fallback);
 }
 
 function getDocumentStatus(entity: CompiledEntity, record: { data: Record<string, unknown>; status?: string }): string {
-  const statusField = entity.display_config.document_header?.status_field ?? "status";
-  return normaliseStatusValue(record.status ?? record.data[statusField]);
+  const statusFields = [
+    entity.display_config.document_header?.status_field,
+    ...(entity.display_config.status_field_names ?? []),
+  ].filter((field): field is string => Boolean(field));
+  const dataStatus = statusFields
+    .map((field) => record.data[field])
+    .find((value) => value !== undefined && value !== null && value !== "");
+  return normaliseStatusValue(record.status ?? dataStatus, defaultDocumentStatus(entity));
 }
 
-function isDocumentEditableField(field: EntityField): boolean {
+function editableDocumentStatuses(entity: CompiledEntity): Set<string> {
+  const dh = asConfigRecord(entity.display_config.document_header);
+  const configured = stringArrayConfig(dh?.["editable_statuses"]);
+  const values = configured ?? [defaultDocumentStatus(entity)].filter(Boolean);
+  return new Set(values.map((value) => normalizeStatusKey(value)));
+}
+
+function documentHeaderField(entity: CompiledEntity, key: string): string | undefined {
+  return textConfig(asConfigRecord(entity.display_config.document_header)?.[key]);
+}
+
+function documentEditSkipFields(entity: CompiledEntity): Set<string> {
+  const dh = asConfigRecord(entity.display_config.document_header);
+  const configured = stringArrayConfig(dh?.["edit_excluded_fields"]) ?? [];
+  const headerFields = DOCUMENT_HEADER_FIELD_CONFIG_KEYS
+    .map((key) => textConfig(dh?.[key]))
+    .filter((field): field is string => Boolean(field));
+  return new Set([...configured, ...headerFields]);
+}
+
+function isDocumentEditableField(field: EntityField, skipFields: Set<string>): boolean {
   return (
     !field.is_readonly &&
     !field.is_computed &&
     field.origin !== "system" &&
     field.ui_type !== "hidden" &&
     field.data_type !== "lifecycle_state" &&
-    !DOCUMENT_EDIT_SKIP_FIELDS.has(field.name)
+    !skipFields.has(field.name)
   );
 }
 
@@ -622,6 +695,98 @@ function getCsrfToken(): string {
   return m ? decodeURIComponent(m[1]!) : "";
 }
 
+type LineAggregateOp = "sum" | "count";
+
+interface LineAggregateConfig {
+  targetField: string;
+  sourceField?: string;
+  aggregate: LineAggregateOp;
+}
+
+interface DocumentActionHandlerConfig {
+  endpointTemplate?: string;
+  routeTemplate?: string;
+  method: string;
+}
+
+function lineAggregateConfigs(entity: CompiledEntity): LineAggregateConfig[] {
+  const dh = asConfigRecord(entity.display_config.document_header);
+  const raw = Array.isArray(dh?.["line_aggregates"]) ? dh?.["line_aggregates"] as unknown[] : [];
+  return raw.flatMap((entry): LineAggregateConfig[] => {
+    const config = asConfigRecord(entry);
+    const targetField = textConfig(config?.["target_field"] ?? config?.["target"]);
+    const aggregate = textConfig(config?.["aggregate"]) as LineAggregateOp | undefined;
+    const sourceField = textConfig(config?.["source_field"] ?? config?.["field"]);
+    const op: LineAggregateOp = aggregate === "count" ? "count" : "sum";
+    if (!targetField || (op === "sum" && !sourceField)) return [];
+    return [{ targetField, sourceField, aggregate: op }];
+  });
+}
+
+function lineValue(line: DocumentLine, fieldName: string): unknown {
+  const row = line as unknown as Record<string, unknown>;
+  if (row[fieldName] !== undefined) return row[fieldName];
+  const data = asConfigRecord(line.data);
+  return data?.[fieldName];
+}
+
+function numberFromValue(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function applyLineAggregates(
+  data: Record<string, unknown>,
+  lines: DocumentLine[],
+  aggregates: LineAggregateConfig[],
+): Record<string, unknown> {
+  if (aggregates.length === 0) return data;
+  const aggregated = aggregates.reduce<Record<string, unknown>>((next, aggregate) => {
+    next[aggregate.targetField] = aggregate.aggregate === "count"
+      ? lines.length
+      : lines.reduce((sum, line) => sum + numberFromValue(lineValue(line, aggregate.sourceField!)), 0);
+    return next;
+  }, {});
+  return Object.keys(aggregated).length > 0 ? { ...data, ...aggregated } : data;
+}
+
+function documentActionHandlers(entity: CompiledEntity): Record<string, unknown> | null {
+  const display = asConfigRecord(entity.display_config);
+  return asConfigRecord(display?.["document_action_handlers"])
+    ?? asConfigRecord(display?.["action_handlers"]);
+}
+
+function documentActionHandler(entity: CompiledEntity, action: string): DocumentActionHandlerConfig | null {
+  const config = asConfigRecord(documentActionHandlers(entity)?.[action]);
+  if (!config) return null;
+  const endpointTemplate = textConfig(config["endpoint_template"] ?? config["endpoint"] ?? config["url_template"] ?? config["url"]);
+  const routeTemplate = textConfig(config["route_template"] ?? config["route"]);
+  if (!endpointTemplate && !routeTemplate) return null;
+  return {
+    endpointTemplate,
+    routeTemplate,
+    method: textConfig(config["method"]) ?? "POST",
+  };
+}
+
+function documentTemplateValues(
+  entity: CompiledEntity,
+  record: { id: string; data: Record<string, unknown> },
+  recordId: string,
+): Record<string, string> {
+  const dataValues = Object.fromEntries(
+    Object.entries(record.data).flatMap(([key, value]) =>
+      value === undefined || value === null ? [] : [[key, String(value)] as const],
+    ),
+  );
+  return {
+    ...dataValues,
+    id: record.id,
+    recordId,
+    entityCode: entity.entity_code,
+  };
+}
+
 function fmtFieldValue(
   value: unknown,
   dataType: string,
@@ -688,6 +853,26 @@ function normaliseFieldValueForEdit(value: unknown, field: EntityField): unknown
   return value;
 }
 
+/**
+ * Extracts the raw field value from a record, correctly handling fields whose
+ * physical column_name is "metadata" (JSONB). For those fields the logical
+ * field.name is the key inside the metadata object, not a top-level key.
+ */
+function extractFieldValue(data: Record<string, unknown>, field: EntityField): unknown {
+  const direct = data[field.name];
+  if (direct !== undefined) return direct;
+
+  if (field.column_name === "metadata") {
+    const meta = data["metadata"];
+    if (meta !== null && typeof meta === "object" && !Array.isArray(meta)) {
+      return (meta as Record<string, unknown>)[field.name] ?? null;
+    }
+    return null;
+  }
+
+  return data[field.column_name ?? ""] ?? null;
+}
+
 function documentHeaderActionKey(action: HeaderAction): string {
   if (action.id === "edit" || action.id === "update") return "edit";
   if (action.label.trim().toLowerCase() === "edit") return "edit";
@@ -719,7 +904,13 @@ function DocumentFieldsPanel({
 }) {
   const grouped = buildDocumentFieldGroups(
     entity,
-    entity.fields.filter(isDocumentDisplayField),
+    entity.fields
+      .filter(isDocumentDisplayField)
+      .filter((f) => {
+        const rule = (f.ui_hint as Record<string, unknown> | null)?.["visible_when"];
+        if (!rule) return true;
+        return Boolean(evaluateRule(rule, { draft: data }));
+      }),
   );
 
   if (grouped.length === 0) return null;
@@ -734,7 +925,7 @@ function DocumentFieldsPanel({
             </h4>
             <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 lg:grid-cols-3">
               {group.fields.map((field) => {
-                const raw = data[field.name] ?? data[field.column_name ?? ""];
+                const raw = extractFieldValue(data, field);
                 const { text } = fmtFieldValue(raw, field.data_type, resolvedRefs);
                 return (
                   <div key={field.name}>
@@ -768,9 +959,16 @@ function DocumentEditableFieldsPanel({
   fieldErrors: Record<string, string>;
   onFieldChange: (name: string, value: unknown) => void;
 }) {
+  const skipFields = documentEditSkipFields(entity);
   const grouped = buildDocumentFieldGroups(
     entity,
-    entity.fields.filter(isDocumentEditableField),
+    entity.fields
+      .filter((field) => isDocumentEditableField(field, skipFields))
+      .filter((f) => {
+        const rule = (f.ui_hint as Record<string, unknown> | null)?.["visible_when"];
+        if (!rule) return true;
+        return Boolean(evaluateRule(rule, { draft: data }));
+      }),
   );
 
   if (grouped.length === 0) {
@@ -794,7 +992,7 @@ function DocumentEditableFieldsPanel({
             <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
               {group.fields.map((field) => {
                 const Renderer = resolveFieldRenderer(field);
-                const value = normaliseFieldValueForEdit(data[field.name] ?? data[field.column_name ?? ""], field);
+                const value = normaliseFieldValueForEdit(extractFieldValue(data, field), field);
                 const error = fieldErrors[field.name];
                 return (
                   <div key={field.name} className="space-y-1.5">
@@ -922,10 +1120,8 @@ export function DocumentDetailPage({
   const detailConfig  = resolveDetailConfig(entity);
   const resolvedTabs  = resolveTabs(entity, null, []);
 
-  const resolvedDisplayConfig = resolveDisplayConfig(entity.display_config as Record<string, unknown>);
-  const linesRenderer = resolveDocumentLinesRenderer(
-    entity.entity_code,
-    resolvedDisplayConfig.lines_renderer,
+  const linesRenderer = resolveDocumentLinesRendererKey(
+    entity.display_config as Record<string, unknown>,
     resolvedTabs.includes("lines"),
   );
   const hasLinesSection = linesRenderer !== null;
@@ -938,15 +1134,20 @@ export function DocumentDetailPage({
 
   const statusNorm = getDocumentStatus(entity, record);
   const subResourceRecordId = record.id;
-  const isJournalEntry = entity.entity_code.replace(/-/g, "_") === "journal_entry";
-  const isEditableDraftStatus = statusNorm === "draft" || statusNorm === "created";
+  const editableStatuses = useMemo(() => editableDocumentStatuses(entity), [entity]);
+  const isEditableDraftStatus = editableStatuses.has(statusNorm);
   const canEditDraft = isEditableDraftStatus && (
     operations === undefined ||
-    operations.some((op) =>
-      op.is_enabled &&
-      (op.surface === "DETAIL" || op.surface === "BOTH") &&
-      ["edit", "update"].includes(op.permission_code),
-    )
+    operations.some((op) => {
+      const code = op.permission_code.includes(".")
+        ? op.permission_code.split(".").pop()!
+        : op.permission_code;
+      return (
+        op.is_enabled &&
+        (op.surface === "DETAIL" || op.surface === "BOTH") &&
+        ["edit", "update"].includes(code)
+      );
+    })
   );
   const effectiveEditMode = editMode && canEditDraft;
 
@@ -965,8 +1166,13 @@ export function DocumentDetailPage({
   }, [data]);
 
   const editableFieldNames = useMemo(
-    () => new Set(entity.fields.filter(isDocumentEditableField).map((field) => field.name)),
-    [entity.fields],
+    () => {
+      const skipFields = documentEditSkipFields(entity);
+      return new Set(entity.fields
+        .filter((field) => isDocumentEditableField(field, skipFields))
+        .map((field) => field.name));
+    },
+    [entity],
   );
 
   const editPatch = useMemo(() => {
@@ -981,6 +1187,7 @@ export function DocumentDetailPage({
 
   const isDirty = Object.keys(editPatch).length > 0;
   const displayData = effectiveEditMode ? { ...data, ...editFormData } : data;
+  const headerLineAggregates = useMemo(() => lineAggregateConfigs(entity), [entity]);
 
   const linesQuery = useQuery<{ data: DocumentLine[] }>({
     queryKey: ["record-lines", entity.entity_code, subResourceRecordId],
@@ -998,27 +1205,14 @@ export function DocumentDetailPage({
     retryDelay: 1000,
   });
 
-  const headerDisplayData = useMemo(() => {
-    if (!isJournalEntry || !linesQuery.data) return displayData;
-    const totals = journalTotalsFromLines(linesQuery.data.data ?? []);
-    return {
-      ...displayData,
-      total_debit:  totals.totalDebit,
-      total_credit: totals.totalCredit,
-      line_count:   totals.lineCount,
-    };
-  }, [displayData, isJournalEntry, linesQuery.data]);
+  const headerDisplayData = useMemo(
+    () => applyLineAggregates(displayData, linesQuery.data?.data ?? [], headerLineAggregates),
+    [displayData, linesQuery.data, headerLineAggregates],
+  );
 
   const headerCurrencyCode = useMemo(() => {
     const dh = entity.display_config.document_header;
-    const candidates = [
-      dh?.currency_field ? headerDisplayData[dh.currency_field] : undefined,
-      headerDisplayData["transaction_currency"],
-      headerDisplayData["currency_code"],
-      headerDisplayData["base_currency"],
-      headerDisplayData["base_currency_code"],
-    ];
-    return candidates.map(normaliseCurrencyCode).find(Boolean) ?? "";
+    return normaliseCurrencyCode(dh?.currency_field ? headerDisplayData[dh.currency_field] : undefined) ?? "";
   }, [entity.display_config.document_header, headerDisplayData]);
 
   const { data: currencyMeta } = useQuery<CurrencyRefRow | null>({
@@ -1078,11 +1272,17 @@ export function DocumentDetailPage({
   const partyIdField = entity.display_config.document_header?.party_id_field;
   const partyId = partyIdField ? String(data[partyIdField] ?? "") : "";
 
+  const partyField = useMemo(
+    () => partyIdField ? entity.fields.find((f) => f.name === partyIdField) : undefined,
+    [entity.fields, partyIdField],
+  );
+  const partyOptionConfig = useMemo(
+    () => resolveEntityPickerOptionConfig(partyField?.reference_config),
+    [partyField],
+  );
   const partyRefEntity = useMemo(() => {
-    if (!partyIdField) return null;
-    const field = entity.fields.find((f) => f.name === partyIdField);
-    return field?.reference_config?.target_entity ?? null;
-  }, [entity, partyIdField]);
+    return partyField?.reference_config?.target_entity ?? null;
+  }, [partyField]);
 
   const { data: partyRecord } = useQuery<{ data: Record<string, unknown> } | null>({
     queryKey: ["entity-ref", partyRefEntity, partyId],
@@ -1100,19 +1300,22 @@ export function DocumentDetailPage({
 
   const resolvedPartyName = useMemo<string | null>(() => {
     if (!partyRecord?.data) return null;
-    const d = partyRecord.data;
-    for (const key of ["name", "legal_name", "trade_name", "display_name"]) {
-      const val = d[key];
-      if (val && typeof val === "string" && val.trim()) return val.trim();
-    }
-    return null;
-  }, [partyRecord]);
+    return entityRowToPickerOption(partyRecord.data, partyRefEntity, partyOptionConfig).label || null;
+  }, [partyRecord, partyRefEntity, partyOptionConfig]);
 
-  const companyCodeId = String(data["company_code_id"] ?? "");
+  const companyCodeFieldName = documentHeaderField(entity, "company_code_field");
+  const companyCodeId = companyCodeFieldName ? String(data[companyCodeFieldName] ?? "") : "";
+  const companyCodeField = useMemo(
+    () => companyCodeFieldName ? entity.fields.find((f) => f.name === companyCodeFieldName) : undefined,
+    [entity.fields, companyCodeFieldName],
+  );
+  const companyCodeOptionConfig = useMemo(
+    () => resolveEntityPickerOptionConfig(companyCodeField?.reference_config),
+    [companyCodeField],
+  );
   const companyCodeRefEntity = useMemo(() => {
-    const field = entity.fields.find((f) => f.name === "company_code_id");
-    return field?.reference_config?.target_entity ?? null;
-  }, [entity]);
+    return companyCodeField?.reference_config?.target_entity ?? null;
+  }, [companyCodeField]);
 
   const { data: companyCodeRecord } = useQuery<{ data: Record<string, unknown> } | null>({
     queryKey: ["entity-ref", companyCodeRefEntity, companyCodeId],
@@ -1130,17 +1333,18 @@ export function DocumentDetailPage({
 
   const resolvedCompanyCode = useMemo<{ code: string; name: string } | null>(() => {
     if (!companyCodeRecord?.data) return null;
-    const d = companyCodeRecord.data;
-    const code = d["code"];
-    const name = d["name"];
-    if (!code || typeof code !== "string") return null;
+    const option = entityRowToPickerOption(companyCodeRecord.data, companyCodeRefEntity, companyCodeOptionConfig);
+    const code = option.code ?? option.label;
+    if (!code) return null;
     return {
-      code: code.trim(),
-      name: typeof name === "string" ? name.trim() : code.trim(),
+      code,
+      name: option.description ?? option.label,
     };
-  }, [companyCodeRecord]);
+  }, [companyCodeRecord, companyCodeRefEntity, companyCodeOptionConfig]);
 
-  const partyCode = partyRecord?.data?.["code"];
+  const partyCode = partyRecord?.data && partyOptionConfig?.codeField
+    ? partyRecord.data[partyOptionConfig.codeField]
+    : undefined;
 
   const resolvedRefs = useMemo(() => {
     const m = new Map<string, string>();
@@ -1200,10 +1404,11 @@ export function DocumentDetailPage({
     }
 
     if (effectiveEditMode) {
+      const hasConfiguredSubmit = Boolean(documentActionHandler(entity, "submit"));
       const submitAction = model.actions.find((action) => action.id === "submit")
         ?? (
-          isJournalEntry &&
-          (statusNorm === "draft" || statusNorm === "created") &&
+          hasConfiguredSubmit &&
+          editableStatuses.has(statusNorm) &&
           (operations === undefined || operations.some((op) => op.is_enabled && op.permission_code === "submit"))
             ? {
                 id:        "submit",
@@ -1221,29 +1426,31 @@ export function DocumentDetailPage({
         };
       }
       model.actions = [
-        {
-          id:        "__document_save",
-          label:     "Save",
-          placement: "primary",
-          order:     1,
-          disabled:  busy,
-          pending:   savingDraft,
-          icon:      "save",
-        },
+        ...(isDirty
+          ? [{
+              id:        "__document_save",
+              label:     "Save",
+              placement: "primary" as const,
+              order:     1,
+              disabled:  busy,
+              pending:   savingDraft,
+              icon:      "save",
+            }]
+          : []),
         ...(submitAction
           ? [{
               ...submitAction,
               placement: "primary" as const,
-              order:     2,
+              order:     isDirty ? 2 : 1,
               disabled:  submitAction.disabled || busy,
               pending:   submittingDraft || opDispatch.isSubmitting,
             }]
           : []),
         {
-          id:        "__document_discard",
-          label:     "Discard",
+          id:        isDirty ? "__document_discard" : "__document_exit",
+          label:     isDirty ? "Discard" : "View",
           placement: "secondary",
-          order:     3,
+          order:     isDirty ? 3 : 2,
           disabled:  busy,
         },
       ];
@@ -1258,9 +1465,10 @@ export function DocumentDetailPage({
     savingDraft,
     submittingDraft,
     opDispatch.isSubmitting,
-    isJournalEntry,
     statusNorm,
     operations,
+    entity,
+    editableStatuses,
   ]);
 
   useEffect(() => {
@@ -1408,14 +1616,15 @@ export function DocumentDetailPage({
 
   function validateDraftChanges(): boolean {
     const nextErrors: Record<string, string> = {};
+    const skipFields = documentEditSkipFields(entity);
     for (const field of entity.fields) {
-      if (!isDocumentEditableField(field) || !field.is_required) continue;
+      if (!isDocumentEditableField(field, skipFields) || !field.is_required) continue;
       const value = editFormData[field.name];
       if (value === undefined || value === null || value === "") {
         nextErrors[field.name] = `${field.label ?? field.name} is required`;
       }
     }
-    const editableFields = entity.fields.filter(isDocumentEditableField);
+    const editableFields = entity.fields.filter((field) => isDocumentEditableField(field, skipFields));
     const metaValidation = validateMetaFieldRules(editableFields, editFormData);
     Object.assign(nextErrors, metaValidation.fieldErrors);
     setFieldErrors(nextErrors);
@@ -1468,24 +1677,31 @@ export function DocumentDetailPage({
     }
   }
 
-  async function submitJournalEntry(): Promise<boolean> {
+  async function runConfiguredDocumentAction(action: string): Promise<boolean | null> {
+    const handler = documentActionHandler(entity, action);
+    if (!handler) return null;
+
+    const templateValues = documentTemplateValues(entity, record, recordId);
+    if (handler.routeTemplate) {
+      router.push(renderTemplate(handler.routeTemplate, templateValues));
+      return true;
+    }
+
+    if (!handler.endpointTemplate) return null;
     setSubmittingDraft(true);
     setSaveError(null);
     try {
-      const res = await fetch(
-        `/api/finance/journals/${encodeURIComponent(record.id)}/submit`,
-        {
-          method:  "POST",
-          headers: { "X-CSRF-Token": getCsrfToken() },
-        },
-      );
+      const res = await fetch(renderTemplate(handler.endpointTemplate, templateValues), {
+        method:  handler.method,
+        headers: { "X-CSRF-Token": getCsrfToken() },
+      });
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as Record<string, unknown>;
         const message = typeof body["message"] === "string"
           ? body["message"]
           : typeof body["error"] === "string"
           ? body["error"]
-          : `Submit failed (${res.status})`;
+          : `${action} failed (${res.status})`;
         setSaveError(message);
         return false;
       }
@@ -1496,7 +1712,7 @@ export function DocumentDetailPage({
       await queryClient.invalidateQueries({ queryKey: ["record-distributions", entity.entity_code, subResourceRecordId] });
       return true;
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Submit failed. Please try again.");
+      setSaveError(err instanceof Error ? err.message : `${action} failed. Please try again.`);
       return false;
     } finally {
       setSubmittingDraft(false);
@@ -1541,11 +1757,9 @@ export function DocumentDetailPage({
       if (action === "submit") {
         const saved = await saveDraftChanges();
         if (!saved) return;
-        if (isJournalEntry) {
-          const submitted = await submitJournalEntry();
-          if (submitted) {
-            router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
-          }
+        const handled = await runConfiguredDocumentAction(action);
+        if (handled !== null) {
+          if (handled) router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
           return;
         }
         await opDispatch.dispatch(action, operations ?? []);
@@ -1553,9 +1767,9 @@ export function DocumentDetailPage({
       }
     }
 
-    if (action === "submit" && isJournalEntry) {
-      const submitted = await submitJournalEntry();
-      if (submitted) {
+    const configuredActionHandled = await runConfiguredDocumentAction(action);
+    if (configuredActionHandled !== null) {
+      if (configuredActionHandled && action === "submit") {
         router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
       }
       return;
@@ -1566,21 +1780,12 @@ export function DocumentDetailPage({
       return;
     }
     if (action === "copy") { void navigator.clipboard?.writeText(title); return; }
-    if (action === "view_je") {
-      const jeId = record.data["ap_je_id"] as string | null | undefined;
-      if (jeId) { router.push(`/app/journal_entry/${jeId}`); }
-      return;
-    }
     const op = findOperation(action);
     if (op?.handler_type === "NAVIGATE" && op.handler_target) {
       const url = op.handler_target
         .replace(/\{id\}/g, record.id)
         .replace(/\{recordId\}/g, recordId);
       router.push(url);
-      return;
-    }
-    if (action === "allocate_payment") {
-      router.push(`/finance/ap?invoice=${record.id}`);
       return;
     }
     await opDispatch.dispatch(action, operations ?? []);
@@ -1641,7 +1846,7 @@ export function DocumentDetailPage({
           </div>
         )}
 
-        {activeTab === "__lines" && (
+        {activeTab === "__lines" && linesRenderer && (
           <Card className="overflow-hidden">
             <LinesPanel
               entity={entity}
@@ -1654,7 +1859,7 @@ export function DocumentDetailPage({
               distributions={distQuery.data?.data ?? []}
               isLoading={linesQuery.isLoading}
               onRefresh={onLinesRefresh}
-              linesRenderer={linesRenderer ?? "generic"}
+              linesRenderer={linesRenderer}
               hasAiClassification={Boolean(entity.feature_flags?.["has_ai_classification"])}
               hasLineComposer={Boolean(entity.feature_flags?.["has_line_composer"])}
               editMode={effectiveEditMode}
@@ -1682,7 +1887,7 @@ export function DocumentDetailPage({
         {activeTab === "__versions" && (
           <Card>
             <CardContent className="pt-5">
-              <VersionsPanel entityCode={entity.entity_code} recordId={recordId} />
+              <VersionsPanel entity={entity} entityCode={entity.entity_code} recordId={recordId} />
             </CardContent>
           </Card>
         )}
@@ -1800,15 +2005,14 @@ export function DocumentDetailPage({
             <AttachmentsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
           )}
           {activePanel === "activity" && (() => {
-            // Resolve field names via document_header config, fall back to standard names
-            const dh = entity.display_config?.document_header as Record<string, string> | undefined;
+            const dh = entity.display_config?.document_header;
             return (
               <>
                 <AuditMetaCard
-                  createdAt={dh?.created_at_field ? data[dh.created_at_field] : data["created_at"]}
-                  createdBy={dh?.created_by_field ? data[dh.created_by_field] : data["created_by"]}
-                  updatedAt={dh?.updated_at_field ? data[dh.updated_at_field] : data["updated_at"]}
-                  updatedBy={dh?.updated_by_field ? data[dh.updated_by_field] : data["updated_by"]}
+                  createdAt={dh?.created_at_field ? data[dh.created_at_field] : undefined}
+                  createdBy={dh?.created_by_field ? data[dh.created_by_field] : undefined}
+                  updatedAt={dh?.updated_at_field ? data[dh.updated_at_field] : undefined}
+                  updatedBy={dh?.updated_by_field ? data[dh.updated_by_field] : undefined}
                 />
                 <EventsPanel entityCode={entity.entity_code} recordId={recordId} recordUuid={record.id} />
               </>

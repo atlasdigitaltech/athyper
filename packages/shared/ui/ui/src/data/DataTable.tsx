@@ -105,6 +105,7 @@ export interface DataTableProps<TData> {
    * The select checkbox column ("select") is always first; include it here to pin it too.
    */
   pinnedColumns?: string[];
+  tableContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function DataTable<TData>({
@@ -126,6 +127,7 @@ export function DataTable<TData>({
   onPageChange,
   rowActions,
   tableContainerClassName,
+  tableContainerRef,
   density = "comfortable",
   aggregations,
   pinnedColumns,
@@ -252,7 +254,7 @@ export function DataTable<TData>({
 
   return (
     <div className={cn("space-y-3", className)}>
-      <div className={cn("rounded-md border", tableContainerClassName)}>
+      <div ref={tableContainerRef} className={cn("rounded-md border", tableContainerClassName)}>
         <table className="w-full caption-bottom text-sm text-foreground">
           <thead className="sticky top-0 z-10 border-b bg-muted">
             {table.getHeaderGroups().map((headerGroup) => (
