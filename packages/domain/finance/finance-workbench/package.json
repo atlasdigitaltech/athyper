@@ -15,6 +15,9 @@
     "./lib/reportRegistry": "./src/lib/reportRegistry.ts",
     "./lib/invoice-orchestrator-mock": "./src/lib/invoice-orchestrator-mock.ts"
   },
+  "dependencies": {
+    "@athyper/runtime-shared": "workspace:*"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/"

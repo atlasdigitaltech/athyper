@@ -35,6 +35,7 @@ export interface RecordsRoutesDeps {
   };
   importQueue?: Queue;
   objectStorage?: ImportObjectStorage;
+  importMaxUploadMb?: number;
   cache?: CacheClient;
 }
 
@@ -56,6 +57,7 @@ export function registerRecordsRoutes(router: Router, deps: RecordsRoutesDeps): 
       auth: deps.auth,
       importQueue: deps.importQueue,
       objectStorage: deps.objectStorage,
+      maxUploadMb: deps.importMaxUploadMb,
       logger: deps.logger,
     });
   }

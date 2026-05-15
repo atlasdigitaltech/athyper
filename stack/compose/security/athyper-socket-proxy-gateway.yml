@@ -39,6 +39,10 @@ services:
       EXEC: 0
       GRPC: 0
       IMAGES: 0
+      # INFO: 0 disables the Docker /info endpoint. Traefik does not need it for
+      # service discovery. Note: any external monitoring tool that queries Docker's
+      # /_ping or /info endpoints via this proxy will receive a 403 — use the
+      # Docker daemon socket directly on the host for those tools instead.
       INFO: 0
       NODES: 0
       PLUGINS: 0

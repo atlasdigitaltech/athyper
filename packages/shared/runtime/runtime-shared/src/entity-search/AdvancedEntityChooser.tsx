@@ -8,5 +8,6 @@ export {
   type AdvancedEntityChooserOption,
   type AdvancedEntityChooserPanelProps,
   type AdvancedEntityChooserSection,
+  type AdvancedEntityChooserTreeConfig,
   type AdvancedEntityChooserTone,
 } from "@athyper/ui/composites";

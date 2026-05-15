@@ -25,3 +25,13 @@ export { useFinanceDashboardKpis, type FinanceDashboardKpis } from "./useFinance
 export { useFiscalPeriods, type FiscalPeriodRow } from "./useFiscalPeriods";
 export { useCreateJournal, type CreateJournalPayload, type CreateJournalLine, type CreateJournalResult } from "./useCreateJournal";
 export { useReverseJournal, type ReverseJournalPayload, type ReverseJournalResult } from "./useReverseJournal";
+export {
+  useSpendCategories,
+  useBusinessIntents,
+  type SpendCategoryRow,
+  type SpendCategorySummary,
+  type SpendCategoryPayload,
+  type BusinessIntentRow,
+  type BusinessIntentSummary,
+  type BusinessIntentPayload,
+} from "./useTaxonomyWorkbenches";

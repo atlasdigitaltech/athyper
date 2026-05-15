@@ -88,6 +88,11 @@ export interface DataTableProps<TData> {
    */
   rowActions?: (row: TData) => ReactNode;
   /**
+   * Optional per-row class hook for states owned by the calling surface, such
+   * as a selected row mirrored in a side panel.
+   */
+  getRowClassName?: (row: TData) => string | undefined;
+  /**
    * Fired when the user right-clicks a row.
    * Use this to render a custom context menu positioned at the mouse cursor.
    */
@@ -132,6 +137,7 @@ export function DataTable<TData>({
   aggregations,
   pinnedColumns,
   onRowContextMenu,
+  getRowClassName,
 }: DataTableProps<TData>) {
   // Row density maps
   const CELL_PAD: Record<string, string> = {
@@ -319,6 +325,7 @@ export function DataTable<TData>({
                     "border-b transition-colors hover:bg-muted/50",
                     row.getIsSelected() && "bg-muted",
                     onRowClick && "cursor-pointer",
+                    getRowClassName?.(row.original),
                   )}
                   onClick={(event) => {
                     if (isInteractiveRowClick(event)) return;

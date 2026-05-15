@@ -47,12 +47,16 @@ function captureTraceId(response: Response): void {
 export async function bffFetch<T = unknown>(
   url: string,
   options: BffFetchOptions = {},
+  timeoutMs = 30_000,
 ): Promise<T> {
   const { method = "GET", body, headers = {}, signal } = options;
 
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const effectiveSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+
   const init: RequestInit = {
     method,
-    signal,
+    signal: effectiveSignal,
     headers: {
       "Content-Type": "application/json",
       ...headers,

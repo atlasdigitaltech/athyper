@@ -146,6 +146,8 @@ stack/config/**/certs/ca.*
 # Tool outputs
 tools/**/tmp/
 tools/**/output/
+.codex-logs/
+.weekly-db-checks/
 
 # =========================
 # Prisma / DB artifacts

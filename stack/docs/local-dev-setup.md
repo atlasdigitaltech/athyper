@@ -1223,3 +1223,4 @@ Key variables in `stack/env/.env` for local development. Full list with descript
 | [`staging-setup.md`](staging-setup.md) | Ubuntu server installation, v13 permission model, full Phase 0–26 runbook |
 | [`infrastructure-plan.md`](infrastructure-plan.md) | Architecture overview, v13 permission decision, pre-deployment code gates |
 | [`secrets-management.md`](secrets-management.md) | Secret inventory, generation commands, rotation runbook |
+| [`weekly-reset-reseed-export.md`](weekly-reset-reseed-export.md) | Weekly DB reset, re-seed, export, and restore validation until base completion |

@@ -56,20 +56,20 @@ REM                        Resolution order: shell env → stack\env\.env
 REM                        Overridden by --tenant-id=UUID CLI flag.
 REM                        If omitted, each Stage 3 SQL file uses its own baked-in UUID.
 REM
-REM Stage layout (migrate.ts):
-REM   Stage 1 — DDL        : all dirs under server/db/sql/ except 900_seed_data/
-REM                          Sub-stage order: 00_platform → public → 00_bootstrap →
+REM Stage layout (provision.ts):
+REM   Stage 1 — DDL        : all dirs under server/db/ddl/
+REM                          Sub-stage order: 000_bootstrap → public → 00_bootstrap →
 REM                          shared/01_tables → shared/02_pre_constraint + shared/05_functions →
 REM                          */01_tables → 02_pre_constraint → 03_constraints → 04_indexes →
-REM                          05_functions → 06_triggers → 07_views → 08_rls → 99_security
-REM   Stage 2 — Platform   : 900_seed_data/010_platform/
+REM                          05_functions → 06_triggers → 07_views → 08_rls → security/
+REM   Stage 2 — Platform   : server/db/seed/010_platform/
 REM                          Seed order: 000_bootstrap → 000_lookups →
 REM                          001_global_reference → 002_permission_model → 003_control →
 REM                          003_master → 004_entity_engine → 005_domain_registrations →
-REM                          006_system_tenant
-REM   Stage 3 — Blueprint  : 900_seed_data/020_universal/  (TIER 1 foundation + TIER 2a COA)
-REM                        : 900_seed_data/030_industry/   (TIER 2b industry packs + TIER 3 modules)
-REM             Tenant     : 900_seed_data/040_tenants/{client}/
+REM                          006_system_tenant → 007_blueprint_registry
+REM   Stage 3 — Blueprint  : server/db/seed/020_universal/  (TIER 1 foundation + TIER 2a COA)
+REM                        : server/db/seed/030_industry/   (TIER 2b industry packs + TIER 3 modules)
+REM             Tenant     : server/db/tenants/{client}/
 REM                          Per-client order: 000_tenant.sql → 001_tenant_profile.sql →
 REM                          100_org_structure → 200_finance → 300_governance →
 REM                          800_subscriptions → 900_principals → 950_rbac →
@@ -219,7 +219,7 @@ REM Run the provisioner (cd to server/ so node_modules and tsconfig resolve corr
 REM SEED_TENANT_ID is inherited by the child process automatically.
 REM ---------------------------------------------------------------------------
 cd /d "%SERVER_DIR%"
-npx tsx db/seed/migrate.ts !MIGRATE_ARGS!
+npx tsx db/scripts/provision.ts !MIGRATE_ARGS!
 
 if errorlevel 1 (
     echo.

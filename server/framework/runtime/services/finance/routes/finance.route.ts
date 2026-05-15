@@ -1440,7 +1440,10 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
           coa.country_code      AS country,
           coa.version,
           coa.is_locked         AS "isLocked",
-          COUNT(ga.id) FILTER (WHERE ga.node_type = 'posting') AS "accountCount",
+          COUNT(ga.id) FILTER (
+            WHERE ga.node_type = 'posting'
+              AND COALESCE((ga.metadata->>'_journal_postable')::boolean, true) = true
+          ) AS "accountCount",
           COUNT(DISTINCT asgn.company_code_id)                  AS "assignmentCount",
           CASE
             WHEN bool_or(asgn.assignment_type = 'group')     THEN 'group'
@@ -1457,6 +1460,7 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
                AND asgn.status              = 'active'
         WHERE  coa.tenant_id = ${tenantId}::uuid
           AND  coa.status    = 'active'
+          AND  COALESCE((coa.metadata->>'_selectable')::boolean, true) = true
         GROUP  BY coa.id
         ORDER  BY coa.code
       `.execute(db);
@@ -1529,6 +1533,7 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
         WHERE  ga.tenant_id = ${tenantId}::uuid
           AND  ga.status    = 'active'
           AND  (${nodeType} = '' OR ga.node_type = ${nodeType})
+          AND  (${nodeType} <> 'posting' OR COALESCE((ga.metadata->>'_journal_postable')::boolean, true) = true)
           AND  (ga.code ILIKE ${pattern} OR ga.name ILIKE ${pattern})
         ORDER  BY ga.code
         LIMIT  ${limit}

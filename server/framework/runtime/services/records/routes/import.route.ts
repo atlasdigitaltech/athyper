@@ -9,14 +9,15 @@
  *   GET  /api/records/:entity/import/:jobId   — poll import_request status
  *   GET  /api/records/:entity/import          — list recent import history for entity
  *
- * The BFF relay at /api/relay/[...path] converts multipart→base64 JSON before forwarding,
- * so upload receives { file: { name, type, data: base64 } } in req.body.
+ * The BFF relay streams multipart/form-data to this runtime. Legacy JSON
+ * base64 uploads remain supported for small/non-browser clients.
  */
 
 import { sql } from "kysely";
-import type { RequestHandler, Router } from "express";
+import type { Request, RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import type { Queue } from "bullmq";
+import busboy from "busboy";
 
 import { verifyBearer } from "@athyper/svc-shared";
 
@@ -40,6 +41,7 @@ export interface ImportRouteDeps {
   auth:          { verifyToken(token: string): Promise<Record<string, unknown>> };
   importQueue:   Queue;
   objectStorage: ImportObjectStorage;
+  maxUploadMb?:  number;
   logger?:       JobLogger;
 }
 
@@ -124,16 +126,163 @@ async function parsePreview(buf: Buffer, format: string): Promise<{
   return parseCsvPreview(buf, format);
 }
 
+// Upload body parsing
+
+interface ImportUploadFile {
+  fileName: string;
+  buffer:   Buffer;
+}
+
+class ImportUploadError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ImportUploadError";
+  }
+}
+
+function contentType(req: Request): string {
+  const value = req.headers["content-type"];
+  return (Array.isArray(value) ? value.join(";") : value ?? "").toLowerCase();
+}
+
+function fileNameOrDefault(value: unknown): string {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.slice(0, 500)
+    : "import.csv";
+}
+
+function uploadLimitMessage(maxUploadBytes: number): string {
+  return `File exceeds the ${Math.floor(maxUploadBytes / 1024 / 1024)} MB limit`;
+}
+
+function readJsonUpload(req: Request, maxUploadBytes: number): ImportUploadFile {
+  const body = req.body as { file?: { name?: unknown; data?: unknown } };
+  if (typeof body.file?.data !== "string" || body.file.data.length === 0) {
+    throw new ImportUploadError(400, "MISSING_FILE", "No file in request body");
+  }
+
+  const data = body.file.data.replace(/[\r\n]/g, "");
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(data)) {
+    throw new ImportUploadError(400, "INVALID_BASE64", "file.data must be valid base64");
+  }
+
+  const buffer = Buffer.from(data, "base64");
+  if (buffer.byteLength === 0) {
+    throw new ImportUploadError(400, "EMPTY_FILE", "Uploaded file is empty");
+  }
+  if (buffer.byteLength > maxUploadBytes) {
+    throw new ImportUploadError(413, "FILE_TOO_LARGE", uploadLimitMessage(maxUploadBytes));
+  }
+
+  return {
+    fileName: fileNameOrDefault(body.file.name),
+    buffer,
+  };
+}
+
+function readMultipartUpload(req: Request, maxUploadBytes: number): Promise<ImportUploadFile> {
+  return new Promise((resolve, reject) => {
+    const bb = busboy({
+      headers: req.headers,
+      limits: {
+        files:    1,
+        fileSize: maxUploadBytes,
+      },
+    });
+
+    let fileSeen = false;
+    let fileLimitExceeded = false;
+    let fileName = "import.csv";
+    let sizeBytes = 0;
+    let chunks: Buffer[] = [];
+    let settled = false;
+
+    const rejectOnce = (err: unknown) => {
+      if (settled) return;
+      settled = true;
+      reject(err instanceof Error ? err : new Error(String(err)));
+    };
+
+    bb.on("file", (_fieldName, fileStream, info) => {
+      if (fileSeen) {
+        fileStream.resume();
+        return;
+      }
+
+      fileSeen = true;
+      fileName = fileNameOrDefault(info.filename);
+
+      fileStream.on("data", (chunk: Buffer) => {
+        if (fileLimitExceeded) return;
+        sizeBytes += chunk.length;
+        if (sizeBytes > maxUploadBytes) {
+          fileLimitExceeded = true;
+          chunks = [];
+          fileStream.resume();
+          return;
+        }
+        chunks.push(Buffer.from(chunk));
+      });
+
+      fileStream.on("limit", () => {
+        fileLimitExceeded = true;
+        chunks = [];
+        fileStream.resume();
+      });
+
+      fileStream.on("error", rejectOnce);
+    });
+
+    bb.on("finish", () => {
+      if (settled) return;
+      if (fileLimitExceeded) {
+        rejectOnce(new ImportUploadError(413, "FILE_TOO_LARGE", uploadLimitMessage(maxUploadBytes)));
+        return;
+      }
+      if (!fileSeen) {
+        rejectOnce(new ImportUploadError(400, "MISSING_FILE", "No file part found in multipart body"));
+        return;
+      }
+
+      const buffer = Buffer.concat(chunks, sizeBytes);
+      if (buffer.byteLength === 0) {
+        rejectOnce(new ImportUploadError(400, "EMPTY_FILE", "Uploaded file is empty"));
+        return;
+      }
+
+      settled = true;
+      resolve({ fileName, buffer });
+    });
+
+    bb.on("error", rejectOnce);
+    req.on("error", rejectOnce);
+    req.pipe(bb);
+  });
+}
+
+function readImportUpload(req: Request, maxUploadBytes: number): Promise<ImportUploadFile> | ImportUploadFile {
+  if (contentType(req).includes("multipart/form-data")) {
+    return readMultipartUpload(req, maxUploadBytes);
+  }
+  return readJsonUpload(req, maxUploadBytes);
+}
+
 // ── Chunk size ────────────────────────────────────────────────────────────────
 const DEFAULT_CHUNK_SIZE = 500;
+const DEFAULT_IMPORT_UPLOAD_MB = 100;
 
 // ── Route registration ────────────────────────────────────────────────────────
 
 export function createImportRoutes(router: Router, deps: ImportRouteDeps): void {
   const { db, auth, importQueue, objectStorage, logger } = deps;
+  const maxUploadBytes = Math.max(1, deps.maxUploadMb ?? DEFAULT_IMPORT_UPLOAD_MB) * 1024 * 1024;
 
   // ── POST /api/records/:entity/import/upload ──────────────────────────────
-  // Receives { file: { name, type, data: base64 } } from BFF relay.
+  // Receives multipart/form-data from the BFF relay, or legacy JSON base64.
   // Stores file in object storage, creates an import_request with status='uploaded',
   // and returns { uploadToken, headers, rowCount, previewRows }.
   router.post("/records/:entity/import/upload", (async (req, res, next) => {
@@ -160,19 +309,22 @@ export function createImportRoutes(router: Router, deps: ImportRouteDeps): void 
         .executeTakeFirst() as { id: string } | undefined;
       const principalId = principal?.id ?? sub;
 
-      // Extract uploaded file from BFF relay format
-      const body = req.body as { file?: { name?: string; type?: string; data?: string } };
-      if (!body.file?.data) {
-        res.status(400).json({ error: "MISSING_FILE", message: "No file in request body" });
-        return;
+      let uploaded: ImportUploadFile;
+      try {
+        uploaded = await readImportUpload(req, maxUploadBytes);
+      } catch (err) {
+        if (err instanceof ImportUploadError) {
+          res.status(err.status).json({ error: err.code, message: err.message });
+          return;
+        }
+        throw err;
       }
 
-      const fileName   = body.file.name ?? "import.csv";
+      const { fileName, buffer } = uploaded;
       const fileFormat = fileName.endsWith(".xlsx") ? "xlsx"
                        : fileName.endsWith(".tsv")  ? "tsv"
                        : "csv";
 
-      const buffer    = Buffer.from(body.file.data, "base64");
       const sizeBytes = buffer.byteLength;
 
       // Parse headers + preview rows

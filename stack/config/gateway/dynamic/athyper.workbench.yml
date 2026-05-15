@@ -57,22 +57,57 @@ http:
           - "172.16.0.0/12"
           - "192.168.0.0/16"
 
-    # Local: forward-auth disabled — Next.js middleware handles auth.
-    # Staging/production use Traefik-layer forward-auth (see environments/).
-    #
-    # DEV-PARITY NOTE: local skips the Traefik auth layer entirely.
-    # Bugs in forward-auth header propagation (X-User-Id, X-Tenant-Id)
-    # will NOT surface locally. To test, uncomment the block below and
-    # ensure athyper-api exposes GET /api/auth/verify.
-    #
-    # workbench-forward-auth:
-    #   forwardAuth:
-    #     address: "http://athyper-api:3000/api/auth/verify"
-    #     trustForwardHeader: true
-    #     authResponseHeaders:
-    #       - "X-User-Id"
-    #       - "X-User-Roles"
-    #       - "X-Tenant-Id"
+    # Browser auth is enforced by the Next.js BFF/session layer. Traefik
+    # forward-auth is intentionally not attached to these routes because browser
+    # sessions are cookie-based while the runtime verifier is bearer-token-only.
+
+    # ── Production-grade reliability + security ────────────────────────────────
+
+    # Steady-state rate limit — protects backend from spike/scrape load.
+    athyper-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1s
+
+    # Concurrency cap — prevents a single slow upstream from starving all goroutines.
+    athyper-inflight:
+      inFlightReq:
+        amount: 200
+        sourceCriterion:
+          requestHeaderName: "X-Forwarded-For"
+
+    # Circuit breaker — fail-fast when the backend is consistently unhealthy.
+    athyper-circuit-breaker:
+      circuitBreaker:
+        expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.30 || NetworkErrorRatio() > 0.10"
+        checkPeriod: 10s
+        fallbackDuration: 10s
+        recoveryDuration: 10s
+
+    # Do not attach retry to the workbench routers below: they carry both page
+    # loads and mutating BFF/API calls, so automatic retries can duplicate writes.
+    # Keep this middleware only for future method-scoped idempotent routers.
+    athyper-retry:
+      retry:
+        attempts: 2
+        initialInterval: 50ms
+
+    # Security response headers — defense against clickjacking, MIME sniffing, etc.
+    athyper-security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+          X-XSS-Protection: "0"
+
+    # Brotli/gzip compression for responses ≥ 1 KB.
+    athyper-compress:
+      compress:
+        minResponseBodyBytes: 1024
+        encodings: ["br", "gzip"]
 
   routers:
     neon-workbench-admin:
@@ -82,9 +117,14 @@ http:
       priority: 110
       tls: {}
       middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
         - workbench-ip-restrict
         - workbench-strip-admin
         - workbench-headers-admin
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
 
     neon-workbench-ops:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/ops`)"
@@ -93,9 +133,14 @@ http:
       priority: 110
       tls: {}
       middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
         - workbench-ip-restrict
         - workbench-strip-ops
         - workbench-headers-ops
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
 
     neon-workbench-user:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/user`)"
@@ -104,8 +149,13 @@ http:
       priority: 100
       tls: {}
       middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
         - workbench-strip-user
         - workbench-headers-user
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
 
     neon-default:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`)"
@@ -114,7 +164,12 @@ http:
       priority: 1
       tls: {}
       middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
         - workbench-headers-user
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
 
   services:
     athyper-neon-web:

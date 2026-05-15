@@ -66,6 +66,16 @@ export interface EntityPickerBadgeConfig {
   toneMap?: Record<string, AdvancedEntityChooserBadge["tone"]>;
 }
 
+export interface EntityPickerTreeConfig {
+  enabled?: boolean;
+  defaultEnabled?: boolean;
+  parentField?: string;
+  valueField?: string;
+  levelField?: string;
+  sortField?: string;
+  minRecords?: number;
+}
+
 export interface EntityPickerOptionConfig {
   labelField?: string | null;
   labelTemplate?: string | null;
@@ -78,10 +88,14 @@ export interface EntityPickerOptionConfig {
   variant?: "standard" | "advanced";
   density?: AdvancedEntityChooserDensity;
   width?: number | string;
-  maxListHeight?: number;
+  maxListHeight?: number | string;
   showKeyboardHints?: boolean;
   showRecentlyUsed?: boolean;
   recentLimit?: number;
+  /** Number of records fetched per advanced-picker request and per Load more action. */
+  pageSize?: number;
+  /** Initial search mode for advanced pickers. Defaults to server search. */
+  defaultSearchMode?: "server" | "instant";
   optionActionLabel?: string;
   resultLabel?: string;
   /** ID of the control tab that should be active on first open. Defaults to the first control. */
@@ -89,6 +103,7 @@ export interface EntityPickerOptionConfig {
   controls?: EntityPickerControlConfig[];
   sections?: EntityPickerSectionConfig[];
   badges?: EntityPickerBadgeConfig[];
+  tree?: EntityPickerTreeConfig;
 }
 
 export interface EntityPickerSearchContext {
@@ -97,6 +112,7 @@ export interface EntityPickerSearchContext {
   limit?: number;
   pageSize?: number;
   page?: number;
+  treeEnabled?: boolean;
 }
 
 export interface EntityPickerSearchResult {
@@ -124,10 +140,29 @@ function numberConfig(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function positiveIntegerConfig(value: unknown): number | undefined {
+  const numeric = typeof value === "string" && value.trim() ? Number(value) : value;
+  return typeof numeric === "number" && Number.isFinite(numeric) && numeric > 0
+    ? Math.floor(numeric)
+    : undefined;
+}
+
+function searchModeConfig(value: unknown): "server" | "instant" | undefined {
+  const mode = textConfig(value)?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (!mode) return undefined;
+  if (mode === "server" || mode === "server_search" || mode === "remote" || mode === "all") return "server";
+  if (mode === "instant" || mode === "instant_search" || mode === "in_view" || mode === "local") return "instant";
+  return undefined;
+}
+
 function widthConfig(value: unknown): number | string | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim()) return value.trim();
   return undefined;
+}
+
+function lengthConfig(value: unknown): number | string | undefined {
+  return widthConfig(value);
 }
 
 function densityConfig(value: unknown): AdvancedEntityChooserDensity | undefined {
@@ -230,6 +265,40 @@ function badgesConfig(value: unknown): EntityPickerBadgeConfig[] | undefined {
   return badges.length > 0 ? badges : undefined;
 }
 
+function treeConfig(value: unknown): EntityPickerTreeConfig | undefined {
+  const tree = asRecord(value);
+  if (!tree) return undefined;
+  const parentField = textConfig(
+    tree["parent_field"]
+      ?? tree["parentField"]
+      ?? tree["field"]
+      ?? tree["parent"],
+  );
+  if (!parentField) return undefined;
+  return {
+    enabled: boolConfig(tree["enabled"]) ?? true,
+    defaultEnabled: boolConfig(
+      tree["default_enabled"]
+        ?? tree["defaultEnabled"]
+        ?? tree["default"]
+        ?? tree["initially_enabled"]
+        ?? tree["initiallyEnabled"],
+    ) ?? false,
+    parentField,
+    valueField: textConfig(tree["value_field"] ?? tree["valueField"]),
+    levelField: textConfig(tree["level_field"] ?? tree["levelField"]),
+    sortField: textConfig(tree["sort_field"] ?? tree["sortField"] ?? tree["order_field"] ?? tree["orderField"]),
+    minRecords: positiveIntegerConfig(
+      tree["min_records"]
+        ?? tree["minRecords"]
+        ?? tree["minimum_records"]
+        ?? tree["minimumRecords"]
+        ?? tree["page_size"]
+        ?? tree["pageSize"],
+    ),
+  };
+}
+
 export function resolveEntityPickerOptionConfig(referenceConfig: unknown): EntityPickerOptionConfig | undefined {
   const config = asRecord(referenceConfig);
   if (!config) return undefined;
@@ -252,27 +321,47 @@ export function resolveEntityPickerOptionConfig(referenceConfig: unknown): Entit
     variant:          variantConfig(picker?.["variant"] ?? picker?.["display"]),
     density:          densityConfig(picker?.["density"]),
     width:            widthConfig(picker?.["width"]),
-    maxListHeight:    numberConfig(picker?.["max_list_height"] ?? picker?.["maxListHeight"]),
+    maxListHeight:    lengthConfig(picker?.["max_list_height"] ?? picker?.["maxListHeight"]),
     showKeyboardHints: boolConfig(picker?.["show_keyboard_hints"] ?? picker?.["showKeyboardHints"]),
     showRecentlyUsed: boolConfig(picker?.["show_recently_used"] ?? picker?.["showRecentlyUsed"]),
     recentLimit:      numberConfig(picker?.["recent_limit"] ?? picker?.["recentLimit"]),
+    pageSize:         positiveIntegerConfig(
+      picker?.["page_size"]
+        ?? picker?.["pageSize"]
+        ?? picker?.["result_limit"]
+        ?? picker?.["resultLimit"]
+        ?? picker?.["row_count"]
+        ?? picker?.["rowCount"],
+    ),
+    defaultSearchMode: searchModeConfig(
+      picker?.["default_search_mode"]
+        ?? picker?.["defaultSearchMode"]
+        ?? picker?.["search_mode"]
+        ?? picker?.["searchMode"],
+    ),
     optionActionLabel: textConfig(picker?.["option_action_label"] ?? picker?.["optionActionLabel"]),
     resultLabel:      textConfig(picker?.["result_label"] ?? picker?.["resultLabel"]),
     defaultControl:   textConfig(picker?.["default_control"] ?? picker?.["defaultControl"] ?? config["default_control"]),
     controls:         controlsConfig(picker?.["controls"]),
     sections:         sectionsConfig(picker?.["sections"]),
     badges:           badgesConfig(picker?.["badges"]),
+    tree:             treeConfig(picker?.["tree"] ?? picker?.["hierarchy"] ?? config["tree"] ?? config["hierarchy"]),
   };
 }
 
-function rawText(option: EntityPickerOption, field: string | undefined): string | undefined {
+function rawValue(option: EntityPickerOption, field: string | undefined): unknown {
   if (!field) return undefined;
-  if (field === "value" || field === "id") return option.value;
+  if (field === "value") return option.value;
+  if (field === "id") return option.raw?.["id"] ?? option.recordId ?? option.value;
   if (field === "label") return option.label;
   if (field === "code") return option.code;
   if (field === "description") return option.description;
   if (field === "recordId") return option.recordId;
-  const value = option.raw?.[field];
+  return option.raw?.[field];
+}
+
+function rawText(option: EntityPickerOption, field: string | undefined): string | undefined {
+  const value = rawValue(option, field);
   if (value === null || value === undefined) return undefined;
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
@@ -348,6 +437,10 @@ function toAdvancedOption(
   getOptionHref?: (option: EntityPickerOption) => string | null | undefined,
   sectionOverride?: string,
 ): AdvancedEntityChooserOption {
+  const tree = optionConfig?.tree?.enabled ? optionConfig.tree : undefined;
+  const treeValue = rawText(option, tree?.valueField) ?? option.recordId ?? option.value;
+  const treeLevelValue = rawValue(option, tree?.levelField);
+  const treeSortValue = rawValue(option, tree?.sortField);
   return {
     value: option.value,
     label: option.label,
@@ -357,6 +450,16 @@ function toAdvancedOption(
     disabled: false,
     section: sectionOverride ?? resolveAdvancedSection(option, optionConfig?.sections),
     badges: resolveAdvancedBadges(option, optionConfig?.badges),
+    treeValue: tree ? treeValue : undefined,
+    parentValue: tree ? rawText(option, tree.parentField) ?? null : undefined,
+    treeLevel: typeof treeLevelValue === "number" ? treeLevelValue : (
+      typeof treeLevelValue === "string" && treeLevelValue.trim() && Number.isFinite(Number(treeLevelValue))
+        ? Number(treeLevelValue)
+        : undefined
+    ),
+    treeSortValue: typeof treeSortValue === "number" || typeof treeSortValue === "string"
+      ? treeSortValue
+      : undefined,
   };
 }
 
@@ -395,6 +498,16 @@ function optionMatchesQuery(option: EntityPickerOption, query: string): boolean 
 function recentLimitConfig(value: number | undefined): number {
   if (value === undefined) return 5;
   return Math.min(10, Math.max(0, Math.floor(value)));
+}
+
+function pageSizeConfig(value: number | undefined): number {
+  if (value === undefined) return 20;
+  return Math.min(100, Math.max(1, Math.floor(value)));
+}
+
+function treeMinRecordsConfig(value: number | undefined): number {
+  if (value === undefined) return 500;
+  return Math.min(1000, Math.max(500, Math.floor(value)));
 }
 
 function rawRecordForRecent(raw: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
@@ -480,8 +593,17 @@ export const EntityPicker = forwardRef<HTMLDivElement, EntityPickerProps>(
     ref,
   ) => {
     const isCustomMode = typeof search === "function";
-    const pageIncrement = 20;
-    const resultLimit = pageIncrement;
+    const pageIncrement = pageSizeConfig(optionConfig?.pageSize);
+    const treeSupported = !!optionConfig?.tree?.enabled && !!optionConfig.tree.parentField;
+    const treeMinRecords = treeSupported ? treeMinRecordsConfig(optionConfig?.tree?.minRecords) : pageIncrement;
+    const [treeEnabled, setTreeEnabled] = useState<boolean>(
+      () => treeSupported && optionConfig?.tree?.defaultEnabled === true,
+    );
+    useEffect(() => {
+      setTreeEnabled(treeSupported && optionConfig?.tree?.defaultEnabled === true);
+    }, [optionConfig?.tree?.defaultEnabled, optionConfig?.tree?.parentField, treeSupported]);
+    const activeTreeEnabled = treeSupported && treeEnabled;
+    const resultLimit = activeTreeEnabled ? Math.max(pageIncrement, treeMinRecords) : pageIncrement;
     const [activeControlValue, setActiveControlValue] = useState<string | null>(
       optionConfig?.defaultControl ?? optionConfig?.controls?.[0]?.value ?? null,
     );
@@ -492,18 +614,20 @@ export const EntityPicker = forwardRef<HTMLDivElement, EntityPickerProps>(
       () => optionConfig?.controls?.find((control) => control.value === activeControlValue) ?? null,
       [activeControlValue, optionConfig?.controls],
     );
-    const activeSearchParams = useMemo(
-      () => searchParamsWithControl(searchParams, activeControl),
-      [activeControl, searchParams],
-    );
+    const activeSearchParams = useMemo(() => {
+      const params = searchParamsWithControl(searchParams, activeControl) ?? {};
+      if (activeTreeEnabled) params.picker_tree = "1";
+      return Object.keys(params).length > 0 ? params : undefined;
+    }, [activeControl, activeTreeEnabled, searchParams]);
     const activeSearchContext = useMemo<EntityPickerSearchContext>(
       () => ({
         activeControl,
         searchParams: activeSearchParams,
         limit: resultLimit,
         pageSize: resultLimit,
+        treeEnabled: activeTreeEnabled,
       }),
-      [activeControl, activeSearchParams, resultLimit],
+      [activeControl, activeSearchParams, activeTreeEnabled, resultLimit],
     );
     const recentLimit = recentLimitConfig(optionConfig?.recentLimit);
     const recentEnabled = optionConfig?.variant === "advanced"
@@ -670,26 +794,31 @@ export const EntityPicker = forwardRef<HTMLDivElement, EntityPickerProps>(
       },
       [],
     );
+    const handleTreeEnabledChange = useCallback((enabled: boolean) => {
+      if (!treeSupported) return;
+      setTreeEnabled(enabled);
+      setControlSearchRevision((revision) => revision + 1);
+    }, [treeSupported]);
     const handleLoadMore = useCallback(() => {
-      const nextPage = Math.floor(options.length / pageIncrement) + 1;
+      const nextPage = Math.floor(options.length / resultLimit) + 1;
       const nextContext: EntityPickerSearchContext = {
         ...activeSearchContext,
-        limit: pageIncrement,
-        pageSize: pageIncrement,
+        limit: resultLimit,
+        pageSize: resultLimit,
         page: nextPage,
       };
       if (isCustomMode) {
         runCustomSearch(advancedQuery, true, nextContext, true);
       } else {
-        relayRunSearch(advancedQuery, true, pageIncrement, nextPage, true);
+        relayRunSearch(advancedQuery, true, resultLimit, nextPage, true);
       }
     }, [
       activeSearchContext,
       advancedQuery,
       isCustomMode,
       options.length,
-      pageIncrement,
       relayRunSearch,
+      resultLimit,
       runCustomSearch,
     ]);
     useEffect(() => {
@@ -716,12 +845,13 @@ export const EntityPicker = forwardRef<HTMLDivElement, EntityPickerProps>(
         }
       : undefined;
     const recentAdvancedOptions = useMemo(
-      () => recentOptions
+      () => activeTreeEnabled ? [] : recentOptions
         .filter((option) => matchesControlForDisplay(option, activeControl))
         .filter((option) => optionMatchesQuery(option, advancedQuery))
         .map((option) => toAdvancedOption(option, optionConfig, getOptionHref ?? defaultOptionHref, "recent")),
       [
         activeControl,
+        activeTreeEnabled,
         advancedQuery,
         defaultOptionHref,
         getOptionHref,
@@ -767,9 +897,17 @@ export const EntityPicker = forwardRef<HTMLDivElement, EntityPickerProps>(
         placeholder,
         controls: optionConfig.controls,
         sections: advancedSections,
+        tree: treeSupported ? {
+          enabled: true,
+          parentField: optionConfig.tree?.parentField,
+          valueField: optionConfig.tree?.valueField,
+          levelField: optionConfig.tree?.levelField,
+          sortField: optionConfig.tree?.sortField,
+          minRecords: treeMinRecords,
+        } : undefined,
         showKeyboardHints: optionConfig.showKeyboardHints,
       };
-    }, [advancedSections, optionConfig, placeholder]);
+    }, [advancedSections, optionConfig, placeholder, treeMinRecords, treeSupported]);
 
     if (optionConfig?.variant === "advanced") {
       return (
@@ -795,6 +933,9 @@ export const EntityPicker = forwardRef<HTMLDivElement, EntityPickerProps>(
           resultLabel={advancedResultLabel}
           onLoadMore={hasMoreAdvancedResults ? handleLoadMore : undefined}
           loadMoreLoading={loading}
+          treeEnabled={activeTreeEnabled}
+          onTreeEnabledChange={treeSupported ? handleTreeEnabledChange : undefined}
+          defaultSearchMode={optionConfig?.defaultSearchMode ?? "server"}
           activeControlValue={activeControlValue}
           onControlChange={handleAdvancedControlChange}
           storageKey={entityCode ?? undefined}

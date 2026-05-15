@@ -15,6 +15,8 @@ export { PostingTrace, type PostingTraceProps } from "./PostingTrace";
 export { JournalGrid, type JournalGridProps } from "./JournalGrid";
 export { CloseCycleWorkbench, type CloseCycleWorkbenchProps } from "./CloseCycleWorkbench";
 export { FinancialReportsWorkbench, type FinancialReportsWorkbenchProps } from "./FinancialReportsWorkbench";
+export { SpendCategoryWorkbench } from "./SpendCategoryWorkbench";
+export { BusinessIntentWorkbench } from "./BusinessIntentWorkbench";
 export { CashFlowView } from "./CashFlowView";
 export { ApAgingView } from "./ApAgingView";
 export { ArAgingView } from "./ArAgingView";

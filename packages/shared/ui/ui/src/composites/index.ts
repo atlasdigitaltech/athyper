@@ -47,6 +47,30 @@ export {
   type ViewMode,
 } from "./ViewModeSwitcher";
 export {
+  WorkbenchMetaShell,
+  WorkbenchModeSwitcher,
+  type WorkbenchMetaShellProps,
+  type WorkbenchModeItem,
+  type WorkbenchModeSwitcherProps,
+} from "./WorkbenchMetaShell";
+export {
+  WorkbenchMatrix,
+  type WorkbenchMatrixAction,
+  type WorkbenchMatrixAxisItem,
+  type WorkbenchMatrixCellItem,
+  type WorkbenchMatrixLegendItem,
+  type WorkbenchMatrixProps,
+  type WorkbenchMatrixSelection,
+  type WorkbenchMatrixTone,
+} from "./WorkbenchMatrix";
+export {
+  WorkbenchHierarchyTree,
+  buildWorkbenchHierarchy,
+  type WorkbenchHierarchyMeta,
+  type WorkbenchHierarchyNode,
+  type WorkbenchHierarchyTreeProps,
+} from "./WorkbenchHierarchyTree";
+export {
   AsyncCombobox,
   type AsyncComboboxProps,
   type ComboboxOption,
@@ -61,6 +85,7 @@ export {
   type AdvancedEntityChooserOption,
   type AdvancedEntityChooserPanelProps,
   type AdvancedEntityChooserSection,
+  type AdvancedEntityChooserTreeConfig,
   type AdvancedEntityChooserTone,
 } from "./AdvancedEntityChooser";
 export {

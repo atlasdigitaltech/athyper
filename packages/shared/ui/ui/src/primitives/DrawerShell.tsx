@@ -168,6 +168,8 @@ export function DrawerShell({
         {/* Drawer panel */}
         <DialogPrimitive.Content
           aria-describedby={undefined}
+          data-advanced-picker-portal-root="true"
+          data-drawer-shell-content="true"
           style={{ width: effectiveWidth, maxWidth: maxWidthCss } as CSSProperties}
           className={cn(
             "fixed inset-y-0 right-0 z-modal flex flex-col",

@@ -222,10 +222,14 @@ async function main() {
     if (execs.length === 0) {
       await addExecution(fa, { provider: 'idp-confirm-link' });
       await addSubFlow(fa, { alias: 'neon broker login Account verification options', type: 'basic-flow', provider: 'registration-page-form' });
-      await addExecution(fa, { provider: 'idp-auto-link' });
       console.log(`  ✓ Added executions to: ${fa}`);
     } else {
       console.log(`  ✓ Already has executions: ${fa}`);
+    }
+    for (const ex of await getExecutions(fa)) {
+      const name = ex.displayName || ex.providerId || ex.authenticationFlow || '';
+      const requirement = name.includes('auto') || name.includes('Auto') ? 'DISABLED' : 'REQUIRED';
+      await updateExecution(fa, ex.id, { requirement });
     }
   }
 

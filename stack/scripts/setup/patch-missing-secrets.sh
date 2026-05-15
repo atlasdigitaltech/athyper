@@ -159,6 +159,18 @@ else
   add_key "IAM_CLIENT_SECRET" "$(openssl rand -hex 32)"
 fi
 
+if has_key "ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET"; then
+  skip_key "ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET"
+else
+  add_key "ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET" "$(openssl rand -hex 32)"
+fi
+
+if has_key "NEON_SVC_BFF_CLIENT_SECRET"; then
+  skip_key "NEON_SVC_BFF_CLIENT_SECRET"
+else
+  add_key "NEON_SVC_BFF_CLIENT_SECRET" "$(openssl rand -hex 32)"
+fi
+
 # ── Redis / MemoryCache ───────────────────────────────────────────────────────
 # hex avoids %, +, = characters that break Redis ACL config and URL embedding.
 for redis_key in MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD \

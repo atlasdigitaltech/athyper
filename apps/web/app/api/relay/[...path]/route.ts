@@ -2,8 +2,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/get-server-session";
 import {
   RUNTIME_API_URL,
+  buildServiceUrl,
   buildRuntimeHeaders,
+  copySetCookieHeaders,
   copyTraceResponseHeaders,
+  safePathFromSegments,
   sanitizeContentDisposition,
   withTraceResponseHeaders,
 } from "@/lib/server/runtime-headers";
@@ -24,10 +27,20 @@ import {
 
 type Params = { params: Promise<{ path: string[] }> };
 
+const UPSTREAM_TIMEOUT_MS = 30_000;
+
 const PASSTHROUGH_REQUEST_HEADERS = [
   "Idempotency-Key",
   "X-Idempotency-Key",
 ] as const;
+
+function buildUpstreamPath(path: string[]): string | null {
+  const safePath = safePathFromSegments(path);
+  if (!safePath) return null;
+  // Callers that use relayFetch() pass paths without the /api/ prefix (e.g. "/audit/events").
+  // Callers that build the URL manually may already include it (e.g. "/api/relay/api/records/...").
+  return safePath.startsWith("api/") ? `/${safePath}` : `/api/${safePath}`;
+}
 
 async function relay(req: NextRequest, { params }: Params): Promise<NextResponse> {
   const session = await getServerSession();
@@ -36,14 +49,14 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
   }
 
   const { path } = await params;
-  const joined = path.join("/");
-  // Callers that use relayFetch() pass paths without the /api/ prefix (e.g. "/audit/events").
-  // Callers that build the URL manually may already include it (e.g. "/api/relay/api/records/...").
-  const upstreamPath = joined.startsWith("api/") ? "/" + joined : "/api/" + joined;
+  const upstreamPath = buildUpstreamPath(path);
+  if (!upstreamPath) {
+    return NextResponse.json({ error: "INVALID_RELAY_PATH" }, { status: 400 });
+  }
 
   // Preserve query string
   const search = req.nextUrl.search;
-  const upstreamUrl = `${RUNTIME_API_URL}${upstreamPath}${search}`;
+  const upstreamUrl = buildServiceUrl(RUNTIME_API_URL, upstreamPath, search);
 
   // Forward relevant headers, strip Next.js / host specifics
   const reqContentType = req.headers.get("Content-Type") ?? "";
@@ -67,12 +80,15 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
       // enforces its own file-size limit without buffering into memory.
       // The old base64-JSON approach capped effective uploads at ~192 KB due to
       // the 256 KB JSON body-parser limit on the runtime side.
-      const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
-      if (contentLength > 100 * 1024 * 1024) {
-        return NextResponse.json(
-          { error: "FILE_TOO_LARGE", message: "File too large (max 100 MB)" },
-          { status: 413 },
-        );
+      const clHeader = req.headers.get("content-length");
+      if (clHeader !== null) {
+        const contentLength = parseInt(clHeader, 10);
+        if (!Number.isFinite(contentLength) || contentLength > 100 * 1024 * 1024) {
+          return NextResponse.json(
+            { error: "FILE_TOO_LARGE", message: "File too large (max 100 MB)" },
+            { status: 413 },
+          );
+        }
       }
       // Preserve Content-Type including the multipart boundary parameter.
       forwarded.set("Content-Type", reqContentType);
@@ -86,11 +102,15 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
   }
 
   try {
-    const upstream = await fetch(upstreamUrl, init);
+    const upstream = await fetch(upstreamUrl, {
+      ...init,
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
 
     // 204 No Content — return as-is
     if (upstream.status === 204) {
       const res = new NextResponse(null, { status: 204 });
+      copySetCookieHeaders(upstream.headers, res.headers);
       copyTraceResponseHeaders(upstream.headers, res.headers);
       return res;
     }
@@ -98,17 +118,20 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
     const contentType        = upstream.headers.get("Content-Type") ?? "application/json";
     const contentDisposition = upstream.headers.get("Content-Disposition");
 
-    // Use arrayBuffer for all response bodies — preserves binary content (file downloads)
-    const body = await upstream.arrayBuffer();
-
     const resHeaders: Record<string, string> = { "Content-Type": contentType };
     if (contentDisposition) resHeaders["Content-Disposition"] = sanitizeContentDisposition(contentDisposition);
 
-    return new NextResponse(body, {
+    const res = new NextResponse(upstream.body, {
       status: upstream.status,
       headers: withTraceResponseHeaders(upstream.headers, resHeaders),
     });
+    copySetCookieHeaders(upstream.headers, res.headers);
+    return res;
   } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      console.error(`[relay] upstream timeout after ${UPSTREAM_TIMEOUT_MS}ms`);
+      return NextResponse.json({ error: "Gateway Timeout" }, { status: 504 });
+    }
     console.error("[relay] upstream error", err);
     return NextResponse.json({ error: "Bad Gateway" }, { status: 502 });
   }

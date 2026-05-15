@@ -144,6 +144,7 @@ BACKUP_REMOTE_S3_BUCKET="${BACKUP_REMOTE_S3_BUCKET:-$(_env_val BACKUP_REMOTE_S3_
 MC_IMAGE="${MC_IMAGE:-minio/mc:RELEASE.2025-08-13T08-35-41Z}"
 MC_NETWORK="athyper-edge"
 PROJECT="${COMPOSE_PROJECT_NAME:-athyper}"
+PG_DUMP_MODE="host"
 
 # ----------------------------
 # Timestamp for this run
@@ -177,6 +178,42 @@ mc_run() {
     "$@" 2>/dev/null
 }
 
+is_local_db_host() {
+  [[ "$DB_PORT" == "5432" ]] || return 1
+
+  case "$DB_HOST" in
+    localhost|127.0.0.1|db|athyper-db-1|"${PROJECT}-db-1"|"$CONTAINER_DB") return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+run_pg_dump() {
+  local db="$1"
+  local dump_file="$2"
+
+  if [[ "$PG_DUMP_MODE" == "docker" ]]; then
+    docker exec -e PGPASSWORD="$DB_ADMIN_PASSWORD" "$CONTAINER_DB" \
+      pg_dump \
+        --host=localhost \
+        --port=5432 \
+        --username="$DB_ADMIN_USER" \
+        --format=custom \
+        --compress=9 \
+        --no-password \
+        "$db" > "$dump_file"
+  else
+    PGPASSWORD="$DB_ADMIN_PASSWORD" pg_dump \
+      --host="$DB_HOST" \
+      --port="$DB_PORT" \
+      --username="$DB_ADMIN_USER" \
+      --format=custom \
+      --compress=9 \
+      --no-password \
+      --file="$dump_file" \
+      "$db"
+  fi
+}
+
 # ----------------------------
 # Header
 # ----------------------------
@@ -200,9 +237,15 @@ if [[ -z "$DB_ADMIN_PASSWORD" ]]; then
   exit 1
 fi
 
-if ! command -v pg_dump &>/dev/null; then
+if command -v pg_dump &>/dev/null; then
+  PG_DUMP_MODE="host"
+elif command -v docker &>/dev/null && is_local_db_host && docker exec "$CONTAINER_DB" pg_dump --version >/dev/null 2>&1; then
+  PG_DUMP_MODE="docker"
+  info "pg_dump not found on host; using ${CONTAINER_DB}:pg_dump for local backup"
+else
   echo -e "${RED}ERROR: pg_dump not found in PATH.${NC}" >&2
   echo "Install postgresql-client on the host machine." >&2
+  echo "For local Docker stacks, ensure Docker is running and ${CONTAINER_DB} has pg_dump available." >&2
   exit 1
 fi
 
@@ -226,29 +269,17 @@ if [[ "$DO_DUMP" == "true" ]]; then
   echo "[1/3] Dumping databases..."
   mkdir -p "$RUN_DIR"
 
-  export PGPASSWORD="$DB_ADMIN_PASSWORD"
-
   for db in "${DATABASES[@]}"; do
     DUMP_FILE="${RUN_DIR}/${db}_${TS}.dump"
     info "Dumping $db → $(basename "$DUMP_FILE")"
 
-    if pg_dump \
-        --host="$DB_HOST" \
-        --port="$DB_PORT" \
-        --username="$DB_ADMIN_USER" \
-        --format=custom \
-        --compress=9 \
-        --no-password \
-        --file="$DUMP_FILE" \
-        "$db" 2>&1; then
+    if run_pg_dump "$db" "$DUMP_FILE" 2>&1; then
       DUMP_SIZE="$(du -sh "$DUMP_FILE" 2>/dev/null | cut -f1 || echo "?")"
       pass "Dumped $db (${DUMP_SIZE})"
     else
       fail "pg_dump failed for $db"
     fi
   done
-
-  unset PGPASSWORD
 
   # Checksum manifest for integrity verification
   MANIFEST="${RUN_DIR}/SHA256SUMS"

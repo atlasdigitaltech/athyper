@@ -27,6 +27,7 @@ export {
   type EntityPickerProps,
   type EntityPickerOption,
   type EntityPickerOptionConfig,
+  type EntityPickerTreeConfig,
   type EntityPickerSearchResponse,
   type EntityPickerSearchContext,
   type EntityPickerSearchResult,
@@ -60,5 +61,6 @@ export {
   type AdvancedEntityChooserOption,
   type AdvancedEntityChooserPanelProps,
   type AdvancedEntityChooserSection,
+  type AdvancedEntityChooserTreeConfig,
   type AdvancedEntityChooserTone,
 } from "./AdvancedEntityChooser";

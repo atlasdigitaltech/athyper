@@ -17,7 +17,6 @@ import type { V4Session } from "@/lib/auth/types";
 // ─── KC org enrichment (id + name only — workbenches come from JWT roles) ────
 // Workbench shell access is determined by WB_* client roles in resource_access,
 // not by org attributes. This admin-API call only enriches id and display name.
-const KC_ADMIN_TOKEN_KEY = "kc_admin_token";
 const KC_ADMIN_TIMEOUT_MS = 5_000;
 
 type RedisClient = Awaited<ReturnType<typeof getSessionRedis>>;
@@ -62,15 +61,25 @@ function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   );
 }
 
-async function getKcAdminToken(baseUrl: string): Promise<string | null> {
+// Realm-scoped cache key prevents cross-realm token collisions in multi-realm setups.
+async function getKcAdminToken(baseUrl: string, realm: string): Promise<string | null> {
+  const cacheKey = `kc_admin_token:${realm}`;
   const redis = await getSessionRedis();
   try {
-    const cached = await redis.get(KC_ADMIN_TOKEN_KEY);
+    const cached = await redis.get(cacheKey);
     if (cached) return cached;
   } catch { /* Redis unavailable — fall through */ }
 
-  const adminUser = process.env.KEYCLOAK_ADMIN_USERNAME ?? "athyperadmin";
-  const adminPass = process.env.KEYCLOAK_ADMIN_PASSWORD ?? "athyperadmin";
+  const adminUser = process.env.KEYCLOAK_ADMIN_USERNAME;
+  const adminPass = process.env.KEYCLOAK_ADMIN_PASSWORD;
+  if (!adminUser || !adminPass) {
+    // Fail loudly in non-local environments — missing credentials should never
+    // be silently swallowed in staging/prod as it could mask a misconfiguration.
+    if ((process.env.ENVIRONMENT ?? "local") !== "local") {
+      console.error("[auth/callback] KEYCLOAK_ADMIN_USERNAME and KEYCLOAK_ADMIN_PASSWORD must be set in non-local environments");
+    }
+    return null;
+  }
   try {
     const res = await fetchWithTimeout(
       `${baseUrl}/realms/master/protocol/openid-connect/token`,
@@ -89,7 +98,7 @@ async function getKcAdminToken(baseUrl: string): Promise<string | null> {
     const d = await res.json() as { access_token?: string; expires_in?: number };
     if (!d.access_token) return null;
     const ttl = Math.max((d.expires_in ?? 60) - 10, 5);
-    try { await redis.set(KC_ADMIN_TOKEN_KEY, d.access_token, { EX: ttl }); } catch { /* non-fatal */ }
+    try { await redis.set(cacheKey, d.access_token, { EX: ttl }); } catch { /* non-fatal */ }
     return d.access_token;
   } catch {
     return null;
@@ -114,6 +123,9 @@ async function fetchAllOrgDetails(
       if (!o.alias) continue;
       map.set(o.alias, { id: o.id, name: o.name ?? o.alias });
     }
+    if (orgs.length === 200) {
+      console.warn("[auth/callback] KC org list may be truncated at max=200 — implement pagination if realm exceeds 200 orgs", { realm });
+    }
     return map;
   } catch {
     return new Map();
@@ -121,16 +133,23 @@ async function fetchAllOrgDetails(
 }
 
 /**
- * Fetch all org aliases the user belongs to via KC admin API.
+ * Fetch org aliases the user belongs to via KC admin API.
  * Used when KC omits the `organization` JWT claim (e.g. user in 10+ orgs —
  * KC 26.5.1 stops including the claim beyond the default page size).
- * Endpoint: GET /organizations?member={userId}&first=0&max=200
+ *
+ * KC 26.6.x bug: GET /organizations?member={userId} silently ignores the
+ * member filter and returns ALL realm orgs. Guard: if returned count ≥
+ * totalOrgCount the filter didn't work — return [] so the caller falls back
+ * to an empty set rather than flooding the session with every realm org.
+ * The totalOrgCount is passed in from the already-fetched orgMap to avoid
+ * an extra round-trip.
  */
 async function fetchUserOrgAliases(
   userId: string,
   realm: string,
   baseUrl: string,
   adminToken: string,
+  totalOrgCount: number,
 ): Promise<string[]> {
   try {
     const res = await fetchWithTimeout(
@@ -139,7 +158,13 @@ async function fetchUserOrgAliases(
     );
     if (!res.ok) return [];
     const orgs = await res.json() as Array<{ alias?: string }>;
-    return orgs.flatMap((o) => (o.alias ? [o.alias] : []));
+    const aliases = orgs.flatMap((o) => (o.alias ? [o.alias] : []));
+    // KC 26.6.x: if every realm org was returned, the member filter is broken.
+    if (totalOrgCount > 0 && aliases.length >= totalOrgCount) {
+      console.warn("[auth/callback] KC ?member= filter returned all realm orgs — filter broken, skipping fallback", { userId, returned: aliases.length, total: totalOrgCount });
+      return [];
+    }
+    return aliases;
   } catch {
     return [];
   }
@@ -161,13 +186,63 @@ function extractWorkbenchRolesFromClaims(resourceAccess: unknown): string[] {
   return workbenches;
 }
 
-/** Check that ACCESS role is present — gate per IAM §6 step 3. */
-function hasAccessRole(resourceAccess: unknown): boolean {
-  if (!resourceAccess || typeof resourceAccess !== "object") return false;
-  const neonWeb = (resourceAccess as Record<string, unknown>)["neon-web"];
-  if (!neonWeb || typeof neonWeb !== "object") return false;
-  const roles = (neonWeb as Record<string, unknown>).roles;
-  return Array.isArray(roles) && roles.includes("ACCESS");
+/**
+ * Fallback: infer workbenches from the KC `groups` JWT claim when WB_* client
+ * roles are absent. This handles KC 26.6.x import regressions where
+ * group→client-role mappings aren't resolved during realm import, but the
+ * group membership itself IS present in the token (oidc-group-membership-mapper
+ * on neon-web writes it directly, independent of role resolution).
+ */
+function extractWorkbenchesFromGroups(groups: unknown): string[] {
+  if (!Array.isArray(groups)) return [];
+  const result: string[] = [];
+  for (const g of groups) {
+    if (typeof g !== "string") continue;
+    const name = g.startsWith("/") ? g.slice(1) : g;
+    if (name === "grp:workbench:user") result.push("user");
+    else if (name === "grp:workbench:partner") result.push("partner");
+    else if (name === "grp:workbench:admin") result.push("admin");
+  }
+  return result;
+}
+
+/**
+ * Validates that a returnUrl is a safe same-origin relative path.
+ * Rejects absolute URLs (open-redirect risk) and empty/root values.
+ */
+function isSafeReturnUrl(url: string | null | undefined): url is string {
+  if (!url || url === "/") return false;
+  try {
+    // URL constructor with a sentinel base: if the hostname changes, it's absolute.
+    const parsed = new URL(url, "https://sentinel.invalid");
+    return parsed.hostname === "sentinel.invalid";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check that ACCESS role is present — gate per IAM §6 step 3.
+ * Falls back to groups claim: any workbench group (grp:workbench:*) implicitly
+ * grants access, mirroring the KC group→client-role definition.
+ */
+function hasAccessRole(resourceAccess: unknown, groups?: unknown): boolean {
+  if (resourceAccess && typeof resourceAccess === "object") {
+    const neonWeb = (resourceAccess as Record<string, unknown>)["neon-web"];
+    if (neonWeb && typeof neonWeb === "object") {
+      const roles = (neonWeb as Record<string, unknown>).roles;
+      if (Array.isArray(roles) && roles.includes("ACCESS")) return true;
+    }
+  }
+  // Fallback: membership in any workbench group implies ACCESS (KC 26.6.x import regression).
+  if (Array.isArray(groups)) {
+    return groups.some((g) => {
+      if (typeof g !== "string") return false;
+      const name = g.startsWith("/") ? g.slice(1) : g;
+      return name.startsWith("grp:workbench:");
+    });
+  }
+  return false;
 }
 
 /**
@@ -283,7 +358,8 @@ export async function GET(req: Request) {
 
     // ─── Step 3b: ACCESS gate ────────────────────────────────────────────────
     // Every user MUST have the ACCESS client role (IAM §6 step 3).
-    if (!hasAccessRole(claims.resource_access)) {
+    // groups claim is passed as fallback for KC 26.6.x import regression.
+    if (!hasAccessRole(claims.resource_access, claims.groups)) {
       console.warn("[auth/callback] ACCESS role missing for user:", sub);
       return NextResponse.redirect(
         new URL(`/login?error=${encodeURIComponent("NO_PLATFORM_ACCESS")}`, publicBaseUrl),
@@ -294,33 +370,42 @@ export async function GET(req: Request) {
     // WB_USER / WB_PARTNER / WB_ADMIN are KC group-granted client roles on neon-web.
     // They are global (same for all orgs the user belongs to). No per-org workbench
     // attribute is used — allowed_workbenches was removed from KC orgs (IAM §5.1).
-    const kcWorkbenches = extractWorkbenchRolesFromClaims(claims.resource_access);
+    // Falls back to the `groups` claim when WB_* roles are absent (KC 26.6.x import
+    // regression: group→client-role resolution can silently fail post-import).
+    const kcWorkbenchesFromRoles = extractWorkbenchRolesFromClaims(claims.resource_access);
+    const kcWorkbenches = kcWorkbenchesFromRoles.length > 0
+      ? kcWorkbenchesFromRoles
+      : extractWorkbenchesFromGroups(claims.groups);
+    if (kcWorkbenchesFromRoles.length === 0 && kcWorkbenches.length > 0) {
+      console.warn("[auth/callback] WB_* roles absent — using groups fallback", { userId: sub, workbenches: kcWorkbenches });
+    }
 
     // Normalize KC organization claim (UUID-keyed → alias-keyed)
     const organizations = normalizeOrganizationClaim(claims.organization);
 
     // Enrich org memberships: fill id/name from admin API; assign WB_* roles uniformly.
     try {
-      const adminToken = await getKcAdminToken(baseUrl);
+      const adminToken = await getKcAdminToken(baseUrl, realm);
       if (adminToken) {
-        // Pass 0: org claim absent (>10 orgs) — look up memberships via admin API
+        // Fetch all org details once — used for both the member-filter guard and id/name fill.
+        const orgMap = await fetchAllOrgDetails(realm, baseUrl, adminToken);
+
+        // Pass 0: org claim absent (>10 orgs or KC cache miss) — look up via admin API.
+        // totalOrgCount guards against KC 26.6.x ?member= filter returning all realm orgs.
         if (Object.keys(organizations).length === 0) {
-          const aliases = await fetchUserOrgAliases(sub, realm, baseUrl, adminToken);
+          const aliases = await fetchUserOrgAliases(sub, realm, baseUrl, adminToken, orgMap.size);
           for (const alias of aliases) {
             organizations[alias] = { id: "", name: alias, alias, roles: [] };
           }
         }
 
-        // Pass 1: fill id + name (no workbench enrichment — comes from JWT roles)
-        const needsDetail = Object.values(organizations).filter((m) => !m.id);
-        if (needsDetail.length > 0) {
-          const orgMap = await fetchAllOrgDetails(realm, baseUrl, adminToken);
-          for (const membership of needsDetail) {
-            const details = orgMap.get(membership.alias);
-            if (!details) continue;
-            if (!membership.id) membership.id = details.id;
-            if (membership.name === membership.alias) membership.name = details.name;
-          }
+        // Pass 1: fill id + name for entries that only have an alias (no id yet).
+        for (const membership of Object.values(organizations)) {
+          if (membership.id) continue;
+          const details = orgMap.get(membership.alias);
+          if (!details) continue;
+          membership.id = details.id;
+          if (membership.name === membership.alias) membership.name = details.name;
         }
       }
     } catch (enrichErr) {
@@ -476,7 +561,7 @@ export async function GET(req: Request) {
 
     // Build the post-auth destination (entity/workbench selector)
     const selectUrl = new URL("/auth/select", publicBaseUrl);
-    if (returnUrl && returnUrl !== "/") selectUrl.searchParams.set("returnUrl", returnUrl);
+    if (isSafeReturnUrl(returnUrl)) selectUrl.searchParams.set("returnUrl", returnUrl);
     if (filter) selectUrl.searchParams.set("filter", filter);
 
     // If MFA is required, go to challenge page first — passing selectUrl as returnUrl.

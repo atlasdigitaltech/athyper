@@ -14,7 +14,6 @@
 # Prerequisites:
 #   - Traefik certificatesResolvers.letsencrypt must be configured
 #     in the static config (athyper-gateway.yml command args).
-#   - workbench-forward-auth requires athyper-api to expose GET /api/auth/verify.
 #   - The `athyper-neon-web` upstream below resolves to the containerised
 #     Next.js service defined in stack/compose/apps/athyper-apps.yml (profile
 #     `apps`, F8 Phase 3, landed 2026-04-18). Bring the stack up with the
@@ -63,14 +62,48 @@ http:
         sourceRange:
           - "203.0.113.0/24"  # !! REPLACE — TEST-NET-3 (RFC 5737) fail-safe
 
-    workbench-forward-auth:
-      forwardAuth:
-        address: "http://athyper-api:{{ env "API_PORT" }}/api/auth/verify"
-        trustForwardHeader: true
-        authResponseHeaders:
-          - "X-User-Id"
-          - "X-User-Roles"
-          - "X-Tenant-Id"
+    # ── Production-grade reliability + security ────────────────────────────────
+
+    athyper-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1s
+
+    athyper-inflight:
+      inFlightReq:
+        amount: 200
+        sourceCriterion:
+          requestHeaderName: "X-Forwarded-For"
+
+    athyper-circuit-breaker:
+      circuitBreaker:
+        expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.30 || NetworkErrorRatio() > 0.10"
+        checkPeriod: 10s
+        fallbackDuration: 10s
+        recoveryDuration: 10s
+
+    # Do not attach retry to the workbench routers below: they carry both page
+    # loads and mutating BFF/API calls, so automatic retries can duplicate writes.
+    # Keep this middleware only for future method-scoped idempotent routers.
+    athyper-retry:
+      retry:
+        attempts: 2
+        initialInterval: 50ms
+
+    athyper-security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+          X-XSS-Protection: "0"
+
+    athyper-compress:
+      compress:
+        minResponseBodyBytes: 1024
+        encodings: ["br", "gzip"]
 
   routers:
     neon-workbench-admin:
@@ -82,10 +115,14 @@ http:
         certResolver: letsencrypt
         options: athyper-tls-default@file
       middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
         - workbench-ip-restrict
-        - workbench-forward-auth
         - workbench-strip-admin
         - workbench-headers-admin
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
 
     neon-workbench-ops:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/ops`)"
@@ -96,10 +133,14 @@ http:
         certResolver: letsencrypt
         options: athyper-tls-default@file
       middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
         - workbench-ip-restrict
-        - workbench-forward-auth
         - workbench-strip-ops
         - workbench-headers-ops
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
 
     neon-workbench-user:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/user`)"
@@ -110,9 +151,13 @@ http:
         certResolver: letsencrypt
         options: athyper-tls-default@file
       middlewares:
-        - workbench-forward-auth
+        - athyper-ratelimit
+        - athyper-inflight
         - workbench-strip-user
         - workbench-headers-user
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
 
     neon-default:
       rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`)"
@@ -123,8 +168,12 @@ http:
         certResolver: letsencrypt
         options: athyper-tls-default@file
       middlewares:
-        - workbench-forward-auth
+        - athyper-ratelimit
+        - athyper-inflight
         - workbench-headers-user
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
 
   # No file-provider service definition: athyper-neon-web@docker is auto-discovered
   # from the container's Traefik labels (traefik.http.services.athyper-neon-web.

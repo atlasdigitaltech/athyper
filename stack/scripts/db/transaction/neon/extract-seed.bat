@@ -4,13 +4,13 @@ REM Athyper — Seed Extractor (Windows)
 REM Location:
 REM   stack\scripts\db\transaction\neon\extract-seed.bat
 REM
-REM Rebuilds server\db\sql\900_seed_data from the live database.
+REM Rebuilds server\db\seed from the live database.
 REM Run AFTER a successful seed-db.bat --reset --all and AFTER renaming
-REM 900_seed_data to 900_seed_data_backup.
+REM seed to seed_backup.
 REM
 REM Classification:
 REM   SIMPLE  files (pure INSERT INTO)  — re-extracted via pg_dump
-REM   COMPLEX files (DO blocks, $…$)    — copied from 900_seed_data_backup
+REM   COMPLEX files (DO blocks, $…$)    — copied from seed_backup
 REM
 REM Usage:
 REM   extract-seed.bat                  # full rebuild
@@ -74,11 +74,11 @@ if "%DATABASE_ADMIN_URL%"=="" (
 REM ---------------------------------------------------------------------------
 REM Check 900_seed_data_backup exists
 REM ---------------------------------------------------------------------------
-if not exist "%SERVER_DIR%\db\sql\900_seed_data_backup" (
-    echo ERROR: 900_seed_data_backup not found.
+if not exist "%SERVER_DIR%\db\seed_backup" (
+    echo ERROR: seed_backup not found.
     echo.
     echo Rename the source folder first:
-    echo   Rename-Item server\db\sql\900_seed_data server\db\sql\900_seed_data_backup
+    echo   Rename-Item server\db\seed server\db\seed_backup
     exit /b 1
 )
 
@@ -86,13 +86,13 @@ REM ---------------------------------------------------------------------------
 REM Run extractor
 REM ---------------------------------------------------------------------------
 echo Database : %DATABASE_ADMIN_URL%
-echo Backup   : %SERVER_DIR%\db\sql\900_seed_data_backup
-echo Output   : %SERVER_DIR%\db\sql\900_seed_data
+echo Backup   : %SERVER_DIR%\db\seed_backup
+echo Output   : %SERVER_DIR%\db\seed
 echo Args     : %*
 echo.
 
 cd /d "%SERVER_DIR%"
-call npx tsx db/seed/extract-seed.ts %*
+call npx tsx db/scripts/extract.ts %*
 set EXIT_CODE=%ERRORLEVEL%
 
 echo.

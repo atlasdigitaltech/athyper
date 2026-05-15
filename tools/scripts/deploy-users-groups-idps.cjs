@@ -21,6 +21,12 @@ const KC_ADMIN = 'athyperadmin';
 const KC_PASS  = 'athyperadmin';
 const REALM_FILE = path.join(__dirname, '../mesh/config/iam/realm-demosetup.json');
 
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
 const agent = new https.Agent({ rejectUnauthorized: false });
 
 function request(method, url, body, token) {
@@ -296,17 +302,17 @@ async function main() {
   const idpDefs = [
     {
       alias: 'github', displayName: 'GitHub', providerId: 'github',
-      enabled: true, trustEmail: true, storeToken: false,
+      enabled: true, trustEmail: false, storeToken: false,
       addReadTokenRoleOnCreate: false, authenticateByDefault: false, linkOnly: false,
       firstBrokerLoginFlowAlias: firstBrokerFlow,
-      config: { syncMode:'IMPORT', clientId:'Ov23liIgDgW7ohpcUO2N', clientSecret:'e230aae5d7bb7eb955a6d4011c7a75be004ba506', useJwksUrl:'true' },
+      config: { syncMode:'IMPORT', clientId:requiredEnv('GITHUB_OAUTH_CLIENT_ID'), clientSecret:requiredEnv('GITHUB_OAUTH_CLIENT_SECRET'), useJwksUrl:'true' },
     },
     {
       alias: 'microsoft', displayName: 'Microsoft', providerId: 'microsoft',
       enabled: true, trustEmail: true, storeToken: false,
       addReadTokenRoleOnCreate: false, authenticateByDefault: false, linkOnly: false,
       firstBrokerLoginFlowAlias: firstBrokerFlow,
-      config: { syncMode:'FORCE', defaultScopes:'openid profile email', clientId:'c7f62e39-5155-43fd-a125-8e58219265f6', clientSecret:'MVb8Q~CG5~GKCSG5GM8rzDnw6DD3L6NNrGUS9a7Z' },
+      config: { syncMode:'FORCE', defaultScopes:'openid profile email', clientId:requiredEnv('MICROSOFT_CLIENT_ID'), clientSecret:requiredEnv('MICROSOFT_CLIENT_SECRET') },
     },
   ];
 

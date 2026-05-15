@@ -35,7 +35,12 @@ import { FinanceContextBar } from "@athyper/finance-workbench/components";
  */
 export default function FinanceWorkbenchLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const showContextBar = pathname !== "/finance/gl" && pathname !== "/finance/reports";
+  const showContextBar = ![
+    "/finance/gl",
+    "/finance/reports",
+    "/finance/spend-categories",
+    "/finance/business-intents",
+  ].includes(pathname);
 
   return (
     <div className="flex h-full flex-col">

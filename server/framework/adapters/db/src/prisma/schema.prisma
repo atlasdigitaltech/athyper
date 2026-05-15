@@ -157,6 +157,7 @@ model acct_profile_config {
   acct_profile_book_rule            acct_profile_book_rule[]
   acct_profile_commitment_config    acct_profile_commitment_config[]
   tax_group                         tax_group?                          @relation(fields: [tenant_id, default_tax_group_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "apc_default_tax_group_fk")
+  accounting_profile                accounting_profile                  @relation(fields: [accounting_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "apc_profile_fk")
   acct_profile_config               acct_profile_config?                @relation("acct_profile_configToacct_profile_config", fields: [supersedes_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "apc_supersedes_fk")
   other_acct_profile_config         acct_profile_config[]               @relation("acct_profile_configToacct_profile_config")
   tenant                            tenant                              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "apc_tenant_fk")
@@ -318,6 +319,7 @@ model acct_profile_revenue_config {
   updated_at                      DateTime?           @db.Timestamptz(6)
   updated_by                      String?             @db.Uuid
   acct_profile_config             acct_profile_config @relation(fields: [profile_config_id, tenant_id], references: [id, tenant_id], onDelete: Cascade, onUpdate: NoAction, map: "aprc_config_fk")
+  accounting_profile              accounting_profile? @relation(fields: [paired_profile_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "aprc_paired_fk")
   tenant                          tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "aprc_tenant_fk")
 
   @@index([profile_config_id], map: "aprc_config_idx")
@@ -457,6 +459,8 @@ model asset_class_book_policy {
   company_code_id                       String       @db.Uuid
   asset_class_id                        String       @db.Uuid
   book_code                             String
+  capitalization_threshold              Decimal      @default(0) @db.Decimal(18, 4)
+  capitalization_currency               String?      @db.Char(3)
   priority                              Int          @default(50) @db.SmallInt
   effective_from                        DateTime     @default(dbgenerated("CURRENT_DATE")) @db.Date
   effective_to                          DateTime?    @db.Date
@@ -9282,61 +9286,53 @@ model asset_book {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model asset_class {
-  id                                                     String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                              String                      @db.Uuid
-  code                                                   String
-  name                                                   String
-  company_code_id                                        String                      @db.Uuid
-  description                                            String?
-  parent_id                                              String?                     @db.Uuid
-  level_no                                               Int                         @default(1) @db.SmallInt
-  path                                                   String?
-  is_leaf                                                Boolean                     @default(true)
-  capitalization_threshold                               Decimal                     @default(0) @db.Decimal(18, 4)
-  capitalization_currency                                String?                     @db.Char(3)
-  currency_code                                          String                      @default("USD") @db.Char(3)
-  gl_account_defaults                                    Json                        @default("{}")
-  depreciation_defaults                                  Json                        @default("{}")
-  asset_nature                                           String                      @default("tangible")
-  is_depreciable                                         Boolean                     @default(true)
-  is_componentization_required                           Boolean                     @default(false)
-  is_asset_tag_required                                  Boolean                     @default(true)
-  is_serial_tracking_required                            Boolean                     @default(false)
-  is_location_tracking_required                          Boolean                     @default(true)
-  default_uom_code                                       String?
-  useful_life_override_policy                            String                      @default("allow")
-  disposal_requires_approval                             Boolean                     @default(true)
-  transfer_requires_approval                             Boolean                     @default(false)
-  revaluation_allowed                                    Boolean                     @default(false)
-  impairment_tracking_required                           Boolean                     @default(true)
-  sort_order                                             Int                         @default(0) @db.SmallInt
-  tags                                                   Json                        @default("[]")
-  metadata                                               Json                        @default("{}")
-  status                                                 String                      @default("active")
-  is_active                                              Boolean?                    @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                      DateTime?                   @db.Timestamptz(6)
-  status_changed_by                                      String?                     @db.Uuid
-  created_at                                             DateTime                    @default(now()) @db.Timestamptz(6)
-  created_by                                             String                      @db.Uuid
-  updated_at                                             DateTime?                   @db.Timestamptz(6)
-  updated_by                                             String?                     @db.Uuid
-  asset_class_book_policy                                asset_class_book_policy[]
-  purchase_invoice_line                                  purchase_invoice_line[]
-  asset                                                  asset[]
-  currency_asset_class_capitalization_currencyTocurrency currency?                   @relation("asset_class_capitalization_currencyTocurrency", fields: [capitalization_currency], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "ac_cap_currency_fk")
-  company_code                                           company_code                @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ac_company_fk")
-  principal                                              principal                   @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ac_created_by_fk")
-  currency_asset_class_currency_codeTocurrency           currency                    @relation("asset_class_currency_codeTocurrency", fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "ac_currency_fk")
-  asset_class                                            asset_class?                @relation("asset_classToasset_class", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ac_parent_fk")
-  other_asset_class                                      asset_class[]               @relation("asset_classToasset_class")
-  tenant                                                 tenant                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ac_tenant_fk")
-  uom                                                    uom?                        @relation(fields: [default_uom_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "ac_uom_fk")
-  company_code_spend_policy                              company_code_spend_policy[]
+  id                            String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                     String                      @db.Uuid
+  code                          String
+  name                          String
+  description                   String?
+  parent_id                     String?                     @db.Uuid
+  level_no                      Int                         @default(1) @db.SmallInt
+  path                          String?
+  is_leaf                       Boolean                     @default(true)
+  gl_account_defaults           Json                        @default("{}")
+  depreciation_defaults         Json                        @default("{}")
+  asset_nature                  String                      @default("tangible")
+  is_depreciable                Boolean                     @default(true)
+  is_componentization_required  Boolean                     @default(false)
+  is_asset_tag_required         Boolean                     @default(true)
+  is_serial_tracking_required   Boolean                     @default(false)
+  is_location_tracking_required Boolean                     @default(true)
+  default_uom_code              String?
+  useful_life_override_policy   String                      @default("allow")
+  disposal_requires_approval    Boolean                     @default(true)
+  transfer_requires_approval    Boolean                     @default(false)
+  revaluation_allowed           Boolean                     @default(false)
+  impairment_tracking_required  Boolean                     @default(true)
+  sort_order                    Int                         @default(0) @db.SmallInt
+  tags                          Json                        @default("[]")
+  metadata                      Json                        @default("{}")
+  status                        String                      @default("active")
+  is_active                     Boolean?                    @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at             DateTime?                   @db.Timestamptz(6)
+  status_changed_by             String?                     @db.Uuid
+  created_at                    DateTime                    @default(now()) @db.Timestamptz(6)
+  created_by                    String                      @db.Uuid
+  updated_at                    DateTime?                   @db.Timestamptz(6)
+  updated_by                    String?                     @db.Uuid
+  asset_class_book_policy       asset_class_book_policy[]
+  purchase_invoice_line         purchase_invoice_line[]
+  asset                         asset[]
+  principal                     principal                   @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ac_created_by_fk")
+  asset_class                   asset_class?                @relation("asset_classToasset_class", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ac_parent_fk")
+  other_asset_class             asset_class[]               @relation("asset_classToasset_class")
+  tenant                        tenant                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ac_tenant_fk")
+  uom                           uom?                        @relation(fields: [default_uom_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "ac_uom_fk")
+  company_code_spend_policy     company_code_spend_policy[]
 
-  @@unique([tenant_id, company_code_id, code], map: "asset_class_tenant_company_code_uq")
+  @@unique([tenant_id, code], map: "asset_class_tenant_code_uq")
   @@unique([tenant_id, id], map: "asset_class_tenant_id_uq")
-  @@index([tenant_id, company_code_id], map: "ac_active_pidx", where: raw("(is_active = true)"))
-  @@index([tenant_id, company_code_id], map: "ac_company_idx")
+  @@index([tenant_id], map: "ac_active_pidx", where: raw("(is_active = true)"))
   @@index([tenant_id, asset_nature], map: "ac_nature_idx", where: raw("(is_active = true)"))
   @@index([tenant_id, parent_id], map: "ac_parent_idx", where: raw("(parent_id IS NOT NULL)"))
   @@schema("master")
@@ -10576,7 +10572,6 @@ model company_code {
   asset                                                                                                    asset[]
   asset_assignment_history                                                                                 asset_assignment_history[]
   asset_book                                                                                               asset_book[]
-  asset_class                                                                                              asset_class[]
   asset_component                                                                                          asset_component[]
   bank_account_link                                                                                        bank_account_link[]
   budget_allocation                                                                                        budget_allocation[]
@@ -10752,6 +10747,7 @@ model company_code_customer_profile {
   created_by                    String                      @db.Uuid
   updated_at                    DateTime?                   @db.Timestamptz(6)
   updated_by                    String?                     @db.Uuid
+  accounting_profile            accounting_profile?         @relation(fields: [tenant_id, default_accounting_profile_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "ccp_accounting_profile_fk")
   company_code                  company_code                @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ccp_company_fk")
   principal                     principal                   @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ccp_created_by_fk")
   currency                      currency?                   @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "ccp_currency_fk")
@@ -11031,6 +11027,7 @@ model company_code_supplier_profile {
   updated_by                                                                            String?                                  @db.Uuid
   company_code_supplier_intent_policy                                                   company_code_supplier_intent_policy[]
   company_code_supplier_posting_override                                                company_code_supplier_posting_override[]
+  accounting_profile                                                                    accounting_profile?                      @relation(fields: [tenant_id, default_accounting_profile_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "scp_accounting_profile_fk")
   company_code                                                                          company_code                             @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "scp_company_fk")
   principal                                                                             principal                                @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "scp_created_by_fk")
   currency                                                                              currency?                                @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "scp_currency_fk")
@@ -11436,7 +11433,6 @@ model customer {
   business_partner              business_partner                @relation(fields: [tenant_id, business_partner_id], references: [tenant_id, id], onUpdate: NoAction, map: "cust_bp_fk")
   principal                     principal                       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cust_created_by_fk")
   tenant                        tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cust_tenant_fk")
-  customer_app_index            customer_app_index?
   customer_block                customer_block[]
   customer_qualification        customer_qualification?
 
@@ -11472,7 +11468,6 @@ model customer_app_index {
   business_types            String[] @default([])
   search_text               String   @default("")
   updated_at                DateTime @default(now()) @db.Timestamptz(6)
-  customer                  customer @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "customer_app_index_customer_fk")
 
   @@unique([tenant_id, customer_id], map: "customer_app_index_tenant_cus_uq")
   @@index([tenant_id, business_partner_id], map: "cai_bp_idx")
@@ -12114,6 +12109,7 @@ model gl_account {
 
   @@unique([tenant_id, chart_of_account_id, code], map: "gl_account_chart_code_uq")
   @@unique([tenant_id, id], map: "gl_account_tenant_id_uq")
+  @@unique([tenant_id, code], map: "gl_account_tenant_code_uq")
   @@index([tenant_id, chart_of_account_id], map: "gla_chart_idx")
   @@index([tenant_id, chart_of_account_id, account_class], map: "gla_class_idx")
   @@index([tenant_id, parent_id], map: "gla_parent_idx", where: raw("(parent_id IS NOT NULL)"))
@@ -13485,6 +13481,7 @@ model principal {
   ai_drift_baseline_ai_drift_baseline_created_byToprincipal                                             ai_drift_baseline[]                      @relation("ai_drift_baseline_created_byToprincipal")
   ai_drift_baseline_ai_drift_baseline_updated_byToprincipal                                             ai_drift_baseline[]                      @relation("ai_drift_baseline_updated_byToprincipal")
   asset_class_book_policy                                                                               asset_class_book_policy[]
+  asset_class_book_policy_template                                                                      asset_class_book_policy_template[]
   blueprint_registry_blueprint_registry_created_byToprincipal                                           blueprint_registry[]                     @relation("blueprint_registry_created_byToprincipal")
   blueprint_registry_blueprint_registry_updated_byToprincipal                                           blueprint_registry[]                     @relation("blueprint_registry_updated_byToprincipal")
   book_posting_rule                                                                                     book_posting_rule[]
@@ -13665,6 +13662,8 @@ model principal {
   access_grant_access_grant_granted_byToprincipal                                                       access_grant[]                           @relation("access_grant_granted_byToprincipal")
   access_grant_access_grant_principal_idToprincipal                                                     access_grant[]                           @relation("access_grant_principal_idToprincipal")
   access_grant_access_grant_revoked_byToprincipal                                                       access_grant[]                           @relation("access_grant_revoked_byToprincipal")
+  accounting_profile_accounting_profile_created_byToprincipal                                           accounting_profile[]                     @relation("accounting_profile_created_byToprincipal")
+  accounting_profile_accounting_profile_updated_byToprincipal                                           accounting_profile[]                     @relation("accounting_profile_updated_byToprincipal")
   asset                                                                                                 asset[]
   asset_assignment_history_asset_assignment_history_assigned_byToprincipal                              asset_assignment_history[]               @relation("asset_assignment_history_assigned_byToprincipal")
   asset_assignment_history_asset_assignment_history_created_byToprincipal                               asset_assignment_history[]               @relation("asset_assignment_history_created_byToprincipal")
@@ -14636,7 +14635,6 @@ model supplier {
   payment_term                  payment_term?                   @relation(fields: [tenant_id, payment_term_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "supp_payment_term_fk")
   item_category                 item_category?                  @relation(fields: [tenant_id, spend_category_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "supp_spend_category_fk")
   tenant                        tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "supp_tenant_fk")
-  supplier_app_index            supplier_app_index?
   supplier_qualification        supplier_qualification?
   supplier_spend_category       supplier_spend_category?
 
@@ -14673,7 +14671,6 @@ model supplier_app_index {
   business_types             String[] @default([])
   search_text                String   @default("")
   updated_at                 DateTime @default(now()) @db.Timestamptz(6)
-  supplier                   supplier @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "supplier_app_index_supplier_fk")
 
   @@unique([tenant_id, supplier_id], map: "supplier_app_index_tenant_sup_uq")
   @@index([tenant_id, business_partner_id], map: "sai_bp_idx")
@@ -15030,6 +15027,7 @@ model tenant {
   ai_confidence_threshold            ai_confidence_threshold[]
   ai_drift_baseline                  ai_drift_baseline[]
   asset_class_book_policy            asset_class_book_policy[]
+  asset_class_book_policy_template   asset_class_book_policy_template[]
   bank_format_rule                   bank_format_rule[]
   bank_interface_profile             bank_interface_profile[]
   book_posting_rule                  book_posting_rule[]
@@ -15196,6 +15194,7 @@ model tenant {
   workflow_event_log                 workflow_event_log[]
   workspace_usage_metric             workspace_usage_metric[]
   access_grant                       access_grant[]
+  accounting_profile                 accounting_profile[]
   address                            address[]
   address_link                       address_link[]
   asset                              asset[]
@@ -15767,8 +15766,6 @@ model currency {
   tax_credit_movement                                             tax_credit_movement[]
   asset                                                           asset[]
   asset_book                                                      asset_book[]
-  asset_class_asset_class_capitalization_currencyTocurrency       asset_class[]                        @relation("asset_class_capitalization_currencyTocurrency")
-  asset_class_asset_class_currency_codeTocurrency                 asset_class[]                        @relation("asset_class_currency_codeTocurrency")
   asset_component                                                 asset_component[]
   bank_account                                                    bank_account[]
   company_code                                                    company_code[]
@@ -18059,5 +18056,107 @@ model work_pattern_day {
 
   @@unique([tenant_id, work_pattern_id, day_no], map: "work_pattern_day_no_uq")
   @@unique([tenant_id, id], map: "work_pattern_day_tenant_id_uq")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model asset_class_book_policy_template {
+  id                                    String    @id(map: "acbpt_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                             String?   @db.Uuid
+  template_code                         String
+  framework                             String    @default("IFRS")
+  asset_class_code                      String
+  book_category                         String
+  capitalization_threshold_multiplier   Decimal   @default(1) @db.Decimal(9, 4)
+  priority                              Int       @default(50) @db.SmallInt
+  effective_from                        DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to                          DateTime? @db.Date
+  is_depreciable                        Boolean   @default(true)
+  depreciation_method                   String?
+  useful_life_months                    Int?
+  useful_life_min_months                Int?
+  useful_life_max_months                Int?
+  residual_value_mode                   String    @default("zero")
+  residual_value_amount                 Decimal?  @db.Decimal(18, 4)
+  residual_value_pct                    Decimal?  @db.Decimal(9, 4)
+  convention                            String?
+  prorate_basis                         String    @default("monthly")
+  depreciation_start_rule               String    @default("in_service_date")
+  method_params                         Json      @default("{}")
+  source_note                           String?
+  allow_manual_life_override            Boolean   @default(false)
+  allow_manual_residual_override        Boolean   @default(false)
+  allow_manual_method_override          Boolean   @default(false)
+  acquisition_posting_role_code         String?
+  accum_depr_posting_role_code          String?
+  depr_expense_posting_role_code        String?
+  gain_loss_posting_role_code           String?
+  impairment_expense_posting_role_code  String?
+  impairment_reserve_posting_role_code  String?
+  revaluation_surplus_posting_role_code String?
+  revaluation_loss_posting_role_code    String?
+  cwip_posting_role_code                String?
+  capitalization_event_code             String    @default("CAPITALIZE")
+  disposal_event_code                   String    @default("DISPOSE")
+  depreciation_event_code               String    @default("DEPRECIATE")
+  impairment_event_code                 String    @default("IMPAIR")
+  revaluation_event_code                String    @default("REVALUE")
+  metadata                              Json      @default("{}")
+  status                                String    @default("active")
+  is_active                             Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                     DateTime? @db.Timestamptz(6)
+  status_changed_by                     String?   @db.Uuid
+  created_at                            DateTime  @default(now()) @db.Timestamptz(6)
+  created_by                            String    @db.Uuid
+  updated_at                            DateTime? @db.Timestamptz(6)
+  updated_by                            String?   @db.Uuid
+  principal                             principal @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "acbpt_created_by_fk")
+  tenant                                tenant?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "acbpt_tenant_fk")
+
+  @@unique([tenant_id, template_code, asset_class_code, book_category, effective_from], map: "acbpt_scope_uq")
+  @@index([template_code, asset_class_code, book_category, effective_from(sort: Desc), priority(sort: Desc)], map: "acbpt_global_resolution_idx", where: raw("((tenant_id IS NULL) AND (is_active = true))"))
+  @@index([template_code, book_category], map: "acbpt_template_category_idx", where: raw("(is_active = true)"))
+  @@index([tenant_id, template_code, asset_class_code, book_category, effective_from(sort: Desc), priority(sort: Desc)], map: "acbpt_tenant_resolution_idx", where: raw("((tenant_id IS NOT NULL) AND (is_active = true))"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model accounting_profile {
+  id                                                 String                          @id(map: "ap_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                          String                          @db.Uuid
+  code                                               String
+  name                                               String
+  description                                        String?
+  direction                                          String                          @default("INBOUND")
+  subledger_type                                     String                          @default("AP")
+  domain_hint                                        String?
+  icon_key                                           String?
+  color_token                                        String?
+  sort_order                                         Int                             @default(0) @db.SmallInt
+  metadata                                           Json                            @default("{}")
+  status                                             String                          @default("active")
+  is_active                                          Boolean?                        @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                  DateTime?                       @db.Timestamptz(6)
+  status_changed_by                                  String?                         @db.Uuid
+  created_at                                         DateTime                        @default(now()) @db.Timestamptz(6)
+  created_by                                         String                          @db.Uuid
+  updated_at                                         DateTime?                       @db.Timestamptz(6)
+  updated_by                                         String?                         @db.Uuid
+  acct_profile_config                                acct_profile_config[]
+  acct_profile_revenue_config                        acct_profile_revenue_config[]
+  principal_accounting_profile_created_byToprincipal principal                       @relation("accounting_profile_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ap_created_by_fk")
+  tenant                                             tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ap_tenant_fk")
+  principal_accounting_profile_updated_byToprincipal principal?                      @relation("accounting_profile_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ap_updated_by_fk")
+  company_code_customer_profile                      company_code_customer_profile[]
+  company_code_supplier_profile                      company_code_supplier_profile[]
+
+  @@unique([tenant_id, code], map: "ap_tenant_code_uq")
+  @@unique([tenant_id, id], map: "ap_tenant_id_uq")
+  @@index([tenant_id, subledger_type, direction], map: "ap_subledger_idx", where: raw("(is_active = true)"))
+  @@index([tenant_id, status], map: "ap_tenant_status_idx", where: raw("(is_active = true)"))
   @@schema("master")
 }

@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-SQL_DIR="server/db/sql"
+SQL_DIR="server/db/ddl"
 WARNINGS=0
 
 echo "══════════════════════════════════════════════════════════════"
@@ -28,7 +28,7 @@ echo ""
 
 # ── Check 1: Hardcoded status comparisons in triggers ──────────────────────
 echo "── Check 1: Hardcoded NEW.status in trigger functions ──"
-RESULTS=$(grep -rn "NEW\.status\s*=\s*'" "$SQL_DIR"/*.sql \
+RESULTS=$(grep -rn "NEW\.status\s*=\s*'" "$SQL_DIR" \
     --include="*.sql" \
     2>/dev/null \
     | grep -v '10_seed_\|11_seed_\|99_tests' \
@@ -48,7 +48,7 @@ echo ""
 
 # ── Check 2: Hardcoded OLD.status in triggers ─────────────────────────────
 echo "── Check 2: Hardcoded OLD.status in trigger functions ──"
-RESULTS=$(grep -rn "OLD\.status\s*=\s*'" "$SQL_DIR"/*.sql \
+RESULTS=$(grep -rn "OLD\.status\s*=\s*'" "$SQL_DIR" \
     --include="*.sql" \
     2>/dev/null \
     | grep -v '10_seed_\|11_seed_\|99_tests' \
@@ -68,7 +68,7 @@ echo ""
 
 # ── Check 3: Duplicate CHECK constraint patterns ──────────────────────────
 echo "── Check 3: Potential duplicate CHECK constraints ──"
-RESULTS=$(grep -roh "CHECK.*status.*IN.*'[A-Z].*'" "$SQL_DIR"/*.sql \
+RESULTS=$(grep -roh "CHECK.*status.*IN.*'[A-Z].*'" "$SQL_DIR" \
     --include="*.sql" \
     2>/dev/null \
     | grep -v '10_seed_\|11_seed_\|99_tests' \

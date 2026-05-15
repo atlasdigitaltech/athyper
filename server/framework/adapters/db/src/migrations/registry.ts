@@ -89,7 +89,7 @@ export class MigrationRegistry {
     }
     // Fallback: compiled output is at dist/migrations/registry.js; traverse up
     // to server root then descend into db/sql.
-    return join(__dirname, "../../../../../db/sql");
+    return join(__dirname, "../../../../../db/ddl");
   }
 
   /**

@@ -91,6 +91,8 @@ ATHYPER_USERS=(
   partner.owner karim.dual
   # Technostat Group (tenant: technostat) — 5 admin users
   tksa.owner tksa.admin ssk.admin tegy.admin sdtx.admin
+  # CirrusAtlantic (tenant: cirrusatlantic) — 3 seed users
+  catl.admin catl.owner catl.finance
 )
 
 PCC_USERS=(product.admin tenant.manager support.admin)

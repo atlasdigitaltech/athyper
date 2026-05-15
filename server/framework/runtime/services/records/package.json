@@ -26,11 +26,13 @@
   },
   "dependencies": {
     "@athyper/svc-iam": "workspace:*",
-    "@athyper/svc-shared": "workspace:*"
+    "@athyper/svc-shared": "workspace:*",
+    "busboy": "^1.6.0"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",
     "@types/express": "^5.0.1",
+    "bullmq": "^5.74.1",
     "express": "^5.0.0",
     "kysely": "^0.28.16",
     "rimraf": "^6.0.1",

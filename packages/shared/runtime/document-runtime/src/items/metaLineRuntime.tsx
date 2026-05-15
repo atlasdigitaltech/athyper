@@ -723,11 +723,13 @@ export function UomFieldInput({
     showDescription: true,
     variant: "advanced",
     density: "compact",
-    width: 520,
-    maxListHeight: 760,
+    width: 420,
+    maxListHeight: 320,
     showRecentlyUsed: false,
     showKeyboardHints: false,
     resultLabel: "UoM",
+    pageSize: 20,
+    defaultSearchMode: "server",
     sections: [{ id: "matches", label: "All units" }],
   }), []);
 
@@ -842,11 +844,13 @@ function commodityPickerConfig(domain: "unspsc" | "hs"): EntityPickerOptionConfi
   return {
     variant:          "advanced",
     density:          "compact",
-    width:            720,
-    maxListHeight:    900,
+    width:            420,
+    maxListHeight:    320,
     showRecentlyUsed: false,
     showKeyboardHints: false,
     resultLabel:      `${domainLabel} codes`,
+    pageSize:         20,
+    defaultSearchMode: "server",
     sections: [
       { id: "matches", label: "All matches" },
     ],

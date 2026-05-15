@@ -3,7 +3,7 @@
   "displayName": "athyper Platform Control",
   "displayNameHtml": "athyper Platform Administration",
   "enabled": true,
-  "sslRequired": "external",
+  "sslRequired": "all",
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": true,
   "refreshTokenMaxReuse": 0,
@@ -14,7 +14,7 @@
   "ssoSessionIdleTimeoutRememberMe": 0,
   "ssoSessionMaxLifespanRememberMe": 0,
   "offlineSessionIdleTimeout": 2592000,
-  "offlineSessionMaxLifespanEnabled": false,
+  "offlineSessionMaxLifespanEnabled": true,
   "offlineSessionMaxLifespan": 5184000,
   "accessCodeLifespan": 60,
   "accessCodeLifespanUserAction": 300,
@@ -22,11 +22,12 @@
   "registrationAllowed": false,
   "registrationEmailAsUsername": false,
   "rememberMe": false,
-  "verifyEmail": false,
+  "verifyEmail": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": false,
   "editUsernameAllowed": false,
+  "passwordPolicy": "length(8) and upperCase(1) and digits(1) and specialChars(1) and notUsername",
   "bruteForceProtected": true,
   "permanentLockout": false,
   "maxTemporaryLockouts": 3,
@@ -103,7 +104,7 @@
       "lastName": "Admin",
       "email": "admin@athyper.com",
       "credentials": [],
-      "requiredActions": ["UPDATE_PASSWORD"],
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"],
       "realmRoles": ["PRODUCT_ADMIN", "default-roles-platform-control"]
     },
     {
@@ -114,7 +115,7 @@
       "lastName": "Manager",
       "email": "tenantmgr@athyper.com",
       "credentials": [],
-      "requiredActions": ["UPDATE_PASSWORD"],
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"],
       "realmRoles": ["TENANT_MANAGER", "default-roles-platform-control"]
     },
     {
@@ -125,8 +126,19 @@
       "lastName": "Admin",
       "email": "support@athyper.com",
       "credentials": [],
-      "requiredActions": ["UPDATE_PASSWORD"],
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"],
       "realmRoles": ["SUPPORT_ADMIN", "default-roles-platform-control"]
+    }
+  ],
+  "scopeMappings": [
+    {
+      "client": "athyper-admin",
+      "roles": [
+        "PRODUCT_ADMIN",
+        "TENANT_MANAGER",
+        "SUPPORT_ADMIN",
+        "READ_ONLY_SUPPORT"
+      ]
     }
   ],
   "clients": [
@@ -175,10 +187,11 @@
         "tls.client.certificate.bound.access.tokens": "false",
         "display.on.consent.screen": "false",
         "token.response.type.bearer.lower-case": "false",
-        "dpop.bound.access.tokens": "false"
+        "dpop.bound.access.tokens": "false",
+        "pkce.code.challenge.method": "S256"
       },
       "authenticationFlowBindingOverrides": {},
-      "fullScopeAllowed": true,
+      "fullScopeAllowed": false,
       "nodeReRegistrationTimeout": -1,
       "defaultClientScopes": [
         "web-origins",
@@ -417,11 +430,24 @@
     "referrerPolicy": "no-referrer",
     "xRobotsTag": "none",
     "xFrameOptions": "SAMEORIGIN",
-    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
-    "xXSSProtection": "1; mode=block",
+    "contentSecurityPolicy": "require-trusted-types-for 'script'; frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+    "xXSSProtection": "0",
     "strictTransportSecurity": "max-age=31536000; includeSubDomains"
   },
-  "smtpServer": {},
+  "smtpServer": {
+    "host": "${KC_SMTP_HOST}",
+    "port": "${KC_SMTP_PORT}",
+    "from": "${KC_SMTP_FROM}",
+    "fromDisplayName": "${KC_SMTP_FROM_DISPLAY_NAME}",
+    "replyTo": "${KC_SMTP_FROM}",
+    "replyToDisplayName": "${KC_SMTP_FROM_DISPLAY_NAME}",
+    "envelopeFrom": "${KC_SMTP_FROM}",
+    "ssl": "${KC_SMTP_SSL}",
+    "starttls": "${KC_SMTP_STARTTLS}",
+    "auth": "${KC_SMTP_AUTH}",
+    "user": "${KC_SMTP_USERNAME}",
+    "password": "${KC_SMTP_PASSWORD}"
+  },
   "eventsEnabled": true,
   "eventsListeners": ["jboss-logging"],
   "enabledEventTypes": [
@@ -434,10 +460,22 @@
     "REFRESH_TOKEN",
     "REFRESH_TOKEN_ERROR"
   ],
+  "eventsExpiration": 2592000,
   "adminEventsEnabled": true,
   "adminEventsDetailsEnabled": true,
   "internationalizationEnabled": true,
-  "supportedLocales": [ "en", "default", "mono", "modern-minimal", "tangerine", "cosmic-night", "violet-bloom", "vintage-paper", "soft-pop", "bubblegum", "brutalist", "doom-64" ],
+  "supportedLocales": ["en"],
+  "requiredActions": [
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": true,
+      "priority": 10,
+      "config": {}
+    }
+  ],
   "browserFlow": "browser",
   "registrationFlow": "registration",
   "directGrantFlow": "direct grant",

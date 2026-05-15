@@ -46,8 +46,11 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   "/finance/coa":                   { label: "Chart of Accounts",     moduleCode: "ACC", recordFamily: "page" },
   "/finance/views/trial-balance":   { label: "Trial Balance",         moduleCode: "ACC", recordFamily: "page" },
   "/finance/reports":               { label: "Financial Reports",     moduleCode: "ACC", recordFamily: "page" },
+  "/finance/spend-categories":      { label: "Spend Category Workbench", moduleCode: "ACC", recordFamily: "page" },
+  "/finance/business-intents":       { label: "Business Intent Workbench", moduleCode: "ACC", recordFamily: "page" },
   "/finance/close":                 { label: "Period Close",          moduleCode: "ACC", recordFamily: "page" },
   "/finance/admin":                 { label: "Finance Admin",         moduleCode: "ACC", recordFamily: "page" },
+  "/workbench/supply-chain/spend-categories": { label: "Spend Category Workbench", moduleCode: "BUY", recordFamily: "page" },
   // Admin / Setup
   "/setup/tenant":                  { label: "Tenant Setup",          recordFamily: "page" },
   "/setup/metadata":                { label: "Metadata Studio",       recordFamily: "page" },

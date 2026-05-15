@@ -20,6 +20,15 @@ const MIN_PANEL_WIDTH = 220;
 const MAX_PANEL_WIDTH = 1100;
 const MIN_LIST_HEIGHT = 120;
 const MAX_LIST_HEIGHT = 900;
+const DEFAULT_PANEL_WIDTH = 420;
+const DEFAULT_LIST_HEIGHT = 320;
+const EXPANDED_PANEL_WIDTH = "min(720px, calc(100vw - 32px))";
+const EXPANDED_LIST_HEIGHT = "min(64dvh, 560px)";
+const MODAL_PORTAL_ROOT_SELECTOR = [
+  "[data-advanced-picker-portal-root='true']",
+  "[data-drawer-shell-content='true']",
+  "[role='dialog']",
+].join(", ");
 
 function loadSize(key: string | null | undefined): { w: number; h: number } | null {
   if (!key || typeof window === "undefined") return null;
@@ -52,10 +61,10 @@ function clamp(value: number, min: number, max: number): number {
 // Density fallbacks used for resize origin calculation
 
 const DENSITY_DEFAULTS: Record<string, { w: number; h: number }> = {
-  mini:        { w: 300, h: 190 },
-  compact:     { w: 340, h: 250 },
-  comfortable: { w: 390, h: 310 },
-  mobile:      { w: 400, h: 300 },
+  mini:        { w: DEFAULT_PANEL_WIDTH, h: DEFAULT_LIST_HEIGHT },
+  compact:     { w: DEFAULT_PANEL_WIDTH, h: DEFAULT_LIST_HEIGHT },
+  comfortable: { w: DEFAULT_PANEL_WIDTH, h: DEFAULT_LIST_HEIGHT },
+  mobile:      { w: DEFAULT_PANEL_WIDTH, h: DEFAULT_LIST_HEIGHT },
 };
 
 function viewportAwareListHeight(maxListHeight: AdvancedEntityChooserMetaConfig["maxListHeight"]): string {
@@ -64,7 +73,17 @@ function viewportAwareListHeight(maxListHeight: AdvancedEntityChooserMetaConfig[
   if (typeof maxListHeight === "string" && maxListHeight.trim()) {
     return `min(${maxListHeight.trim()}, ${availableHeight})`;
   }
-  return availableHeight;
+  return `min(${DEFAULT_LIST_HEIGHT}px, ${availableHeight})`;
+}
+
+function viewportAwarePanelWidth(width: AdvancedEntityChooserMetaConfig["width"]): string {
+  let preferredWidth = `${DEFAULT_PANEL_WIDTH}px`;
+  if (typeof width === "number") {
+    preferredWidth = `${width}px`;
+  } else if (typeof width === "string" && width.trim()) {
+    preferredWidth = width.trim();
+  }
+  return `min(${preferredWidth}, calc(100vw - 32px))`;
 }
 
 // Types
@@ -102,6 +121,9 @@ export interface AdvancedEntityComboboxProps {
   resultLabel?: string;
   onLoadMore?: () => void;
   loadMoreLoading?: boolean;
+  treeEnabled?: boolean;
+  onTreeEnabledChange?: (enabled: boolean) => void;
+  defaultSearchMode?: "server" | "instant";
   activeControlValue?: string | null;
   onControlChange?: (control: AdvancedEntityChooserControl, query: string) => void;
   /**
@@ -135,6 +157,9 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
       resultLabel,
       onLoadMore,
       loadMoreLoading,
+      treeEnabled = false,
+      onTreeEnabledChange,
+      defaultSearchMode = "server",
       activeControlValue,
       onControlChange,
       storageKey,
@@ -145,7 +170,10 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
     const id = externalId ?? generatedId;
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
-    const [instantSearch, setInstantSearch] = useState(false);
+    const defaultInstantSearch = defaultSearchMode === "instant";
+    const [instantSearch, setInstantSearch] = useState(defaultInstantSearch);
+    const [expanded, setExpanded] = useState(false);
+    const [expandedPortalContainer, setExpandedPortalContainer] = useState<HTMLElement | null>(null);
     const triggerRef = useRef<HTMLDivElement | null>(null);
 
     // Drag & resize state
@@ -168,6 +196,31 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
       userSizeRef.current = nextSize;
       setUserSize(nextSize);
     }, [storageKey]);
+
+    useEffect(() => {
+      if (!open) {
+        setExpandedPortalContainer(null);
+        return;
+      }
+      setExpandedPortalContainer(
+        triggerRef.current?.closest<HTMLElement>(MODAL_PORTAL_ROOT_SELECTOR) ?? null,
+      );
+    }, [open]);
+
+    useEffect(() => {
+      if (!disabled || !open) return;
+      setOpen(false);
+      setQuery("");
+      onQueryChange?.("");
+      setDragOffset({ x: 0, y: 0 });
+      setInstantSearch(defaultInstantSearch);
+      setExpanded(false);
+    }, [defaultInstantSearch, disabled, onQueryChange, open]);
+
+    useEffect(() => {
+      if (open) return;
+      setInstantSearch(defaultInstantSearch);
+    }, [defaultInstantSearch, open]);
 
     const handleDragStart = useCallback((e: React.MouseEvent) => {
       e.preventDefault();
@@ -259,20 +312,29 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
 
     const viewportAwareMeta = useMemo<AdvancedEntityChooserMetaConfig>(
       () => {
+        if (expanded) {
+          return {
+            ...meta,
+            width: EXPANDED_PANEL_WIDTH,
+            listHeight: EXPANDED_LIST_HEIGHT,
+            maxListHeight: EXPANDED_LIST_HEIGHT,
+          };
+        }
         const resizedListHeight = userSize ? viewportAwareListHeight(userSize.h) : undefined;
         return {
           ...meta,
-          width:         userSize?.w ?? meta?.width,
+          width:         viewportAwarePanelWidth(userSize?.w ?? meta?.width),
           listHeight:    resizedListHeight ?? meta?.listHeight,
           maxListHeight: viewportAwareListHeight(userSize?.h ?? meta?.maxListHeight),
         };
       },
-      [meta, userSize],
+      [expanded, meta, userSize],
     );
 
     // Popover handlers
 
     const handleOpenChange = (next: boolean) => {
+      if (disabled && next) return;
       setOpen(next);
       if (next) {
         onOpen?.();
@@ -280,15 +342,31 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
         setQuery("");
         onQueryChange?.("");
         setDragOffset({ x: 0, y: 0 });
+        setInstantSearch(defaultInstantSearch);
+        setExpanded(false);
+      }
+    };
+
+    const handleExpandedChange = (next: boolean) => {
+      if (disabled) return;
+      setExpanded(next);
+      setDragOffset({ x: 0, y: 0 });
+    };
+
+    const handleLayerKeyDown = (event: React.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
       }
     };
 
     const handleQueryChange = (next: string) => {
+      if (disabled) return;
       setQuery(next);
       if (!instantSearch) onQueryChange?.(next);
     };
 
     const handleInstantSearchToggle = () => {
+      if (disabled) return;
       setInstantSearch((current) => {
         const next = !current;
         if (!next) onQueryChange?.(query);
@@ -297,6 +375,7 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
     };
 
     const handleSelect = (option: AdvancedEntityChooserOption) => {
+      if (disabled) return;
       onChange?.(option.value);
       setOpen(false);
       setQuery("");
@@ -305,6 +384,7 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
 
     const handleClear = (event: React.MouseEvent) => {
       event.stopPropagation();
+      if (disabled) return;
       onChange?.(null);
     };
 
@@ -326,6 +406,16 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
               aria-expanded={open}
               aria-invalid={!!error}
               aria-disabled={disabled}
+              onPointerDown={(event) => {
+                if (!disabled) return;
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                if (!disabled) return;
+                event.preventDefault();
+                event.stopPropagation();
+              }}
               onKeyDown={(event) => {
                 if (disabled) return;
                 if (event.key === "Enter" || event.key === " ") {
@@ -365,51 +455,96 @@ export const AdvancedEntityCombobox = forwardRef<HTMLDivElement, AdvancedEntityC
             </div>
           </Popover.Trigger>
 
-          <Popover.Portal>
-            <Popover.Content
-              className="z-popover max-h-[var(--radix-popover-content-available-height)] overflow-visible animate-in fade-in-0 zoom-in-95"
-              align="start"
-              side="bottom"
-              sideOffset={6}
-              collisionPadding={16}
-              avoidCollisions
-              sticky="partial"
-              onOpenAutoFocus={(event) => event.preventDefault()}
-            >
-              {/* Separate wrapper so our drag transform doesn't conflict with Radix's positioning transform */}
+          <Popover.Portal container={expandedPortalContainer ?? undefined}>
+            {expanded ? (
               <div
-                style={
-                  dragOffset.x !== 0 || dragOffset.y !== 0
-                    ? { transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }
-                    : undefined
-                }
+                data-advanced-entity-chooser-expanded="true"
+                className="pointer-events-auto fixed inset-0 z-[600] bg-transparent"
+                onPointerDown={() => setOpen(false)}
+                onMouseDown={() => setOpen(false)}
+                onKeyDown={handleLayerKeyDown}
               >
-                <AdvancedEntityChooserPanel
-                  query={query}
-                  onQueryChange={handleQueryChange}
-                  activeControlValue={activeControlValue}
-                  onControlChange={(control) => onControlChange?.(control, query)}
-                  selectedValue={value ?? null}
-                  onSelect={handleSelect}
-                  options={options}
-                  loading={loading}
-                  meta={viewportAwareMeta}
-                  optionActionLabel={optionActionLabel}
-                  instantSearch={instantSearch}
-                  onInstantSearchToggle={handleInstantSearchToggle}
-                  loadedCount={loadedCount}
-                  totalCount={totalCount}
-                  resultLabel={resultLabel}
-                  onLoadMore={onLoadMore}
-                  loadMoreLoading={loadMoreLoading}
-                  emptyMessage={query || activeControlValue ? "No matches" : "Type to search"}
-                  draggable
-                  onDragHandleMouseDown={handleDragStart}
-                  resizable
-                  onResizeHandleMouseDown={handleResizeStart}
-                />
+                <div
+                  className="pointer-events-auto fixed left-1/2 top-[clamp(5rem,12dvh,8rem)] -translate-x-1/2 animate-in fade-in-0 zoom-in-95"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
+                  <AdvancedEntityChooserPanel
+                    query={query}
+                    onQueryChange={handleQueryChange}
+                    activeControlValue={activeControlValue}
+                    onControlChange={(control) => onControlChange?.(control, query)}
+                    selectedValue={value ?? null}
+                    onSelect={handleSelect}
+                    options={options}
+                    loading={loading}
+                    meta={viewportAwareMeta}
+                    optionActionLabel={optionActionLabel}
+                    instantSearch={instantSearch}
+                    onInstantSearchToggle={handleInstantSearchToggle}
+                    loadedCount={loadedCount}
+                    totalCount={totalCount}
+                    resultLabel={resultLabel}
+                    onLoadMore={onLoadMore}
+                    loadMoreLoading={loadMoreLoading}
+                    treeEnabled={treeEnabled}
+                    onTreeEnabledChange={onTreeEnabledChange}
+                    emptyMessage={query || activeControlValue ? "No matches" : "Type to search"}
+                    expanded={expanded}
+                    onExpandedChange={handleExpandedChange}
+                  />
+                </div>
               </div>
-            </Popover.Content>
+            ) : (
+              <Popover.Content
+                className="z-popover max-h-[var(--radix-popover-content-available-height)] overflow-visible animate-in fade-in-0 zoom-in-95"
+                align="start"
+                side="bottom"
+                sideOffset={6}
+                collisionPadding={16}
+                avoidCollisions
+                sticky="partial"
+                onOpenAutoFocus={(event) => event.preventDefault()}
+              >
+                {/* Separate wrapper so our drag transform doesn't conflict with Radix's positioning transform */}
+                <div
+                  style={
+                    dragOffset.x !== 0 || dragOffset.y !== 0
+                      ? { transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }
+                      : undefined
+                  }
+                >
+                  <AdvancedEntityChooserPanel
+                    query={query}
+                    onQueryChange={handleQueryChange}
+                    activeControlValue={activeControlValue}
+                    onControlChange={(control) => onControlChange?.(control, query)}
+                    selectedValue={value ?? null}
+                    onSelect={handleSelect}
+                    options={options}
+                    loading={loading}
+                    meta={viewportAwareMeta}
+                    optionActionLabel={optionActionLabel}
+                    instantSearch={instantSearch}
+                    onInstantSearchToggle={handleInstantSearchToggle}
+                    loadedCount={loadedCount}
+                    totalCount={totalCount}
+                    resultLabel={resultLabel}
+                    onLoadMore={onLoadMore}
+                    loadMoreLoading={loadMoreLoading}
+                    treeEnabled={treeEnabled}
+                    onTreeEnabledChange={onTreeEnabledChange}
+                    emptyMessage={query || activeControlValue ? "No matches" : "Type to search"}
+                    draggable
+                    onDragHandleMouseDown={handleDragStart}
+                    expanded={expanded}
+                    onExpandedChange={handleExpandedChange}
+                    resizable
+                    onResizeHandleMouseDown={handleResizeStart}
+                  />
+                </div>
+              </Popover.Content>
+            )}
           </Popover.Portal>
         </Popover.Root>
 

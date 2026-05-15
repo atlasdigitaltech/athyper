@@ -1,6 +1,8 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { EntityListPage } from "@athyper/entity-runtime/list";
 import { Skeleton } from "@athyper/ui/primitives";
+import { canonicalEntityCode } from "../_lib/entity-aliases";
 
 /**
  * Runtime entity list — /app/[entity]
@@ -32,10 +34,27 @@ import { Skeleton } from "@athyper/ui/primitives";
  */
 export default async function AppEntityListRoute({
   params,
+  searchParams,
 }: {
   params: Promise<{ entity: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { entity } = await params;
+  const canonicalEntity = canonicalEntityCode(entity);
+  if (canonicalEntity !== entity) {
+    const currentSearchParams = await searchParams;
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(currentSearchParams)) {
+      if (Array.isArray(value)) {
+        value.forEach((item) => query.append(key, item));
+      } else if (value != null) {
+        query.set(key, value);
+      }
+    }
+    const queryText = query.toString();
+    redirect(`/app/${canonicalEntity}${queryText ? `?${queryText}` : ""}`);
+  }
+
   // Suspense boundary is required because EntityListPage uses useSearchParams()
   // (via useEntityListUrl) which opts the subtree into Suspense in Next.js App Router.
   return (
@@ -50,7 +69,7 @@ export default async function AppEntityListRoute({
         </div>
       }
     >
-      <EntityListPage entityCode={entity} />
+      <EntityListPage entityCode={canonicalEntity} />
     </Suspense>
   );
 }

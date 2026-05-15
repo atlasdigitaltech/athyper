@@ -45,6 +45,37 @@ init_stack_env "$STACK_DIR"
 KEYCLOAK_IMAGE_TAG="${KEYCLOAK_IMAGE_TAG:-$(env_val KEYCLOAK_IMAGE_TAG)}"
 KEYCLOAK_IMAGE_TAG="${KEYCLOAK_IMAGE_TAG:?Set KEYCLOAK_IMAGE_TAG in stack/env/.env}"
 
+env_or_default() {
+  local name="$1"
+  local fallback="${2:-}"
+  local value="${!name:-}"
+  if [[ -z "$value" ]]; then
+    value="$(env_val "$name")"
+  fi
+  printf '%s' "${value:-$fallback}"
+}
+
+KC_IMPORT_ENV_ARGS=(
+  -e "KC_SMTP_HOST=$(env_or_default KC_SMTP_HOST mailhog)"
+  -e "KC_SMTP_PORT=$(env_or_default KC_SMTP_PORT 1025)"
+  -e "KC_SMTP_FROM=$(env_or_default KC_SMTP_FROM noreply@athyper.local)"
+  -e "KC_SMTP_FROM_DISPLAY_NAME=$(env_or_default KC_SMTP_FROM_DISPLAY_NAME Athyper)"
+  -e "KC_SMTP_AUTH=$(env_or_default KC_SMTP_AUTH false)"
+  -e "KC_SMTP_SSL=$(env_or_default KC_SMTP_SSL false)"
+  -e "KC_SMTP_STARTTLS=$(env_or_default KC_SMTP_STARTTLS false)"
+  -e "KC_SMTP_USERNAME=$(env_or_default KC_SMTP_USERNAME)"
+  -e "KC_SMTP_PASSWORD=$(env_or_default KC_SMTP_PASSWORD)"
+  -e "KC_WEBAUTHN_RP_ID=$(env_or_default KC_WEBAUTHN_RP_ID athyper.local)"
+  -e "ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET=$(env_or_default ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET)"
+  -e "NEON_SVC_BFF_CLIENT_SECRET=$(env_or_default NEON_SVC_BFF_CLIENT_SECRET)"
+  -e "GITHUB_OAUTH_CLIENT_ID=$(env_or_default GITHUB_OAUTH_CLIENT_ID)"
+  -e "GITHUB_OAUTH_CLIENT_SECRET=$(env_or_default GITHUB_OAUTH_CLIENT_SECRET)"
+  -e "GOOGLE_CLIENT_ID=$(env_or_default GOOGLE_CLIENT_ID)"
+  -e "GOOGLE_CLIENT_SECRET=$(env_or_default GOOGLE_CLIENT_SECRET)"
+  -e "MICROSOFT_CLIENT_ID=$(env_or_default MICROSOFT_CLIENT_ID)"
+  -e "MICROSOFT_CLIENT_SECRET=$(env_or_default MICROSOFT_CLIENT_SECRET)"
+)
+
 echo -e "${GREEN}=== Keycloak Realm Import ===${NC}"
 echo -e "${YELLOW}Importing from: ${IMPORT_FILE}${NC}\n"
 
@@ -105,6 +136,7 @@ docker run --rm \
   -e KC_DB_URL="${DB_URL}" \
   -e KC_DB_USERNAME="${DB_USER}" \
   -e KC_DB_PASSWORD="${DB_PASS}" \
+  "${KC_IMPORT_ENV_ARGS[@]}" \
   quay.io/keycloak/keycloak:${KEYCLOAK_IMAGE_TAG} \
   import \
   --dir /opt/keycloak/data/import \
@@ -122,6 +154,7 @@ if [ -f "${PLATFORM_IMPORT_FILE}" ]; then
     -e KC_DB_URL="${DB_URL}" \
     -e KC_DB_USERNAME="${DB_USER}" \
     -e KC_DB_PASSWORD="${DB_PASS}" \
+    "${KC_IMPORT_ENV_ARGS[@]}" \
     quay.io/keycloak/keycloak:${KEYCLOAK_IMAGE_TAG} \
     import \
     --dir /opt/keycloak/data/import \

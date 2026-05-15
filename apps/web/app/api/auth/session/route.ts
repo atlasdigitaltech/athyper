@@ -37,6 +37,10 @@ function isBindingMismatch(session: V4Session, req: Request): boolean {
   );
 }
 
+function isMfaPending(session: V4Session): boolean {
+  return session.mfaRequired === true && session.mfaVerified !== true;
+}
+
 /**
  * GET /api/auth/session
  *
@@ -156,6 +160,16 @@ export async function PATCH(req: Request) {
     return NextResponse.json(
       { error: "session_binding_mismatch" },
       { status: 401 },
+    );
+  }
+
+  if (isMfaPending(session)) {
+    return NextResponse.json(
+      {
+        error: "MFA_REQUIRED",
+        message: "Complete MFA before selecting a workbench.",
+      },
+      { status: 403 },
     );
   }
 

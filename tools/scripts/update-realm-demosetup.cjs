@@ -57,6 +57,25 @@ console.log(`Orgs after filter: ${realm.organizations.length}`);
 // Helper to find org by alias
 const findOrg = (alias) => realm.organizations.find(o => o.alias === alias);
 
+// Inject CirrusAtlantic org if absent after filter (alias auto-preserved via athyper-- prefix)
+if (!findOrg('athyper--catl')) {
+  realm.organizations.push({
+    id:          'bb000030-0000-0000-0000-000000000001',
+    name:        'CirrusAtlantic',
+    alias:       'athyper--catl',
+    enabled:     true,
+    redirectUrl: '',
+    attributes: {
+      tenant_code:       ['cirrusatlantic'],
+      industry_vertical: ['infocomm_services'],
+      entity_code:       ['CATL'],
+    },
+    identityProviders: [],
+    members: [],
+  });
+  console.log('Injected org: athyper--catl');
+}
+
 // ── 3. neon-web client roles — keep only 3 WORKBENCH roles ─────────────────
 const KEEP_ROLES = [
   'ACCESS',
@@ -145,6 +164,10 @@ const DEMO_USERS = [
   ['partner.manager','Partner',     'Manager',  'partner.manager@athyper.demo',makeId(15), ['partner'],       ['athyper--aqtu']],
   ['partner.owner',  'Partner',     'Owner',    'partner.owner@athyper.demo',  makeId(16), ['partner'],       ['athyper--aqtu']],
   ['karim.dual',     'Karim',       'Dual',     'karim.dual@athyper.demo',     makeId(17), ['user','partner'],['athyper--aqtu']],
+  // CirrusAtlantic — stable UUIDs match DB principal seeds (aa003000-… series)
+  ['catl.admin',   'CATL', 'Admin',       'admin@cirrusatlantic.com',   'aa003000-0000-0000-0000-000000000001', ['admin'], ['athyper--catl']],
+  ['catl.owner',   'CATL', 'Owner',       'owner@cirrusatlantic.com',   'aa003000-0000-0000-0000-000000000002', ['user'],  ['athyper--catl']],
+  ['catl.finance', 'CATL', 'Finance Lead','finance@cirrusatlantic.com', 'aa003000-0000-0000-0000-000000000003', ['user'],  ['athyper--catl']],
 ];
 
 // Build new users array: service accounts + demo users

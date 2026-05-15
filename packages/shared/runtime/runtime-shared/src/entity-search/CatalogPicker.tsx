@@ -44,13 +44,23 @@ const CATALOG_DEFAULT_CONFIGS: Record<string, EntityPickerOptionConfig> = {
   spend_category: {
     variant: "advanced",
     density: "mini",
-    width: 400,
-    maxListHeight: 900,
+    width: 420,
+    maxListHeight: 320,
     optionActionLabel: "Open spend category",
     resultLabel: "spend category",
     showRecentlyUsed: true,
     recentLimit: 5,
+    pageSize: 20,
+    defaultSearchMode: "server",
     defaultControl: "active",
+    tree: {
+      enabled: true,
+      defaultEnabled: false,
+      parentField: "parent_id",
+      valueField: "id",
+      sortField: "sort_order",
+      minRecords: 500,
+    },
     controls: [
       { id: "all",      label: "All",      value: "all" },
       { id: "active",   label: "Active",   value: "active",   field: "status", matchValue: "active" },
@@ -76,12 +86,22 @@ const CATALOG_DEFAULT_CONFIGS: Record<string, EntityPickerOptionConfig> = {
     variant: "advanced",
     density: "mini",
     width: 420,
-    maxListHeight: 900,
+    maxListHeight: 320,
     optionActionLabel: "Open business intent",
     resultLabel: "business intent",
     showRecentlyUsed: true,
     recentLimit: 5,
+    pageSize: 20,
+    defaultSearchMode: "server",
     defaultControl: "active",
+    tree: {
+      enabled: true,
+      defaultEnabled: false,
+      parentField: "parent_id",
+      valueField: "id",
+      sortField: "sort_order",
+      minRecords: 500,
+    },
     controls: [
       { id: "all",      label: "All",      value: "all" },
       { id: "active",   label: "Active",   value: "active",   field: "status", matchValue: "active" },
@@ -110,12 +130,14 @@ const CATALOG_DEFAULT_CONFIGS: Record<string, EntityPickerOptionConfig> = {
   item: {
     variant: "advanced",
     density: "mini",
-    width: 400,
-    maxListHeight: 900,
+    width: 420,
+    maxListHeight: 320,
     optionActionLabel: "Open item",
     resultLabel: "item",
     showRecentlyUsed: true,
     recentLimit: 5,
+    pageSize: 20,
+    defaultSearchMode: "server",
     defaultControl: "active",
     controls: [
       { id: "all",      label: "All",      value: "all" },
@@ -135,12 +157,14 @@ const CATALOG_DEFAULT_CONFIGS: Record<string, EntityPickerOptionConfig> = {
   product: {
     variant: "advanced",
     density: "mini",
-    width: 400,
-    maxListHeight: 900,
+    width: 420,
+    maxListHeight: 320,
     optionActionLabel: "Open product",
     resultLabel: "product",
     showRecentlyUsed: true,
     recentLimit: 5,
+    pageSize: 20,
+    defaultSearchMode: "server",
     defaultControl: "active",
     controls: [
       { id: "all",      label: "All",      value: "all" },
@@ -164,7 +188,10 @@ function resolveOptionConfig(
 ): EntityPickerOptionConfig {
   const fromField = resolveEntityPickerOptionConfig(fieldRefConfig);
   // DB-driven config takes full precedence when it already carries advanced variant.
-  if (fromField?.variant === "advanced") return fromField;
+  if (fromField?.variant === "advanced") {
+    const defaults = CATALOG_DEFAULT_CONFIGS[entityCode];
+    return defaults && !fromField.tree ? { ...defaults, ...fromField, tree: defaults.tree } : fromField;
+  }
   // Otherwise merge: defaults as base, field config overlaid for any non-undefined keys.
   const defaults = CATALOG_DEFAULT_CONFIGS[entityCode];
   if (!defaults) return fromField ?? { variant: "advanced" };

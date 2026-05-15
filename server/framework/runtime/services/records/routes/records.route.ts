@@ -54,6 +54,15 @@ import {
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE     = 100;
 const DEFAULT_LOCK_TTL_SECONDS = 300;
+const TEXT_SEARCH_DATA_TYPES = new Set([
+  "email",
+  "enum",
+  "lifecycle_state",
+  "phone",
+  "string",
+  "text",
+  "url",
+]);
 
 export interface RecordsRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,6 +123,10 @@ function parseJsonPathColumn(columnName: string): { root: string; path: string[]
 
 function storageColumnName(columnName: string): string {
   return parseJsonPathColumn(columnName)?.root ?? columnName;
+}
+
+function isTextSearchDataType(dataType: string | null | undefined): boolean {
+  return TEXT_SEARCH_DATA_TYPES.has(String(dataType ?? "").toLowerCase());
 }
 
 function asPlainObject(value: unknown): Record<string, unknown> {
@@ -229,6 +242,10 @@ function isCertificationBackingTable(table: EntityTableInfo): boolean {
   return table.table_schema === "master" && table.table_name === "certification";
 }
 
+function isCommodityClassificationBackingTable(table: EntityTableInfo): boolean {
+  return table.table_schema === "master" && table.table_name === "commodity_classification";
+}
+
 // Adds display-only values from the existing certification_type table. These are
 // virtual API fields, not DDL columns.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -282,6 +299,67 @@ async function enrichCertificationTypeDisplayFields(
       certification_type_code:    typeRow?.["code"] ?? null,
       certification_category:     typeRow?.["category"] ?? null,
       certification_issuing_body: typeRow?.["issuing_body"] ?? null,
+    };
+  });
+}
+
+// Adds display-only code values for the polymorphic commodity_classification
+// bridge. These are virtual API fields backed by shared.commodity_code or
+// shared.industry_code, so the generic app can avoid showing code_id UUIDs.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function enrichCommodityClassificationDisplayFields(
+  db: Kysely<any>,
+  rows: Record<string, unknown>[],
+): Promise<Record<string, unknown>[]> {
+  const commodityIds = Array.from(new Set(
+    rows
+      .filter((row) => row["classification_type"] === "commodity")
+      .map((row) => row["code_id"])
+      .filter((id): id is string => typeof id === "string" && UUID_RE.test(id)),
+  ));
+  const industryIds = Array.from(new Set(
+    rows
+      .filter((row) => row["classification_type"] === "industry")
+      .map((row) => row["code_id"])
+      .filter((id): id is string => typeof id === "string" && UUID_RE.test(id)),
+  ));
+
+  const [commodityRows, industryRows] = await Promise.all([
+    commodityIds.length > 0
+      ? db
+        .selectFrom("shared.commodity_code as cc" as never)
+        .select(["cc.id", "cc.code", "cc.name", "cc.domain_code", "cc.level_no"] as never[])
+        .where("cc.id" as never, "in", commodityIds as never)
+        .execute() as Promise<Record<string, unknown>[]>
+      : Promise.resolve([]),
+    industryIds.length > 0
+      ? db
+        .selectFrom("shared.industry_code as ic" as never)
+        .select(["ic.id", "ic.code", "ic.name", "ic.domain_code", "ic.level_no"] as never[])
+        .where("ic.id" as never, "in", industryIds as never)
+        .execute() as Promise<Record<string, unknown>[]>
+      : Promise.resolve([]),
+  ]);
+
+  const codeById = new Map<string, Record<string, unknown>>();
+  for (const codeRow of [...commodityRows, ...industryRows]) {
+    if (typeof codeRow["id"] === "string") codeById.set(codeRow["id"], codeRow);
+  }
+
+  return rows.map((row) => {
+    const codeId = row["code_id"];
+    const codeRow = typeof codeId === "string" ? codeById.get(codeId) : undefined;
+    const code = codeRow?.["code"] ?? null;
+    const name = codeRow?.["name"] ?? null;
+    const label = code && name ? `${code} - ${name}` : (code ?? name ?? null);
+
+    return {
+      ...row,
+      system_code:  code,
+      system_name:  name,
+      system_label: label,
+      code_domain:  codeRow?.["domain_code"] ?? row["domain_code"] ?? null,
+      code_level:   codeRow?.["level_no"] ?? null,
     };
   });
 }
@@ -404,6 +482,23 @@ function singleStringLegacyFilterValue(value: unknown): string | null {
   return null;
 }
 
+function booleanFilterValue(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+  if (Array.isArray(value) && value.length === 1) return booleanFilterValue(value[0]);
+  return null;
+}
+
+function booleanFilterOpValue(op: ServerFilterOp | undefined): boolean | null {
+  if (!op) return null;
+  if (op.type === "in" && op.values.length === 1) return booleanFilterValue(op.values[0]);
+  return null;
+}
+
 // ── Relative range resolver ────────────────────────────────────────────────────
 
 function resolveRelativeRange(token: string): { from: string; to: string } | null {
@@ -497,7 +592,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   //
   // Query params (canonical — matches EntityListQueryState URL serialization):
   //   ?page=<n>          current page (1-based, default 1)
-  //   ?page_size=<n>     records per page (default 20, max 100)
+  //   ?page_size=<n>     records per page (default 20, max 100; picker_tree can raise this)
   //   ?q=<term>          free-text ILIKE search on is_searchable fields
   //   ?filter.<field>=<sigil>   per-field operator filter (preferred)
   //   ?filters=<json>    legacy JSON map (deprecated, still accepted)
@@ -518,6 +613,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const page          = Math.max(1, parseInt(String(req.query["page"] ?? "1"), 10) || 1);
       const rawPageSize   = parseInt(String(req.query["page_size"] ?? "0"), 10) || 0;
+      const pickerTreeMode = ["1", "true", "yes"].includes(String(req.query["picker_tree"] ?? "").toLowerCase());
 
       const searchTerm = typeof req.query["q"] === "string" && req.query["q"].trim()
         ? req.query["q"].trim()
@@ -583,7 +679,18 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         : null;
       const defaultPageSize = getIntParam(paginationSnap, "api.pagination.default_page_size", DEFAULT_PAGE_SIZE);
       const maxPageSize     = getIntParam(paginationSnap, "api.pagination.max_page_size",     MAX_PAGE_SIZE);
-      const pageSize = Math.min(maxPageSize, Math.max(1, rawPageSize || defaultPageSize));
+      const pickerTreeMinPageSize = getIntParam(
+        paginationSnap,
+        "api.pagination.picker_tree_min_page_size",
+        500,
+      );
+      const effectiveMaxPageSize = pickerTreeMode
+        ? Math.max(maxPageSize, Math.max(500, pickerTreeMinPageSize))
+        : maxPageSize;
+      const requestedPageSize = pickerTreeMode
+        ? Math.max(rawPageSize || defaultPageSize, 500)
+        : rawPageSize || defaultPageSize;
+      const pageSize = Math.min(effectiveMaxPageSize, Math.max(1, requestedPageSize));
       const offset   = (page - 1) * pageSize;
 
       let fieldMap = await resolveFieldMap(db, listCode);
@@ -856,6 +963,27 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         }
       }
 
+      // Virtual GL-account picker filter. Reporting taxonomy leaves are rollup
+      // targets, not journal-postable accounts, even when node_type='posting'.
+      if (listCode === "gl_account") {
+        const postingAllowedFilter =
+          booleanFilterValue(legacyFilters["posting_allowed"])
+          ?? booleanFilterOpValue(sigilFilters["posting_allowed"]);
+
+        if (postingAllowedFilter !== null) {
+          const predicate = postingAllowedFilter
+            ? sql<boolean>`node_type = 'posting' AND COALESCE((metadata->>'_journal_postable')::boolean, true) = true`
+            : sql<boolean>`(node_type <> 'posting' OR COALESCE((metadata->>'_journal_postable')::boolean, true) = false)`;
+
+          listQuery = listQuery.where(predicate as never);
+          countQuery = countQuery.where(predicate as never);
+          if (groupCountQuery) groupCountQuery = groupCountQuery.where(predicate as never);
+
+          delete legacyFilters["posting_allowed"];
+          delete sigilFilters["posting_allowed"];
+        }
+      }
+
       // ── Sigil-based filters ───────────────────────────────────────────────────
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const applyOp = (q: any, col: never, op: ServerFilterOp): any => {
@@ -910,8 +1038,16 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // return empty results with a reasons flag rather than silently returning all rows.
       const reasons: Record<string, boolean> = {};
       if (searchTerm) {
+        const configuredSearchFields = new Set(
+          Array.isArray(entityVersionRow?.display_config?.["search_fields"])
+            ? entityVersionRow.display_config["search_fields"].filter((fieldName): fieldName is string => typeof fieldName === "string")
+            : [],
+        );
         const searchableCols = fieldMeta
-          .filter((f) => f.is_searchable && queryableColumnNames.has(f.column_name))
+          .filter((f) =>
+            (f.is_searchable || configuredSearchFields.has(f.name)) &&
+            isTextSearchDataType(f.data_type) &&
+            queryableColumnNames.has(f.column_name))
           .map((f) => f.column_name);
         if (searchableCols.length > 0) {
           const pattern = `%${searchTerm}%` as never;
@@ -1001,9 +1137,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const remappedRows = (rows as Record<string, unknown>[]).map((row) => {
         return remapRecordRow(row, fieldMap);
       });
-      const responseRows = isCertificationBackingTable(listTable)
-        ? await enrichCertificationTypeDisplayFields(db, remappedRows)
-        : remappedRows;
+      let responseRows = remappedRows;
+      if (isCertificationBackingTable(listTable)) {
+        responseRows = await enrichCertificationTypeDisplayFields(db, responseRows);
+      }
+      if (isCommodityClassificationBackingTable(listTable)) {
+        responseRows = await enrichCommodityClassificationDisplayFields(db, responseRows);
+      }
 
       // ── Facets with budget (F7: scoped to the same filtered context) ─────────
       // Budget: 20-field cap, 200-value cardinality cap per field, 2s hard timeout.
@@ -1198,9 +1338,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         }
       }
 
-      const responseData = isCertificationBackingTable(table)
-        ? (await enrichCertificationTypeDisplayFields(db, [data]))[0] ?? data
-        : data;
+      let responseData = data;
+      if (isCertificationBackingTable(table)) {
+        responseData = (await enrichCertificationTypeDisplayFields(db, [responseData]))[0] ?? responseData;
+      }
+      if (isCommodityClassificationBackingTable(table)) {
+        responseData = (await enrichCommodityClassificationDisplayFields(db, [responseData]))[0] ?? responseData;
+      }
 
       const detailBody: Record<string, unknown> = {
         id:               row.id,

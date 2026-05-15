@@ -65,7 +65,7 @@ export async function resolveFxRate(
   const toCurrency = normalizeCurrency(params.toCurrency);
   const asOf = asIsoDate(params.asOf);
   const rateType = String(params.rateType ?? "SPOT").trim().toUpperCase();
-  const pivotCurrency = normalizeCurrency(params.pivotCurrency ?? "USD");
+  const pivotCurrency = normalizeCurrency(params.pivotCurrency ?? "MYR");
 
   if (fromCurrency === toCurrency) {
     return {

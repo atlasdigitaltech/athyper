@@ -1,7 +1,20 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
-import { Clock3, ExternalLink, GripHorizontal, List, Loader2, X, Zap } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Clock3,
+  ExternalLink,
+  GripHorizontal,
+  List,
+  ListTree,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  X,
+  Zap,
+} from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { SearchInput } from "./SearchInput";
 
@@ -29,6 +42,10 @@ export interface AdvancedEntityChooserOption {
   section?: string;
   badges?: AdvancedEntityChooserBadge[];
   disabled?: boolean;
+  treeValue?: string;
+  parentValue?: string | null;
+  treeLevel?: number | null;
+  treeSortValue?: string | number | null;
 }
 
 export interface AdvancedEntityChooserControl {
@@ -52,6 +69,15 @@ export interface AdvancedEntityChooserFooterAction {
   onSelect?: () => void;
 }
 
+export interface AdvancedEntityChooserTreeConfig {
+  enabled?: boolean;
+  parentField?: string;
+  valueField?: string;
+  levelField?: string;
+  sortField?: string;
+  minRecords?: number;
+}
+
 export interface AdvancedEntityChooserMetaConfig {
   density?: AdvancedEntityChooserDensity;
   placeholder?: string;
@@ -61,6 +87,7 @@ export interface AdvancedEntityChooserMetaConfig {
   controls?: AdvancedEntityChooserControl[];
   sections?: AdvancedEntityChooserSection[];
   footerActions?: AdvancedEntityChooserFooterAction[];
+  tree?: AdvancedEntityChooserTreeConfig;
   showKeyboardHints?: boolean;
   optionActionLabel?: string;
 }
@@ -83,6 +110,8 @@ export interface AdvancedEntityChooserPanelProps {
   resultLabel?: string;
   onLoadMore?: () => void;
   loadMoreLoading?: boolean;
+  treeEnabled?: boolean;
+  onTreeEnabledChange?: (enabled: boolean) => void;
   title?: string;
   onClose?: () => void;
   emptyMessage?: string;
@@ -90,10 +119,17 @@ export interface AdvancedEntityChooserPanelProps {
   /** Show a drag-grip strip at the top so the panel can be repositioned. */
   draggable?: boolean;
   onDragHandleMouseDown?: (e: React.MouseEvent) => void;
+  /** Toggle a larger browse surface for record-heavy picker sessions. */
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
   /** Show a resize handle at the bottom-right corner. */
   resizable?: boolean;
   onResizeHandleMouseDown?: (e: React.MouseEvent) => void;
 }
+
+const DEFAULT_PANEL_WIDTH = 420;
+const DEFAULT_LIST_MAX_HEIGHT = 320;
+const DEFAULT_MOBILE_PANEL_WIDTH = "calc(100vw - 32px)";
 
 const DENSITY = {
   mini: {
@@ -101,30 +137,30 @@ const DENSITY = {
     header: "p-1.5",
     search: "h-8",
     controls: "mt-1.5 gap-1",
-    control: "h-5 px-1.5 text-2xs",
-    section: "px-2 py-1.5 text-2xs",
+    control: "h-5 px-1.5 text-xs",
+    section: "px-2 py-1.5 text-xs",
     row: "gap-2 px-2 py-1.5",
-    label: "text-xs",
-    meta: "text-2xs",
-    badge: "h-4 px-1 text-2xs",
-    footer: "px-2 py-1 text-2xs",
-    defaultWidth: 300,
-    defaultMaxHeight: 190,
+    label: "text-sm",
+    meta: "text-xs",
+    badge: "h-5 px-1.5 text-xs",
+    footer: "px-2 py-1 text-xs",
+    defaultWidth: DEFAULT_PANEL_WIDTH,
+    defaultMaxHeight: DEFAULT_LIST_MAX_HEIGHT,
   },
   compact: {
     panel: "rounded-md shadow-xl",
     header: "p-2",
     search: "h-8",
     controls: "mt-2 gap-1",
-    control: "h-5 px-1.5 text-2xs",
-    section: "px-2.5 py-1.5 text-2xs",
+    control: "h-5 px-1.5 text-xs",
+    section: "px-2.5 py-1.5 text-xs",
     row: "gap-2.5 px-2.5 py-2",
-    label: "text-xs",
-    meta: "text-2xs",
-    badge: "h-4 px-1 text-2xs",
-    footer: "px-2 py-1.5 text-2xs",
-    defaultWidth: 340,
-    defaultMaxHeight: 250,
+    label: "text-sm",
+    meta: "text-xs",
+    badge: "h-5 px-1.5 text-xs",
+    footer: "px-2 py-1.5 text-xs",
+    defaultWidth: DEFAULT_PANEL_WIDTH,
+    defaultMaxHeight: DEFAULT_LIST_MAX_HEIGHT,
   },
   comfortable: {
     panel: "rounded-md shadow-xl",
@@ -132,29 +168,29 @@ const DENSITY = {
     search: "h-9",
     controls: "mt-2 gap-1.5",
     control: "h-6 px-2 text-xs",
-    section: "px-3 py-2 text-2xs",
+    section: "px-3 py-2 text-xs",
     row: "gap-3 px-3 py-2.5",
-    label: "text-xs",
-    meta: "text-2xs",
-    badge: "h-5 px-1.5 text-2xs",
-    footer: "px-2.5 py-1.5 text-2xs",
-    defaultWidth: 390,
-    defaultMaxHeight: 310,
+    label: "text-sm",
+    meta: "text-xs",
+    badge: "h-5 px-1.5 text-xs",
+    footer: "px-2.5 py-1.5 text-xs",
+    defaultWidth: DEFAULT_PANEL_WIDTH,
+    defaultMaxHeight: DEFAULT_LIST_MAX_HEIGHT,
   },
   mobile: {
     panel: "rounded-t-xl shadow-2xl",
     header: "p-2.5",
     search: "h-9",
     controls: "mt-2 gap-1",
-    control: "h-6 px-2 text-2xs",
-    section: "px-3 py-2 text-2xs",
+    control: "h-6 px-2 text-xs",
+    section: "px-3 py-2 text-xs",
     row: "gap-2.5 px-3 py-2.5",
-    label: "text-xs",
-    meta: "text-2xs",
-    badge: "h-5 px-1.5 text-2xs",
-    footer: "px-3 py-2 text-2xs",
-    defaultWidth: "100%",
-    defaultMaxHeight: 300,
+    label: "text-sm",
+    meta: "text-xs",
+    badge: "h-5 px-1.5 text-xs",
+    footer: "px-3 py-2 text-xs",
+    defaultWidth: DEFAULT_MOBILE_PANEL_WIDTH,
+    defaultMaxHeight: DEFAULT_LIST_MAX_HEIGHT,
   },
 } satisfies Record<AdvancedEntityChooserDensity, Record<string, string | number>>;
 
@@ -190,12 +226,16 @@ export function AdvancedEntityChooserPanel({
   resultLabel,
   onLoadMore,
   loadMoreLoading = false,
+  treeEnabled = false,
+  onTreeEnabledChange,
   title,
   onClose,
   emptyMessage = "No matches",
   className,
   draggable,
   onDragHandleMouseDown,
+  expanded = false,
+  onExpandedChange,
   resizable,
   onResizeHandleMouseDown,
 }: AdvancedEntityChooserPanelProps) {
@@ -207,6 +247,27 @@ export function AdvancedEntityChooserPanel({
     [instantSearch, options, query],
   );
   const sections = meta?.sections ?? deriveSections(displayOptions);
+  const treeSupported = !!meta?.tree?.enabled && !!onTreeEnabledChange;
+  const treeNodes = useMemo(
+    () => treeSupported && treeEnabled ? buildChooserTree(displayOptions) : [],
+    [displayOptions, treeEnabled, treeSupported],
+  );
+  const treeRootKey = useMemo(() => treeNodes.map((node) => chooserTreeKey(node.option)).join("|"), [treeNodes]);
+  const [expandedTreeIds, setExpandedTreeIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!treeSupported || !treeEnabled) {
+      setExpandedTreeIds(new Set());
+      return;
+    }
+    const next = query.trim()
+      ? new Set(collectChooserTreeIds(treeNodes))
+      : new Set(treeNodes.map((node) => chooserTreeKey(node.option)));
+    setExpandedTreeIds(next);
+  }, [query, treeEnabled, treeRootKey, treeSupported, treeNodes]);
+  const treeRows = useMemo(
+    () => treeEnabled ? flattenChooserTree(treeNodes, expandedTreeIds) : [],
+    [expandedTreeIds, treeEnabled, treeNodes],
+  );
   const width = meta?.width ?? d.defaultWidth;
   const listHeight = meta?.listHeight;
   const maxListHeight = meta?.maxListHeight ?? d.defaultMaxHeight;
@@ -215,6 +276,7 @@ export function AdvancedEntityChooserPanel({
   const summaryLoadedCount = instantSearch ? displayOptions.length : (loadedCount ?? displayOptions.length);
   const hasResultSummary = totalCount !== undefined || resultLabel !== undefined;
   const hasFooter = hasResultSummary || !!onLoadMore || (meta?.footerActions?.length ?? 0) > 0;
+  const expandable = !!onExpandedChange;
 
   return (
     <div
@@ -222,13 +284,40 @@ export function AdvancedEntityChooserPanel({
       className={cn("relative overflow-hidden border bg-popover font-sans text-popover-foreground", d.panel, className)}
       style={{ width: cssLength(width) }}
     >
-      {draggable && (
+      {(draggable || expandable) && (
         <div
-          onMouseDown={onDragHandleMouseDown}
-          title="Drag to reposition"
-          className="group flex cursor-grab items-center justify-center border-b py-0.5 select-none transition-colors duration-150 hover:bg-muted/50 active:cursor-grabbing active:bg-muted/70"
+          onMouseDown={draggable ? onDragHandleMouseDown : undefined}
+          title={draggable ? "Drag to reposition" : undefined}
+          className={cn(
+            "group relative flex h-5 items-center justify-center border-b select-none transition-colors duration-150 hover:bg-muted/50",
+            draggable && "cursor-grab active:cursor-grabbing active:bg-muted/70",
+          )}
         >
           <GripHorizontal className="size-3 text-muted-foreground/30 transition-all duration-150 group-hover:scale-110 group-hover:text-muted-foreground/70 group-active:scale-90 group-active:text-muted-foreground/90" />
+          {expandable && (
+            <button
+              type="button"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onExpandedChange?.(!expanded);
+              }}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (event.detail === 0) onExpandedChange?.(!expanded);
+              }}
+              title={expanded ? "Collapse chooser" : "Expand chooser"}
+              aria-label={expanded ? "Collapse chooser" : "Expand chooser"}
+              className="absolute right-1 top-1/2 flex size-4 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground/70 hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {expanded ? <Minimize2 className="size-3" /> : <Maximize2 className="size-3" />}
+            </button>
+          )}
         </div>
       )}
 
@@ -269,31 +358,53 @@ export function AdvancedEntityChooserPanel({
           } : undefined}
         />
 
-        {controls.length > 0 && (
-          <div className={cn("flex overflow-x-auto pb-0.5", d.controls)}>
-            {controls.map((control) => {
-              const active = activeControlValue === control.value;
-              return (
-                <button
-                  key={control.id}
-                  type="button"
-                  disabled={control.disabled}
-                  onClick={() => onControlChange?.(control)}
-                  className={cn(
-                    "inline-flex shrink-0 items-center rounded-full border font-semibold leading-none transition-colors disabled:opacity-50",
-                    d.control,
-                    active
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background text-foreground hover:bg-muted",
-                  )}
-                >
-                  <span>{control.label}</span>
-                  {typeof control.count === "number" && (
-                    <span className="ml-0.5 font-mono tabular-nums">-{control.count}</span>
-                  )}
-                </button>
-              );
-            })}
+        {(controls.length > 0 || treeSupported) && (
+          <div className={cn("flex items-center gap-1.5", d.controls)}>
+            {controls.length > 0 && (
+              <div className="flex min-w-0 flex-1 overflow-x-auto pb-0.5">
+                {controls.map((control) => {
+                  const active = activeControlValue === control.value;
+                  return (
+                    <button
+                      key={control.id}
+                      type="button"
+                      disabled={control.disabled}
+                      onClick={() => onControlChange?.(control)}
+                      className={cn(
+                        "mr-1 inline-flex shrink-0 items-center rounded-full border font-semibold leading-none transition-colors disabled:opacity-50",
+                        d.control,
+                        active
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border bg-background text-foreground hover:bg-muted",
+                      )}
+                    >
+                      <span>{control.label}</span>
+                      {typeof control.count === "number" && (
+                        <span className="ml-0.5 font-mono tabular-nums">-{control.count}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {treeSupported && (
+              <button
+                type="button"
+                aria-pressed={treeEnabled}
+                title={treeEnabled ? "Tree view on" : "Tree view off"}
+                onClick={() => onTreeEnabledChange?.(!treeEnabled)}
+                className={cn(
+                  "ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border font-semibold leading-none transition-colors",
+                  d.control,
+                  treeEnabled
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-background text-foreground hover:bg-muted",
+                )}
+              >
+                <ListTree className="size-3" />
+                <span>Tree</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -312,6 +423,38 @@ export function AdvancedEntityChooserPanel({
           </div>
         ) : displayOptions.length === 0 ? (
           <div className="px-3 py-8 text-center text-xs text-muted-foreground">{emptyMessage}</div>
+        ) : treeEnabled && treeSupported ? (
+          treeRows.length === 0 ? (
+            <div className="px-3 py-8 text-center text-xs text-muted-foreground">{emptyMessage}</div>
+          ) : (
+            <div>
+              <div className={cn("flex items-center gap-2 border-b bg-muted/20 font-semibold uppercase tracking-wide text-muted-foreground", d.section)}>
+                <ListTree className="size-3" />
+                Hierarchy
+              </div>
+              {treeRows.map((row) => (
+                <ChooserTreeOptionRow
+                  key={row.node.option.value}
+                  node={row.node}
+                  depth={row.depth}
+                  expanded={expandedTreeIds.has(chooserTreeKey(row.node.option))}
+                  selected={selectedValue === row.node.option.value}
+                  density={density}
+                  optionActionLabel={resolvedOptionActionLabel}
+                  onToggle={() => {
+                    setExpandedTreeIds((current) => {
+                      const treeKey = chooserTreeKey(row.node.option);
+                      const next = new Set(current);
+                      if (next.has(treeKey)) next.delete(treeKey);
+                      else next.add(treeKey);
+                      return next;
+                    });
+                  }}
+                  onSelect={() => onSelect?.(row.node.option)}
+                />
+              ))}
+            </div>
+          )
         ) : (
           sections.map((section) => {
             const sectionOptions = displayOptions.filter((option) => (option.section ?? "matches") === section.id);
@@ -319,7 +462,7 @@ export function AdvancedEntityChooserPanel({
 
             return (
               <div key={section.id}>
-                <div className={cn("flex items-center gap-2 border-b bg-muted/20 font-semibold uppercase text-muted-foreground", d.section)}>
+                <div className={cn("flex items-center gap-2 border-b bg-muted/20 font-semibold uppercase tracking-wide text-muted-foreground", d.section)}>
                   <SectionIcon id={section.id} />
                   {section.label}
                 </div>
@@ -340,7 +483,13 @@ export function AdvancedEntityChooserPanel({
       </div>
 
       {hasFooter && (
-        <div className={cn("flex items-center justify-between border-t bg-muted/30 text-muted-foreground", d.footer)}>
+        <div
+          className={cn(
+            "flex items-center justify-between border-t bg-muted/30 text-muted-foreground",
+            d.footer,
+            resizable && "pr-7",
+          )}
+        >
           {hasResultSummary ? (
             <p className="min-w-0 truncate">
               Showing <span className="font-semibold text-foreground">{summaryLoadedCount.toLocaleString()}</span>
@@ -402,7 +551,7 @@ export function AdvancedEntityChooserPanel({
         <div
           onMouseDown={onResizeHandleMouseDown}
           title="Drag to resize"
-          className="group absolute bottom-0 right-0 size-5 cursor-se-resize select-none flex items-end justify-end p-1"
+          className="group absolute bottom-0 right-0 flex size-5 cursor-se-resize select-none items-end justify-end p-1"
         >
           <svg
             width="9" height="9" viewBox="0 0 9 9"
@@ -416,6 +565,11 @@ export function AdvancedEntityChooserPanel({
       )}
     </div>
   );
+}
+
+interface ChooserTreeNode {
+  option: AdvancedEntityChooserOption;
+  children: ChooserTreeNode[];
 }
 
 function ChooserOptionRow({
@@ -432,7 +586,7 @@ function ChooserOptionRow({
   onSelect: () => void;
 }) {
   const d = DENSITY[density];
-  const metaLine = [option.code, option.description].filter(Boolean).join(" - ");
+  const hasMetaLine = !!option.code || !!option.description;
 
   return (
     <div
@@ -452,9 +606,11 @@ function ChooserOptionRow({
       >
         <div className="min-w-0 flex-1">
           <p className={cn("truncate font-semibold leading-tight", d.label)}>{option.label}</p>
-          {metaLine && (
-            <p className={cn("mt-0.5 truncate font-mono text-muted-foreground", d.meta)}>
-              {metaLine}
+          {hasMetaLine && (
+            <p className={cn("mt-0.5 truncate text-muted-foreground", d.meta)}>
+              {option.code && <span className="font-mono">{option.code}</span>}
+              {option.code && option.description && <span className="mx-1">-</span>}
+              {option.description && <span>{option.description}</span>}
             </p>
           )}
         </div>
@@ -465,7 +621,7 @@ function ChooserOptionRow({
                 key={`${option.value}-${badge.label}`}
                 title={badge.title}
                 className={cn(
-                  "inline-flex items-center rounded-sm border font-mono font-semibold leading-none",
+                  "inline-flex items-center rounded-sm border font-medium leading-none",
                   d.badge,
                   BADGE_TONE[badge.tone ?? "muted"],
                 )}
@@ -493,10 +649,171 @@ function ChooserOptionRow({
   );
 }
 
+function ChooserTreeOptionRow({
+  node,
+  depth,
+  expanded,
+  selected,
+  density,
+  optionActionLabel,
+  onToggle,
+  onSelect,
+}: {
+  node: ChooserTreeNode;
+  depth: number;
+  expanded: boolean;
+  selected: boolean;
+  density: AdvancedEntityChooserDensity;
+  optionActionLabel: string;
+  onToggle: () => void;
+  onSelect: () => void;
+}) {
+  const d = DENSITY[density];
+  const option = node.option;
+  const hasChildren = node.children.length > 0;
+  const hasMetaLine = !!option.code || !!option.description;
+  const indent = Math.min(depth, 8) * 14;
+
+  return (
+    <div
+      role="treeitem"
+      aria-expanded={hasChildren ? expanded : undefined}
+      className={cn(
+        "group flex w-full items-stretch border-b border-l-2 text-left transition-colors hover:bg-accent hover:text-accent-foreground",
+        selected ? "border-l-primary bg-primary/10" : "border-l-transparent bg-popover",
+      )}
+    >
+      <div className={cn("flex min-w-0 flex-1 items-center", d.row)}>
+        <span style={{ width: indent }} className="shrink-0" />
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggle();
+            }}
+            title={expanded ? "Collapse" : "Expand"}
+            aria-label={expanded ? `Collapse ${option.label}` : `Expand ${option.label}`}
+            className="mr-1 flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+          </button>
+        ) : (
+          <span className="mr-1 size-4 shrink-0" />
+        )}
+        <button
+          type="button"
+          disabled={option.disabled}
+          onClick={onSelect}
+          className="flex min-w-0 flex-1 items-center text-left disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <div className="min-w-0 flex-1">
+            <p className={cn("truncate font-semibold leading-tight", d.label)}>{option.label}</p>
+            {hasMetaLine && (
+              <p className={cn("mt-0.5 truncate text-muted-foreground", d.meta)}>
+                {option.code && <span className="font-mono">{option.code}</span>}
+                {option.code && option.description && <span className="mx-1">-</span>}
+                {option.description && <span>{option.description}</span>}
+              </p>
+            )}
+          </div>
+          {option.badges && option.badges.length > 0 && (
+            <div className="flex shrink-0 items-center gap-1">
+              {option.badges.map((badge) => (
+                <span
+                  key={`${option.value}-${badge.label}`}
+                  title={badge.title}
+                  className={cn(
+                    "inline-flex items-center rounded-sm border font-medium leading-none",
+                    d.badge,
+                    BADGE_TONE[badge.tone ?? "muted"],
+                  )}
+                >
+                  {badge.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </button>
+      </div>
+      {option.href && (
+        <a
+          href={option.href}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(event) => event.stopPropagation()}
+          title={optionActionLabel}
+          aria-label={`${optionActionLabel}: ${option.label}`}
+          className="flex w-9 shrink-0 items-center justify-center text-muted-foreground opacity-70 transition hover:bg-background/70 hover:text-foreground hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ExternalLink className="size-3.5" />
+        </a>
+      )}
+    </div>
+  );
+}
+
 function SectionIcon({ id }: { id: string }) {
   if (id === "recent") return <Clock3 className="size-3" />;
   if (id === "matches") return <List className="size-3" />;
   return <span className="h-1.5 w-1.5 rounded-full border border-muted-foreground/40" />;
+}
+
+function compareChooserOptions(left: AdvancedEntityChooserOption, right: AdvancedEntityChooserOption): number {
+  const leftSort = left.treeSortValue;
+  const rightSort = right.treeSortValue;
+  if (typeof leftSort === "number" && typeof rightSort === "number" && leftSort !== rightSort) {
+    return leftSort - rightSort;
+  }
+  if (leftSort !== undefined && leftSort !== null && rightSort !== undefined && rightSort !== null) {
+    const bySort = String(leftSort).localeCompare(String(rightSort), undefined, { numeric: true, sensitivity: "base" });
+    if (bySort !== 0) return bySort;
+  }
+  return (left.code ?? left.label).localeCompare(right.code ?? right.label, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+function buildChooserTree(options: AdvancedEntityChooserOption[]): ChooserTreeNode[] {
+  const nodes = new Map<string, ChooserTreeNode>();
+  const orderedOptions = [...options].sort(compareChooserOptions);
+  orderedOptions.forEach((option) => nodes.set(chooserTreeKey(option), { option, children: [] }));
+
+  const roots: ChooserTreeNode[] = [];
+  nodes.forEach((node) => {
+    const nodeKey = chooserTreeKey(node.option);
+    const parentValue = node.option.parentValue;
+    const parent = parentValue && parentValue !== nodeKey ? nodes.get(parentValue) : undefined;
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  });
+
+  const sortChildren = (items: ChooserTreeNode[]) => {
+    items.sort((left, right) => compareChooserOptions(left.option, right.option));
+    items.forEach((item) => sortChildren(item.children));
+  };
+  sortChildren(roots);
+  return roots;
+}
+
+function collectChooserTreeIds(nodes: ChooserTreeNode[]): string[] {
+  return nodes.flatMap((node) => [chooserTreeKey(node.option), ...collectChooserTreeIds(node.children)]);
+}
+
+function flattenChooserTree(
+  nodes: ChooserTreeNode[],
+  expandedIds: Set<string>,
+  depth = 0,
+): Array<{ node: ChooserTreeNode; depth: number }> {
+  return nodes.flatMap((node) => [
+    { node, depth },
+    ...(expandedIds.has(chooserTreeKey(node.option)) ? flattenChooserTree(node.children, expandedIds, depth + 1) : []),
+  ]);
+}
+
+function chooserTreeKey(option: AdvancedEntityChooserOption): string {
+  return option.treeValue ?? option.value;
 }
 
 function optionMatchesQuery(option: AdvancedEntityChooserOption, query: string): boolean {

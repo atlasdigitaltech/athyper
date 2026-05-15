@@ -7,6 +7,7 @@ import { createJournalRoutes } from "./journal.route.js";
 import { createAnalyticsRoutes } from "./analytics.route.js";
 import { createReportsRoutes } from "./reports.route.js";
 import { createIntakeRoutes } from "./intake.route.js";
+import { createTaxonomyRoutes } from "./taxonomy.route.js";
 
 export function registerFinanceRoutes(router: Router, deps: FinanceRouteDeps): void {
   createFinanceRoutes(router, deps);
@@ -17,4 +18,5 @@ export function registerFinanceRoutes(router: Router, deps: FinanceRouteDeps): v
   createAnalyticsRoutes(router, deps);
   createReportsRoutes(router, deps);
   createIntakeRoutes(router, deps);
+  createTaxonomyRoutes(router, deps);
 }

@@ -17,7 +17,15 @@ services:
         limits:
           memory: "${GATEWAY_MEMORY_LIMIT}"
     command:
-      - --accesslog=${GATEWAY_ACCESSLOG:-false}
+      - --accesslog=${GATEWAY_ACCESSLOG:-true}
+      - --accesslog.format=json
+      - --accesslog.fields.defaultMode=keep
+      - --accesslog.fields.headers.defaultMode=drop
+      - --accesslog.fields.headers.names.Authorization=drop
+      - --accesslog.fields.headers.names.Cookie=drop
+      - --accesslog.fields.headers.names.Set-Cookie=drop
+      - --accesslog.fields.headers.names.User-Agent=keep
+      - --accesslog.fields.headers.names.X-Forwarded-For=keep
       - --api.dashboard=true
       - --api.insecure=false
       - --entrypoints.web.address=:80
@@ -25,6 +33,7 @@ services:
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.websecure.address=:443
       - --entrypoints.websecure.forwardedHeaders.insecure=false
+      - --entrypoints.websecure.forwardedHeaders.trustedIPs=${GATEWAY_TRUSTED_IPS:-127.0.0.1/32}
       - --entrypoints.websecure.http.encodeQuerySemicolons=true
       - --entrypoints.websecure.http.tls=true
       - --global.checknewversion=false
@@ -37,7 +46,9 @@ services:
       - --providers.docker=true
       - --providers.file.directory=/etc/traefik/dynamic
       - --providers.file.watch=true
-      - --serversTransport.forwardingTimeouts.dialTimeout=30s
+      - --serversTransport.forwardingTimeouts.dialTimeout=10s
+      - --serversTransport.forwardingTimeouts.responseHeaderTimeout=60s
+      - --serversTransport.forwardingTimeouts.idleConnTimeout=90s
       - --serversTransport.insecureSkipVerify=false
     ports:
       - "80:80"

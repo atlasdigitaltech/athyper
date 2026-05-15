@@ -1,8 +1,0 @@
--- ============================================================================
--- 300_operating_units.sql — REMOVED (company_code migration)
--- ============================================================================
--- master.operating_unit table has been dropped. Scoping is now handled
--- entirely by master.company_code. This file is retained as a no-op
--- placeholder to preserve execution-order numbering in the seed run.
--- See 13_patches/002_drop_operating_unit.sql for the authoritative DROP.
--- ============================================================================

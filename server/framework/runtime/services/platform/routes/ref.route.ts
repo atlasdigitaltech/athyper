@@ -1221,7 +1221,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
 
   // ── GET /platform/ref/fx-rates/lookup ───────────────────────────────────────
   // Calls master.get_fx_rate() — direct → inverse → triangulation.
-  // ?base= &quote= required; ?pivot= optional (default USD); ?date= optional.
+  // ?base= &quote= required; ?pivot= optional (default MYR); ?date= optional.
 
   const fxRateLookupHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -1234,7 +1234,19 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
       const q     = req.query as Record<string, unknown>;
       const from  = typeof q["base"]  === "string" ? q["base"].trim().toUpperCase()  : "";
       const to    = typeof q["quote"] === "string" ? q["quote"].trim().toUpperCase() : "";
-      const pivot = typeof q["pivot"] === "string" ? q["pivot"].trim().toUpperCase() : "USD";
+      const rateType = typeof q["rate_type"] === "string"
+        ? q["rate_type"].trim().toUpperCase()
+        : typeof q["rateType"] === "string"
+          ? q["rateType"].trim().toUpperCase()
+          : "SPOT";
+      const asOf = typeof q["date"] === "string"
+        ? q["date"].trim()
+        : typeof q["as_of"] === "string"
+          ? q["as_of"].trim()
+          : typeof q["asOf"] === "string"
+            ? q["asOf"].trim()
+            : new Date().toISOString().slice(0, 10);
+      const pivot = typeof q["pivot"] === "string" ? q["pivot"].trim().toUpperCase() : "MYR";
 
       if (!from || !to) {
         res.status(400).json({ error: "VALIDATION_ERROR", message: "?base= and ?quote= are required" });
@@ -1246,6 +1258,8 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
           ${tenantId}::uuid,
           ${from}::char(3),
           ${to}::char(3),
+          ${rateType},
+          ${asOf}::date,
           ${pivot}::char(3)
         ) AS fx
       `.execute(db);

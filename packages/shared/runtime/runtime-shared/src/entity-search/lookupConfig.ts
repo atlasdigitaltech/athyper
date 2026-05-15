@@ -76,18 +76,29 @@ export function readLookupFilters(
 export function searchParamsForLookupFilters(
   filters: Record<string, LookupFilterValue>,
 ): Record<string, string> | undefined {
-  return Object.keys(filters).length > 0
-    ? { filters: JSON.stringify(filters) }
-    : undefined;
+  const params: Record<string, string> = {};
+  for (const [field, value] of Object.entries(filters)) {
+    const sigil = serializeLookupFilterValue(value);
+    if (sigil) params[`filter.${field}`] = sigil;
+  }
+  return Object.keys(params).length > 0 ? params : undefined;
 }
 
 export function applyLookupFiltersParam(
   params: URLSearchParams,
   filters: Record<string, LookupFilterValue>,
 ) {
-  if (Object.keys(filters).length > 0) {
-    params.set("filters", JSON.stringify(filters));
+  for (const [field, value] of Object.entries(filters)) {
+    const sigil = serializeLookupFilterValue(value);
+    if (sigil) params.set(`filter.${field}`, sigil);
   }
+}
+
+function serializeLookupFilterValue(value: LookupFilterValue): string | null {
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.map(String).join(",") : "in:";
+  }
+  return String(value);
 }
 
 export function readLookupDependency(

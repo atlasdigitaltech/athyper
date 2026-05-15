@@ -23,7 +23,7 @@ import { fileURLToPath } from "url";
 // ── Config ──────────────────────────────────────────────────────────────────
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SQL_ROOT = resolve(__dirname, "../db/sql");
+const SQL_ROOT = resolve(__dirname, "../db/ddl");
 
 /** Schemas whose table files are required to carry ARCHETYPE= tags. */
 const TAGGED_SCHEMAS: string[] = ["control", "event", "governance", "shared"];
@@ -159,7 +159,7 @@ function scanFile(filePath: string): ScanResult {
   const lines = raw.split("\n");
   const findings: Finding[] = [];
   const commentCount = (raw.match(/^COMMENT ON TABLE\s/gim) ?? []).length;
-  const relPath = filePath.replace(/\\/g, "/").split("/server/db/sql/")[1] ?? filePath;
+  const relPath = filePath.replace(/\\/g, "/").split("/server/db/ddl/")[1] ?? filePath;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -251,7 +251,7 @@ function main() {
       const { findings, commentCount } = scanFile(file);
       totalComments += commentCount;
 
-      const relPath = file.replace(/\\/g, "/").split("/server/db/sql/")[1] ?? file;
+      const relPath = file.replace(/\\/g, "/").split("/server/db/ddl/")[1] ?? file;
       if (findings.length === 0) {
         console.log(`  ✓ ${relPath} (${commentCount} tables)`);
       } else {

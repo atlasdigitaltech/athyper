@@ -102,7 +102,7 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/platform") ||
+    (pathname === "/platform" || pathname.startsWith("/platform/")) ||
     pathname === "/health"
   ) {
     return NextResponse.next({ request: { headers: requestHeaders } });

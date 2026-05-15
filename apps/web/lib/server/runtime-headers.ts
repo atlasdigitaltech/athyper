@@ -58,6 +58,36 @@ export function sanitizeContentDisposition(disposition: string): string {
   return disposition.replace(/[\r\n\0]/g, "");
 }
 
+export function safePathFromSegments(segments: readonly string[]): string | null {
+  const encoded: string[] = [];
+
+  for (const segment of segments) {
+    if (!segment || segment === "." || segment === "..") return null;
+    if (segment.includes("/") || segment.includes("\\") || segment.includes("?") || segment.includes("#")) return null;
+    if (/[\u0000-\u001F\u007F]/.test(segment)) return null;
+    encoded.push(encodeURIComponent(segment));
+  }
+
+  return encoded.join("/");
+}
+
+export function buildServiceUrl(baseUrl: string, pathname: string, search = ""): string {
+  return `${baseUrl.replace(/\/+$/, "")}${pathname}${search}`;
+}
+
+export function copySetCookieHeaders(source: Headers, target: Headers): void {
+  const getSetCookie = (source as Headers & { getSetCookie?: () => string[] }).getSetCookie;
+  const cookies = typeof getSetCookie === "function" ? getSetCookie.call(source) : [];
+
+  if (cookies.length > 0) {
+    for (const cookie of cookies) target.append("Set-Cookie", cookie);
+    return;
+  }
+
+  const setCookie = source.get("Set-Cookie");
+  if (setCookie) target.append("Set-Cookie", setCookie);
+}
+
 function appendHeaderValue(existing: string | null, value: string): string {
   const values = new Set(
     (existing ?? "")

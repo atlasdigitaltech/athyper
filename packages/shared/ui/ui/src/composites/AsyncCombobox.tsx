@@ -12,7 +12,7 @@
  * EntityPicker from @athyper/runtime-shared (Phase 2).
  */
 
-import { forwardRef, useId, useRef, useState } from "react";
+import { forwardRef, useEffect, useId, useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { ChevronDown, ExternalLink, Loader2, X } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
@@ -77,7 +77,15 @@ export const AsyncCombobox = forwardRef<HTMLDivElement, AsyncComboboxProps>(
     const [query, setQuery] = useState("");
     const searchRef = useRef<HTMLInputElement>(null);
 
+    useEffect(() => {
+      if (!disabled || !open) return;
+      setOpen(false);
+      setQuery("");
+      onQueryChange?.("");
+    }, [disabled, onQueryChange, open]);
+
     const handleOpenChange = (next: boolean) => {
+      if (disabled && next) return;
       setOpen(next);
       if (next) {
         onOpen?.();
@@ -88,11 +96,13 @@ export const AsyncCombobox = forwardRef<HTMLDivElement, AsyncComboboxProps>(
     };
 
     const handleQueryChange = (q: string) => {
+      if (disabled) return;
       setQuery(q);
       onQueryChange?.(q);
     };
 
     const handleSelect = (option: ComboboxOption) => {
+      if (disabled) return;
       onChange?.(option.value);
       setOpen(false);
       setQuery("");
@@ -101,6 +111,7 @@ export const AsyncCombobox = forwardRef<HTMLDivElement, AsyncComboboxProps>(
 
     const handleClear = (e: React.MouseEvent) => {
       e.stopPropagation();
+      if (disabled) return;
       onChange?.(null);
     };
 
@@ -118,6 +129,16 @@ export const AsyncCombobox = forwardRef<HTMLDivElement, AsyncComboboxProps>(
               aria-expanded={open}
               aria-invalid={!!error}
               aria-disabled={disabled}
+              onPointerDown={(e) => {
+                if (!disabled) return;
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                if (!disabled) return;
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               onKeyDown={(e) => {
                 if (disabled) return;
                 if (e.key === "Enter" || e.key === " ") {

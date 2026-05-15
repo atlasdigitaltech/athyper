@@ -52,6 +52,10 @@ export async function getServerSession(): Promise<V4Session | null> {
       return null;
     }
 
+    if (isMfaPending(session)) {
+      return null;
+    }
+
     if (session.accessExpiresAt > now + policy.serverRefreshBufferSeconds) {
       return session;
     }
@@ -79,6 +83,10 @@ type RedisClient = Awaited<ReturnType<typeof getSessionRedis>>;
 function isIdleExpired(session: V4Session, now: number, policy: ResolvedSessionPolicy): boolean {
   const lastSeenAt = typeof session.lastSeenAt === "number" ? session.lastSeenAt : 0;
   return lastSeenAt > 0 && now - lastSeenAt >= policy.idleTimeoutSeconds;
+}
+
+function isMfaPending(session: V4Session): boolean {
+  return session.mfaRequired === true && session.mfaVerified !== true;
 }
 
 async function destroySession(

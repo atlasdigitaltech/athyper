@@ -63,12 +63,12 @@
 #                        Overridden by --tenant-id=UUID CLI flag.
 #                        If omitted, each Phase 3 SQL file uses its own baked-in UUID.
 #
-# Phase layout (migrate.ts):
-#   Phase 1 — DDL        : all dirs under server/db/sql/ except 900_seed_data/
-#   Phase 2 — Platform   : 900_seed_data/010_platform/
-#   Phase 3 — Blueprint  : 900_seed_data/020_universal/  (TIER 1 foundation + TIER 2a COA)
-#                        : 900_seed_data/030_industry/   (TIER 2b industry packs + TIER 3 modules)
-#             Tenant     : 900_seed_data/040_tenants/{client}/
+# Phase layout (provision.ts):
+#   Phase 1 — DDL        : all dirs under server/db/ddl/
+#   Phase 2 — Platform   : server/db/seed/010_platform/
+#   Phase 3 — Blueprint  : server/db/seed/020_universal/  (TIER 1 foundation + TIER 2a COA)
+#                        : server/db/seed/030_industry/   (TIER 2b industry packs + TIER 3 modules)
+#             Tenant     : server/db/tenants/{client}/
 #
 # Requires: Node.js with tsx available (npx tsx)
 #           DATABASE_ADMIN_URL must be a DIRECT Postgres connection — not PgBouncer.
@@ -301,7 +301,7 @@ if [ "$DOCKER_MODE" = "true" ]; then
       -v "${NM_VOLUME}:/app/node_modules" \
       -w /app \
       "$DOCKER_NODE_IMAGE" \
-      sh -c "npm install --no-fund --no-audit && npx tsx seed/migrate.ts $MIGRATE_ARGS")
+      sh -c "npm install --no-fund --no-audit && npx tsx scripts/provision.ts $MIGRATE_ARGS")
 
   docker network connect "$DOCKER_NETWORK" "$SEED_CID"
 
@@ -322,7 +322,7 @@ else
   # Host mode: cd to server/ so node_modules and tsconfig resolve correctly.
   cd "$SERVER_DIR"
   # shellcheck disable=SC2086  # intentional word-split for MIGRATE_ARGS
-  if ! npx tsx db/seed/migrate.ts $MIGRATE_ARGS; then
+  if ! npx tsx db/scripts/provision.ts $MIGRATE_ARGS; then
     echo ""
     echo -e "${RED}Seed failed!${NC}"
     exit 1

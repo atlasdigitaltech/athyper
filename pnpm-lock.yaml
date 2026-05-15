@@ -98,6 +98,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.5)
+      '@formatjs/intl':
+        specifier: ^4.1.6
+        version: 4.1.6
       '@sentry/nextjs':
         specifier: ^10.49.0
         version: 10.49.0(@opentelemetry/core@2.7.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.7.0(@opentelemetry/api@1.9.1))(next@16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react@19.2.5)(webpack@5.106.2)
@@ -161,6 +164,10 @@ importers:
         version: 6.0.3
 
   packages/domain/finance/finance-workbench:
+    dependencies:
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../../../shared/runtime/runtime-shared
     devDependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
@@ -1291,6 +1298,9 @@ importers:
       '@athyper/svc-shared':
         specifier: workspace:*
         version: link:../shared
+      busboy:
+        specifier: ^1.6.0
+        version: 1.6.0
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -1298,6 +1308,9 @@ importers:
       '@types/express':
         specifier: ^5.0.1
         version: 5.0.6
+      bullmq:
+        specifier: ^5.74.1
+        version: 5.74.1
       express:
         specifier: ^5.0.0
         version: 5.2.1

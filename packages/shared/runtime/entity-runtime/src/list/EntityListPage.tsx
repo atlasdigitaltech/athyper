@@ -35,7 +35,8 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutList,
   LayoutGrid,
@@ -116,6 +117,10 @@ import { ColumnFilterHeader } from "./ColumnFilterHeader";
 import { describeVirtualFilter, isVirtualFilter } from "./virtualFilterLabels";
 import { RuntimeStatusText, listTypography, runtimeStatusDotClass } from "./listPresentation";
 import {
+  entityRowToPickerOption,
+  resolveEntityPickerOptionConfig,
+} from "@athyper/runtime-shared/entity-search";
+import {
   configuredAuditFieldNames,
   configuredCodeFieldName,
   configuredStatusFieldNames,
@@ -134,6 +139,8 @@ export interface EntityListPageProps {
 
 type ViewMode = "list" | "board" | "compact" | "dashboard" | "excel";
 type EntityListArchetype = "simple" | "rich" | "doc";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Maps display_config v2 canonical view-mode names → legacy EntityListPage ViewMode names.
 const B5_TO_LEGACY_MODE: Record<string, ViewMode> = {
@@ -283,6 +290,62 @@ function resolveRecordNavId(row: Record<string, unknown>, fieldNames: string[]):
     if (value) return value;
   }
   return normalizeNavValue(row.id);
+}
+
+function normalizeEntityCodeForNav(entityCode: string): string {
+  return entityCode
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function hasBusinessIdentifierField(entity: CompiledEntity): boolean {
+  const entityCode = normalizeEntityCodeForNav(entity.entity_code);
+  const fieldNames = new Set(entity.fields.map((field) => field.name.toLowerCase()));
+  return [
+    "code",
+    "document_no",
+    "document_number",
+    "number",
+    "external_id",
+    `${entityCode}_code`,
+    `${entityCode}_no`,
+    `${entityCode}_number`,
+  ].some((fieldName) => fieldNames.has(fieldName));
+}
+
+function hasReferenceScopeField(entity: CompiledEntity): boolean {
+  return entity.fields.some((field) => {
+    const fieldName = field.name.toLowerCase();
+    if (fieldName === "id" || fieldName === "tenant_id") return false;
+    return fieldName.endsWith("_id") || field.data_type === "reference";
+  });
+}
+
+function hasAssociationStyleEntityCode(entity: CompiledEntity): boolean {
+  const entityCode = normalizeEntityCodeForNav(entity.entity_code);
+  return /(^|_)(rule|policy|classification|link|override|assignment|binding|mapping)$/.test(entityCode);
+}
+
+function usesRecordIdNavigation(entity: CompiledEntity): boolean {
+  const flags = entity.feature_flags as Record<string, unknown>;
+  return entity.entity_class === "RELATION" ||
+    entity.entity_class === "DOCUMENT_RELATION" ||
+    flags["requires_owner_type_scope"] === true ||
+    typeof flags["parent_fk"] === "string" ||
+    typeof flags["parent_entity"] === "string" ||
+    hasAssociationStyleEntityCode(entity) ||
+    (hasReferenceScopeField(entity) && !hasBusinessIdentifierField(entity));
+}
+
+function resolveEntityRecordNavId(
+  entity: CompiledEntity,
+  row: Record<string, unknown>,
+  fieldNames: string[],
+): string | undefined {
+  const id = normalizeNavValue(row.id);
+  if (usesRecordIdNavigation(entity) && id) return id;
+  return resolveRecordNavId(row, fieldNames);
 }
 
 // ── Compact card grid ─────────────────────────────────────────────────────────
@@ -1676,6 +1739,76 @@ function RowActionMenu({
 // Shows one chip per active filter field with a × to remove it.
 // "Clear all" removes all filters at once.
 
+function getReferenceEntityCode(field: EntityField | undefined): string | null {
+  if (field?.reference_config?.target_entity?.trim()) {
+    return field.reference_config.target_entity.trim();
+  }
+  const refEntity = field?.validation_rules?.["ref_entity"];
+  return typeof refEntity === "string" && refEntity.trim() ? refEntity.trim() : null;
+}
+
+function formatFilterEntryWithValues(
+  entry: FilterEntry,
+  formatValue: (value: string) => string,
+): string {
+  const values = getFilterStringValues(entry);
+  if (values.length === 0) return describeFilterEntry(entry);
+
+  if (Array.isArray(entry)) return values.map(formatValue).join(", ");
+  if (entry.op === "eq" || entry.op === "in") return values.map(formatValue).join(", ");
+  if (entry.op === "not_in") return `not ${values.map(formatValue).join(", ")}`;
+
+  return describeFilterEntry(entry);
+}
+
+function ReferenceAwareFilterValue({
+  entry,
+  field,
+}: {
+  entry: FilterEntry;
+  field: EntityField | undefined;
+}) {
+  const values = getFilterStringValues(entry);
+  const referenceEntityCode = getReferenceEntityCode(field);
+  const referenceValues = values.filter((value) => UUID_RE.test(value));
+  const optionConfig = useMemo(
+    () => resolveEntityPickerOptionConfig(field?.reference_config),
+    [field?.reference_config],
+  );
+
+  const { data: labelMap, isLoading } = useQuery<Record<string, string>>({
+    queryKey: ["entity-filter-reference-labels", referenceEntityCode, referenceValues.join("|"), field?.reference_config],
+    queryFn: async ({ signal }) => {
+      const labels: Record<string, string> = {};
+
+      await Promise.all(referenceValues.map(async (value) => {
+        const res = await fetch(
+          `/api/relay/api/records/${encodeURIComponent(referenceEntityCode!)}/${encodeURIComponent(value)}`,
+          { signal },
+        );
+        if (!res.ok) return;
+        const body = await res.json() as { data?: Record<string, unknown> };
+        if (!body.data) return;
+        const option = entityRowToPickerOption(body.data, referenceEntityCode, optionConfig);
+        if (option.label) labels[value] = option.label;
+      }));
+
+      return labels;
+    },
+    enabled: !!referenceEntityCode && referenceValues.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const display = formatFilterEntryWithValues(entry, (value) => {
+    if (!referenceEntityCode || !UUID_RE.test(value)) return value;
+    const label = labelMap?.[value];
+    if (label) return label;
+    return isLoading ? "Loading..." : `${value.slice(0, 8)}...`;
+  });
+
+  return <span className="font-medium">{display}</span>;
+}
+
 function ActiveFilterChips({
   filters,
   fieldLabels,
@@ -1732,14 +1865,28 @@ function ActiveFilterChips({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+function safeInternalReturnHref(value: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
 export function EntityListPage({ entityCode }: EntityListPageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = safeInternalReturnHref(searchParams.get("returnTo"));
   const [rowSelection,  setRowSelection]  = useState<RowSelectionState>({});
   const [activeDrawer,  setActiveDrawer]  = useState<"filter" | "sort" | "group" | "columns" | null>(null);
   const [drawerWidth,   setDrawerWidth]   = useState<number | undefined>(undefined);
 
   const openDrawer  = useCallback((d: "filter" | "sort" | "group" | "columns") => setActiveDrawer(d), []);
   const closeDrawer = useCallback(() => setActiveDrawer(null), []);
+  const handleBack = useCallback(() => {
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+    router.back();
+  }, [returnTo, router]);
 
   // URL is the single source of truth for list state
   const {
@@ -1799,6 +1946,15 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     () => entity ? resolveDisplayConfig(entity.display_config as Record<string, unknown>) : undefined,
     [entity],
   );
+  const searchableFieldNames = useMemo(() => {
+    const names = new Set<string>();
+    entity?.fields.forEach((field) => {
+      if (field.is_searchable) names.add(field.name);
+    });
+    displayConfig?.search_fields?.forEach((fieldName) => names.add(fieldName));
+    return names;
+  }, [displayConfig?.search_fields, entity?.fields]);
+  const hasSearchableFields = searchableFieldNames.size > 0;
 
   const entityArchetype = useMemo<EntityListArchetype>(
     () => entity ? resolveEntityListArchetype(entity) : "rich",
@@ -1902,6 +2058,13 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
         : {},
     [entity],
   );
+  const fieldMetaMap = useMemo<Record<string, EntityField>>(
+    () =>
+      entity
+        ? Object.fromEntries(entity.fields.map((f) => [f.name, f]))
+        : {},
+    [entity],
+  );
 
   // Quick status filter — prefer display_config.status_field_names[0]; fall back to
   // the first column with a semanticResolver (legacy heuristic).
@@ -1942,12 +2105,12 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const allRows = useMemo(() => {
     if (searchMode !== "client" || !state.search?.trim()) return rawRows;
     const q = state.search.toLowerCase();
-    const searchableCols = entity?.fields.filter((f) => f.is_searchable).map((f) => f.name) ?? [];
+    const searchableCols = entity?.fields.filter((f) => searchableFieldNames.has(f.name)).map((f) => f.name) ?? [];
     if (searchableCols.length === 0) return rawRows;
     return rawRows.filter((row) =>
       searchableCols.some((col) => String(row[col] ?? "").toLowerCase().includes(q)),
     );
-  }, [rawRows, searchMode, state.search, entity?.fields]);
+  }, [rawRows, searchMode, state.search, entity?.fields, searchableFieldNames]);
 
   // ── Social signals — batch-fetched for all visible rows (S1.A/S1.B) ─────────
   // Called unconditionally before any early return (Rules of Hooks).
@@ -2112,15 +2275,14 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const listConfig   = resolveListConfig(entity);
   const titleKey     = listConfig.columns[0]?.name;
   const codeFieldName = configuredCodeFieldName(entity);
-  const compactTitleFieldName = configuredTitleFieldName(entity) ?? titleKey;
+  const explicitTitleFieldName = configuredTitleFieldName(entity);
+  const compactTitleFieldName = explicitTitleFieldName ?? titleKey;
   const statusFieldNames = configuredStatusFieldNames(entity);
   const auditFieldNames = configuredAuditFieldNames(entity);
   const hasGroupable = !!findKanbanGroupField(entity);
   const navFieldNames = uniqueFieldNames([
     codeFieldName,
-    compactTitleFieldName,
-    titleKey,
-    ...listConfig.columns.map((column) => column.name),
+    explicitTitleFieldName,
   ]);
 
   // Status field resolver from presentation config (for compact view badges)
@@ -2245,7 +2407,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       });
 
   const getRecordHref = (row: Record<string, unknown>) => {
-    const navId = resolveRecordNavId(row, navFieldNames);
+    const navId = resolveEntityRecordNavId(entity, row, navFieldNames);
     return navId ? `/app/${entityCode}/${encodeURIComponent(navId)}` : undefined;
   };
 
@@ -2275,7 +2437,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       header={
         <PageHeader
           typeChip={listEntityTypeLabel}
-          onBack={() => router.back()}
+          onBack={handleBack}
           actionsLayout="adaptive"
           statusSlot={<EntityArchetypeBadge archetype={entityArchetype} />}
           primaryActions={
@@ -2307,7 +2469,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                 onKeyDown={(e: React.KeyboardEvent) => {
                   if (e.key === "Escape") setSearch("");
                 }}
-                modeToggle={entity.fields.some((f) => f.is_searchable) ? {
+                modeToggle={hasSearchableFields ? {
                   active:         searchMode === "client",
                   onToggle:       () => setSearchMode(searchMode === "client" ? "server" : undefined),
                   activeLabel:    "In view",
@@ -2464,7 +2626,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                 .map(([field, entry]) => (
                   <span key={field} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs text-foreground">
                     <span className="text-muted-foreground">{fieldLabelMap[field] ?? field}:</span>
-                    <span className="font-medium">{describeFilterEntry(entry as FilterEntry)}</span>
+                    <ReferenceAwareFilterValue entry={entry as FilterEntry} field={fieldMetaMap[field]} />
                     <button
                       onClick={() => handleRemoveFilterField(field)}
                       className="ml-0.5 rounded-full p-px text-muted-foreground hover:text-foreground transition-colors"
@@ -2606,7 +2768,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               rowActions={(row) => {
                 const r      = row as Record<string, unknown>;
                 const rid    = String(r.id ?? "");
-                const navId  = resolveRecordNavId(r, navFieldNames);
+                const navId  = resolveEntityRecordNavId(entity, r, navFieldNames);
                 const displayName =
                   normalizeNavValue(fieldValueByName(entity, r, compactTitleFieldName)) ??
                   normalizeNavValue(fieldValueByName(entity, r, titleKey)) ??

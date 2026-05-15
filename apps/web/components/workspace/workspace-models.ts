@@ -54,6 +54,8 @@ export const financeWorkspaceModel: WorkspaceDashboardModel = {
         ]),
         section("masterData", "Master Data", [
           { label: "Chart of Accounts", href: "/finance/coa", archetype: "Rich", description: "Account hierarchy explorer and posting controls." },
+          { label: "Spend Categories", href: "/workbench/supply-chain/spend-categories", archetype: "Rich", description: "Spend taxonomy, intent defaults, and company-code overrides." },
+          { label: "Business Intents", href: "/finance/business-intents", archetype: "Rich", description: "Intent ontology, GL fallback, and approval policy overlays." },
           { label: "Business Partners", href: "/app/business_partner", archetype: "Rich", description: "Supplier and customer roles with company-code settings." },
           { label: "Cost Centers", href: "/app/cost_center", archetype: "Rich", description: "Cost accounting dimensions for posting and reporting." },
           { label: "Legal Entities", href: "/finance/admin?tab=legal-entities", archetype: "Rich", description: "Group hierarchy, consolidation, and operating entities.", adminOnly: true },
@@ -62,6 +64,7 @@ export const financeWorkspaceModel: WorkspaceDashboardModel = {
           { label: "Fiscal Periods", href: "/app/fiscal_period", archetype: "Simple", description: "Open, soft-close, and hard-close accounting periods.", adminOnly: true },
           { label: "Company Controls", href: "/finance/admin?tab=controls", archetype: "Rich", description: "Account class rules, reconciliation flags, and posting controls.", adminOnly: true },
           { label: "COA Mapping", href: "/finance/admin?tab=mapping", archetype: "Rich", description: "Cross-chart translation and reporting mappings.", adminOnly: true },
+          { label: "Taxonomy Controls", href: "/workbench/supply-chain/spend-categories", archetype: "Rich", description: "Category and intent resolution controls.", adminOnly: true },
         ]),
       ],
     },
@@ -170,7 +173,7 @@ export const supplyChainWorkspaceModel: WorkspaceDashboardModel = {
         section("masterData", "Master Data", [
           { label: "Business Partners", href: "/app/business_partner", archetype: "Rich", description: "Supplier and customer identity management." },
           { label: "Suppliers", href: "/app/supplier", archetype: "Rich", description: "Supplier lifecycle, qualification, and company-code profile." },
-          { label: "Spend Categories", href: "/app/spend_category", archetype: "Simple", description: "Procurement spend classification.", adminOnly: true },
+          { label: "Spend Categories", href: "/workbench/supply-chain/spend-categories", archetype: "Rich", description: "Procurement spend classification and policy overlays.", adminOnly: true },
         ]),
         section("setup", "Setup", [
           { label: "Supplier Policies", href: "/setup/policies", archetype: "Simple", description: "Controls for supplier onboarding and blocked spend.", adminOnly: true },

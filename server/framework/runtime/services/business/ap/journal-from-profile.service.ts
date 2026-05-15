@@ -141,11 +141,15 @@ async function resolveBySubledger(
              ON  cca.chart_of_account_id = ga.chart_of_account_id
              AND cca.tenant_id           = ${tenantId}
              AND cca.company_code_id     = ${companyId}
+             AND cca.assignment_type     = 'operating'
              AND cca.status             = 'active'
+             AND cca.effective_from     <= CURRENT_DATE
+             AND (cca.effective_to IS NULL OR cca.effective_to >= CURRENT_DATE)
      WHERE ga.tenant_id      = ${tenantId}
        AND ga.subledger_type = ${subledger}
        AND ga.is_active      = true
        AND ga.node_type      = 'posting'
+       AND COALESCE((ga.metadata->>'_journal_postable')::boolean, true) = true
      LIMIT 1
   `.execute(db);
   return r.rows[0]?.id ?? null;
@@ -158,17 +162,54 @@ async function resolveByCode(
   code:     string,
 ): Promise<string | null> {
   const r = await sql<{ id: string }>`
-    SELECT ga.id
-      FROM master.gl_account ga
-      JOIN master.company_code_chart_assignment cca
-             ON  cca.chart_of_account_id = ga.chart_of_account_id
-             AND cca.tenant_id           = ${tenantId}
-             AND cca.company_code_id     = ${companyId}
-             AND cca.status             = 'active'
-     WHERE ga.tenant_id = ${tenantId}
-       AND ga.code      = ${code}
-       AND ga.is_active = true
-       AND ga.node_type = 'posting'
+    WITH operating AS (
+      SELECT cca.chart_of_account_id
+        FROM master.company_code_chart_assignment cca
+        JOIN master.chart_of_account coa
+          ON coa.tenant_id = cca.tenant_id
+         AND coa.id = cca.chart_of_account_id
+       WHERE cca.tenant_id = ${tenantId}
+         AND cca.company_code_id = ${companyId}
+         AND cca.assignment_type = 'operating'
+         AND cca.status = 'active'
+         AND cca.effective_from <= CURRENT_DATE
+         AND (cca.effective_to IS NULL OR cca.effective_to >= CURRENT_DATE)
+         AND coa.is_active = true
+         AND COALESCE((coa.metadata->>'_operating_coa')::boolean, true) = true
+         AND COALESCE((coa.metadata->>'_reporting_taxonomy')::boolean, false) = false
+       ORDER BY cca.is_primary DESC, cca.effective_from DESC
+       LIMIT 1
+    ),
+    source_group AS (
+      SELECT ga.metadata->>'_group_map' AS group_map
+        FROM master.gl_account ga
+       WHERE ga.tenant_id = ${tenantId}
+         AND ga.code = ${code}
+         AND ga.metadata ? '_group_map'
+       LIMIT 1
+    ),
+    candidates AS (
+      SELECT ga.id, 0 AS priority, ga.sort_order, ga.code
+        FROM master.gl_account ga
+        JOIN operating op ON op.chart_of_account_id = ga.chart_of_account_id
+       WHERE ga.tenant_id = ${tenantId}
+         AND ga.code = ${code}
+         AND ga.is_active = true
+         AND ga.node_type = 'posting'
+         AND COALESCE((ga.metadata->>'_journal_postable')::boolean, true) = true
+      UNION ALL
+      SELECT ga.id, 1 AS priority, ga.sort_order, ga.code
+        FROM master.gl_account ga
+        JOIN operating op ON op.chart_of_account_id = ga.chart_of_account_id
+        JOIN source_group sg ON sg.group_map = ga.metadata->>'_group_map'
+       WHERE ga.tenant_id = ${tenantId}
+         AND ga.is_active = true
+         AND ga.node_type = 'posting'
+         AND COALESCE((ga.metadata->>'_journal_postable')::boolean, true) = true
+    )
+    SELECT id
+      FROM candidates
+     ORDER BY priority, sort_order, code
      LIMIT 1
   `.execute(db);
   return r.rows[0]?.id ?? null;
@@ -184,26 +225,26 @@ async function resolveFromIntent(
 ): Promise<string | null> {
   if (businessIntentId) {
     const r = await sql<{ account_id: string }>`
-      SELECT default_gl_account_id AS account_id
-        FROM master.business_intent
-       WHERE id        = ${businessIntentId}
-         AND tenant_id = ${tenantId}
-         AND default_gl_account_id IS NOT NULL
+      SELECT master.fn_resolve_intent_default_gl_account(
+               ${tenantId}::uuid,
+               ${businessIntentId}::uuid,
+               ${companyId}::uuid
+             )::text AS account_id
        LIMIT 1
     `.execute(db);
-    if (r.rows[0]) return r.rows[0].account_id;
+    if (r.rows[0]?.account_id) return r.rows[0].account_id;
   }
   if (spendCategoryId) {
     const r = await sql<{ account_id: string }>`
-      SELECT bi.default_gl_account_id AS account_id
-        FROM master.spend_category sc
-        JOIN master.business_intent bi ON bi.id = sc.default_intent_id
-       WHERE sc.id        = ${spendCategoryId}
-         AND sc.tenant_id = ${tenantId}
-         AND bi.default_gl_account_id IS NOT NULL
+      SELECT resolved_gl_account_id::text AS account_id
+        FROM master.fn_resolve_spend_category_defaults(
+               ${tenantId}::uuid,
+               ${spendCategoryId}::uuid,
+               ${companyId}::uuid
+             )
        LIMIT 1
     `.execute(db);
-    if (r.rows[0]) return r.rows[0].account_id;
+    if (r.rows[0]?.account_id) return r.rows[0].account_id;
   }
   // Last resort: account_fallback is a GL code
   if (fallbackCode) {

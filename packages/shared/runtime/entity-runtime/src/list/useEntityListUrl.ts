@@ -66,6 +66,8 @@ const P = {
   BASE_VIEW_ID: "bvid",        // baseSavedViewId
 } as const;
 
+const RETURN_TO_PARAM = "returnTo";
+
 // ─── State parser ──────────────────────────────────────────────────────────────
 
 function parseState(
@@ -231,10 +233,12 @@ export function useEntityListUrl(entityCode: string) {
   const applyState = useCallback(
     (next: EntityListQueryState) => {
       const params = stateToParams(next);
+      const returnTo = searchParams.get(RETURN_TO_PARAM);
+      if (returnTo) params.set(RETURN_TO_PARAM, returnTo);
       const qs = params.toString();
       router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
     },
-    [router, pathname],
+    [router, pathname, searchParams],
   );
 
   // ── Setters ──────────────────────────────────────────────────────────────────
@@ -350,8 +354,11 @@ export function useEntityListUrl(entityCode: string) {
    * sort, search, saved view, etc.
    */
   const reset = useCallback(
-    () => router.replace(pathname, { scroll: false }),
-    [router, pathname],
+    () => {
+      const returnTo = searchParams.get(RETURN_TO_PARAM);
+      router.replace(returnTo ? `${pathname}?${RETURN_TO_PARAM}=${encodeURIComponent(returnTo)}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
   );
 
   // ── Derived state ─────────────────────────────────────────────────────────────

@@ -63,6 +63,28 @@ const nextConfig = {
       { source: "/workbench/partner", destination: "/dashboard",          permanent: true },
       { source: "/workbench/user",    destination: "/dashboard",          permanent: true },
 
+      // Phase 1 workbench canonicalization: Spend Categories is Supply Chain-owned.
+      {
+        source:      "/finance/spend-categories",
+        destination: "/workbench/supply-chain/spend-categories",
+        permanent:   false,
+      },
+      {
+        source:      "/workbench/finance/spend-categories",
+        destination: "/workbench/supply-chain/spend-categories",
+        permanent:   false,
+      },
+      {
+        source:      "/app/cc_supplier_spend_policy",
+        destination: "/app/company_code_supplier_spend_policy",
+        permanent:   false,
+      },
+      {
+        source:      "/app/cc_supplier_spend_policy/:rest*",
+        destination: "/app/company_code_supplier_spend_policy/:rest*",
+        permanent:   false,
+      },
+
       // ── Finance workbench (ledger → finance) ───────────────────────────────
       { source: "/ledger/coa",            destination: "/finance/coa",    permanent: true },
       { source: "/ledger/gl-workbench",   destination: "/finance/gl",     permanent: true },

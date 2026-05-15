@@ -147,17 +147,17 @@ async function main() {
   }
 
   // ── 2c: Add executions to Handle Existing Account ────────────────────────
-  // 1. idp-confirm-link (DISABLED, priority 0)
+  // 1. idp-confirm-link (REQUIRED, priority 10)
   const r_icl = await addExec('neon broker login Handle Existing Account', 'idp-confirm-link', token);
   console.log(`  ${r_icl.status===201?'✓':'✗'} Added: idp-confirm-link (${r_icl.status})`);
   await sleep(100);
 
-  // 2. Sub-flow: Account verification options (DISABLED, priority 0)
+  // 2. Sub-flow: Account verification options (REQUIRED, priority 20)
   const r_avo = await addSubFlow('neon broker login Handle Existing Account', 'neon broker login Account verification options', token);
   console.log(`  ${r_avo.status===201?'✓':'✗'} Added sub-flow: Account verification options (${r_avo.status})`);
   await sleep(100);
 
-  // 3. idp-auto-link (REQUIRED, priority 0) — auto-link accounts
+  // 3. idp-auto-link (DISABLED, priority 30)
   const r_ial = await addExec('neon broker login Handle Existing Account', 'idp-auto-link', token);
   console.log(`  ${r_ial.status===201?'✓':'✗'} Added: idp-auto-link (${r_ial.status})`);
   await sleep(200);
@@ -166,8 +166,9 @@ async function main() {
   const heaExecs = await getExecs('neon broker login Handle Existing Account', token);
   for (const ex of heaExecs) {
     const name = ex.displayName || ex.providerId || '';
-    if (name.includes('auto') || name.includes('Auto')) await updateExec('neon broker login Handle Existing Account', ex.id, 'REQUIRED', 20, token);
-    else await updateExec('neon broker login Handle Existing Account', ex.id, 'DISABLED', 0, token);
+    if (name.includes('auto') || name.includes('Auto')) await updateExec('neon broker login Handle Existing Account', ex.id, 'DISABLED', 30, token);
+    else if (name.includes('confirm') || name.includes('Confirm')) await updateExec('neon broker login Handle Existing Account', ex.id, 'REQUIRED', 10, token);
+    else await updateExec('neon broker login Handle Existing Account', ex.id, 'REQUIRED', 20, token);
   }
 
   // ── 2d: Add executions to Account verification options ───────────────────

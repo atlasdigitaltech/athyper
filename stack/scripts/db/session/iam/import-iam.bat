@@ -16,7 +16,7 @@ REM   [3b/6] Import platform-control realm (only if realm-platform-control.json
 REM          exists in stack\config\iam\; uses a separate temp directory)
 REM   [4/6] Clean up temp directory
 REM   [5/6] Restart Keycloak container; wait for healthy status
-REM         (60 attempts x 3 s = 180 s max — extended vs .sh's 60 s because
+REM         (60 attempts x 3 s = 180 s max ? extended vs .sh's 60 s because
 REM          Docker Desktop on Windows restarts containers more slowly)
 REM   [6/6] Run provision-keycloak-users.mjs to seed passwords + MFA
 REM
@@ -38,7 +38,7 @@ set "PLATFORM_IMPORT_FILE=%CONFIG_DIR%\realm-platform-control.json"
 set "TEMP_IMPORT_DIR=%TEMP%\keycloak-import-%RANDOM%%RANDOM%"
 
 REM ---------------------------------------------------------------------------
-REM Container / network / DB names — honour env-var overrides (mirrors lib/constants.sh)
+REM Container / network / DB names ? honour env-var overrides (mirrors lib/constants.sh)
 REM Prefix is derived from COMPOSE_PROJECT_NAME in stack\env\.env
 REM ---------------------------------------------------------------------------
 if not defined COMPOSE_PROJECT_NAME (
@@ -129,6 +129,22 @@ if "%IAM_DB_PASSWORD%"=="" (
     exit /b 1
 )
 
+for %%V in (KC_SMTP_HOST KC_SMTP_PORT KC_SMTP_FROM KC_SMTP_FROM_DISPLAY_NAME KC_SMTP_AUTH KC_SMTP_SSL KC_SMTP_STARTTLS KC_SMTP_USERNAME KC_SMTP_PASSWORD KC_WEBAUTHN_RP_ID ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID MICROSOFT_CLIENT_SECRET) do (
+    if not defined %%V (
+        if defined ENV_FILE_IMP (
+            for /f "tokens=2 delims==" %%a in ('findstr /B /C:"%%V=" "!ENV_FILE_IMP!" 2^>nul') do set "%%V=%%a"
+        )
+    )
+)
+if not defined KC_SMTP_HOST set "KC_SMTP_HOST=mailhog"
+if not defined KC_SMTP_PORT set "KC_SMTP_PORT=1025"
+if not defined KC_SMTP_FROM set "KC_SMTP_FROM=noreply@athyper.local"
+if not defined KC_SMTP_FROM_DISPLAY_NAME set "KC_SMTP_FROM_DISPLAY_NAME=Athyper"
+if not defined KC_SMTP_AUTH set "KC_SMTP_AUTH=false"
+if not defined KC_SMTP_SSL set "KC_SMTP_SSL=false"
+if not defined KC_SMTP_STARTTLS set "KC_SMTP_STARTTLS=false"
+if not defined KC_WEBAUTHN_RP_ID set "KC_WEBAUTHN_RP_ID=athyper.local"
+
 echo [1/6] Creating temporary import directory...
 mkdir "%TEMP_IMPORT_DIR%" 2>nul
 copy /y "%IMPORT_FILE%" "%TEMP_IMPORT_DIR%\athyper-realm.json" >nul
@@ -145,7 +161,7 @@ echo Database connection successful
 echo [3/6] Importing realm configuration...
 echo This will override existing realm data!
 echo Press Ctrl+C to cancel, or wait 5 seconds...
-timeout /t 5 >nul
+timeout /t 5 /nobreak >nul 2>&1
 
 docker run --rm ^
   --network %DOCKER_NETWORK% ^
@@ -154,6 +170,24 @@ docker run --rm ^
   -e KC_DB_URL=%IAM_DB_URL% ^
   -e KC_DB_USERNAME=%IAM_DB_USERNAME% ^
   -e KC_DB_PASSWORD=%IAM_DB_PASSWORD% ^
+  -e KC_SMTP_HOST=!KC_SMTP_HOST! ^
+  -e KC_SMTP_PORT=!KC_SMTP_PORT! ^
+  -e KC_SMTP_FROM=!KC_SMTP_FROM! ^
+  -e KC_SMTP_FROM_DISPLAY_NAME=!KC_SMTP_FROM_DISPLAY_NAME! ^
+  -e KC_SMTP_AUTH=!KC_SMTP_AUTH! ^
+  -e KC_SMTP_SSL=!KC_SMTP_SSL! ^
+  -e KC_SMTP_STARTTLS=!KC_SMTP_STARTTLS! ^
+  -e KC_SMTP_USERNAME=!KC_SMTP_USERNAME! ^
+  -e KC_SMTP_PASSWORD=!KC_SMTP_PASSWORD! ^
+  -e KC_WEBAUTHN_RP_ID=!KC_WEBAUTHN_RP_ID! ^
+  -e ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET=!ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET! ^
+  -e NEON_SVC_BFF_CLIENT_SECRET=!NEON_SVC_BFF_CLIENT_SECRET! ^
+  -e GITHUB_OAUTH_CLIENT_ID=!GITHUB_OAUTH_CLIENT_ID! ^
+  -e GITHUB_OAUTH_CLIENT_SECRET=!GITHUB_OAUTH_CLIENT_SECRET! ^
+  -e GOOGLE_CLIENT_ID=!GOOGLE_CLIENT_ID! ^
+  -e GOOGLE_CLIENT_SECRET=!GOOGLE_CLIENT_SECRET! ^
+  -e MICROSOFT_CLIENT_ID=!MICROSOFT_CLIENT_ID! ^
+  -e MICROSOFT_CLIENT_SECRET=!MICROSOFT_CLIENT_SECRET! ^
   quay.io/keycloak/keycloak:!KEYCLOAK_IMAGE_TAG! ^
   import ^
   --dir /opt/keycloak/data/import ^
@@ -181,6 +215,24 @@ if exist "%PLATFORM_IMPORT_FILE%" (
       -e KC_DB_URL=%IAM_DB_URL% ^
       -e KC_DB_USERNAME=%IAM_DB_USERNAME% ^
       -e KC_DB_PASSWORD=%IAM_DB_PASSWORD% ^
+      -e KC_SMTP_HOST=!KC_SMTP_HOST! ^
+      -e KC_SMTP_PORT=!KC_SMTP_PORT! ^
+      -e KC_SMTP_FROM=!KC_SMTP_FROM! ^
+      -e KC_SMTP_FROM_DISPLAY_NAME=!KC_SMTP_FROM_DISPLAY_NAME! ^
+      -e KC_SMTP_AUTH=!KC_SMTP_AUTH! ^
+      -e KC_SMTP_SSL=!KC_SMTP_SSL! ^
+      -e KC_SMTP_STARTTLS=!KC_SMTP_STARTTLS! ^
+      -e KC_SMTP_USERNAME=!KC_SMTP_USERNAME! ^
+      -e KC_SMTP_PASSWORD=!KC_SMTP_PASSWORD! ^
+      -e KC_WEBAUTHN_RP_ID=!KC_WEBAUTHN_RP_ID! ^
+      -e ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET=!ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET! ^
+      -e NEON_SVC_BFF_CLIENT_SECRET=!NEON_SVC_BFF_CLIENT_SECRET! ^
+      -e GITHUB_OAUTH_CLIENT_ID=!GITHUB_OAUTH_CLIENT_ID! ^
+      -e GITHUB_OAUTH_CLIENT_SECRET=!GITHUB_OAUTH_CLIENT_SECRET! ^
+      -e GOOGLE_CLIENT_ID=!GOOGLE_CLIENT_ID! ^
+      -e GOOGLE_CLIENT_SECRET=!GOOGLE_CLIENT_SECRET! ^
+      -e MICROSOFT_CLIENT_ID=!MICROSOFT_CLIENT_ID! ^
+      -e MICROSOFT_CLIENT_SECRET=!MICROSOFT_CLIENT_SECRET! ^
       quay.io/keycloak/keycloak:!KEYCLOAK_IMAGE_TAG! ^
       import ^
       --dir /opt/keycloak/data/import ^
@@ -215,13 +267,13 @@ if not errorlevel 1 (
                 set "KC_READY=1"
                 echo Keycloak is ready.
             ) else (
-                timeout /t 3 >nul
+                timeout /t 3 /nobreak >nul 2>&1
             )
         )
     )
     if "!KC_READY!"=="0" (
         echo Warning: Keycloak health check timed out. Waiting an extra 15 seconds...
-        timeout /t 15 >nul
+        timeout /t 15 /nobreak >nul 2>&1
     )
 ) else (
     echo Keycloak container not running, start it to apply changes:

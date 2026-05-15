@@ -32,7 +32,7 @@ set "STACK_DIR=%CD%"
 popd >nul
 
 REM ---------------------------------------------------------------------------
-REM Container name — honour env-var override (mirrors lib/constants.sh)
+REM Container name ? honour env-var override (mirrors lib/constants.sh)
 REM Prefix is derived from COMPOSE_PROJECT_NAME in stack\env\.env
 REM ---------------------------------------------------------------------------
 if not defined COMPOSE_PROJECT_NAME (
@@ -102,21 +102,21 @@ if "!PCC_PASS!"=="" (
 if "!PCC_PASS!"=="" set "PCC_PASS=admin"
 
 REM ---------------------------------------------------------------------------
-REM User lists — must stay in sync with seed-iam-credentials.sh and:
+REM User lists ? must stay in sync with seed-iam-credentials.sh and:
 REM   stack\config\iam\realm-demosetup.json
 REM   stack\config\iam\realm-platform-control.json
 REM ---------------------------------------------------------------------------
-set "ATHYPER_USERS=athq.viewer athq.reporter athq.requester athq.agent athq.manager athq.owner athq.admin aqtu.manager asac.manager auic.manager asgf.manager athq.cfo partner.viewer partner.agent partner.manager partner.owner karim.dual tksa.owner tksa.admin ssk.admin tegy.admin sdtx.admin"
+set "ATHYPER_USERS=athq.viewer athq.reporter athq.requester athq.agent athq.manager athq.owner athq.admin aqtu.manager asac.manager auic.manager asgf.manager athq.cfo partner.viewer partner.agent partner.manager partner.owner karim.dual catl.admin catl.owner catl.finance tksa.owner tksa.admin ssk.admin tegy.admin sdtx.admin"
 set "PCC_USERS=product.admin tenant.manager support.admin"
 
 echo.
 echo === Seeding IAM credentials ===
-echo   realm athyper:          22 users
+echo   realm athyper:          25 users
 echo   realm platform-control: 3 users
 echo.
 
 REM ---------------------------------------------------------------------------
-REM Authenticate kcadm once — credentials cached inside the KC container
+REM Authenticate kcadm once ? credentials cached inside the KC container
 REM ---------------------------------------------------------------------------
 docker exec %DOCKER_CONTAINER_IAM% /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user "!IAM_ADMIN_USER!" --password "!IAM_ADMIN_PASS!" >nul
 if errorlevel 1 (

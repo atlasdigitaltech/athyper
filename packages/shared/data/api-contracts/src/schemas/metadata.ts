@@ -75,11 +75,24 @@ export const ReferencePickerConfigSchema = z.object({
   /** Display density for the advanced chooser. */
   density: z.enum(["mini", "compact", "comfortable", "mobile"]).optional(),
   width: z.union([z.number(), z.string()]).optional(),
-  max_list_height: z.number().optional(),
+  max_list_height: z.union([z.number(), z.string()]).optional(),
   show_keyboard_hints: z.boolean().optional(),
   show_recently_used: z.boolean().optional(),
   recent_limit: z.number().optional(),
+  /** Number of records fetched per advanced-picker request / Load more click. */
+  page_size: z.number().int().positive().optional(),
+  /** Initial advanced-picker search mode. Server search is the default. */
+  default_search_mode: z.enum(["server", "instant"]).optional(),
   result_label: z.string().optional(),
+  tree: z.object({
+    enabled: z.boolean().optional(),
+    default_enabled: z.boolean().optional(),
+    parent_field: z.string(),
+    value_field: z.string().optional(),
+    level_field: z.string().optional(),
+    sort_field: z.string().optional(),
+    min_records: z.number().int().positive().optional(),
+  }).optional(),
   controls: z.array(z.object({
     id: z.string().optional(),
     label: z.string(),

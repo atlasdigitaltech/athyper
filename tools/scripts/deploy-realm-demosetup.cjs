@@ -27,6 +27,16 @@ const KC_ADMIN  = 'athyperadmin';
 const KC_PASS   = 'athyperadmin';
 const REALM_FILE = path.join(__dirname, '../../mesh/config/iam/realm-demosetup.json');
 
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+function optionalEnv(name, fallback = '') {
+  return process.env[name] ?? fallback;
+}
+
 // Ignore self-signed TLS
 const agent = new https.Agent({ rejectUnauthorized: false });
 
@@ -280,7 +290,7 @@ async function main() {
       {"alias":"neon broker login Account verification options","description":"Method with which to verify the existing account","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[{"authenticator":"idp-email-verification","authenticatorFlow":false,"requirement":"ALTERNATIVE","priority":10},{"authenticatorFlow":true,"requirement":"ALTERNATIVE","priority":20,"flowAlias":"neon broker login Verify Existing Account by Re-authentication"}]},
       {"alias":"neon broker login First Broker Login - Conditional Organization","description":"Flow to determine if the authenticator that adds organization members is to be used","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[{"authenticator":"conditional-user-configured","authenticatorFlow":false,"requirement":"REQUIRED","priority":10},{"authenticator":"idp-add-organization-member","authenticatorFlow":false,"requirement":"REQUIRED","priority":20}]},
       {"alias":"neon broker login First broker login - Conditional 2FA","description":"Flow to determine if any 2FA is required","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[{"authenticator":"conditional-user-configured","authenticatorFlow":false,"requirement":"REQUIRED","priority":10},{"authenticatorConfig":"neon broker login first-broker-login-conditional-credential","authenticator":"conditional-credential","authenticatorFlow":false,"requirement":"REQUIRED","priority":20},{"authenticator":"auth-otp-form","authenticatorFlow":false,"requirement":"ALTERNATIVE","priority":30},{"authenticator":"webauthn-authenticator","authenticatorFlow":false,"requirement":"DISABLED","priority":40},{"authenticator":"auth-recovery-authn-code-form","authenticatorFlow":false,"requirement":"DISABLED","priority":50}]},
-      {"alias":"neon broker login Handle Existing Account","description":"Handle what to do if there is existing account with same email/username","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[{"authenticator":"idp-confirm-link","authenticatorFlow":false,"requirement":"DISABLED","priority":0},{"authenticatorFlow":true,"requirement":"DISABLED","priority":0,"flowAlias":"neon broker login Account verification options"},{"authenticator":"idp-auto-link","authenticatorFlow":false,"requirement":"REQUIRED","priority":0}]},
+      {"alias":"neon broker login Handle Existing Account","description":"Handle what to do if there is existing account with same email/username","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[{"authenticator":"idp-confirm-link","authenticatorFlow":false,"requirement":"REQUIRED","priority":0},{"authenticatorFlow":true,"requirement":"REQUIRED","priority":0,"flowAlias":"neon broker login Account verification options"},{"authenticator":"idp-auto-link","authenticatorFlow":false,"requirement":"DISABLED","priority":0}]},
       {"alias":"neon broker login User creation or linking","description":"Flow for the existing/non-existing user alternatives","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[{"authenticatorConfig":"neon broker login create unique user config","authenticator":"idp-create-user-if-unique","authenticatorFlow":false,"requirement":"ALTERNATIVE","priority":10},{"authenticatorFlow":true,"requirement":"ALTERNATIVE","priority":20,"flowAlias":"neon broker login Handle Existing Account"}]},
       {"alias":"neon broker login Verify Existing Account by Re-authentication","description":"Reauthentication of existing account","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[{"authenticator":"idp-username-password-form","authenticatorFlow":false,"requirement":"REQUIRED","priority":10},{"authenticatorFlow":true,"requirement":"CONDITIONAL","priority":20,"flowAlias":"neon broker login First broker login - Conditional 2FA"}]}
     ];
@@ -311,7 +321,7 @@ async function main() {
       displayName: 'GitHub',
       providerId: 'github',
       enabled: true,
-      trustEmail: true,
+      trustEmail: false,
       storeToken: false,
       addReadTokenRoleOnCreate: false,
       authenticateByDefault: false,
@@ -319,8 +329,8 @@ async function main() {
       firstBrokerLoginFlowAlias: 'neon broker login',
       config: {
         syncMode: 'IMPORT',
-        clientId: 'Ov23liIgDgW7ohpcUO2N',
-        clientSecret: 'e230aae5d7bb7eb955a6d4011c7a75be004ba506',
+        clientId: requiredEnv('GITHUB_OAUTH_CLIENT_ID'),
+        clientSecret: requiredEnv('GITHUB_OAUTH_CLIENT_SECRET'),
         useJwksUrl: 'true',
       },
     },
@@ -338,8 +348,8 @@ async function main() {
       config: {
         syncMode: 'FORCE',
         defaultScopes: 'openid profile email',
-        clientId: 'c7f62e39-5155-43fd-a125-8e58219265f6',
-        clientSecret: 'MVb8Q~CG5~GKCSG5GM8rzDnw6DD3L6NNrGUS9a7Z',
+        clientId: requiredEnv('MICROSOFT_CLIENT_ID'),
+        clientSecret: requiredEnv('MICROSOFT_CLIENT_SECRET'),
       },
     },
   ];
@@ -362,21 +372,23 @@ async function main() {
     }
   }
 
-  // ── 9. Verify SMTP (update to mailhog if needed) ──────────────────────────
+  // ── 9. Verify SMTP ────────────────────────────────────────────────────────
   console.log('\nStep 9: Verifying SMTP config...');
   const realmResp = await api('GET', `/admin/realms/${KC_REALM}`, null, token);
   const currentSmtp = realmResp.data?.smtpServer || {};
   const targetSmtp = {
-    host: 'mailhog',
-    port: '1025',
-    from: 'noreply@athyper.com',
-    fromDisplayName: 'Athyper Platform',
-    replyTo: 'manoj.rajendran@atlasdigitaltech.com',
-    replyToDisplayName: 'Athyper Admin',
-    envelopeFrom: 'noreply@athyper.com',
-    ssl: 'false',
-    starttls: 'false',
-    auth: 'false',
+    host: optionalEnv('KC_SMTP_HOST', 'mailhog'),
+    port: optionalEnv('KC_SMTP_PORT', '1025'),
+    from: optionalEnv('KC_SMTP_FROM', 'noreply@athyper.local'),
+    fromDisplayName: optionalEnv('KC_SMTP_FROM_DISPLAY_NAME', 'Athyper'),
+    replyTo: optionalEnv('KC_SMTP_FROM', 'noreply@athyper.local'),
+    replyToDisplayName: optionalEnv('KC_SMTP_FROM_DISPLAY_NAME', 'Athyper'),
+    envelopeFrom: optionalEnv('KC_SMTP_FROM', 'noreply@athyper.local'),
+    ssl: optionalEnv('KC_SMTP_SSL', 'false'),
+    starttls: optionalEnv('KC_SMTP_STARTTLS', 'false'),
+    auth: optionalEnv('KC_SMTP_AUTH', 'false'),
+    user: optionalEnv('KC_SMTP_USERNAME'),
+    password: optionalEnv('KC_SMTP_PASSWORD'),
   };
   const smtpNeedsUpdate = JSON.stringify(currentSmtp) !== JSON.stringify(targetSmtp);
   if (smtpNeedsUpdate) {
@@ -384,9 +396,9 @@ async function main() {
       { ...realmResp.data, smtpServer: targetSmtp }, token
     );
     const ok = smtpUpd.status === 204 || smtpUpd.status === 200;
-    console.log(`  ${ok ? '✓' : '✗'} SMTP updated to mailhog (${smtpUpd.status})`);
+    console.log(`  ${ok ? '✓' : '✗'} SMTP updated (${smtpUpd.status})`);
   } else {
-    console.log('  ✓ SMTP already correct (mailhog:1025)');
+    console.log('  ✓ SMTP already correct');
   }
 
   // ── 10. Final summary ──────────────────────────────────────────────────────

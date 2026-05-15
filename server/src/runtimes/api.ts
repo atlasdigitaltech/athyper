@@ -375,11 +375,9 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   app.get("/healthz", readinessHandler);
   app.get("/health", readinessHandler);
 
-  // Forward-auth endpoint for the Traefik gateway. Mounted on `app` (not
-  // apiRouter) to bypass the X-Org tenant-stamp middleware — Traefik forwards
-  // only the Authorization header. Verifies the bearer token and returns
-  // X-User-Id / X-User-Roles / X-Tenant-Id headers consumed by downstream
-  // routers. See stack/config/gateway/environments/neon-workbench-routes.staging.yml.
+  // Optional bearer-token verifier for gateway/service integrations. Browser
+  // workbench routers do not attach this as Traefik forward-auth because the
+  // web session is cookie-based and enforced by the Next.js BFF/session layer.
   app.get("/api/auth/verify", (req: Request, res: Response): void => {
     void (async () => {
       const authHeader = req.headers["authorization"] ?? "";
@@ -530,6 +528,8 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
     cache:         iamCache,
     objectStorage: objectStorageRef.current ?? undefined,
+    importQueue:   jobs.queues.import,
+    importMaxUploadMb: config.objectStorage?.maxUploadMb,
   });
 
   registerMasterContactsRoutes(apiRouter, {

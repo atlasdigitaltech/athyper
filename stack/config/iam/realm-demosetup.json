@@ -37,6 +37,7 @@
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
+  "passwordPolicy": "length(8) and upperCase(1) and digits(1) and specialChars(1) and notUsername",
   "bruteForceProtected": true,
   "permanentLockout": false,
   "maxTemporaryLockouts": 3,
@@ -1215,6 +1216,69 @@
       "groups": [
         "/grp:workbench:admin"
       ],
+      "attributes": {},
+      "notBefore": 0
+    },
+    {
+      "id": "aa003000-0000-0000-0000-000000000001",
+      "username": "catl.admin",
+      "firstName": "CATL",
+      "lastName": "Admin",
+      "email": "admin@cirrusatlantic.com",
+      "emailVerified": true,
+      "enabled": true,
+      "totp": false,
+      "createdTimestamp": 1743861600000,
+      "credentials": [],
+      "disableableCredentialTypes": [],
+      "requiredActions": ["UPDATE_PASSWORD"],
+      "realmRoles": ["default-roles-athyper"],
+      "clientRoles": {
+        "neon-web": ["WB_ADMIN", "WB_USER", "WB_PARTNER"]
+      },
+      "groups": ["/grp:workbench:admin"],
+      "attributes": {},
+      "notBefore": 0
+    },
+    {
+      "id": "aa003000-0000-0000-0000-000000000002",
+      "username": "catl.owner",
+      "firstName": "CATL",
+      "lastName": "Owner",
+      "email": "owner@cirrusatlantic.com",
+      "emailVerified": true,
+      "enabled": true,
+      "totp": false,
+      "createdTimestamp": 1743861600000,
+      "credentials": [],
+      "disableableCredentialTypes": [],
+      "requiredActions": ["UPDATE_PASSWORD"],
+      "realmRoles": ["default-roles-athyper"],
+      "clientRoles": {
+        "neon-web": ["WB_USER"]
+      },
+      "groups": ["/grp:workbench:user"],
+      "attributes": {},
+      "notBefore": 0
+    },
+    {
+      "id": "aa003000-0000-0000-0000-000000000003",
+      "username": "catl.finance",
+      "firstName": "CATL",
+      "lastName": "Finance Lead",
+      "email": "finance@cirrusatlantic.com",
+      "emailVerified": true,
+      "enabled": true,
+      "totp": false,
+      "createdTimestamp": 1743861600000,
+      "credentials": [],
+      "disableableCredentialTypes": [],
+      "requiredActions": ["UPDATE_PASSWORD"],
+      "realmRoles": ["default-roles-athyper"],
+      "clientRoles": {
+        "neon-web": ["WB_USER"]
+      },
+      "groups": ["/grp:workbench:user"],
       "attributes": {},
       "notBefore": 0
     },
@@ -4972,6 +5036,28 @@
       "members": [
         {"username": "tksa.admin",  "membershipType": "UNMANAGED"},
         {"username": "sdtx.admin",  "membershipType": "UNMANAGED"}
+      ]
+    },
+    {
+      "id": "bb000026-0000-0000-0000-000000000001",
+      "alias": "cirrusatlantic--catl",
+      "name": "cirrusatlantic",
+      "enabled": true,
+      "description": "CirrusAtlantic Group — Kuala Lumpur, Malaysia",
+      "attributes": {
+        "entity_code": ["CATL"],
+        "entity_type": ["holding"],
+        "display_name": ["CirrusAtlantic"],
+        "country": ["MY"],
+        "currency": ["MYR"],
+        "industry_vertical": ["infocomm_services"],
+        "tenant_code": ["cirrusatlantic"]
+      },
+      "domains": [],
+      "members": [
+        {"username": "catl.admin",   "membershipType": "UNMANAGED"},
+        {"username": "catl.owner",   "membershipType": "UNMANAGED"},
+        {"username": "catl.finance", "membershipType": "UNMANAGED"}
       ]
     }
   ],
