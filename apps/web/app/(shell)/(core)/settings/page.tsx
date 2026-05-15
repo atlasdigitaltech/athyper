@@ -30,6 +30,7 @@ import {
 
 // ─── Section imports ──────────────────────────────────────────────────────────
 
+import { useIntl } from "@/components/providers/IntlProvider";
 import { ProfileSection       } from "./_sections/profile-section";
 import { IdentitySection      } from "./_sections/identity-section";
 import { MfaSection           } from "./_sections/mfa-section";
@@ -55,31 +56,31 @@ type SectionId =
 
 const NAV_ITEMS: {
   id: SectionId;
-  label: string;
+  labelId: string;
   icon: React.ElementType;
   adminOnly?: boolean;
 }[] = [
-  { id: "profile",       label: "Profile",               icon: User        },
-  { id: "identity",      label: "Identity & Access",     icon: ShieldCheck },
-  { id: "security",      label: "Security & MFA",        icon: ShieldAlert },
-  { id: "preferences",   label: "Preferences",           icon: Palette     },
-  { id: "notifications", label: "Notifications",         icon: Bell        },
-  { id: "tenant",        label: "Tenant Administration", icon: Building2,  adminOnly: true },
-  { id: "diagnostics",   label: "Diagnostics",           icon: Activity,   adminOnly: true },
-  { id: "docs",          label: "Documentation",         icon: FileText    },
-  { id: "feedback",      label: "Feedback",              icon: MessageSquare },
+  { id: "profile",       labelId: "settings.nav.profile",       icon: User        },
+  { id: "identity",      labelId: "settings.nav.identity",      icon: ShieldCheck },
+  { id: "security",      labelId: "settings.nav.security",      icon: ShieldAlert },
+  { id: "preferences",   labelId: "settings.nav.preferences",   icon: Palette     },
+  { id: "notifications", labelId: "settings.nav.notifications", icon: Bell        },
+  { id: "tenant",        labelId: "settings.nav.tenant",        icon: Building2,  adminOnly: true },
+  { id: "diagnostics",   labelId: "settings.nav.diagnostics",   icon: Activity,   adminOnly: true },
+  { id: "docs",          labelId: "settings.nav.docs",          icon: FileText    },
+  { id: "feedback",      labelId: "settings.nav.feedback",      icon: MessageSquare },
 ];
 
-const SECTION_TITLE: Record<SectionId, string> = {
-  profile:       "Profile",
-  identity:      "Identity & Access",
-  security:      "Security & MFA",
-  preferences:   "Preferences",
-  notifications: "Notification Preferences",
-  tenant:        "Tenant Administration",
-  diagnostics:   "Diagnostics",
-  docs:          "Documentation",
-  feedback:      "Feedback",
+const SECTION_TITLE_IDS: Record<SectionId, string> = {
+  profile:       "settings.nav.profile",
+  identity:      "settings.nav.identity",
+  security:      "settings.nav.security",
+  preferences:   "settings.nav.preferences",
+  notifications: "settings.section.notifications.title",
+  tenant:        "settings.nav.tenant",
+  diagnostics:   "settings.nav.diagnostics",
+  docs:          "settings.nav.docs",
+  feedback:      "settings.nav.feedback",
 };
 
 const VALID_SECTIONS = NAV_ITEMS.map((i) => i.id);
@@ -88,6 +89,7 @@ const VALID_SECTIONS = NAV_ITEMS.map((i) => i.id);
 
 function SettingsContent() {
   const searchParams = useSearchParams();
+  const { formatMessage } = useIntl();
   const raw = (searchParams.get("section") ?? "profile") as SectionId;
 
   const [active,     setActive]     = useState<SectionId>(VALID_SECTIONS.includes(raw) ? raw : "profile");
@@ -102,7 +104,7 @@ function SettingsContent() {
   }
 
   return (
-    <PageFrame title="Settings" description="Manage your profile, access, and preferences">
+    <PageFrame title={formatMessage({ id: "settings.page.title" }) as string} description={formatMessage({ id: "settings.page.description" }) as string}>
       <div className="flex gap-0">
 
         {/* ── Sidebar (desktop ≥ lg) ── */}
@@ -124,9 +126,9 @@ function SettingsContent() {
                   )}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+                  <span className="min-w-0 flex-1 truncate text-left">{formatMessage({ id: item.labelId })}</span>
                   {item.adminOnly && (
-                    <Badge variant="secondary" className="shrink-0 text-2xs">Admin</Badge>
+                    <Badge variant="secondary" className="shrink-0 text-2xs">{formatMessage({ id: "settings.badge.admin" })}</Badge>
                   )}
                 </button>
               );
@@ -140,7 +142,7 @@ function SettingsContent() {
               className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs text-destructive transition-colors hover:bg-muted"
             >
               <LogOut className="h-3.5 w-3.5 shrink-0" />
-              <span className="text-left">Log Out</span>
+              <span className="text-left">{formatMessage({ id: "settings.logout.label" })}</span>
             </button>
           </nav>
         </aside>
@@ -156,7 +158,7 @@ function SettingsContent() {
               <SelectContent>
                 {NAV_ITEMS.map((item) => (
                   <SelectItem key={item.id} value={item.id} className="text-sm">
-                    {item.label}
+                    {formatMessage({ id: item.labelId })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -165,7 +167,7 @@ function SettingsContent() {
 
           {/* Section heading */}
           <h2 className="mb-4 text-base font-semibold text-foreground">
-            {SECTION_TITLE[active]}
+            {formatMessage({ id: SECTION_TITLE_IDS[active] })}
           </h2>
 
           {/* Sections — rendered on first activation, hidden (not unmounted) after */}
@@ -212,16 +214,16 @@ function SettingsContent() {
             className="w-full max-w-sm rounded-xl bg-card p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-2 text-base font-semibold text-foreground">Log Out?</h3>
+            <h3 className="mb-2 text-base font-semibold text-foreground">{formatMessage({ id: "settings.logout.confirmTitle" })}</h3>
             <p className="mb-5 text-sm text-muted-foreground">
-              You&apos;ll need to sign in again. Unsaved preference changes will be lost.
+              {formatMessage({ id: "settings.logout.confirmMessage" })}
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowLogout(false)}>
-                Cancel
+                {formatMessage({ id: "settings.logout.cancel" })}
               </Button>
               <a href="/logout">
-                <Button variant="destructive" size="sm">Log Out</Button>
+                <Button variant="destructive" size="sm">{formatMessage({ id: "settings.logout.label" })}</Button>
               </a>
             </div>
           </div>

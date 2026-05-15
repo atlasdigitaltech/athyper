@@ -23,9 +23,11 @@ import { Building2, Check, ChevronDown, Search } from "lucide-react";
 import { Badge } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import { useShellSession } from "@/components/providers/SessionProvider";
+import { useIntl } from "@/components/providers/IntlProvider";
 
 export function EntitySelector() {
   const { bff, switchContext } = useShellSession();
+  const { formatMessage } = useIntl();
   const { organizations, activeOrg, activeWorkbench } = bff;
 
   const [open, setOpen] = useState(false);
@@ -132,7 +134,7 @@ export function EntitySelector() {
       >
         <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         <Badge variant={activeEntityCode ? "secondary" : "outline"} className="text-doc-subtitle">
-          {activeEntityCode ?? "Select"}
+          {activeEntityCode ?? formatMessage({ id: "shell.entitySelector.placeholder" })}
         </Badge>
         {activeOrgEntry && (
           <span className="hidden max-w-[140px] truncate text-xs font-medium text-muted-foreground lg:block">
@@ -163,7 +165,7 @@ export function EntitySelector() {
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search entities…"
+                placeholder={formatMessage({ id: "shell.entitySelector.search" }) as string}
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
@@ -172,7 +174,7 @@ export function EntitySelector() {
           <div className="max-h-72 overflow-y-auto py-1">
             {filteredGroups.size === 0 && (
               <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-                No entities found
+                {formatMessage({ id: "shell.entitySelector.empty" })}
               </p>
             )}
 

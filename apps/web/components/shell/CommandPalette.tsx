@@ -54,6 +54,7 @@ import {
   type RecentItem,
 } from "@/lib/recent-items";
 import { useGlobalSearch, type SearchHit } from "@/hooks/useGlobalSearch";
+import { useIntl } from "@/components/providers/IntlProvider";
 
 // ── Module icons registry (module-code → icon) ────────────────────────────────
 
@@ -172,10 +173,10 @@ const MODULE_PAGES_NAV: Partial<Record<string, NavPage[]>> = {
 
 // ── Global pages (always visible in Search tab) ───────────────────────────────
 
-const GLOBAL_PAGES: Array<{ label: string; href: string; keywords: string[]; icon: LucideIcon; badge: string }> = [
-  { label: "Home", href: "/home", keywords: ["home", "start", "dashboard", "overview"], icon: Home, badge: "HOME" },
-  { label: "Work Inbox", href: "/inbox", keywords: ["inbox", "tasks", "approvals", "my work", "work queue"], icon: Inbox, badge: "INBOX" },
-  { label: "Settings", href: "/settings", keywords: ["settings", "preferences", "profile", "account", "config"], icon: Settings, badge: "SET" },
+const GLOBAL_PAGES: Array<{ labelId: string; href: string; keywords: string[]; icon: LucideIcon; badge: string }> = [
+  { labelId: "shell.command.page.home",     href: "/home",     keywords: ["home", "start", "dashboard", "overview"], icon: Home, badge: "HOME" },
+  { labelId: "shell.command.page.inbox",    href: "/inbox",    keywords: ["inbox", "tasks", "approvals", "my work", "work queue"], icon: Inbox, badge: "INBOX" },
+  { labelId: "shell.command.page.settings", href: "/settings", keywords: ["settings", "preferences", "profile", "account", "config"], icon: Settings, badge: "SET" },
 ];
 
 // ── Record family label ───────────────────────────────────────────────────────
@@ -206,6 +207,7 @@ function hitHref(hit: SearchHit): string {
 
 export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) {
   const router = useRouter();
+  const { formatMessage } = useIntl();
   const [activeTab, setActiveTab] = useState<PaletteTab>("search");
   const [query, setQuery] = useState("");
 
@@ -250,7 +252,7 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
       onSearchChange={setQuery}
       activeTab={activeTab}
       onTabChange={handleTabChange}
-      emptyMessage="No results — try a module name, record code, or action"
+      emptyMessage={formatMessage({ id: "shell.command.empty" }) as string}
     >
       {/* ══════════════════════════════════════════════════
           SEARCH TAB
@@ -258,24 +260,25 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
       {activeTab === "search" && (
         <>
           {/* Global pages */}
-          <CommandPaletteBase.Group heading="Pages">
+          <CommandPaletteBase.Group heading={formatMessage({ id: "shell.command.group.pages" }) as string}>
             {GLOBAL_PAGES.map((page) => {
               const Icon = page.icon;
+              const pageLabel = formatMessage({ id: page.labelId }) as string;
               return (
                 <CommandPaletteBase.Item
                   key={page.href}
-                  value={page.label}
+                  value={pageLabel}
                   keywords={page.keywords}
                   onSelect={() =>
                     navigate(page.href, {
                       href: page.href,
-                      label: page.label,
+                      label: pageLabel,
                       recordFamily: "page",
                     })
                   }
                 >
                   <Icon className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 truncate">{page.label}</span>
+                  <span className="flex-1 truncate">{pageLabel}</span>
                   <CommandPaletteBase.Badge>{page.badge}</CommandPaletteBase.Badge>
                 </CommandPaletteBase.Item>
               );
@@ -287,7 +290,7 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
           {/* Runtime modules */}
           {modules.length > 0 && (
             <>
-              <CommandPaletteBase.Group heading="Modules">
+              <CommandPaletteBase.Group heading={formatMessage({ id: "shell.command.group.modules" }) as string}>
                 {modules.map((mod) => {
                   const Icon = moduleIcon(mod.code);
                   const href = `/module/${mod.code.toLowerCase()}`;
@@ -350,7 +353,7 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
           {searchHits.length > 0 && (
             <>
               <CommandPaletteBase.Separator />
-              <CommandPaletteBase.Group heading="Records">
+              <CommandPaletteBase.Group heading={formatMessage({ id: "shell.command.group.records" }) as string}>
                 {searchHits.map((hit) => {
                   const href = hitHref(hit);
                   return (
@@ -387,7 +390,7 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
       {activeTab === "create" && (
         <>
           {availableCreateActions.length > 0 ? (
-            <CommandPaletteBase.Group heading="Actions">
+            <CommandPaletteBase.Group heading={formatMessage({ id: "shell.command.group.actions" }) as string}>
               {availableCreateActions.map((action) => {
                 const Icon = moduleIcon(action.moduleCode);
                 return (
@@ -413,7 +416,7 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
             </CommandPaletteBase.Group>
           ) : (
             // Fallback: no modules loaded yet
-            <CommandPaletteBase.Group heading="Actions">
+            <CommandPaletteBase.Group heading={formatMessage({ id: "shell.command.group.actions" }) as string}>
               <CommandPaletteBase.Item
                 value="New Journal Entry"
                 keywords={["journal", "entry", "je"]}
@@ -442,7 +445,7 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
         <>
           {pinnedItems.length > 0 && (
             <>
-              <CommandPaletteBase.Group heading="Pinned">
+              <CommandPaletteBase.Group heading={formatMessage({ id: "shell.command.group.pinned" }) as string}>
                 {pinnedItems.map((item) => (
                   <RecentRow
                     key={item.href}
@@ -465,7 +468,7 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
           )}
 
           {unpinnedItems.length > 0 && (
-            <CommandPaletteBase.Group heading="Recently Viewed">
+            <CommandPaletteBase.Group heading={formatMessage({ id: "shell.command.group.recent" }) as string}>
               {unpinnedItems.map((item) => (
                 <RecentRow
                   key={item.href}
@@ -487,7 +490,7 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
 
           {recentItems.length === 0 && (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              No recent activity yet
+              {formatMessage({ id: "shell.command.empty.recent" })}
             </div>
           )}
         </>

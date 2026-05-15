@@ -6,6 +6,7 @@ import {
   InfoRow, SectionCard, Banner, DataTable, SkeletonCard,
   StatusBadge, useSectionData, str, fmtDate,
 } from "@/components/settings/shared";
+import { useIntl, useFormatRich } from "@/components/providers/IntlProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,8 @@ interface TenantAdminData {
 // ─── TenantSection ─────────────────────────────────────────────────────────────
 
 export function TenantSection({ active }: { active: boolean }) {
+  const { formatMessage } = useIntl();
+  const formatRich        = useFormatRich();
   const { data, loading, error } = useSectionData<TenantAdminData>(active, "/api/user/tenant-admin");
 
   if (loading) {
@@ -37,18 +40,12 @@ export function TenantSection({ active }: { active: boolean }) {
     return (
       <div className="w-full">
         <Banner variant="warn">
-          {isPermission ? (
-            <>
-              You do not have tenant administration privileges. This section requires membership
-              in the <strong>Tenant Administrators</strong> group.
-            </>
-          ) : (
-            <>
-              Could not load tenant data —{" "}
-              <code className="font-mono text-2xs">{error}</code>.{" "}
-              Ensure the runtime service is running and try refreshing.
-            </>
-          )}
+          {isPermission
+            ? formatRich(
+                { id: "settings.tenant.banner.noPermission" },
+                { strong: (chunks) => <strong>{chunks}</strong> },
+              )
+            : formatMessage({ id: "settings.tenant.banner.loadFailed" }, { error })}
         </Banner>
       </div>
     );
@@ -60,35 +57,37 @@ export function TenantSection({ active }: { active: boolean }) {
   return (
     <div className="w-full">
       <Banner variant="warn">
-        Tenant settings are <strong>view-only</strong> in this panel. Full configuration is managed
-        through <strong>Tenant Studio</strong>.
+        {formatRich(
+          { id: "settings.tenant.banner.viewOnly" },
+          { strong: (chunks) => <strong>{chunks}</strong> },
+        )}
       </Banner>
 
       {/* ── Tenant ── */}
       <SectionCard
-        title="Tenant"
+        title={formatMessage({ id: "settings.tenant.section.tenant" }) as string}
         icon={Building2}
         managedBy={{
-          manager:  "Platform / Tenant Studio",
+          manager:  formatMessage({ id: "settings.tenant.section.tenant.managedBy" }) as string,
           source:   "master.tenant",
-          editPath: "Changes via Tenant Studio only",
+          editPath: formatMessage({ id: "settings.tenant.section.tenant.editPath" }) as string,
         }}
       >
         <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
           <div>
-            <InfoRow label="Tenant Code"  value={str(t?.["code"])}         mono copyable hint="Immutable identifier for this tenant" />
-            <InfoRow label="Name"         value={str(t?.["name"])} />
-            <InfoRow label="Display Name" value={str(t?.["display_name"])} />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.code" }) as string}  value={str(t?.["code"])}         mono copyable hint={formatMessage({ id: "settings.tenant.field.code.hint" }) as string} />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.name" }) as string}         value={str(t?.["name"])} />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.displayName" }) as string} value={str(t?.["display_name"])} />
           </div>
           <div>
-            <InfoRow label="Realm"        value={str(t?.["realm_key"])} mono hint="Keycloak realm key" />
-            <InfoRow label="Region"       value={str(t?.["region"])} />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.realm" }) as string} value={str(t?.["realm_key"])} mono hint={formatMessage({ id: "settings.tenant.field.realm.hint" }) as string} />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.region" }) as string} value={str(t?.["region"])} />
             <InfoRow
-              label="Subscription"
+              label={formatMessage({ id: "settings.tenant.field.subscription" }) as string}
               value={<StatusBadge status={str(t?.["subscription"], "starter")}>{str(t?.["subscription"], "starter")}</StatusBadge>}
             />
             <InfoRow
-              label="Status"
+              label={formatMessage({ id: "settings.tenant.field.status" }) as string}
               value={<StatusBadge status={str(t?.["status"], "active")}>{str(t?.["status"], "active")}</StatusBadge>}
             />
           </div>
@@ -97,51 +96,56 @@ export function TenantSection({ active }: { active: boolean }) {
 
       {/* ── Tenant Profile ── */}
       <SectionCard
-        title="Tenant Profile"
+        title={formatMessage({ id: "settings.tenant.section.profile" }) as string}
         icon={Globe}
         managedBy={{
-          manager:  "Tenant Admin",
+          manager:  formatMessage({ id: "settings.tenant.section.profile.managedBy" }) as string,
           source:   "master.tenant_profile",
-          editPath: "Default locale, currency and fiscal settings for all principals",
+          editPath: formatMessage({ id: "settings.tenant.section.profile.editPath" }) as string,
         }}
       >
         <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
           <div>
-            <InfoRow label="Country"            value={str(tp?.["country_code"])}           hint="ISO 3166-1 alpha-2" />
-            <InfoRow label="Currency"           value={str(tp?.["currency_code"])}           hint="ISO 4217 transaction currency" />
-            <InfoRow label="Reporting Currency" value={str(tp?.["reporting_currency_code"])} hint="Consolidated reporting currency" />
-            <InfoRow label="Locale"             value={str(tp?.["locale_code"])}             hint="BCP-47 default locale" />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.country" }) as string}            value={str(tp?.["country_code"])}           hint={formatMessage({ id: "settings.tenant.field.country.hint" }) as string} />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.currency" }) as string}           value={str(tp?.["currency_code"])}           hint={formatMessage({ id: "settings.tenant.field.currency.hint" }) as string} />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.reportingCurrency" }) as string} value={str(tp?.["reporting_currency_code"])} hint={formatMessage({ id: "settings.tenant.field.reportingCurrency.hint" }) as string} />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.locale" }) as string}             value={str(tp?.["locale_code"])}             hint={formatMessage({ id: "settings.tenant.field.locale.hint" }) as string} />
           </div>
           <div>
-            <InfoRow label="Timezone"          value={str(tp?.["timezone_code"])} />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.timezone" }) as string}          value={str(tp?.["timezone_code"])} />
             <InfoRow
-              label="Fiscal Year Start"
-              value={tp?.["fiscal_year_start_month"] ? `Month ${tp["fiscal_year_start_month"]}` : "—"}
-              hint="Month number (1 = January)"
+              label={formatMessage({ id: "settings.tenant.field.fiscalYearStart" }) as string}
+              value={tp?.["fiscal_year_start_month"] ? (formatMessage({ id: "settings.tenant.field.fiscalYearStart.value" }, { month: String(tp["fiscal_year_start_month"]) }) as string) : "—"}
+              hint={formatMessage({ id: "settings.tenant.field.fiscalYearStart.hint" }) as string}
             />
-            <InfoRow label="Date Format"  value={str(tp?.["date_format"])} mono />
-            <InfoRow label="Week Start"   value={str(tp?.["week_start"])}  hint="0 = Sunday, 1 = Monday" />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.dateFormat" }) as string}  value={str(tp?.["date_format"])} mono />
+            <InfoRow label={formatMessage({ id: "settings.tenant.field.weekStart" }) as string}   value={str(tp?.["week_start"])}  hint={formatMessage({ id: "settings.tenant.field.weekStart.hint" }) as string} />
           </div>
         </div>
       </SectionCard>
 
       {/* ── Module Subscriptions ── */}
       <SectionCard
-        title="Module Subscriptions"
+        title={formatMessage({ id: "settings.tenant.section.modules" }) as string}
         icon={Layers}
         badge={
           <Badge variant="secondary" className="text-2xs">
-            {data?.modules.length ?? 0} modules
+            {formatMessage({ id: "settings.tenant.section.modules.badge" }, { count: data?.modules.length ?? 0 })}
           </Badge>
         }
         managedBy={{
-          manager: "Platform / Tenant Admin",
+          manager: formatMessage({ id: "settings.tenant.section.modules.managedBy" }) as string,
           source:  "master.tenant_module_subscription",
         }}
       >
         {(data?.modules ?? []).length > 0 ? (
           <DataTable
-            columns={["Module", "Code", "Status", "Subscribed"]}
+            columns={[
+              formatMessage({ id: "settings.tenant.column.module" }) as string,
+              formatMessage({ id: "settings.tenant.column.code" }) as string,
+              formatMessage({ id: "settings.tenant.column.status" }) as string,
+              formatMessage({ id: "settings.tenant.column.subscribed" }) as string,
+            ]}
             rows={(data?.modules ?? []).map((m) => [
               str(m["module_name"]),
               <span key="code" className="font-mono text-2xs">{str(m["module_code"])}</span>,
@@ -150,22 +154,26 @@ export function TenantSection({ active }: { active: boolean }) {
             ])}
           />
         ) : (
-          <p className="text-xs text-muted-foreground">No module subscriptions found.</p>
+          <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.tenant.section.modules.empty" })}</p>
         )}
       </SectionCard>
 
       {/* ── Feature Entitlements (only if present) ── */}
       {(data?.features ?? []).length > 0 && (
         <SectionCard
-          title="Feature Entitlements"
+          title={formatMessage({ id: "settings.tenant.section.features" }) as string}
           icon={Sparkles}
           managedBy={{
-            manager: "Platform",
+            manager: formatMessage({ id: "settings.tenant.section.features.managedBy" }) as string,
             source:  "master.tenant_feature_entitlement",
           }}
         >
           <DataTable
-            columns={["Feature ID", "Status", "Expires"]}
+            columns={[
+              formatMessage({ id: "settings.tenant.column.featureId" }) as string,
+              formatMessage({ id: "settings.tenant.column.status" }) as string,
+              formatMessage({ id: "settings.tenant.column.expires" }) as string,
+            ]}
             rows={(data?.features ?? []).map((f) => [
               <span key="id" className="font-mono text-2xs">{str(f["feature_id"])}</span>,
               <StatusBadge key="status" status={str(f["status"])}>{str(f["status"])}</StatusBadge>,
@@ -178,34 +186,39 @@ export function TenantSection({ active }: { active: boolean }) {
       {/* ── Permission Overrides (only if present) ── */}
       {(data?.permission_overrides ?? []).length > 0 && (
         <SectionCard
-          title="Permission Overrides"
+          title={formatMessage({ id: "settings.tenant.section.overrides" }) as string}
           icon={ShieldCheck}
           managedBy={{
-            manager:  "Platform Support",
+            manager:  formatMessage({ id: "settings.tenant.section.overrides.managedBy" }) as string,
             source:   "master.tenant_permission_override",
-            editPath: "Contact Platform Support to modify",
+            editPath: formatMessage({ id: "settings.tenant.section.overrides.editPath" }) as string,
           }}
         >
           <DataTable
-            columns={["Permission", "Effect", "Reason", "Expires"]}
+            columns={[
+              formatMessage({ id: "settings.tenant.column.permission" }) as string,
+              formatMessage({ id: "settings.tenant.column.effect" }) as string,
+              formatMessage({ id: "settings.tenant.column.reason" }) as string,
+              formatMessage({ id: "settings.tenant.column.expires" }) as string,
+            ]}
             rows={(data?.permission_overrides ?? []).map((o) => [
               <span key="id" className="font-mono text-2xs">{str(o["permission_id"])}</span>,
               <StatusBadge key="effect" status={o["is_granted"] ? "allow" : "deny"}>
-                {o["is_granted"] ? "Granted" : "Denied"}
+                {formatMessage({ id: o["is_granted"] ? "settings.tenant.effect.granted" : "settings.tenant.effect.denied" })}
               </StatusBadge>,
               str(o["reason"]),
               fmtDate(o["expires_at"]),
             ])}
           />
           <p className="mt-2 text-2xs text-muted-foreground">
-            Platform-level overrides take precedence over tenant and group role assignments.
+            {formatMessage({ id: "settings.tenant.overrides.note" })}
           </p>
         </SectionCard>
       )}
 
       <div className="mt-2 flex justify-center">
         <Button variant="outline" className="gap-2 text-sm">
-          <ExternalLink className="h-4 w-4" /> Open Tenant Studio
+          <ExternalLink className="h-4 w-4" /> {formatMessage({ id: "settings.tenant.openStudio" })}
         </Button>
       </div>
     </div>

@@ -1,9 +1,9 @@
 "use client";
 
 import { CheckCircle2, Fingerprint, Key, User, Briefcase, Pencil } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
 import { Badge, Button, Card, CardContent } from "@athyper/ui/primitives";
 import { useShellSession } from "@/components/providers/SessionProvider";
+import { useIntl } from "@/components/providers/IntlProvider";
 import {
   InfoRow, SectionCard, Banner, SkeletonCard,
   useSectionData, str, fmtDate, fmtDateTime,
@@ -21,6 +21,7 @@ interface ProfileData {
 
 export function ProfileSection({ active }: { active: boolean }) {
   const { bff }                  = useShellSession();
+  const { formatMessage }        = useIntl();
   const { data, loading, error } = useSectionData<ProfileData>(active, "/api/user/profile");
 
   const initials = bff.displayName
@@ -39,9 +40,7 @@ export function ProfileSection({ active }: { active: boolean }) {
     <div className="w-full">
       {error && (
         <Banner variant="warn">
-          Could not load profile data —{" "}
-          <code className="font-mono text-2xs">{error}</code>. Ensure the
-          runtime service is running and your session is active.
+          {formatMessage({ id: "settings.profile.error.loadFailed" }, { error })}
         </Banner>
       )}
 
@@ -63,7 +62,7 @@ export function ProfileSection({ active }: { active: boolean }) {
               <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <Badge variant="success" className="text-2xs">Active</Badge>
+              <Badge variant="success" className="text-2xs">{formatMessage({ id: "settings.profile.badge.active" })}</Badge>
               <Badge variant="secondary" className="text-2xs capitalize">
                 {str(p?.["principal_type"], "user")}
               </Badge>
@@ -71,7 +70,7 @@ export function ProfileSection({ active }: { active: boolean }) {
                 {str(p?.["principal_source"], "internal")}
               </Badge>
               {!!pp?.["employee_id"] && (
-                <Badge variant="success" className="text-2xs">Employee linked</Badge>
+                <Badge variant="success" className="text-2xs">{formatMessage({ id: "settings.profile.badge.employeeLinked" })}</Badge>
               )}
             </div>
           </div>
@@ -79,7 +78,7 @@ export function ProfileSection({ active }: { active: boolean }) {
           {/* Tenant context */}
           {bff.activeOrg && (
             <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
-              <span className="text-2xs text-muted-foreground">Tenant</span>
+              <span className="text-2xs text-muted-foreground">{formatMessage({ id: "settings.profile.tenant" })}</span>
               <span className="text-sm font-semibold text-foreground">
                 {entityCode ?? tenantCode}
               </span>
@@ -104,56 +103,56 @@ export function ProfileSection({ active }: { active: boolean }) {
         <>
           {/* ── Account Identity ── */}
           <SectionCard
-            title="Account Identity"
+            title={formatMessage({ id: "settings.profile.section.identity" }) as string}
             icon={Fingerprint}
             managedBy={{
-              manager:  "System / Tenant Admin",
+              manager:  formatMessage({ id: "settings.profile.section.identity.managedBy" }) as string,
               source:   "master.principal",
-              editPath: "Read-only — no direct mutations",
+              editPath: formatMessage({ id: "settings.profile.section.identity.editPath" }) as string,
             }}
           >
             <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
               <div>
-                <InfoRow label="Code"        value={str(p?.["code"])}  mono copyable hint="Human-readable code, unique per tenant." />
-                <InfoRow label="Login Email" value={bff.email}         verified hint="Trigger-maintained; source of truth is contact_link." />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.code" }) as string}        value={str(p?.["code"])}  mono copyable hint={formatMessage({ id: "settings.profile.field.code.hint" }) as string} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.loginEmail" }) as string} value={bff.email}         verified hint={formatMessage({ id: "settings.profile.field.loginEmail.hint" }) as string} />
               </div>
               <div>
-                <InfoRow label="Type"          value={str(p?.["principal_type"], "user")}     hint="user or service_account" />
-                <InfoRow label="Source"        value={str(p?.["principal_source"], "internal")} hint="internal | scim | saml_jit | oidc_jit | import | api" />
-                <InfoRow label="Created"       value={fmtDate(p?.["created_at"])} />
-                <InfoRow label="Enabled"       value={fmtDate(pp?.["enabled_date"])} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.type" }) as string}          value={str(p?.["principal_type"], "user")}     hint={formatMessage({ id: "settings.profile.field.type.hint" }) as string} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.source" }) as string}        value={str(p?.["principal_source"], "internal")} hint={formatMessage({ id: "settings.profile.field.source.hint" }) as string} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.created" }) as string}       value={fmtDate(p?.["created_at"])} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.enabled" }) as string}       value={fmtDate(pp?.["enabled_date"])} />
               </div>
             </div>
           </SectionCard>
 
           {/* ── Display Profile ── */}
           <SectionCard
-            title="Display Profile"
+            title={formatMessage({ id: "settings.profile.section.display" }) as string}
             icon={User}
             badge={
               <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-xs">
-                <Pencil className="h-3 w-3" /> Request Change
+                <Pencil className="h-3 w-3" /> {formatMessage({ id: "settings.profile.requestChange" })}
               </Button>
             }
             managedBy={{
-              manager:     "You (via profile request)",
+              manager:     formatMessage({ id: "settings.profile.section.display.managedBy" }) as string,
               source:      "master.principal_profile",
               lastUpdated: pp?.["updated_at"] as string | undefined,
-              editPath:    "Submit UPUPR workflow",
+              editPath:    formatMessage({ id: "settings.profile.section.display.editPath" }) as string,
             }}
           >
             <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
               <div>
-                <InfoRow label="Given Name"     value={str(pp?.["given_name"])}     hint="Legal first name" />
-                <InfoRow label="Family Name"    value={str(pp?.["family_name"])}    hint="Legal last name" />
-                <InfoRow label="Preferred Name" value={str(pp?.["preferred_name"])} hint="Informal / display preference" />
-                <InfoRow label="Display Name"   value={str(pp?.["display_name"])}   hint="Computed display name shown throughout the platform" />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.givenName" }) as string}     value={str(pp?.["given_name"])}     hint={formatMessage({ id: "settings.profile.field.givenName.hint" }) as string} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.familyName" }) as string}    value={str(pp?.["family_name"])}    hint={formatMessage({ id: "settings.profile.field.familyName.hint" }) as string} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.preferredName" }) as string} value={str(pp?.["preferred_name"])} hint={formatMessage({ id: "settings.profile.field.preferredName.hint" }) as string} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.displayName" }) as string}   value={str(pp?.["display_name"])}   hint={formatMessage({ id: "settings.profile.field.displayName.hint" }) as string} />
               </div>
               <div>
-                <InfoRow label="Locale"          value={str(pp?.["locale"])}                   hint="BCP-47 locale override (e.g. en-US)" />
-                <InfoRow label="Timezone"        value={str(pp?.["timezone"])}                  hint="Personal timezone override for display" />
-                <InfoRow label="Default Company" value={str(pp?.["default_company_code_id"])}   mono hint="Working-context default — pre-populates document headers" />
-                <InfoRow label="Default Cost Centre" value={str(pp?.["default_cost_center_id"])} mono hint="Default cost centre for expense allocation" />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.locale" }) as string}          value={str(pp?.["locale"])}                   hint={formatMessage({ id: "settings.profile.field.locale.hint" }) as string} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.timezone" }) as string}        value={str(pp?.["timezone"])}                  hint={formatMessage({ id: "settings.profile.field.timezone.hint" }) as string} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.defaultCompany" }) as string} value={str(pp?.["default_company_code_id"])}   mono hint={formatMessage({ id: "settings.profile.field.defaultCompany.hint" }) as string} />
+                <InfoRow label={formatMessage({ id: "settings.profile.field.defaultCostCenter" }) as string} value={str(pp?.["default_cost_center_id"])} mono hint={formatMessage({ id: "settings.profile.field.defaultCostCenter.hint" }) as string} />
               </div>
             </div>
           </SectionCard>
@@ -161,34 +160,34 @@ export function ProfileSection({ active }: { active: boolean }) {
           {/* ── Work Profile (if employee linked) ── */}
           {pp?.["employee_id"] && (
             <SectionCard
-              title="Work Profile"
+              title={formatMessage({ id: "settings.profile.section.work" }) as string}
               icon={Briefcase}
               badge={
                 <Button variant="ghost" size="sm" className="h-6 gap-1 px-2 text-xs">
-                  <Pencil className="h-3 w-3" /> Request Change
+                  <Pencil className="h-3 w-3" /> {formatMessage({ id: "settings.profile.requestChange" })}
                 </Button>
               }
               managedBy={{
-                manager:  "HR / Tenant Admin",
+                manager:  formatMessage({ id: "settings.profile.section.work.managedBy" }) as string,
                 source:   "master.employee → principal_profile.employee_id",
-                editPath: "Submit UPUPR or HR update",
+                editPath: formatMessage({ id: "settings.profile.section.work.editPath" }) as string,
               }}
             >
-              <InfoRow label="Employee ID" value={str(pp?.["employee_id"])} mono copyable />
-              <InfoRow label="Default Project"      value={str(pp?.["default_project_id"])}      mono />
-              <InfoRow label="Default Profit Centre" value={str(pp?.["default_profit_center_id"])} mono />
+              <InfoRow label={formatMessage({ id: "settings.profile.field.employeeId" }) as string} value={str(pp?.["employee_id"])} mono copyable />
+              <InfoRow label={formatMessage({ id: "settings.profile.field.defaultProject" }) as string}      value={str(pp?.["default_project_id"])}      mono />
+              <InfoRow label={formatMessage({ id: "settings.profile.field.defaultProfitCenter" }) as string} value={str(pp?.["default_profit_center_id"])} mono />
             </SectionCard>
           )}
 
           {/* ── Identity Provider Binding ── */}
           {(data?.auth_bindings ?? []).length > 0 && (
             <SectionCard
-              title="Identity Provider Status"
+              title={formatMessage({ id: "settings.profile.section.idp" }) as string}
               icon={Key}
               managedBy={{
-                manager:  "Identity Provider (Athyper IAM)",
+                manager:  formatMessage({ id: "settings.profile.section.idp.managedBy" }) as string,
                 source:   "master.principal_identity_binding",
-                editPath: "Managed by your organisation's login provider",
+                editPath: formatMessage({ id: "settings.profile.section.idp.editPath" }) as string,
               }}
             >
               {(data?.auth_bindings ?? []).map((ab, i) => {
@@ -205,40 +204,41 @@ export function ProfileSection({ active }: { active: boolean }) {
                   ? (ab["keycloak_required_actions"] as string[])
                   : [];
 
+                const syncHintId =
+                  syncStatus === "synced"  ? "settings.profile.syncStatus.synced" :
+                  syncStatus === "drift"   ? "settings.profile.syncStatus.drift" :
+                  syncStatus === "pending" ? "settings.profile.syncStatus.pending" :
+                  syncStatus === "error"   ? "settings.profile.syncStatus.error" :
+                  "settings.profile.syncStatus.disabled";
+
                 return (
                   <div key={i}>
                     <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
                       <div>
-                        <InfoRow label="Provider" value={<Badge variant={providerVariant}>{str(ab["provider_code"])}</Badge>} />
-                        <InfoRow label="Username" value={str(ab["keycloak_username"] ?? ab["username"])} mono hint="Login username at the identity provider" />
+                        <InfoRow label={formatMessage({ id: "settings.profile.field.provider" }) as string} value={<Badge variant={providerVariant}>{str(ab["provider_code"])}</Badge>} />
+                        <InfoRow label={formatMessage({ id: "settings.profile.field.username" }) as string} value={str(ab["keycloak_username"] ?? ab["username"])} mono hint={formatMessage({ id: "settings.profile.field.username.hint" }) as string} />
                       </div>
                       <div>
-                        <InfoRow label="Sync Status"
+                        <InfoRow label={formatMessage({ id: "settings.profile.field.syncStatus" }) as string}
                           value={<Badge variant={syncVariant}>{syncStatus}</Badge>}
-                          hint={
-                            syncStatus === "synced"  ? "Identity record matches provider" :
-                            syncStatus === "drift"   ? "Mismatch detected — re-sync recommended" :
-                            syncStatus === "pending" ? "Awaiting first synchronisation" :
-                            syncStatus === "error"   ? "Synchronisation failed" :
-                            "Provider link disabled"
-                          }
+                          hint={formatMessage({ id: syncHintId }) as string}
                         />
-                        <InfoRow label="Last Synced"    value={fmtDateTime(ab["keycloak_synced_at"] ?? ab["synced_at"])} />
-                        <InfoRow label="IdP Enabled"
+                        <InfoRow label={formatMessage({ id: "settings.profile.field.lastSynced" }) as string}    value={fmtDateTime(ab["keycloak_synced_at"] ?? ab["synced_at"])} />
+                        <InfoRow label={formatMessage({ id: "settings.profile.field.idpEnabled" }) as string}
                           value={ab["idp_enabled"] !== false
-                            ? <span className="text-success">✓ Enabled</span>
-                            : <span className="text-destructive">✗ Disabled</span>}
+                            ? <span className="text-success">{formatMessage({ id: "settings.profile.enabled" })}</span>
+                            : <span className="text-destructive">{formatMessage({ id: "settings.profile.disabled" })}</span>}
                         />
-                        <InfoRow label="Email Verified"
+                        <InfoRow label={formatMessage({ id: "settings.profile.field.emailVerified" }) as string}
                           value={ab["idp_email_verified"]
-                            ? <span className="text-success">✓ Verified</span>
-                            : <span className="text-destructive">✗ Unverified</span>}
+                            ? <span className="text-success">{formatMessage({ id: "settings.profile.verified" })}</span>
+                            : <span className="text-destructive">{formatMessage({ id: "settings.profile.unverified" })}</span>}
                         />
                       </div>
                     </div>
                     {requiredActions.length > 0 && (
                       <Banner variant="warn">
-                        <strong>Required actions from IdP:</strong>{" "}
+                        <strong>{formatMessage({ id: "settings.profile.idp.requiredActions" })}</strong>{" "}
                         {requiredActions.join(", ")}
                       </Banner>
                     )}

@@ -19,7 +19,14 @@ import { Inbox, CheckCircle2 } from "lucide-react";
 import { ContextPanel } from "@athyper/shell";
 import { deriveNavTree, deriveCoreModules, CORE_GROUPS, MODULE_PAGES } from "@athyper/navigation";
 import { useShellSession } from "@/components/providers/SessionProvider";
+import { useIntl } from "@/components/providers/IntlProvider";
 import { getWorkbenchLabel } from "@/lib/auth/workbench-config";
+
+const WORKBENCH_LABEL_IDS: Record<string, string> = {
+  user:    "shell.workbench.label.user",
+  partner: "shell.workbench.label.partner",
+  admin:   "shell.workbench.label.admin",
+};
 
 export interface AppContextPanelProps {
   activeWorkspaceKey: string | null;
@@ -38,6 +45,7 @@ export function AppContextPanel({
   const { runtime, bff } = useShellSession();
   const router = useRouter();
   const pathname = usePathname();
+  const { formatMessage } = useIntl();
 
   if (!runtime || !activeWorkspaceKey) return null;
 
@@ -45,7 +53,9 @@ export function AppContextPanel({
   const navTree = deriveNavTree(runtime.modules);
   const platformItems = deriveCoreModules(runtime.platform, runtime.modules);
   const workbenchLabel = bff.activeWorkbench
-    ? getWorkbenchLabel(bff.activeWorkbench)
+    ? (WORKBENCH_LABEL_IDS[bff.activeWorkbench]
+        ? formatMessage({ id: WORKBENCH_LABEL_IDS[bff.activeWorkbench] }) as string
+        : getWorkbenchLabel(bff.activeWorkbench))
     : "";
 
   // Active module from pathname: /module/{code} or /platform/{code}
@@ -79,7 +89,7 @@ export function AppContextPanel({
 
     return (
       <ContextPanel
-        title="Core"
+        title={formatMessage({ id: "shell.contextPanel.core.title" }) as string}
         subtitle="Cross-cutting modules · workspace_id = NULL"
         modules={platformItems}
         platformGroups={coreGroups}
@@ -108,14 +118,14 @@ export function AppContextPanel({
       pinnedItems={[
         {
           key: "queue",
-          label: "My queue",
+          label: formatMessage({ id: "shell.contextPanel.pinned.queue" }) as string,
           icon: Inbox,
           badge: inboxCount,
           onClick: () => router.push("/inbox"),
         },
         {
           key: "approvals",
-          label: "Approvals",
+          label: formatMessage({ id: "shell.contextPanel.pinned.approvals" }) as string,
           icon: CheckCircle2,
           onClick: () => router.push("/inbox?tab=approvals"),
         },

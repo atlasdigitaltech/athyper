@@ -6,6 +6,8 @@ import {
   parseOrgAlias,
 } from "@/lib/server/get-server-session";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import { PreferencesHydrator } from "@/components/providers/PreferencesHydrator";
+import { IntlProvider } from "@/components/providers/IntlProvider";
 import { EntitySelector } from "@/components/navigation/EntitySelector";
 import { WorkbenchToggle } from "@/components/navigation/WorkbenchToggle";
 import { DelegationBanner } from "@/components/delegation/DelegationBanner";
@@ -71,26 +73,29 @@ export default async function ShellRouteLayout({
 
   return (
     <SessionProvider initialSession={initialSession}>
-      <RuntimeProvider>
-        <AppShellLayout
-          topbar={
-            <AppTopbar
-              tenantSlot={<EntitySelector />}
-              workbenchToggle={<WorkbenchToggle />}
-              delegationIndicator={<DelegationIndicator />}
-              userSlot={<UserMenu />}
-            />
-          }
-          banner={
-            <>
-              <SessionErrorBanner />
-              <DelegationBanner />
-            </>
-          }
-        >
-          {children}
-        </AppShellLayout>
-      </RuntimeProvider>
+      <PreferencesHydrator />
+      <IntlProvider>
+        <RuntimeProvider>
+          <AppShellLayout
+            topbar={
+              <AppTopbar
+                tenantSlot={<EntitySelector />}
+                workbenchToggle={<WorkbenchToggle />}
+                delegationIndicator={<DelegationIndicator />}
+                userSlot={<UserMenu />}
+              />
+            }
+            banner={
+              <>
+                <SessionErrorBanner />
+                <DelegationBanner />
+              </>
+            }
+          >
+            {children}
+          </AppShellLayout>
+        </RuntimeProvider>
+      </IntlProvider>
     </SessionProvider>
   );
 }

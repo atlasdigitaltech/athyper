@@ -62,10 +62,14 @@ export class TotpEnrollmentService {
     accountLabel: string, // user's email or username for QR display
     enrolledBy:  string,
   ): Promise<TotpEnrollmentResult> {
-    // Revoke any existing unverified TOTP enrollment for this principal
+    // Drop any existing unverified TOTP row for this principal so the INSERT
+    // below has a clean slot. mfa_config_principal_method_uq forbids two rows
+    // with the same (tenant_id, principal_id, method_type), so just flipping
+    // is_enabled doesn't free the slot — we have to delete.
+    // Verified rows are not touched: the route handler requires step-up MFA
+    // before reaching this method when a verified TOTP already exists.
     await this.db
-      .updateTable("control.mfa_config" as never)
-      .set({ is_enabled: false as never, updated_at: new Date().toISOString() as never } as never)
+      .deleteFrom("control.mfa_config" as never)
       .where("principal_id" as never, "=", principalId as never)
       .where("tenant_id" as never, "=", tenantId as never)
       .where("method_type" as never, "=", "totp" as never)

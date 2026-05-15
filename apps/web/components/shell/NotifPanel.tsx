@@ -15,6 +15,7 @@ import Link from "next/link";
 import { Badge, Button } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import { bffFetch } from "@/lib/bff-fetch";
+import { useIntl } from "@/components/providers/IntlProvider";
 
 // ── Types — matches GET /api/notifications response ──────────────────────────
 
@@ -107,6 +108,7 @@ export function NotifPanel({ open, onClose }: NotifPanelProps) {
   const { data, isLoading } = useNotifItems();
   const markRead  = useMarkRead();
   const markAll   = useMarkAllRead();
+  const { formatMessage } = useIntl();
 
   // Refetch when panel opens
   useEffect(() => {
@@ -140,7 +142,7 @@ export function NotifPanel({ open, onClose }: NotifPanelProps) {
       <div className="flex items-center justify-between px-4 py-3 border-b">
         <div className="flex items-center gap-2">
           <Bell className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Notifications</span>
+          <span className="text-sm font-medium">{formatMessage({ id: "shell.notifications.title" })}</span>
           {unreadCount > 0 && (
             <Badge variant="destructive" className="text-doc-support px-1.5 py-0.5">
               {unreadCount}
@@ -153,7 +155,7 @@ export function NotifPanel({ open, onClose }: NotifPanelProps) {
               onClick={() => markAll.mutate()}
               className="text-doc-subtitle text-primary hover:text-primary/80 transition-colors"
             >
-              Mark all read
+              {formatMessage({ id: "shell.notifications.markAllRead" })}
             </button>
           )}
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
@@ -175,7 +177,11 @@ export function NotifPanel({ open, onClose }: NotifPanelProps) {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {t === "all" ? "All" : `Unread${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+            {t === "all"
+              ? formatMessage({ id: "shell.notifications.tab.all" })
+              : unreadCount > 0
+                ? formatMessage({ id: "shell.notifications.tab.unreadWithCount" }, { count: unreadCount })
+                : formatMessage({ id: "shell.notifications.tab.unread" })}
           </button>
         ))}
       </div>
@@ -183,12 +189,14 @@ export function NotifPanel({ open, onClose }: NotifPanelProps) {
       {/* Items */}
       <div className="max-h-80 overflow-y-auto divide-y divide-border/50">
         {isLoading ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">{formatMessage({ id: "shell.notifications.loading" })}</div>
         ) : visible.length === 0 ? (
           <div className="py-10 text-center">
             <Bell className="mx-auto h-7 w-7 text-muted-foreground/30 mb-2" />
             <p className="text-sm text-muted-foreground">
-              {tab === "unread" ? "All caught up" : "No notifications"}
+              {tab === "unread"
+                ? formatMessage({ id: "shell.notifications.empty.unread" })
+                : formatMessage({ id: "shell.notifications.empty.all" })}
             </p>
           </div>
         ) : (
@@ -253,7 +261,7 @@ export function NotifPanel({ open, onClose }: NotifPanelProps) {
           onClick={onClose}
           className="text-xs text-primary hover:text-primary/80 transition-colors"
         >
-          View all notifications
+          {formatMessage({ id: "shell.notifications.viewAll" })}
         </Link>
       </div>
     </div>

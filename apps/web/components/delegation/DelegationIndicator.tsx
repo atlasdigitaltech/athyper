@@ -11,18 +11,21 @@
  */
 
 import { useShellSession } from "@/components/providers/SessionProvider";
+import { useIntl } from "@/components/providers/IntlProvider";
 
 export function DelegationIndicator() {
   const { runtime, deactivateDelegation } = useShellSession();
+  const { formatMessage } = useIntl();
 
   if (!runtime?.active_delegation) return null;
 
   const { delegator_name } = runtime.active_delegation;
+  const actingAs = formatMessage({ id: "shell.delegation.actingAs" }, { name: delegator_name }) as string;
 
   return (
     <div
       role="status"
-      aria-label={`Acting as ${delegator_name}`}
+      aria-label={actingAs}
       className="flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning"
     >
       {/* Person icon */}
@@ -41,12 +44,12 @@ export function DelegationIndicator() {
         />
       </svg>
 
-      <span>Acting as {delegator_name}</span>
+      <span>{actingAs}</span>
 
       {/* Deactivate button */}
       <button
         type="button"
-        aria-label="Stop acting as delegate"
+        aria-label={formatMessage({ id: "shell.delegation.stop" }) as string}
         className="ml-0.5 rounded-full p-0.5 hover:bg-warning/20"
         onClick={() => deactivateDelegation()}
       >

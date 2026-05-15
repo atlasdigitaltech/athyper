@@ -29,6 +29,7 @@ import {
   type ConfirmDialogAction,
 } from "@/components/settings/shared";
 import { useDiagnosticAction, type ActionResult } from "@/components/settings/use-diagnostic-action";
+import { useIntl, useFormatRich } from "@/components/providers/IntlProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -188,6 +189,7 @@ function AutofixStepLog({ steps }: { steps: AutofixStep[] }) {
 const POLL_INTERVAL_MS = 30_000;
 
 function SessionDebugConsole({ active }: { active: boolean }) {
+  const { formatMessage }             = useIntl();
   const [data,        setData]        = useState<DebugData | null>(null);
   const [loading,     setLoading]     = useState(false);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
@@ -234,7 +236,7 @@ function SessionDebugConsole({ active }: { active: boolean }) {
 
   const ttl = data?.session.token_ttl_seconds ?? 0;
   const ttlLabel =
-    ttl <= 0   ? "Expired"
+    ttl <= 0   ? (formatMessage({ id: "settings.diagnostics.console.ttl.expired" }) as string)
     : ttl < 60 ? `${ttl}s`
     : ttl < 3600 ? `${Math.floor(ttl / 60)}m ${ttl % 60}s`
     : `${Math.floor(ttl / 3600)}h ${Math.floor((ttl % 3600) / 60)}m`;
@@ -244,7 +246,7 @@ function SessionDebugConsole({ active }: { active: boolean }) {
       <CardHeader className="pb-0 pt-4">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <Activity className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="flex-1">Session Debug Console</span>
+          <span className="flex-1">{formatMessage({ id: "settings.diagnostics.console.title" })}</span>
           <div className="flex items-center gap-2">
             {lastFetched && (
               <span className="text-2xs text-muted-foreground">
@@ -262,7 +264,7 @@ function SessionDebugConsole({ active }: { active: boolean }) {
               {loading
                 ? <Loader2 className="h-3 w-3 animate-spin" />
                 : <RefreshCw className="h-3 w-3" />}
-              Refresh
+              {formatMessage({ id: "settings.diagnostics.console.refresh" })}
             </Button>
             {data && (
               <Button
@@ -272,7 +274,7 @@ function SessionDebugConsole({ active }: { active: boolean }) {
                 onClick={copyBundle}
               >
                 {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                Copy Bundle
+                {formatMessage({ id: "settings.diagnostics.console.copyBundle" })}
               </Button>
             )}
           </div>
@@ -280,21 +282,21 @@ function SessionDebugConsole({ active }: { active: boolean }) {
       </CardHeader>
       <CardContent className="pb-4 pt-3">
         {!data ? (
-          <p className="text-xs text-muted-foreground">{loading ? "Loading…" : "No data"}</p>
+          <p className="text-xs text-muted-foreground">{loading ? formatMessage({ id: "settings.diagnostics.console.loading" }) : formatMessage({ id: "settings.diagnostics.console.noData" })}</p>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {/* Session block */}
             <details open className="rounded-md border border-border">
               <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-xs font-semibold text-foreground">
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
-                Session
+                {formatMessage({ id: "settings.diagnostics.console.section.session" })}
               </summary>
               <div className="border-t border-border px-3 py-1">
-                <DebugRow label="Principal" value={data.session.principal_id} />
-                <DebugRow label="Org"       value={data.session.active_org} />
-                <DebugRow label="Workbench" value={data.session.active_workbench} />
+                <DebugRow label={formatMessage({ id: "settings.diagnostics.console.row.principal" }) as string} value={data.session.principal_id} />
+                <DebugRow label={formatMessage({ id: "settings.diagnostics.console.row.org" }) as string}       value={data.session.active_org} />
+                <DebugRow label={formatMessage({ id: "settings.diagnostics.console.row.workbench" }) as string} value={data.session.active_workbench} />
                 <DebugRow
-                  label="Token"
+                  label={formatMessage({ id: "settings.diagnostics.console.row.token" }) as string}
                   value={
                     <span className="flex items-center gap-1.5">
                       <Badge variant={data.session.token_status === "valid" ? "success" : "destructive"}>
@@ -307,7 +309,7 @@ function SessionDebugConsole({ active }: { active: boolean }) {
                   }
                 />
                 <DebugRow
-                  label="CSRF"
+                  label={formatMessage({ id: "settings.diagnostics.console.row.csrf" }) as string}
                   value={
                     <Badge variant={data.session.csrf_status === "present" ? "success" : "destructive"}>
                       {data.session.csrf_status}
@@ -315,13 +317,15 @@ function SessionDebugConsole({ active }: { active: boolean }) {
                   }
                 />
                 <DebugRow
-                  label="MFA"
+                  label={formatMessage({ id: "settings.diagnostics.console.row.mfa" }) as string}
                   value={
                     data.session.mfa_required
                       ? <Badge variant={data.session.mfa_verified ? "success" : "warning"}>
-                          {data.session.mfa_verified ? "verified" : "pending"}
+                          {data.session.mfa_verified
+                            ? formatMessage({ id: "settings.diagnostics.console.mfa.verified" })
+                            : formatMessage({ id: "settings.diagnostics.console.mfa.pending" })}
                         </Badge>
-                      : <span className="text-xs text-muted-foreground">not required</span>
+                      : <span className="text-xs text-muted-foreground">{formatMessage({ id: "settings.diagnostics.console.mfa.notRequired" })}</span>
                   }
                 />
               </div>
@@ -331,26 +335,28 @@ function SessionDebugConsole({ active }: { active: boolean }) {
             <details open className="rounded-md border border-border">
               <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-xs font-semibold text-foreground">
                 <Server className="h-3.5 w-3.5 text-muted-foreground" />
-                BFF / Runtime
+                {formatMessage({ id: "settings.diagnostics.console.section.bff" })}
               </summary>
               <div className="border-t border-border px-3 py-1">
                 <DebugRow
-                  label="Runtime"
+                  label={formatMessage({ id: "settings.diagnostics.console.row.runtime" }) as string}
                   value={
                     <Badge variant={data.bff.connected ? "success" : "destructive"}>
-                      {data.bff.connected ? "connected" : "unreachable"}
+                      {data.bff.connected
+                        ? formatMessage({ id: "settings.diagnostics.console.runtime.connected" })
+                        : formatMessage({ id: "settings.diagnostics.console.runtime.unreachable" })}
                     </Badge>
                   }
                 />
-                <DebugRow label="Environment" value={data.bff.environment} />
-                <DebugRow label="Runtime URL"  value={data.bff.runtime_url} />
-                <DebugRow label="Realm"        value={data.bff.realm_key} />
+                <DebugRow label={formatMessage({ id: "settings.diagnostics.console.row.environment" }) as string} value={data.bff.environment} />
+                <DebugRow label={formatMessage({ id: "settings.diagnostics.console.row.runtimeUrl" }) as string}  value={data.bff.runtime_url} />
+                <DebugRow label={formatMessage({ id: "settings.diagnostics.console.row.realm" }) as string}        value={data.bff.realm_key} />
               </div>
             </details>
           </div>
         )}
         <p className="mt-2 text-2xs text-muted-foreground">
-          Polls every 30 s · pauses when tab is hidden · secrets are always redacted.
+          {formatMessage({ id: "settings.diagnostics.console.footer" })}
         </p>
       </CardContent>
     </Card>
@@ -369,6 +375,7 @@ function DebugRow({ label, value }: { label: string; value: React.ReactNode }) {
 // ─── ActionHistoryLog ─────────────────────────────────────────────────────────
 
 function ActionHistoryLog({ history }: { history: ReturnType<typeof useDiagnosticAction>["history"] }) {
+  const { formatMessage } = useIntl();
   const [open, setOpen] = useState(false);
 
   if (history.length === 0) return null;
@@ -382,7 +389,7 @@ function ActionHistoryLog({ history }: { history: ReturnType<typeof useDiagnosti
       >
         <Archive className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="flex-1 text-sm font-semibold text-foreground">
-          Action History
+          {formatMessage({ id: "settings.diagnostics.history.title" })}
         </span>
         <Badge variant="secondary" className="text-2xs">{history.length}</Badge>
         {open
@@ -423,19 +430,23 @@ function ActionHistoryLog({ history }: { history: ReturnType<typeof useDiagnosti
 // ─── DiagnosticsSection ───────────────────────────────────────────────────────
 
 export function DiagnosticsSection({ active }: { active: boolean }) {
+  const { formatMessage } = useIntl();
+  const formatRich        = useFormatRich();
   const { execute, results, loading, history } = useDiagnosticAction();
 
   // Autofix step log state (only populated when autofix returns steps)
   const [autofixSteps, setAutofixSteps] = useState<AutofixStep[] | null>(null);
+
+  const fm = (id: string) => formatMessage({ id }) as string;
 
   // ── Tier 1: User Recovery ─────────────────────────────────────────────────
 
   const tier1Actions: ActionDef[] = [
     {
       id: "refresh_token",
-      label: "Refresh Session Token",
-      desc: "Exchanges the current refresh token for a new access token. Fixes most 401/403 errors without logging out.",
-      buttonLabel: "Refresh",
+      label: fm("settings.diagnostics.action.refreshToken.label"),
+      desc: fm("settings.diagnostics.action.refreshToken.desc"),
+      buttonLabel: fm("settings.diagnostics.action.refreshToken.button"),
       onExecute: async () => {
         await execute("refresh_token", {
           url: "/api/auth/refresh",
@@ -445,9 +456,9 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
     },
     {
       id: "reset_local_caches",
-      label: "Clear Browser Cache",
-      desc: "Clears all athyper_ localStorage and sessionStorage entries on this browser. Fixes stale UI state — reload required.",
-      buttonLabel: "Clear",
+      label: fm("settings.diagnostics.action.clearCache.label"),
+      desc: fm("settings.diagnostics.action.clearCache.desc"),
+      buttonLabel: fm("settings.diagnostics.action.clearCache.button"),
       onExecute: async () => {
         await execute("reset_local_caches", {
           clientFn: async () => {
@@ -456,16 +467,16 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
             keys.forEach((k) => { localStorage.removeItem(k); count++; });
             const skeys = Object.keys(sessionStorage).filter((k) => k.startsWith("athyper_"));
             skeys.forEach((k) => { sessionStorage.removeItem(k); count++; });
-            return `Removed ${count} cached entr${count !== 1 ? "ies" : "y"}`;
+            return formatMessage({ id: "settings.diagnostics.action.clearCache.success" }, { count }) as string;
           },
         });
       },
     },
     {
       id: "export_debug_bundle",
-      label: "Export Debug Bundle",
-      desc: "Downloads a redacted JSON file with session metadata, BFF status, and browser info. Attach to support tickets.",
-      buttonLabel: "Download",
+      label: fm("settings.diagnostics.action.exportBundle.label"),
+      desc: fm("settings.diagnostics.action.exportBundle.desc"),
+      buttonLabel: fm("settings.diagnostics.action.exportBundle.button"),
       onExecute: async () => {
         await execute("export_debug_bundle", {
           clientFn: async () => {
@@ -483,7 +494,7 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
             a.download = `athyper-debug-${Date.now()}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            return "Debug bundle downloaded";
+            return fm("settings.diagnostics.action.exportBundle.success");
           },
         });
       },
@@ -495,13 +506,13 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
   const tier2Actions: ActionDef[] = [
     {
       id: "resync_identity",
-      label: "Re-sync Identity Binding",
-      desc: "Forces re-synchronisation of the principal_identity_binding record from Athyper IAM. Use when your IdP profile has changed but the platform hasn't updated.",
-      buttonLabel: "Re-sync",
+      label: fm("settings.diagnostics.action.resyncIdentity.label"),
+      desc: fm("settings.diagnostics.action.resyncIdentity.desc"),
+      buttonLabel: fm("settings.diagnostics.action.resyncIdentity.button"),
       confirm: {
         endpoint: "POST /api/admin/user/sync-profile",
-        impact: "Re-reads your identity from Keycloak and overwrites the local auth binding record. Your session is not interrupted.",
-        scopeLabel: "Current user · principal_identity_binding",
+        impact: fm("settings.diagnostics.action.resyncIdentity.impact"),
+        scopeLabel: fm("settings.diagnostics.action.resyncIdentity.scope"),
       },
       onExecute: async () => {
         await execute("resync_identity", {
@@ -512,13 +523,13 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
     },
     {
       id: "reload_permissions",
-      label: "Reload Permission Cache",
-      desc: "Clears the RBAC cache for this tenant. New group assignments and permission changes take effect immediately.",
-      buttonLabel: "Reload",
+      label: fm("settings.diagnostics.action.reloadPermissions.label"),
+      desc: fm("settings.diagnostics.action.reloadPermissions.desc"),
+      buttonLabel: fm("settings.diagnostics.action.reloadPermissions.button"),
       confirm: {
         endpoint: "POST /api/admin/cache?scope=rbac",
-        impact: "All permission resolution caches for this tenant are flushed. Next request re-derives permissions from the database. Brief latency on first access.",
-        scopeLabel: "Current tenant · RBAC cache",
+        impact: fm("settings.diagnostics.action.reloadPermissions.impact"),
+        scopeLabel: fm("settings.diagnostics.action.reloadPermissions.scope"),
       },
       onExecute: async () => {
         await execute("reload_permissions", {
@@ -529,9 +540,9 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
     },
     {
       id: "tenant_health",
-      label: "Tenant Health Check",
-      desc: "Runs a lightweight health probe against the runtime service and returns current status for all subsystems.",
-      buttonLabel: "Run Check",
+      label: fm("settings.diagnostics.action.tenantHealth.label"),
+      desc: fm("settings.diagnostics.action.tenantHealth.desc"),
+      buttonLabel: fm("settings.diagnostics.action.tenantHealth.button"),
       onExecute: async () => {
         await execute("tenant_health", {
           url: "/api/admin/health",
@@ -546,25 +557,25 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
   const tier3Actions: ActionDef[] = [
     {
       id: "reload_app_cache",
-      label: "Reload Application Cache",
-      desc: "Clears the full application-level cache (all tenants). Use only when platform configuration has changed and cannot wait for natural expiry.",
-      buttonLabel: "Reload",
+      label: fm("settings.diagnostics.action.reloadAppCache.label"),
+      desc: fm("settings.diagnostics.action.reloadAppCache.desc"),
+      buttonLabel: fm("settings.diagnostics.action.reloadAppCache.button"),
       confirm: {
         endpoint: "POST /api/admin/cache?scope=app",
         impact: (
           <>
-            <p>All in-memory application caches across all tenants are flushed. Includes:</p>
+            <p>{formatMessage({ id: "settings.diagnostics.action.reloadAppCache.impact.lead" })}</p>
             <ul className="mt-1.5 list-inside list-disc space-y-0.5">
-              <li>Module subscription lookups</li>
-              <li>Feature entitlement tables</li>
-              <li>Tenant profile defaults</li>
+              <li>{formatMessage({ id: "settings.diagnostics.action.reloadAppCache.impact.item1" })}</li>
+              <li>{formatMessage({ id: "settings.diagnostics.action.reloadAppCache.impact.item2" })}</li>
+              <li>{formatMessage({ id: "settings.diagnostics.action.reloadAppCache.impact.item3" })}</li>
             </ul>
             <p className="mt-1.5 text-destructive font-semibold">
-              Affects all users in all tenants. Elevated latency for 30–60 s.
+              {formatMessage({ id: "settings.diagnostics.action.reloadAppCache.impact.warning" })}
             </p>
           </>
         ),
-        scopeLabel: "All tenants · application cache",
+        scopeLabel: fm("settings.diagnostics.action.reloadAppCache.scope"),
       },
       onExecute: async () => {
         await execute("reload_app_cache", {
@@ -575,14 +586,14 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
     },
     {
       id: "rebuild_session",
-      label: "Rebuild Runtime Session",
-      desc: "Destroys and reconstructs the runtime-layer session for this principal. The BFF session and browser cookies are preserved — you stay logged in.",
-      buttonLabel: "Rebuild",
+      label: fm("settings.diagnostics.action.rebuildSession.label"),
+      desc: fm("settings.diagnostics.action.rebuildSession.desc"),
+      buttonLabel: fm("settings.diagnostics.action.rebuildSession.button"),
       danger: true,
       confirm: {
         endpoint: "POST /api/admin/session/rebuild",
-        impact: "Runtime session state is fully reset. Any in-flight workflow locks or optimistic locks held by this session will be released.",
-        scopeLabel: "Current user · runtime session",
+        impact: fm("settings.diagnostics.action.rebuildSession.impact"),
+        scopeLabel: fm("settings.diagnostics.action.rebuildSession.scope"),
         confirmText: "REBUILD",
       },
       onExecute: async () => {
@@ -594,25 +605,25 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
     },
     {
       id: "autofix",
-      label: "Run Auto-fix",
-      desc: "Runs the platform auto-fix routine: checks for orphaned records, stale locks, and inconsistent state, and attempts to self-correct each issue.",
-      buttonLabel: "Run Auto-fix",
+      label: fm("settings.diagnostics.action.autofix.label"),
+      desc: fm("settings.diagnostics.action.autofix.desc"),
+      buttonLabel: fm("settings.diagnostics.action.autofix.button"),
       danger: true,
       confirm: {
         endpoint: "POST /api/admin/autofix",
         impact: (
           <>
-            <p>Executes all registered auto-fix routines including:</p>
+            <p>{formatMessage({ id: "settings.diagnostics.action.autofix.impact.lead" })}</p>
             <ul className="mt-1.5 list-inside list-disc space-y-0.5">
-              <li>Release stale document locks (≥ 15 min)</li>
-              <li>Mark timed-out workflow tasks</li>
-              <li>Reconcile undelivered notification events</li>
-              <li>Verify dimension integrity on unposted journals</li>
+              <li>{formatMessage({ id: "settings.diagnostics.action.autofix.impact.item1" })}</li>
+              <li>{formatMessage({ id: "settings.diagnostics.action.autofix.impact.item2" })}</li>
+              <li>{formatMessage({ id: "settings.diagnostics.action.autofix.impact.item3" })}</li>
+              <li>{formatMessage({ id: "settings.diagnostics.action.autofix.impact.item4" })}</li>
             </ul>
-            <p className="mt-1.5 font-semibold">This writes to the database.</p>
+            <p className="mt-1.5 font-semibold">{formatMessage({ id: "settings.diagnostics.action.autofix.impact.warning" })}</p>
           </>
         ),
-        scopeLabel: "Platform-wide",
+        scopeLabel: fm("settings.diagnostics.action.autofix.scope"),
         confirmText: "AUTOFIX",
         danger: true,
       },
@@ -637,8 +648,7 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
   return (
     <div className="w-full">
       <Banner>
-        Diagnostic tools are for troubleshooting only — they do not modify business data.
-        All actions are logged with correlation IDs for audit purposes.
+        {formatMessage({ id: "settings.diagnostics.banner.intro" })}
       </Banner>
 
       {/* ── Session Debug Console ── */}
@@ -646,13 +656,13 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
 
       {/* ── Tier 1: User Recovery ── */}
       <SectionCard
-        title="User Recovery"
+        title={fm("settings.diagnostics.tier1.title")}
         icon={User}
-        badge={<Badge variant="success" className="text-2xs">Safe</Badge>}
+        badge={<Badge variant="success" className="text-2xs">{formatMessage({ id: "settings.diagnostics.tier1.badge" })}</Badge>}
         managedBy={{
-          manager:  "You",
-          source:   "BFF session · browser storage",
-          editPath: "No confirmation required · safe to run at any time",
+          manager:  fm("settings.diagnostics.tier1.managedBy"),
+          source:   fm("settings.diagnostics.tier1.source"),
+          editPath: fm("settings.diagnostics.tier1.editPath"),
         }}
       >
         {tier1Actions.map((a) => (
@@ -667,17 +677,17 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
 
       {/* ── Tier 2: Tenant Operations ── */}
       <SectionCard
-        title="Tenant Operations"
+        title={fm("settings.diagnostics.tier2.title")}
         icon={Shield}
-        badge={<Badge variant="warning" className="text-2xs">Admin</Badge>}
+        badge={<Badge variant="warning" className="text-2xs">{formatMessage({ id: "settings.diagnostics.tier2.badge" })}</Badge>}
         managedBy={{
-          manager:  "Tenant Admin",
-          source:   "Runtime service",
-          editPath: "Requires tenant administrator group membership",
+          manager:  fm("settings.diagnostics.tier2.managedBy"),
+          source:   fm("settings.diagnostics.tier2.source"),
+          editPath: fm("settings.diagnostics.tier2.editPath"),
         }}
       >
         <Banner variant="warn">
-          These actions affect your tenant. All require confirmation before executing.
+          {formatMessage({ id: "settings.diagnostics.tier2.banner" })}
         </Banner>
         {tier2Actions.map((a) => (
           <ActionRow
@@ -691,18 +701,20 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
 
       {/* ── Tier 3: Platform Operations ── */}
       <SectionCard
-        title="Platform Operations"
+        title={fm("settings.diagnostics.tier3.title")}
         icon={ShieldAlert}
-        badge={<Badge variant="destructive" className="text-2xs">Elevated</Badge>}
+        badge={<Badge variant="destructive" className="text-2xs">{formatMessage({ id: "settings.diagnostics.tier3.badge" })}</Badge>}
         managedBy={{
-          manager:  "Platform Support",
-          source:   "Runtime service · platform admin",
-          editPath: "Destructive actions require typed confirmation",
+          manager:  fm("settings.diagnostics.tier3.managedBy"),
+          source:   fm("settings.diagnostics.tier3.source"),
+          editPath: fm("settings.diagnostics.tier3.editPath"),
         }}
       >
         <Banner variant="error">
-          These actions have <strong>platform-wide or irreversible effects</strong>.
-          Only execute under guidance from Athyper Platform Support.
+          {formatRich(
+            { id: "settings.diagnostics.tier3.banner" },
+            { strong: (chunks) => <strong>{chunks}</strong> },
+          )}
         </Banner>
         {tier3Actions.map((a) => (
           <ActionRow
@@ -715,7 +727,7 @@ export function DiagnosticsSection({ active }: { active: boolean }) {
         {autofixSteps && (
           <div className="mt-2">
             <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Auto-fix steps
+              {formatMessage({ id: "settings.diagnostics.autofixSteps" })}
             </p>
             <AutofixStepLog steps={autofixSteps} />
           </div>

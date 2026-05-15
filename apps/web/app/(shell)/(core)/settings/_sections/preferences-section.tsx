@@ -13,10 +13,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Separator, Skeleton,
 } from "@athyper/ui/primitives";
-import { usePreferencesStore, type AppearanceMode, type DensityCode } from "@/stores/preferences/usePreferencesStore";
+import { usePreferencesStore, type AppearanceMode, type DensityCode, type LanguageCode } from "@/stores/preferences/usePreferencesStore";
 import { useShellSession } from "@/components/providers/SessionProvider";
+import { useIntl, useFormatRich } from "@/components/providers/IntlProvider";
 import { bffFetch } from "@/lib/bff-fetch";
-import { normalizePreferencesForBootstrap, readPreferenceMetadata } from "@/lib/preferences/ui-profile";
+import { normalizeLanguageCode, normalizePreferencesForBootstrap, readPreferenceMetadata } from "@/lib/preferences/ui-profile";
 import {
   Banner, SectionCard, DataTable, SkeletonCard, ToggleGroup,
   SourceChip, str, fmtDate,
@@ -182,94 +183,113 @@ function SavedViewCard({
 
 // ─── PreferencesSection ───────────────────────────────────────────────────────
 
-const PRESET_CATEGORIES: { key: (typeof themePresets)[number]["category"]; label: string }[] = [
-  { key: "professional", label: "Professional" },
-  { key: "expressive",   label: "Expressive" },
-  { key: "playful",      label: "Playful" },
-  { key: "retro",        label: "Retro" },
+/**
+ * Module-scope option definitions hold message IDs only. Localised label/desc
+ * strings are resolved inside the component via formatMessage so the dropdowns
+ * stay live-translatable.
+ */
+const PRESET_CATEGORY_DEFS: { key: (typeof themePresets)[number]["category"]; labelId: string }[] = [
+  { key: "professional", labelId: "settings.preferences.themeCategory.professional" },
+  { key: "expressive",   labelId: "settings.preferences.themeCategory.expressive" },
+  { key: "playful",      labelId: "settings.preferences.themeCategory.playful" },
+  { key: "retro",        labelId: "settings.preferences.themeCategory.retro" },
 ];
 
-const APPEARANCE_OPTIONS: { value: AppearanceMode; label: ReactNode; desc: string }[] = [
-  { value: "light",  label: <><Sun  className="h-3.5 w-3.5" /> Light</>,  desc: "Always light" },
-  { value: "dark",   label: <><Moon className="h-3.5 w-3.5" /> Dark</>,   desc: "Always dark"  },
-  { value: "system", label: <><SunMoon className="h-3.5 w-3.5" /> System</>, desc: "Follows OS" },
+const APPEARANCE_OPTION_DEFS: { value: AppearanceMode; icon: ReactNode; labelId: string; descId: string }[] = [
+  { value: "light",  icon: <Sun     className="h-3.5 w-3.5" />, labelId: "settings.preferences.appearance.light",  descId: "settings.preferences.appearance.lightDesc"  },
+  { value: "dark",   icon: <Moon    className="h-3.5 w-3.5" />, labelId: "settings.preferences.appearance.dark",   descId: "settings.preferences.appearance.darkDesc"   },
+  { value: "system", icon: <SunMoon className="h-3.5 w-3.5" />, labelId: "settings.preferences.appearance.system", descId: "settings.preferences.appearance.systemDesc" },
 ];
 
-const DENSITY_OPTIONS: { value: DensityCode; label: string; desc: string }[] = [
-  { value: "compact",     label: "Compact",     desc: "Tighter spacing" },
-  { value: "comfortable", label: "Comfortable", desc: "Balanced (default)" },
-  { value: "spacious",    label: "Spacious",    desc: "Generous padding" },
+const DENSITY_OPTION_DEFS: { value: DensityCode; labelId: string; descId: string }[] = [
+  { value: "compact",     labelId: "settings.preferences.density.compact",     descId: "settings.preferences.density.compactDesc"     },
+  { value: "comfortable", labelId: "settings.preferences.density.comfortable", descId: "settings.preferences.density.comfortableDesc" },
+  { value: "spacious",    labelId: "settings.preferences.density.spacious",    descId: "settings.preferences.density.spaciousDesc"    },
 ];
 
-const HOME_WORKSPACE_OPTIONS = [
-  { value: "CORE", label: "Core Platform" },
-  { value: "FIN",  label: "Finance" },
-  { value: "SCM",  label: "Supply Chain" },
-  { value: "COM",  label: "Commercial" },
-  { value: "PPL",  label: "People" },
-  { value: "PRS",  label: "Projects & Services" },
-  { value: "OPS",  label: "Operations" },
-  { value: "AST",  label: "Assets & Facilities" },
-  { value: "PTR",  label: "Partner Collaboration" },
+const HOME_WORKSPACE_DEFS: { value: string; labelId: string }[] = [
+  { value: "CORE", labelId: "settings.preferences.workspace.core" },
+  { value: "FIN",  labelId: "settings.preferences.workspace.fin"  },
+  { value: "SCM",  labelId: "settings.preferences.workspace.scm"  },
+  { value: "COM",  labelId: "settings.preferences.workspace.com"  },
+  { value: "PPL",  labelId: "settings.preferences.workspace.ppl"  },
+  { value: "PRS",  labelId: "settings.preferences.workspace.prs"  },
+  { value: "OPS",  labelId: "settings.preferences.workspace.ops"  },
+  { value: "AST",  labelId: "settings.preferences.workspace.ast"  },
+  { value: "PTR",  labelId: "settings.preferences.workspace.ptr"  },
 ];
 
-const HOME_MODULE_OPTIONS_BY_WORKSPACE: Record<string, { value: string; label: string }[]> = {
+const HOME_MODULE_DEFS_BY_WORKSPACE: Record<string, { value: string; labelId: string }[]> = {
   CORE: [
-    { value: "FND",  label: "Foundation Runtime" },
-    { value: "META", label: "Metadata Studio" },
-    { value: "IAM",  label: "Identity & Access Management" },
-    { value: "AUD",  label: "Audit & Governance" },
-    { value: "NTF",  label: "Notification Services" },
+    { value: "FND",  labelId: "settings.preferences.module.fnd"  },
+    { value: "META", labelId: "settings.preferences.module.meta" },
+    { value: "IAM",  labelId: "settings.preferences.module.iam"  },
+    { value: "AUD",  labelId: "settings.preferences.module.aud"  },
+    { value: "NTF",  labelId: "settings.preferences.module.ntf"  },
   ],
   FIN: [
-    { value: "ACC",      label: "Core Accounting" },
-    { value: "PAY",      label: "Payment Processing" },
-    { value: "TREASURY", label: "Treasury & Cash Management" },
-    { value: "BUDGET",   label: "Budget & Funds Control" },
+    { value: "ACC",      labelId: "settings.preferences.module.acc"      },
+    { value: "PAY",      labelId: "settings.preferences.module.pay"      },
+    { value: "TREASURY", labelId: "settings.preferences.module.treasury" },
+    { value: "BUDGET",   labelId: "settings.preferences.module.budget"   },
   ],
   SCM: [
-    { value: "SRM",       label: "Supplier Relationship Management" },
-    { value: "SOURCE",    label: "Sourcing" },
-    { value: "CONTRACT",  label: "Contract Management" },
-    { value: "BUY",       label: "Procurement" },
-    { value: "INVENTORY", label: "Inventory Management" },
+    { value: "SRM",       labelId: "settings.preferences.module.srm"       },
+    { value: "SOURCE",    labelId: "settings.preferences.module.source"    },
+    { value: "CONTRACT",  labelId: "settings.preferences.module.contract"  },
+    { value: "BUY",       labelId: "settings.preferences.module.buy"       },
+    { value: "INVENTORY", labelId: "settings.preferences.module.inventory" },
   ],
   COM: [
-    { value: "CRM",  label: "Customer Relationship Management" },
-    { value: "SALE", label: "Sales & Order Management" },
+    { value: "CRM",  labelId: "settings.preferences.module.crm"  },
+    { value: "SALE", labelId: "settings.preferences.module.sale" },
   ],
   PPL: [
-    { value: "HR",      label: "Human Resources" },
-    { value: "PAYROLL", label: "Payroll" },
+    { value: "HR",      labelId: "settings.preferences.module.hr"      },
+    { value: "PAYROLL", labelId: "settings.preferences.module.payroll" },
   ],
   PRS: [
-    { value: "PRJCOST", label: "Project Management" },
-    { value: "ITSM",    label: "Service Management" },
+    { value: "PRJCOST", labelId: "settings.preferences.module.prjcost" },
+    { value: "ITSM",    labelId: "settings.preferences.module.itsm"    },
   ],
   OPS: [
-    { value: "MAINT", label: "Maintenance Management" },
-    { value: "MFG",   label: "Manufacturing" },
+    { value: "MAINT", labelId: "settings.preferences.module.maint" },
+    { value: "MFG",   labelId: "settings.preferences.module.mfg"   },
   ],
   AST: [
-    { value: "ASSET",     label: "Asset Management" },
-    { value: "ASSETREMS", label: "Real Estate Asset Management" },
-    { value: "ASSETFM",   label: "Facility Management" },
+    { value: "ASSET",     labelId: "settings.preferences.module.asset"     },
+    { value: "ASSETREMS", labelId: "settings.preferences.module.assetrems" },
+    { value: "ASSETFM",   labelId: "settings.preferences.module.assetfm"   },
   ],
   PTR: [
-    { value: "PCON", label: "Proposal & Contract Collaboration" },
-    { value: "OMI",  label: "Order Intake" },
-    { value: "IMO",  label: "Invoice Delivery" },
-    { value: "LOGX", label: "Logistics Collaboration" },
+    { value: "PCON", labelId: "settings.preferences.module.pcon" },
+    { value: "OMI",  labelId: "settings.preferences.module.omi"  },
+    { value: "IMO",  labelId: "settings.preferences.module.imo"  },
+    { value: "LOGX", labelId: "settings.preferences.module.logx" },
   ],
 };
 
+interface PrefsBaseline {
+  appearanceMode: AppearanceMode;
+  themePreset: string;
+  densityCode: DensityCode;
+  languageCode: LanguageCode;
+  timezone: string;
+  dateFormat: string;
+  weekStart: string;
+  homeWs: string;
+  homeMod: string;
+  digest: string;
+}
+
 export function PreferencesSection({ active }: { active: boolean }) {
-  const { appearanceMode, themePreset, densityCode, setAppearanceMode, setThemePreset, setDensityCode, seedFromBootstrap } =
+  const { appearanceMode, themePreset, densityCode, languageCode, setAppearanceMode, setThemePreset, setDensityCode, setLanguageCode, seedFromBootstrap } =
     usePreferencesStore();
   const { bff } = useShellSession();
+  const { formatMessage } = useIntl();
+  const formatRich = useFormatRich();
 
   // Extended prefs from principal_ui_profile
-  const [language,   setLanguage]   = useState("en");
   const [timezone,   setTimezone]   = useState("Asia/Dubai");
   const [dateFormat, setDateFormat] = useState("%d/%m/%Y");
   const [weekStart,  setWeekStart]  = useState("1");
@@ -282,7 +302,30 @@ export function PreferencesSection({ active }: { active: boolean }) {
   const [saving,      setSaving]      = useState(false);
   const [saveStatus,  setSaveStatus]  = useState<"idle" | "saved" | "error">("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const homeModuleOptions = HOME_MODULE_OPTIONS_BY_WORKSPACE[homeWs] ?? HOME_MODULE_OPTIONS_BY_WORKSPACE.FIN ?? [];
+
+  // Localised option arrays — rebuild on locale change so dropdown labels stay live.
+  const appearanceOptions = APPEARANCE_OPTION_DEFS.map((o) => ({
+    value: o.value,
+    label: (<>{o.icon} {formatMessage({ id: o.labelId })}</>) as ReactNode,
+    desc: formatMessage({ id: o.descId }),
+  }));
+  const densityOptions = DENSITY_OPTION_DEFS.map((o) => ({
+    value: o.value,
+    label: formatMessage({ id: o.labelId }),
+    desc: formatMessage({ id: o.descId }),
+  }));
+  const homeWorkspaceOptions = HOME_WORKSPACE_DEFS.map((o) => ({
+    value: o.value,
+    label: formatMessage({ id: o.labelId }),
+  }));
+  const homeModuleDefs = HOME_MODULE_DEFS_BY_WORKSPACE[homeWs] ?? HOME_MODULE_DEFS_BY_WORKSPACE.FIN ?? [];
+  const homeModuleOptions = homeModuleDefs.map((o) => ({
+    value: o.value,
+    label: formatMessage({ id: o.labelId }),
+  }));
+  // Snapshot of the last server-loaded values; used by Discard to revert
+  // every field (including Zustand-backed appearance/theme/density).
+  const baselineRef = useRef<PrefsBaseline | null>(null);
 
   // Saved views
   const [views,        setViews]        = useState<SavedView[]>([]);
@@ -295,16 +338,44 @@ export function PreferencesSection({ active }: { active: boolean }) {
     setPrefsLoaded(true);
     bffFetch<Record<string, unknown>>("/api/user/preferences")
       .then((d) => {
+        // Seed Zustand store from the server response (handles legacy snake_case
+        // and metadata-nested theme_preset). This is what Discard reverts to.
         seedFromBootstrap(normalizePreferencesForBootstrap(d));
         const metadata = readPreferenceMetadata(d);
-        if (d["language_code"])       setLanguage(String(d["language_code"]));
-        if (d["timezone_code"])       setTimezone(String(d["timezone_code"]));
-        if (d["date_format"])         setDateFormat(String(d["date_format"]));
-        if (d["week_start"] != null)  setWeekStart(String(d["week_start"]));
-        if (d["home_workspace_code"]) setHomeWs(String(d["home_workspace_code"]));
-        if (d["home_module_code"])    setHomeMod(String(d["home_module_code"]));
-        if (d["notification_digest"]) setDigest(String(d["notification_digest"]));
-        else if (typeof metadata["digest"] === "string") setDigest(metadata["digest"]);
+
+        const nextTz     = d["timezone_code"]       ? String(d["timezone_code"])       : "Asia/Dubai";
+        const nextDateFmt= d["date_format"]         ? String(d["date_format"])         : "%d/%m/%Y";
+        const nextWeek   = d["week_start"] != null  ? String(d["week_start"])          : "1";
+        const nextHomeWs = d["home_workspace_code"] ? String(d["home_workspace_code"]) : "FIN";
+        const nextHomeMod= d["home_module_code"]    ? String(d["home_module_code"])    : "ACC";
+        const nextDigest = d["notification_digest"]
+          ? String(d["notification_digest"])
+          : (typeof metadata["digest"] === "string" ? metadata["digest"] : "daily");
+
+        setTimezone(nextTz);
+        setDateFormat(nextDateFmt);
+        setWeekStart(nextWeek);
+        setHomeWs(nextHomeWs);
+        setHomeMod(nextHomeMod);
+        setDigest(nextDigest);
+
+        // Snapshot baseline AFTER seeding. Read appearance/theme/density back
+        // from the store since seedFromBootstrap normalises them.
+        const store = usePreferencesStore.getState();
+        baselineRef.current = {
+          appearanceMode: store.appearanceMode,
+          themePreset: store.themePreset,
+          densityCode: store.densityCode,
+          languageCode: store.languageCode,
+          timezone: nextTz,
+          dateFormat: nextDateFmt,
+          weekStart: nextWeek,
+          homeWs: nextHomeWs,
+          homeMod: nextHomeMod,
+          digest: nextDigest,
+        };
+        // Loading the baseline shouldn't leave the form looking dirty.
+        setDirty(false);
       })
       .catch(() => { /* use defaults */ });
   }, [active, prefsLoaded, seedFromBootstrap]);
@@ -334,7 +405,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
           appearance_mode:     appearanceMode,
           density_code:        densityCode,
           metadata:            { theme_preset: themePreset, digest },
-          language_code:       language   || null,
+          language_code:       languageCode   || null,
           timezone_code:       timezone   || null,
           date_format:         dateFormat || null,
           week_start:          weekStart ? Number(weekStart) : null,
@@ -343,6 +414,12 @@ export function PreferencesSection({ active }: { active: boolean }) {
           notification_digest: digest    || null,
         },
       });
+      // Update baseline so a follow-up Discard reverts to what we just saved,
+      // not to the previous server values.
+      baselineRef.current = {
+        appearanceMode, themePreset, densityCode, languageCode,
+        timezone, dateFormat, weekStart, homeWs, homeMod, digest,
+      };
       setSaveStatus("saved"); setDirty(false);
     } catch {
       setSaveStatus("error");
@@ -351,6 +428,23 @@ export function PreferencesSection({ active }: { active: boolean }) {
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => setSaveStatus("idle"), 3000);
     }
+  }
+
+  function handleDiscard() {
+    const b = baselineRef.current;
+    if (!b) { setDirty(false); return; }
+    setAppearanceMode(b.appearanceMode);
+    setThemePreset(b.themePreset as Parameters<typeof setThemePreset>[0]);
+    setDensityCode(b.densityCode);
+    setLanguageCode(b.languageCode);
+    setTimezone(b.timezone);
+    setDateFormat(b.dateFormat);
+    setWeekStart(b.weekStart);
+    setHomeWs(b.homeWs);
+    setHomeMod(b.homeMod);
+    setDigest(b.digest);
+    setDirty(false);
+    setSaveStatus("idle");
   }
 
   const handleViewAction = useCallback(
@@ -377,44 +471,49 @@ export function PreferencesSection({ active }: { active: boolean }) {
   return (
     <div className="w-full">
       <Banner>
-        Preferences follow a cascade:{" "}
-        <strong>Platform default → Tenant default → Your overrides</strong>.
-        Saving stores values in your{" "}
-        <code className="rounded bg-card px-1 font-mono text-2xs">principal_ui_profile</code>.
+        {formatRich(
+          { id: "settings.preferences.banner" },
+          {
+            strong: (chunks) => <strong>{chunks}</strong>,
+            code: (chunks) => (
+              <code className="rounded bg-card px-1 font-mono text-2xs">{chunks}</code>
+            ),
+          },
+        )}
       </Banner>
 
       {/* ── Appearance ── */}
       <SectionCard
-        title="Appearance"
+        title={formatMessage({ id: "settings.section.appearance" })}
         icon={Palette}
         managedBy={{ manager: "You", source: "master.principal_ui_preference, master.principal_ui_profile" }}
       >
         {/* Color mode */}
         <div className="mb-5">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Color mode</p>
+            <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.preferences.colorMode" })}</p>
             <SourceChip source="principal_ui_profile" />
           </div>
           <ToggleGroup
             value={appearanceMode}
             onChange={(v) => { setAppearanceMode(v); markDirty(); }}
-            options={APPEARANCE_OPTIONS}
+            options={appearanceOptions}
           />
         </div>
 
         {/* Theme preset */}
         <div>
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Theme preset</p>
+            <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.preferences.themePreset" })}</p>
             <SourceChip source="principal_ui_profile" />
           </div>
           <div className="space-y-4">
-            {PRESET_CATEGORIES.map((cat) => {
+            {PRESET_CATEGORY_DEFS.map((cat) => {
               const presets = themePresets.filter((p) => p.category === cat.key);
               return (
                 <div key={cat.key}>
                   <p className="mb-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {cat.label}
+                    {formatMessage({ id: cat.labelId })}
                   </p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                     {presets.map((p) => (
@@ -435,16 +534,16 @@ export function PreferencesSection({ active }: { active: boolean }) {
 
       {/* ── Density ── */}
       <SectionCard
-        title="Density"
+        title={formatMessage({ id: "settings.section.density" })}
         icon={Grid3x3}
         managedBy={{ manager: "You", source: "master.principal_ui_profile" }}
       >
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">Layout density</p>
+          <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.preferences.layoutDensity" })}</p>
           <SourceChip source="principal_ui_profile" />
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          {DENSITY_OPTIONS.map((opt) => (
+          {densityOptions.map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -465,7 +564,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
 
       {/* ── Regional ── */}
       <SectionCard
-        title="Regional"
+        title={formatMessage({ id: "settings.section.regional" })}
         icon={Globe}
         managedBy={{
           manager: "You",
@@ -476,10 +575,10 @@ export function PreferencesSection({ active }: { active: boolean }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {([
             {
-              label: "Language",
+              label: formatMessage({ id: "user.language" }),
               key: "language_code",
-              value: language,
-              setter: setLanguage,
+              value: languageCode,
+              setter: (v: string) => setLanguageCode(normalizeLanguageCode(v) ?? "en"),
               source: "principal_ui_profile",
               options: [
                 { value: "en", label: "English" },
@@ -491,7 +590,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
               ],
             },
             {
-              label: "Timezone",
+              label: formatMessage({ id: "settings.preferences.regional.timezone" }),
               key: "timezone_code",
               value: timezone,
               setter: setTimezone,
@@ -506,7 +605,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
               ],
             },
             {
-              label: "Date Format",
+              label: formatMessage({ id: "settings.preferences.regional.dateFormat" }),
               key: "date_format",
               value: dateFormat,
               setter: setDateFormat,
@@ -519,15 +618,15 @@ export function PreferencesSection({ active }: { active: boolean }) {
               ],
             },
             {
-              label: "Week Starts On",
+              label: formatMessage({ id: "settings.preferences.regional.weekStartsOn" }),
               key: "week_start",
               value: weekStart,
               setter: setWeekStart,
               source: "tenant_profile",
               options: [
-                { value: "0", label: "Sunday" },
-                { value: "1", label: "Monday" },
-                { value: "6", label: "Saturday" },
+                { value: "0", label: formatMessage({ id: "settings.preferences.regional.weekday.sunday" }) },
+                { value: "1", label: formatMessage({ id: "settings.preferences.regional.weekday.monday" }) },
+                { value: "6", label: formatMessage({ id: "settings.preferences.regional.weekday.saturday" }) },
               ],
             },
           ] as const).map(({ label, value, setter, source, options }) => (
@@ -553,7 +652,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
 
       {/* ── Navigation Defaults ── */}
       <SectionCard
-        title="Navigation Defaults"
+        title={formatMessage({ id: "settings.section.navigation" })}
         icon={Settings}
         managedBy={{
           manager: "You",
@@ -564,29 +663,31 @@ export function PreferencesSection({ active }: { active: boolean }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">Home Workspace</label>
+              <label className="text-xs font-medium text-muted-foreground">{formatMessage({ id: "settings.preferences.navigation.homeWorkspace" })}</label>
               <SourceChip source="principal_ui_profile" />
             </div>
             <Select
               value={homeWs}
               onValueChange={(v) => {
                 setHomeWs(v);
-                setHomeMod(HOME_MODULE_OPTIONS_BY_WORKSPACE[v]?.[0]?.value ?? "");
+                // Module is FK-scoped to workspace; snap to the first module of
+                // the new workspace whenever the current selection wouldn't be valid.
+                setHomeMod(HOME_MODULE_DEFS_BY_WORKSPACE[v]?.[0]?.value ?? "");
                 markDirty();
               }}
             >
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {HOME_WORKSPACE_OPTIONS.map((ws) => (
+                {homeWorkspaceOptions.map((ws) => (
                   <SelectItem key={ws.value} value={ws.value} className="text-sm">{ws.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="mt-1 text-2xs text-muted-foreground">First workspace shown on login</p>
+            <p className="mt-1 text-2xs text-muted-foreground">{formatMessage({ id: "settings.preferences.navigation.firstWorkspace" })}</p>
           </div>
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">Home Module</label>
+              <label className="text-xs font-medium text-muted-foreground">{formatMessage({ id: "settings.preferences.navigation.homeModule" })}</label>
               <SourceChip source="principal_ui_profile" />
             </div>
             <Select value={homeMod} onValueChange={(v) => { setHomeMod(v); markDirty(); }}>
@@ -597,12 +698,12 @@ export function PreferencesSection({ active }: { active: boolean }) {
                 ))}
               </SelectContent>
             </Select>
-            <p className="mt-1 text-2xs text-muted-foreground">Landing module within workspace</p>
+            <p className="mt-1 text-2xs text-muted-foreground">{formatMessage({ id: "settings.preferences.navigation.landingModule" })}</p>
           </div>
         </div>
         <Separator className="my-3" />
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Active Organization</span>
+          <span className="text-xs text-muted-foreground">{formatMessage({ id: "settings.preferences.navigation.activeOrg" })}</span>
           <span className="text-sm text-foreground">
             {bff.activeOrg ? bff.activeOrg.replace("--", " / ") : "—"}
           </span>
@@ -611,7 +712,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
 
       {/* ── Notifications ── */}
       <SectionCard
-        title="Notifications"
+        title={formatMessage({ id: "settings.section.notifications" })}
         icon={Bell}
         managedBy={{
           manager: "You",
@@ -620,31 +721,31 @@ export function PreferencesSection({ active }: { active: boolean }) {
         }}
       >
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">Digest frequency</p>
+          <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.preferences.notifications.digestFrequency" })}</p>
           <SourceChip source="principal_ui_profile" />
         </div>
         <ToggleGroup
           value={digest}
           onChange={(v) => { setDigest(v); markDirty(); }}
           options={[
-            { value: "realtime", label: "Realtime" },
-            { value: "hourly",   label: "Hourly"   },
-            { value: "daily",    label: "Daily"    },
-            { value: "weekly",   label: "Weekly"   },
+            { value: "realtime", label: formatMessage({ id: "settings.preferences.notifications.realtime" }) as string },
+            { value: "hourly",   label: formatMessage({ id: "settings.preferences.notifications.hourly"   }) as string },
+            { value: "daily",    label: formatMessage({ id: "settings.preferences.notifications.daily"    }) as string },
+            { value: "weekly",   label: formatMessage({ id: "settings.preferences.notifications.weekly"   }) as string },
           ]}
         />
         <p className="mt-2 text-2xs text-muted-foreground">
-          How often you receive notification summary emails.
+          {formatMessage({ id: "settings.preferences.notifications.howOften" })}
         </p>
       </SectionCard>
 
       {/* ── Saved Views ── */}
       <SectionCard
-        title="Saved Views"
+        title={formatMessage({ id: "settings.section.savedViews" })}
         icon={Lock}
         badge={
           <Badge variant="secondary" className="text-2xs">
-            {activeViews.length} active
+            {formatMessage({ id: "settings.preferences.savedViews.activeCount" }, { count: activeViews.length })}
           </Badge>
         }
         managedBy={{
@@ -661,7 +762,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
           </div>
         ) : activeViews.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            No saved views yet. Views are created from module list pages.
+            {formatMessage({ id: "settings.preferences.savedViews.empty" })}
           </p>
         ) : (
           <div className="space-y-2">
@@ -671,47 +772,51 @@ export function PreferencesSection({ active }: { active: boolean }) {
           </div>
         )}
         <p className="mt-3 text-2xs text-muted-foreground">
-          <strong>Pin</strong> — show in sidebar ·{" "}
-          <strong>Star</strong> — personal favourite ·{" "}
-          <strong>Share</strong> — visible to team members ·{" "}
-          <strong>Archive</strong> — hides from all lists.
+          {formatRich(
+            { id: "settings.preferences.savedViews.legend" },
+            { strong: (chunks) => <strong>{chunks}</strong> },
+          )}
         </p>
       </SectionCard>
 
       {/* ── Sticky save bar ── */}
-      {dirty && (
+      {/* Keep the bar mounted while there's a status to show, otherwise the
+          "Saved"/"Failed" feedback unmounts the moment dirty flips to false. */}
+      {(dirty || saveStatus !== "idle") && (
         <div className="sticky bottom-0 z-10 flex items-center justify-between gap-3 rounded-t-lg border-t border-border bg-card px-4 py-3 shadow-md">
           <span className="text-xs">
             {saveStatus === "saved" && (
               <span className="flex items-center gap-1 text-success">
-                <Check className="h-3 w-3" /> Saved
+                <Check className="h-3 w-3" /> {formatMessage({ id: "settings.preferences.status.saved" })}
               </span>
             )}
             {saveStatus === "error" && (
               <span className="flex items-center gap-1 text-destructive">
-                <XCircle className="h-3 w-3" /> Failed to save
+                <XCircle className="h-3 w-3" /> {formatMessage({ id: "settings.preferences.status.failed" })}
               </span>
             )}
-            {saveStatus === "idle" && (
-              <span className="text-muted-foreground">Unsaved changes</span>
+            {saveStatus === "idle" && dirty && (
+              <span className="text-muted-foreground">{formatMessage({ id: "settings.preferences.status.unsaved" })}</span>
             )}
           </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setPrefsLoaded(false); setDirty(false); }}
-              disabled={saving}
-            >
-              <RotateCcw className="mr-1.5 h-3 w-3" /> Discard
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={saving}>
-              {saving
-                ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                : <Save className="mr-1.5 h-3 w-3" />}
-              {saving ? "Saving…" : "Save Preferences"}
-            </Button>
-          </div>
+          {dirty && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDiscard}
+                disabled={saving}
+              >
+                <RotateCcw className="mr-1.5 h-3 w-3" /> {formatMessage({ id: "settings.preferences.actions.discard" })}
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                {saving
+                  ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                  : <Save className="mr-1.5 h-3 w-3" />}
+                {formatMessage({ id: saving ? "settings.preferences.actions.saving" : "settings.preferences.actions.save" })}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

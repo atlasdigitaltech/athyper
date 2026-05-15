@@ -1,3 +1,4 @@
+import { isValidLocale, type Locale } from "@athyper/i18n/config";
 import { DEFAULT_PRESET, getPresetMeta, type ThemePresetMeta } from "@athyper/theme/presets";
 
 export const THEME_PRESET_COOKIE = "theme_preset";
@@ -6,11 +7,13 @@ export const THEME_PRESET_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 export type AppearanceModeValue = "light" | "dark" | "system";
 export type DensityCodeValue = "compact" | "comfortable" | "spacious";
 export type ThemePresetValue = ThemePresetMeta["value"];
+export type LanguageCodeValue = Locale;
 
 export interface PreferenceBootstrapProfile {
   appearanceMode?: AppearanceModeValue;
   densityCode?: DensityCodeValue;
   themePreset?: ThemePresetValue;
+  languageCode?: LanguageCodeValue;
 }
 
 const APPEARANCE_MODES = new Set<AppearanceModeValue>(["light", "dark", "system"]);
@@ -32,6 +35,12 @@ export function normalizeThemePreset(value: unknown): ThemePresetValue | undefin
   if (typeof value !== "string") return undefined;
   const normalized = value.trim() || DEFAULT_PRESET;
   return getPresetMeta(normalized)?.value as ThemePresetValue | undefined;
+}
+
+export function normalizeLanguageCode(value: unknown): LanguageCodeValue | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  return isValidLocale(normalized) ? (normalized as LanguageCodeValue) : undefined;
 }
 
 export function readPreferenceMetadata(profile: Record<string, unknown>): Record<string, unknown> {
@@ -73,6 +82,9 @@ export function normalizePreferencesForBootstrap(
       normalizeDensityCode(profile["densityCode"]) ??
       normalizeDensityCode(profile["density_code"]),
     themePreset: extractThemePresetFromPreferences(profile),
+    languageCode:
+      normalizeLanguageCode(profile["languageCode"]) ??
+      normalizeLanguageCode(profile["language_code"]),
   };
 }
 

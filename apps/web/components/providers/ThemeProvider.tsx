@@ -1,28 +1,31 @@
 "use client";
 
 /**
- * ThemeProvider — syncs PreferencesStore to the DOM on app boot.
+ * ThemeProvider — applies preference defaults to the DOM on app boot.
  *
- * Handles:
- *   - System dark-mode detection and initial sync
- *   - `prefers-color-scheme` media query change listener
- *   - Renders nothing — purely a DOM sync side-effect component
+ * Responsibilities:
+ *   - Seed PreferencesStore with built-in defaults so first paint isn't blank
+ *   - Track `prefers-color-scheme` changes when appearance mode = "system"
  *
- * Must be mounted inside QueryProvider but outside SessionProvider so
- * theme is applied before any shell chrome renders.
+ * The user's persisted prefs (master.principal_ui_profile) are hydrated by
+ * PreferencesHydrator, mounted inside SessionProvider — that's where we have
+ * access to bff.activeOrg, which the runtime needs to resolve the row. Doing
+ * the fetch here would race with org selection and silently return PREFS_EMPTY.
+ *
+ * Must be mounted inside QueryProvider but outside SessionProvider so theme
+ * is applied before any shell chrome renders.
  */
 
 import { useEffect } from "react";
 import { usePreferencesStore } from "@/stores/preferences/usePreferencesStore";
 
 export function ThemeProvider() {
-  const { appearanceMode, seedFromBootstrap, setResolvedAppearanceMode } =
-    usePreferencesStore();
+  const { appearanceMode, setResolvedAppearanceMode } = usePreferencesStore();
 
   // Seed with the preset already present on <html> so a cookie-restored hard
-  // refresh is not immediately overwritten by client defaults.
-  // When a user logs in and the session contains uiProfile, call
-  // seedFromBootstrap(uiProfile) again from SessionProvider.
+  // refresh is not immediately overwritten by client defaults. The user's
+  // persisted prefs are then hydrated by PreferencesHydrator (inside
+  // SessionProvider, where bff.activeOrg is available).
   useEffect(() => {
     usePreferencesStore.getState().seedFromBootstrap({
       themePreset: document.documentElement.dataset.themePreset,

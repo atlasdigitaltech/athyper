@@ -30,6 +30,7 @@ import {
   Switch,
 } from "@athyper/ui/primitives";
 import { bffFetch } from "@/lib/bff-fetch";
+import { useIntl } from "@/components/providers/IntlProvider";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,20 +53,20 @@ interface PrefUpsert {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const CHANNELS = ["in_app", "email", "sms", "push", "whatsapp"] as const;
-const CHANNEL_LABELS: Record<string, string> = {
-  in_app:   "In-App",
-  email:    "Email",
-  sms:      "SMS",
-  push:     "Push",
-  whatsapp: "WhatsApp",
+const CHANNEL_LABEL_IDS: Record<string, string> = {
+  in_app:   "settings.notifications.channel.inApp",
+  email:    "settings.notifications.channel.email",
+  sms:      "settings.notifications.channel.sms",
+  push:     "settings.notifications.channel.push",
+  whatsapp: "settings.notifications.channel.whatsapp",
 };
 
-const DIGEST_FREQUENCIES = [
-  { code: null,            label: "Immediately" },
-  { code: "hourly_digest", label: "Hourly digest" },
-  { code: "daily_digest",  label: "Daily digest"  },
-  { code: "weekly_digest", label: "Weekly digest" },
-] as const;
+const DIGEST_FREQUENCIES: { code: string | null; labelId: string }[] = [
+  { code: null,            labelId: "settings.notifications.frequency.immediate" },
+  { code: "hourly_digest", labelId: "settings.notifications.frequency.hourly" },
+  { code: "daily_digest",  labelId: "settings.notifications.frequency.daily"  },
+  { code: "weekly_digest", labelId: "settings.notifications.frequency.weekly" },
+];
 
 // ── API hooks ─────────────────────────────────────────────────────────────────
 
@@ -132,6 +133,7 @@ function EventCodeRow({
   expanded:    boolean;
   onExpand:    () => void;
 }) {
+  const { formatMessage } = useIntl();
   const enabledCount = prefs.filter((p) => p.is_enabled !== false).length;
 
   return (
@@ -153,7 +155,7 @@ function EventCodeRow({
           <span className="font-mono text-2xs text-muted-foreground">{eventCode}</span>
         </div>
         <Badge variant="secondary" className="shrink-0 text-2xs">
-          {enabledCount}/{prefs.length} active
+          {formatMessage({ id: "settings.notifications.badge.active" }, { enabled: enabledCount, total: prefs.length })}
         </Badge>
       </button>
 
@@ -169,10 +171,12 @@ function EventCodeRow({
               >
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-foreground w-20 shrink-0">
-                    {CHANNEL_LABELS[pref.channel] ?? pref.channel}
+                    {CHANNEL_LABEL_IDS[pref.channel]
+                      ? formatMessage({ id: CHANNEL_LABEL_IDS[pref.channel] })
+                      : pref.channel}
                   </span>
                   {pref.is_enabled === null && (
-                    <Badge variant="outline" className="text-2xs">Default</Badge>
+                    <Badge variant="outline" className="text-2xs">{formatMessage({ id: "settings.notifications.badge.default" })}</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-4">
@@ -192,7 +196,7 @@ function EventCodeRow({
                             value={f.code ?? "__immediate__"}
                             className="text-xs"
                           >
-                            {f.label}
+                            {formatMessage({ id: f.labelId })}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -217,6 +221,7 @@ function EventCodeRow({
 // ── NotificationsSection ──────────────────────────────────────────────────────
 
 export function NotificationsSection({ active }: { active: boolean }) {
+  const { formatMessage } = useIntl();
   const { data, isLoading } = useNotifPreferences();
   const save               = useSavePreferences();
 
@@ -294,15 +299,14 @@ export function NotificationsSection({ active }: { active: boolean }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs text-muted-foreground">
-            Control which channels deliver each notification type. Changes apply immediately.
-            Removing an override restores the routing rule default.
+            {formatMessage({ id: "settings.notifications.header" })}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {hasDrafts && (
             <Button variant="ghost" size="sm" onClick={handleReset} disabled={save.isPending}>
               <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
-              Reset
+              {formatMessage({ id: "settings.notifications.action.reset" })}
             </Button>
           )}
           <Button
@@ -315,12 +319,12 @@ export function NotificationsSection({ active }: { active: boolean }) {
             {saved ? (
               <>
                 <Check className="mr-1.5 h-3.5 w-3.5" />
-                Saved
+                {formatMessage({ id: "settings.notifications.action.saved" })}
               </>
             ) : (
               <>
                 <Save className="mr-1.5 h-3.5 w-3.5" />
-                Save changes
+                {formatMessage({ id: "settings.notifications.action.save" })}
               </>
             )}
           </Button>
@@ -329,7 +333,7 @@ export function NotificationsSection({ active }: { active: boolean }) {
 
       {save.isError && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-xs text-destructive">
-          Failed to save preferences. Please try again.
+          {formatMessage({ id: "settings.notifications.error.saveFailed" })}
         </div>
       )}
 
@@ -342,8 +346,8 @@ export function NotificationsSection({ active }: { active: boolean }) {
         <Card>
           <EmptyState
             icon={<Bell className="h-8 w-8 text-muted-foreground/30" />}
-            title="No custom preferences"
-            description="All notifications are delivered using the system routing rule defaults. Once you change a setting here, your override will appear in this list."
+            title={formatMessage({ id: "settings.notifications.empty.title" }) as string}
+            description={formatMessage({ id: "settings.notifications.empty.description" }) as string}
             className="py-12"
           />
         </Card>
@@ -367,17 +371,16 @@ export function NotificationsSection({ active }: { active: boolean }) {
 
       {/* Channel legend */}
       <div className="space-y-1.5">
-        <p className="text-xs font-medium text-muted-foreground">Available channels</p>
+        <p className="text-xs font-medium text-muted-foreground">{formatMessage({ id: "settings.notifications.legend.title" })}</p>
         <div className="flex flex-wrap gap-2">
           {CHANNELS.map((ch) => (
             <div key={ch} className="flex items-center gap-1.5 rounded border px-2.5 py-1">
-              <span className="text-xs text-foreground">{CHANNEL_LABELS[ch]}</span>
+              <span className="text-xs text-foreground">{CHANNEL_LABEL_IDS[ch] ? formatMessage({ id: CHANNEL_LABEL_IDS[ch] }) : ch}</span>
             </div>
           ))}
         </div>
         <p className="text-2xs text-muted-foreground">
-          SMS and WhatsApp channels require additional setup (phone number verification).
-          High-priority and urgent notifications are always delivered immediately regardless of digest settings.
+          {formatMessage({ id: "settings.notifications.legend.note" })}
         </p>
       </div>
     </div>

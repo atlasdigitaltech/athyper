@@ -29,6 +29,7 @@ import {
 import { ActivityFeed } from "@athyper/collaboration-ui/activity";
 import { SectionLabel } from "@/components/home/SectionLabel";
 import { useShellSession } from "@/components/providers/SessionProvider";
+import { useIntl } from "@/components/providers/IntlProvider";
 import { getWorkbenchLabel } from "@/lib/auth/workbench-config";
 import { parseOrgAlias } from "@/lib/auth/parse-org-alias";
 import {
@@ -42,9 +43,16 @@ import { useInbox, useRecentActivity } from "@athyper/query";
 interface WorkspaceCardModel {
   key: string;
   href: string;
-  title: string;
+  /** Message ID for the workspace label (resolved via formatMessage). */
+  titleId: string;
   icon: LucideIcon;
 }
+
+const WORKBENCH_LABEL_IDS: Record<string, string> = {
+  user:    "shell.workbench.label.user",
+  partner: "shell.workbench.label.partner",
+  admin:   "shell.workbench.label.admin",
+};
 
 type PortalType = "user" | "partner" | "admin";
 
@@ -57,43 +65,43 @@ const PORTAL_WORKSPACES: Record<PortalType, WorkspaceCardModel[]> = {
     {
       key: "finance",
       href: "/finance",
-      title: "Finance",
+      titleId: "home.workspace.finance",
       icon: Building2,
     },
     {
       key: "supply-chain",
       href: "/supply-chain",
-      title: "Supply Chain",
+      titleId: "home.workspace.supplyChain",
       icon: Package,
     },
     {
       key: "customer-experience",
       href: "/customer-experience",
-      title: "Sales & CRM",
+      titleId: "home.workspace.salesCrm",
       icon: ShoppingBag,
     },
     {
       key: "people-management",
       href: "/people",
-      title: "People",
+      titleId: "home.workspace.people",
       icon: Users,
     },
     {
       key: "project-management",
       href: "/projects",
-      title: "Projects & Services",
+      titleId: "home.workspace.projects",
       icon: FolderKanban,
     },
     {
       key: "manufacturing-operations",
       href: "/manufacturing",
-      title: "Manufacturing & Maintenance",
+      titleId: "home.workspace.manufacturing",
       icon: Factory,
     },
     {
       key: "asset-management",
       href: "/asset-management",
-      title: "Assets & Facilities",
+      titleId: "home.workspace.assetsFacilities",
       icon: Briefcase,
     },
   ],
@@ -166,30 +174,33 @@ function AttentionCard({
 
 function WorkspaceShortcut({ workspace }: { workspace: WorkspaceCardModel }) {
   const Icon = workspace.icon;
+  const { formatMessage } = useIntl();
+  const title = formatMessage({ id: workspace.titleId }) as string;
 
   return (
     <Link
       href={workspace.href}
-      aria-label={`Open ${workspace.title} workspace`}
-      title={`Open ${workspace.title}`}
+      aria-label={title}
+      title={title}
       className="group flex min-h-14 items-center gap-2.5 rounded-lg border bg-card px-3 py-2 transition-colors hover:bg-accent/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors group-hover:text-foreground">
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-        {workspace.title}
+        {title}
       </span>
     </Link>
   );
 }
 
 function PinnedItems({ items }: { items: RecentItem[] }) {
+  const { formatMessage } = useIntl();
   if (items.length === 0) return null;
 
   return (
     <section>
-      <SectionLabel>Pinned</SectionLabel>
+      <SectionLabel>{formatMessage({ id: "home.section.pinned" })}</SectionLabel>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
           <Link
@@ -211,6 +222,7 @@ function PinnedItems({ items }: { items: RecentItem[] }) {
 
 export default function DashboardPage() {
   const { bff, runtime } = useShellSession();
+  const { formatMessage } = useIntl();
   const { data: inboxData, isLoading: inboxLoading } = useInbox();
   const { data: activityData, isLoading: activityLoading } = useRecentActivity(12);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
@@ -233,11 +245,14 @@ export default function DashboardPage() {
   const activeOrgEntry = bff.activeOrg ? bff.organizations[bff.activeOrg] : null;
   const activeOrgParts = bff.activeOrg ? parseOrgAlias(bff.activeOrg) : null;
   const welcomeName = activeOrgEntry?.name ?? firstName(bff.displayName);
-  const workbenchLabel = getWorkbenchLabel(PHASE_ONE_DEFAULT_PORTAL);
+  const workbenchLabelKey = WORKBENCH_LABEL_IDS[PHASE_ONE_DEFAULT_PORTAL];
+  const workbenchLabel = workbenchLabelKey
+    ? (formatMessage({ id: workbenchLabelKey }) as string)
+    : getWorkbenchLabel(PHASE_ONE_DEFAULT_PORTAL);
   const tenantStatus = [
     activeOrgEntry?.name ?? runtime?.entity.name ?? activeOrgParts?.entity,
-    `Period ${periodLabel()}`,
-    `${workbenchLabel} workspace`,
+    formatMessage({ id: "home.period" }, { label: periodLabel() }) as string,
+    formatMessage({ id: "home.workbenchSuffix" }, { label: workbenchLabel }) as string,
   ]
     .filter(Boolean)
     .join(" - ");
@@ -254,45 +269,45 @@ export default function DashboardPage() {
 
   return (
     <PageFrame
-      title={`Welcome, ${welcomeName}`}
-      description={tenantStatus || "Open a workspace to begin"}
+      title={formatMessage({ id: "home.welcome" }, { name: welcomeName }) as string}
+      description={tenantStatus || (formatMessage({ id: "home.openWorkspace" }) as string)}
       width="full"
     >
       <div className="space-y-6">
         <section>
-          <SectionLabel>My attention</SectionLabel>
+          <SectionLabel>{formatMessage({ id: "home.section.attention" })}</SectionLabel>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <AttentionCard
               href="/inbox"
-              label="My Work"
+              label={formatMessage({ id: "home.card.myWork" }) as string}
               value={myWorkCount}
-              detail={`${myWorkCount} ${plural(myWorkCount, "open item", "open items")}`}
+              detail={formatMessage({ id: "home.card.myWork.detail" }, { count: myWorkCount }) as string}
               icon={Inbox}
               loading={inboxLoading}
             />
             <AttentionCard
               href="/inbox?tab=approvals"
-              label="Approvals"
+              label={formatMessage({ id: "home.card.approvals" }) as string}
               value={approvalCount}
-              detail={`${approvalCount} waiting`}
+              detail={formatMessage({ id: "home.card.approvals.detail" }, { count: approvalCount }) as string}
               icon={CheckCircle2}
               loading={inboxLoading}
               tone="success"
             />
             <AttentionCard
               href="/inbox?filter=exceptions"
-              label="Exceptions"
+              label={formatMessage({ id: "home.card.exceptions" }) as string}
               value={exceptionCount}
-              detail={`${exceptionCount} need review`}
+              detail={formatMessage({ id: "home.card.exceptions.detail" }, { count: exceptionCount }) as string}
               icon={AlertTriangle}
               loading={inboxLoading}
               tone={exceptionCount > 0 ? "warning" : "muted"}
             />
             <AttentionCard
               href="#recent-activity"
-              label="Recent"
+              label={formatMessage({ id: "home.card.recent" }) as string}
               value={recentItems.length}
-              detail={`${recentItems.length} viewed`}
+              detail={formatMessage({ id: "home.card.recent.detail" }, { count: recentItems.length }) as string}
               icon={Clock3}
               tone="muted"
             />
@@ -300,7 +315,7 @@ export default function DashboardPage() {
         </section>
 
         <section>
-          <SectionLabel>Workspaces</SectionLabel>
+          <SectionLabel>{formatMessage({ id: "home.section.workspaces" })}</SectionLabel>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {workspaceCards.map((workspace) => (
               <WorkspaceShortcut key={workspace.key} workspace={workspace} />
@@ -313,7 +328,7 @@ export default function DashboardPage() {
         <Card id="recent-activity">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Recent Activity
+              {formatMessage({ id: "home.section.recentActivity" })}
             </CardTitle>
           </CardHeader>
           <CardContent>

@@ -17,9 +17,11 @@
 import { useState } from "react";
 import { Button } from "@athyper/ui/primitives";
 import { useShellSession } from "@/components/providers/SessionProvider";
+import { useIntl } from "@/components/providers/IntlProvider";
 
 export function DelegationBanner() {
   const { runtime, activateDelegation } = useShellSession();
+  const { formatMessage } = useIntl();
   const [dismissed, setDismissed] = useState(false);
 
   // Don't render if no runtime session yet, no delegations, or already active
@@ -59,8 +61,11 @@ export function DelegationBanner() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-warning">
             {runtime.delegations_available.length === 1
-              ? "You have an active delegation available"
-              : `You have ${runtime.delegations_available.length} delegations available`}
+              ? formatMessage({ id: "shell.delegation.banner.one" })
+              : formatMessage(
+                  { id: "shell.delegation.banner.many" },
+                  { count: runtime.delegations_available.length },
+                )}
           </p>
 
           <ul className="mt-2 space-y-2">
@@ -92,7 +97,12 @@ export function DelegationBanner() {
                   )}
 
                   <span className="text-xs text-warning/60">
-                    {daysLeft === 1 ? "expires tomorrow" : `expires in ${daysLeft}d`}
+                    {daysLeft === 1
+                      ? formatMessage({ id: "shell.delegation.expires.tomorrow" })
+                      : formatMessage(
+                          { id: "shell.delegation.expires.days" },
+                          { days: daysLeft },
+                        )}
                   </span>
 
                   <Button
@@ -101,7 +111,10 @@ export function DelegationBanner() {
                     className="h-6 border-warning/40 bg-warning/10 px-2 text-xs text-warning hover:bg-warning/20"
                     onClick={() => activateDelegation(d.delegation_id)}
                   >
-                    Act as {d.delegator_name.split(" ")[0]}
+                    {formatMessage(
+                      { id: "shell.delegation.actAs" },
+                      { name: d.delegator_name.split(" ")[0] ?? d.delegator_name },
+                    )}
                   </Button>
                 </li>
               );
@@ -112,7 +125,7 @@ export function DelegationBanner() {
         {/* Dismiss */}
         <button
           type="button"
-          aria-label="Dismiss delegation banner"
+          aria-label={formatMessage({ id: "shell.delegation.dismiss" }) as string}
           className="shrink-0 text-warning hover:text-warning/80"
           onClick={() => setDismissed(true)}
         >

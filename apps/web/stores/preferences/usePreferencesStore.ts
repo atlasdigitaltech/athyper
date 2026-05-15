@@ -18,10 +18,12 @@
 
 import { create } from "zustand";
 
+import { i18nConfig, getLocaleDir, isValidLocale, type Locale } from "@athyper/i18n/config";
 import type { ThemePresetMeta } from "@athyper/theme";
 import {
   normalizeAppearanceMode,
   normalizeDensityCode,
+  normalizeLanguageCode,
   normalizeThemePreset,
   type AppearanceModeValue,
   type DensityCodeValue,
@@ -32,6 +34,7 @@ import {
 export type AppearanceMode = AppearanceModeValue;
 export type ResolvedAppearanceMode = "light" | "dark";
 export type DensityCode = DensityCodeValue;
+export type LanguageCode = Locale;
 
 /** Preset value — must match a `ThemePresetMeta.value` in @athyper/theme. */
 export type ThemePresetValue = ThemePresetMeta["value"];
@@ -43,6 +46,7 @@ export const PREFERENCES_DEFAULTS = {
   resolvedAppearanceMode: "light" as ResolvedAppearanceMode,
   themePreset: "base" as ThemePresetValue,
   densityCode: "comfortable" as DensityCode,
+  languageCode: i18nConfig.defaultLocale as LanguageCode,
   sidebarCollapsed: false,
 } as const;
 
@@ -53,6 +57,7 @@ export interface PreferencesState {
   resolvedAppearanceMode: ResolvedAppearanceMode;
   themePreset: ThemePresetValue;
   densityCode: DensityCode;
+  languageCode: LanguageCode;
   sidebarCollapsed: boolean;
 
   /** True once seeded from bootstrap response. */
@@ -63,6 +68,7 @@ export interface PreferencesState {
   setResolvedAppearanceMode: (mode: ResolvedAppearanceMode) => void;
   setThemePreset: (preset: ThemePresetValue) => void;
   setDensityCode: (density: DensityCode) => void;
+  setLanguageCode: (locale: LanguageCode) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
   setIsSynced: (synced: boolean) => void;
@@ -78,6 +84,7 @@ export interface PreferencesBootstrapInput {
   appearanceMode?: string | null;
   densityCode?: string | null;
   themePreset?: string | null;
+  languageCode?: string | null;
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -87,6 +94,7 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
   resolvedAppearanceMode: PREFERENCES_DEFAULTS.resolvedAppearanceMode,
   themePreset: PREFERENCES_DEFAULTS.themePreset,
   densityCode: PREFERENCES_DEFAULTS.densityCode,
+  languageCode: PREFERENCES_DEFAULTS.languageCode,
   sidebarCollapsed: PREFERENCES_DEFAULTS.sidebarCollapsed,
   isSynced: false,
 
@@ -116,6 +124,11 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
     syncDensityToDom(density);
   },
 
+  setLanguageCode: (locale) => {
+    set({ languageCode: locale });
+    syncLocaleToDom(locale);
+  },
+
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
   toggleSidebar: () =>
     set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
@@ -132,6 +145,9 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
     const densityCode =
       normalizeDensityCode(profile.densityCode) ??
       PREFERENCES_DEFAULTS.densityCode;
+    const languageCode =
+      normalizeLanguageCode(profile.languageCode) ??
+      PREFERENCES_DEFAULTS.languageCode;
 
     const resolved: ResolvedAppearanceMode =
       appearanceMode === "system"
@@ -146,12 +162,14 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
       appearanceMode,
       resolvedAppearanceMode: resolved,
       densityCode,
+      languageCode,
       isSynced: true,
     });
 
     syncPresetToDom(themePreset);
     syncAppearanceToDom(resolved);
     syncDensityToDom(densityCode);
+    syncLocaleToDom(languageCode);
   },
 }));
 
@@ -170,4 +188,11 @@ function syncAppearanceToDom(mode: ResolvedAppearanceMode) {
 function syncDensityToDom(density: DensityCode) {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.density = density;
+}
+
+function syncLocaleToDom(locale: LanguageCode) {
+  if (typeof document === "undefined") return;
+  const html = document.documentElement;
+  html.lang = locale;
+  html.dir = isValidLocale(locale) ? getLocaleDir(locale) : "ltr";
 }

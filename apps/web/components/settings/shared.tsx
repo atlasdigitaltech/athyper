@@ -23,6 +23,7 @@ import {
   Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton,
   overlayScrimVariants,
 } from "@athyper/ui/primitives";
+import { useIntl } from "@/components/providers/IntlProvider";
 import { bffFetch } from "@/lib/bff-fetch";
 
 // ─── Utility helpers ─────────────────────────────────────────────────────────
@@ -148,20 +149,22 @@ type SourceKey =
   | "principal_ui_profile"
   | "principal_profile";
 
-const SOURCE_META: Record<SourceKey, { label: string; Icon: ElementType }> = {
-  platform_default:     { label: "Platform default",   Icon: Server },
-  tenant_profile:       { label: "Tenant default",     Icon: Building2 },
-  principal_ui_profile: { label: "Personal override",  Icon: User },
-  principal_profile:    { label: "Work profile",       Icon: Briefcase },
+const SOURCE_META: Record<SourceKey, { labelId: string; Icon: ElementType }> = {
+  platform_default:     { labelId: "settings.source.platformDefault",  Icon: Server },
+  tenant_profile:       { labelId: "settings.source.tenantDefault",    Icon: Building2 },
+  principal_ui_profile: { labelId: "settings.source.personalOverride", Icon: User },
+  principal_profile:    { labelId: "settings.source.workProfile",      Icon: Briefcase },
 };
 
 export function SourceChip({ source }: { source: SourceKey | string }) {
-  const meta = SOURCE_META[source as SourceKey] ?? { label: source, Icon: Database };
-  const { Icon } = meta;
+  const { formatMessage } = useIntl();
+  const meta = SOURCE_META[source as SourceKey];
+  const Icon = meta?.Icon ?? Database;
+  const label = meta ? formatMessage({ id: meta.labelId }) : source;
   return (
     <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
       <Icon className="h-2.5 w-2.5 shrink-0" />
-      {meta.label}
+      {label}
     </span>
   );
 }
@@ -179,12 +182,19 @@ export interface ManagedByProps {
 }
 
 export function ManagedBy({ manager, source, lastUpdated, editPath }: ManagedByProps) {
+  const { formatMessage } = useIntl();
   const parts: string[] = [];
-  if (manager)     parts.push(`Managed by: ${manager}`);
+  if (manager) {
+    const text = formatMessage({ id: "settings.managedBy.by" }, { manager });
+    parts.push(typeof text === "string" ? text : `Managed by: ${manager}`);
+  }
   if (source)      parts.push(source);
   if (lastUpdated) {
     const d = fmtDate(lastUpdated);
-    if (d !== "—") parts.push(`Updated: ${d}`);
+    if (d !== "—") {
+      const text = formatMessage({ id: "settings.managedBy.updated" }, { date: d });
+      parts.push(typeof text === "string" ? text : `Updated: ${d}`);
+    }
   }
   if (editPath)    parts.push(editPath);
 

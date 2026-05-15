@@ -14,6 +14,7 @@ import {
   InfoRow, SectionCard, Banner, DataTable, SkeletonCard,
   StatusBadge, useSectionData, str, fmtDate,
 } from "@/components/settings/shared";
+import { useIntl, useFormatRich } from "@/components/providers/IntlProvider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ function StepUpDialog({
   actionClass: string;
   onElevated: () => void;
 }) {
+  const { formatMessage } = useIntl();
   const [code, setCode]     = useState("");
   const [error, setError]   = useState("");
   const [loading, setLoading] = useState(false);
@@ -77,7 +79,7 @@ function StepUpDialog({
       });
       const body = await r.json() as Record<string, unknown>;
       if (!r.ok) {
-        setError(String(body["message"] ?? "Invalid code"));
+        setError(String(body["message"] ?? formatMessage({ id: "settings.identity.stepUp.invalid" })));
       } else {
         setCode(""); setError("");
         onOpenChange(false);
@@ -92,14 +94,14 @@ function StepUpDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) { setCode(""); setError(""); } onOpenChange(v); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Step-up verification required</DialogTitle>
+          <DialogTitle>{formatMessage({ id: "settings.identity.stepUp.title" })}</DialogTitle>
           <DialogDescription>
-            This action requires MFA verification. Enter your current TOTP code.
+            {formatMessage({ id: "settings.identity.stepUp.description" })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div>
-            <Label className="text-xs">Authenticator code</Label>
+            <Label className="text-xs">{formatMessage({ id: "settings.identity.stepUp.code" })}</Label>
             <Input
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -112,9 +114,9 @@ function StepUpDialog({
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={loading}>{formatMessage({ id: "settings.identity.stepUp.cancel" })}</Button>
           <Button size="sm" onClick={handleElevate} disabled={loading || code.length !== 6}>
-            {loading ? "Verifying…" : "Verify"}
+            {loading ? formatMessage({ id: "settings.identity.stepUp.verifying" }) : formatMessage({ id: "settings.identity.stepUp.verify" })}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -131,6 +133,7 @@ function GrantDelegationDialog({
   onOpenChange: (v: boolean) => void;
   onGranted: () => void;
 }) {
+  const { formatMessage } = useIntl();
   const [delegateSearch, setDelegateSearch]         = useState("");
   const [selectedDelegate, setSelectedDelegate]     = useState<PrincipalItem | null>(null);
   const [scopeType, setScopeType]                   = useState("");
@@ -178,7 +181,7 @@ function GrantDelegationDialog({
 
   async function handleSubmit() {
     if (!selectedDelegate || !scopeType || selectedPermIds.size === 0 || !expiresAt) {
-      setSubmitError("Please fill in all required fields.");
+      setSubmitError(formatMessage({ id: "settings.identity.grant.errorRequired" }) as string);
       return;
     }
     setSubmitError(""); setSubmitting(true);
@@ -200,7 +203,7 @@ function GrantDelegationDialog({
         if (body["error"] === "STEP_UP_REQUIRED") {
           setStepUpOpen(true);
         } else {
-          setSubmitError(String(body["message"] ?? "Failed to create delegation"));
+          setSubmitError(String(body["message"] ?? formatMessage({ id: "settings.identity.grant.errorCreate" })));
         }
       } else {
         reset();
@@ -225,16 +228,16 @@ function GrantDelegationDialog({
       <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Grant Delegation</DialogTitle>
+            <DialogTitle>{formatMessage({ id: "settings.identity.grant.title" })}</DialogTitle>
             <DialogDescription>
-              Delegate a subset of your permissions to another user for a limited time.
+              {formatMessage({ id: "settings.identity.grant.description" })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-1">
             {/* Delegate search */}
             <div>
-              <Label className="text-xs font-semibold">Delegate to *</Label>
+              <Label className="text-xs font-semibold">{formatMessage({ id: "settings.identity.grant.delegateLabel" })}</Label>
               {selectedDelegate ? (
                 <div className="mt-1.5 flex items-center justify-between rounded-md border px-3 py-2">
                   <div>
@@ -244,7 +247,7 @@ function GrantDelegationDialog({
                     )}
                   </div>
                   <Button variant="ghost" size="sm" className="h-6 text-2xs" onClick={() => setSelectedDelegate(null)}>
-                    Change
+                    {formatMessage({ id: "settings.identity.grant.delegateChange" })}
                   </Button>
                 </div>
               ) : (
@@ -252,7 +255,7 @@ function GrantDelegationDialog({
                   <Input
                     value={delegateSearch}
                     onChange={(e) => setDelegateSearch(e.target.value)}
-                    placeholder="Search by name or email…"
+                    placeholder={formatMessage({ id: "settings.identity.grant.delegateSearch" }) as string}
                     className="text-xs"
                   />
                   {principals.length > 0 && (
@@ -279,10 +282,10 @@ function GrantDelegationDialog({
             {/* Scope */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold">Scope type *</Label>
+                <Label className="text-xs font-semibold">{formatMessage({ id: "settings.identity.grant.scopeTypeLabel" })}</Label>
                 <Select value={scopeType} onValueChange={setScopeType}>
                   <SelectTrigger className="mt-1.5 h-8 text-xs">
-                    <SelectValue placeholder="Select scope…" />
+                    <SelectValue placeholder={formatMessage({ id: "settings.identity.grant.scopePlaceholder" }) as string} />
                   </SelectTrigger>
                   <SelectContent>
                     {["task", "entity", "workflow", "module", "company_code"].map((s) => (
@@ -292,11 +295,11 @@ function GrantDelegationDialog({
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Scope reference</Label>
+                <Label className="text-xs font-semibold">{formatMessage({ id: "settings.identity.grant.scopeRefLabel" })}</Label>
                 <Input
                   value={scopeRef}
                   onChange={(e) => setScopeRef(e.target.value)}
-                  placeholder="Module code, task ID…"
+                  placeholder={formatMessage({ id: "settings.identity.grant.scopeRefPlaceholder" }) as string}
                   className="mt-1.5 h-8 text-xs"
                 />
               </div>
@@ -304,7 +307,7 @@ function GrantDelegationDialog({
 
             {/* Permissions */}
             <div>
-              <Label className="text-xs font-semibold">Permissions to delegate *</Label>
+              <Label className="text-xs font-semibold">{formatMessage({ id: "settings.identity.grant.permsLabel" })}</Label>
               <div className="mt-1.5 max-h-48 overflow-y-auto rounded-md border p-2 space-y-3">
                 {Object.entries(permsByModule).map(([module, perms]) => (
                   <div key={module}>
@@ -331,17 +334,17 @@ function GrantDelegationDialog({
                   </div>
                 ))}
                 {permissions.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Loading permissions…</p>
+                  <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.identity.grant.permsLoading" })}</p>
                 )}
               </div>
               {selectedPermIds.size > 0 && (
-                <p className="mt-1 text-2xs text-muted-foreground">{selectedPermIds.size} permission{selectedPermIds.size !== 1 ? "s" : ""} selected</p>
+                <p className="mt-1 text-2xs text-muted-foreground">{formatMessage({ id: "settings.identity.grant.permsSelected" }, { count: selectedPermIds.size })}</p>
               )}
             </div>
 
             {/* Expires + reason */}
             <div>
-              <Label className="text-xs font-semibold">Expires at *</Label>
+              <Label className="text-xs font-semibold">{formatMessage({ id: "settings.identity.grant.expiresLabel" })}</Label>
               <Input
                 type="datetime-local"
                 value={expiresAt}
@@ -350,11 +353,11 @@ function GrantDelegationDialog({
               />
             </div>
             <div>
-              <Label className="text-xs font-semibold">Reason</Label>
+              <Label className="text-xs font-semibold">{formatMessage({ id: "settings.identity.grant.reasonLabel" })}</Label>
               <Textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Optional justification for this delegation…"
+                placeholder={formatMessage({ id: "settings.identity.grant.reasonPlaceholder" }) as string}
                 className="mt-1.5 text-xs"
                 rows={2}
               />
@@ -365,10 +368,10 @@ function GrantDelegationDialog({
 
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => { reset(); onOpenChange(false); }} disabled={submitting}>
-              Cancel
+              {formatMessage({ id: "settings.identity.grant.cancel" })}
             </Button>
             <Button size="sm" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "Granting…" : "Grant Delegation"}
+              {submitting ? formatMessage({ id: "settings.identity.grant.granting" }) : formatMessage({ id: "settings.identity.grant.submit" })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -380,6 +383,7 @@ function GrantDelegationDialog({
 // ─── Delegations tab ──────────────────────────────────────────────────────────
 
 function DelegationsTab() {
+  const { formatMessage } = useIntl();
   const queryClient = useQueryClient();
   const [grantOpen, setGrantOpen]           = useState(false);
   const [stepUpOpen, setStepUpOpen]         = useState(false);
@@ -424,7 +428,7 @@ function DelegationsTab() {
   const revokedGiven = given.filter((d) => d.is_revoked);
 
   if (isLoading) return <SkeletonCard lines={4} />;
-  if (isError)   return <Banner variant="warn">Could not load delegation data.</Banner>;
+  if (isError)   return <Banner variant="warn">{formatMessage({ id: "settings.identity.delegations.errorLoad" })}</Banner>;
 
   return (
     <>
@@ -452,19 +456,19 @@ function DelegationsTab() {
 
       {/* Delegations Given (self-managed) */}
       <SectionCard
-        title="Delegations Given"
+        title={formatMessage({ id: "settings.identity.delegations.given.title" }) as string}
         icon={RefreshCw}
-        badge={<Badge variant="warning" className="text-2xs">{activeGiven.length} active</Badge>}
+        badge={<Badge variant="warning" className="text-2xs">{formatMessage({ id: "settings.identity.delegations.given.activeBadge" }, { count: activeGiven.length })}</Badge>}
         managedBy={{
-          manager:  "You",
+          manager:  formatMessage({ id: "settings.identity.delegations.given.managedBy" }) as string,
           source:   "master.delegation_grant (delegator_id = you)",
-          editPath: "Grant or revoke below",
+          editPath: formatMessage({ id: "settings.identity.delegations.given.editPath" }) as string,
         }}
       >
         <div className="mb-3">
           <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={() => setGrantOpen(true)}>
             <Plus className="h-3.5 w-3.5" />
-            Grant Delegation
+            {formatMessage({ id: "settings.identity.delegations.given.grantButton" })}
           </Button>
         </div>
 
@@ -474,11 +478,11 @@ function DelegationsTab() {
               <div className="mb-2 flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-foreground">
-                    To: {str(d["delegate_name"] ?? d["delegate_id"])}
+                    {formatMessage({ id: "settings.identity.delegations.given.to" }, { name: str(d["delegate_name"] ?? d["delegate_id"]) })}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <StatusBadge status="active">Active</StatusBadge>
+                  <StatusBadge status="active">{formatMessage({ id: "settings.identity.delegations.given.activeStatus" })}</StatusBadge>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -486,17 +490,17 @@ function DelegationsTab() {
                     onClick={() => handleRevoke(d.id)}
                   >
                     <Trash2 className="h-3 w-3" />
-                    Revoke
+                    {formatMessage({ id: "settings.identity.delegations.given.revoke" })}
                   </Button>
                 </div>
               </div>
-              <InfoRow label="Scope"   value={`${d.scope_type}${d.scope_ref ? `: ${d.scope_ref}` : ""}`} />
-              <InfoRow label="Reason"  value={str(d.reason)} />
-              <InfoRow label="Expires" value={fmtDate(d.expires_at)} />
+              <InfoRow label={formatMessage({ id: "settings.identity.delegations.field.scope" }) as string}   value={`${d.scope_type}${d.scope_ref ? `: ${d.scope_ref}` : ""}`} />
+              <InfoRow label={formatMessage({ id: "settings.identity.delegations.field.reason" }) as string}  value={str(d.reason)} />
+              <InfoRow label={formatMessage({ id: "settings.identity.delegations.field.expires" }) as string} value={fmtDate(d.expires_at)} />
               {Array.isArray(d.permissions) && d.permissions.length > 0 && (
                 <div className="mt-2">
                   <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Permissions
+                    {formatMessage({ id: "settings.identity.delegations.permissions" })}
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {(d.permissions as string[]).map((p) => (
@@ -510,23 +514,23 @@ function DelegationsTab() {
             </div>
           ))
         ) : (
-          <p className="text-xs text-muted-foreground">No active delegations given.</p>
+          <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.identity.delegations.given.empty" })}</p>
         )}
 
         {revokedGiven.length > 0 && (
           <details className="mt-3">
             <summary className="cursor-pointer text-2xs text-muted-foreground hover:text-foreground">
-              {revokedGiven.length} revoked delegation{revokedGiven.length !== 1 ? "s" : ""}
+              {formatMessage({ id: "settings.identity.delegations.given.revokedCount" }, { count: revokedGiven.length })}
             </summary>
             <div className="mt-2 space-y-2">
               {revokedGiven.map((d) => (
                 <div key={d.id} className="rounded-md bg-muted/50 p-2 opacity-60">
                   <div className="flex items-center justify-between">
-                    <p className="text-2xs font-medium">To: {str(d["delegate_name"] ?? d["delegate_id"])}</p>
-                    <StatusBadge status="suspended">Revoked</StatusBadge>
+                    <p className="text-2xs font-medium">{formatMessage({ id: "settings.identity.delegations.given.to" }, { name: str(d["delegate_name"] ?? d["delegate_id"]) })}</p>
+                    <StatusBadge status="suspended">{formatMessage({ id: "settings.identity.delegations.given.revokedStatus" })}</StatusBadge>
                   </div>
                   <p className="mt-1 text-2xs text-muted-foreground">
-                    {d.scope_type}{d.scope_ref ? `: ${d.scope_ref}` : ""} · expired {fmtDate(d.expires_at)}
+                    {formatMessage({ id: "settings.identity.delegations.given.revokedLine" }, { scope: d.scope_type, ref: d.scope_ref ? `: ${d.scope_ref}` : "", date: fmtDate(d.expires_at) })}
                   </p>
                 </div>
               ))}
@@ -537,13 +541,13 @@ function DelegationsTab() {
 
       {/* Delegations Received (read-only) */}
       <SectionCard
-        title="Delegations Received"
+        title={formatMessage({ id: "settings.identity.delegations.received.title" }) as string}
         icon={RefreshCw}
-        badge={<Badge variant="warning" className="text-2xs">{received.filter((d) => !d.is_revoked).length} active</Badge>}
+        badge={<Badge variant="warning" className="text-2xs">{formatMessage({ id: "settings.identity.delegations.given.activeBadge" }, { count: received.filter((d) => !d.is_revoked).length })}</Badge>}
         managedBy={{
-          manager:  "Delegator",
+          manager:  formatMessage({ id: "settings.identity.delegations.received.managedBy" }) as string,
           source:   "master.delegation_grant (delegate_id = you)",
-          editPath: "Granted to you by another principal",
+          editPath: formatMessage({ id: "settings.identity.delegations.received.editPath" }) as string,
         }}
       >
         {received.filter((d) => !d.is_revoked).length > 0 ? (
@@ -551,18 +555,18 @@ function DelegationsTab() {
             <div key={d.id} className="mb-3 last:mb-0 rounded-md bg-muted p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs font-semibold text-foreground">
-                  From: {str(d["delegator_name"] ?? d["delegator_id"])}
+                  {formatMessage({ id: "settings.identity.delegations.received.from" }, { name: str(d["delegator_name"] ?? d["delegator_id"]) })}
                 </span>
-                <StatusBadge status="active">Active</StatusBadge>
+                <StatusBadge status="active">{formatMessage({ id: "settings.identity.delegations.given.activeStatus" })}</StatusBadge>
               </div>
-              <InfoRow label="Scope Type" value={str(d.scope_type)} />
-              <InfoRow label="Scope Ref"  value={str(d.scope_ref)} mono />
-              <InfoRow label="Reason"     value={str(d.reason)} />
-              <InfoRow label="Expires"    value={fmtDate(d.expires_at)} hint="Mandatory expiry — open-ended delegation is not permitted" />
+              <InfoRow label={formatMessage({ id: "settings.identity.delegations.field.scopeType" }) as string} value={str(d.scope_type)} />
+              <InfoRow label={formatMessage({ id: "settings.identity.delegations.field.scopeRef" }) as string}  value={str(d.scope_ref)} mono />
+              <InfoRow label={formatMessage({ id: "settings.identity.delegations.field.reason" }) as string}     value={str(d.reason)} />
+              <InfoRow label={formatMessage({ id: "settings.identity.delegations.field.expires" }) as string}    value={fmtDate(d.expires_at)} hint={formatMessage({ id: "settings.identity.delegations.field.expires.hint" }) as string} />
               {Array.isArray(d.permissions) && d.permissions.length > 0 && (
                 <div className="mt-2">
                   <p className="mb-1 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Delegated permissions
+                    {formatMessage({ id: "settings.identity.delegations.delegatedPermissions" })}
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {(d.permissions as string[]).map((p) => (
@@ -576,7 +580,7 @@ function DelegationsTab() {
             </div>
           ))
         ) : (
-          <p className="text-xs text-muted-foreground">No delegations received.</p>
+          <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.identity.delegations.received.empty" })}</p>
         )}
       </SectionCard>
     </>
@@ -586,6 +590,8 @@ function DelegationsTab() {
 // ─── IdentitySection ──────────────────────────────────────────────────────────
 
 export function IdentitySection({ active }: { active: boolean }) {
+  const { formatMessage } = useIntl();
+  const formatRich        = useFormatRich();
   const { data, loading, error } = useSectionData<IdentityData>(active, "/api/user/identity");
 
   if (loading) return (
@@ -599,9 +605,7 @@ export function IdentitySection({ active }: { active: boolean }) {
   if (error) return (
     <div className="w-full">
       <Banner variant="warn">
-        Could not load identity data —{" "}
-        <code className="font-mono text-2xs">{error}</code>. Ensure the
-        runtime service is running and your session is active.
+        {formatMessage({ id: "settings.identity.error.loadFailed" }, { error })}
       </Banner>
     </div>
   );
@@ -626,42 +630,43 @@ export function IdentitySection({ active }: { active: boolean }) {
   return (
     <div className="w-full">
       <Banner>
-        Read-only transparency view — identity and access are managed by your
-        tenant administrator and the RBAC engine. You can see{" "}
-        <strong>what</strong> access you have and <strong>why</strong>.
+        {formatRich(
+          { id: "settings.identity.banner.intro" },
+          { strong: (chunks) => <strong>{chunks}</strong> },
+        )}
       </Banner>
 
       <Tabs defaultValue="summary">
         <TabsList className="mb-4 h-auto flex-wrap gap-1 bg-muted p-1">
-          <TabsTrigger value="summary"     className="text-xs">Effective Access</TabsTrigger>
-          <TabsTrigger value="persona"     className="text-xs">Persona</TabsTrigger>
-          <TabsTrigger value="groups"      className="text-xs">Groups & Roles</TabsTrigger>
-          <TabsTrigger value="teams"       className="text-xs">Teams</TabsTrigger>
-          <TabsTrigger value="delegations" className="text-xs">Delegations</TabsTrigger>
+          <TabsTrigger value="summary"     className="text-xs">{formatMessage({ id: "settings.identity.tab.summary" })}</TabsTrigger>
+          <TabsTrigger value="persona"     className="text-xs">{formatMessage({ id: "settings.identity.tab.persona" })}</TabsTrigger>
+          <TabsTrigger value="groups"      className="text-xs">{formatMessage({ id: "settings.identity.tab.groups" })}</TabsTrigger>
+          <TabsTrigger value="teams"       className="text-xs">{formatMessage({ id: "settings.identity.tab.teams" })}</TabsTrigger>
+          <TabsTrigger value="delegations" className="text-xs">{formatMessage({ id: "settings.identity.tab.delegations" })}</TabsTrigger>
           {showFeatures && (
-            <TabsTrigger value="features" className="text-xs">Feature Grants</TabsTrigger>
+            <TabsTrigger value="features" className="text-xs">{formatMessage({ id: "settings.identity.tab.features" })}</TabsTrigger>
           )}
         </TabsList>
 
         {/* ── Effective Access ── */}
         <TabsContent value="summary" className="mt-4">
           <SectionCard
-            title="Effective Access Summary"
+            title={formatMessage({ id: "settings.identity.summary.title" }) as string}
             icon={ShieldCheck}
             managedBy={{
-              manager:  "RBAC Engine",
+              manager:  formatMessage({ id: "settings.identity.summary.managedBy" }) as string,
               source:   "Runtime: check_permission → derive_effective_roles → access_grant evaluation",
-              editPath: "Contact tenant admin",
+              editPath: formatMessage({ id: "settings.identity.summary.editPath" }) as string,
             }}
           >
             <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {[
-                { label: "Current Persona",       value: persona ? str(persona["persona_name"]) : "None" },
-                { label: "Active Groups",          value: `${groups.length} group${groups.length !== 1 ? "s" : ""}` },
-                { label: "Delegations Received",   value: String(received.length) },
-                { label: "Legal Entities",         value: companies.length === 0 ? "—" : String(legalEntityCount) },
-                { label: "Company Codes",          value: companies.length === 0 ? "—" : String(companies.length) },
-                { label: "Explicit Denials",       value: String(accessGrants.filter((a) => str(a["effect"]) === "deny").length) },
+                { label: formatMessage({ id: "settings.identity.summary.card.currentPersona" }) as string,       value: persona ? str(persona["persona_name"]) : (formatMessage({ id: "settings.identity.summary.card.none" }) as string) },
+                { label: formatMessage({ id: "settings.identity.summary.card.activeGroups" }) as string,          value: formatMessage({ id: "settings.identity.summary.groupsCount" }, { count: groups.length }) as string },
+                { label: formatMessage({ id: "settings.identity.summary.card.delegationsReceived" }) as string,   value: String(received.length) },
+                { label: formatMessage({ id: "settings.identity.summary.card.legalEntities" }) as string,         value: companies.length === 0 ? "—" : String(legalEntityCount) },
+                { label: formatMessage({ id: "settings.identity.summary.card.companyCodes" }) as string,          value: companies.length === 0 ? "—" : String(companies.length) },
+                { label: formatMessage({ id: "settings.identity.summary.card.explicitDenials" }) as string,       value: String(accessGrants.filter((a) => str(a["effect"]) === "deny").length) },
               ].map((card) => (
                 <div key={card.label} className="rounded-md bg-muted p-3">
                   <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -677,7 +682,7 @@ export function IdentitySection({ active }: { active: boolean }) {
             {companies.length > 0 && (
               <>
                 <p className="mb-2.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Accessible Legal Entities &amp; Company Codes
+                  {formatMessage({ id: "settings.identity.summary.companies.title" })}
                 </p>
                 <div className="mb-4 space-y-2">
                   {Object.entries(companiesByLE).map(([leKey, leCos]) => {
@@ -704,8 +709,10 @@ export function IdentitySection({ active }: { active: boolean }) {
                   })}
                 </div>
                 <p className="mb-3 text-2xs text-muted-foreground">
-                  Source: direct principal assignment or via group membership in{" "}
-                  <code className="rounded bg-muted px-1 font-mono text-2xs">master.company_code_access</code>.
+                  {formatRich(
+                    { id: "settings.identity.summary.companies.note" },
+                    { code: (chunks) => <code className="rounded bg-muted px-1 font-mono text-2xs">{chunks}</code> },
+                  )}
                 </p>
               </>
             )}
@@ -713,10 +720,16 @@ export function IdentitySection({ active }: { active: boolean }) {
             {accessGrants.length > 0 && (
               <>
                 <p className="mb-2.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Permission Resolution Sample
+                  {formatMessage({ id: "settings.identity.summary.resolution.title" })}
                 </p>
                 <DataTable
-                  columns={["Permission", "Effect", "Source", "Via", "Scope"]}
+                  columns={[
+                    formatMessage({ id: "settings.identity.summary.resolution.column.permission" }) as string,
+                    formatMessage({ id: "settings.identity.summary.resolution.column.effect" }) as string,
+                    formatMessage({ id: "settings.identity.summary.resolution.column.source" }) as string,
+                    formatMessage({ id: "settings.identity.summary.resolution.column.via" }) as string,
+                    formatMessage({ id: "settings.identity.summary.resolution.column.scope" }) as string,
+                  ]}
                   rows={accessGrants.map((a) => [
                     <span key="perm" className="font-mono text-2xs">{str(a["permission_code"])}</span>,
                     <StatusBadge key="eff" status={str(a["effect"])}>{str(a["effect"])}</StatusBadge>,
@@ -728,8 +741,7 @@ export function IdentitySection({ active }: { active: boolean }) {
                   ])}
                 />
                 <p className="mt-2.5 text-2xs text-muted-foreground">
-                  Resolution order: Plan gate → Persona permissions → Group roles (scoped) →
-                  Access grants (allow) → Access grants (deny wins). Deny always beats allow (SoD).
+                  {formatMessage({ id: "settings.identity.summary.resolution.note" })}
                 </p>
               </>
             )}
@@ -739,33 +751,31 @@ export function IdentitySection({ active }: { active: boolean }) {
         {/* ── Persona ── */}
         <TabsContent value="persona" className="mt-4">
           <SectionCard
-            title="Principal Persona"
+            title={formatMessage({ id: "settings.identity.persona.title" }) as string}
             icon={UserCheck}
             managedBy={{
-              manager:  "Tenant Admin",
+              manager:  formatMessage({ id: "settings.identity.persona.managedBy" }) as string,
               source:   "master.principal_persona",
-              editPath: "Admin assignment only — one per principal per tenant",
+              editPath: formatMessage({ id: "settings.identity.persona.editPath" }) as string,
             }}
           >
             {persona ? (
               <>
-                <InfoRow label="Persona"     value={str(persona["persona_name"])} />
-                <InfoRow label="Code"        value={str(persona["persona_code"])} mono copyable />
-                <InfoRow label="Assigned By" value={str(persona["assigned_by"], "System")} />
-                <InfoRow label="Assigned On" value={fmtDate(persona["created_at"])} />
+                <InfoRow label={formatMessage({ id: "settings.identity.persona.field.name" }) as string}        value={str(persona["persona_name"])} />
+                <InfoRow label={formatMessage({ id: "settings.identity.persona.field.code" }) as string}        value={str(persona["persona_code"])} mono copyable />
+                <InfoRow label={formatMessage({ id: "settings.identity.persona.field.assignedBy" }) as string} value={str(persona["assigned_by"], formatMessage({ id: "settings.identity.persona.assignedBy.system" }) as string)} />
+                <InfoRow label={formatMessage({ id: "settings.identity.persona.field.assignedOn" }) as string} value={fmtDate(persona["created_at"])} />
                 <InfoRow
-                  label="Expires"
-                  value={persona["expires_at"] ? fmtDate(persona["expires_at"]) : "Never"}
-                  hint="Open-ended if no expiry set"
+                  label={formatMessage({ id: "settings.identity.persona.field.expires" }) as string}
+                  value={persona["expires_at"] ? fmtDate(persona["expires_at"]) : (formatMessage({ id: "settings.identity.persona.field.expires.never" }) as string)}
+                  hint={formatMessage({ id: "settings.identity.persona.field.expires.hint" }) as string}
                 />
                 <p className="mt-3 text-xs text-muted-foreground">
-                  One persona per principal per tenant — enforced at DB level. The persona
-                  determines the base permission set. Additional permissions come from group
-                  roles, direct grants, and delegations.
+                  {formatMessage({ id: "settings.identity.persona.description" })}
                 </p>
               </>
             ) : (
-              <p className="text-xs text-muted-foreground">No persona assigned.</p>
+              <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.identity.persona.empty" })}</p>
             )}
           </SectionCard>
         </TabsContent>
@@ -773,12 +783,12 @@ export function IdentitySection({ active }: { active: boolean }) {
         {/* ── Groups & Roles ── */}
         <TabsContent value="groups" className="mt-4">
           <SectionCard
-            title="Group Memberships & Roles"
+            title={formatMessage({ id: "settings.identity.groups.title" }) as string}
             icon={Users}
             managedBy={{
-              manager:  "Tenant Admin",
+              manager:  formatMessage({ id: "settings.identity.groups.managedBy" }) as string,
               source:   "master.auth_group_member → auth_group → auth_group_role → shared.role",
-              editPath: "Admin or self-service (if group is eligible)",
+              editPath: formatMessage({ id: "settings.identity.groups.editPath" }) as string,
             }}
           >
             {groups.length > 0 ? (
@@ -795,7 +805,7 @@ export function IdentitySection({ active }: { active: boolean }) {
                     </div>
                     <div className="flex shrink-0 gap-1.5">
                       {!!g["is_system"] && (
-                        <Badge variant="info" className="text-2xs">System</Badge>
+                        <Badge variant="info" className="text-2xs">{formatMessage({ id: "settings.identity.groups.systemBadge" })}</Badge>
                       )}
                       <Badge variant="outline" className="text-2xs capitalize">
                         {str(g["status"], "active")}
@@ -804,7 +814,12 @@ export function IdentitySection({ active }: { active: boolean }) {
                   </div>
                   {g.roles.length > 0 && (
                     <DataTable
-                      columns={["Role", "Code", "Visibility", "Assignment Scope"]}
+                      columns={[
+                        formatMessage({ id: "settings.identity.groups.column.role" }) as string,
+                        formatMessage({ id: "settings.identity.groups.column.code" }) as string,
+                        formatMessage({ id: "settings.identity.groups.column.visibility" }) as string,
+                        formatMessage({ id: "settings.identity.groups.column.assignmentScope" }) as string,
+                      ]}
                       rows={g.roles.map((r) => [
                         r.role_name,
                         <span key="code" className="font-mono text-2xs">{r.role_code}</span>,
@@ -817,14 +832,14 @@ export function IdentitySection({ active }: { active: boolean }) {
               ))
             ) : (
               <p className="text-xs text-muted-foreground">
-                Not a member of any groups.
+                {formatMessage({ id: "settings.identity.groups.empty" })}
               </p>
             )}
             <p className="mt-3 text-xs text-muted-foreground">
-              Scope: <strong>all</strong> = unrestricted ·{" "}
-              <strong>own</strong> = records you created ·{" "}
-              <strong>team</strong> = your team&apos;s records. Company code optionally
-              restricts scope further.
+              {formatRich(
+                { id: "settings.identity.groups.scopeNote" },
+                { strong: (chunks) => <strong>{chunks}</strong> },
+              )}
             </p>
           </SectionCard>
         </TabsContent>
@@ -832,18 +847,25 @@ export function IdentitySection({ active }: { active: boolean }) {
         {/* ── Teams ── */}
         <TabsContent value="teams" className="mt-4">
           <SectionCard
-            title="Team Memberships"
+            title={formatMessage({ id: "settings.identity.teams.title" }) as string}
             icon={Layers}
             managedBy={{
-              manager:  "Team Leader / Tenant Admin",
+              manager:  formatMessage({ id: "settings.identity.teams.managedBy" }) as string,
               source:   "master.team_member → master.team",
-              editPath: "Admin or team leader assignment",
+              editPath: formatMessage({ id: "settings.identity.teams.editPath" }) as string,
             }}
           >
             {teams.length > 0 ? (
               <>
                 <DataTable
-                  columns={["Team", "Code", "Type", "Your Role", "Leader", "Since"]}
+                  columns={[
+                    formatMessage({ id: "settings.identity.teams.column.team" }) as string,
+                    formatMessage({ id: "settings.identity.teams.column.code" }) as string,
+                    formatMessage({ id: "settings.identity.teams.column.type" }) as string,
+                    formatMessage({ id: "settings.identity.teams.column.yourRole" }) as string,
+                    formatMessage({ id: "settings.identity.teams.column.leader" }) as string,
+                    formatMessage({ id: "settings.identity.teams.column.since" }) as string,
+                  ]}
                   rows={teams.map((t) => [
                     str(t["name"]),
                     <span key="code" className="font-mono text-2xs">{str(t["code"])}</span>,
@@ -858,16 +880,18 @@ export function IdentitySection({ active }: { active: boolean }) {
                   ])}
                 />
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Types: <strong>functional</strong> (permanent) ·{" "}
-                  <strong>project</strong> (time-bound) ·{" "}
-                  <strong>virtual</strong> (cross-functional). Teams resolve{" "}
-                  <code className="rounded bg-muted px-1 font-mono text-2xs">scope=team</code>{" "}
-                  permission checks.
+                  {formatRich(
+                    { id: "settings.identity.teams.typesNote" },
+                    {
+                      strong: (chunks) => <strong>{chunks}</strong>,
+                      code: (chunks) => <code className="rounded bg-muted px-1 font-mono text-2xs">{chunks}</code>,
+                    },
+                  )}
                 </p>
               </>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Not a member of any teams.
+                {formatMessage({ id: "settings.identity.teams.empty" })}
               </p>
             )}
           </SectionCard>
@@ -882,31 +906,42 @@ export function IdentitySection({ active }: { active: boolean }) {
         {showFeatures && (
           <TabsContent value="features" className="mt-4">
             <SectionCard
-              title="Feature Access Grants"
+              title={formatMessage({ id: "settings.identity.features.title" }) as string}
               icon={Sparkles}
               managedBy={{
-                manager:  "Tenant Admin / Plan",
+                manager:  formatMessage({ id: "settings.identity.features.managedBy" }) as string,
                 source:   "master.principal_feature_grant, master.group_feature_grant, master.tenant_feature_entitlement",
-                editPath: "Admin-managed",
+                editPath: formatMessage({ id: "settings.identity.features.editPath" }) as string,
               }}
             >
               <DataTable
-                columns={["Feature", "Access", "Source", "Via", "Expires", "Contact"]}
+                columns={[
+                  formatMessage({ id: "settings.identity.features.column.feature" }) as string,
+                  formatMessage({ id: "settings.identity.features.column.access" }) as string,
+                  formatMessage({ id: "settings.identity.features.column.source" }) as string,
+                  formatMessage({ id: "settings.identity.features.column.via" }) as string,
+                  formatMessage({ id: "settings.identity.features.column.expires" }) as string,
+                  formatMessage({ id: "settings.identity.features.column.contact" }) as string,
+                ]}
                 rows={features.map((f) => [
                   str(f["feature_name"]),
                   <StatusBadge key="acc" status={str(f["access_type"], "view")}>{str(f["access_type"])}</StatusBadge>,
                   <StatusBadge key="src" status={str(f["source"])}>{str(f["source"])}</StatusBadge>,
                   str(f["source_name"]),
                   f["expires_at"] ? fmtDate(f["expires_at"]) : "—",
-                  str(f["source"]) === "plan"  ? "Subscription" :
-                  str(f["source"]) === "group" ? "Group admin"  : "Tenant admin",
+                  str(f["source"]) === "plan"  ? (formatMessage({ id: "settings.identity.features.contact.subscription" }) as string) :
+                  str(f["source"]) === "group" ? (formatMessage({ id: "settings.identity.features.contact.groupAdmin" }) as string)  : (formatMessage({ id: "settings.identity.features.contact.tenantAdmin" }) as string),
                 ])}
               />
               <p className="mt-3 text-xs text-muted-foreground">
-                Feature access sources:{" "}
-                <Badge variant="success" className="text-2xs">plan</Badge> included in subscription ·{" "}
-                <Badge variant="secondary" className="text-2xs">group</Badge> via group membership ·{" "}
-                <Badge variant="secondary" className="text-2xs">principal</Badge> direct individual grant.
+                {formatRich(
+                  { id: "settings.identity.features.legend" },
+                  {
+                    plan: (chunks) => <Badge variant="success" className="text-2xs">{chunks}</Badge>,
+                    group: (chunks) => <Badge variant="secondary" className="text-2xs">{chunks}</Badge>,
+                    principal: (chunks) => <Badge variant="secondary" className="text-2xs">{chunks}</Badge>,
+                  },
+                )}
               </p>
             </SectionCard>
           </TabsContent>

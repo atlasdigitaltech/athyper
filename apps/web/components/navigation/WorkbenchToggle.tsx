@@ -14,6 +14,7 @@ import { useState } from "react";
 import { cn } from "@athyper/theme/utils";
 import { getWorkbenchLabel } from "@/lib/auth/workbench-config";
 import { useShellSession } from "@/components/providers/SessionProvider";
+import { useIntl } from "@/components/providers/IntlProvider";
 
 const WORKBENCH_ORDER: Record<string, number> = {
   user:    0,
@@ -21,9 +22,16 @@ const WORKBENCH_ORDER: Record<string, number> = {
   admin:   2,
 };
 
+const WORKBENCH_LABEL_IDS: Record<string, string> = {
+  user:    "shell.workbench.label.user",
+  partner: "shell.workbench.label.partner",
+  admin:   "shell.workbench.label.admin",
+};
+
 export function WorkbenchToggle() {
   const { bff, switchContext } = useShellSession();
   const { organizations, activeOrg, activeWorkbench } = bff;
+  const { formatMessage } = useIntl();
 
   const [switching, setSwitching] = useState(false);
 
@@ -50,7 +58,7 @@ export function WorkbenchToggle() {
   return (
     <div
       role="group"
-      aria-label="Switch workbench"
+      aria-label={formatMessage({ id: "shell.workbench.switch" }) as string}
       className={cn(
         "flex items-center rounded-md border bg-muted/40 p-0.5",
         switching && "opacity-60 pointer-events-none",
@@ -71,7 +79,9 @@ export function WorkbenchToggle() {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {getWorkbenchLabel(role)}
+            {WORKBENCH_LABEL_IDS[role]
+              ? formatMessage({ id: WORKBENCH_LABEL_IDS[role] })
+              : getWorkbenchLabel(role)}
           </button>
         );
       })}

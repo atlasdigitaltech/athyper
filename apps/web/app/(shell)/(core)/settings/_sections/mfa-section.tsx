@@ -43,6 +43,17 @@ import {
 } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import { getCsrfToken } from "@/lib/bff-fetch";
+import { useIntl } from "@/components/providers/IntlProvider";
+
+// ── Method label & device-name lookup tables (resolved via formatMessage) ─────
+
+const METHOD_LABEL_IDS: Record<string, string> = {
+  totp:     "settings.mfa.method.totp",
+  webauthn: "settings.mfa.method.webauthn",
+  sms:      "settings.mfa.method.sms",
+  email:    "settings.mfa.method.email",
+  backup:   "settings.mfa.method.backup",
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -79,14 +90,13 @@ interface TrustedDevice {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function methodLabel(type: string, userLabel?: string | null): string {
-  if (userLabel) return userLabel;
-  return type === "totp"     ? "Authenticator App (TOTP)"
-       : type === "webauthn" ? "Security Key / Passkey"
-       : type === "sms"      ? "SMS One-Time Code"
-       : type === "email"    ? "Email One-Time Code"
-       : type === "backup"   ? "Backup Codes"
-       : type;
+function useMethodLabel() {
+  const { formatMessage } = useIntl();
+  return (type: string, userLabel?: string | null): string => {
+    if (userLabel) return userLabel;
+    const id = METHOD_LABEL_IDS[type];
+    return id ? (formatMessage({ id }) as string) : type;
+  };
 }
 
 function methodIcon(type: string) {
@@ -102,6 +112,7 @@ const SYNC_VARIANT: Record<string, "success" | "warning" | "destructive" | "mute
 // ── CopyButton ────────────────────────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
+  const { formatMessage } = useIntl();
   const [copied, setCopied] = useState(false);
   function handleCopy() {
     void navigator.clipboard.writeText(text);
@@ -113,7 +124,7 @@ function CopyButton({ text }: { text: string }) {
       type="button"
       onClick={handleCopy}
       className="ml-1.5 text-muted-foreground hover:text-foreground transition-colors"
-      title="Copy to clipboard"
+      title={formatMessage({ id: "settings.mfa.copy" }) as string}
     >
       {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
@@ -134,6 +145,7 @@ function StepUpDialog({
   actionClass: string;
   onElevated: () => void;
 }) {
+  const { formatMessage } = useIntl();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -157,13 +169,13 @@ function StepUpDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle>Security Verification</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{formatMessage({ id: "settings.mfa.stepUp.title" })}</DialogTitle></DialogHeader>
         <div className="space-y-3 py-2">
           <p className="text-sm text-muted-foreground">
-            Enter your current 6-digit authenticator code to authorize this action.
+            {formatMessage({ id: "settings.mfa.stepUp.description" })}
           </p>
           <div className="space-y-1">
-            <Label className="text-xs">Authenticator Code</Label>
+            <Label className="text-xs">{formatMessage({ id: "settings.mfa.stepUp.code" })}</Label>
             <Input
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -177,9 +189,9 @@ function StepUpDialog({
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>{formatMessage({ id: "settings.mfa.stepUp.cancel" })}</Button>
           <Button onClick={() => elevate.mutate()} disabled={code.length !== 6 || elevate.isPending}>
-            Verify
+            {formatMessage({ id: "settings.mfa.stepUp.verify" })}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -193,6 +205,7 @@ function StepUpDialog({
 type WizardStep = "idle" | "qr" | "verify" | "done";
 
 function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
+  const { formatMessage } = useIntl();
   const [step, setStep]         = useState<WizardStep>("idle");
   const [pending, setPending]   = useState<EnrollBeginResult | null>(null);
   const [code, setCode]         = useState("");
@@ -240,7 +253,7 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
           disabled={begin.isPending}
         >
           <QrCode className="mr-1.5 h-3.5 w-3.5" />
-          Set up Authenticator App
+          {formatMessage({ id: "settings.mfa.totp.setup" })}
         </Button>
       </div>
     );
@@ -251,9 +264,9 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
     return (
       <div className="mt-3 rounded-lg border p-4 space-y-4">
         <div>
-          <p className="text-sm font-medium">1. Scan this QR code with your authenticator app</p>
+          <p className="text-sm font-medium">{formatMessage({ id: "settings.mfa.totp.step1.title" })}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Use Google Authenticator, Authy, 1Password, or any TOTP-compatible app.
+            {formatMessage({ id: "settings.mfa.totp.step1.description" })}
           </p>
         </div>
 
@@ -264,7 +277,7 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
         />
 
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Or enter this key manually:</p>
+          <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.mfa.totp.manualKey" })}</p>
           <div className="flex items-center rounded-md border bg-muted px-3 py-1.5">
             <code className="flex-1 font-mono text-xs tracking-wide">{formattedSecret}</code>
             <CopyButton text={pending.secret_base32} />
@@ -272,7 +285,7 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
         </div>
 
         <Button size="sm" onClick={() => { setStep("verify"); setCode(""); setError(null); }}>
-          I&apos;ve scanned it — Continue
+          {formatMessage({ id: "settings.mfa.totp.scanned" })}
         </Button>
       </div>
     );
@@ -282,13 +295,13 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
     return (
       <div className="mt-3 rounded-lg border p-4 space-y-3">
         <div>
-          <p className="text-sm font-medium">2. Enter the 6-digit code from your app</p>
+          <p className="text-sm font-medium">{formatMessage({ id: "settings.mfa.totp.step2.title" })}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Codes refresh every 30 seconds. Enter the current code to confirm enrollment.
+            {formatMessage({ id: "settings.mfa.totp.step2.description" })}
           </p>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Verification Code</Label>
+          <Label className="text-xs">{formatMessage({ id: "settings.mfa.totp.verifyCode" })}</Label>
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -301,9 +314,9 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => { setStep("qr"); setError(null); }}>Back</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setStep("qr"); setError(null); }}>{formatMessage({ id: "settings.mfa.totp.back" })}</Button>
           <Button size="sm" onClick={() => verify.mutate()} disabled={code.length !== 6 || verify.isPending}>
-            Verify & Enable
+            {formatMessage({ id: "settings.mfa.totp.verify" })}
           </Button>
         </div>
       </div>
@@ -314,9 +327,9 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
     return (
       <div className="mt-3 flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 p-3 text-sm text-success">
         <CheckCircle2 className="h-4 w-4 shrink-0" />
-        <span>Authenticator app enrolled successfully.</span>
+        <span>{formatMessage({ id: "settings.mfa.totp.success" })}</span>
         <Button variant="ghost" size="sm" className="ml-auto h-6 text-xs" onClick={() => { setStep("idle"); onDone(); }}>
-          Done
+          {formatMessage({ id: "settings.mfa.totp.done" })}
         </Button>
       </div>
     );
@@ -329,6 +342,7 @@ function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
 // Triggers KC AIA flow for WebAuthn/Passkey enrollment.
 
 function WebAuthnEnrollCard({ onSyncDone }: { onSyncDone: () => void }) {
+  const { formatMessage } = useIntl();
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -374,10 +388,9 @@ function WebAuthnEnrollCard({ onSyncDone }: { onSyncDone: () => void }) {
           <Fingerprint className="h-4 w-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">Security Key / Passkey</p>
+          <p className="text-sm font-medium">{formatMessage({ id: "settings.mfa.webauthn.title" })}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Use a hardware security key (YubiKey, etc.) or a platform authenticator
-            (Face ID, Touch ID, Windows Hello) as your second factor.
+            {formatMessage({ id: "settings.mfa.webauthn.description" })}
           </p>
         </div>
       </div>
@@ -390,23 +403,22 @@ function WebAuthnEnrollCard({ onSyncDone }: { onSyncDone: () => void }) {
           disabled={startEnroll.isPending}
         >
           <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Register Security Key
+          {formatMessage({ id: "settings.mfa.webauthn.register" })}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => void handleSync()}
           disabled={syncing}
-          title="Sync credentials from Keycloak"
+          title={formatMessage({ id: "settings.mfa.webauthn.syncTooltip" }) as string}
           className="text-muted-foreground"
         >
           <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", syncing && "animate-spin")} />
-          Sync
+          {formatMessage({ id: "settings.mfa.webauthn.sync" })}
         </Button>
       </div>
       <p className="text-doc-support text-muted-foreground">
-        You&apos;ll be redirected to the authentication portal to complete registration.
-        Return here afterwards and the new key will appear in your methods list.
+        {formatMessage({ id: "settings.mfa.webauthn.note" })}
       </p>
     </div>
   );
@@ -416,6 +428,7 @@ function WebAuthnEnrollCard({ onSyncDone }: { onSyncDone: () => void }) {
 
 function TrustedDevicesPanel() {
   const qc = useQueryClient();
+  const { formatMessage } = useIntl();
   const [stepUpOpen, setStepUpOpen] = useState(false);
   const [deviceName, setDeviceName] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -475,11 +488,11 @@ function TrustedDevicesPanel() {
     if (d.device_name) return d.device_name;
     const ua = d.user_agent ?? "";
     // Extract a browser+OS hint from user agent
-    if (ua.includes("iPhone") || ua.includes("iPad")) return "iPhone / iPad";
-    if (ua.includes("Android")) return "Android Device";
-    if (ua.includes("Mac")) return "Mac";
-    if (ua.includes("Windows")) return "Windows PC";
-    return "Browser Session";
+    if (ua.includes("iPhone") || ua.includes("iPad")) return formatMessage({ id: "settings.mfa.trusted.device.iphone" }) as string;
+    if (ua.includes("Android")) return formatMessage({ id: "settings.mfa.trusted.device.android" }) as string;
+    if (ua.includes("Mac")) return formatMessage({ id: "settings.mfa.trusted.device.mac" }) as string;
+    if (ua.includes("Windows")) return formatMessage({ id: "settings.mfa.trusted.device.windows" }) as string;
+    return formatMessage({ id: "settings.mfa.trusted.device.browser" }) as string;
   }
 
   function isExpiringSoon(d: TrustedDevice): boolean {
@@ -491,7 +504,7 @@ function TrustedDevicesPanel() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Trusted Devices
+          {formatMessage({ id: "settings.mfa.trusted.title" })}
         </h3>
         <div className="flex items-center gap-1.5">
           <Button
@@ -499,7 +512,7 @@ function TrustedDevicesPanel() {
             size="sm"
             className="h-6 w-6 p-0"
             onClick={() => qc.invalidateQueries({ queryKey: ["trusted-devices"] })}
-            title="Refresh"
+            title={formatMessage({ id: "settings.mfa.refresh" }) as string}
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
@@ -509,14 +522,13 @@ function TrustedDevicesPanel() {
             className="h-6 text-xs px-2"
             onClick={() => setAddDialogOpen(true)}
           >
-            <Plus className="mr-1 h-3 w-3" />Trust this device
+            <Plus className="mr-1 h-3 w-3" />{formatMessage({ id: "settings.mfa.trusted.add" })}
           </Button>
         </div>
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Trusted devices skip the MFA step-up challenge for up to 30 days. Revoke a device
-        immediately if it is lost, stolen, or no longer yours.
+        {formatMessage({ id: "settings.mfa.trusted.description" })}
       </p>
 
       {isLoading ? (
@@ -526,7 +538,7 @@ function TrustedDevicesPanel() {
       ) : devices.length === 0 ? (
         <div className="rounded-md border border-dashed p-4 text-center">
           <Monitor className="mx-auto mb-1.5 h-6 w-6 text-muted-foreground/30" />
-          <p className="text-xs text-muted-foreground">No trusted devices registered.</p>
+          <p className="text-xs text-muted-foreground">{formatMessage({ id: "settings.mfa.trusted.empty" })}</p>
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -537,12 +549,12 @@ function TrustedDevicesPanel() {
                   <Monitor className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <p className="text-sm font-medium truncate">{formatDevice(d)}</p>
                   {isExpiringSoon(d) && (
-                    <Badge variant="warning" className="text-doc-field-label">expiring soon</Badge>
+                    <Badge variant="warning" className="text-doc-field-label">{formatMessage({ id: "settings.mfa.trusted.expiringSoon" })}</Badge>
                   )}
                 </div>
                 <div className="flex gap-3 text-doc-support text-muted-foreground mt-0.5">
-                  {d.last_seen_at && <span>Last seen {new Date(d.last_seen_at).toLocaleDateString()}</span>}
-                  <span>Expires {new Date(d.expires_at).toLocaleDateString()}</span>
+                  {d.last_seen_at && <span>{formatMessage({ id: "settings.mfa.trusted.lastSeen" }, { date: new Date(d.last_seen_at).toLocaleDateString() })}</span>}
+                  <span>{formatMessage({ id: "settings.mfa.trusted.expires" }, { date: new Date(d.expires_at).toLocaleDateString() })}</span>
                   {d.ip_address && <span>{d.ip_address}</span>}
                 </div>
               </div>
@@ -550,7 +562,7 @@ function TrustedDevicesPanel() {
                 size="sm"
                 variant="ghost"
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
-                title="Revoke this device"
+                title={formatMessage({ id: "settings.mfa.trusted.revoke" }) as string}
                 onClick={() => revokeDevice.mutate(d.id)}
                 disabled={revokeDevice.isPending}
               >
@@ -571,7 +583,7 @@ function TrustedDevicesPanel() {
             disabled={revokeAll.isPending}
           >
             <ShieldAlert className="mr-1.5 h-3 w-3" />
-            Revoke all devices
+            {formatMessage({ id: "settings.mfa.trusted.revokeAll" })}
           </Button>
         </div>
       )}
@@ -579,27 +591,27 @@ function TrustedDevicesPanel() {
       {/* Add device dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Trust This Device</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{formatMessage({ id: "settings.mfa.trusted.dialog.title" })}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
             <p className="text-sm text-muted-foreground">
-              This browser session will skip MFA step-up for the next 30 days.
+              {formatMessage({ id: "settings.mfa.trusted.dialog.description" })}
             </p>
             <div className="space-y-1">
-              <Label className="text-xs">Device Label (optional)</Label>
+              <Label className="text-xs">{formatMessage({ id: "settings.mfa.trusted.dialog.labelField" })}</Label>
               <Input
                 value={deviceName}
                 onChange={(e) => setDeviceName(e.target.value)}
-                placeholder="e.g. Work Laptop, Home Mac"
+                placeholder={formatMessage({ id: "settings.mfa.trusted.dialog.placeholder" }) as string}
               />
             </div>
             <p className="text-doc-support text-muted-foreground">
-              You will need to complete a security verification (MFA step-up) to confirm.
+              {formatMessage({ id: "settings.mfa.trusted.dialog.note" })}
             </p>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setAddDialogOpen(false)}>{formatMessage({ id: "settings.mfa.trusted.dialog.cancel" })}</Button>
             <Button onClick={() => addDevice.mutate()} disabled={addDevice.isPending}>
-              Trust Device
+              {formatMessage({ id: "settings.mfa.trusted.dialog.submit" })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -620,6 +632,8 @@ function TrustedDevicesPanel() {
 
 export function MfaSection({ active }: { active: boolean }) {
   const qc = useQueryClient();
+  const { formatMessage } = useIntl();
+  const methodLabel = useMethodLabel();
   const [stepUpOpen, setStepUpOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -695,8 +709,8 @@ export function MfaSection({ active }: { active: boolean }) {
           : "border-warning/30 bg-warning/10 text-warning",
       )}>
         {hasActiveMfa
-          ? <><ShieldCheck className="h-4 w-4 shrink-0" /><span>Multi-factor authentication is active.</span></>
-          : <><AlertTriangle className="h-4 w-4 shrink-0" /><span>MFA is not enabled. Add an authentication method to protect your account.</span></>
+          ? <><ShieldCheck className="h-4 w-4 shrink-0" /><span>{formatMessage({ id: "settings.mfa.banner.active" })}</span></>
+          : <><AlertTriangle className="h-4 w-4 shrink-0" /><span>{formatMessage({ id: "settings.mfa.banner.inactive" })}</span></>
         }
       </div>
 
@@ -704,14 +718,14 @@ export function MfaSection({ active }: { active: boolean }) {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Authentication Methods
+            {formatMessage({ id: "settings.mfa.section.methods" })}
           </h3>
           <Button
             variant="ghost"
             size="sm"
             className="h-6 w-6 p-0"
             onClick={() => qc.invalidateQueries({ queryKey: ["iam-mfa-methods"] })}
-            title="Refresh"
+            title={formatMessage({ id: "settings.mfa.refresh" }) as string}
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
@@ -720,7 +734,7 @@ export function MfaSection({ active }: { active: boolean }) {
         {methods.length === 0 ? (
           <div className="rounded-md border border-dashed p-6 text-center">
             <ShieldOff className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">No authentication methods enrolled.</p>
+            <p className="text-sm text-muted-foreground">{formatMessage({ id: "settings.mfa.empty" })}</p>
           </div>
         ) : (
           methods.map((m) => (
@@ -731,33 +745,35 @@ export function MfaSection({ active }: { active: boolean }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-medium">{methodLabel(m.method_type, m.user_label)}</p>
                     {m.is_primary && (
-                      <Badge variant="success" className="text-doc-field-label">Primary</Badge>
+                      <Badge variant="success" className="text-doc-field-label">{formatMessage({ id: "settings.mfa.badge.primary" })}</Badge>
                     )}
                     {m.is_verified && m.is_enabled
-                      ? <Badge variant="success" className="text-doc-support">Active</Badge>
+                      ? <Badge variant="success" className="text-doc-support">{formatMessage({ id: "settings.mfa.badge.active" })}</Badge>
                       : m.is_verified
-                      ? <Badge variant="muted" className="text-doc-support">Disabled</Badge>
-                      : <Badge variant="warning" className="text-doc-support">Pending verification</Badge>
+                      ? <Badge variant="muted" className="text-doc-support">{formatMessage({ id: "settings.mfa.badge.disabled" })}</Badge>
+                      : <Badge variant="warning" className="text-doc-support">{formatMessage({ id: "settings.mfa.badge.pending" })}</Badge>
                     }
                     {m.keycloak_sync_status && (
                       <Badge
                         variant={SYNC_VARIANT[m.keycloak_sync_status] ?? "muted"}
                         className="text-doc-field-label"
                       >
-                        {m.keycloak_sync_status === "synced" ? "sync: active" : `sync: ${m.keycloak_sync_status}`}
+                        {m.keycloak_sync_status === "synced"
+                          ? formatMessage({ id: "settings.mfa.badge.syncActive" })
+                          : formatMessage({ id: "settings.mfa.badge.syncStatus" }, { status: m.keycloak_sync_status })}
                       </Badge>
                     )}
                   </div>
                   <div className="flex gap-3 text-doc-support text-muted-foreground">
-                    {m.enrolled_at && <span>Enrolled {new Date(m.enrolled_at).toLocaleDateString()}</span>}
-                    {m.last_used_at && <span>Last used {new Date(m.last_used_at).toLocaleDateString()}</span>}
+                    {m.enrolled_at && <span>{formatMessage({ id: "settings.mfa.enrolledOn" }, { date: new Date(m.enrolled_at).toLocaleDateString() })}</span>}
+                    {m.last_used_at && <span>{formatMessage({ id: "settings.mfa.lastUsed" }, { date: new Date(m.last_used_at).toLocaleDateString() })}</span>}
                   </div>
                 </div>
                 <Button
                   size="sm"
                   variant="ghost"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
-                  title="Remove method"
+                  title={formatMessage({ id: "settings.mfa.remove" }) as string}
                   onClick={() => deleteMethod.mutate(m.id)}
                   disabled={deleteMethod.isPending || stepUpOpen}
                 >
@@ -773,15 +789,14 @@ export function MfaSection({ active }: { active: boolean }) {
       {(!totpMethod || !webauthnMethod) && (
         <div className="space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Add Authentication Method
+            {formatMessage({ id: "settings.mfa.section.add" })}
           </h3>
 
           {/* TOTP */}
           {!totpMethod && (
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">
-                Use a TOTP authenticator app (Google Authenticator, Authy, 1Password) to generate
-                time-based one-time codes.
+                {formatMessage({ id: "settings.mfa.totp.description" })}
               </p>
               <TotpEnrollWizard onDone={() => qc.invalidateQueries({ queryKey: ["iam-mfa-methods"] })} />
             </div>
@@ -801,14 +816,14 @@ export function MfaSection({ active }: { active: boolean }) {
 
       {/* Security notes */}
       <div className="rounded-md bg-muted/40 px-4 py-3 space-y-1 text-xs text-muted-foreground">
-        <p className="font-semibold text-foreground text-xs">Security notes</p>
+        <p className="font-semibold text-foreground text-xs">{formatMessage({ id: "settings.mfa.notes.title" })}</p>
         <ul className="list-disc list-inside space-y-0.5">
-          <li>Removing a method requires re-entering your current authenticator code.</li>
-          <li>Re-enrolling (replacing TOTP) also requires a live code from the existing method.</li>
-          <li>MFA codes expire after 30 seconds. Keep your device clock synchronized.</li>
-          <li>Step-up elevation (for admin actions) expires after 10 minutes.</li>
-          <li>Trusted devices skip step-up challenges — revoke them if a device is lost or shared.</li>
-          <li>Security key registration requires a redirect to the authentication portal.</li>
+          <li>{formatMessage({ id: "settings.mfa.notes.removal" })}</li>
+          <li>{formatMessage({ id: "settings.mfa.notes.reenroll" })}</li>
+          <li>{formatMessage({ id: "settings.mfa.notes.expiry" })}</li>
+          <li>{formatMessage({ id: "settings.mfa.notes.stepUp" })}</li>
+          <li>{formatMessage({ id: "settings.mfa.notes.trusted" })}</li>
+          <li>{formatMessage({ id: "settings.mfa.notes.webauthn" })}</li>
         </ul>
       </div>
 
