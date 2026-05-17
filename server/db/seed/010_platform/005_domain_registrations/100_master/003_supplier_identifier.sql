@@ -34,11 +34,7 @@ SELECT
     '{}'::jsonb,
     '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'party_identifier'
-      AND entity_code = 'business_partner_identifier' AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- Repair existing installs that were previously registered as BP-owned identifiers.
 -- Business Partner is the canonical owner for external identifiers.

@@ -367,12 +367,12 @@ BEGIN
   (NULL, v_step_2, 'advance_lines', 'Advance Line', 'Single advance payment line.', 6,
    false, '{"==":[{"var":"invoice_type"},"advance"]}'::jsonb, 'auto_expand',
    'repeater', 'purchase_invoice_line', 'lines',
-   '["item_description","procurement_type","uom_code","quantity","unit_price","gross_amount","spend_category_id","business_intent_id","cost_center_id","profit_center_id","project_id","site_id"]'::jsonb,
+   '["item_description","procurement_type","uom_code","quantity","unit_price","gross_amount","commodity_category_id","business_intent_id","cost_center_id","profit_center_id","project_id","site_id"]'::jsonb,
    1, '{"item_description":"Advance Payment","procurement_type":"services","uom_code":"EA","quantity":1}'::jsonb, v_su),
   (NULL, v_step_2, 'retention_release_lines', 'Retention Release Line', 'Release amount line for selected retention.', 7,
    false, '{"==":[{"var":"invoice_type"},"retention_release"]}'::jsonb, 'auto_expand',
    'repeater', 'purchase_invoice_line', 'lines',
-   '["item_description","procurement_type","uom_code","quantity","unit_price","gross_amount","spend_category_id","business_intent_id","cost_center_id","profit_center_id","project_id","site_id"]'::jsonb,
+   '["item_description","procurement_type","uom_code","quantity","unit_price","gross_amount","commodity_category_id","business_intent_id","cost_center_id","profit_center_id","project_id","site_id"]'::jsonb,
    1, '{"item_description":"Retention Release","procurement_type":"services","uom_code":"EA","quantity":1}'::jsonb, v_su)
   ON CONFLICT (flow_step_id, section_key) DO UPDATE SET
     label = EXCLUDED.label,

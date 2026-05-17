@@ -241,7 +241,7 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       }
 
       const page     = Math.max(1, parseInt(String(req.query["page"]      ?? "1"),  10));
-      const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query["page_size"] ?? "20"), 10)));
+      const pageSize = Math.min(500, Math.max(1, parseInt(String(req.query["page_size"] ?? "20"), 10)));
       const offset   = (page - 1) * pageSize;
 
       const fullTable = `${entity.table_schema as string}.${entity.table_name as string}` as `${string}.${string}`;

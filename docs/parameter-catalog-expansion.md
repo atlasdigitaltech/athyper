@@ -180,7 +180,8 @@ These affect how data is paginated and filtered across all entity list views.
 | Code (proposed) | Current location | Hardcoded value | Tier | Rationale |
 |-----------------|-----------------|-----------------|------|-----------|
 | `api.pagination.default_page_size` | `records.route.ts:363`, search, documents | `20` | T1 | Dense-display tenants (finance houses) prefer 50+ rows |
-| `api.pagination.max_page_size` | multiple routes | `100` | T2 | Platform safety cap |
+| `api.pagination.max_page_size` | multiple routes | `500` | T2 | Product hard cap; use page navigation after 500 rows |
+| `api.pagination.load_more_increment` | entity list footer | `50` | T1 | Tenant-tunable Load More increment |
 | `api.facets.max_fields` | `records.route.ts:797` | `20` | T2 | Facet UI performance bound |
 | `api.facets.max_values` | `records.route.ts:798` | `200` | T2 | Facet dropdown item count |
 | `api.facets.query_timeout_ms` | `records.route.ts:799` | `2_000` | T2 | Hard kill for slow facet queries |

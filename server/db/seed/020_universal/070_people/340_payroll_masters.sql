@@ -5,12 +5,25 @@
 -- Covers (all tenant-scoped, idempotent):
 --   § 1  control.formula_expression        — 14 named formula definitions
 --   § 2  control.formula_expression_version — initial effective version per formula
---   § 3  control.rate_table                — 5 statutory / bracket rate tables
---   § 4  control.rate_table_row            — ~60 bracket / flat rows
---   § 5  master.pay_component              — 50 components (earning/deduction/statutory/memo)
+--   § 3  control.rate_table                — 7 statutory / bracket rate tables (IN×3, SG, GB, US×2)
+--   § 4  control.rate_table_row            — ~70 bracket / flat rows
+--                                             incl. India IT FY2024-25 (expired) + FY2025-26 (live)
+--                                             UK NI 2024-25 + 2025-26 (15% employer from Apr 2025)
+--                                             US FICA SS + Medicare
+--   § 5  master.pay_component              — 58 components (earning/deduction/statutory/memo)
+--                                             incl. NI_EE, SS_EE, MEDICARE_EE, SOCSO_EE,
+--                                             EIS_EE/ER, SDL_ER, SHG_EE
 --   § 6  master.pay_structure              — 3 tenant-template structures (no pay_group link)
 --   § 7  master.pay_structure_line         — component-to-structure mappings (~50 lines)
 --   § 8  master.statutory_scheme           — 18 schemes across IN/SG/MY/GB/US/AE
+--                                             all schemes now have employee/employer components linked
+--
+-- ⚠  VERIFY BEFORE NEXT FINANCIAL YEAR:
+--   SG CPF: 55-60 and 60-65 age-band rates subject to CPF Board phased-increase schedule;
+--            cross-check against https://www.cpf.gov.sg/employer/employer-obligations/what-are-the-cpf-contribution-rates
+--   IN IT:  New regime slabs updated for FY2025-26 (Budget 2025); FY2026-27 slabs to be added after Budget 2026.
+--   UK NI:  2025-26 rates applied; update if 2026-27 Autumn Statement changes rates/thresholds.
+--   US SS:  Wage base updated to $176,100 (2025); update annually per IRS announcement.
 --
 -- Intentionally NOT seeded:
 --   master.pay_group              — requires company_code_id (NOT NULL); create via admin UI
@@ -361,15 +374,27 @@ BEGIN
          'active', v_su),
 
         (shared.uuidv7(), v_tid,
-         'CPF_RATE_SG', 'Singapore — CPF Contribution Rate (Age < 55)',
+         'CPF_RATE_SG', 'Singapore — CPF Contribution Rates (All Age Bands)',
          'lookup', 'SG', 'SGD',
-         'CPF Act: employee 20% + employer 17% on ordinary wages capped at SGD 6,000/month. Key: age_band = "below_55".',
+         'CPF Act: age-banded rates on ordinary wages capped at SGD 6,000/month. Keys: party + age_band. Phase-in schedule increases rates for 55+ workers — verify against CPF Board for latest effective dates.',
          'active', v_su),
 
         (shared.uuidv7(), v_tid,
-         'NI_RATE_GB', 'United Kingdom — National Insurance (2024-25)',
+         'NI_RATE_GB', 'United Kingdom — National Insurance (2024-25 / 2025-26)',
          'bracket', 'GB', 'GBP',
-         'Class 1 NI: primary threshold £12,570/yr; 8% employee contribution on earnings £12,571–£50,270; 2% above. Employer 13.8% above secondary threshold.',
+         'Class 1 NI. Employee: 8% on £12,571–£50,270, 2% above (unchanged 2024-26). Employer 2024-25: 13.8% above £9,100. Employer 2025-26 (from 6 Apr 2025): 15% above £5,000.',
+         'active', v_su),
+
+        (shared.uuidv7(), v_tid,
+         'US_SS_RATE', 'United States — Social Security FICA (2025)',
+         'bracket', 'US', 'USD',
+         'FICA Social Security: 6.2% employee + 6.2% employer on annual wages up to $176,100 (2025 wage base). Zero above wage base for both parties.',
+         'active', v_su),
+
+        (shared.uuidv7(), v_tid,
+         'US_MEDICARE_RATE', 'United States — Medicare FICA',
+         'statutory', 'US', 'USD',
+         'FICA Medicare: 1.45% employee + 1.45% employer on all wages (no ceiling). Additional 0.9% employee-only surcharge (no employer match) on wages above $200,000/year.',
          'active', v_su)
 
     ON CONFLICT (tenant_id, code) DO UPDATE
@@ -560,8 +585,101 @@ BEGIN
          0.00, NULL, NULL, NULL),
 
         ('NI_RATE_GB', 'er_band_main',      5,  '2024-04-06',
-         9101, NULL, '{"party":"employer","class":"1_secondary"}',
-         0.138, NULL, NULL, NULL)
+         9101, NULL, '{"party":"employer","class":"1_secondary","fy":"2024-25"}',
+         0.138, NULL, NULL, NULL),
+
+        -- ── UK NI 2025-26 (from 6 April 2025) ────────────────────────────
+        -- Employer NI only changed: secondary threshold cut £9,100→£5,000;
+        -- rate raised 13.8%→15%. Employee bands (ee_band_*) are unchanged.
+        ('NI_RATE_GB', 'er_band_zero_25',   6,  '2025-04-06',
+         0, 5000, '{"party":"employer","class":"1_secondary","fy":"2025-26"}',
+         0.00, NULL, NULL, NULL),
+
+        ('NI_RATE_GB', 'er_band_main_25',   7,  '2025-04-06',
+         5001, NULL, '{"party":"employer","class":"1_secondary","fy":"2025-26"}',
+         0.15, NULL, NULL, NULL),
+
+        -- ── India Income Tax New Regime FY 2025-26 (Budget 2025) ─────────
+        -- Finance Act 2025 revised slabs: 7 bands vs 6 in FY 2024-25.
+        -- Sec 87A full rebate on income up to ₹12,00,000 (zero tax for most salaried).
+        -- Standard deduction ₹75,000 unchanged. Eff 1 April 2025.
+        ('INCOME_TAX_IN_NEW', 'slab_fy26_1',  11, '2025-04-01',
+         0, 400000, '{"regime":"new","slab":1,"fy":"2025-26"}',
+         0.00, NULL, NULL, NULL),
+
+        ('INCOME_TAX_IN_NEW', 'slab_fy26_2',  12, '2025-04-01',
+         400001, 800000, '{"regime":"new","slab":2,"fy":"2025-26"}',
+         0.05, NULL, NULL, NULL),
+
+        ('INCOME_TAX_IN_NEW', 'slab_fy26_3',  13, '2025-04-01',
+         800001, 1200000, '{"regime":"new","slab":3,"fy":"2025-26"}',
+         0.10, NULL, NULL, NULL),
+
+        ('INCOME_TAX_IN_NEW', 'slab_fy26_4',  14, '2025-04-01',
+         1200001, 1600000, '{"regime":"new","slab":4,"fy":"2025-26"}',
+         0.15, NULL, NULL, NULL),
+
+        ('INCOME_TAX_IN_NEW', 'slab_fy26_5',  15, '2025-04-01',
+         1600001, 2000000, '{"regime":"new","slab":5,"fy":"2025-26"}',
+         0.20, NULL, NULL, NULL),
+
+        ('INCOME_TAX_IN_NEW', 'slab_fy26_6',  16, '2025-04-01',
+         2000001, 2400000, '{"regime":"new","slab":6,"fy":"2025-26"}',
+         0.25, NULL, NULL, NULL),
+
+        ('INCOME_TAX_IN_NEW', 'slab_fy26_7',  17, '2025-04-01',
+         2400001, NULL, '{"regime":"new","slab":7,"fy":"2025-26"}',
+         0.30, NULL, NULL, NULL),
+
+        -- Surcharge thresholds unchanged from FY 2024-25.
+        ('INCOME_TAX_IN_NEW', 'surcharge_fy26_10pct', 18, '2025-04-01',
+         5000000, 10000000, '{"regime":"new","charge_type":"surcharge","fy":"2025-26"}',
+         0.10, NULL, NULL, NULL),
+
+        ('INCOME_TAX_IN_NEW', 'surcharge_fy26_15pct', 19, '2025-04-01',
+         10000001, 20000000, '{"regime":"new","charge_type":"surcharge","fy":"2025-26"}',
+         0.15, NULL, NULL, NULL),
+
+        ('INCOME_TAX_IN_NEW', 'surcharge_fy26_25pct', 20, '2025-04-01',
+         20000001, NULL, '{"regime":"new","charge_type":"surcharge","fy":"2025-26"}',
+         0.25, NULL, NULL, NULL),
+
+        ('INCOME_TAX_IN_NEW', 'cess_fy26_4pct',       21, '2025-04-01',
+         NULL, NULL, '{"regime":"new","charge_type":"cess","fy":"2025-26"}',
+         0.04, NULL, NULL, NULL),
+
+        -- ── United States FICA — Social Security (2025 wage base) ────────
+        -- Annual wage base $176,100. Rate 6.2% EE + 6.2% ER on wages up to base.
+        ('US_SS_RATE', 'ee_ss_2025',        1, '2025-01-01',
+         0, 176100, '{"party":"employee","year":2025}',
+         0.062, NULL, 10918.20, NULL),
+
+        ('US_SS_RATE', 'ee_ss_above_base',  2, '2025-01-01',
+         176101, NULL, '{"party":"employee","year":2025}',
+         0.00, NULL, NULL, NULL),
+
+        ('US_SS_RATE', 'er_ss_2025',        3, '2025-01-01',
+         0, 176100, '{"party":"employer","year":2025}',
+         0.062, NULL, 10918.20, NULL),
+
+        ('US_SS_RATE', 'er_ss_above_base',  4, '2025-01-01',
+         176101, NULL, '{"party":"employer","year":2025}',
+         0.00, NULL, NULL, NULL),
+
+        -- ── United States FICA — Medicare (no wage ceiling) ───────────────
+        -- EE 1.45% on all wages; additional 0.9% EE-only surcharge above $200k.
+        -- ER 1.45% on all wages (no ceiling, no additional tax for employer).
+        ('US_MEDICARE_RATE', 'ee_medicare_base',  1, '2013-01-01',
+         0, 200000, '{"party":"employee"}',
+         0.0145, NULL, NULL, NULL),
+
+        ('US_MEDICARE_RATE', 'ee_medicare_addl',  2, '2013-01-01',
+         200001, NULL, '{"party":"employee","addl_tax":true}',
+         0.0235, NULL, NULL, NULL),
+
+        ('US_MEDICARE_RATE', 'er_medicare',       3, '2013-01-01',
+         NULL, NULL, '{"party":"employer"}',
+         0.0145, NULL, NULL, NULL)
 
     ) AS x(table_code, row_key, seq, eff_from,
             range_from, range_until, kv,
@@ -572,9 +690,36 @@ BEGIN
     GET DIAGNOSTICS v_n = ROW_COUNT;
     RAISE NOTICE '[%] rate_table_row: % rows inserted', v_pack, v_n;
 
+    -- ── Post-insert corrections ──────────────────────────────────────────────
+    -- PF admin charges have NO ₹75 cap; minimum floor is ₹500/month.
+    -- ON CONFLICT DO NOTHING above won't fix existing rows — use UPDATE.
+    UPDATE control.rate_table_row rtr
+       SET cap_amount   = NULL,
+           floor_amount = 500,
+           updated_by   = v_su
+      FROM control.rate_table rt
+     WHERE rt.tenant_id  = v_tid
+       AND rt.code       = 'PF_RATE_IN'
+       AND rtr.tenant_id = v_tid
+       AND rtr.rate_table_id = rt.id
+       AND rtr.row_key   = 'er_admin'
+       AND rtr.cap_amount = 75;
+
+    -- Expire the FY 2024-25 India IT slab rows now that FY 2025-26 rows exist.
+    UPDATE control.rate_table_row rtr
+       SET effective_until = '2025-03-31',
+           updated_by      = v_su
+      FROM control.rate_table rt
+     WHERE rt.tenant_id  = v_tid
+       AND rt.code       = 'INCOME_TAX_IN_NEW'
+       AND rtr.tenant_id = v_tid
+       AND rtr.rate_table_id  = rt.id
+       AND rtr.effective_from = '2024-04-01'
+       AND rtr.effective_until IS NULL;
+
     -- ========================================================================
     -- § 5  PAY COMPONENTS
-    -- 50 components covering the full payroll spectrum.
+    -- 58 components covering the full payroll spectrum across all 6 jurisdictions.
     -- formula_expression_id links to formulas seeded in § 1.
     -- default_gl_role uses canonical posting-role codes from the AP/payroll pack.
     -- ========================================================================
@@ -672,8 +817,8 @@ BEGIN
         ('NPS_EE',       'NPS — Employee Contribution',  'deduction','formula','statutory_exempt', true,  false, NULL::text,                 'NPS_PAYABLE'),
         -- Union Dues: trade union membership fee.
         ('UNION_DUES',   'Trade Union Dues',             'deduction','amount', 'non_taxable',      true,  false, NULL::text,                 'PAYROLL_PAYABLE'),
-        -- CPF Employee: Singapore CPF employee contribution (20% < 55 yrs).
-        ('CPF_EE',       'CPF — Employee Contribution (SG)','deduction','formula','statutory_exempt',true,false,'pf_employee_in',           'CPF_PAYABLE'),
+        -- CPF Employee: SG CPF, age-banded rates — no India PF formula applies.
+        ('CPF_EE',       'CPF — Employee Contribution (SG)','deduction','formula','statutory_exempt',true,false, NULL::text,                'CPF_PAYABLE'),
 
         -- ── STATUTORY (EMPLOYER COST) ─────────────────────────────────────
         -- PF Employer: 3.67% PF + 8.33% EPS + 0.5% EDLI + 0.5% admin.
@@ -686,18 +831,36 @@ BEGIN
         ('STAT_BONUS',   'Statutory Bonus Accrual',      'statutory','formula','statutory_exempt', true,  true,  'stat_bonus_in',            'STAT_BONUS_PAYABLE'),
         -- NPS Employer: 10% of basic+DA, deductible under Sec 36(1)(iva).
         ('NPS_ER',       'NPS — Employer Contribution',  'statutory','formula','statutory_exempt', true,  true,  NULL::text,                 'NPS_EXPENSE'),
-        -- CPF Employer Singapore: 17% on ordinary wages < 55 years.
-        ('CPF_ER',       'CPF — Employer Contribution (SG)','statutory','formula','statutory_exempt',true,true,'pf_employer_in',            'CPF_EXPENSE'),
-        -- EPF Employer Malaysia: 12% on basic capped.
-        ('EPF_ER',       'EPF — Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,'pf_employer_in',            'EPF_EXPENSE'),
+        -- CPF Employer Singapore: age-banded rates — no India PF formula applies.
+        ('CPF_ER',       'CPF — Employer Contribution (SG)','statutory','formula','statutory_exempt',true,true,  NULL::text,                'CPF_EXPENSE'),
+        -- EPF Employer Malaysia: 12% / 13% on basic capped — no India PF formula.
+        ('EPF_ER',       'EPF — Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,  NULL::text,                'EPF_EXPENSE'),
         -- SOCSO Employer Malaysia: ~1.75% on insured salary.
         ('SOCSO_ER',     'SOCSO — Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,NULL::text,                 'SOCSO_EXPENSE'),
-        -- UK National Insurance Employer: 13.8% above secondary threshold.
+        -- UK National Insurance Employer: 13.8% (2024-25) / 15% (2025-26) above secondary threshold.
         ('NI_ER',        'National Insurance — Employer (GB)','statutory','formula','statutory_exempt',true,true,NULL::text,                 'NI_EXPENSE'),
-        -- US Social Security Employer: 6.2% up to wage base.
+        -- US Social Security Employer: 6.2% up to annual wage base ($176,100 in 2025).
         ('SS_ER',        'Social Security — Employer (US)','statutory','formula','statutory_exempt',true,true,NULL::text,                   'SS_EXPENSE'),
-        -- US Medicare Employer: 1.45%, no wage ceiling.
+        -- US Medicare Employer: 1.45% on all wages, no ceiling, no additional tax.
         ('MEDICARE_ER',  'Medicare — Employer (US)',      'statutory','formula','statutory_exempt', true,  true,  NULL::text,                 'MEDICARE_EXPENSE'),
+        -- EIS Employer Malaysia: 0.4% under Employment Insurance System Act 2017.
+        ('EIS_ER',       'EIS — Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,  NULL::text,                'EIS_EXPENSE'),
+        -- Singapore Skills Development Levy: employer 0.25% of total wages (min $2, max $11.25).
+        ('SDL_ER',       'Skills Development Levy (SG)',  'statutory','formula','statutory_exempt', true,  true,  NULL::text,                 'SDL_EXPENSE'),
+
+        -- ── DEDUCTIONS (additional countries) ─────────────────────────────
+        -- UK NI Employee: Class 1 primary — 8% on £12,571–£50,270, 2% above (2024-26).
+        ('NI_EE',        'National Insurance — Employee (GB)','deduction','formula','statutory_exempt',true,false,NULL::text,               'NI_PAYABLE'),
+        -- US Social Security Employee: FICA 6.2% up to annual wage base.
+        ('SS_EE',        'Social Security — Employee (US)','deduction','formula','statutory_exempt', true,  false, NULL::text,               'SS_PAYABLE'),
+        -- US Medicare Employee: FICA 1.45% base + 0.9% surcharge above $200k.
+        ('MEDICARE_EE',  'Medicare — Employee (US)',      'deduction','formula','statutory_exempt', true,  false, NULL::text,                 'MEDICARE_PAYABLE'),
+        -- Malaysia SOCSO Employee: ~0.5% under Employees Social Security Act (categories 1 & 2).
+        ('SOCSO_EE',     'SOCSO — Employee Contribution (MY)','deduction','formula','statutory_exempt',true,false,NULL::text,               'SOCSO_PAYABLE'),
+        -- Malaysia EIS Employee: 0.2% under Employment Insurance System Act 2017.
+        ('EIS_EE',       'EIS — Employee Contribution (MY)','deduction','formula','statutory_exempt', true,  false, NULL::text,               'EIS_PAYABLE'),
+        -- Singapore SHG: CDAC / ECF / MBMF / SINDA — fixed amounts by ethnicity, employer remits.
+        ('SHG_EE',       'Self-Help Group Contribution (SG)','deduction','amount','non_taxable',    true,  false, NULL::text,                 'SHG_PAYABLE'),
 
         -- ── MEMO (computed summaries, not posted to GL) ─────────────────────
         ('GROSS_SAL',    'Gross Salary',                 'memo',    'formula', 'non_taxable',      true,  false, NULL::text,                 NULL::text),
@@ -720,8 +883,12 @@ BEGIN
             formula_expression_id = EXCLUDED.formula_expression_id,
             updated_at       = now(),
             updated_by       = v_su
-        WHERE (master.pay_component.name, master.pay_component.component_type)
-              IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.component_type);
+        WHERE (master.pay_component.name,
+               master.pay_component.component_type,
+               coalesce(master.pay_component.formula_expression_id::text, 'NULL'))
+              IS DISTINCT FROM (EXCLUDED.name,
+                                EXCLUDED.component_type,
+                                coalesce(EXCLUDED.formula_expression_id::text, 'NULL'));
 
     GET DIAGNOSTICS v_n = ROW_COUNT;
     RAISE NOTICE '[%] pay_component: % rows upserted', v_pack, v_n;
@@ -926,45 +1093,45 @@ BEGIN
         -- Mandatory for Singapore Citizens and Permanent Residents.
         ('SG_CPF',         'Singapore — Central Provident Fund (CPF)',
          'SG', 'pension',
-         'CPF_EE', 'CPF_ER', 'CPF_RATE_SG', 'pf_employee_in'),
+         'CPF_EE', 'CPF_ER', 'CPF_RATE_SG', NULL::text),
 
-        -- SDL: Skills Development Levy — employer 0.25% of gross (min $2)
-        -- Funds Skills Future Singapore. Employee has no contribution.
+        -- SDL: Skills Development Levy — employer 0.25% of gross (min $2, max $11.25).
+        -- Funds SkillsFuture Singapore. Employee has no contribution.
         ('SG_SDL',         'Singapore — Skills Development Levy (SDL)',
          'SG', 'other',
-         NULL::text, NULL::text, NULL::text, NULL::text),
+         NULL::text, 'SDL_ER', NULL::text, NULL::text),
 
-        -- SHG: Self-Help Group contributions — CDAC / ECF / MBMF / SINDA
+        -- SHG: Self-Help Group contributions — CDAC / ECF / MBMF / SINDA.
         -- Deducted from employee salary by employer, remitted monthly.
         ('SG_SHG',         'Singapore — Self-Help Group Contributions',
          'SG', 'social_security',
-         NULL::text, NULL::text, NULL::text, NULL::text),
+         'SHG_EE', NULL::text, NULL::text, NULL::text),
 
         -- ── MALAYSIA ──────────────────────────────────────────────────────
         -- EPF: Employees Provident Fund Act, 1991
         -- Employee 11%, Employer 12% (or 13% for salary ≤ MYR 5,000).
         ('MY_EPF',         'Malaysia — Employees Provident Fund (EPF)',
          'MY', 'pension',
-         'PF_EE', 'EPF_ER', NULL::text, 'pf_employee_in'),
+         'PF_EE', 'EPF_ER', NULL::text, NULL::text),
 
         -- SOCSO: Employees Social Security Act, 1969 (Perkeso)
         -- Employment Injury & Invalidity Scheme. Employer ~1.75%, Employee ~0.5%.
         ('MY_SOCSO',       'Malaysia — SOCSO / Perkeso',
          'MY', 'social_security',
-         NULL::text, 'SOCSO_ER', NULL::text, NULL::text),
+         'SOCSO_EE', 'SOCSO_ER', NULL::text, NULL::text),
 
         -- EIS: Employment Insurance System — Employment Insurance System Act, 2017
-        -- Employer 0.4%, Employee 0.2% on insured salary.
+        -- Employee 0.2%, Employer 0.4% on insured salary.
         ('MY_EIS',         'Malaysia — Employment Insurance System (EIS)',
          'MY', 'other',
-         NULL::text, NULL::text, NULL::text, NULL::text),
+         'EIS_EE', 'EIS_ER', NULL::text, NULL::text),
 
         -- ── UNITED KINGDOM ────────────────────────────────────────────────
         -- NI: Class 1 National Insurance (Social Security Contributions Act, 1992)
-        -- Employee 8% / Employer 13.8% above respective thresholds.
+        -- Employee 8% (2024-26) / Employer 13.8% (2024-25) or 15% (2025-26) above respective thresholds.
         ('GB_NI',          'United Kingdom — National Insurance (Class 1)',
          'GB', 'social_security',
-         NULL::text, 'NI_ER', 'NI_RATE_GB', NULL::text),
+         'NI_EE', 'NI_ER', 'NI_RATE_GB', NULL::text),
 
         -- Auto-Enrolment Pension: Pensions Act, 2008
         -- Minimum 5% employee + 3% employer on qualifying earnings.
@@ -973,15 +1140,15 @@ BEGIN
          NULL::text, NULL::text, NULL::text, NULL::text),
 
         -- ── UNITED STATES ─────────────────────────────────────────────────
-        -- FICA Social Security: 6.2% employee + 6.2% employer (wage base $168,600 in 2024)
+        -- FICA Social Security: 6.2% EE + 6.2% ER; 2025 wage base $176,100.
         ('US_SOC_SEC',     'United States — Social Security (FICA)',
          'US', 'social_security',
-         NULL::text, 'SS_ER', NULL::text, NULL::text),
+         'SS_EE', 'SS_ER', 'US_SS_RATE', NULL::text),
 
-        -- Medicare: 1.45% employee + 1.45% employer (no wage ceiling)
+        -- Medicare: 1.45% EE + 1.45% ER; additional 0.9% EE surcharge above $200k.
         ('US_MEDICARE',    'United States — Medicare (FICA)',
          'US', 'healthcare',
-         NULL::text, 'MEDICARE_ER', NULL::text, NULL::text),
+         'MEDICARE_EE', 'MEDICARE_ER', 'US_MEDICARE_RATE', NULL::text),
 
         -- ── UAE ───────────────────────────────────────────────────────────
         -- GPSSA: General Pension & Social Security Authority
@@ -1001,8 +1168,16 @@ BEGIN
             formula_expression_id = EXCLUDED.formula_expression_id,
             updated_at            = now(),
             updated_by            = v_su
-        WHERE (master.statutory_scheme.name, master.statutory_scheme.scheme_type)
-              IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.scheme_type);
+        WHERE (master.statutory_scheme.name,
+               master.statutory_scheme.scheme_type,
+               master.statutory_scheme.employee_component_id,
+               master.statutory_scheme.employer_component_id,
+               master.statutory_scheme.rate_table_id)
+              IS DISTINCT FROM (EXCLUDED.name,
+                                EXCLUDED.scheme_type,
+                                EXCLUDED.employee_component_id,
+                                EXCLUDED.employer_component_id,
+                                EXCLUDED.rate_table_id);
 
     GET DIAGNOSTICS v_n = ROW_COUNT;
     RAISE NOTICE '[%] statutory_scheme: % rows upserted', v_pack, v_n;
@@ -1021,18 +1196,18 @@ BEGIN
     END IF;
 
     SELECT COUNT(*) INTO v_n FROM control.rate_table WHERE tenant_id = v_tid;
-    IF v_n < 5 THEN
-        RAISE EXCEPTION '[%] Assertion failed: expected >= 5 rate_table rows, found %', v_pack, v_n;
+    IF v_n < 7 THEN
+        RAISE EXCEPTION '[%] Assertion failed: expected >= 7 rate_table rows, found %', v_pack, v_n;
     END IF;
 
     SELECT COUNT(*) INTO v_n FROM control.rate_table_row WHERE tenant_id = v_tid;
-    IF v_n < 30 THEN
-        RAISE EXCEPTION '[%] Assertion failed: expected >= 30 rate_table_row rows, found %', v_pack, v_n;
+    IF v_n < 50 THEN
+        RAISE EXCEPTION '[%] Assertion failed: expected >= 50 rate_table_row rows, found %', v_pack, v_n;
     END IF;
 
     SELECT COUNT(*) INTO v_n FROM master.pay_component WHERE tenant_id = v_tid;
-    IF v_n < 45 THEN
-        RAISE EXCEPTION '[%] Assertion failed: expected >= 45 pay_component rows, found %', v_pack, v_n;
+    IF v_n < 56 THEN
+        RAISE EXCEPTION '[%] Assertion failed: expected >= 56 pay_component rows, found %', v_pack, v_n;
     END IF;
 
     SELECT COUNT(*) INTO v_n FROM master.pay_structure WHERE tenant_id = v_tid;

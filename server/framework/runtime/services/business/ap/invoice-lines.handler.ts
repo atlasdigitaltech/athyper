@@ -44,7 +44,7 @@ export interface AddLineBody {
   discount_pct?:              number;
   tax_group_id?:              string;
   withholding_tax_group_id?:  string;
-  spend_category_id?:         string;
+  commodity_category_id?:         string;
   business_intent_id?:        string;
   cost_center_id?:            string;
   profit_center_id?:          string;
@@ -235,7 +235,7 @@ export async function handleAddInvoiceLine(
             gross_amount:             grossAmount,
             retention_pct:            retentionPct,
             retention_amount:         retentionAmount,
-            spend_category_id:        body.spend_category_id ?? null,
+            commodity_category_id:        body.commodity_category_id ?? null,
             business_intent_id:       body.business_intent_id ?? null,
             cost_center_id:           body.cost_center_id ?? null,
             profit_center_id:         body.profit_center_id ?? null,
@@ -375,7 +375,7 @@ export async function handleUpdateInvoiceLine(
           "item_id", "item_description", "procurement_type", "uom_code",
           "quantity", "unit_price", "price_unit", "discount_pct",
           "tax_group_id", "withholding_tax_group_id",
-          "spend_category_id", "business_intent_id",
+          "commodity_category_id", "business_intent_id",
           "cost_center_id", "profit_center_id", "project_id", "site_id",
           "is_asset", "asset_category_id",
           "commitment_line_id", "goods_receipt_line_id", "ses_line_id",

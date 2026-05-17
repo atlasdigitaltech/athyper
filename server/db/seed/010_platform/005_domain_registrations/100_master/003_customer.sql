@@ -43,11 +43,7 @@ SELECT
     '{"prefix":"CUS","prefix_configurable":true,"separator":"-","segments":[{"type":"sequence","padding":5}]}'::jsonb,
     '{"is_approvable":false,"party_category":"customer","allow_address":false,"allow_contact":false,"identity_via":"business_partner","list_entity_code":"customer_app_index"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'customer'
-      AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (

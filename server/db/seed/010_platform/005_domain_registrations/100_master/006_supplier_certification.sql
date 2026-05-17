@@ -37,11 +37,7 @@ SELECT
     '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner",'
     '"allow_attachment":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'certification'
-      AND entity_code = 'business_partner_certification' AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- Repair existing installs that were previously registered as BP-owned certifications.
 -- Business Partner is the canonical owner for certifications.

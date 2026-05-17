@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS document.purchase_requisition_line (
     item_id                 uuid,
     item_description        text            NOT NULL,
     procurement_type        text            NOT NULL DEFAULT 'goods',
-    spend_category_id       uuid,
+    commodity_category_id   uuid,
     business_intent_id      uuid,
 
     -- Quantity / price
@@ -213,6 +213,21 @@ CREATE TABLE IF NOT EXISTS document.purchase_requisition_line (
         'open','partially_converted','converted','cancelled')),
     CONSTRAINT prl_converted_chk    CHECK (converted_quantity >= 0 AND converted_quantity <= quantity)
 );
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'document' AND table_name = 'purchase_requisition_line'
+          AND column_name = 'spend_category_id'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'document' AND table_name = 'purchase_requisition_line'
+          AND column_name = 'commodity_category_id'
+    ) THEN
+        ALTER TABLE document.purchase_requisition_line RENAME COLUMN spend_category_id TO commodity_category_id;
+    END IF;
+END $$;
 
 COMMENT ON TABLE document.purchase_requisition_line IS
     'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Purchase requisition line items. '
@@ -753,7 +768,7 @@ CREATE TABLE IF NOT EXISTS document.service_entry_sheet_line (
     -- Service description
     item_id                 uuid,
     service_description     text            NOT NULL,
-    spend_category_id       uuid,
+    commodity_category_id   uuid,
     business_intent_id      uuid,
 
     -- Quantity / price
@@ -803,6 +818,21 @@ CREATE TABLE IF NOT EXISTS document.service_entry_sheet_line (
     CONSTRAINT sesl_status_chk      CHECK (status IN (
         'open','posted','reversed','cancelled'))
 );
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'document' AND table_name = 'service_entry_sheet_line'
+          AND column_name = 'spend_category_id'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'document' AND table_name = 'service_entry_sheet_line'
+          AND column_name = 'commodity_category_id'
+    ) THEN
+        ALTER TABLE document.service_entry_sheet_line RENAME COLUMN spend_category_id TO commodity_category_id;
+    END IF;
+END $$;
 
 COMMENT ON TABLE document.service_entry_sheet_line IS
     'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. SES line items. '

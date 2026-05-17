@@ -292,10 +292,10 @@ BEGIN
   IF EXISTS (
     SELECT 1
       FROM tmp_technostat_supplier_category d
-      LEFT JOIN master.spend_category sc
-        ON sc.tenant_id = v_tenant_id
-       AND sc.code = d.spend_category_code
-     WHERE sc.id IS NULL
+      LEFT JOIN master.commodity_category cc
+        ON cc.tenant_id = v_tenant_id
+       AND cc.code = d.spend_category_code
+     WHERE cc.id IS NULL
   ) THEN
     RAISE NOTICE 'Some Technostat spend category codes not yet seeded — related rows will be skipped. Run universal/industry seeds first for full coverage.';
   END IF;
@@ -388,7 +388,7 @@ BEGIN
   INSERT INTO master.supplier_spend_category (
     tenant_id,
     supplier_id,
-    spend_category_id,
+    commodity_category_id,
     is_primary,
     effective_from,
     status,
@@ -399,7 +399,7 @@ BEGIN
   )
   SELECT v_tenant_id,
          s.id,
-         sc.id,
+         cc.id,
          d.is_primary,
          d.effective_from,
          'active',
@@ -415,10 +415,10 @@ BEGIN
     JOIN master.supplier s
       ON s.tenant_id = v_tenant_id
      AND s.supplier_code = d.supplier_code
-    JOIN master.spend_category sc
-      ON sc.tenant_id = v_tenant_id
-     AND sc.code = d.spend_category_code
-  ON CONFLICT (tenant_id, supplier_id, spend_category_id) DO UPDATE
+    JOIN master.commodity_category cc
+      ON cc.tenant_id = v_tenant_id
+     AND cc.code = d.spend_category_code
+  ON CONFLICT (tenant_id, supplier_id, commodity_category_id) DO UPDATE
      SET is_primary = EXCLUDED.is_primary,
          effective_from = EXCLUDED.effective_from,
          effective_until = NULL,
@@ -740,50 +740,66 @@ BEGIN
          search_text = EXCLUDED.search_text,
          updated_at = now();
 
-  INSERT INTO master.company_code_supplier_spend_policy (
+  DELETE FROM control.commodity_category_buy_policy p
+   WHERE p.tenant_id = v_tenant_id
+     AND p.scope_type = 'SUPPLIER_PROFILE'
+     AND p.metadata ->> 'seed_pack' = 'technostat_supplier_100pct';
+
+  DELETE FROM control.supplier_posting_override po
+   WHERE po.tenant_id = v_tenant_id
+     AND po.metadata ->> 'seed_pack' = 'technostat_supplier_100pct';
+
+  INSERT INTO control.commodity_category_buy_policy (
     tenant_id,
-    supplier_profile_id,
-    spend_category_id,
+    commodity_category_id,
+    business_intent_id,
+    company_code_id,
+    scope_type,
+    scope_id,
     mapping_mode,
-    sourcing_status,
-    qualification_status,
-    po_status,
-    invoice_status,
-    valid_from,
-    valid_until,
-    max_po_amount,
-    max_po_currency_code,
-    is_preferred_supplier,
-    notes,
+    is_default,
+    is_selectable,
+    sort_order,
+    effective_from,
+    effective_to,
     metadata,
+    status,
     created_by,
     updated_by
   )
   SELECT p.tenant_id,
+         ssc.commodity_category_id,
+         mapped_intent.business_intent_id,
+         p.company_code_id,
+         'SUPPLIER_PROFILE',
          p.id,
-         ssc.spend_category_id,
          'ALLOW',
-         CASE WHEN s.status = 'onboarding' THEN 'restricted' ELSE 'allowed' END,
-         CASE WHEN s.status = 'onboarding' THEN 'pending' ELSE 'qualified' END,
-         CASE WHEN s.status = 'onboarding' THEN 'blocked' ELSE 'allowed' END,
-         CASE WHEN s.status = 'onboarding' THEN 'blocked' ELSE 'allowed' END,
+         true,
+         s.status <> 'onboarding',
+         CASE WHEN ssc.is_primary THEN 0 ELSE 20 END,
          DATE '2025-01-01',
          DATE '2026-12-31',
-         CASE
-           WHEN s.status = 'onboarding' THEN 50000.00
-           WHEN s.supplier_type = 'intercompany' THEN 10000000.00
-           WHEN sq.is_preferred_supplier THEN 5000000.00
-           WHEN s.supplier_type = 'contractor' THEN 2500000.00
-           ELSE 2000000.00
-         END,
-         p.currency_code,
-         COALESCE(sq.is_preferred_supplier, false),
-         'Seeded supplier spend policy for Technostat 100% supplier coverage',
          jsonb_build_object(
            'seed_pack', 'technostat_supplier_100pct',
+           'policy_kind', 'supplier_spend_default',
            'supplier_code', s.supplier_code,
-           'profile_id', p.id
+           'profile_id', p.id,
+           'sourcing_status', CASE WHEN s.status = 'onboarding' THEN 'restricted' ELSE 'allowed' END,
+           'qualification_status', CASE WHEN s.status = 'onboarding' THEN 'pending' ELSE 'qualified' END,
+           'po_status', CASE WHEN s.status = 'onboarding' THEN 'blocked' ELSE 'allowed' END,
+           'invoice_status', CASE WHEN s.status = 'onboarding' THEN 'blocked' ELSE 'allowed' END,
+           'max_po_amount', CASE
+             WHEN s.status = 'onboarding' THEN 50000.00
+             WHEN s.supplier_type = 'intercompany' THEN 10000000.00
+             WHEN sq.is_preferred_supplier THEN 5000000.00
+             WHEN s.supplier_type = 'contractor' THEN 2500000.00
+             ELSE 2000000.00
+           END,
+           'max_po_currency_code', p.currency_code,
+           'is_preferred_supplier', COALESCE(sq.is_preferred_supplier, false),
+           'notes', 'Seeded supplier buy policy for Technostat 100% supplier coverage'
          ),
+         'active',
          v_system_user_id,
          v_system_user_id
     FROM master.company_code_supplier_profile p
@@ -794,43 +810,95 @@ BEGIN
       ON ssc.tenant_id = s.tenant_id
      AND ssc.supplier_id = s.id
      AND ssc.status = 'active'
+    JOIN master.commodity_category cc
+      ON cc.tenant_id = ssc.tenant_id
+     AND cc.id = ssc.commodity_category_id
+    LEFT JOIN LATERAL (
+      SELECT bi.id AS business_intent_id
+        FROM tmp_technostat_category_intent_map cim
+        JOIN master.business_intent bi
+          ON bi.tenant_id = cc.tenant_id
+         AND bi.code = cim.intent_code
+       WHERE cim.spend_category_code = cc.code
+       ORDER BY cim.is_primary_intent DESC, cim.intent_code
+       LIMIT 1
+    ) mapped_intent ON true
     LEFT JOIN master.supplier_qualification sq
       ON sq.tenant_id = s.tenant_id
      AND sq.supplier_id = s.id
    WHERE p.tenant_id = v_tenant_id
      AND p.status = 'active'
-  ON CONFLICT (tenant_id, supplier_profile_id, spend_category_id) DO UPDATE
-     SET mapping_mode = EXCLUDED.mapping_mode,
-         sourcing_status = EXCLUDED.sourcing_status,
-         qualification_status = EXCLUDED.qualification_status,
-         po_status = EXCLUDED.po_status,
-         invoice_status = EXCLUDED.invoice_status,
-         valid_from = EXCLUDED.valid_from,
-         valid_until = EXCLUDED.valid_until,
-         max_po_amount = EXCLUDED.max_po_amount,
-         max_po_currency_code = EXCLUDED.max_po_currency_code,
-         is_preferred_supplier = EXCLUDED.is_preferred_supplier,
-         notes = EXCLUDED.notes,
-         metadata = COALESCE(master.company_code_supplier_spend_policy.metadata, '{}'::jsonb) || EXCLUDED.metadata,
-         updated_by = v_system_user_id,
-         updated_at = now();
+     AND mapped_intent.business_intent_id IS NOT NULL;
 
-  UPDATE master.company_code_supplier_intent_policy ip
-     SET is_default = false,
-         updated_by = v_system_user_id,
-         updated_at = now()
-   WHERE ip.tenant_id = v_tenant_id
-     AND ip.supplier_profile_id IN (
-       SELECT p.id
-         FROM master.company_code_supplier_profile p
-        WHERE p.tenant_id = v_tenant_id
-          AND p.status = 'active'
-     )
-     AND ip.metadata ->> 'seed_pack' = 'technostat_supplier_100pct';
+  INSERT INTO control.commodity_category_buy_policy (
+    tenant_id,
+    commodity_category_id,
+    business_intent_id,
+    company_code_id,
+    scope_type,
+    scope_id,
+    mapping_mode,
+    is_default,
+    is_selectable,
+    sort_order,
+    effective_from,
+    effective_to,
+    metadata,
+    status,
+    created_by,
+    updated_by
+  )
+  SELECT p.tenant_id,
+         ssc.commodity_category_id,
+         bi.id,
+         p.company_code_id,
+         'SUPPLIER_PROFILE',
+         p.id,
+         'ALLOW',
+         false,
+         s.status <> 'onboarding',
+         10,
+         DATE '2025-01-01',
+         DATE '2026-12-31',
+         jsonb_build_object(
+           'seed_pack', 'technostat_supplier_100pct',
+           'policy_kind', 'supplier_spend_intercompany',
+           'supplier_code', s.supplier_code,
+           'intent_code', bi.code
+         ),
+         'active',
+         v_system_user_id,
+         v_system_user_id
+    FROM master.company_code_supplier_profile p
+    JOIN master.supplier s
+      ON s.tenant_id = p.tenant_id
+     AND s.id = p.supplier_id
+    JOIN master.supplier_spend_category ssc
+      ON ssc.tenant_id = s.tenant_id
+     AND ssc.supplier_id = s.id
+     AND ssc.status = 'active'
+    JOIN master.business_intent bi
+      ON bi.tenant_id = s.tenant_id
+     AND bi.code = 'TRANSFER-IC'
+   WHERE p.tenant_id = v_tenant_id
+     AND p.status = 'active'
+     AND s.supplier_type = 'intercompany'
+     AND NOT EXISTS (
+       SELECT 1
+         FROM control.commodity_category_buy_policy existing
+        WHERE existing.tenant_id = p.tenant_id
+          AND existing.scope_type = 'SUPPLIER_PROFILE'
+          AND existing.scope_id = p.id
+          AND existing.commodity_category_id = ssc.commodity_category_id
+          AND existing.business_intent_id = bi.id
+          AND existing.metadata ->> 'seed_pack' = 'technostat_supplier_100pct'
+     );
 
   WITH profile_intents_raw AS (
     SELECT
            p.id AS supplier_profile_id,
+           p.company_code_id,
+           ssc.commodity_category_id AS commodity_category_id,
            bi.id AS business_intent_id,
            s.supplier_code,
            s.status AS supplier_status,
@@ -844,11 +912,11 @@ BEGIN
         ON ssc.tenant_id = s.tenant_id
        AND ssc.supplier_id = s.id
        AND ssc.status = 'active'
-      JOIN master.spend_category sc
-        ON sc.tenant_id = ssc.tenant_id
-       AND sc.id = ssc.spend_category_id
+      JOIN master.commodity_category cc
+        ON cc.tenant_id = ssc.tenant_id
+       AND cc.id = ssc.commodity_category_id
       JOIN tmp_technostat_category_intent_map cim
-        ON cim.spend_category_code = sc.code
+        ON cim.spend_category_code = cc.code
       JOIN master.business_intent bi
         ON bi.tenant_id = s.tenant_id
        AND bi.code = cim.intent_code
@@ -859,6 +927,8 @@ BEGIN
 
     SELECT
            p.id AS supplier_profile_id,
+           p.company_code_id,
+           ssc.commodity_category_id AS commodity_category_id,
            bi.id AS business_intent_id,
            s.supplier_code,
            s.status AS supplier_status,
@@ -868,6 +938,10 @@ BEGIN
       JOIN master.supplier s
         ON s.tenant_id = p.tenant_id
        AND s.id = p.supplier_id
+      JOIN master.supplier_spend_category ssc
+        ON ssc.tenant_id = s.tenant_id
+       AND ssc.supplier_id = s.id
+       AND ssc.status = 'active'
       JOIN master.business_intent bi
         ON bi.tenant_id = s.tenant_id
        AND bi.code = 'TRANSFER-IC'
@@ -877,13 +951,17 @@ BEGIN
   ),
   profile_intents AS (
     SELECT supplier_profile_id,
+           company_code_id,
+           commodity_category_id,
            business_intent_id,
            supplier_code,
            supplier_status,
            intent_code,
            min(priority) AS priority
-      FROM profile_intents_raw
+     FROM profile_intents_raw
      GROUP BY supplier_profile_id,
+              company_code_id,
+              commodity_category_id,
               business_intent_id,
               supplier_code,
               supplier_status,
@@ -892,52 +970,64 @@ BEGIN
   ranked_profile_intents AS (
     SELECT pi.*,
            row_number() OVER (
-             PARTITION BY pi.supplier_profile_id
+             PARTITION BY pi.supplier_profile_id, pi.commodity_category_id
              ORDER BY pi.priority, pi.intent_code
            ) AS default_rank
       FROM profile_intents pi
   )
-  INSERT INTO master.company_code_supplier_intent_policy (
+  INSERT INTO control.commodity_category_buy_policy (
     tenant_id,
-    supplier_profile_id,
+    commodity_category_id,
     business_intent_id,
+    company_code_id,
+    scope_type,
+    scope_id,
     mapping_mode,
     is_default,
-    is_sourcing_allowed,
-    is_po_allowed,
-    is_invoice_allowed,
+    is_selectable,
+    sort_order,
+    effective_from,
+    effective_to,
     metadata,
+    status,
     created_by,
     updated_by
   )
   SELECT v_tenant_id,
-         rpi.supplier_profile_id,
+         rpi.commodity_category_id,
          rpi.business_intent_id,
+         rpi.company_code_id,
+         'SUPPLIER_PROFILE',
+         rpi.supplier_profile_id,
          'ALLOW',
-         rpi.default_rank = 1,
-         true,
+         false,
          rpi.supplier_status <> 'onboarding',
-         rpi.supplier_status <> 'onboarding',
+         30 + rpi.default_rank,
+         DATE '2025-01-01',
+         DATE '2026-12-31',
          jsonb_build_object(
            'seed_pack', 'technostat_supplier_100pct',
+           'policy_kind', 'supplier_intent_allow',
            'supplier_code', rpi.supplier_code,
            'intent_code', rpi.intent_code,
            'notes', 'Seeded supplier business intent policy for Technostat 100% supplier coverage'
          ),
+         'active',
          v_system_user_id,
          v_system_user_id
     FROM ranked_profile_intents rpi
-  ON CONFLICT (tenant_id, supplier_profile_id, business_intent_id) DO UPDATE
-     SET mapping_mode = EXCLUDED.mapping_mode,
-         is_default = EXCLUDED.is_default,
-         is_sourcing_allowed = EXCLUDED.is_sourcing_allowed,
-         is_po_allowed = EXCLUDED.is_po_allowed,
-         is_invoice_allowed = EXCLUDED.is_invoice_allowed,
-         metadata = COALESCE(master.company_code_supplier_intent_policy.metadata, '{}'::jsonb) || EXCLUDED.metadata,
-         updated_by = v_system_user_id,
-         updated_at = now();
+   WHERE NOT EXISTS (
+       SELECT 1
+         FROM control.commodity_category_buy_policy existing
+        WHERE existing.tenant_id = v_tenant_id
+          AND existing.scope_type = 'SUPPLIER_PROFILE'
+          AND existing.scope_id = rpi.supplier_profile_id
+          AND existing.commodity_category_id = rpi.commodity_category_id
+          AND existing.business_intent_id = rpi.business_intent_id
+          AND existing.metadata ->> 'seed_pack' = 'technostat_supplier_100pct'
+     );
 
-  INSERT INTO master.company_code_supplier_posting_override (
+  INSERT INTO control.supplier_posting_override (
     tenant_id,
     supplier_profile_id,
     posting_role_code,
@@ -1003,7 +1093,7 @@ BEGIN
      AND COALESCE(ga.id, fallback_ga.id) IS NOT NULL
      AND NOT EXISTS (
        SELECT 1
-         FROM master.company_code_supplier_posting_override po
+         FROM control.supplier_posting_override po
         WHERE po.tenant_id = p.tenant_id
           AND po.supplier_profile_id = p.id
           AND po.posting_role_code = 'ap_trade_payable'
@@ -1015,19 +1105,14 @@ BEGIN
   -- Purge orphaned supplier-side records that survive partial re-migrations
   -- (01h recreates master.supplier without the FK-cascade being present,
   --  leaving child-table rows with no live parent supplier).
-  DELETE FROM master.company_code_supplier_spend_policy sp
+  DELETE FROM control.commodity_category_buy_policy sp
    WHERE sp.tenant_id = v_tenant_id
+     AND sp.scope_type = 'SUPPLIER_PROFILE'
      AND NOT EXISTS (
        SELECT 1 FROM master.company_code_supplier_profile p
-        WHERE p.tenant_id = sp.tenant_id AND p.id = sp.supplier_profile_id
+        WHERE p.tenant_id = sp.tenant_id AND p.id = sp.scope_id
      );
-  DELETE FROM master.company_code_supplier_intent_policy ip
-   WHERE ip.tenant_id = v_tenant_id
-     AND NOT EXISTS (
-       SELECT 1 FROM master.company_code_supplier_profile p
-        WHERE p.tenant_id = ip.tenant_id AND p.id = ip.supplier_profile_id
-     );
-  DELETE FROM master.company_code_supplier_posting_override po
+  DELETE FROM control.supplier_posting_override po
    WHERE po.tenant_id = v_tenant_id
      AND NOT EXISTS (
        SELECT 1 FROM master.company_code_supplier_profile p
@@ -1127,9 +1212,10 @@ BEGIN
      AND p.status = 'active'
      AND EXISTS (
        SELECT 1
-         FROM master.company_code_supplier_spend_policy sp
+         FROM control.commodity_category_buy_policy sp
         WHERE sp.tenant_id = p.tenant_id
-          AND sp.supplier_profile_id = p.id
+          AND sp.scope_type = 'SUPPLIER_PROFILE'
+          AND sp.scope_id = p.id
      );
 
   SELECT count(DISTINCT p.id)
@@ -1139,9 +1225,11 @@ BEGIN
      AND p.status = 'active'
      AND EXISTS (
        SELECT 1
-         FROM master.company_code_supplier_intent_policy ip
+         FROM control.commodity_category_buy_policy ip
         WHERE ip.tenant_id = p.tenant_id
-          AND ip.supplier_profile_id = p.id
+          AND ip.scope_type = 'SUPPLIER_PROFILE'
+          AND ip.scope_id = p.id
+          AND ip.business_intent_id IS NOT NULL
      );
 
   SELECT count(DISTINCT p.id)
@@ -1151,7 +1239,7 @@ BEGIN
      AND p.status = 'active'
      AND EXISTS (
        SELECT 1
-         FROM master.company_code_supplier_posting_override po
+         FROM control.supplier_posting_override po
         WHERE po.tenant_id = p.tenant_id
           AND po.supplier_profile_id = p.id
           AND po.posting_role_code = 'ap_trade_payable'
@@ -1185,7 +1273,7 @@ BEGIN
      WHERE p.tenant_id = v_tenant_id
        AND p.status = 'active'
   ) THEN
-    RAISE EXCEPTION 'Supplier profile spend policy coverage failed: % profiles covered', v_profile_with_spend_policy_count;
+    RAISE EXCEPTION 'Supplier profile buy policy coverage failed: % profiles covered', v_profile_with_spend_policy_count;
   END IF;
 
   IF v_profile_with_intent_policy_count <> (

@@ -1523,9 +1523,11 @@ DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_account_manager_fk
     FOREIGN KEY (tenant_id, account_manager_id)
     REFERENCES master.employee (tenant_id, id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_spend_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id)
-    REFERENCES master.item_category (tenant_id, id) ON DELETE SET NULL;
+DO $$ BEGIN
+ALTER TABLE master.supplier DROP CONSTRAINT IF EXISTS supp_spend_category_fk;
+ALTER TABLE master.supplier ADD CONSTRAINT supp_commodity_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.supplier ADD CONSTRAINT supp_payment_term_fk
     FOREIGN KEY (tenant_id, payment_term_id)
@@ -1559,28 +1561,30 @@ CREATE UNIQUE INDEX IF NOT EXISTS employee_principal_uq
     ON master.employee (tenant_id, principal_id)
     WHERE principal_id IS NOT NULL;
 
--- ── master.item_category ────────────────────────────────────────────────
-ALTER TABLE master.item_category DROP CONSTRAINT IF EXISTS pcat_tenant_fk;
-DO $$ BEGIN ALTER TABLE master.item_category ADD CONSTRAINT pcat_tenant_fk
+-- ── master.commodity_category ────────────────────────────────────────────────
+ALTER TABLE master.commodity_category DROP CONSTRAINT IF EXISTS ccat_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.commodity_category ADD CONSTRAINT ccat_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.item_category ADD CONSTRAINT pcat_parent_fk
-    FOREIGN KEY (tenant_id, parent_id) REFERENCES master.item_category (tenant_id, id);
+DO $$ BEGIN ALTER TABLE master.commodity_category ADD CONSTRAINT ccat_parent_fk
+    FOREIGN KEY (tenant_id, parent_id) REFERENCES master.commodity_category (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.item_category ADD CONSTRAINT pcat_created_by_fk
+DO $$ BEGIN ALTER TABLE master.commodity_category ADD CONSTRAINT ccat_root_category_fk
+    FOREIGN KEY (tenant_id, root_category_id) REFERENCES master.commodity_category (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.commodity_category ADD CONSTRAINT ccat_uom_fk
+    FOREIGN KEY (uom_code) REFERENCES shared.uom (code);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.commodity_category ADD CONSTRAINT ccat_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 -- ── master.product ─────────────────────────────────────────────────────────
 ALTER TABLE master.product DROP CONSTRAINT IF EXISTS prod_tenant_fk;
 DO $$ BEGIN ALTER TABLE master.product ADD CONSTRAINT prod_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.product ADD CONSTRAINT prod_category_fk
-    FOREIGN KEY (tenant_id, category_id) REFERENCES master.item_category (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.product ADD CONSTRAINT prod_spend_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id) REFERENCES master.spend_category (tenant_id, id);
+DO $$ BEGIN ALTER TABLE master.product ADD CONSTRAINT prod_commodity_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id) REFERENCES master.commodity_category (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.product ADD CONSTRAINT prod_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code);
@@ -1604,12 +1608,8 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.item ADD CONSTRAINT im_product_fk
     FOREIGN KEY (tenant_id, product_id) REFERENCES master.product (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.item ADD CONSTRAINT im_category_fk
-    FOREIGN KEY (tenant_id, category_id) REFERENCES master.item_category (tenant_id, id)
-    ON DELETE RESTRICT;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.item ADD CONSTRAINT im_spend_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id) REFERENCES master.spend_category (tenant_id, id);
+DO $$ BEGIN ALTER TABLE master.item ADD CONSTRAINT im_commodity_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id) REFERENCES master.commodity_category (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.item ADD CONSTRAINT im_uom_fk
     FOREIGN KEY (uom_code) REFERENCES shared.uom (code);
@@ -1638,32 +1638,6 @@ DO $$ BEGIN ALTER TABLE master.spend_category ADD CONSTRAINT sc_default_intent_f
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── master.company_code_spend_policy ────────────────────────────────────
-ALTER TABLE master.company_code_spend_policy DROP CONSTRAINT IF EXISTS sccp_tenant_fk;
-DO $$ BEGIN ALTER TABLE master.company_code_spend_policy ADD CONSTRAINT sccp_tenant_fk
-    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code_spend_policy ADD CONSTRAINT sccp_cc_fk
-    FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code_spend_policy ADD CONSTRAINT sccp_spend_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id) REFERENCES master.spend_category (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code_spend_policy ADD CONSTRAINT sccp_gl_account_fk
-    FOREIGN KEY (tenant_id, default_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code_spend_policy ADD CONSTRAINT sccp_tax_group_fk
-    FOREIGN KEY (tenant_id, default_tax_group_id) REFERENCES control.tax_group (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code_spend_policy ADD CONSTRAINT sccp_asset_class_fk
-    FOREIGN KEY (tenant_id, asset_class_id) REFERENCES master.asset_class (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code_spend_policy ADD CONSTRAINT sccp_capex_currency_fk
-    FOREIGN KEY (capex_screening_currency) REFERENCES shared.currency (code);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.company_code_spend_policy ADD CONSTRAINT sccp_created_by_fk
-    FOREIGN KEY (created_by) REFERENCES master.principal (id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 -- ── master.commodity_classification ────────────────────────────────────────
 ALTER TABLE master.commodity_classification DROP CONSTRAINT IF EXISTS cc_tenant_fk;
 DO $$ BEGIN ALTER TABLE master.commodity_classification ADD CONSTRAINT cc_tenant_fk
@@ -1777,57 +1751,6 @@ DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- invoice_hold_policy_id: FUTURE ANCHOR — no FK target yet.
-
--- company_code_supplier_spend_policy (supplier extension child)
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_spend_policy ADD CONSTRAINT csspo_profile_fk
-    FOREIGN KEY (tenant_id, supplier_profile_id)
-    REFERENCES master.company_code_supplier_profile (tenant_id, id) ON DELETE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_spend_policy ADD CONSTRAINT csspo_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id)
-    REFERENCES master.spend_category (tenant_id, id) ON DELETE RESTRICT;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_spend_policy ADD CONSTRAINT csspo_max_po_currency_fk
-    FOREIGN KEY (max_po_currency_code)
-    REFERENCES shared.currency (code);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_spend_policy ADD CONSTRAINT csspo_created_by_fk
-    FOREIGN KEY (created_by) REFERENCES master.principal (id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
--- company_code_supplier_intent_policy (supplier extension child)
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_intent_policy ADD CONSTRAINT csip_profile_fk
-    FOREIGN KEY (tenant_id, supplier_profile_id)
-    REFERENCES master.company_code_supplier_profile (tenant_id, id) ON DELETE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_intent_policy ADD CONSTRAINT csip_intent_fk
-    FOREIGN KEY (tenant_id, business_intent_id)
-    REFERENCES master.business_intent (tenant_id, id) ON DELETE RESTRICT;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_intent_policy ADD CONSTRAINT csip_created_by_fk
-    FOREIGN KEY (created_by) REFERENCES master.principal (id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
--- company_code_supplier_posting_override (supplier extension child)
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_posting_override ADD CONSTRAINT cspo_profile_fk
-    FOREIGN KEY (tenant_id, supplier_profile_id)
-    REFERENCES master.company_code_supplier_profile (tenant_id, id) ON DELETE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_posting_override ADD CONSTRAINT cspo_gl_account_fk
-    FOREIGN KEY (tenant_id, gl_account_id)
-    REFERENCES master.gl_account (tenant_id, id) ON DELETE RESTRICT;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.company_code_supplier_posting_override ADD CONSTRAINT cspo_created_by_fk
-    FOREIGN KEY (created_by) REFERENCES master.principal (id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 
 -- ── master.principal_identity_binding ──────────────────────────────────────────
 -- pib_tenant_id_uq UNIQUE (tenant_id, id) was redundant — id is already a global PK
@@ -2052,12 +1975,6 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── §SCCP-ALT  master.company_code_spend_policy.default_intent_id ──────────
 -- Deferred FK (business_intent defined below in §BI).
-DO $$ BEGIN ALTER TABLE master.company_code_spend_policy ADD CONSTRAINT sccp_intent_fk
-    FOREIGN KEY (default_intent_id) REFERENCES master.business_intent (id)
-    ON DELETE SET NULL;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-
 -- ── §BI  master.business_intent ──────────────────────────────────────────────
 DO $$ BEGIN ALTER TABLE master.business_intent ADD CONSTRAINT bi_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
@@ -2071,28 +1988,7 @@ DO $$ BEGIN ALTER TABLE master.business_intent ADD CONSTRAINT bi_parent_fk
     DEFERRABLE INITIALLY DEFERRED;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN ALTER TABLE master.business_intent ADD CONSTRAINT bi_gl_account_fk
-    FOREIGN KEY (default_gl_account_id) REFERENCES master.gl_account (id)
-    ON DELETE SET NULL;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-
 -- ── §CCIP  master.company_code_intent_policy ─────────────────────────────────
-DO $$ BEGIN ALTER TABLE master.company_code_intent_policy ADD CONSTRAINT ccip_tenant_fk
-    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.company_code_intent_policy ADD CONSTRAINT ccip_cc_fk
-    FOREIGN KEY (tenant_id, company_code_id)
-    REFERENCES master.company_code (tenant_id, id) ON DELETE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN ALTER TABLE master.company_code_intent_policy ADD CONSTRAINT ccip_intent_fk
-    FOREIGN KEY (tenant_id, intent_id)
-    REFERENCES master.business_intent (tenant_id, id) ON DELETE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-
 -- ── §CCDD  master.company_code_dimension_default ──────────────────────────────
 DO $$ BEGIN ALTER TABLE master.company_code_dimension_default ADD CONSTRAINT ccdd_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
@@ -2163,21 +2059,10 @@ DO $$ BEGIN ALTER TABLE master.product ADD CONSTRAINT product_default_tax_group_
     REFERENCES control.tax_group (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- ── master.item_category — default_tax_group_id FK ────────────────────────
-DO $$ BEGIN ALTER TABLE master.item_category ADD CONSTRAINT pc_default_tax_group_fk
-    FOREIGN KEY (tenant_id, default_tax_group_id)
-    REFERENCES control.tax_group (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── master.company_code_supplier_profile — default_wht_tax_group_id FK ────────────
 DO $$ BEGIN ALTER TABLE master.company_code_supplier_profile ADD CONSTRAINT scp_default_wht_tax_group_fk
     FOREIGN KEY (tenant_id, default_wht_tax_group_id)
-    REFERENCES control.tax_group (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
--- ── master.business_intent — default_tax_group_id FK ─────────────────────────
-DO $$ BEGIN ALTER TABLE master.business_intent ADD CONSTRAINT bi_default_tax_group_fk
-    FOREIGN KEY (tenant_id, default_tax_group_id)
     REFERENCES control.tax_group (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 

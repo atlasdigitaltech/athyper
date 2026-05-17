@@ -3,8 +3,8 @@
 -- ============================================================================
 -- File:     027_commodity_bridge.sql
 -- Schema:   master.commodity_classification
--- Purpose:  Bridge spend_category + item_category → UNSPSC commodity codes
--- Depends:  020_spend_categories.sql, 025_base_item_categories.sql,
+-- Purpose:  Bridge spend_category to UNSPSC commodity codes
+-- Depends:  020_spend_categories.sql,
 --           001_shared/008a_commodity_code_unspsc.sql
 -- Idempotent: Yes — ON CONFLICT DO UPDATE
 -- Spec ref: §7 Commodity Classification Bridge, §15 Alignment Rules
@@ -12,8 +12,6 @@
 -- NOTE: domain_code is ALWAYS lowercase ('unspsc') per §7.1
 -- NOTE: mapping_type uses ONLY legal values per §7.2
 -- NOTE: provenance = 'seed' per §13.3
--- NOTE: item_category anchors at family/class level per §15.5
--- NOTE: item_category gets NO HS codes at category level per §15.6
 -- ============================================================================
 
 DO $seed$
@@ -33,12 +31,6 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM master.spend_category
                    WHERE tenant_id = v_tid AND code = 'SC-IT') THEN
         RAISE EXCEPTION 'Base seed not loaded. Run 020 first.';
-    END IF;
-
-    -- Verify base item categories loaded
-    IF NOT EXISTS (SELECT 1 FROM master.item_category
-                   WHERE tenant_id = v_tid AND code = 'IC-GOODS') THEN
-        RAISE EXCEPTION 'Base item categories not loaded. Run 025 first.';
     END IF;
 
     -- ── STAGE B: Stage bridge data ───────────────────────────────────────
@@ -247,92 +239,10 @@ BEGIN
     END IF;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- ITEM CATEGORY BRIDGE — item_category → UNSPSC (§14, §15)
-    -- Anchor precision: family or class level (4–6 digit) per §15.5
-    -- 1 primary per leaf, 0–1 secondary broader anchor
-    -- Container nodes (roots): NO bridge entries per §15.4
-    -- ══════════════════════════════════════════════════════════════════════
-    CREATE TEMP TABLE tmp_ic_bridge (
-        ic_code       text NOT NULL,             -- item_category.code
-        domain        text NOT NULL DEFAULT 'unspsc',
-        cc_code       text NOT NULL,             -- commodity_code.code
-        mapping_type  text NOT NULL DEFAULT 'broad',
-        confidence    numeric(5,2) NOT NULL,
-        is_primary    boolean NOT NULL DEFAULT false,
-        description   text
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_ic_bridge (ic_code, cc_code, mapping_type, confidence, is_primary, description) VALUES
-    -- ── IC-GOODS children ────────────────────────────────────────────────
-    ('IC-RAW',    '11100000', 'broad', 82, true,  'Minerals and ores — class'),
-    ('IC-COMP',   '31160000', 'broad', 85, true,  'Bearings, bushings, gears — class'),
-    ('IC-PACK',   '24110000', 'broad', 85, true,  'Containers and packaging — class'),
-    ('IC-FG',     '60000000', 'broad', 60, true,  'Musical/games/toys segment — broad proxy for finished goods'),
-    ('IC-FG',     '53100000', 'broad', 58, false, 'Clothing — secondary finished goods proxy'),
-    ('IC-SPARE',  '31000000', 'broad', 72, true,  'Manufacturing components — segment'),
-    ('IC-CONSUM', '47130000', 'broad', 82, true,  'Cleaning equipment and supplies — class'),
-    ('IC-CHEM',   '12160000', 'broad', 85, true,  'Solvents — class'),
-    ('IC-CHEM',   '12350000', 'broad', 80, false, 'Additives — secondary'),
-    ('IC-FUEL',   '15101500', 'broad', 85, true,  'Petroleum and distillates — family'),
-    ('IC-PPE',    '46180000', 'broad', 85, true,  'Safety and rescue equipment — class'),
-    ('IC-FOOD',   '50000000', 'broad', 75, true,  'Food, beverage & tobacco — segment'),
-
-    -- ── IC-EQUIP children ────────────────────────────────────────────────
-    ('IC-IT-EQ',  '43210000', 'broad', 85, true,  'Computer equipment and accessories — class'),
-    ('IC-OFF-EQ', '56101500', 'broad', 82, true,  'Office furniture — family'),
-    ('IC-OFF-EQ', '44100000', 'broad', 78, false, 'Office machines — secondary'),
-    ('IC-HVY-EQ', '22100000', 'broad', 82, true,  'Heavy construction machinery — class'),
-    ('IC-PLT-EQ', '26100000', 'broad', 82, true,  'Power generation sources — class'),
-    ('IC-MFG-EQ', '23150000', 'broad', 82, true,  'Metal working machinery — class'),
-    ('IC-LAB-EQ', '41110000', 'broad', 85, true,  'Laboratory and measuring instruments — class'),
-    ('IC-MED-EQ', '42180000', 'broad', 82, true,  'Patient examination instruments — class'),
-    ('IC-MED-EQ', '42290000', 'broad', 78, false, 'Surgical instruments — secondary'),
-    ('IC-VEH',    '25101500', 'broad', 85, true,  'Motor vehicles — family'),
-    ('IC-AGR-EQ', '21100000', 'broad', 82, true,  'Agricultural and forestry machinery — class'),
-
-    -- ── IC-SVC children ──────────────────────────────────────────────────
-    ('IC-PROFSVC',  '80100000', 'broad', 80, true,  'Management and business services — class'),
-    ('IC-MAINTSVC', '72150000', 'broad', 82, true,  'Building and facility maintenance — class'),
-    ('IC-LOGSVC',   '78100000', 'broad', 82, true,  'Mail and cargo transport — class'),
-    ('IC-SUBSVC',   '72100000', 'broad', 80, true,  'Building and maintenance services — class'),
-    ('IC-TESTSVC',  '41115400', 'broad', 82, true,  'Measuring and observing instruments — family'),
-    ('IC-CLEANSVC', '76111500', 'broad', 85, true,  'Cleaning and janitorial services — family'),
-    ('IC-ITSVC',    '81110000', 'broad', 82, true,  'Computer services — class'),
-
-    -- ── IC-CONMAT children ───────────────────────────────────────────────
-    ('IC-STRUCT',  '30100000', 'broad', 85, true,  'Structural components and basic shapes — class'),
-    ('IC-CONC',    '30110000', 'broad', 85, true,  'Concrete, cement and plaster — class'),
-    ('IC-ELEC',    '39120000', 'broad', 82, true,  'Electrical wire and cable — class'),
-    ('IC-MECH',    '40140000', 'broad', 82, true,  'Fluid and gas distribution — class'),
-    ('IC-FINISH',  '30160000', 'broad', 80, true,  'Insulation — class (finishing proxy)'),
-    ('IC-SCAFF',   '30171500', 'broad', 85, true,  'Scaffolding — family');
-
-    -- ── STAGE B.4: Pre-check — all IC bridge UNSPSC codes must exist ─────────
-    IF EXISTS (
-        SELECT 1 FROM tmp_ic_bridge b
-        WHERE NOT EXISTS (
-            SELECT 1 FROM shared.commodity_code cc
-            WHERE cc.domain_code = b.domain AND cc.code = b.cc_code
-        )
-    ) THEN
-        RAISE EXCEPTION '[023_base] item_category bridge: UNSPSC codes missing from shared.commodity_code'
-            ' — ensure 008a_commodity_code_unspsc.sql ran first. Missing: %',
-            (SELECT string_agg(DISTINCT b.cc_code, ', ' ORDER BY b.cc_code)
-             FROM tmp_ic_bridge b
-             WHERE NOT EXISTS (
-                 SELECT 1 FROM shared.commodity_code cc
-                 WHERE cc.domain_code = b.domain AND cc.code = b.cc_code
-             ));
-    END IF;
-
-    -- ── STAGE C: Build resolve maps ──────────────────────────────────────
+    -- STAGE C: Build resolve maps ──────────────────────────────────────
     DROP TABLE IF EXISTS tmp_sc_map;
     CREATE TEMP TABLE tmp_sc_map AS
     SELECT code, id FROM master.spend_category WHERE tenant_id = v_tid;
-
-    DROP TABLE IF EXISTS tmp_ic_map;
-    CREATE TEMP TABLE tmp_ic_map AS
-    SELECT code, id FROM master.item_category WHERE tenant_id = v_tid;
 
     -- ── STAGE D: UPSERT spend_category bridge rows ──────────────────────
     INSERT INTO master.commodity_classification (
@@ -389,64 +299,7 @@ BEGIN
            EXCLUDED.provenance,
            EXCLUDED.is_primary,
            EXCLUDED.description);
-
-    -- ── STAGE E: UPSERT item_category bridge rows ─────────────────────────
-    INSERT INTO master.commodity_classification (
-        tenant_id, owner_type, owner_id,
-        classification_type, domain_code, code_id,
-        mapping_type, confidence, provenance, is_primary,
-        description, metadata, status, created_by
-    )
-    SELECT
-        v_tid,
-        'item_category',
-        im.id,
-        'commodity',
-        b.domain,
-        cc.id,
-        b.mapping_type,
-        b.confidence,
-        'seed',
-        b.is_primary,
-        b.description,
-        jsonb_build_object('_seed', jsonb_build_object(
-            'pack',      v_pack,
-            'version',   v_version,
-            'seeded_at', now()::text
-        )),
-        'active',
-        v_su
-    FROM tmp_ic_bridge b
-    JOIN tmp_ic_map im ON im.code = b.ic_code
-    JOIN shared.commodity_code cc ON cc.domain_code = b.domain AND cc.code = b.cc_code
-    ON CONFLICT (tenant_id, owner_type, owner_id, classification_type, domain_code, code_id)
-    DO UPDATE SET
-        mapping_type = EXCLUDED.mapping_type,
-        confidence   = EXCLUDED.confidence,
-        provenance   = EXCLUDED.provenance,
-        is_primary   = EXCLUDED.is_primary,
-        description  = EXCLUDED.description,
-        metadata     = master.commodity_classification.metadata
-                       || jsonb_build_object('_seed', jsonb_build_object(
-                              'pack',      v_pack,
-                              'version',   v_version,
-                              'seeded_at', now()::text
-                          )),
-        updated_at   = now(),
-        updated_by   = v_su
-    WHERE (master.commodity_classification.mapping_type,
-           master.commodity_classification.confidence,
-           master.commodity_classification.provenance,
-           master.commodity_classification.is_primary,
-           master.commodity_classification.description)
-       IS DISTINCT FROM
-          (EXCLUDED.mapping_type,
-           EXCLUDED.confidence,
-           EXCLUDED.provenance,
-           EXCLUDED.is_primary,
-           EXCLUDED.description);
-
-    -- ── STAGE F: Assertions ──────────────────────────────────────────────
+    -- STAGE E: Assertions ──────────────────────────────────────────────
 
     -- spend_category bridge count
     IF (SELECT count(*) FROM master.commodity_classification
@@ -457,18 +310,6 @@ BEGIN
             (SELECT count(*) FROM master.commodity_classification
              WHERE tenant_id = v_tid
                AND owner_type = 'spend_category'
-               AND metadata->'_seed'->>'pack' = v_pack);
-    END IF;
-
-    -- item_category bridge count
-    IF (SELECT count(*) FROM master.commodity_classification
-        WHERE tenant_id = v_tid
-          AND owner_type = 'item_category'
-          AND metadata->'_seed'->>'pack' = v_pack) < 32 THEN
-        RAISE EXCEPTION '[023_base] item_category bridge incomplete: expected ≥32, got %',
-            (SELECT count(*) FROM master.commodity_classification
-             WHERE tenant_id = v_tid
-               AND owner_type = 'item_category'
                AND metadata->'_seed'->>'pack' = v_pack);
     END IF;
 
@@ -490,13 +331,9 @@ BEGIN
     ) THEN
         RAISE WARNING '[023_base] broad bridge rows outside 55–94 range detected';
     END IF;
-
-    RAISE NOTICE '[023_base] Commodity bridge loaded: % spend_category rows, % item_category rows',
+    RAISE NOTICE '[023_base] Commodity bridge loaded: % spend_category rows',
         (SELECT count(*) FROM master.commodity_classification
          WHERE tenant_id = v_tid AND owner_type = 'spend_category'
-           AND metadata->'_seed'->>'pack' = v_pack),
-        (SELECT count(*) FROM master.commodity_classification
-         WHERE tenant_id = v_tid AND owner_type = 'item_category'
            AND metadata->'_seed'->>'pack' = v_pack);
 
 END $seed$;

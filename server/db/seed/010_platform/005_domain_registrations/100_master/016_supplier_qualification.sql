@@ -22,11 +22,7 @@ SELECT
     '{}'::jsonb,
     '{"parent_entity":"supplier","parent_fk":"supplier_id","singleton":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'supplier_qualification'
-      AND entity_code = 'supplier_qualification' AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (

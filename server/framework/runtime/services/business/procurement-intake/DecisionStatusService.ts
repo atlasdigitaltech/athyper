@@ -36,7 +36,7 @@ export function computeDecisionStatus(
 
   if (d.policy.mapping_mode === "DENY") return "blocked";
 
-  if (d.policy.classification_required && !d.selected.spend_category_id) return "blocked";
+  if (d.policy.classification_required && !d.selected.commodity_category_id) return "blocked";
 
   if (d.policy.hs_required && !d.selected.line_commodity_code) return "blocked";
 

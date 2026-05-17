@@ -32,6 +32,8 @@ export interface EntityDetailPageProps {
   recordId: string;
   /** When true (URL: ?mode=edit) renders the entity form in-place. */
   editMode?: boolean;
+  /** Optional internal URL to return to when opened from a workbench or launcher. */
+  returnTo?: string;
   /** Renderer for entities with detail_renderer="document". Pass DocumentDetailPage from @athyper/document-runtime. */
   documentRenderer?: React.ComponentType<DocumentRendererProps>;
 }
@@ -39,7 +41,7 @@ export interface EntityDetailPageProps {
 // ── Main dispatcher ────────────────────────────────────────────────────────────
 
 export function EntityDetailPage({
-  entityCode, recordId, editMode = false, documentRenderer: DocumentRenderer,
+  entityCode, recordId, editMode = false, returnTo, documentRenderer: DocumentRenderer,
 }: EntityDetailPageProps) {
   useRouter();
   const { data: entity,     isLoading: metaLoading   } = useCompiledEntity(entityCode);
@@ -119,6 +121,7 @@ export function EntityDetailPage({
           operations={operations}
           recordId={recordId}
           editMode={effectiveEditMode}
+          returnTo={returnTo}
         />
       );
     }
@@ -130,7 +133,8 @@ export function EntityDetailPage({
         operations={operations}
         recordId={recordId}
         editMode={!isReadOnly && effectiveEditMode}
-        canEdit={!isReadOnly}
+        returnTo={returnTo}
+        canEdit={!isReadOnly && canEdit}
       />
     );
   }

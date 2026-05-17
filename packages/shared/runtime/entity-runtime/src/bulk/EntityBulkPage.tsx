@@ -14,13 +14,13 @@
  * allows retrying only the failed subset.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle, CheckCircle2, ChevronDown,
   Download, Loader2, Trash2, X,
 } from "lucide-react";
-import { useCompiledEntity, useEntityList, useEntityOperations, useSavedViews } from "@athyper/query";
+import { useCompiledEntity, useEntityList, useEntityOperations, useSavedViews, useLookupDomain } from "@athyper/query";
 import { resolveListConfig } from "@athyper/metadata-client/compiled-reader";
 import { DataTable, type ColumnDef, type RowSelectionState } from "@athyper/ui/data";
 import { PageFrame } from "@athyper/ui/layout";
@@ -153,8 +153,64 @@ function BulkResultPanel({
 // ── Update modal ──────────────────────────────────────────────────────────────
 
 interface UpdateField {
-  name:  string;
-  label: string;
+  name:             string;
+  label:            string;
+  data_type?:       string | null;
+  enum_domain_code?: string | null;
+  lookup_config?:   Record<string, unknown> | null;
+}
+
+type LookupValueCase = "preserve" | "upper" | "lower";
+
+function readLookupValueCase(lookupConfig: Record<string, unknown> | null | undefined): LookupValueCase {
+  const raw = typeof lookupConfig?.["value_case"] === "string"
+    ? lookupConfig["value_case"].trim().toLowerCase()
+    : "";
+  if (raw === "upper" || raw === "uppercase") return "upper";
+  if (raw === "lower" || raw === "lowercase") return "lower";
+  return "preserve";
+}
+
+function applyLookupValueCase(value: string, valueCase: LookupValueCase): string {
+  if (valueCase === "upper") return value.toUpperCase();
+  if (valueCase === "lower") return value.toLowerCase();
+  return value;
+}
+
+// Lookup-aware select rendered when the chosen field has enum_domain_code
+function EnumValueSelect({
+  domainCode,
+  value,
+  valueCase = "preserve",
+  onChange,
+}: {
+  domainCode: string;
+  value:      string;
+  valueCase?: LookupValueCase;
+  onChange:   (v: string) => void;
+}) {
+  const { data, isLoading } = useLookupDomain(domainCode);
+  const options = (data?.values ?? []).filter((v) => v.status === "active");
+  const normalizedValue = value ? value.toLowerCase() : value;
+
+  return (
+    <Select
+      value={normalizedValue}
+      onValueChange={(next) => onChange(applyLookupValueCase(next, valueCase))}
+      disabled={isLoading}
+    >
+      <SelectTrigger className="h-8 text-xs">
+        <SelectValue placeholder={isLoading ? "Loading…" : "Select a value…"} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((opt) => (
+          <SelectItem key={opt.code} value={opt.code} className="text-xs">
+            {opt.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 function BulkUpdateModal({
@@ -174,6 +230,13 @@ function BulkUpdateModal({
 }) {
   const [field, setField] = useState(fields[0]?.name ?? "");
   const [value, setValue] = useState("");
+
+  // Reset value whenever the target field changes
+  useEffect(() => { setValue(""); }, [field]);
+
+  const selectedField = fields.find((f) => f.name === field);
+  const isEnum = selectedField?.data_type === "enum" && !!selectedField.enum_domain_code;
+  const enumValueCase = readLookupValueCase(selectedField?.lookup_config);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -199,15 +262,24 @@ function BulkUpdateModal({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">New value</Label>
-            <Input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="Enter new value…"
-              className="h-8 text-xs"
-            />
+            {isEnum ? (
+              <EnumValueSelect
+                domainCode={selectedField!.enum_domain_code!}
+                value={value}
+                valueCase={enumValueCase}
+                onChange={setValue}
+              />
+            ) : (
+              <Input
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="Enter new value…"
+                className="h-8 text-xs"
+              />
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
-            This will update <strong>{field}</strong> on all {count} selected records.
+            This will update <strong>{selectedField?.label ?? field}</strong> on all {count} selected records.
           </p>
         </div>
         <DialogFooter>
@@ -439,10 +511,16 @@ export function EntityBulkPage({ entityCode }: EntityBulkPageProps) {
 
   const listConfig = resolveListConfig(entity);
 
-  // Updatable fields: not computed, not read-only
-  const updatableFields = listConfig.columns
+  // Updatable fields: not computed, not read-only; carry enum metadata for the value input
+  const updatableFields: UpdateField[] = listConfig.columns
     .filter((f) => !f.is_readonly)
-    .map((f) => ({ name: f.name, label: f.label ?? f.name }));
+    .map((f) => ({
+      name:             f.name,
+      label:            f.label ?? f.name,
+      data_type:        f.data_type,
+      enum_domain_code: f.enum_domain_code,
+      lookup_config:    f.lookup_config,
+    }));
 
   const columns: ColumnDef<Record<string, unknown>>[] = listConfig.columns.map((field) => ({
     accessorKey: field.name,

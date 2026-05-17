@@ -662,16 +662,24 @@ CREATE INDEX IF NOT EXISTS emp_principal_idx   ON master.employee (tenant_id, pr
 CREATE INDEX IF NOT EXISTS emp_manager_idx     ON master.employee (tenant_id, manager_id) WHERE manager_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS emp_cc_idx          ON master.employee (tenant_id, company_code_id) WHERE company_code_id IS NOT NULL;
 
--- ── master.item_category ────────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS pcat_tenant_idx     ON master.item_category (tenant_id);
-CREATE INDEX IF NOT EXISTS pcat_parent_idx     ON master.item_category (tenant_id, parent_id) WHERE parent_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS pcat_active_pidx    ON master.item_category (tenant_id) WHERE is_active = true;
+-- ── master.commodity_category ────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS ccat_tenant_idx     ON master.commodity_category (tenant_id);
+CREATE INDEX IF NOT EXISTS ccat_parent_idx     ON master.commodity_category (tenant_id, parent_id) WHERE parent_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS ccat_root_idx       ON master.commodity_category (tenant_id, root_category_id);
+CREATE INDEX IF NOT EXISTS ccat_active_pidx    ON master.commodity_category (tenant_id) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS ccat_buy_allowed_pidx ON master.commodity_category (tenant_id, code)
+    WHERE is_active = true AND buy_allowed = true;
+CREATE INDEX IF NOT EXISTS ccat_sell_allowed_pidx ON master.commodity_category (tenant_id, code)
+    WHERE is_active = true AND sell_allowed = true;
+CREATE INDEX IF NOT EXISTS ccat_inventory_allowed_pidx ON master.commodity_category (tenant_id, code)
+    WHERE is_active = true AND inventory_allowed = true;
+
 
 -- ── master.product ─────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS prod_tenant_idx       ON master.product (tenant_id);
 CREATE INDEX IF NOT EXISTS prod_active_pidx      ON master.product (tenant_id, code) WHERE is_active = true;
-CREATE INDEX IF NOT EXISTS prod_category_idx     ON master.product (tenant_id, category_id) WHERE category_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS prod_spend_cat_idx    ON master.product (tenant_id, spend_category_id) WHERE spend_category_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS prod_commodity_category_idx ON master.product (tenant_id, commodity_category_id)
+    WHERE commodity_category_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS prod_type_idx         ON master.product (tenant_id, product_type);
 
 -- ── master.item ─────────────────────────────────────────────────────
@@ -680,13 +688,10 @@ CREATE INDEX IF NOT EXISTS im_company_product_idx ON master.item (tenant_id, com
     WHERE product_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS im_product_idx        ON master.item (tenant_id, product_id)
     WHERE product_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS im_commodity_category_idx ON master.item (tenant_id, commodity_category_id)
+    WHERE commodity_category_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS im_reorder_pidx       ON master.item (tenant_id, company_code_id)
     WHERE reorder_point IS NOT NULL;
-
--- Items by category (item-centric path)
-CREATE INDEX IF NOT EXISTS im_category_pidx
-    ON master.item (tenant_id, category_id)
-    WHERE category_id IS NOT NULL AND is_active = true;
 
 -- Items without product (item-centric path admin view)
 CREATE INDEX IF NOT EXISTS im_no_product_pidx
@@ -701,16 +706,6 @@ CREATE INDEX IF NOT EXISTS sc_active_pidx        ON master.spend_category (tenan
 
 -- ── master.company_code_spend_policy ────────────────────────────────────
 -- Note: (tenant_id, company_code_id, spend_category_id) is already covered by UNIQUE constraint.
-CREATE INDEX IF NOT EXISTS sccp_tenant_idx       ON master.company_code_spend_policy (tenant_id);
-CREATE INDEX IF NOT EXISTS sccp_category_idx     ON master.company_code_spend_policy (tenant_id, spend_category_id);
-CREATE INDEX IF NOT EXISTS sccp_cc_idx           ON master.company_code_spend_policy (tenant_id, company_code_id);
-CREATE INDEX IF NOT EXISTS sccp_active_pidx      ON master.company_code_spend_policy (tenant_id, company_code_id)
-    WHERE is_active = true;
-CREATE INDEX IF NOT EXISTS sccp_asset_class_idx  ON master.company_code_spend_policy (tenant_id, asset_class_id)
-    WHERE asset_class_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS sccp_default_pidx     ON master.company_code_spend_policy (tenant_id, company_code_id, spend_category_id)
-    WHERE is_default = true;
-
 -- ── master.commodity_classification ────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS cc_owner_idx          ON master.commodity_classification (tenant_id, owner_type, owner_id);
 CREATE INDEX IF NOT EXISTS cc_owner_domain_pidx  ON master.commodity_classification
@@ -733,9 +728,6 @@ CREATE INDEX IF NOT EXISTS scp_active_pidx     ON master.company_code_supplier_p
     WHERE is_active = true;
 
 -- ── master.item (spend_category override) ───────────────────────────
-CREATE INDEX IF NOT EXISTS im_spend_category_idx ON master.item (tenant_id, spend_category_id)
-    WHERE spend_category_id IS NOT NULL;
-
 -- ══════════════════════════════════════════════════════════════════════════════
 -- ASSET MANAGEMENT MODULE — Indexes
 -- ══════════════════════════════════════════════════════════════════════════════
@@ -882,26 +874,6 @@ CREATE INDEX IF NOT EXISTS bi_visibility_pidx
 
 -- ── §CCIP  master.company_code_intent_policy ─────────────────────────────────
 -- One default ALLOW mapping per company code per tenant
-CREATE UNIQUE INDEX IF NOT EXISTS ccip_default_per_cc_uq
-    ON master.company_code_intent_policy (tenant_id, company_code_id)
-    WHERE is_default = true AND is_active = true AND mapping_mode = 'ALLOW';
-
--- All active mappings for a company code (availability check)
-CREATE INDEX IF NOT EXISTS ccip_cc_pidx
-    ON master.company_code_intent_policy (tenant_id, company_code_id)
-    WHERE is_active = true;
-
--- All active mappings for an intent (propagation check)
-CREATE INDEX IF NOT EXISTS ccip_intent_pidx
-    ON master.company_code_intent_policy (tenant_id, intent_id)
-    WHERE is_active = true;
-
--- Fast DENY lookup for blocking check
-CREATE INDEX IF NOT EXISTS ccip_deny_pidx
-    ON master.company_code_intent_policy (tenant_id, company_code_id, intent_id)
-    WHERE mapping_mode = 'DENY' AND is_active = true;
-
-
 -- ── §CCDD  master.company_code_dimension_default ──────────────────────────────
 -- All active defaults for a company code (expand dimension context)
 CREATE INDEX IF NOT EXISTS ccdd_cc_pidx
@@ -1198,29 +1170,3 @@ COMMENT ON INDEX master.content_item_fts_idx IS
 -- Supplier company-code extension indexes
 -- (company_code_supplier_spend_policy / intent_policy / posting_override)
 -- ============================================================================
-
-CREATE INDEX IF NOT EXISTS csspo_profile_idx
-    ON master.company_code_supplier_spend_policy (tenant_id, supplier_profile_id);
-CREATE INDEX IF NOT EXISTS csspo_category_idx
-    ON master.company_code_supplier_spend_policy (tenant_id, spend_category_id);
-CREATE INDEX IF NOT EXISTS csspo_active_pidx
-    ON master.company_code_supplier_spend_policy (tenant_id, supplier_profile_id)
-    WHERE status = 'active';
-
-CREATE INDEX IF NOT EXISTS csip_profile_idx
-    ON master.company_code_supplier_intent_policy (tenant_id, supplier_profile_id);
-CREATE INDEX IF NOT EXISTS csip_intent_idx
-    ON master.company_code_supplier_intent_policy (tenant_id, business_intent_id);
-CREATE INDEX IF NOT EXISTS csip_active_pidx
-    ON master.company_code_supplier_intent_policy (tenant_id, supplier_profile_id)
-    WHERE status = 'active';
-
-CREATE INDEX IF NOT EXISTS cspo_profile_idx
-    ON master.company_code_supplier_posting_override (tenant_id, supplier_profile_id);
-CREATE INDEX IF NOT EXISTS cspo_role_idx
-    ON master.company_code_supplier_posting_override (tenant_id, posting_role_code);
-CREATE INDEX IF NOT EXISTS cspo_active_pidx
-    ON master.company_code_supplier_posting_override (tenant_id, supplier_profile_id, effective_from)
-    WHERE status = 'active';
-
-

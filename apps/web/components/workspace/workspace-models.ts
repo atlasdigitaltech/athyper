@@ -54,7 +54,7 @@ export const financeWorkspaceModel: WorkspaceDashboardModel = {
         ]),
         section("masterData", "Master Data", [
           { label: "Chart of Accounts", href: "/finance/coa", archetype: "Rich", description: "Account hierarchy explorer and posting controls." },
-          { label: "Spend Categories", href: "/workbench/supply-chain/spend-categories", archetype: "Rich", description: "Spend taxonomy, intent defaults, and company-code overrides." },
+          { label: "Commodity Categories", href: "/workbench/supply-chain/commodity-categories", archetype: "Rich", description: "Commodity taxonomy, intent defaults, and company-code overrides." },
           { label: "Business Intents", href: "/finance/business-intents", archetype: "Rich", description: "Intent ontology, GL fallback, and approval policy overlays." },
           { label: "Business Partners", href: "/app/business_partner", archetype: "Rich", description: "Supplier and customer roles with company-code settings." },
           { label: "Cost Centers", href: "/app/cost_center", archetype: "Rich", description: "Cost accounting dimensions for posting and reporting." },
@@ -64,7 +64,7 @@ export const financeWorkspaceModel: WorkspaceDashboardModel = {
           { label: "Fiscal Periods", href: "/app/fiscal_period", archetype: "Simple", description: "Open, soft-close, and hard-close accounting periods.", adminOnly: true },
           { label: "Company Controls", href: "/finance/admin?tab=controls", archetype: "Rich", description: "Account class rules, reconciliation flags, and posting controls.", adminOnly: true },
           { label: "COA Mapping", href: "/finance/admin?tab=mapping", archetype: "Rich", description: "Cross-chart translation and reporting mappings.", adminOnly: true },
-          { label: "Taxonomy Controls", href: "/workbench/supply-chain/spend-categories", archetype: "Rich", description: "Category and intent resolution controls.", adminOnly: true },
+          { label: "Taxonomy Controls", href: "/workbench/supply-chain/commodity-categories", archetype: "Rich", description: "Category and intent resolution controls.", adminOnly: true },
         ]),
       ],
     },
@@ -173,7 +173,7 @@ export const supplyChainWorkspaceModel: WorkspaceDashboardModel = {
         section("masterData", "Master Data", [
           { label: "Business Partners", href: "/app/business_partner", archetype: "Rich", description: "Supplier and customer identity management." },
           { label: "Suppliers", href: "/app/supplier", archetype: "Rich", description: "Supplier lifecycle, qualification, and company-code profile." },
-          { label: "Spend Categories", href: "/workbench/supply-chain/spend-categories", archetype: "Rich", description: "Procurement spend classification and policy overlays.", adminOnly: true },
+          { label: "Commodity Categories", href: "/workbench/supply-chain/commodity-categories", archetype: "Rich", description: "Procurement commodity classification and policy overlays.", adminOnly: true },
         ]),
         section("setup", "Setup", [
           { label: "Supplier Policies", href: "/setup/policies", archetype: "Simple", description: "Controls for supplier onboarding and blocked spend.", adminOnly: true },
@@ -240,7 +240,6 @@ export const supplyChainWorkspaceModel: WorkspaceDashboardModel = {
         section("masterData", "Master Data", [
           { label: "Items", href: "/app/item", archetype: "Rich", description: "Products, materials, and services catalog." },
           { label: "Warehouses", href: "/app/warehouse", archetype: "Rich", description: "Storage locations and inventory positions." },
-          { label: "Item Categories", href: "/app/item_category", archetype: "Simple", description: "Item classification and defaults.", adminOnly: true },
         ]),
         section("setup", "Setup", [
           { label: "Inventory Controls", href: "/setup/policies", archetype: "Simple", description: "Valuation, movement, and count policies.", adminOnly: true },

@@ -40,7 +40,34 @@
 --     "max_carry_days"    : int,
 --     "carry_expiry_months": int,
 --     "payout_on_exit"    : bool,
---     "payout_capped_days": int | null
+--     "payout_capped_days": int | null   -- null = not applicable (use when payout_on_exit=false)
+--                                        -- int  = cap on days paid out (use when payout_on_exit=true)
+--   }
+--
+-- eligibility_condition extended JSONB schema (all keys, some rule-type-specific):
+--   {
+--     "after_probation"                  : bool,
+--     "min_tenure_days"                  : int,
+--     "employment_types"                 : [string, ...],
+--     "gender"                           : string | null,
+--     "requires_approval"                : bool,
+--     "requires_documentation"           : bool,
+--     "tenure_condition"                 : {operator, min_years, max_years} | null,
+--     "max_per_year"                     : int | null,
+--     -- sick-leave specific:
+--     "cert_required_after_consecutive_days": int,
+--     "cert_type"                        : string,
+--     -- bereavement-specific:
+--     "relationship_tier"                : string,
+--     -- parental-specific:
+--     "is_primary_caregiver"             : bool,
+--     -- TOIL-specific:
+--     "accrual_ratio"                    : string,          -- e.g. "1:1"
+--     -- study-specific:
+--     "doc_type"                         : string,
+--     -- LOA-specific:
+--     "approvers"                        : [string, ...],
+--     "min_duration_days"                : int
 --   }
 --
 -- Usage:
@@ -188,57 +215,57 @@ BEGIN
         -- Sick leave — 10 days fixed per year
         ('std_sick_10d', 'Standard Sick Leave (10 Days)',
          'sick_leave', 'annual',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Unlimited sick leave — subject to manager approval
         ('unlimited_sick', 'Unlimited Sick Leave (Manager Approved)',
          'sick_leave', 'manual',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Maternity leave — 16 weeks (112 days), ILO minimum = 14 weeks
         ('maternity_16w', 'Maternity Leave (16 Weeks)',
          'maternity_leave', 'on_hire',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Paternity leave — 2 weeks (14 days)
         ('paternity_2w', 'Paternity Leave (2 Weeks)',
          'paternity_leave', 'on_hire',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Shared parental leave — up to 52 weeks shared between parents
         ('shared_parental', 'Shared Parental Leave (Up to 52 Weeks)',
          'parental_leave', 'on_hire',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Adoption leave — mirrors maternity, 16 weeks
         ('adoption_16w', 'Adoption Leave (16 Weeks)',
          'adoption_leave', 'on_hire',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Bereavement leave — standard plan, rules split by relationship tier
         ('std_bereavement', 'Standard Bereavement Leave',
          'bereavement_leave', 'manual',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Study leave — 5 days per year with proof of enrolment
         ('std_study_5d', 'Study / Education Leave (5 Days)',
          'study_leave', 'annual',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Compensatory / TOIL — accrues from approved overtime, 1:1 ratio
         ('compensatory_toil', 'Compensatory Leave / TOIL',
          'compensatory_leave', 'manual',
-         '{"max_carry_days":30,"carry_expiry_months":6,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":30,"carry_expiry_months":6,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Emergency leave — 3 days per year; no carry, no payout
         ('emergency_3d', 'Emergency Family Leave (3 Days)',
          'emergency_leave', 'annual',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}'),
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}'),
 
         -- Unpaid leave of absence — manager + HR approval, no fixed limit
         ('unpaid_loa', 'Unpaid Leave of Absence',
          'unpaid_leave', 'manual',
-         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":0}')
+         '{"max_carry_days":0,"carry_expiry_months":0,"payout_on_exit":false,"payout_capped_days":null}')
 
     ) AS x(code, name, lt_code, freq, cfp)
     ON CONFLICT (tenant_id, code) DO UPDATE

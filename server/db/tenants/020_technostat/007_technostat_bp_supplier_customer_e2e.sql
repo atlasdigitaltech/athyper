@@ -238,46 +238,24 @@ BEGIN
         SELECT 1 FROM master.payment_term
          WHERE tenant_id=v_tid AND code=v.code AND is_current_version=true);
 
-    -- ── Certification types (platform-level: tenant_id = NULL) ────────────
+    -- ── Certification types ────────────────────────────────────────────────
+    --    Platform types (iso-9001, iso-14001, iso-27001, iso-45001, halal-gsas)
+    --    are guaranteed by 010_platform/003_master/003_certification_type.sql.
+    --    zatca-einv is tenant-scoped: KSA regulatory mandate, not a universal standard.
     INSERT INTO master.certification_type (
-        tenant_id, code, name, issuing_body, category, description, is_custom, metadata, status, created_by)
-    SELECT NULL, code, name, body, cat, descr, false,
-           '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb, 'active', v_sys
-    FROM (VALUES
-        ('iso-9001',
-         'ISO 9001 Quality Management Systems',
-         'International Organization for Standardization',
-         'quality',
-         'Requirements for a quality management system (QMS).'),
-        ('iso-14001',
-         'ISO 14001 Environmental Management Systems',
-         'International Organization for Standardization',
-         'esg',
-         'Framework for managing environmental responsibilities.'),
-        ('iso-27001',
-         'ISO/IEC 27001 Information Security Management',
-         'International Organization for Standardization',
-         'information_security',
-         'Requirements for establishing and maintaining an ISMS.'),
-        ('iso-45001',
-         'ISO 45001 Occupational Health and Safety',
-         'International Organization for Standardization',
-         'safety',
-         'Requirements for an OH&S management system.'),
-        ('halal-gsas',
-         'GSAS Halal Certification',
-         'Gulf Standardization Organization',
-         'halal',
-         'GCC Halal Standard conformity for products and processes.'),
-        ('zatca-einv',
-         'ZATCA Phase 2 e-Invoicing Compliance',
-         'Zakat Tax and Customs Authority',
-         'financial',
-         'Saudi Arabia mandatory e-invoicing (Fatoorah) Phase 2 compliance.')
-    ) AS v(code,name,body,cat,descr)
+        tenant_id, code, name, issuing_body, category, description,
+        is_custom, metadata, status, created_by)
+    SELECT v_tid,
+           'zatca-einv',
+           'ZATCA Phase 2 e-Invoicing Compliance',
+           'Zakat Tax and Customs Authority',
+           'financial',
+           'Saudi Arabia mandatory e-invoicing (Fatoorah) Phase 2 compliance.',
+           true,
+           '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,
+           'active', v_sys
     WHERE NOT EXISTS (
-        SELECT 1 FROM master.certification_type
-         WHERE tenant_id IS NULL AND code = v.code);
+        SELECT 1 FROM master.certification_type WHERE tenant_id = v_tid AND code = 'zatca-einv');
 
     RAISE NOTICE '[tksa_ref] Reference data ensured (SA+EG tax, payment methods, cert types).';
 END $tksa_ref$;
@@ -1320,7 +1298,7 @@ BEGIN
     SELECT id INTO v_pt      FROM master.payment_term    WHERE tenant_id=v_tid AND code='PT-NET30' AND is_current_version=true LIMIT 1;
     SELECT id INTO v_acct    FROM master.accounting_profile WHERE tenant_id=v_tid AND code='AR_STANDARD' LIMIT 1;
     SELECT id INTO v_ct1     FROM master.certification_type WHERE tenant_id IS NULL AND code='iso-27001';
-    SELECT id INTO v_ct2     FROM master.certification_type WHERE tenant_id IS NULL AND code='zatca-einv';
+    SELECT id INTO v_ct2     FROM master.certification_type WHERE tenant_id = v_tid AND code='zatca-einv';
 
     IF v_cc IS NULL THEN RAISE EXCEPTION '[tksa_sa_cus1] TKSA company code not found'; END IF;
 

@@ -6,7 +6,7 @@
 -- Step 2: Commercial Indicative (amounts, tax mode — indicative derivation variants)
 -- Dedup disabled. Budget precheck advisory. Creates with status='proforma'.
 -- Idempotent: WHERE NOT EXISTS / ON CONFLICT, DELETE+INSERT for field bindings.
--- Depends on: 001_invoice.sql, 001_invoice_v2.sql, 015_ap_override_permissions.sql,
+-- Depends on: 001_invoice.sql, 015_ap_override_permissions.sql,
 --             020_ap_flow_permissions.sql, 016_purchase_invoice_flow.sql
 -- =============================================================================
 
@@ -113,7 +113,7 @@ BEGIN
     ('company_code_id',        'required', 'derived_overrideable',
       NULL::text, NULL::text, NULL, 'ctx.user.default_company_code',
       'ap.override_company_code', NULL, 'inline_search', 1,
-      'Company that will post this invoice when promoted.', 10),
+      'Company that will post this invoice when promoted.', 20),
     ('invoice_type',           'hidden',   'derived_locked',
       NULL, NULL, NULL, 'const:standard', NULL, NULL, NULL, 1,
       'Always standard for proforma; reclassify at promotion if needed.', 15),
@@ -121,7 +121,7 @@ BEGIN
       NULL, NULL, 'lookup.document.purchase_invoice_source.po_based', NULL, NULL,
       NULL, 'segmented', 2, NULL, 30),
     ('supplier_id',            'required', 'manual',
-      NULL, NULL, NULL, NULL, NULL, NULL, 'inline_search', 2, NULL, 40),
+      NULL, NULL, NULL, NULL, NULL, NULL, 'inline_search', 1, NULL, 10),
     ('commitment_id',          'editable', 'manual',
       '{"in":[{"var":"invoice_source"},["po_based","contract_based"]]}',
       NULL,

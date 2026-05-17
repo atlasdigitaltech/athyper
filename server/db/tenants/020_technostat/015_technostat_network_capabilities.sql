@@ -60,36 +60,9 @@ BEGIN
     SELECT id INTO v_bp_ards FROM master.business_partner WHERE tenant_id = v_tid AND code = 'CUS-KSA-01';
     SELECT id INTO v_bp_sth  FROM master.business_partner WHERE tenant_id = v_tid AND code = 'CUS-KSA-02';
 
-    -- ============================================================================
-    -- §A  Platform certification types
-    --     iso-9001, iso-14001, iso-27001, iso-45001 already seeded in §REF of 007.
-    --     Add pci-dss and soc-2 which are needed by global/IT suppliers.
-    -- ============================================================================
-    INSERT INTO master.certification_type (
-        tenant_id, code, name, issuing_body, category, description,
-        is_custom, metadata, status, created_by
-    )
-    SELECT NULL, code, name, body, cat, descr, false,
-           '{"_seed":{"pack":"015_tstat_network","version":"1.0.0"}}'::jsonb,
-           'active', v_sys
-    FROM (VALUES
-        ('pci-dss',
-         'PCI DSS Payment Card Industry Data Security Standard',
-         'PCI Security Standards Council',
-         'financial',
-         'Security standard for organisations that handle branded payment cards.'),
-        ('soc-2',
-         'SOC 2 Service Organisation Control 2',
-         'American Institute of CPAs (AICPA)',
-         'information_security',
-         'Audit standard for service providers storing customer data in the cloud.')
-    ) AS v(code, name, body, cat, descr)
-    WHERE NOT EXISTS (
-        SELECT 1 FROM master.certification_type
-         WHERE tenant_id IS NULL AND code = v.code
-    );
-
-    RAISE NOTICE '[015_tstat_network] §A: platform cert types ensured (pci-dss, soc-2)';
+    -- §A  (removed) — Certification types now seeded centrally by
+    --     010_platform/003_master/003_certification_type.sql.
+    RAISE NOTICE '[015_tstat_network] §A: platform cert types guaranteed by platform seed';
 
     -- ============================================================================
     -- §B  business_partner_network_capability

@@ -17,9 +17,9 @@
  *   all amounts negated. status → 'reversed' on the original.
  *
  * Posting account resolution:
- *   1. Line's spend_category → control.posting_role → account mapping
- *   2. Line's business_intent → control.posting_role mapping
- *   3. Company default expense account (master.company_code.default_expense_account_id)
+ *   1. Line's commodity_category + business_intent -> commodity_category_buy_policy
+ *   2. Line's commodity_category default buy policy
+ *   3. Company chart fallback expense account
  */
 
 import type { Kysely } from "kysely";
@@ -46,39 +46,58 @@ async function resolvePostingAccount(
   db:              AnyDb,
   tenantId:        string,
   companyId:       string,
-  spendCategoryId: string | null,
+  commodityCategoryId: string | null,
   businessIntentId: string | null,
   _isAsset:        boolean,
 ): Promise<string | null> {
 
-  // 1. Spend category → default_intent_id → business_intent.default_gl_account_id
-  if (spendCategoryId) {
-    const scResult = await sql<{ account_id: string }>`
-      SELECT bi.default_gl_account_id AS account_id
-      FROM   master.spend_category sc
-      JOIN   master.business_intent bi ON bi.id = sc.default_intent_id
-      WHERE  sc.id        = ${spendCategoryId}
-        AND  sc.tenant_id = ${tenantId}
-        AND  bi.default_gl_account_id IS NOT NULL
-      LIMIT  1
+  if (commodityCategoryId) {
+    const policyResult = await sql<{ account_id: string }>`
+      WITH policy_candidates AS (
+        SELECT
+          p.default_gl_account_id AS account_id,
+          CASE WHEN p.business_intent_id = ${businessIntentId}::uuid THEN 0 ELSE 1 END AS intent_rank,
+          CASE p.scope_type WHEN 'COMPANY' THEN 0 WHEN 'TENANT' THEN 1 ELSE 2 END AS scope_rank,
+          p.is_default,
+          p.sort_order,
+          p.updated_at,
+          p.created_at
+        FROM control.commodity_category_buy_policy p
+        WHERE p.tenant_id = ${tenantId}::uuid
+          AND p.commodity_category_id = ${commodityCategoryId}::uuid
+          AND p.mapping_mode = 'ALLOW'
+          AND p.is_active = true
+          AND p.default_gl_account_id IS NOT NULL
+          AND (
+            p.scope_type = 'TENANT'
+            OR (p.scope_type = 'COMPANY' AND p.scope_id = ${companyId}::uuid)
+          )
+          AND (
+            (${businessIntentId}::uuid IS NOT NULL AND (p.business_intent_id = ${businessIntentId}::uuid OR p.is_default = true))
+            OR (${businessIntentId}::uuid IS NULL AND p.is_default = true)
+          )
+          AND p.effective_from <= current_date
+          AND (p.effective_to IS NULL OR p.effective_to >= current_date)
+      )
+      SELECT ga.id AS account_id
+      FROM policy_candidates pc
+      JOIN master.gl_account ga
+        ON ga.tenant_id = ${tenantId}::uuid
+       AND ga.id = pc.account_id
+       AND ga.is_active = true
+       AND ga.node_type = 'posting'
+      JOIN master.company_code_chart_assignment cca
+        ON cca.tenant_id = ${tenantId}::uuid
+       AND cca.company_code_id = ${companyId}::uuid
+       AND cca.chart_of_account_id = ga.chart_of_account_id
+       AND cca.status = 'active'
+      ORDER BY pc.intent_rank, pc.scope_rank, pc.is_default DESC, pc.sort_order, pc.updated_at DESC NULLS LAST, pc.created_at DESC
+      LIMIT 1
     `.execute(db);
-    if (scResult.rows[0]) return scResult.rows[0].account_id;
+    if (policyResult.rows[0]) return policyResult.rows[0].account_id;
   }
 
-  // 2. Business intent → default_gl_account_id
-  if (businessIntentId) {
-    const biResult = await sql<{ account_id: string }>`
-      SELECT default_gl_account_id AS account_id
-      FROM   master.business_intent
-      WHERE  id        = ${businessIntentId}
-        AND  tenant_id = ${tenantId}
-        AND  default_gl_account_id IS NOT NULL
-      LIMIT  1
-    `.execute(db);
-    if (biResult.rows[0]) return biResult.rows[0].account_id;
-  }
-
-  // 3. Fallback: first posting-type expense account on the company's active chart
+  // Fallback: first posting-type expense account on the company's active chart
   const fallbackResult = await sql<{ account_id: string }>`
     SELECT ga.id AS account_id
     FROM   master.gl_account ga
@@ -98,7 +117,6 @@ async function resolvePostingAccount(
 
   return null;
 }
-
 async function resolveApControlAccount(
   db:        AnyDb,
   tenantId:  string,
@@ -255,14 +273,14 @@ async function handlePostInvoiceInner(
       id: string; line_no: number; item_description: string;
       quantity: number; unit_price: number; net_amount: number;
       tax_amount: number; withholding_tax_amount: number;
-      spend_category_id: string | null; business_intent_id: string | null;
+      commodity_category_id: string | null; business_intent_id: string | null;
       cost_center_id: string | null; profit_center_id: string | null; project_id: string | null;
       is_asset: boolean; asset_category_id: string | null;
       commitment_line_id: string | null;
     }>`
       SELECT id, line_no, item_description, quantity, unit_price, net_amount,
              tax_amount, withholding_tax_amount,
-             spend_category_id, business_intent_id,
+             commodity_category_id, business_intent_id,
              cost_center_id, profit_center_id, project_id,
              is_asset, asset_category_id, commitment_line_id
       FROM   document.purchase_invoice_line
@@ -451,7 +469,7 @@ async function handlePostInvoiceInner(
       netAmount:        Number(l.net_amount),
       taxAmount:        Number(l.tax_amount),
       whtAmount:        Number(l.withholding_tax_amount),
-      spendCategoryId:  l.spend_category_id,
+      spendCategoryId:  l.commodity_category_id,
       businessIntentId: l.business_intent_id,
       costCenterId:     l.cost_center_id,
       profitCenterId:   l.profit_center_id,
@@ -509,7 +527,7 @@ async function handlePostInvoiceInner(
               distribution_no, distribution_basis, split_pct,
               distributed_amount, currency_code,
               account_source, gl_account_id,
-              business_intent_id, spend_category_id,
+              business_intent_id, commodity_category_id,
               cost_center_id, profit_center_id, project_id,
               created_by
             ) VALUES (
@@ -518,7 +536,7 @@ async function handlePostInvoiceInner(
               1, 'PERCENT', 100,
               ${lineAmount}, ${currencyCode},
               'FIXED', ${distAccountId},
-              ${line.business_intent_id ?? null}, ${line.spend_category_id ?? null},
+              ${line.business_intent_id ?? null}, ${line.commodity_category_id ?? null},
               ${line.cost_center_id ?? null}, ${line.profit_center_id ?? null}, ${line.project_id ?? null},
               ${pId}
             )
@@ -577,7 +595,7 @@ async function handlePostInvoiceInner(
       for (const line of lines) {
         const debitAccount = await resolvePostingAccount(
           trx, tenantId, companyId,
-          line.spend_category_id,
+          line.commodity_category_id,
           line.business_intent_id,
           line.is_asset,
         );
@@ -634,7 +652,7 @@ async function handlePostInvoiceInner(
             distribution_no, distribution_basis, split_pct,
             distributed_amount, currency_code,
             account_source, gl_account_id,
-            business_intent_id, spend_category_id,
+            business_intent_id, commodity_category_id,
             cost_center_id, profit_center_id, project_id,
             created_by
           ) VALUES (
@@ -643,7 +661,7 @@ async function handlePostInvoiceInner(
             1, 'PERCENT', 100,
             ${lineAmount}, ${currencyCode},
             'FIXED', ${debitAccount},
-            ${line.business_intent_id ?? null}, ${line.spend_category_id ?? null},
+            ${line.business_intent_id ?? null}, ${line.commodity_category_id ?? null},
             ${line.cost_center_id ?? null}, ${line.profit_center_id ?? null}, ${line.project_id ?? null},
             ${pId}
           )

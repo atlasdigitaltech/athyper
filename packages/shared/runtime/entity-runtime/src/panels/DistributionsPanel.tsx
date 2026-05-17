@@ -102,11 +102,11 @@ export function DistributionsPanel({ entityCode, recordId }: DistributionsPanelP
                 <tr className="border-b border-border/40 text-xs font-medium text-muted-foreground">
                   <th className="px-3 py-2 text-center w-8">#</th>
                   <th className="px-3 py-2 text-left">Basis</th>
-                  <th className="px-3 py-2 text-left">Account Source</th>
+                  <th className="px-3 py-2 text-left">Derivation</th>
                   <th className="px-3 py-2 text-left">Account</th>
                   <th className="px-3 py-2 text-left">Cost Centre</th>
                   <th className="px-3 py-2 text-left">Project</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
+                  <th className="px-3 py-2 text-right">Assigned</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">

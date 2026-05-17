@@ -416,7 +416,7 @@ CREATE TABLE IF NOT EXISTS document.accounting_distribution (
     account_fallback        text,
     gl_account_id           uuid,
     business_intent_id      uuid,
-    spend_category_id       uuid,
+    commodity_category_id   uuid,
 
     -- Dimensions
     cost_center_id          uuid,
@@ -482,7 +482,7 @@ CREATE TABLE IF NOT EXISTS document.accounting_distribution (
     CONSTRAINT ad_intent_req        CHECK (
         account_source <> 'FROM_INTENT' OR business_intent_id IS NOT NULL),
     CONSTRAINT ad_category_req      CHECK (
-        account_source <> 'FROM_CATEGORY' OR spend_category_id IS NOT NULL),
+        account_source <> 'FROM_CATEGORY' OR commodity_category_id IS NOT NULL),
     CONSTRAINT ad_budget_chk        CHECK (budget_check_result IS NULL OR budget_check_result IN (
         'passed','warned','override','blocked','exempt')),
     CONSTRAINT ad_tax_override_chk  CHECK (tax_treatment_override IS NULL OR
@@ -490,8 +490,23 @@ CREATE TABLE IF NOT EXISTS document.accounting_distribution (
             'STANDARD','ZERO_RATED','EXEMPT','REVERSE_CHARGE','OUT_OF_SCOPE'))
 );
 
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'document' AND table_name = 'accounting_distribution'
+          AND column_name = 'spend_category_id'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'document' AND table_name = 'accounting_distribution'
+          AND column_name = 'commodity_category_id'
+    ) THEN
+        ALTER TABLE document.accounting_distribution RENAME COLUMN spend_category_id TO commodity_category_id;
+    END IF;
+END $$;
+
 COMMENT ON TABLE document.accounting_distribution IS
     'ARCHETYPE=C;SCOPE=T. Split-charge distribution. account_source drives control.resolve_entry_account() at posting time. '
-    'Default: FROM_CATEGORY (spend_category → intent → GL). '
+    'Default: FROM_CATEGORY (commodity_category -> intent -> GL). '
     'POSTING_ROLE for system rows (GRIR_CLEARING, PRICE_VARIANCE, ADVANCE_PREPAID, AP_TRADE, AP_RETENTION). '
     'PAYMENT_ENTRY excluded – payments allocate AP liabilities, not P&L charges.';

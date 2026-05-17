@@ -63,25 +63,80 @@ const nextConfig = {
       { source: "/workbench/partner", destination: "/dashboard",          permanent: true },
       { source: "/workbench/user",    destination: "/dashboard",          permanent: true },
 
-      // Phase 1 workbench canonicalization: Spend Categories is Supply Chain-owned.
+      // Phase 1 workbench canonicalization: Commodity Categories is Supply Chain-owned.
       {
         source:      "/finance/spend-categories",
-        destination: "/workbench/supply-chain/spend-categories",
+        destination: "/workbench/supply-chain/commodity-categories",
         permanent:   false,
       },
       {
         source:      "/workbench/finance/spend-categories",
-        destination: "/workbench/supply-chain/spend-categories",
+        destination: "/workbench/supply-chain/commodity-categories",
+        permanent:   false,
+      },
+      {
+        source:      "/workbench/supply-chain/spend-categories",
+        destination: "/workbench/supply-chain/commodity-categories",
+        permanent:   false,
+      },
+      {
+        source:      "/finance/commodity-categories",
+        destination: "/workbench/supply-chain/commodity-categories",
+        permanent:   false,
+      },
+      {
+        source:      "/workbench/finance/commodity-categories",
+        destination: "/workbench/supply-chain/commodity-categories",
         permanent:   false,
       },
       {
         source:      "/app/cc_supplier_spend_policy",
-        destination: "/app/company_code_supplier_spend_policy",
+        destination: "/app/commodity_category_buy_policy?filter.scope_type=SUPPLIER_PROFILE",
         permanent:   false,
       },
       {
         source:      "/app/cc_supplier_spend_policy/:rest*",
-        destination: "/app/company_code_supplier_spend_policy/:rest*",
+        destination: "/app/commodity_category_buy_policy/:rest*",
+        permanent:   false,
+      },
+      {
+        source:      "/app/commodity_category_spend_policy",
+        destination: "/app/commodity_category_buy_policy",
+        permanent:   false,
+      },
+      {
+        source:      "/app/commodity_category_spend_policy/:rest*",
+        destination: "/app/commodity_category_buy_policy/:rest*",
+        permanent:   false,
+      },
+      {
+        source:      "/app/commodity_category_sales_policy",
+        destination: "/app/commodity_category_sell_policy",
+        permanent:   false,
+      },
+      {
+        source:      "/app/commodity_category_sales_policy/:rest*",
+        destination: "/app/commodity_category_sell_policy/:rest*",
+        permanent:   false,
+      },
+      {
+        source:      "/app/classification_to_intent_rule",
+        destination: "/app/commodity_classification_to_intent_rule",
+        permanent:   false,
+      },
+      {
+        source:      "/app/classification_to_intent_rule/:rest*",
+        destination: "/app/commodity_classification_to_intent_rule/:rest*",
+        permanent:   false,
+      },
+      {
+        source:      "/app/classification_config",
+        destination: "/app/commodity_classification_config",
+        permanent:   false,
+      },
+      {
+        source:      "/app/classification_config/:rest*",
+        destination: "/app/commodity_classification_config/:rest*",
         permanent:   false,
       },
 

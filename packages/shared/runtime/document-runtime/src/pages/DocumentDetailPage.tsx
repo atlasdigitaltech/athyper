@@ -18,6 +18,7 @@ import { queryKeys } from "@athyper/api-contracts/query-keys";
 import { buildOrchestratorFromRecord } from "../orchestrator";
 import { buildDocumentHeaderModel } from "../header";
 import { AmountSummaryCard } from "../amounts";
+import { AccountingReadinessPanel } from "../accounting";
 import { FlowModal, evaluateRule } from "../intake";
 import { ValidationBanner } from "../validation";
 import { EntityHeader, EntityProgressRow, useRailState } from "@athyper/entity-runtime/header";
@@ -37,7 +38,7 @@ import { normaliseCurrencyCode } from "@athyper/runtime-shared/core";
 import { useOperationDispatch } from "@athyper/entity-runtime/actions";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
 import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
-import { resolveFieldRenderer } from "@athyper/entity-runtime/field-renderers";
+import { resolveFieldRenderer, BOOLEAN_UI_TYPES, BOOLEAN_FULL_WIDTH_UI_TYPES } from "@athyper/entity-runtime/field-renderers";
 import {
   TasksPanel,
   WatchersPanel,
@@ -52,7 +53,6 @@ import {
   AttachmentsPanel,
   AuditMetaCard,
   EntityContextDrawer,
-  DistributionsPanel,
 } from "@athyper/entity-runtime/panels";
 import {
   asConfigRecord,
@@ -662,26 +662,47 @@ function buildDocumentFieldGroups(
     byGroup.set(groupKey, groupFields);
   }
 
-  const grouped = [...byGroup.entries()].map(([key, groupFields]) => {
+  const grouped = new Map<string, {
+    key: string;
+    label: string;
+    order: number;
+    fields: EntityField[];
+  }>();
+
+  for (const [key, groupFields] of byGroup.entries()) {
     const sortedFields = [...groupFields].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-    return {
+    grouped.set(key, {
       key,
       label: getDocumentFieldGroupLabel(entity, key),
       order: getDocumentFieldGroupOrder(key, sortedFields),
       fields: sortedFields,
-    };
-  });
+    });
+  }
 
-  const fallbackGroups = FIELD_BANDS.map((band) => ({
-    key:    band.key,
-    label:  band.label,
-    order:  band.min,
-    fields: ungrouped
+  for (const band of FIELD_BANDS) {
+    const fallbackFields = ungrouped
       .filter((field) => (field.sort_order ?? 0) >= band.min && (field.sort_order ?? 0) <= band.max)
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
-  })).filter((group) => group.fields.length > 0);
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-  return [...grouped, ...fallbackGroups].sort((a, b) => a.order - b.order);
+    if (fallbackFields.length === 0) continue;
+
+    const existing = grouped.get(band.key);
+    if (existing) {
+      existing.fields = [...existing.fields, ...fallbackFields]
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      existing.order = Math.min(existing.order, band.min);
+      continue;
+    }
+
+    grouped.set(band.key, {
+      key: band.key,
+      label: band.label,
+      order: band.min,
+      fields: fallbackFields,
+    });
+  }
+
+  return [...grouped.values()].sort((a, b) => a.order - b.order);
 }
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -994,12 +1015,17 @@ function DocumentEditableFieldsPanel({
                 const Renderer = resolveFieldRenderer(field);
                 const value = normaliseFieldValueForEdit(extractFieldValue(data, field), field);
                 const error = fieldErrors[field.name];
+                const effectiveUiType = field.ui_type ?? field.data_type;
+                const embedsLabel = BOOLEAN_UI_TYPES.has(effectiveUiType);
+                const isFullWidth = BOOLEAN_FULL_WIDTH_UI_TYPES.has(effectiveUiType);
                 return (
-                  <div key={field.name} className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground leading-normal">
-                      {field.label ?? field.name}
-                      {field.is_required && <span className="ml-1 text-destructive">*</span>}
-                    </label>
+                  <div key={field.name} className={isFullWidth ? "space-y-1.5 md:col-span-2 lg:col-span-3" : "space-y-1.5"}>
+                    {!embedsLabel && (
+                      <label className="text-xs font-medium text-muted-foreground leading-normal">
+                        {field.label ?? field.name}
+                        {field.is_required && <span className="ml-1 text-destructive">*</span>}
+                      </label>
+                    )}
                     <Renderer
                       value={value}
                       field={field}
@@ -1871,7 +1897,16 @@ export function DocumentDetailPage({
         {activeTab === "__distributions" && (
           <Card>
             <CardContent className="pt-5">
-              <DistributionsPanel entityCode={entity.entity_code} recordId={recordId} />
+              <AccountingReadinessPanel
+                entityCode={entity.entity_code}
+                recordId={recordId}
+                record={displayData}
+                lines={linesQuery.data?.data ?? []}
+                distributions={distQuery.data?.data ?? []}
+                isLoading={linesQuery.isLoading || distQuery.isLoading}
+                currencyCode={normaliseCurrencyCode(displayData[entity.display_config.document_header?.currency_field ?? "currency_code"]) ?? undefined}
+                onOpenLines={hasLinesSection ? () => setActiveTab("__lines") : undefined}
+              />
             </CardContent>
           </Card>
         )}

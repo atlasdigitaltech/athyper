@@ -22,7 +22,7 @@
 --               SCTC customer: credit_status     → 'on_hold'
 --               MGI  customer: credit_status     → 'conditional'
 --
---   §CSSPO-EXP  UPDATE company_code_supplier_spend_policy to add missing
+--   §CSSPO-EXP  UPDATE supplier-scoped commodity_category_buy_policy to add missing
 --               qualification_status variants:
 --               NTP @ TEGY (all categories) → 'expired'  (tax cert lapse)
 --               GPS @ SSK  (SC-PROF-AUDIT)  → 'waived'   (emergency procurement)
@@ -343,7 +343,7 @@ END $qual$;
 
 -- ============================================================================
 -- §CSSPO-EXP  Spend policy qualification_status diversity
--- company_code_supplier_spend_policy.qualification_status valid values:
+-- commodity_category_buy_policy.metadata.qualification_status valid values:
 --   'qualified' | 'pending' | 'expired' | 'waived'
 --   010 covers: qualified + pending
 --   011 adds:   expired (NTP@TEGY — tax cert lapse invalidates spend approvals)
@@ -381,28 +381,31 @@ BEGIN
     FROM master.spend_category
     WHERE tenant_id=v_tid AND code='SC-PROF-AUDIT';
 
-    -- NTP@TEGY: expire all spend policy rows (tax cert lapsed → invoice block active)
+    -- NTP@TEGY: expire all buy policy rows (tax cert lapsed → invoice block active)
     IF v_prof_ntp IS NOT NULL THEN
-        UPDATE master.company_code_supplier_spend_policy
-           SET qualification_status = 'expired',
+        UPDATE control.commodity_category_buy_policy
+           SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('qualification_status', 'expired'),
                updated_at = now(),
                updated_by = v_sys
-         WHERE tenant_id=v_tid AND supplier_profile_id=v_prof_ntp
-           AND qualification_status IN ('qualified', 'pending');
+         WHERE tenant_id=v_tid
+           AND scope_type = 'SUPPLIER_PROFILE'
+           AND scope_id = v_prof_ntp
+           AND COALESCE(metadata->>'qualification_status', 'qualified') IN ('qualified', 'pending');
         GET DIAGNOSTICS v_rows_exp = ROW_COUNT;
-        RAISE NOTICE '[csspo_exp] NTP@TEGY: % spend policy rows → expired', v_rows_exp;
+        RAISE NOTICE '[csspo_exp] NTP@TEGY: % buy policy rows → expired', v_rows_exp;
     END IF;
 
     -- GPS@SSK SC-PROF-AUDIT: waived for emergency procurement period
     IF v_prof_gps IS NOT NULL AND v_sc_audit IS NOT NULL THEN
-        UPDATE master.company_code_supplier_spend_policy
-           SET qualification_status = 'waived',
+        UPDATE control.commodity_category_buy_policy
+           SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('qualification_status', 'waived'),
                updated_at = now(),
                updated_by = v_sys
          WHERE tenant_id=v_tid
-           AND supplier_profile_id=v_prof_gps
-           AND spend_category_id=v_sc_audit
-           AND qualification_status = 'qualified';
+           AND scope_type = 'SUPPLIER_PROFILE'
+           AND scope_id = v_prof_gps
+           AND commodity_category_id = v_sc_audit
+           AND COALESCE(metadata->>'qualification_status', 'qualified') = 'qualified';
         GET DIAGNOSTICS v_rows_waiv = ROW_COUNT;
         RAISE NOTICE '[csspo_exp] GPS@SSK SC-PROF-AUDIT: % row(s) → waived', v_rows_waiv;
     END IF;

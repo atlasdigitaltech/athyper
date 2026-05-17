@@ -11,7 +11,7 @@
 --              +copy+report+print+export+follow+tag+add_comment+add_attachment+delegate+share_read
 --   agent:     requester + approve+deny+post+reconcile+close+reopen+import
 --   manager:   agent + reverse+merge+share_edit+del_others_comment+del_others_attach
---   owner:     all 36 except special (those via feature path)
+--   owner:     all non-special base permissions (special permissions use feature paths)
 --   admin:     read+create+update+delete_draft+delete+copy+merge+import+report+print+export
 --              +bulk_*+delegate+share_read+share_edit+add_comment+add_attachment
 --              +del_others_comment+del_others_attach+follow+tag (NO workflow/finance)
@@ -31,7 +31,7 @@ WITH persona_grants AS (
     ('reporter','follow',true),('reporter','tag',true),
     ('reporter','add_comment',true),('reporter','add_attachment',true),
     -- requester
-    ('requester','read',true),('requester','create',true),('requester','update',true),
+    ('requester','read',true),('requester','create',true),('requester','update',true),('requester','edit',true),
     ('requester','delete_draft',true),('requester','submit',true),('requester','amend',true),
     ('requester','cancel',true),('requester','withdraw',true),('requester','escalate',true),
     ('requester','copy',true),('requester','report',true),('requester','print',true),
@@ -39,7 +39,7 @@ WITH persona_grants AS (
     ('requester','add_comment',true),('requester','add_attachment',true),
     ('requester','delegate',true),('requester','share_read',true),
     -- agent
-    ('agent','read',true),('agent','create',true),('agent','update',true),
+    ('agent','read',true),('agent','create',true),('agent','update',true),('agent','edit',true),
     ('agent','delete_draft',true),('agent','submit',true),('agent','amend',true),
     ('agent','cancel',true),('agent','close',true),('agent','reopen',true),
     ('agent','withdraw',true),('agent','escalate',true),('agent','approve',true),
@@ -49,7 +49,7 @@ WITH persona_grants AS (
     ('agent','tag',true),('agent','add_comment',true),('agent','add_attachment',true),
     ('agent','delegate',true),('agent','share_read',true),
     -- manager
-    ('manager','read',true),('manager','create',true),('manager','update',true),
+    ('manager','read',true),('manager','create',true),('manager','update',true),('manager','edit',true),
     ('manager','delete_draft',true),('manager','submit',true),('manager','amend',true),
     ('manager','cancel',true),('manager','close',true),('manager','reopen',true),
     ('manager','withdraw',true),('manager','escalate',true),('manager','approve',true),
@@ -60,8 +60,8 @@ WITH persona_grants AS (
     ('manager','add_comment',true),('manager','add_attachment',true),
     ('manager','del_others_comment',true),('manager','del_others_attach',true),
     ('manager','delegate',true),('manager','share_read',true),('manager','share_edit',true),
-    -- owner (all 36 except special)
-    ('owner','read',true),('owner','create',true),('owner','update',true),
+    -- owner (all non-special base permissions)
+    ('owner','read',true),('owner','create',true),('owner','update',true),('owner','edit',true),
     ('owner','delete_draft',true),('owner','delete',true),('owner','submit',true),
     ('owner','amend',true),('owner','cancel',true),('owner','close',true),
     ('owner','reopen',true),('owner','withdraw',true),('owner','escalate',true),
@@ -75,7 +75,7 @@ WITH persona_grants AS (
     ('owner','del_others_comment',true),('owner','del_others_attach',true),
     ('owner','follow',true),('owner','tag',true),
     -- admin (BLOCKED from workflow and finance ops)
-    ('admin','read',true),('admin','create',true),('admin','update',true),
+    ('admin','read',true),('admin','create',true),('admin','update',true),('admin','edit',true),
     ('admin','delete_draft',true),('admin','delete',true),('admin','copy',true),
     ('admin','merge',true),('admin','import',true),('admin','report',true),
     ('admin','print',true),('admin','export',true),('admin','bulk_import',true),

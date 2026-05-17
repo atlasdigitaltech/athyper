@@ -2,12 +2,12 @@
 -- UNIVERSAL — DIRECT-OPS CLASSIFICATION-TO-INTENT RULES (Layer B)
 -- ============================================================================
 -- File:     026b_intent_rules_direct_ops.sql
--- Schema:   control.classification_to_intent_rule
+-- Schema:   control.commodity_classification_to_intent_rule
 -- Purpose:  Context-sensitive intent rules for Layer B direct-ops categories
 -- Depends:  020b_spend_categories_direct_ops.sql  (Layer B SC codes)
---           021b_business_intents_direct_ops.sql  (BI-COGS-*, BI-CAPEX-MACH/TOOL/EQUIP)
+--           021b_business_intents_direct_ops.sql  (BI-COGS-*, BI-CAPEX/TOOL/EQUIP)
 --           022b_spend_intent_link_direct_ops.sql (Layer B intents must be linked)
---           022_spend_intent_link.sql             (BI-REG-COMP must exist)
+--           022_spend_intent_link.sql             (BI-REG must exist)
 -- Idempotent: Yes — delete-then-insert by pack metadata
 -- Spec ref: §10 Confidence Calibration
 -- ============================================================================
@@ -33,8 +33,8 @@ BEGIN
         RAISE EXCEPTION '[026_base_direct_ops] SC-CAPEQUIP-MACH not found — run 020b first';
     END IF;
     IF NOT EXISTS (SELECT 1 FROM master.business_intent
-                   WHERE tenant_id = v_tid AND code = 'BI-CAPEX-MACH') THEN
-        RAISE EXCEPTION '[026_base_direct_ops] BI-CAPEX-MACH not found — run 021b first';
+                   WHERE tenant_id = v_tid AND code = 'BI-CAPEX') THEN
+        RAISE EXCEPTION '[026_base_direct_ops] BI-CAPEX not found — run 021b first';
     END IF;
 
     -- ── STAGE B: Stage intent rules ──────────────────────────────────────
@@ -57,13 +57,13 @@ BEGIN
     -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_rule (sc_code, condition_type, condition_config, resolved_intent_code, resolved_domain, explanation_template, confidence, priority) VALUES
     ('SC-CAPEQUIP-MACH', 'AMOUNT_ABOVE', '{"threshold": 0, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-MACH', 'CAPEX', 'Machinery acquisition classified as capital expenditure', 0.98, 95),
+     'BI-CAPEX', 'CAPEX', 'Machinery acquisition classified as capital expenditure', 0.98, 95),
 
     ('SC-CAPEQUIP-TOOL', 'AMOUNT_ABOVE', '{"threshold": 0, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-TOOL', 'CAPEX', 'Tooling acquisition classified as capital expenditure', 0.98, 95),
+     'BI-CAPEX', 'CAPEX', 'Tooling acquisition classified as capital expenditure', 0.98, 95),
 
     ('SC-CAPEQUIP-LINE', 'AMOUNT_ABOVE', '{"threshold": 0, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-EQUIP', 'CAPEX', 'Production line classified as capital expenditure', 0.98, 95);
+     'BI-CAPEX', 'CAPEX', 'Production line classified as capital expenditure', 0.98, 95);
 
     -- ══════════════════════════════════════════════════════════════════════
     -- RULE SET 2: CROSS-BORDER (CROSS_BORDER)
@@ -71,27 +71,27 @@ BEGIN
     -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_rule (sc_code, condition_type, condition_config, resolved_intent_code, resolved_domain, explanation_template, confidence, priority) VALUES
     ('SC-RAW-METAL', 'CROSS_BORDER', '{}'::jsonb,
-     'BI-COGS-MAT', 'COST_OF_SALES', 'Cross-border raw material import — customs duty may apply', 0.80, 50),
+     'BI-COGS', 'COST_OF_SALES', 'Cross-border raw material import — customs duty may apply', 0.80, 50),
 
     ('SC-RAW-CHEM',  'CROSS_BORDER', '{}'::jsonb,
-     'BI-COGS-MAT', 'COST_OF_SALES', 'Cross-border chemical import — hazmat compliance may apply', 0.80, 50),
+     'BI-COGS', 'COST_OF_SALES', 'Cross-border chemical import — hazmat compliance may apply', 0.80, 50),
 
     ('SC-FREIGHT-CUST', 'CROSS_BORDER', '{}'::jsonb,
-     'BI-COGS-FREIGHT', 'COST_OF_SALES', 'Cross-border customs brokerage — duty and tariff handling', 0.85, 55);
+     'BI-COGS', 'COST_OF_SALES', 'Cross-border customs brokerage — duty and tariff handling', 0.85, 55);
 
     -- ══════════════════════════════════════════════════════════════════════
     -- RULE SET 3: PROCUREMENT METHOD (PROCUREMENT_METHOD)
     -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_rule (sc_code, condition_type, condition_config, resolved_intent_code, resolved_domain, explanation_template, confidence, priority) VALUES
     ('SC-CONTRACT-MFG', 'PROCUREMENT_METHOD', '{"method": "FORMAL_TENDER"}'::jsonb,
-     'BI-COGS-SUB', 'COST_OF_SALES', 'Formal tender subcontracting classified as cost of sales', 0.90, 70);
+     'BI-COGS', 'COST_OF_SALES', 'Formal tender subcontracting classified as cost of sales', 0.90, 70);
 
     -- ══════════════════════════════════════════════════════════════════════
     -- RULE SET 4: FALLBACK (FALLBACK)
     -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_rule (sc_code, condition_type, condition_config, resolved_intent_code, resolved_domain, explanation_template, confidence, priority) VALUES
     ('SC-QC-CERT', 'FALLBACK', '{}'::jsonb,
-     'BI-REG-COMP', 'REGULATORY', 'Certification and accreditation classified as compliance cost', 0.70, 10);
+     'BI-REG', 'REGULATORY', 'Certification and accreditation classified as compliance cost', 0.70, 10);
 
     -- ── STAGE B.5: Pre-checks ────────────────────────────────────────────
     IF EXISTS (
@@ -127,21 +127,21 @@ BEGIN
     END IF;
 
     -- ── STAGE C: Idempotent cleanup ──────────────────────────────────────
-    DELETE FROM control.classification_to_intent_rule
+    DELETE FROM control.commodity_classification_to_intent_rule
     WHERE tenant_id = v_tid
       AND metadata->'_seed'->>'pack' = v_pack;
 
     -- ── STAGE D: Build resolve maps ──────────────────────────────────────
     DROP TABLE IF EXISTS tmp_sc_map;
     CREATE TEMP TABLE tmp_sc_map AS
-    SELECT code, id FROM master.spend_category WHERE tenant_id = v_tid;
+    SELECT code, id FROM master.commodity_category WHERE tenant_id = v_tid;
 
     DROP TABLE IF EXISTS tmp_bi_map;
     CREATE TEMP TABLE tmp_bi_map AS
     SELECT code, id FROM master.business_intent WHERE tenant_id = v_tid;
 
     -- ── STAGE E: INSERT intent rules ─────────────────────────────────────
-    INSERT INTO control.classification_to_intent_rule (
+    INSERT INTO control.commodity_classification_to_intent_rule (
         tenant_id, classification_source, classification_id, direction,
         condition_type, condition_config, applies_to_flows,
         resolved_intent_id, resolved_domain, explanation_template,
@@ -151,7 +151,7 @@ BEGIN
     )
     SELECT
         v_tid,
-        'SPEND_CATEGORY',
+        'COMMODITY_CATEGORY',
         sm.id,
         NULL,
         r.condition_type,
@@ -176,17 +176,17 @@ BEGIN
     JOIN tmp_bi_map bm ON bm.code = r.resolved_intent_code;
 
     -- ── STAGE F: Assertions ──────────────────────────────────────────────
-    IF (SELECT count(*) FROM control.classification_to_intent_rule
+    IF (SELECT count(*) FROM control.commodity_classification_to_intent_rule
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack) < 7 THEN
         RAISE EXCEPTION '[026_base_direct_ops] Intent rule load incomplete: expected ≥7, got %',
-            (SELECT count(*) FROM control.classification_to_intent_rule
+            (SELECT count(*) FROM control.commodity_classification_to_intent_rule
              WHERE tenant_id = v_tid
                AND metadata->'_seed'->>'pack' = v_pack);
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM control.classification_to_intent_rule
+        SELECT 1 FROM control.commodity_classification_to_intent_rule
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack
           AND condition_type = 'AMOUNT_ABOVE'
@@ -196,7 +196,7 @@ BEGIN
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM control.classification_to_intent_rule
+        SELECT 1 FROM control.commodity_classification_to_intent_rule
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack
           AND condition_type = 'FALLBACK'
@@ -206,15 +206,15 @@ BEGIN
     END IF;
 
     RAISE NOTICE '[026_base_direct_ops] Direct-ops intent rules loaded: % total (AMOUNT_ABOVE=%, CROSS_BORDER=%, PROCUREMENT_METHOD=%, FALLBACK=%)',
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack),
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack AND condition_type = 'AMOUNT_ABOVE'),
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack AND condition_type = 'CROSS_BORDER'),
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack AND condition_type = 'PROCUREMENT_METHOD'),
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack AND condition_type = 'FALLBACK');
 
 END $seed$;

@@ -14,7 +14,7 @@
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent, Input, Textarea } from "@athyper/ui/primitives";
 import type { EntityField } from "@athyper/api-contracts/metadata";
-import { resolveFieldRenderer } from "../field-renderers/registry";
+import { resolveFieldRenderer, BOOLEAN_UI_TYPES, BOOLEAN_FULL_WIDTH_UI_TYPES } from "../field-renderers";
 import type { EntityEditableField, FieldRenderer, SectionRenderer } from "./adapter/types";
 
 // ── Generic field fallback ────────────────────────────────────────────────────
@@ -89,15 +89,20 @@ function FormField({
 }) {
   if (metadataField && !customRenderer) {
     const Renderer = resolveFieldRenderer(metadataField);
+    const effectiveUiType = metadataField.ui_type ?? metadataField.data_type;
+    const embedsLabel = BOOLEAN_UI_TYPES.has(effectiveUiType);
+    const isFullWidth = BOOLEAN_FULL_WIDTH_UI_TYPES.has(effectiveUiType);
     return (
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor={field.name}
-          className="text-sm font-medium leading-none text-foreground"
-        >
-          {field.label}
-          {field.required && <span className="text-destructive ml-0.5">*</span>}
-        </label>
+      <div className={cn("flex flex-col gap-1.5", isFullWidth && "md:col-span-2")}>
+        {!embedsLabel && (
+          <label
+            htmlFor={field.name}
+            className="text-sm font-medium leading-none text-foreground"
+          >
+            {field.label}
+            {field.required && <span className="text-destructive ml-0.5">*</span>}
+          </label>
+        )}
         <Renderer
           value={value}
           field={metadataField}

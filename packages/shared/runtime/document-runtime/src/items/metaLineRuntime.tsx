@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { resolveFormConfig } from "@athyper/metadata-client";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import { cn } from "@athyper/theme/utils";
+import { resolveFieldRenderer, BOOLEAN_UI_TYPES } from "@athyper/entity-runtime/field-renderers";
 import {
   BusinessIntentPicker,
   EntityPicker,
@@ -790,7 +791,7 @@ function ReferenceInput({
     placeholder: `Search ${fieldLabel(field).toLowerCase()}...`,
   };
 
-  if (targetEntity === "spend_category") {
+  if (targetEntity === "commodity_category") {
     return <SpendCategoryPicker {...pickerProps} onChange={commit} />;
   }
   if (targetEntity === "business_intent") {
@@ -959,7 +960,7 @@ function referenceTargetEntity(field: EntityField): string | null {
   if (explicit) return explicit;
 
   const name = field.name.toLowerCase();
-  if (name.includes("spend_category")) return "spend_category";
+  if (name.includes("commodity_category")) return "commodity_category";
   if (name.includes("business_intent")) return "business_intent";
   if (name === "item_id" || name.endsWith("_item_id")) return "item";
   return null;
@@ -1111,21 +1112,17 @@ export function MetaFieldInput({
     return <ReferenceInput field={field} value={value} onChange={onChange} disabled={disabled} formData={formData} />;
   }
 
-  if (field.data_type === "boolean") {
+  if (BOOLEAN_UI_TYPES.has(field.ui_type ?? field.data_type)) {
+    const Renderer = resolveFieldRenderer(field);
     return (
-      <button
-        type="button"
+      <Renderer
+        value={value}
+        field={field}
+        mode="edit"
+        density="compact"
         disabled={disabled}
-        onClick={() => onChange(!Boolean(value))}
-        className={cn(
-          "inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium transition-colors disabled:opacity-50",
-          value
-            ? "border-foreground bg-foreground text-background"
-            : "border-border/60 text-muted-foreground hover:text-foreground",
-        )}
-      >
-        {value ? "Yes" : "No"}
-      </button>
+        onChange={onChange}
+      />
     );
   }
 
@@ -1135,7 +1132,7 @@ export function MetaFieldInput({
         value={value == null ? "" : String(value)}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-full rounded-lg border border-border/60 bg-transparent px-3 text-sm outline-none transition-colors focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
+        className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
       >
         <option value="">Select...</option>
         {options.map((option) => (
@@ -1152,7 +1149,7 @@ export function MetaFieldInput({
         disabled={disabled}
         rows={3}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full resize-none rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
+        className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
       />
     );
   }
@@ -1164,7 +1161,7 @@ export function MetaFieldInput({
       disabled={disabled}
       onChange={(event) => onChange(event.target.value)}
       className={cn(
-        "h-9 w-full rounded-lg border border-border/60 bg-transparent px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50",
+        "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50",
         NUMERIC_TYPES.has(field.data_type) && "text-right tabular-nums",
       )}
     />

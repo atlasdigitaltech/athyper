@@ -355,20 +355,64 @@ CREATE INDEX IF NOT EXISTS apdr_priority_idx
 
 
 -- ============================================================================
--- control.classification_to_intent_rule
+-- control.commodity_classification_to_intent_rule
 -- ============================================================================
 
 CREATE INDEX IF NOT EXISTS cir_class_idx
-    ON control.classification_to_intent_rule (classification_source, classification_id);
+    ON control.commodity_classification_to_intent_rule (classification_source, classification_id);
 
 -- Priority-ordered active rules — primary lookup path
 CREATE INDEX IF NOT EXISTS cir_priority_idx
-    ON control.classification_to_intent_rule (tenant_id, classification_id, priority)
+    ON control.commodity_classification_to_intent_rule (tenant_id, classification_id, priority)
     WHERE is_active = true;
 
 -- Effective-date filtering
 CREATE INDEX IF NOT EXISTS cir_effective_idx
-    ON control.classification_to_intent_rule (tenant_id, effective_from, effective_to)
+    ON control.commodity_classification_to_intent_rule (tenant_id, effective_from, effective_to)
+    WHERE is_active = true;
+
+
+-- ============================================================================
+-- control.commodity_category_*_policy
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS ccbpol_scope_idx
+    ON control.commodity_category_buy_policy
+    (tenant_id, commodity_category_id, business_intent_id, scope_type, scope_id, effective_from DESC)
+    WHERE is_active = true;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ccbpol_default_tenant_uq
+    ON control.commodity_category_buy_policy (tenant_id, commodity_category_id)
+    WHERE is_active = true AND scope_type = 'TENANT' AND mapping_mode = 'ALLOW' AND is_default = true;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ccbpol_default_scope_uq
+    ON control.commodity_category_buy_policy (tenant_id, commodity_category_id, company_code_id, scope_type, scope_id)
+    WHERE is_active = true AND scope_type <> 'TENANT' AND mapping_mode = 'ALLOW' AND is_default = true;
+
+CREATE INDEX IF NOT EXISTS ccselpol_scope_idx
+    ON control.commodity_category_sell_policy
+    (tenant_id, commodity_category_id, business_intent_id, scope_type, scope_id, effective_from DESC)
+    WHERE is_active = true;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ccselpol_default_tenant_uq
+    ON control.commodity_category_sell_policy (tenant_id, commodity_category_id)
+    WHERE is_active = true AND scope_type = 'TENANT' AND mapping_mode = 'ALLOW' AND is_default = true;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ccselpol_default_scope_uq
+    ON control.commodity_category_sell_policy (tenant_id, commodity_category_id, company_code_id, scope_type, scope_id)
+    WHERE is_active = true AND scope_type <> 'TENANT' AND mapping_mode = 'ALLOW' AND is_default = true;
+
+CREATE INDEX IF NOT EXISTS ccipol_scope_idx
+    ON control.commodity_category_inventory_policy
+    (tenant_id, commodity_category_id, scope_type, scope_id, effective_from DESC)
+    WHERE is_active = true;
+
+CREATE INDEX IF NOT EXISTS spo_profile_idx
+    ON control.supplier_posting_override (tenant_id, supplier_profile_id);
+CREATE INDEX IF NOT EXISTS spo_role_idx
+    ON control.supplier_posting_override (tenant_id, posting_role_code);
+CREATE INDEX IF NOT EXISTS spo_profile_effective_pidx
+    ON control.supplier_posting_override (tenant_id, supplier_profile_id, effective_from)
     WHERE is_active = true;
 
 
@@ -431,22 +475,22 @@ CREATE INDEX IF NOT EXISTS dsc_company_active_pidx ON control.document_sequence_
 -- is the hot path for the UPDATE in next_document_number(). PK covers all access.
 
 
--- ── §CCRR  control.commodity_to_spend_category_rule ───────────────────────────
+-- ── §CCRR  control.commodity_code_to_category_rule ───────────────────────────
 -- Deterministic routing: UNIQUE prevents same-priority collisions per (tenant, domain, code_from).
 CREATE UNIQUE INDEX IF NOT EXISTS ccrr_active_priority_uq
-    ON control.commodity_to_spend_category_rule (
+    ON control.commodity_code_to_category_rule (
         tenant_id, commodity_domain_code, code_from, priority
     ) WHERE is_active = true;
 
 -- Range-scan index for routing lookups by incoming code
 CREATE INDEX IF NOT EXISTS ccrr_domain_range_pidx
-    ON control.commodity_to_spend_category_rule (
+    ON control.commodity_code_to_category_rule (
         tenant_id, commodity_domain_code, code_from, code_to
     ) WHERE is_active = true;
 
--- Reverse lookup: all routing rules targeting a given spend_category
+-- Reverse lookup: all routing rules targeting a given commodity_category
 CREATE INDEX IF NOT EXISTS ccrr_category_idx
-    ON control.commodity_to_spend_category_rule (tenant_id, spend_category_id);
+    ON control.commodity_code_to_category_rule (tenant_id, commodity_category_id);
 
 
 -- ── control.tax_rate_schedule ────────────────────────────────────────────────
@@ -468,6 +512,8 @@ CREATE INDEX IF NOT EXISTS trs_wht_pidx
 CREATE INDEX IF NOT EXISTS idx_fl_scenario        ON control.forecast_line (scenario_id);
 CREATE INDEX IF NOT EXISTS idx_fl_account         ON control.forecast_line (gl_account_id, fiscal_year)
     WHERE gl_account_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_fl_commodity_category ON control.forecast_line (tenant_id, commodity_category_id, fiscal_year)
+    WHERE commodity_category_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_fl_allocation      ON control.forecast_line (budget_allocation_id)
     WHERE budget_allocation_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_fl_cost_center     ON control.forecast_line (cost_center_id)

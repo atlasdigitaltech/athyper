@@ -143,7 +143,7 @@ RAISE NOTICE '  payment_method (WIRE-USD)       : % rows', v_n;
 -- ============================================================================
 -- Delete in FK cascade order:
 --   entry_template → profile_event → profile_config → accounting_profile
---   intent_to_profile_rule, classification_to_intent_rule, payment_settlement_rule
+--   intent_to_profile_rule, commodity_classification_to_intent_rule, payment_settlement_rule
 -- ============================================================================
 RAISE NOTICE '';
 RAISE NOTICE '════════════════════════════════════════════════════════════════';
@@ -187,10 +187,10 @@ WHERE accounting_profile_id IN (
 GET DIAGNOSTICS v_n = ROW_COUNT;
 RAISE NOTICE '  acct_profile_config             : % rows', v_n;
 
-DELETE FROM control.classification_to_intent_rule
+DELETE FROM control.commodity_classification_to_intent_rule
 WHERE metadata->'_seed'->>'pack' = 'pack_ap_non_po';
 GET DIAGNOSTICS v_n = ROW_COUNT;
-RAISE NOTICE '  classification_to_intent_rule   : % rows', v_n;
+RAISE NOTICE '  commodity_classification_to_intent_rule   : % rows', v_n;
 
 DELETE FROM control.payment_settlement_rule
 WHERE metadata->>'auto_created_by' = 'pack_ap_non_po';
@@ -205,8 +205,8 @@ RAISE NOTICE '  accounting_profile              : % rows', v_n;
 -- ============================================================================
 -- §3  INDUSTRY PACK TAXONOMY  (all tenants)
 -- ============================================================================
--- Order: routing rules → classifications → item_category → business_intent
---        → spend_category (nullify RESTRICT FKs first)
+-- Order: routing rules → classifications → business_intent → spend_category
+--        (nullify RESTRICT FKs first)
 -- ============================================================================
 RAISE NOTICE '';
 RAISE NOTICE '════════════════════════════════════════════════════════════════';
@@ -219,23 +219,11 @@ WHERE metadata->'_seed'->>'pack' = ANY(v_industry_packs);
 GET DIAGNOSTICS v_n = ROW_COUNT;
 RAISE NOTICE '  commodity_to_spend_category_rule: % rows', v_n;
 
--- Commodity → spend_category / item_category bridge
+-- Commodity → spend_category bridge
 DELETE FROM master.commodity_classification
 WHERE metadata->'_seed'->>'pack' = ANY(v_industry_packs);
 GET DIAGNOSTICS v_n = ROW_COUNT;
 RAISE NOTICE '  commodity_classification        : % rows', v_n;
-
--- Item categories — leaves before roots
-DELETE FROM master.item_category
-WHERE parent_id IS NOT NULL
-  AND metadata->'_seed'->>'pack' = ANY(v_industry_packs);
-GET DIAGNOSTICS v_n = ROW_COUNT;
-RAISE NOTICE '  item_category (leaves)          : % rows', v_n;
-
-DELETE FROM master.item_category
-WHERE metadata->'_seed'->>'pack' = ANY(v_industry_packs);
-GET DIAGNOSTICS v_n = ROW_COUNT;
-RAISE NOTICE '  item_category (roots)           : % rows', v_n;
 
 -- Business intents (ON DELETE CASCADE → company_code_business_intent_policy)
 DELETE FROM master.business_intent
@@ -243,24 +231,24 @@ WHERE metadata->'_seed'->>'pack' = ANY(v_industry_packs);
 GET DIAGNOSTICS v_n = ROW_COUNT;
 RAISE NOTICE '  business_intent                 : % rows', v_n;
 
--- Spend categories: nullify RESTRICT FKs in document lines first
+-- Commodity categories: nullify RESTRICT FKs in document lines first
 UPDATE document.purchase_invoice_line
-SET    spend_category_id = NULL,
+SET    commodity_category_id = NULL,
        business_intent_id = NULL
-WHERE  spend_category_id IN (
-    SELECT id FROM master.spend_category
+WHERE  commodity_category_id IN (
+    SELECT id FROM master.commodity_category
     WHERE  metadata->'_seed'->>'pack' = ANY(v_industry_packs)
 );
 GET DIAGNOSTICS v_n = ROW_COUNT;
 RAISE NOTICE '  purchase_invoice_line nullified  : % rows', v_n;
 
-DELETE FROM master.company_code_spend_policy
-WHERE spend_category_id IN (
+DELETE FROM control.commodity_category_buy_policy
+WHERE commodity_category_id IN (
     SELECT id FROM master.spend_category
     WHERE  metadata->'_seed'->>'pack' = ANY(v_industry_packs)
 );
 GET DIAGNOSTICS v_n = ROW_COUNT;
-RAISE NOTICE '  company_code_spend_policy        : % rows', v_n;
+RAISE NOTICE '  commodity_category_buy_policy  : % rows', v_n;
 
 -- Spend categories — leaves before roots
 DELETE FROM master.spend_category

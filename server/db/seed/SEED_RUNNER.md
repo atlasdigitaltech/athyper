@@ -93,7 +93,6 @@ Files sort alphabetically by subfolder prefix (numeric order):
 010_platform/001_global_reference/005_locale.sql
 010_platform/001_global_reference/006_timezone.sql
 010_platform/001_global_reference/007_uom.sql
-010_platform/001_global_reference/008a_commodity_code_unspsc.sql
 010_platform/001_global_reference/008b_commodity_code_hs.sql
 010_platform/001_global_reference/008c_commodity_crosswalk.sql
 010_platform/001_global_reference/008d_commodity_code_keywords.sql
@@ -126,11 +125,16 @@ Files sort alphabetically by subfolder prefix (numeric order):
 010_platform/003_control/011_notification_routing_collab.sql   ← global collab routing rules (tenant_id=NULL)
 010_platform/003_control/012_backfill_entity_code.sql          ← idempotent backfill; safe to re-run
 010_platform/003_control/013_platform_cron_backup.sql          ← daily pg_dump backup cron schedule
+010_platform/003_control/020_parameter_definitions.sql          ← parameter domain registry
+010_platform/003_control/021_parameter_definitions_finance.sql  ← Tier 1 tenant-configurable params (25)
+010_platform/003_control/022_parameter_definitions_ops.sql      ← Tier 2 system-controlled readonly params (38)
 
 010_platform/003_master/*.sql
+010_platform/005_domain_registrations/000_normalize_system_entities.sql  ← one-time: set tenant_id=NULL on system entities
 010_platform/005_domain_registrations/100_master/*.sql
 010_platform/005_domain_registrations/200_document/*.sql
 010_platform/005_domain_registrations/900_operations/*.sql
+010_platform/005_domain_registrations/300_control/*.sql
 
 # Entity Engine registry
 010_platform/004_entity_engine/010_lifecycles/*.sql
@@ -142,7 +146,17 @@ Files sort alphabetically by subfolder prefix (numeric order):
 010_platform/004_entity_engine/040_field_group_members.sql
 010_platform/004_entity_engine/060_entity_operations/*.sql
 010_platform/004_entity_engine/050_entity_lifecycles.sql
+010_platform/004_entity_engine/051_master_schema_coverage_lifecycles.sql
 010_platform/004_entity_engine/070_entity_relations.sql
+
+# Schema migrations (idempotent rename / cleanup — run on upgrades, skip on fresh installs)
+010_platform/999_schema_migrations/20260510_vendor_to_supplier.sql
+010_platform/999_schema_migrations/20260516_decommission_item_category.sql
+010_platform/999_schema_migrations/20260517_business_intent_domain_policy_cleanup.sql
+010_platform/999_schema_migrations/20260517_rename_commodity_category_policy_tables.sql
+010_platform/999_schema_migrations/20260517_rename_commodity_category_workbench_parameter.sql
+010_platform/999_schema_migrations/20260517_rename_commodity_classification_tables.sql
+010_platform/999_schema_migrations/20260517_rename_spend_category_refs_to_commodity_category.sql
 
 # Athyper system tenant (blueprint owner — platform-level singleton)
 010_platform/006_system_tenant/000_athyper_tenant.sql
@@ -186,11 +200,14 @@ SET app.seed_tenant_id = '<tenant_uuid>';
 020_universal/010_spend_taxonomy/020_spend_categories.sql          ← Layer A: 17 universal roots (always)
 020_universal/010_spend_taxonomy/020b_spend_categories_direct_ops.sql ← Layer B: 13 direct-ops roots (opt-in)
 020_universal/010_spend_taxonomy/021_business_intents.sql
-020_universal/010_spend_taxonomy/025_base_item_categories.sql
 020_universal/010_spend_taxonomy/022_spend_intent_link.sql
 020_universal/010_spend_taxonomy/027_commodity_bridge.sql
+020_universal/010_spend_taxonomy/028_commodity_category_model.sql  ← migrates spend_category roots → commodity_category
 020_universal/010_spend_taxonomy/024_routing_rules.sql
 020_universal/010_spend_taxonomy/026_base_intent_rules.sql
+
+-- Commodity category policy validation (run after taxonomy seeds)
+020_universal/990_validation/900_commodity_category_policy_refresh.sql
 
 -- [2/6] foundation_tax — tax jurisdictions, types, rates, FX
 020_universal/020_tax/320_tax_jurisdictions.sql

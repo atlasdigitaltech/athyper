@@ -56,14 +56,14 @@ BEGIN
     -- ── STAGE B: Products (one per spend category, tenant-scoped) ─────────
     --   • product_type  = physical (goods) | service (services)
     --   • unit_of_measure = EA for all (demo catalog — cost defaulted to NULL)
-    --   • spend_category_id links product back to its category
+    --   • commodity_category_id links product back to its category
 
     INSERT INTO master.product (
         tenant_id,
         code,
         name,
         description,
-        spend_category_id,
+        commodity_category_id,
         product_type,
         unit_of_measure,
         is_taxable,
@@ -76,7 +76,7 @@ BEGIN
         'PRD-' || sc.code,
         sc.name,
         'Demo product — ' || sc.name,
-        sc.id,
+        ccg.id,
         CASE sc.procurement_type
             WHEN 'goods'    THEN 'physical'
             WHEN 'services' THEN 'service'
@@ -88,12 +88,15 @@ BEGIN
         'active',
         v_su
     FROM master.spend_category sc
+    JOIN master.commodity_category ccg
+      ON ccg.tenant_id = sc.tenant_id
+     AND ccg.code = sc.code
     WHERE sc.tenant_id = v_tid
       AND sc.status = 'active'
     ON CONFLICT (tenant_id, code) DO UPDATE SET
         name              = EXCLUDED.name,
         description       = EXCLUDED.description,
-        spend_category_id = EXCLUDED.spend_category_id,
+        commodity_category_id = EXCLUDED.commodity_category_id,
         product_type      = EXCLUDED.product_type,
         unit_of_measure   = EXCLUDED.unit_of_measure,
         metadata          = master.product.metadata
@@ -117,7 +120,7 @@ BEGIN
         code,
         name,
         product_id,
-        spend_category_id,
+        commodity_category_id,
         valuation_method,
         uom_code,
         has_lot_tracking,
@@ -132,7 +135,7 @@ BEGIN
         'ITM-' || sc.code,
         sc.name,
         p.id,
-        sc.id,
+        p.commodity_category_id,
         'weighted_avg',
         'EA',
         false,
@@ -150,7 +153,7 @@ BEGIN
     ON CONFLICT (tenant_id, company_code_id, code) DO UPDATE SET
         name              = EXCLUDED.name,
         product_id        = EXCLUDED.product_id,
-        spend_category_id = EXCLUDED.spend_category_id,
+        commodity_category_id = EXCLUDED.commodity_category_id,
         uom_code          = EXCLUDED.uom_code,
         metadata          = master.item.metadata
                             || jsonb_build_object('_seed', jsonb_build_object(

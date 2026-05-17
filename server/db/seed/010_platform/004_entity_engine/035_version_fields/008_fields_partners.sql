@@ -65,7 +65,7 @@ FROM (VALUES
             (v_ev,'payment_term_id',    'payment_term_id',    'Payment Terms',   'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"payment_term"}'::jsonb,140,v_su),
             (v_ev,'payment_method_id',  'payment_method_id',  'Payment Method',  'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"payment_method"}'::jsonb,150,v_su),
             (v_ev,'account_manager_id', 'account_manager_id', 'Account Manager', 'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"principal"}'::jsonb,160,v_su),
-            (v_ev,'spend_category_id',  'spend_category_id',  'Spend Category',  'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"spend_category"}'::jsonb,170,v_su),
+            (v_ev,'commodity_category_id',  'commodity_category_id',  'Commodity Category',  'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"commodity_category"}'::jsonb,170,v_su),
             (v_ev,'is_payment_ready',   'is_payment_ready',   'Payment Ready',   'boolean','checkbox', 'one','standard',false,true,  true,  false,NULL::jsonb,180,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,

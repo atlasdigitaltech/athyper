@@ -572,16 +572,7 @@ WHERE ef.entity_version_id = ev.id
 
 WITH field_updates(entity_name, field_name, data_type, ui_type, is_required, validation, enum_config) AS (
   VALUES
-    ('company_code_spend_policy'::text,'capex_screening_threshold'::text,NULL::text,NULL::text,NULL::boolean,'{"min":0}'::jsonb,NULL::jsonb),
-    ('company_code_spend_policy','override_visibility','enum','select',NULL,NULL,'{}'::jsonb),
-    ('company_code_spend_policy','company_code_id',NULL,NULL,NULL,'{"ref_entity":"company_code"}'::jsonb,NULL),
-    ('company_code_spend_policy','spend_category_id',NULL,NULL,NULL,'{"ref_entity":"spend_category"}'::jsonb,NULL),
-    ('company_code_spend_policy','default_gl_account_id',NULL,NULL,NULL,'{"ref_entity":"gl_account"}'::jsonb,NULL),
-    ('company_code_spend_policy','default_tax_group_id',NULL,NULL,NULL,'{"ref_entity":"tax_group"}'::jsonb,NULL),
-    ('company_code_spend_policy','default_intent_id',NULL,NULL,NULL,'{"ref_entity":"business_intent"}'::jsonb,NULL),
-    ('company_code_spend_policy','asset_class_id',NULL,NULL,NULL,'{"ref_entity":"asset_class"}'::jsonb,NULL),
-
-    ('bank_account_link','bank_account_id',NULL,NULL,NULL,'{"ref_entity":"bank_account"}'::jsonb,NULL),
+    ('bank_account_link'::text,'bank_account_id'::text,NULL::text,NULL::text,NULL::boolean,'{"ref_entity":"bank_account"}'::jsonb,NULL::jsonb),
     ('bank_account_link','company_code_id',NULL,NULL,NULL,'{"ref_entity":"company_code"}'::jsonb,NULL),
 
     ('bank_account','bank_party_id',NULL,NULL,NULL,'{"ref_entity":"bank_party"}'::jsonb,NULL),
@@ -616,7 +607,7 @@ WITH field_updates(entity_name, field_name, data_type, ui_type, is_required, val
     ('supplier','payment_term_id',NULL,NULL,NULL,'{"ref_entity":"payment_term"}'::jsonb,NULL),
     ('supplier','payment_method_id',NULL,NULL,NULL,'{"ref_entity":"payment_method"}'::jsonb,NULL),
     ('supplier','account_manager_id',NULL,NULL,NULL,'{"ref_entity":"principal"}'::jsonb,NULL),
-    ('supplier','spend_category_id',NULL,NULL,NULL,'{"ref_entity":"spend_category"}'::jsonb,NULL),
+    ('supplier','commodity_category_id',NULL,NULL,NULL,'{"ref_entity":"commodity_category"}'::jsonb,NULL),
 
     ('employee','principal_id',NULL,NULL,NULL,'{"ref_entity":"principal"}'::jsonb,NULL),
     ('employee','manager_id',NULL,NULL,NULL,'{"ref_entity":"employee"}'::jsonb,NULL),
@@ -671,7 +662,7 @@ WITH field_updates(entity_name, field_name, data_type, ui_type, is_required, val
     ('payment_term_clause','release_delay_days',NULL,NULL,NULL,'{"min":0}'::jsonb,NULL),
     ('payment_term_clause','recovery_start_after_pct',NULL,NULL,NULL,'{"min":0,"max":100}'::jsonb,NULL),
     ('payment_term_clause','recovery_end_before_pct',NULL,NULL,NULL,'{"min":0,"max":100}'::jsonb,NULL),
-    ('payment_term_clause','recovery_method','enum','select',NULL,NULL,'{}'::jsonb),
+    ('payment_term_clause','recovery_method','enum','select',NULL,NULL,NULL::jsonb),
     ('payment_term_clause','partial_release_pct',NULL,NULL,NULL,'{"min":0,"max":100}'::jsonb,NULL),
     ('payment_term_clause','rounding_scale',NULL,NULL,NULL,'{"min":0}'::jsonb,NULL),
 

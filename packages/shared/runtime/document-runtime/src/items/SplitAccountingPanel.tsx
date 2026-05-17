@@ -33,6 +33,8 @@ interface SplitRow {
   basis: DistBasis;
   splitPct: number | null;
   splitAmount: number | null;
+  businessIntentId: string;
+  commodityCategoryId: string;
   accountSource: string;
   accountCode: string;
   accountLabel: string;
@@ -89,6 +91,8 @@ type DistributionFieldConfig = {
   splitAmount: string;
   distributedAmount: string;
   currencyCode: string;
+  businessIntentId: string;
+  commodityCategoryId: string;
   accountSource: string;
   accountCode: string;
   costCenterId: string;
@@ -242,7 +246,7 @@ function readAccountingDistributionConfig(
   return {
     basisTypes,
     defaultBasis: textConfig(config["default_basis"]) ?? basisTypes[0]?.value,
-    defaultAccountSource: textConfig(config["default_account_source"]) ?? "FIXED",
+    defaultAccountSource: textConfig(config["default_account_source"]) ?? "FROM_CATEGORY",
     costCenterEntityCode: textConfig(config["cost_center_entity_code"]) ?? "cost_center",
     profitCenterEntityCode: textConfig(config["profit_center_entity_code"]) ?? "profit_center",
     projectEntityCode: textConfig(config["project_entity_code"]) ?? "project",
@@ -254,6 +258,8 @@ function readAccountingDistributionConfig(
       splitAmount:       textConfig(fields["split_amount"])       ?? "split_amount",
       distributedAmount: textConfig(fields["distributed_amount"]) ?? "distributed_amount",
       currencyCode:      textConfig(fields["currency_code"])      ?? "currency_code",
+      businessIntentId:  textConfig(fields["business_intent_id"]) ?? "business_intent_id",
+      commodityCategoryId: textConfig(fields["commodity_category_id"]) ?? "commodity_category_id",
       accountSource:     textConfig(fields["account_source"])     ?? "account_source",
       accountCode:       textConfig(fields["account_code"])       ?? "account_code",
       costCenterId:      textConfig(fields["cost_center_id"])     ?? "cost_center_id",
@@ -285,6 +291,8 @@ function distToRow(d: AccountingDistribution, config: AccountingDistributionConf
     basis:             stringValue(record, fields.basis) || config.defaultBasis || config.basisTypes[0]?.value || "",
     splitPct:          numberValue(record, fields.splitPct),
     splitAmount:       numberValue(record, fields.splitAmount),
+    businessIntentId:  stringValue(record, fields.businessIntentId),
+    commodityCategoryId: stringValue(record, fields.commodityCategoryId),
     accountSource:     stringValue(record, fields.accountSource),
     accountCode:       stringValue(record, fields.accountCode),
     accountLabel:      labelFromRecord(record, "gl_account_id") || stringValue(record, fields.accountCode),
@@ -315,6 +323,8 @@ function newRow(lineAmount: number, currency: string, nextNo: number, config: Ac
     basis,
     splitPct:          basisCalculation(config, basis) === "percent" ? 100 : null,
     splitAmount:       null,
+    businessIntentId:  "",
+    commodityCategoryId: "",
     accountSource:     config.defaultAccountSource ?? "",
     accountCode:       "",
     accountLabel:      "",
@@ -349,7 +359,7 @@ function ViewModeToggle({
   splitDisabled?: boolean;
 }) {
   return (
-    <div className="inline-flex rounded-lg border border-border overflow-hidden text-xs font-semibold">
+    <div className="inline-flex overflow-hidden rounded-lg border border-input bg-background text-xs font-semibold">
       {(["single", "split"] as ViewMode[]).map((mode) => {
         const disabled = mode === "split" && splitDisabled;
         return (
@@ -386,7 +396,7 @@ function BasisToggle({
 }) {
   if (options.length === 0) return null;
   return (
-    <div className="inline-flex rounded-lg border border-border overflow-hidden text-xs font-semibold">
+    <div className="inline-flex overflow-hidden rounded-lg border border-input bg-background text-xs font-semibold">
       {options.map((b) => (
           <button
           key={b.value}
@@ -431,7 +441,7 @@ function InlineInput({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       className={cn(
-        "w-full bg-transparent border-b border-border/60 focus:border-foreground outline-none text-sm py-0.5 transition-colors",
+        "h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none transition-colors focus:border-ring/50 focus:ring-2 focus:ring-ring/30",
         "placeholder:text-muted-foreground/50 disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
@@ -700,7 +710,7 @@ function SingleDistributionForm({
 
       <div className={cn("grid gap-4", row?.isCapex ? "md:grid-cols-2" : "")}>
         {/* CAPEX TOGGLE */}
-        <div className="rounded-lg border border-border/40 bg-muted/10 px-4 py-3">
+        <div className="rounded-lg border border-input bg-background px-4 py-3">
           <CapexToggle
             value={row?.isCapex ?? false}
             onChange={(v) => onRowChange({
@@ -804,11 +814,20 @@ export const SplitAccountingPanel = forwardRef<SplitAccountingPanelHandle, Split
   const lineFormData = useMemo(
     () => ({
       ...(parentFormData ?? {}),
+      ...(line as unknown as Record<string, unknown>),
       ...((line.data as Record<string, unknown> | null | undefined) ?? {}),
     }),
-    [line.data, parentFormData],
+    [line, line.data, parentFormData],
   );
   const cc = currencyCode ?? "";
+  const inheritedBusinessIntentId = useMemo(
+    () => stringValue(lineFormData, "business_intent_id"),
+    [lineFormData],
+  );
+  const inheritedCommodityCategoryId = useMemo(
+    () => stringValue(lineFormData, "commodity_category_id"),
+    [lineFormData],
+  );
 
   const [rows, setRows] = useState<SplitRow[]>(() =>
     distributions.map((item) => distToRow(item, distributionConfig)),
@@ -961,6 +980,8 @@ export const SplitAccountingPanel = forwardRef<SplitAccountingPanelHandle, Split
     setViewMode(next);
     if (next === "split" && rows.length === 0) {
       const r = newRow(lineAmount, cc, 1, distributionConfig);
+      r.businessIntentId = inheritedBusinessIntentId;
+      r.commodityCategoryId = inheritedCommodityCategoryId;
       r.distributedAmount = computeDistributed(r, r.basis);
       setRows([r]);
     }
@@ -1000,6 +1021,8 @@ export const SplitAccountingPanel = forwardRef<SplitAccountingPanelHandle, Split
     if (readOnly) return;
     const nextNo = (rows[rows.length - 1]?.distributionNo ?? 0) + 1;
     const r = newRow(lineAmount, cc, nextNo, distributionConfig);
+    r.businessIntentId = inheritedBusinessIntentId;
+    r.commodityCategoryId = inheritedCommodityCategoryId;
     r.distributedAmount = computeDistributed(r, r.basis);
     setRows((prev) => [...prev, r]);
   }
@@ -1009,11 +1032,18 @@ export const SplitAccountingPanel = forwardRef<SplitAccountingPanelHandle, Split
     if (readOnly) return;
     if (rows.length === 0) {
       const row = { ...newRow(lineAmount, cc, 1, distributionConfig), ...patch, _dirty: true };
+      row.businessIntentId = row.businessIntentId || inheritedBusinessIntentId;
+      row.commodityCategoryId = row.commodityCategoryId || inheritedCommodityCategoryId;
       row.distributedAmount = computeDistributed(row, row.basis);
       setRows([row]);
     } else {
       updateRow(0, patch);
     }
+  }
+
+  function effectiveAccountSource(row: SplitRow): string {
+    if (row.accountCode.trim()) return "FIXED";
+    return row.accountSource || distributionConfig.defaultAccountSource || "FROM_CATEGORY";
   }
 
   async function saveRow(idx: number, options: { notify?: boolean } = {}): Promise<boolean> {
@@ -1043,7 +1073,9 @@ export const SplitAccountingPanel = forwardRef<SplitAccountingPanelHandle, Split
         [fields.splitAmount]:       calc === "amount"  ? row.splitAmount : null,
         [fields.distributedAmount]: row.distributedAmount,
         [fields.currencyCode]:      row.currencyCode || cc,
-        [fields.accountSource]:     row.accountSource || distributionConfig.defaultAccountSource,
+        [fields.businessIntentId]:  row.businessIntentId || inheritedBusinessIntentId || null,
+        [fields.commodityCategoryId]: row.commodityCategoryId || inheritedCommodityCategoryId || null,
+        [fields.accountSource]:     effectiveAccountSource(row),
         [fields.accountCode]:       row.accountCode   || null,
         [fields.costCenterId]:      row.costCenterId  || null,
         [fields.profitCenterId]:    row.profitCenterId || null,
@@ -1188,7 +1220,7 @@ export const SplitAccountingPanel = forwardRef<SplitAccountingPanelHandle, Split
           <span className={cn(
             "inline-flex h-[26px] items-center rounded-md border px-2.5 text-xs font-medium",
             hasSavingRows
-              ? "border-border/60 bg-background text-muted-foreground"
+              ? "border-input bg-background text-muted-foreground"
               : "border-warning/30 bg-warning/10 text-warning",
           )}>
             {hasSavingRows ? "Saving accounting" : "Pending accounting changes"}
@@ -1215,7 +1247,7 @@ export const SplitAccountingPanel = forwardRef<SplitAccountingPanelHandle, Split
                 <button
                   type="button"
                   onClick={evenSplit}
-                  className="h-[26px] px-3 rounded-md border border-border text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                  className="h-[26px] rounded-md border border-input bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
                 >
                   Even split
                 </button>
@@ -1297,9 +1329,9 @@ export const SplitAccountingPanel = forwardRef<SplitAccountingPanelHandle, Split
                   <div
                     key={key}
                     className={cn(
-                      "rounded-md border border-transparent transition-colors",
+                      "rounded-md border border-input bg-background transition-colors",
                       row._dirty && !row._isNew && "border-warning/20 bg-warning/5",
-                      row._isNew && "border-dashed border-border/40",
+                      row._isNew && "border-dashed border-input",
                     )}
                   >
                     {/* ── Row 1: Cost Centre · Project · Split value · Amount · Delete ── */}

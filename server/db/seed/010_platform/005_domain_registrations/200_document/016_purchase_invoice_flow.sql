@@ -8,7 +8,7 @@
 --   - tax_mode binding added (Step 2, amount_basis section)
 --   - payment_method_id relocated from Step 2 → Step 3
 --   - JSONLogic predicates: lowercase values throughout
--- Depends on: 001_invoice.sql, 001_invoice_v2.sql, 015_ap_override_permissions.sql,
+-- Depends on: 001_invoice.sql, 015_ap_override_permissions.sql,
 --             020_ap_flow_permissions.sql, control/01g_tables_flow_engine_ext.sql
 -- Idempotent: WHERE NOT EXISTS for flow+steps, ON CONFLICT for sections,
 --             DELETE+INSERT for field bindings (platform-level only, tenant_id IS NULL)
@@ -139,9 +139,9 @@ BEGIN
    'Goods, services, freight, and miscellaneous invoice lines.',
    5, false, NULL, 'auto_expand',
    'repeater', 'purchase_invoice_line', 'lines',
-   '["item_description","procurement_type","uom_code","quantity","unit_price","gross_amount","tax_amount","withholding_tax_amount","spend_category_id","business_intent_id","cost_center_id","profit_center_id","project_id","site_id"]'::jsonb,
+   '["item_description","procurement_type","uom_code","quantity","unit_price","gross_amount","tax_amount","withholding_tax_amount","commodity_category_id","business_intent_id","cost_center_id","profit_center_id","project_id","site_id"]'::jsonb,
    1,
-   '{"procurement_type":"services","uom_code":"EA","quantity":1}'::jsonb,
+   '{"procurement_type":"goods","uom_code":"EA","quantity":1}'::jsonb,
    v_su),
   (NULL, v_step_2, 'amount_basis',    'Amount Basis',
    'Invoice Total, tax interpretation, and derived amounts.',
@@ -192,7 +192,7 @@ BEGIN
     ('company_code_id',       'required',  'derived_overrideable',
       NULL::text, NULL::text, NULL, 'ctx.user.default_company_code',
       'ap.override_company_code', NULL, 'inline_search', 1,
-      'Company posting the invoice.', 10),
+      'Company posting the invoice.', 20),
     ('invoice_type',          'required',  'manual',
       NULL, NULL, 'lookup.document.purchase_invoice_type.standard', NULL, NULL,
       NULL, 'radio_cards', 2,
@@ -202,7 +202,7 @@ BEGIN
       NULL, 'segmented', 2,
       'Determines PO/commitment requirement and three-way/two-way match type.', 30),
     ('supplier_id',           'required',  'manual',
-      NULL, NULL, NULL, NULL, NULL, NULL, 'inline_search', 2, NULL, 40),
+      NULL, NULL, NULL, NULL, NULL, NULL, 'inline_search', 1, NULL, 10),
     ('commitment_id',         'editable',  'manual',
       '{"in":[{"var":"invoice_source"},["po_based","contract_based"]]}',
       '{"in":[{"var":"invoice_source"},["po_based","contract_based"]]}',

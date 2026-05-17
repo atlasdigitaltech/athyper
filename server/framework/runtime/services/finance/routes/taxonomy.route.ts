@@ -1,7 +1,7 @@
 /**
  * Finance Taxonomy Routes
  *
- * Read models for spend categories and business intents. These endpoints expose
+ * Read models for commodity categories and business intents. These endpoints expose
  * the DDL-backed taxonomy structure used by procurement intake, AP coding, GL
  * defaulting, and reporting attribution.
  */
@@ -13,6 +13,7 @@ import type { FinanceRouteDeps } from "./finance.route.js";
 
 interface SpendCategoryRow {
   id: string;
+  tenantId: string;
   code: string;
   name: string;
   description: string | null;
@@ -25,6 +26,8 @@ interface SpendCategoryRow {
   isClassificationRequired: boolean;
   isHsRequired: boolean;
   isRegulated: boolean;
+  allowedDomains: unknown;
+  defaultIntentId: string | null;
   defaultIntentCode: string | null;
   defaultIntentName: string | null;
   defaultIntentDomain: string | null;
@@ -34,8 +37,45 @@ interface SpendCategoryRow {
   supplierPolicyCount: string | number | null;
   supplierBlockCount: string | number | null;
   glDefaultCount: string | number | null;
+  metadata: unknown;
   status: string;
+  isActive: boolean | null;
+  statusChangedAt: string | null;
+  statusChangedBy: string | null;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
   sortOrder: number;
+}
+
+interface SpendCategoryRuleRow {
+  id: string;
+  tenantId: string;
+  classificationSource: string;
+  classificationId: string;
+  direction: string | null;
+  conditionType: string;
+  conditionConfig: unknown;
+  appliesToFlows: string[];
+  resolvedIntentId: string;
+  resolvedIntentCode: string | null;
+  resolvedIntentName: string | null;
+  resolvedDomain: string | null;
+  explanationTemplate: string;
+  confidence: string | number | null;
+  priority: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  metadata: unknown;
+  status: string;
+  isActive: boolean | null;
+  statusChangedAt: string | null;
+  statusChangedBy: string | null;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
 }
 
 interface BusinessIntentRow {
@@ -48,13 +88,6 @@ interface BusinessIntentRow {
   parentId: string | null;
   path: string | null;
   depth: number;
-  defaultGlAccountCode: string | null;
-  defaultGlAccountName: string | null;
-  defaultTaxCode: string | null;
-  defaultAssetProfileCode: string | null;
-  isApprovalRequired: boolean;
-  maxAutoApproveAmount: string | number | null;
-  maxAutoApproveCurrency: string | null;
   visibility: string;
   childCount: string | number | null;
   companyPolicyCount: string | number | null;
@@ -91,6 +124,7 @@ function toNumber(value: string | number | null | undefined): number {
 function mapSpendCategory(row: SpendCategoryRow) {
   return {
     id: row.id,
+    tenantId: row.tenantId,
     code: row.code,
     name: row.name,
     description: row.description,
@@ -103,6 +137,8 @@ function mapSpendCategory(row: SpendCategoryRow) {
     isClassificationRequired: row.isClassificationRequired,
     isHsRequired: row.isHsRequired,
     isRegulated: row.isRegulated,
+    allowedDomains: row.allowedDomains,
+    defaultIntentId: row.defaultIntentId,
     defaultIntentCode: row.defaultIntentCode,
     defaultIntentName: row.defaultIntentName,
     defaultIntentDomain: row.defaultIntentDomain,
@@ -112,8 +148,47 @@ function mapSpendCategory(row: SpendCategoryRow) {
     supplierPolicyCount: toNumber(row.supplierPolicyCount),
     supplierBlockCount: toNumber(row.supplierBlockCount),
     glDefaultCount: toNumber(row.glDefaultCount),
+    metadata: row.metadata,
     status: row.status,
+    isActive: row.isActive,
+    statusChangedAt: row.statusChangedAt,
+    statusChangedBy: row.statusChangedBy,
+    createdAt: row.createdAt,
+    createdBy: row.createdBy,
+    updatedAt: row.updatedAt,
+    updatedBy: row.updatedBy,
     sortOrder: row.sortOrder,
+  };
+}
+
+function mapSpendCategoryRule(row: SpendCategoryRuleRow) {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    classificationSource: row.classificationSource,
+    classificationId: row.classificationId,
+    direction: row.direction,
+    conditionType: row.conditionType,
+    conditionConfig: row.conditionConfig,
+    appliesToFlows: row.appliesToFlows,
+    resolvedIntentId: row.resolvedIntentId,
+    resolvedIntentCode: row.resolvedIntentCode,
+    resolvedIntentName: row.resolvedIntentName,
+    resolvedDomain: row.resolvedDomain,
+    explanationTemplate: row.explanationTemplate,
+    confidence: row.confidence === null ? null : toNumber(row.confidence),
+    priority: row.priority,
+    effectiveFrom: row.effectiveFrom,
+    effectiveTo: row.effectiveTo,
+    metadata: row.metadata,
+    status: row.status,
+    isActive: row.isActive,
+    statusChangedAt: row.statusChangedAt,
+    statusChangedBy: row.statusChangedBy,
+    createdAt: row.createdAt,
+    createdBy: row.createdBy,
+    updatedAt: row.updatedAt,
+    updatedBy: row.updatedBy,
   };
 }
 
@@ -128,13 +203,6 @@ function mapBusinessIntent(row: BusinessIntentRow) {
     parentId: row.parentId,
     path: row.path,
     depth: row.depth,
-    defaultGlAccountCode: row.defaultGlAccountCode,
-    defaultGlAccountName: row.defaultGlAccountName,
-    defaultTaxCode: row.defaultTaxCode,
-    defaultAssetProfileCode: row.defaultAssetProfileCode,
-    isApprovalRequired: row.isApprovalRequired,
-    maxAutoApproveAmount: row.maxAutoApproveAmount === null ? null : toNumber(row.maxAutoApproveAmount),
-    maxAutoApproveCurrency: row.maxAutoApproveCurrency,
     visibility: row.visibility,
     childCount: toNumber(row.childCount),
     companyPolicyCount: toNumber(row.companyPolicyCount),
@@ -187,21 +255,20 @@ function mapSpendSummary(row?: SpendSummarySqlRow | null) {
 async function querySpendSummary(db: FinanceRouteDeps["db"], tenantId: string) {
   const { rows } = await sql<SpendSummarySqlRow>`
     WITH policy_categories AS (
-      SELECT tenant_id, spend_category_id
-      FROM master.company_code_spend_policy
+      SELECT tenant_id, commodity_category_id AS spend_category_id
+      FROM control.commodity_category_buy_policy
       WHERE tenant_id = ${tenantId}::uuid
-      UNION
-      SELECT tenant_id, spend_category_id
-      FROM master.company_code_supplier_spend_policy
-      WHERE tenant_id = ${tenantId}::uuid
+        AND is_active = true
     ),
     company_policy AS (
       SELECT
         tenant_id,
         COUNT(*)::text AS company_policies,
         COUNT(*) FILTER (WHERE mapping_mode = 'DENY')::text AS company_denied
-      FROM master.company_code_spend_policy
+      FROM control.commodity_category_buy_policy
       WHERE tenant_id = ${tenantId}::uuid
+        AND scope_type = 'COMPANY'
+        AND is_active = true
       GROUP BY tenant_id
     ),
     supplier_policy AS (
@@ -210,12 +277,14 @@ async function querySpendSummary(db: FinanceRouteDeps["db"], tenantId: string) {
         COUNT(*)::text AS supplier_policies,
         COUNT(*) FILTER (
           WHERE mapping_mode = 'DENY'
-             OR sourcing_status = 'blocked'
-             OR po_status = 'blocked'
-             OR invoice_status = 'blocked'
+             OR metadata->>'sourcing_status' = 'blocked'
+             OR metadata->>'po_status' = 'blocked'
+             OR metadata->>'invoice_status' = 'blocked'
         )::text AS supplier_denied
-      FROM master.company_code_supplier_spend_policy
+      FROM control.commodity_category_buy_policy
       WHERE tenant_id = ${tenantId}::uuid
+        AND scope_type = 'SUPPLIER_PROFILE'
+        AND is_active = true
       GROUP BY tenant_id
     )
     SELECT
@@ -261,31 +330,36 @@ async function querySpendCategoryRows(
     company_policy AS (
       SELECT
         tenant_id,
-        spend_category_id,
+        commodity_category_id AS spend_category_id,
         COUNT(*)::text AS company_policy_count,
         COUNT(*) FILTER (WHERE mapping_mode = 'DENY')::text AS company_deny_count,
         COUNT(default_gl_account_id)::text AS gl_default_count
-      FROM master.company_code_spend_policy
+      FROM control.commodity_category_buy_policy
       WHERE tenant_id = ${tenantId}::uuid
-      GROUP BY tenant_id, spend_category_id
+        AND scope_type = 'COMPANY'
+        AND is_active = true
+      GROUP BY tenant_id, commodity_category_id
     ),
     supplier_policy AS (
       SELECT
         tenant_id,
-        spend_category_id,
+        commodity_category_id AS spend_category_id,
         COUNT(*)::text AS supplier_policy_count,
         COUNT(*) FILTER (
           WHERE mapping_mode = 'DENY'
-             OR sourcing_status = 'blocked'
-             OR po_status = 'blocked'
-             OR invoice_status = 'blocked'
+             OR metadata->>'sourcing_status' = 'blocked'
+             OR metadata->>'po_status' = 'blocked'
+             OR metadata->>'invoice_status' = 'blocked'
         )::text AS supplier_block_count
-      FROM master.company_code_supplier_spend_policy
+      FROM control.commodity_category_buy_policy
       WHERE tenant_id = ${tenantId}::uuid
-      GROUP BY tenant_id, spend_category_id
+        AND scope_type = 'SUPPLIER_PROFILE'
+        AND is_active = true
+      GROUP BY tenant_id, commodity_category_id
     )
     SELECT
       sc.id::text AS "id",
+      sc.tenant_id::text AS "tenantId",
       sc.code AS "code",
       sc.name AS "name",
       sc.description AS "description",
@@ -298,6 +372,8 @@ async function querySpendCategoryRows(
       sc.is_classification_required AS "isClassificationRequired",
       sc.is_hs_required AS "isHsRequired",
       sc.is_regulated AS "isRegulated",
+      sc.allowed_domains AS "allowedDomains",
+      sc.default_intent_id::text AS "defaultIntentId",
       bi.code AS "defaultIntentCode",
       bi.name AS "defaultIntentName",
       bi.domain AS "defaultIntentDomain",
@@ -307,7 +383,15 @@ async function querySpendCategoryRows(
       COALESCE(sp.supplier_policy_count, '0') AS "supplierPolicyCount",
       COALESCE(sp.supplier_block_count, '0') AS "supplierBlockCount",
       COALESCE(cp.gl_default_count, '0') AS "glDefaultCount",
+      sc.metadata AS "metadata",
       sc.status AS "status",
+      sc.is_active AS "isActive",
+      sc.status_changed_at::text AS "statusChangedAt",
+      sc.status_changed_by::text AS "statusChangedBy",
+      sc.created_at::text AS "createdAt",
+      sc.created_by::text AS "createdBy",
+      sc.updated_at::text AS "updatedAt",
+      sc.updated_by::text AS "updatedBy",
       sc.sort_order AS "sortOrder"
     FROM master.spend_category sc
     LEFT JOIN master.spend_category root
@@ -335,6 +419,56 @@ async function querySpendCategoryRows(
   `.execute(db);
 
   return rows.map(mapSpendCategory);
+}
+
+async function querySpendCategoryRules(
+  db: FinanceRouteDeps["db"],
+  tenantId: string,
+  classificationId: string,
+) {
+  const { rows } = await sql<SpendCategoryRuleRow>`
+    SELECT
+      r.id::text AS "id",
+      r.tenant_id::text AS "tenantId",
+      r.classification_source AS "classificationSource",
+      r.classification_id::text AS "classificationId",
+      r.direction AS "direction",
+      r.condition_type AS "conditionType",
+      r.condition_config AS "conditionConfig",
+      COALESCE(r.applies_to_flows, ARRAY[]::text[]) AS "appliesToFlows",
+      r.resolved_intent_id::text AS "resolvedIntentId",
+      bi.code AS "resolvedIntentCode",
+      bi.name AS "resolvedIntentName",
+      r.resolved_domain AS "resolvedDomain",
+      r.explanation_template AS "explanationTemplate",
+      r.confidence::text AS "confidence",
+      r.priority AS "priority",
+      r.effective_from::text AS "effectiveFrom",
+      r.effective_to::text AS "effectiveTo",
+      r.metadata AS "metadata",
+      r.status AS "status",
+      r.is_active AS "isActive",
+      r.status_changed_at::text AS "statusChangedAt",
+      r.status_changed_by::text AS "statusChangedBy",
+      r.created_at::text AS "createdAt",
+      r.created_by::text AS "createdBy",
+      r.updated_at::text AS "updatedAt",
+      r.updated_by::text AS "updatedBy"
+    FROM control.commodity_classification_to_intent_rule r
+    LEFT JOIN master.business_intent bi
+      ON bi.tenant_id = r.tenant_id
+     AND bi.id = r.resolved_intent_id
+    WHERE r.tenant_id = ${tenantId}::uuid
+      AND r.classification_source = 'COMMODITY_CATEGORY'
+      AND r.classification_id = ${classificationId}::uuid
+    ORDER BY
+      r.priority,
+      r.condition_type,
+      r.effective_from DESC,
+      r.id
+  `.execute(db);
+
+  return rows.map(mapSpendCategoryRule);
 }
 
 async function querySpendCategorySearchRows(
@@ -399,7 +533,7 @@ async function querySpendCategorySearchRows(
 export function createTaxonomyRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger } = deps;
 
-  router.get("/finance/spend-categories", (async (req, res, next) => {
+  const commodityCategoriesHandler = (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
@@ -420,6 +554,7 @@ export function createTaxonomyRoutes(router: Router, deps: FinanceRouteDeps): Ro
       const procurementType = firstQueryValue(req.query.procurementType)?.trim();
       const visibility = firstQueryValue(req.query.visibility)?.trim();
       const rootCode = firstQueryValue(req.query.rootCode)?.trim();
+      const includeRules = firstQueryValue(req.query.includeRules)?.trim() === "true";
       const summary = summaryMode === "false" ? emptySpendSummary() : await querySpendSummary(db, tenantId);
 
       if (summaryMode === "only") {
@@ -472,18 +607,26 @@ export function createTaxonomyRoutes(router: Router, deps: FinanceRouteDeps): Ro
         items = hasMore && pageLimit !== null ? rows.slice(0, pageLimit) : rows;
       }
 
+      const rules = includeRules && id
+        ? await querySpendCategoryRules(db, tenantId, id)
+        : undefined;
+
       res.json({
         items,
+        ...(rules !== undefined ? { rules } : {}),
         summary,
         pageInfo: { scope, limit: pageLimit, returned: items.length, hasMore },
         asAt: new Date().toISOString(),
         isLive: true,
       });
     } catch (err) {
-      logger?.error("finance_spend_categories_error", { err: String(err) });
+      logger?.error("finance_commodity_categories_error", { err: String(err) });
       next(err);
     }
-  }) as RequestHandler);
+  }) as RequestHandler;
+
+  router.get("/finance/commodity-categories", commodityCategoriesHandler);
+  router.get("/finance/spend-categories", commodityCategoriesHandler);
 
   router.get("/finance/business-intents", (async (req, res, next) => {
     try {
@@ -508,13 +651,46 @@ export function createTaxonomyRoutes(router: Router, deps: FinanceRouteDeps): Ro
         company_policy AS (
           SELECT
             tenant_id,
-            intent_id,
+            business_intent_id,
             COUNT(*)::text AS company_policy_count,
             COUNT(*) FILTER (WHERE mapping_mode = 'DENY')::text AS company_deny_count,
             COUNT(*) FILTER (WHERE is_default = true)::text AS company_default_count
-          FROM master.company_code_intent_policy
-          WHERE tenant_id = ${tenantId}::uuid
-          GROUP BY tenant_id, intent_id
+          FROM (
+            SELECT tenant_id, business_intent_id, mapping_mode, is_default
+            FROM control.commodity_category_buy_policy
+            WHERE tenant_id = ${tenantId}::uuid
+              AND scope_type = 'COMPANY'
+              AND is_active = true
+            UNION ALL
+            SELECT tenant_id, business_intent_id, mapping_mode, is_default
+            FROM control.commodity_category_sell_policy
+            WHERE tenant_id = ${tenantId}::uuid
+              AND scope_type = 'COMPANY'
+              AND is_active = true
+          ) policy
+          GROUP BY tenant_id, business_intent_id
+        ),
+        default_policy AS (
+          SELECT
+            tenant_id,
+            business_intent_id,
+            COUNT(*)::text AS default_policy_count
+          FROM (
+            SELECT tenant_id, business_intent_id
+            FROM control.commodity_category_buy_policy
+            WHERE tenant_id = ${tenantId}::uuid
+              AND scope_type IN ('TENANT', 'COMPANY')
+              AND is_default = true
+              AND is_active = true
+            UNION ALL
+            SELECT tenant_id, business_intent_id
+            FROM control.commodity_category_sell_policy
+            WHERE tenant_id = ${tenantId}::uuid
+              AND scope_type IN ('TENANT', 'COMPANY')
+              AND is_default = true
+              AND is_active = true
+          ) policy
+          GROUP BY tenant_id, business_intent_id
         ),
         supplier_policy AS (
           SELECT
@@ -522,8 +698,10 @@ export function createTaxonomyRoutes(router: Router, deps: FinanceRouteDeps): Ro
             business_intent_id,
             COUNT(*)::text AS supplier_policy_count,
             COUNT(*) FILTER (WHERE mapping_mode = 'DENY')::text AS supplier_deny_count
-          FROM master.company_code_supplier_intent_policy
+          FROM control.commodity_category_buy_policy
           WHERE tenant_id = ${tenantId}::uuid
+            AND scope_type = 'SUPPLIER_PROFILE'
+            AND is_active = true
           GROUP BY tenant_id, business_intent_id
         )
         SELECT
@@ -536,32 +714,25 @@ export function createTaxonomyRoutes(router: Router, deps: FinanceRouteDeps): Ro
           bi.parent_id::text AS "parentId",
           bi.path AS "path",
           bi.depth AS "depth",
-          ga.code AS "defaultGlAccountCode",
-          ga.name AS "defaultGlAccountName",
-          bi.default_tax_code AS "defaultTaxCode",
-          bi.default_asset_profile_code AS "defaultAssetProfileCode",
-          bi.is_approval_required AS "isApprovalRequired",
-          bi.max_auto_approve_amount AS "maxAutoApproveAmount",
-          bi.max_auto_approve_currency AS "maxAutoApproveCurrency",
           bi.visibility AS "visibility",
           COALESCE(cc.child_count, '0') AS "childCount",
           COALESCE(cp.company_policy_count, '0') AS "companyPolicyCount",
           COALESCE(cp.company_deny_count, '0') AS "companyDenyCount",
-          COALESCE(cp.company_default_count, '0') AS "companyDefaultCount",
+          COALESCE(dp.default_policy_count, '0') AS "companyDefaultCount",
           COALESCE(sp.supplier_policy_count, '0') AS "supplierPolicyCount",
           COALESCE(sp.supplier_deny_count, '0') AS "supplierDenyCount",
           bi.status AS "status",
           bi.sort_order AS "sortOrder"
         FROM master.business_intent bi
-        LEFT JOIN master.gl_account ga
-          ON ga.tenant_id = bi.tenant_id
-         AND ga.id = bi.default_gl_account_id
         LEFT JOIN child_counts cc
           ON cc.tenant_id = bi.tenant_id
          AND cc.parent_id = bi.id
         LEFT JOIN company_policy cp
           ON cp.tenant_id = bi.tenant_id
-         AND cp.intent_id = bi.id
+         AND cp.business_intent_id = bi.id
+        LEFT JOIN default_policy dp
+          ON dp.tenant_id = bi.tenant_id
+         AND dp.business_intent_id = bi.id
         LEFT JOIN supplier_policy sp
           ON sp.tenant_id = bi.tenant_id
          AND sp.business_intent_id = bi.id
@@ -591,8 +762,7 @@ export function createTaxonomyRoutes(router: Router, deps: FinanceRouteDeps): Ro
         roots: roots.length,
         leaves: items.length - roots.length,
         domains: domains.length,
-        approvalRequired: items.filter((item) => item.isApprovalRequired).length,
-        glDefaults: items.filter((item) => !!item.defaultGlAccountCode).length,
+        policyDefaults: items.reduce((sum, item) => sum + item.companyDefaultCount, 0),
         restricted: items.filter((item) => item.visibility !== "STANDARD").length,
         companyPolicies: items.reduce((sum, item) => sum + item.companyPolicyCount, 0),
         supplierPolicies: items.reduce((sum, item) => sum + item.supplierPolicyCount, 0),
@@ -631,8 +801,7 @@ function emptyIntentSummary() {
     roots: 0,
     leaves: 0,
     domains: 0,
-    approvalRequired: 0,
-    glDefaults: 0,
+    policyDefaults: 0,
     restricted: 0,
     companyPolicies: 0,
     supplierPolicies: 0,

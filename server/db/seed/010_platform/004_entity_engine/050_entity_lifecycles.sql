@@ -188,10 +188,9 @@ BEGIN
 
     -- ── REL: Products & Items ─────────────────────────────────────────────────
     INSERT INTO control.entity_lifecycle (tenant_id, entity_name, lifecycle_id, priority, created_by) VALUES
-        (NULL, 'product',       v_lc_active_inactive_archived, 100, v_su),
-        (NULL, 'item',          v_lc_active_inactive_archived, 100, v_su),
-        (NULL, 'item_category', v_lc_active_inactive,          100, v_su),
-        (NULL, 'spend_category', v_lc_active_inactive,         100, v_su)
+        (NULL, 'product',            v_lc_active_inactive_archived, 100, v_su),
+        (NULL, 'item',               v_lc_active_inactive_archived, 100, v_su),
+        (NULL, 'commodity_category', v_lc_active_inactive,          100, v_su)
     ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
 
     -- ── UI / CMS ─────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@
 --
 -- For the Non-PO pack we use two strategies:
 --   account_source = POSTING_ROLE → uses posting role fallback account
---   account_source = FROM_INTENT  → uses business_intent.default_gl_account_id
+--   account_source = FROM_INTENT  → resolves through commodity category buy policy / profile rules
 --                                     (for the expense/CAPEX line, which varies
 --                                      per invoice line's spend_category→intent)
 --
@@ -22,6 +22,7 @@
 --   DOCUMENT_TOTAL  → full header total
 --   ADVANCE_AMOUNT  → advance payment / recovery amount
 --   RETENTION_AMOUNT → retention withheld
+--   DISCOUNT_AMOUNT -> invoice/line discount that reduces recognized expense
 -- ============================================================================
 
 DO $seed_ap_templates$
@@ -37,11 +38,12 @@ BEGIN
 
     -- ════════════════════════════════════════════════════════════════════════
     -- AP_NON_PO_STANDARD · ORDER_APPROVAL (invoice post)
-    -- Scenarios covered by these 4 lines:
+    -- Scenarios covered by these 5 lines:
     --   A1 (plain):           line 10 + line 40 (REMAINDER = Cr AP full amount)
     --   A2 (+VAT):            line 10 + 20 + 40
     --   A3 (+WHT):            line 10 + 30 (WHT) + 40 (AP reduced)
     --   A4 (+VAT+WHT):        line 10 + 20 + 30 + 40
+    --   A5 (+discount):       line 10 + 32 (discount) + 40
     --   A8 (+retention):      line 10 + 35 (retention) + 40
     -- ════════════════════════════════════════════════════════════════════════
     FOR v_event IN
@@ -76,6 +78,12 @@ BEGIN
              'Cr WHT Payable',
              'CREDIT', 'POSTING_ROLE', 'wht_payable', 'IFRS-L-TAX-WHT-PAYABLE',
              'CALCULATED', false, 30, 'active', v_sys),
+
+            -- Line 32: Cr Purchase Discount / Expense Offset (only fires if discount_amount > 0)
+            (v_event.tenant_id, v_event.event_id, 32,
+             'Cr Purchase Discount / Expense Offset',
+             'CREDIT', 'FROM_INTENT', NULL, 'IFRS-E-OPEX-GENERAL',
+             'DISCOUNT_AMOUNT', false, 32, 'active', v_sys),
 
             -- Line 35: Cr AP Retention Payable (only fires if retention_amount > 0)
             (v_event.tenant_id, v_event.event_id, 35,

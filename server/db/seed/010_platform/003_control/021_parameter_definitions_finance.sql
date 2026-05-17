@@ -66,6 +66,23 @@ FROM (VALUES
      'next_request', 300, false, true, 20,
      '{"source":"server/workspace/finance/ap/matching.service.ts"}'),
 
+    ('finance.ap.default_procurement_line_type', 'finance.ap',
+     'Default procurement line type',
+     'Default Procurement Type applied when a user adds a new procurement line to a purchase invoice.',
+     'tenant_configurable', 'configurable', 'enum', NULL,
+     '"goods"', '"goods"', NULL, NULL,
+     '["goods","services","mixed","freight","misc"]',
+     'immediate', 300, false, true, 40,
+     '{"source":"packages/shared/runtime/document-runtime/src/items/ProcureLineComposerSheet.tsx","lookup_domain":"document.procurement_type","fallback_constant":"goods"}'),
+
+    ('finance.ap.default_procurement_line_uom', 'finance.ap',
+     'Default procurement line UoM',
+     'Default unit of measure applied when a user adds a standalone procurement line without a source document or item.',
+     'tenant_configurable', 'configurable', 'string', NULL,
+     '"EA"', '"EA"', NULL, NULL, NULL,
+     'immediate', 300, false, true, 45,
+     '{"source":"packages/shared/runtime/document-runtime/src/items/ProcureLineComposerSheet.tsx","fallback_constant":"EA","meaning":"Each"}'),
+
     ('finance.ap.tolerance_percent',     'finance.ap',
      'AP matching percentage tolerance',
      'Maximum percentage difference allowed when matching invoice value to GR/PO value.',
@@ -111,13 +128,13 @@ FROM (VALUES
      '{"source":"packages/domain/finance/finance-workbench/src/lib/reportRegistry.ts:107","fallback_constant":"DEFAULT_REPORT"}'),
 
     -- Workbench: Supply Chain
-    ('workbench.supply_chain.spend_category_tree_batch_size', 'workbench.supply_chain',
-     'Spend category tree batch size',
-     'Maximum number of spend-category hierarchy rows loaded per tree request in the supply-chain workbench Explorer.',
+    ('workbench.supply_chain.commodity_category_tree_batch_size', 'workbench.supply_chain',
+     'Commodity category tree batch size',
+     'Maximum number of commodity-category hierarchy rows loaded per tree request in the supply-chain workbench Explorer.',
      'tenant_configurable', 'configurable', 'integer', 'rows',
      '500', '500', '50', '1000', NULL,
      'immediate', 300, false, true, 10,
-     '{"source":"packages/domain/finance/finance-workbench/src/hooks/useTaxonomyWorkbenches.ts","scope":"hierarchy_tree_only","fallback_constant":"DEFAULT_SPEND_CATEGORY_TREE_BATCH_SIZE"}'),
+     '{"source":"packages/domain/finance/finance-workbench/src/hooks/useTaxonomyWorkbenches.ts","scope":"hierarchy_tree_only","fallback_constant":"DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE","legacy_code":"workbench.supply_chain.spend_category_tree_batch_size"}'),
 
     -- ── Finance: Numbering ────────────────────────────────────────────────────
     ('finance.numbering.je_prefix',      'finance.numbering',
@@ -189,11 +206,19 @@ FROM (VALUES
 
     ('api.pagination.max_page_size',     'api.pagination',
      'Maximum list page size',
-     'Hard upper bound on page_size query parameter across all entity list views.',
+     'Hard upper bound on page_size query parameter across all entity list views. Values above 500 must use page navigation.',
      'system_controlled', 'readonly', 'integer', 'rows',
-     '100', '100', '20', '1000', NULL,
+     '500', '500', '20', '500', NULL,
      'next_request', 300, false, true, 20,
      '{"source":"server/framework/runtime/services/records/routes/records.route.ts:363"}'),
+
+    ('api.pagination.load_more_increment', 'api.pagination',
+     'Load more increment',
+     'Number of additional records requested when the entity list Load More control is used.',
+     'tenant_configurable', 'configurable', 'integer', 'rows',
+     '50', '50', '1', '500', NULL,
+     'next_request', 300, false, true, 25,
+     '{"source":"packages/shared/runtime/entity-runtime/src/list/EntityListPage.tsx","fallback_constant":"DEFAULT_LOAD_MORE_SIZE"}'),
 
     ('api.pagination.picker_tree_min_page_size', 'api.pagination',
      'Picker tree minimum page size',

@@ -41,18 +41,14 @@ SELECT
       "extension_modes": ["supplier_role", "customer_role", "supplier_company_code", "customer_company_code"],
       "ownership_lanes": {
         "identity": ["name", "legal_name", "registration_no", "registration_country_code", "tax_residence_country_code"],
-        "supplier": ["supplier_type", "spend_category_id", "payment_term_id", "payment_method_id"],
+        "supplier": ["supplier_type", "commodity_category_id", "payment_term_id", "payment_method_id"],
         "customer": ["customer_type", "is_key_account", "risk_rating"],
         "finance_ap": ["company_code_supplier_profile"],
         "finance_ar": ["company_code_customer_profile"]
       }
     }'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'business_partner'
-      AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── Ensure Business Partner identity can be edited (re-run safe) ─────────────
 UPDATE control.entity
@@ -70,7 +66,7 @@ SET feature_flags = COALESCE(feature_flags, '{}'::jsonb) || '{
       "extension_modes": ["supplier_role", "customer_role", "supplier_company_code", "customer_company_code"],
       "ownership_lanes": {
         "identity": ["name", "legal_name", "registration_no", "registration_country_code", "tax_residence_country_code"],
-        "supplier": ["supplier_type", "spend_category_id", "payment_term_id", "payment_method_id"],
+        "supplier": ["supplier_type", "commodity_category_id", "payment_term_id", "payment_method_id"],
         "customer": ["customer_type", "is_key_account", "risk_rating"],
         "finance_ap": ["company_code_supplier_profile"],
         "finance_ar": ["company_code_customer_profile"]
@@ -265,11 +261,7 @@ SELECT
     '{}'::jsonb,
     '{"parent_entity":"business_partner","parent_fk":"business_partner_id"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE entity_code = 'business_partner_network_link'
-      AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 INSERT INTO control.entity_version (
     entity_id, tenant_id, version_no, status, effective_from, created_by)
@@ -917,7 +909,7 @@ SET natural_key_fields = ARRAY['code'],
       "extension_modes": ["supplier_role", "customer_role", "supplier_company_code", "customer_company_code"],
       "ownership_lanes": {
         "identity": ["name", "legal_name", "registration_no", "registration_country_code", "tax_residence_country_code"],
-        "supplier": ["supplier_type", "spend_category_id", "payment_term_id", "payment_method_id"],
+        "supplier": ["supplier_type", "commodity_category_id", "payment_term_id", "payment_method_id"],
         "customer": ["customer_type", "is_key_account", "risk_rating"],
         "finance_ap": ["company_code_supplier_profile"],
         "finance_ar": ["company_code_customer_profile"]

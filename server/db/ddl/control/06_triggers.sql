@@ -849,23 +849,64 @@ CREATE TRIGGER trg_apdr_status_changed
 
 
 -- ============================================================================
--- control.classification_to_intent_rule
+-- control.commodity_classification_to_intent_rule
 -- ============================================================================
 
-DROP TRIGGER IF EXISTS trg_cir_updated_at ON control.classification_to_intent_rule;
+DROP TRIGGER IF EXISTS trg_cir_updated_at ON control.commodity_classification_to_intent_rule;
 CREATE TRIGGER trg_cir_updated_at
-    BEFORE UPDATE ON control.classification_to_intent_rule
+    BEFORE UPDATE ON control.commodity_classification_to_intent_rule
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_cir_status_changed ON control.classification_to_intent_rule;
+DROP TRIGGER IF EXISTS trg_cir_status_changed ON control.commodity_classification_to_intent_rule;
 CREATE TRIGGER trg_cir_status_changed
-    BEFORE UPDATE ON control.classification_to_intent_rule
+    BEFORE UPDATE ON control.commodity_classification_to_intent_rule
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 
 -- ============================================================================
 -- control.intent_to_accounting_profile_rule
 -- ============================================================================
+
+DROP TRIGGER IF EXISTS trg_ccbpol_updated_at ON control.commodity_category_buy_policy;
+CREATE TRIGGER trg_ccbpol_updated_at
+    BEFORE UPDATE ON control.commodity_category_buy_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_ccbpol_status_changed ON control.commodity_category_buy_policy;
+CREATE TRIGGER trg_ccbpol_status_changed
+    BEFORE UPDATE ON control.commodity_category_buy_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+DROP TRIGGER IF EXISTS trg_ccselpol_updated_at ON control.commodity_category_sell_policy;
+CREATE TRIGGER trg_ccselpol_updated_at
+    BEFORE UPDATE ON control.commodity_category_sell_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_ccselpol_status_changed ON control.commodity_category_sell_policy;
+CREATE TRIGGER trg_ccselpol_status_changed
+    BEFORE UPDATE ON control.commodity_category_sell_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+DROP TRIGGER IF EXISTS trg_ccipol_updated_at ON control.commodity_category_inventory_policy;
+CREATE TRIGGER trg_ccipol_updated_at
+    BEFORE UPDATE ON control.commodity_category_inventory_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_ccipol_status_changed ON control.commodity_category_inventory_policy;
+CREATE TRIGGER trg_ccipol_status_changed
+    BEFORE UPDATE ON control.commodity_category_inventory_policy
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+DROP TRIGGER IF EXISTS trg_spo_updated_at ON control.supplier_posting_override;
+CREATE TRIGGER trg_spo_updated_at
+    BEFORE UPDATE ON control.supplier_posting_override
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_spo_status_changed ON control.supplier_posting_override;
+CREATE TRIGGER trg_spo_status_changed
+    BEFORE UPDATE ON control.supplier_posting_override
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
 
 DROP TRIGGER IF EXISTS trg_iprr_updated_at ON control.intent_to_accounting_profile_rule;
 CREATE TRIGGER trg_iprr_updated_at
@@ -950,17 +991,17 @@ CREATE TRIGGER trg_dsc_reset_strategy_lookup
 -- =============================================================================
 
 -- =============================================================================
--- §CCRR  control.commodity_to_spend_category_rule
+-- §CCRR  control.commodity_code_to_category_rule
 -- =============================================================================
 
-DROP TRIGGER IF EXISTS trg_ccrr_updated_at ON control.commodity_to_spend_category_rule;
+DROP TRIGGER IF EXISTS trg_ccrr_updated_at ON control.commodity_code_to_category_rule;
 CREATE TRIGGER trg_ccrr_updated_at
-    BEFORE UPDATE ON control.commodity_to_spend_category_rule
+    BEFORE UPDATE ON control.commodity_code_to_category_rule
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_ccrr_status_changed ON control.commodity_to_spend_category_rule;
+DROP TRIGGER IF EXISTS trg_ccrr_status_changed ON control.commodity_code_to_category_rule;
 CREATE TRIGGER trg_ccrr_status_changed
-    BEFORE UPDATE OF status ON control.commodity_to_spend_category_rule
+    BEFORE UPDATE OF status ON control.commodity_code_to_category_rule
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 

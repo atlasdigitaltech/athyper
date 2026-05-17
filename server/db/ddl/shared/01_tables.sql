@@ -833,7 +833,7 @@ COMMENT ON TABLE shared.plan_feature_access IS
 -- §22  shared.commodity_crosswalk — cross-domain commodity code mapping
 -- =============================================================================
 -- Answers: "UNSPSC code 43211503 maps to HS code 8471.30."
--- Reverse of this direction lives in control.commodity_to_spend_category_rule.
+-- Reverse of this direction lives in control.commodity_code_to_category_rule.
 -- FKs to shared.commodity_code (source + target) → 06_constraints/001_shared.sql
 -- Indexes → 07_indexes/001_shared.sql
 -- =============================================================================

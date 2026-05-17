@@ -122,7 +122,7 @@ BEGIN
         INSERT INTO document.purchase_invoice_line (
             tenant_id, purchase_invoice_id, line_no,
             item_description, procurement_type,
-            spend_category_id, business_intent_id,
+            commodity_category_id, business_intent_id,
             uom_code, quantity, unit_price,
             tax_amount, withholding_tax_amount, gross_amount,
             created_by

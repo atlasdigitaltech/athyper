@@ -30,14 +30,14 @@ import type { HeaderTab } from "../header/types";
 import { buildMasterHeaderModel, formatValue } from "../header/builders/buildMasterHeaderModel";
 import { titleCase } from "@athyper/runtime-shared/core";
 import {
-  resolveFormConfig,
+  resolveDetailConfig,
   resolveMasterConfig,
   resolveTabs,
   type MasterConfig,
   type MasterTab,
   type MasterTabSection,
 } from "@athyper/metadata-client/compiled-reader";
-import { resolveFieldRenderer } from "../field-renderers/registry";
+import { resolveFieldRenderer, BOOLEAN_UI_TYPES, BOOLEAN_FULL_WIDTH_UI_TYPES } from "../field-renderers";
 import { CommentList } from "@athyper/collaboration-ui/comments";
 import { useOperationDispatch } from "../actions/useOperationDispatch";
 import { EntityForm, type EntityFormHandle } from "../form/EntityForm";
@@ -65,6 +65,7 @@ export interface MasterDetailPageProps {
   operations: EntityOperation[] | undefined;
   recordId:   string;
   editMode?:  boolean;
+  returnTo?:   string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -84,6 +85,23 @@ function plainRecord(value: unknown): Record<string, unknown> | undefined {
 
 function textConfig(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function safeInternalReturnHref(value: string | undefined): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
+function operationLeafCode(op: EntityOperation): string {
+  return op.permission_code.includes(".")
+    ? op.permission_code.split(".").pop()!
+    : op.permission_code;
+}
+
+function isEditNavigationOperation(op: EntityOperation): boolean {
+  const code = operationLeafCode(op).toLowerCase();
+  const target = (op.handler_target ?? "").toLowerCase();
+  return code === "edit" || code === "update" || target === "edit";
 }
 
 function stringArrayConfig(value: unknown): string[] {
@@ -559,12 +577,17 @@ function InlineEditSection({
       {flds.map((field) => {
         const Renderer = resolveFieldRenderer(field);
         const val = extractFieldValue(formData, field);
+        const effectiveUiType = field.ui_type ?? field.data_type;
+        const embedsLabel = BOOLEAN_UI_TYPES.has(effectiveUiType);
+        const isFullWidth = BOOLEAN_FULL_WIDTH_UI_TYPES.has(effectiveUiType);
         return (
-          <div key={field.name} className="space-y-1.5">
-            <Label>
-              {field.label ?? field.name}
-              {field.is_required && <span className="ml-1 text-destructive">*</span>}
-            </Label>
+          <div key={field.name} className={isFullWidth ? "space-y-1.5 md:col-span-2" : "space-y-1.5"}>
+            {!embedsLabel && (
+              <Label>
+                {field.label ?? field.name}
+                {field.is_required && <span className="ml-1 text-destructive">*</span>}
+              </Label>
+            )}
             <Renderer
               value={val}
               field={field}
@@ -1275,12 +1298,14 @@ export function MasterDetailPage({
   operations,
   recordId,
   editMode = false,
+  returnTo,
 }: MasterDetailPageProps) {
   const router         = useRouter();
   const data           = record.data;
   const auditFieldNames = configuredAuditFieldNames(entity);
   const updateMutation = useUpdateEntity(entity.entity_code, recordId);
   const config         = resolveMasterConfig(entity);
+  const returnToHref   = safeInternalReturnHref(returnTo);
   const formRef        = useRef<EntityFormHandle>(null);
   const [isDirty, setIsDirty]         = useState(false);
   const [activePanel, setActivePanel]             = useState<string | null>(null);
@@ -1435,12 +1460,20 @@ export function MasterDetailPage({
     statusFieldName: configuredStatusFieldNames(entity)[0],
   });
 
+  const detailHref = (mode?: "edit") => {
+    const params = new URLSearchParams();
+    if (mode === "edit") params.set("mode", "edit");
+    if (returnToHref) params.set("returnTo", returnToHref);
+    const qs = params.toString();
+    return `/app/${entity.entity_code}/${recordId}${qs ? `?${qs}` : ""}`;
+  };
+
   function handleAction(actionId: string) {
     if (editMode) {
       if (actionId === "__exit" || actionId === "__discard") {
         setIsDirty(false);
         setEditFormData(data);
-        router.push(`/app/${entity.entity_code}/${recordId}`);
+        router.replace(detailHref());
         return;
       }
       if (actionId === "__save") {
@@ -1467,7 +1500,7 @@ export function MasterDetailPage({
             try {
               await updateMutation.mutateAsync(payload);
               setIsDirty(false);
-              router.push(`/app/${entity.entity_code}/${recordId}`);
+              router.replace(detailHref());
             } catch {
               // mutation error is surfaced by useUpdateEntity
             }
@@ -1482,6 +1515,10 @@ export function MasterDetailPage({
     }
     const op = (operations ?? []).find((o) => o.permission_code === actionId);
     if (!op) return;
+    if (isEditNavigationOperation(op)) {
+      router.push(detailHref("edit"));
+      return;
+    }
     if (op.handler_type === "NAVIGATE" && op.handler_target) {
       router.push(op.handler_target.replace("{id}", encodeURIComponent(recordId)));
       return;
@@ -1539,11 +1576,11 @@ export function MasterDetailPage({
             onSubmit={async (formData) => {
               await updateMutation.mutateAsync(formData);
               setIsDirty(false);
-              router.push(`/app/${entity.entity_code}/${recordId}`);
+              router.replace(detailHref());
             }}
             onCancel={() => {
               setIsDirty(false);
-              router.push(`/app/${entity.entity_code}/${recordId}`);
+              router.replace(detailHref());
             }}
             onChange={() => setIsDirty(true)}
             submitting={updateMutation.isPending}
@@ -1702,7 +1739,7 @@ export function MasterDetailPage({
     <>
       <EntityHeader
         model={headerModel}
-        onBack={() => router.back()}
+        onBack={() => returnToHref ? router.push(returnToHref) : router.back()}
         editMode={editMode}
         onAction={handleAction}
         activeTab={activeTab}
@@ -1820,14 +1857,16 @@ export interface SimpleDetailPageProps {
   record:      { id: string; data: Record<string, unknown>; status?: string };
   operations:  EntityOperation[] | undefined;
   editMode?:   boolean;
+  returnTo?:    string;
   canEdit?:    boolean;
 }
 
 export function SimpleDetailPage({
-  entityCode, recordId, entity, record, operations, editMode = false, canEdit = true,
+  entityCode, recordId, entity, record, operations, editMode = false, returnTo, canEdit = true,
 }: SimpleDetailPageProps) {
   const router         = useRouter();
   const updateMutation = useUpdateEntity(entityCode, recordId);
+  const returnToHref   = safeInternalReturnHref(returnTo);
   const opDispatch     = useOperationDispatch({
     entityCode,
     recordId,
@@ -1837,7 +1876,27 @@ export function SimpleDetailPage({
   const data         = record.data as Record<string, unknown>;
   const auditFieldNames = configuredAuditFieldNames(entity);
   const masterConfig = resolveMasterConfig(entity);
-  const formConfig   = resolveFormConfig(entity);
+  const viewSections = useMemo(() => {
+    const detailConfig = resolveDetailConfig(entity);
+    if (detailConfig.sections.length > 0) return detailConfig.sections;
+
+    const fields = entity.fields
+      .filter((f) => f.origin !== "system" && !fieldHiddenInSurface(f, "detail"))
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    return fields.length > 0
+      ? [{
+          group: {
+            group_key:   "general",
+            label:       "General",
+            description: null,
+            sort_order:  0,
+            fields:      fields.map((f) => f.name),
+          },
+          fields,
+        }]
+      : [];
+  }, [entity]);
   // Single Overview tab — all fields displayed together
   const headerTabs: HeaderTab[] = [{ id: "__overview", label: "Overview" }];
 
@@ -1845,6 +1904,14 @@ export function SimpleDetailPage({
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const formRef  = useRef<EntityFormHandle>(null);
   const [isDirty, setIsDirty] = useState(false);
+
+  const detailHref = (mode?: "edit") => {
+    const params = new URLSearchParams();
+    if (mode === "edit") params.set("mode", "edit");
+    if (returnToHref) params.set("returnTo", returnToHref);
+    const qs = params.toString();
+    return `/app/${entityCode}/${recordId}${qs ? `?${qs}` : ""}`;
+  };
 
   // Platform panel gating — identical to MasterDetailPage: driven by masterConfig.platform_panels
   const hasPlatformComments    = (masterConfig.platform_panels ?? []).includes("comments");
@@ -1939,7 +2006,7 @@ export function SimpleDetailPage({
     if (editMode) {
       if (id === "__exit" || id === "__discard") {
         setIsDirty(false);
-        router.push(`/app/${entityCode}/${recordId}`);
+        router.replace(detailHref());
       } else if (id === "__save") {
         void formRef.current?.submit();
       }
@@ -1947,7 +2014,7 @@ export function SimpleDetailPage({
     }
 
     if (id === "__edit") {
-      router.push(`/app/${entityCode}/${recordId}?mode=edit`);
+      router.push(detailHref("edit"));
       return;
     }
 
@@ -1988,6 +2055,10 @@ export function SimpleDetailPage({
 
     const op = (operations ?? []).find((o) => o.permission_code === id);
     if (!op) return;
+    if (isEditNavigationOperation(op)) {
+      router.push(detailHref("edit"));
+      return;
+    }
     if (op.handler_type === "NAVIGATE" && op.handler_target) {
       router.push(op.handler_target.replace("{id}", encodeURIComponent(recordId)));
       return;
@@ -1999,7 +2070,7 @@ export function SimpleDetailPage({
     <>
       <EntityHeader
         model={headerModel}
-        onBack={() => router.back()}
+        onBack={() => returnToHref ? router.push(returnToHref) : router.back()}
         editMode={editMode}
         onAction={handleAction}
         activeTab={activeTab}
@@ -2017,11 +2088,11 @@ export function SimpleDetailPage({
             onSubmit={async (formData) => {
               await updateMutation.mutateAsync(formData);
               setIsDirty(false);
-              router.push(`/app/${entityCode}/${recordId}`);
+              router.replace(detailHref());
             }}
             onCancel={() => {
               setIsDirty(false);
-              router.push(`/app/${entityCode}/${recordId}`);
+              router.replace(detailHref());
             }}
             onChange={() => setIsDirty(true)}
             submitting={updateMutation.isPending}
@@ -2029,7 +2100,7 @@ export function SimpleDetailPage({
             noFrame
           />
         ) : (
-          activeTab === "__overview" && formConfig.sections.map((section) => {
+          activeTab === "__overview" && viewSections.map((section) => {
             return (
               <Card key={section.group.group_key}>
                 <CardHeader>

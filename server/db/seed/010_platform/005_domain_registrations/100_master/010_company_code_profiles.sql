@@ -66,30 +66,30 @@ SET display_config     = COALESCE(display_config, '{}'::jsonb) || jsonb_build_ob
                     )),
                 jsonb_build_object('id','__policies','label','Policies','renderer','composite',
                     'composite_sections', jsonb_build_array(
-                        jsonb_build_object('id','__spend_policies','label','Spend Policies','type','child_list',
-                            'entity_code','company_code_supplier_spend_policy',
+                        jsonb_build_object('id','__spend_policies','label','Buy Policies','type','child_list',
+                            'entity_code','commodity_category_buy_policy',
                             'display_fields',jsonb_build_array(
-                                'supplier_profile_id','spend_category_id','mapping_mode',
+                                'supplier_profile_id','commodity_category_id','mapping_mode',
                                 'sourcing_status','qualification_status','po_status','invoice_status',
                                 'valid_from','valid_until','max_po_amount','max_po_currency_code',
                                 'is_preferred_supplier','notes','status'
                             ),
-                            'add_href_template','/app/company_code_supplier_spend_policy/new?parent_id={uuid}',
-                            'add_label','Add Spend Policy',
+                            'add_href_template','/app/commodity_category_buy_policy/new?parent_id={uuid}',
+                            'add_label','Add Buy Policy',
                             'empty_title','No spend policies',
                             'empty_description','Company-specific spend eligibility appears here.',
                             'config',jsonb_build_object(
-                                'title','spend_category_id',
+                                'title','commodity_category_id',
                                 'facts',jsonb_build_array('mapping_mode','sourcing_status','qualification_status','po_status','invoice_status','valid_from','valid_until','max_po_amount'),
                                 'badges',jsonb_build_array('status','expiry'),
                                 'presentation','policy_matrix',
                                 'presentation_config',jsonb_build_object(
                                     'references',jsonb_build_object(
                                         'supplier_profile_id',jsonb_build_object('target_entity','company_code_supplier_profile','target_field','id','display_field','company_code_id'),
-                                        'spend_category_id',jsonb_build_object('target_entity','spend_category','target_field','id','display_field','name','picker',jsonb_build_object('code_field','code','show_code',true))
+                                        'commodity_category_id',jsonb_build_object('target_entity','commodity_category','target_field','id','display_field','name','picker',jsonb_build_object('code_field','code','show_code',true))
                                     ),
                                     'columns',jsonb_build_array(
-                                        jsonb_build_object('field','spend_category_id','label','Category'),
+                                        jsonb_build_object('field','commodity_category_id','label','Category'),
                                         jsonb_build_object('field','mapping_mode','label','Mapping'),
                                         jsonb_build_object('field','sourcing_status','label','Sourcing','kind','status'),
                                         jsonb_build_object('field','qualification_status','label','Qualification','kind','status'),
@@ -103,9 +103,9 @@ SET display_config     = COALESCE(display_config, '{}'::jsonb) || jsonb_build_ob
                                 'defaultSort',jsonb_build_array('status:asc','valid_until:asc')
                             )),
                         jsonb_build_object('id','__intent_policies','label','Intent Policies','type','child_list',
-                            'entity_code','company_code_supplier_intent_policy',
+                            'entity_code','commodity_category_buy_policy',
                             'display_fields',jsonb_build_array('supplier_profile_id','business_intent_id','mapping_mode','is_default','is_sourcing_allowed','is_po_allowed','is_invoice_allowed','status'),
-                            'add_href_template','/app/company_code_supplier_intent_policy/new?parent_id={uuid}',
+                            'add_href_template','/app/commodity_category_buy_policy/new?parent_id={uuid}',
                             'add_label','Add Intent Policy',
                             'empty_title','No intent policies',
                             'empty_description','Buying intent controls appear here.',
@@ -131,9 +131,9 @@ SET display_config     = COALESCE(display_config, '{}'::jsonb) || jsonb_build_ob
                                 'defaultSort',jsonb_build_array('is_default:desc','status:asc')
                             )),
                         jsonb_build_object('id','__posting_overrides','label','Posting Overrides','type','child_list',
-                            'entity_code','company_code_supplier_posting_override',
+                            'entity_code','supplier_posting_override',
                             'display_fields',jsonb_build_array('supplier_profile_id','posting_role_code','gl_account_id','book_code','effective_from','effective_to','reason','status'),
-                            'add_href_template','/app/company_code_supplier_posting_override/new?parent_id={uuid}',
+                            'add_href_template','/app/supplier_posting_override/new?parent_id={uuid}',
                             'add_label','Add Override',
                             'empty_title','No posting overrides',
                             'empty_description','AP posting exceptions appear here.',

@@ -23,11 +23,7 @@ SELECT
     '{}'::jsonb,
     '{"parent_entity":"business_partner","parent_fk":"business_partner_id","is_readonly":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE entity_code = 'business_partner_role_summary'
-      AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 UPDATE control.entity
 SET feature_flags = COALESCE(feature_flags, '{}'::jsonb)

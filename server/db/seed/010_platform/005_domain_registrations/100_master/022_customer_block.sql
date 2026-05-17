@@ -22,11 +22,7 @@ SELECT
     '{}'::jsonb,
     '{"parent_entity":"customer","parent_fk":"customer_id"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'customer_block'
-      AND entity_code = 'customer_block' AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- 2. control.entity_version
 INSERT INTO control.entity_version (

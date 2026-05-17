@@ -491,6 +491,112 @@ BEGIN
      v_sc_trade, v_sc_trade, 'goods',    'standard', 52, v_meta, v_su)
     ON CONFLICT (tenant_id, code) DO NOTHING;
 
+    INSERT INTO master.commodity_category (
+        id, tenant_id, code, name, description, parent_id, root_category_id,
+        level_no, sort_order, buy_allowed, is_classification_required,
+        is_hs_required, is_regulated, allowed_classification_domains,
+        metadata, status, created_by)
+    SELECT
+        sc.id,
+        sc.tenant_id,
+        sc.code,
+        sc.name,
+        sc.description,
+        NULL,
+        sc.id,
+        1,
+        sc.sort_order,
+        true,
+        sc.is_classification_required,
+        sc.is_hs_required,
+        sc.is_regulated,
+        COALESCE(sc.allowed_domains, '[]'::jsonb),
+        COALESCE(sc.metadata, '{}'::jsonb)
+            || jsonb_build_object('_commodity_model', jsonb_build_object(
+                'pack', '004_finance_controls',
+                'source_table', 'master.spend_category',
+                'source_id', sc.id,
+                'seeded_at', now()::text
+            )),
+        sc.status,
+        v_su
+    FROM master.spend_category sc
+    WHERE sc.tenant_id = v_tid
+      AND sc.parent_id IS NULL
+    ON CONFLICT (tenant_id, code) DO UPDATE
+       SET name                           = EXCLUDED.name,
+           description                    = EXCLUDED.description,
+           buy_allowed                    = true,
+           is_classification_required     = EXCLUDED.is_classification_required,
+           is_hs_required                 = EXCLUDED.is_hs_required,
+           is_regulated                   = EXCLUDED.is_regulated,
+           allowed_classification_domains = EXCLUDED.allowed_classification_domains,
+           metadata                       = master.commodity_category.metadata
+                                            || jsonb_build_object('_commodity_model', EXCLUDED.metadata -> '_commodity_model'),
+           updated_at                     = now(),
+           updated_by                     = v_su;
+
+    INSERT INTO master.commodity_category (
+        id, tenant_id, code, name, description, parent_id, root_category_id,
+        level_no, sort_order, buy_allowed, is_classification_required,
+        is_hs_required, is_regulated, allowed_classification_domains,
+        metadata, status, created_by)
+    SELECT
+        sc.id,
+        sc.tenant_id,
+        sc.code,
+        sc.name,
+        sc.description,
+        parent_cc.id,
+        root_cc.id,
+        COALESCE(parent_cc.level_no + 1, 2),
+        sc.sort_order,
+        true,
+        sc.is_classification_required,
+        sc.is_hs_required,
+        sc.is_regulated,
+        COALESCE(sc.allowed_domains, '[]'::jsonb),
+        COALESCE(sc.metadata, '{}'::jsonb)
+            || jsonb_build_object('_commodity_model', jsonb_build_object(
+                'pack', '004_finance_controls',
+                'source_table', 'master.spend_category',
+                'source_id', sc.id,
+                'seeded_at', now()::text
+            )),
+        sc.status,
+        v_su
+    FROM master.spend_category sc
+    JOIN master.spend_category parent_sc
+      ON parent_sc.tenant_id = sc.tenant_id
+     AND parent_sc.id = sc.parent_id
+    JOIN master.spend_category root_sc
+      ON root_sc.tenant_id = sc.tenant_id
+     AND root_sc.id = sc.root_category_id
+    JOIN master.commodity_category parent_cc
+      ON parent_cc.tenant_id = sc.tenant_id
+     AND parent_cc.code = parent_sc.code
+    JOIN master.commodity_category root_cc
+      ON root_cc.tenant_id = sc.tenant_id
+     AND root_cc.code = root_sc.code
+    WHERE sc.tenant_id = v_tid
+      AND sc.parent_id IS NOT NULL
+    ON CONFLICT (tenant_id, code) DO UPDATE
+       SET name                           = EXCLUDED.name,
+           description                    = EXCLUDED.description,
+           parent_id                      = EXCLUDED.parent_id,
+           root_category_id               = EXCLUDED.root_category_id,
+           level_no                       = EXCLUDED.level_no,
+           sort_order                     = EXCLUDED.sort_order,
+           buy_allowed                    = true,
+           is_classification_required     = EXCLUDED.is_classification_required,
+           is_hs_required                 = EXCLUDED.is_hs_required,
+           is_regulated                   = EXCLUDED.is_regulated,
+           allowed_classification_domains = EXCLUDED.allowed_classification_domains,
+           metadata                       = master.commodity_category.metadata
+                                            || jsonb_build_object('_commodity_model', EXCLUDED.metadata -> '_commodity_model'),
+           updated_at                     = now(),
+           updated_by                     = v_su;
+
     RAISE NOTICE '[P06] 17 spend categories seeded (5 root + 12 leaf)';
 END $p06$;
 

@@ -32,7 +32,7 @@ export interface LineComposerSheetProps {
   suggestBaseUrl?: string;
   classifyBaseUrl?: string;
   onMutated?: () => void;
-  onDraftSubmit?: (payload: Record<string, unknown>) => void;
+  onDraftSubmit?: (payload: Record<string, unknown>) => void | Promise<void>;
 }
 
 function collectionUrl(entityCode: string, recordIdValue: string): string {
@@ -105,8 +105,16 @@ export function LineComposerSheet({
     }
 
     if (onDraftSubmit) {
-      onDraftSubmit(payload);
-      onOpenChange(false);
+      setSaving(true);
+      setSaveError(null);
+      try {
+        await onDraftSubmit(payload);
+        onOpenChange(false);
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : "Failed to update draft line");
+      } finally {
+        setSaving(false);
+      }
       return;
     }
 

@@ -3,13 +3,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export const SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER = "workbench.supply_chain.spend_category_tree_batch_size";
-export const DEFAULT_SPEND_CATEGORY_TREE_BATCH_SIZE = 500;
-const MIN_SPEND_CATEGORY_TREE_BATCH_SIZE = 50;
-const MAX_SPEND_CATEGORY_TREE_BATCH_SIZE = 1000;
+export const COMMODITY_CATEGORY_TREE_BATCH_SIZE_PARAMETER = "workbench.supply_chain.commodity_category_tree_batch_size";
+export const LEGACY_SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER = "workbench.supply_chain.spend_category_tree_batch_size";
+export const DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE = 500;
+const MIN_COMMODITY_CATEGORY_TREE_BATCH_SIZE = 50;
+const MAX_COMMODITY_CATEGORY_TREE_BATCH_SIZE = 1000;
 
-export interface SpendCategoryRow {
+export interface CommodityCategoryRow {
   id: string;
+  tenantId: string;
   code: string;
   name: string;
   description: string | null;
@@ -22,6 +24,8 @@ export interface SpendCategoryRow {
   isClassificationRequired: boolean;
   isHsRequired: boolean;
   isRegulated: boolean;
+  allowedDomains: unknown;
+  defaultIntentId: string | null;
   defaultIntentCode: string | null;
   defaultIntentName: string | null;
   defaultIntentDomain: string | null;
@@ -31,11 +35,48 @@ export interface SpendCategoryRow {
   supplierPolicyCount: number;
   supplierBlockCount: number;
   glDefaultCount: number;
+  metadata: unknown;
   status: string;
+  isActive: boolean | null;
+  statusChangedAt: string | null;
+  statusChangedBy: string | null;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
   sortOrder: number;
 }
 
-export interface SpendCategorySummary {
+export interface CommodityCategoryRuleRow {
+  id: string;
+  tenantId: string;
+  classificationSource: string;
+  classificationId: string;
+  direction: string | null;
+  conditionType: string;
+  conditionConfig: unknown;
+  appliesToFlows: string[];
+  resolvedIntentId: string;
+  resolvedIntentCode: string | null;
+  resolvedIntentName: string | null;
+  resolvedDomain: string | null;
+  explanationTemplate: string;
+  confidence: number | null;
+  priority: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  metadata: unknown;
+  status: string;
+  isActive: boolean | null;
+  statusChangedAt: string | null;
+  statusChangedBy: string | null;
+  createdAt: string;
+  createdBy: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export interface CommodityCategorySummary {
   total: number;
   roots: number;
   leaves: number;
@@ -56,9 +97,10 @@ export interface TaxonomyPageInfo {
   hasMore: boolean;
 }
 
-export interface SpendCategoryPayload {
-  items: SpendCategoryRow[];
-  summary: SpendCategorySummary;
+export interface CommodityCategoryPayload {
+  items: CommodityCategoryRow[];
+  rules?: CommodityCategoryRuleRow[];
+  summary: CommodityCategorySummary;
   asAt: string;
   isLive: boolean;
   pageInfo?: TaxonomyPageInfo;
@@ -78,13 +120,6 @@ export interface BusinessIntentRow {
   parentId: string | null;
   path: string | null;
   depth: number;
-  defaultGlAccountCode: string | null;
-  defaultGlAccountName: string | null;
-  defaultTaxCode: string | null;
-  defaultAssetProfileCode: string | null;
-  isApprovalRequired: boolean;
-  maxAutoApproveAmount: number | null;
-  maxAutoApproveCurrency: string | null;
   visibility: string;
   childCount: number;
   companyPolicyCount: number;
@@ -101,8 +136,7 @@ export interface BusinessIntentSummary {
   roots: number;
   leaves: number;
   domains: number;
-  approvalRequired: number;
-  glDefaults: number;
+  policyDefaults: number;
   restricted: number;
   companyPolicies: number;
   supplierPolicies: number;
@@ -122,21 +156,22 @@ async function fetchJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-type SpendSummaryMode = "include" | "only" | "false";
+type CommoditySummaryMode = "include" | "only" | "false";
 
-interface SpendCategoryQueryParams {
+interface CommodityCategoryQueryParams {
   id?: string | null;
   parentId?: string | null;
   q?: string | null;
   limit?: number;
-  summary?: SpendSummaryMode;
+  summary?: CommoditySummaryMode;
   includeAncestors?: boolean;
+  includeRules?: boolean;
 }
 
 const ROOT_PARENT_ID = "__root";
-const SPEND_CATEGORY_BASE_URL = "/api/finance/spend-categories";
+const COMMODITY_CATEGORY_BASE_URL = "/api/finance/commodity-categories";
 
-function spendCategoryUrl(params: SpendCategoryQueryParams = {}): string {
+function commodityCategoryUrl(params: CommodityCategoryQueryParams = {}): string {
   const qs = new URLSearchParams();
   if (params.id) qs.set("id", params.id);
   if (params.parentId !== undefined) qs.set("parentId", params.parentId ?? ROOT_PARENT_ID);
@@ -144,109 +179,114 @@ function spendCategoryUrl(params: SpendCategoryQueryParams = {}): string {
   if (params.limit) qs.set("limit", String(params.limit));
   if (params.summary) qs.set("summary", params.summary);
   if (params.includeAncestors) qs.set("includeAncestors", "true");
+  if (params.includeRules) qs.set("includeRules", "true");
   const query = qs.toString();
-  return query ? `${SPEND_CATEGORY_BASE_URL}?${query}` : SPEND_CATEGORY_BASE_URL;
+  return query ? `${COMMODITY_CATEGORY_BASE_URL}?${query}` : COMMODITY_CATEGORY_BASE_URL;
 }
 
-function spendCategoryQueryKey(params: SpendCategoryQueryParams = {}) {
+function commodityCategoryQueryKey(params: CommodityCategoryQueryParams = {}) {
   return [
     "finance",
     "taxonomy",
-    "spend-categories",
+    "commodity-categories",
     params.id ?? "",
     params.parentId ?? "",
     params.q?.trim() ?? "",
     params.limit ?? "",
     params.summary ?? "include",
     params.includeAncestors ? "ancestors" : "",
+    params.includeRules ? "rules" : "",
   ] as const;
 }
 
-function fetchSpendCategories(params: SpendCategoryQueryParams = {}) {
-  return fetchJson<SpendCategoryPayload>(spendCategoryUrl(params));
+function fetchCommodityCategories(params: CommodityCategoryQueryParams = {}) {
+  return fetchJson<CommodityCategoryPayload>(commodityCategoryUrl(params));
 }
 
 function normalizeTreeBatchSize(value: unknown): number {
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return DEFAULT_SPEND_CATEGORY_TREE_BATCH_SIZE;
+  if (!Number.isFinite(parsed)) return DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE;
   return Math.min(
-    MAX_SPEND_CATEGORY_TREE_BATCH_SIZE,
-    Math.max(MIN_SPEND_CATEGORY_TREE_BATCH_SIZE, Math.trunc(parsed)),
+    MAX_COMMODITY_CATEGORY_TREE_BATCH_SIZE,
+    Math.max(MIN_COMMODITY_CATEGORY_TREE_BATCH_SIZE, Math.trunc(parsed)),
   );
 }
 
-function mergeSpendRows(current: Map<string, SpendCategoryRow>, rows: SpendCategoryRow[]) {
+function mergeCommodityRows(current: Map<string, CommodityCategoryRow>, rows: CommodityCategoryRow[]) {
   const next = new Map(current);
   for (const row of rows) next.set(row.id, row);
   return next;
 }
 
-export function useSpendCategoryTreeBatchSize({ enabled = true }: { enabled?: boolean } = {}) {
+export function useCommodityCategoryTreeBatchSize({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery<number>({
-    queryKey: ["iam", "parameters", "effective", "workbench.supply_chain", SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER],
+    queryKey: ["iam", "parameters", "effective", "workbench.supply_chain", COMMODITY_CATEGORY_TREE_BATCH_SIZE_PARAMETER],
     queryFn: async () => {
       const snapshot = await fetchJson<ParameterSnapshotPayload>("/api/iam/parameters/effective?namespace=workbench.supply_chain");
-      return normalizeTreeBatchSize(snapshot.values?.[SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER]);
+      return normalizeTreeBatchSize(
+        snapshot.values?.[COMMODITY_CATEGORY_TREE_BATCH_SIZE_PARAMETER]
+          ?? snapshot.values?.[LEGACY_SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER],
+      );
     },
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
-    placeholderData: DEFAULT_SPEND_CATEGORY_TREE_BATCH_SIZE,
+    placeholderData: DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE,
   });
 }
 
-export function useSpendCategories({ enabled = true }: { enabled?: boolean } = {}) {
-  return useQuery<SpendCategoryPayload>({
-    queryKey: ["finance", "taxonomy", "spend-categories"],
-    queryFn: () => fetchSpendCategories(),
+export function useCommodityCategories({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery<CommodityCategoryPayload>({
+    queryKey: ["finance", "taxonomy", "commodity-categories"],
+    queryFn: () => fetchCommodityCategories(),
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useSpendCategorySummary({ enabled = true }: { enabled?: boolean } = {}) {
-  return useQuery<SpendCategoryPayload>({
-    queryKey: spendCategoryQueryKey({ summary: "only" }),
-    queryFn: () => fetchSpendCategories({ summary: "only" }),
+export function useCommodityCategorySummary({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery<CommodityCategoryPayload>({
+    queryKey: commodityCategoryQueryKey({ summary: "only" }),
+    queryFn: () => fetchCommodityCategories({ summary: "only" }),
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useSpendCategoryChildren(parentId: string | null, { enabled = true, limit = 500 }: { enabled?: boolean; limit?: number } = {}) {
-  return useQuery<SpendCategoryPayload>({
-    queryKey: spendCategoryQueryKey({ parentId, summary: "false", limit }),
-    queryFn: () => fetchSpendCategories({ parentId, summary: "false", limit }),
+export function useCommodityCategoryChildren(parentId: string | null, { enabled = true, limit = 500 }: { enabled?: boolean; limit?: number } = {}) {
+  return useQuery<CommodityCategoryPayload>({
+    queryKey: commodityCategoryQueryKey({ parentId, summary: "false", limit }),
+    queryFn: () => fetchCommodityCategories({ parentId, summary: "false", limit }),
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useSpendCategoryDetail(id?: string | null, { enabled = true }: { enabled?: boolean } = {}) {
-  return useQuery<SpendCategoryPayload>({
-    queryKey: spendCategoryQueryKey({ id, summary: "false", limit: 1 }),
-    queryFn: () => fetchSpendCategories({ id, summary: "false", limit: 1 }),
+export function useCommodityCategoryDetail(id?: string | null, { enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery<CommodityCategoryPayload>({
+    queryKey: commodityCategoryQueryKey({ id, summary: "false", limit: 1, includeRules: true }),
+    queryFn: () => fetchCommodityCategories({ id, summary: "false", limit: 1, includeRules: true }),
     enabled: enabled && !!id,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useSpendCategorySearch(q: string, { enabled = true, limit = 75 }: { enabled?: boolean; limit?: number } = {}) {
+export function useCommodityCategorySearch(q: string, { enabled = true, limit = 75 }: { enabled?: boolean; limit?: number } = {}) {
   const normalized = q.trim();
-  return useQuery<SpendCategoryPayload>({
-    queryKey: spendCategoryQueryKey({ q: normalized, summary: "false", includeAncestors: true, limit }),
-    queryFn: () => fetchSpendCategories({ q: normalized, summary: "false", includeAncestors: true, limit }),
+  return useQuery<CommodityCategoryPayload>({
+    queryKey: commodityCategoryQueryKey({ q: normalized, summary: "false", includeAncestors: true, limit }),
+    queryFn: () => fetchCommodityCategories({ q: normalized, summary: "false", includeAncestors: true, limit }),
     enabled: enabled && normalized.length >= 2,
     retry: false,
     staleTime: 60 * 1000,
   });
 }
 
-export function useLazySpendCategoryHierarchy({
+export function useLazyCommodityCategoryHierarchy({
   enabled = true,
   search = "",
   limit = 500,
@@ -256,13 +296,13 @@ export function useLazySpendCategoryHierarchy({
   limit?: number;
 }) {
   const queryClient = useQueryClient();
-  const [itemsById, setItemsById] = useState<Map<string, SpendCategoryRow>>(() => new Map());
+  const [itemsById, setItemsById] = useState<Map<string, CommodityCategoryRow>>(() => new Map());
   const [loadedParentIds, setLoadedParentIds] = useState<Set<string>>(() => new Set());
   const [loadingParentIds, setLoadingParentIds] = useState<Set<string>>(() => new Set());
   const normalizedSearch = search.trim();
   const isSearching = normalizedSearch.length >= 2;
-  const rootsQuery = useSpendCategoryChildren(null, { enabled: enabled && !isSearching, limit });
-  const searchQuery = useSpendCategorySearch(normalizedSearch, { enabled, limit });
+  const rootsQuery = useCommodityCategoryChildren(null, { enabled: enabled && !isSearching, limit });
+  const searchQuery = useCommodityCategorySearch(normalizedSearch, { enabled, limit });
 
   useEffect(() => {
     setItemsById(new Map());
@@ -272,7 +312,7 @@ export function useLazySpendCategoryHierarchy({
 
   useEffect(() => {
     if (!rootsQuery.data?.items) return;
-    setItemsById((current) => mergeSpendRows(current, rootsQuery.data.items));
+    setItemsById((current) => mergeCommodityRows(current, rootsQuery.data.items));
     setLoadedParentIds((current) => new Set(current).add(ROOT_PARENT_ID));
   }, [rootsQuery.data?.items]);
 
@@ -282,11 +322,11 @@ export function useLazySpendCategoryHierarchy({
     setLoadingParentIds((current) => new Set(current).add(parentId));
     try {
       const data = await queryClient.fetchQuery({
-        queryKey: spendCategoryQueryKey({ parentId, summary: "false", limit }),
-        queryFn: () => fetchSpendCategories({ parentId, summary: "false", limit }),
+        queryKey: commodityCategoryQueryKey({ parentId, summary: "false", limit }),
+        queryFn: () => fetchCommodityCategories({ parentId, summary: "false", limit }),
         staleTime: 5 * 60 * 1000,
       });
-      setItemsById((current) => mergeSpendRows(current, data.items));
+      setItemsById((current) => mergeCommodityRows(current, data.items));
       setLoadedParentIds((current) => new Set(current).add(parentId));
     } finally {
       setLoadingParentIds((current) => {
@@ -321,3 +361,32 @@ export function useBusinessIntents() {
     staleTime: 5 * 60 * 1000,
   });
 }
+
+/** @deprecated Use COMMODITY_CATEGORY_TREE_BATCH_SIZE_PARAMETER. */
+export const SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER = LEGACY_SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER;
+/** @deprecated Use DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE. */
+export const DEFAULT_SPEND_CATEGORY_TREE_BATCH_SIZE = DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE;
+
+/** @deprecated Use CommodityCategoryRow. */
+export type SpendCategoryRow = CommodityCategoryRow;
+/** @deprecated Use CommodityCategoryRuleRow. */
+export type SpendCategoryRuleRow = CommodityCategoryRuleRow;
+/** @deprecated Use CommodityCategorySummary. */
+export type SpendCategorySummary = CommodityCategorySummary;
+/** @deprecated Use CommodityCategoryPayload. */
+export type SpendCategoryPayload = CommodityCategoryPayload;
+
+/** @deprecated Use useCommodityCategoryTreeBatchSize. */
+export const useSpendCategoryTreeBatchSize = useCommodityCategoryTreeBatchSize;
+/** @deprecated Use useCommodityCategories. */
+export const useSpendCategories = useCommodityCategories;
+/** @deprecated Use useCommodityCategorySummary. */
+export const useSpendCategorySummary = useCommodityCategorySummary;
+/** @deprecated Use useCommodityCategoryChildren. */
+export const useSpendCategoryChildren = useCommodityCategoryChildren;
+/** @deprecated Use useCommodityCategoryDetail. */
+export const useSpendCategoryDetail = useCommodityCategoryDetail;
+/** @deprecated Use useCommodityCategorySearch. */
+export const useSpendCategorySearch = useCommodityCategorySearch;
+/** @deprecated Use useLazyCommodityCategoryHierarchy. */
+export const useLazySpendCategoryHierarchy = useLazyCommodityCategoryHierarchy;

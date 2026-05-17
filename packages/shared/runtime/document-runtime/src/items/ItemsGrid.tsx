@@ -144,7 +144,9 @@ function isLineNumberColumn(column: MetaLineColumn): boolean {
   return name === "line_number" || name === "line_no" || name === "line_num" || column.label === "#";
 }
 
-const LINE_NUMBER_MIN_WIDTH_REM = 3.75;
+const SELECT_COLUMN_WIDTH_REM = 2.25;
+const LINE_NUMBER_MIN_WIDTH_REM = 2.5;
+const SELECT_CELL_CLASS = "w-9 px-1 py-2.5 text-center align-middle";
 
 function firstTrackToken(width: string): string | undefined {
   const normalized = width.trim();
@@ -175,7 +177,7 @@ function defaultColumnWidth(column: MetaLineColumn): string | undefined {
     if (typeof column.width === "number") return `${column.width}px`;
     return firstTrackToken(column.width);
   }
-  if (isLineNumberColumn(column)) return "4rem";
+  if (isLineNumberColumn(column)) return `${LINE_NUMBER_MIN_WIDTH_REM}rem`;
   if (isDescriptionColumn(column)) return undefined;
   if (column.align === "right") return "9rem";
   if (column.align === "center") return "7rem";
@@ -183,12 +185,18 @@ function defaultColumnWidth(column: MetaLineColumn): string | undefined {
 }
 
 function defaultColumnMinRem(column: MetaLineColumn): number {
+  const lineNumber = isLineNumberColumn(column);
   if (column.width != null) {
-    if (typeof column.width === "number") return Math.max(4, column.width / 16);
+    if (typeof column.width === "number") {
+      const parsed = column.width / 16;
+      return lineNumber ? Math.max(LINE_NUMBER_MIN_WIDTH_REM, parsed) : Math.max(4, parsed);
+    }
     const parsed = remFromWidthHint(column.width);
-    if (parsed != null && Number.isFinite(parsed)) return Math.max(4, parsed);
+    if (parsed != null && Number.isFinite(parsed)) {
+      return lineNumber ? Math.max(LINE_NUMBER_MIN_WIDTH_REM, parsed) : Math.max(4, parsed);
+    }
   }
-  if (isLineNumberColumn(column)) return 4;
+  if (lineNumber) return LINE_NUMBER_MIN_WIDTH_REM;
   if (isDescriptionColumn(column)) return 18;
   if (column.align === "right") return 9;
   if (column.align === "center") return 7;
@@ -209,11 +217,12 @@ function ColumnHeader({ column, currencyCode }: { column: MetaLineColumn; curren
   const label = column.field.data_type === "money" && currencyCode
     ? `${column.label} (${currencyCode})`
     : column.label;
+  const lineNumber = isLineNumberColumn(column);
   return (
     <th
       className={cn(
-        "min-w-0 overflow-hidden px-3 py-2.5 text-xs font-medium text-muted-foreground",
-        alignClass(column.align),
+        "min-w-0 overflow-hidden py-2.5 text-xs font-medium text-muted-foreground",
+        lineNumber ? "px-1 text-center" : cn("px-3", alignClass(column.align)),
       )}
       style={{ width: defaultColumnWidth(column) }}
     >
@@ -276,14 +285,14 @@ export function ItemsGrid({
   const footerTotalColumns = effectiveColumns.slice(firstTotalColumnIndex > 0 ? firstTotalColumnIndex : 1);
   const tableMinWidthRem = Math.max(
     36,
-    (selectable ? 3 : 0) + effectiveColumns.reduce((sum, column) => sum + defaultColumnMinRem(column), 0),
+    (selectable ? SELECT_COLUMN_WIDTH_REM : 0) + effectiveColumns.reduce((sum, column) => sum + defaultColumnMinRem(column), 0),
   );
 
   return (
     <div className="min-w-0 overflow-x-auto">
       <table className="w-full table-fixed text-sm" style={{ minWidth: `${tableMinWidthRem}rem` }}>
         <colgroup>
-          {selectable && <col style={{ width: "3rem" }} />}
+          {selectable && <col style={{ width: `${SELECT_COLUMN_WIDTH_REM}rem` }} />}
           {effectiveColumns.map((column) => (
             <col key={column.key} style={{ width: defaultColumnWidth(column) }} />
           ))}
@@ -291,7 +300,7 @@ export function ItemsGrid({
         <thead className="sticky top-0 z-10 border-b bg-muted">
           <tr>
             {selectable && (
-              <th className="w-12 px-3 py-2.5" onClick={(event) => event.stopPropagation()}>
+              <th className={SELECT_CELL_CLASS} onClick={(event) => event.stopPropagation()}>
                 <input
                   type="checkbox"
                   checked={Boolean(allSelected)}
@@ -321,7 +330,7 @@ export function ItemsGrid({
                 )}
               >
                 {selectable && (
-                  <td className="w-12 px-3 py-2.5" onClick={(event) => event.stopPropagation()}>
+                  <td className={SELECT_CELL_CLASS} onClick={(event) => event.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={Boolean(selectedIds?.has(lineKey))}
@@ -334,13 +343,14 @@ export function ItemsGrid({
                   const value = columnValue(line, column);
                   const displayValue = formatFieldValue(value, column.field, currencyCode);
                   const wrapsDescription = isDescriptionColumn(column);
+                  const lineNumber = isLineNumberColumn(column);
                   return (
                     <td
                       key={column.key}
                       className={cn(
-                        "min-w-0 overflow-hidden px-3 py-2.5 align-middle text-sm",
-                        alignClass(column.align),
-                        column.align === "right" && "tabular-nums font-medium",
+                        "min-w-0 overflow-hidden py-2.5 align-middle text-sm",
+                        lineNumber ? "px-1 text-center tabular-nums font-medium" : cn("px-3", alignClass(column.align)),
+                        !lineNumber && column.align === "right" && "tabular-nums font-medium",
                       )}
                     >
                       <div
@@ -363,7 +373,7 @@ export function ItemsGrid({
         {hasFooter && (
           <tfoot className="border-t bg-muted/30">
             <tr>
-              {selectable && <td className="w-12 px-3 py-2.5" />}
+              {selectable && <td className={SELECT_CELL_CLASS} />}
               <td
                 colSpan={footerLeadingColSpan}
                 className="min-w-0 overflow-hidden px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground"

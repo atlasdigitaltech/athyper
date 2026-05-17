@@ -31,3 +31,4 @@ export {
 export { StatementSection } from "./StatementSection";
 export { StatementRow } from "./StatementRow";
 export type { StatementLineItem } from "./StatementRow";
+export { StampToggle, type StampToggleProps } from "./StampToggle";

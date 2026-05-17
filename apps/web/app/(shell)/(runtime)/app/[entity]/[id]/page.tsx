@@ -29,15 +29,16 @@ export default async function AppEntityDetailRoute({
   searchParams,
 }: {
   params: Promise<{ entity: string; id: string }>;
-  searchParams: Promise<{ mode?: string }>;
+  searchParams: Promise<{ mode?: string; returnTo?: string }>;
 }) {
   const { entity, id } = await params;
-  const { mode } = await searchParams;
+  const { mode, returnTo } = await searchParams;
   return (
     <EntityDetailPage
       entityCode={entity}
       recordId={id}
       editMode={mode === "edit"}
+      returnTo={returnTo}
       documentRenderer={DocumentDetailPage}
     />
   );

@@ -39,98 +39,98 @@ BEGIN
 
     INSERT INTO tmp_link (sc_code, bi_code) VALUES
     -- ── IT & Digital ─────────────────────────────────────────────────────
-    ('SC-IT-HW',         'BI-OPEX-IT'),
-    ('SC-IT-SW',         'BI-OPEX-IT'),
-    ('SC-IT-CLOUD',      'BI-OPEX-IT'),
-    ('SC-IT-SVC',        'BI-OPEX-IT'),
-    ('SC-IT-SEC',        'BI-OPEX-IT'),
+    ('SC-IT-HW',         'BI-OPEX'),
+    ('SC-IT-SW',         'BI-OPEX'),
+    ('SC-IT-CLOUD',      'BI-OPEX'),
+    ('SC-IT-SVC',        'BI-OPEX'),
+    ('SC-IT-SEC',        'BI-OPEX'),
 
     -- ── Telecom & Connectivity ───────────────────────────────────────────
-    ('SC-TELCO-VOICE',   'BI-OPEX-IT'),
-    ('SC-TELCO-DATA',    'BI-OPEX-IT'),
-    ('SC-TELCO-MOB',     'BI-OPEX-IT'),
+    ('SC-TELCO-VOICE',   'BI-OPEX'),
+    ('SC-TELCO-DATA',    'BI-OPEX'),
+    ('SC-TELCO-MOB',     'BI-OPEX'),
 
     -- ── Office & Workplace ───────────────────────────────────────────────
-    ('SC-OFFICE-SUP',    'BI-OPEX-FAC'),
-    ('SC-OFFICE-FURN',   'BI-OPEX-FAC'),
-    ('SC-OFFICE-EQUIP',  'BI-OPEX-FAC'),
-    ('SC-OFFICE-PRINT',  'BI-OPEX-FAC'),
+    ('SC-OFFICE-SUP',    'BI-OPEX'),
+    ('SC-OFFICE-FURN',   'BI-OPEX'),
+    ('SC-OFFICE-EQUIP',  'BI-OPEX'),
+    ('SC-OFFICE-PRINT',  'BI-OPEX'),
 
     -- ── HR, Talent & Benefits ────────────────────────────────────────────
-    ('SC-HR-RECRUIT',    'BI-OPEX-HR'),
-    ('SC-HR-TRAIN',      'BI-OPEX-HR'),
-    ('SC-HR-BEN',        'BI-OPEX-HR'),
-    ('SC-HR-PAYROLL',    'BI-OPEX-HR'),
+    ('SC-HR-RECRUIT',    'BI-OPEX'),
+    ('SC-HR-TRAIN',      'BI-OPEX'),
+    ('SC-HR-BEN',        'BI-OPEX'),
+    ('SC-HR-PAYROLL',    'BI-OPEX'),
 
     -- ── Travel, Events & Welfare ─────────────────────────────────────────
-    ('SC-TRAVEL-AIR',    'BI-OPEX-HR'),
-    ('SC-TRAVEL-HOTEL',  'BI-OPEX-HR'),
-    ('SC-TRAVEL-GROUND', 'BI-OPEX-HR'),
-    ('SC-TRAVEL-EVENTS', 'BI-OPEX-MKTG'),
+    ('SC-TRAVEL-AIR',    'BI-OPEX'),
+    ('SC-TRAVEL-HOTEL',  'BI-OPEX'),
+    ('SC-TRAVEL-GROUND', 'BI-OPEX'),
+    ('SC-TRAVEL-EVENTS', 'BI-OPEX'),
 
     -- ── Professional Services ────────────────────────────────────────────
-    ('SC-PROF-LEGAL',    'BI-OPEX-PROF'),
-    ('SC-PROF-AUDIT',    'BI-OPEX-PROF'),
-    ('SC-PROF-CONSULT',  'BI-OPEX-PROF'),
-    ('SC-PROF-ENG',      'BI-OPEX-PROF'),
+    ('SC-PROF-LEGAL',    'BI-OPEX'),
+    ('SC-PROF-AUDIT',    'BI-OPEX'),
+    ('SC-PROF-CONSULT',  'BI-OPEX'),
+    ('SC-PROF-ENG',      'BI-OPEX'),
 
     -- ── Marketing, Media & CX ────────────────────────────────────────────
-    ('SC-MKTG-DIGITAL',  'BI-OPEX-MKTG'),
-    ('SC-MKTG-TRAD',     'BI-OPEX-MKTG'),
-    ('SC-MKTG-PR',       'BI-OPEX-MKTG'),
-    ('SC-MKTG-CX',       'BI-OPEX-MKTG'),
+    ('SC-MKTG-DIGITAL',  'BI-OPEX'),
+    ('SC-MKTG-TRAD',     'BI-OPEX'),
+    ('SC-MKTG-PR',       'BI-OPEX'),
+    ('SC-MKTG-CX',       'BI-OPEX'),
 
     -- ── Facilities & Occupancy ───────────────────────────────────────────
-    ('SC-FAC-RENT',      'BI-OPEX-FAC'),
-    ('SC-FAC-MAINT',     'BI-OPEX-MAINT'),
-    ('SC-FAC-CLEAN',     'BI-OPEX-FAC'),
-    ('SC-FAC-SECUR',     'BI-OPEX-SAFETY'),
+    ('SC-FAC-RENT',      'BI-OPEX'),
+    ('SC-FAC-MAINT',     'BI-OPEX'),
+    ('SC-FAC-CLEAN',     'BI-OPEX'),
+    ('SC-FAC-SECUR',     'BI-OPEX'),
 
     -- ── Utilities & Energy ───────────────────────────────────────────────
-    ('SC-UTIL-ELEC',     'BI-OPEX-UTIL'),
-    ('SC-UTIL-WATER',    'BI-OPEX-UTIL'),
-    ('SC-UTIL-GAS',      'BI-OPEX-UTIL'),
-    ('SC-UTIL-WASTE',    'BI-OPEX-ENV'),
+    ('SC-UTIL-ELEC',     'BI-OPEX'),
+    ('SC-UTIL-WATER',    'BI-OPEX'),
+    ('SC-UTIL-GAS',      'BI-OPEX'),
+    ('SC-UTIL-WASTE',    'BI-OPEX'),
 
     -- ── Fleet & Mobility ─────────────────────────────────────────────────
-    ('SC-FLEET-VEH',     'BI-CAPEX-FLEET'),
-    ('SC-FLEET-FUEL',    'BI-OPEX-FUEL'),
-    ('SC-FLEET-MAINT',   'BI-OPEX-FLEET'),
+    ('SC-FLEET-VEH',     'BI-CAPEX'),
+    ('SC-FLEET-FUEL',    'BI-OPEX'),
+    ('SC-FLEET-MAINT',   'BI-OPEX'),
 
     -- ── Insurance ────────────────────────────────────────────────────────
-    ('SC-INS-PROP',      'BI-OPEX-INS'),
-    ('SC-INS-LIAB',      'BI-OPEX-INS'),
-    ('SC-INS-EMP',       'BI-OPEX-INS'),
+    ('SC-INS-PROP',      'BI-OPEX'),
+    ('SC-INS-LIAB',      'BI-OPEX'),
+    ('SC-INS-EMP',       'BI-OPEX'),
 
     -- ── Banking & Treasury ───────────────────────────────────────────────
-    ('SC-BANK-FEE',      'BI-ADMIN-GEN'),
-    ('SC-BANK-FX',       'BI-ADMIN-GEN'),
-    ('SC-BANK-TREAS',    'BI-ADMIN-GEN'),
+    ('SC-BANK-FEE',      'BI-ADMIN'),
+    ('SC-BANK-FX',       'BI-ADMIN'),
+    ('SC-BANK-TREAS',    'BI-ADMIN'),
 
     -- ── Taxes & Duties ───────────────────────────────────────────────────
-    ('SC-TAX-CORP',      'BI-REG-TAX'),
-    ('SC-TAX-DUTY',      'BI-REG-TAX'),
-    ('SC-TAX-STAT',      'BI-REG-TAX'),
+    ('SC-TAX-CORP',      'BI-REG'),
+    ('SC-TAX-DUTY',      'BI-REG'),
+    ('SC-TAX-STAT',      'BI-REG'),
 
     -- ── Security, HSE & Compliance ───────────────────────────────────────
-    ('SC-SAFETY-SEC',    'BI-OPEX-SAFETY'),
-    ('SC-SAFETY-HSE',    'BI-OPEX-SAFETY'),
-    ('SC-SAFETY-COMP',   'BI-REG-COMP'),
+    ('SC-SAFETY-SEC',    'BI-OPEX'),
+    ('SC-SAFETY-HSE',    'BI-OPEX'),
+    ('SC-SAFETY-COMP',   'BI-REG'),
 
     -- ── ESG & Environmental ──────────────────────────────────────────────
-    ('SC-ENV-WASTE',     'BI-OPEX-ENV'),
-    ('SC-ENV-CARBON',    'BI-OPEX-ENV'),
-    ('SC-ENV-REMEDN',    'BI-REG-ENV'),
+    ('SC-ENV-WASTE',     'BI-OPEX'),
+    ('SC-ENV-CARBON',    'BI-OPEX'),
+    ('SC-ENV-REMEDN',    'BI-REG'),
 
     -- ── Outsourced & Shared Services ─────────────────────────────────────
-    ('SC-OUTSRC-BPO',    'BI-OPEX-OUTSRC'),
-    ('SC-OUTSRC-SHARED', 'BI-OPEX-OUTSRC'),
-    ('SC-OUTSRC-TEMP',   'BI-OPEX-OUTSRC'),
+    ('SC-OUTSRC-BPO',    'BI-OPEX'),
+    ('SC-OUTSRC-SHARED', 'BI-OPEX'),
+    ('SC-OUTSRC-TEMP',   'BI-OPEX'),
 
     -- ── Subscriptions & Licenses ─────────────────────────────────────────
-    ('SC-SUBS-LIC',      'BI-OPEX-IT'),
-    ('SC-SUBS-MEMB',     'BI-ADMIN-GEN'),
-    ('SC-SUBS-PUB',      'BI-ADMIN-GEN');
+    ('SC-SUBS-LIC',      'BI-OPEX'),
+    ('SC-SUBS-MEMB',     'BI-ADMIN'),
+    ('SC-SUBS-PUB',      'BI-ADMIN');
 
 
     -- STAGE C: Validate one-to-one base seed coverage.

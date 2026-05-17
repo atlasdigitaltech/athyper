@@ -51,7 +51,7 @@ export const MoneyWithRateSchema = MoneySchema.extend({
 
 export const PaginationRequestSchema = z.object({
   page: z.number().int().positive().default(1),
-  page_size: z.number().int().min(1).max(200).default(25),
+  page_size: z.number().int().min(1).max(500).default(25),
   sort_by: z.string().optional(),
   sort_order: z.enum(["asc", "desc"]).default("asc"),
 });

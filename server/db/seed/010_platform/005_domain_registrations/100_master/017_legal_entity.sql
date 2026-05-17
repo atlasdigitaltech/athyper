@@ -23,11 +23,7 @@ SELECT
     '{"prefix":"LE","prefix_configurable":false,"separator":"-","segments":[{"type":"sequence","padding":4}]}'::jsonb,
     '{"is_approvable":false,"party_category":"legal_entity","allow_address":true,"allow_contact":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'legal_entity'
-      AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (

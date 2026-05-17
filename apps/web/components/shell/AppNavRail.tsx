@@ -4,10 +4,11 @@
  * AppNavRail — live-data wrapper around NavRail.
  *
  * - Reads runtime.modules from SessionProvider and derives workspace groups.
- * - Tracks activeKey (workspace key or global action) in state lifted from AppShellLayout.
+ * - Tracks utility panel state lifted from AppShellLayout.
  * - Dispatches "athyper:open-palette" custom event so AppTopbar opens ⌘K.
  * - Routes to /home, /inbox, /settings for global actions.
- * - Calls onWorkspaceChange so AppShellLayout can open/close the ContextPanel.
+ * - Calls onPanelChange so AppShellLayout can open/close utility panels.
+ * - Workspace clicks navigate directly to the workspace landing page.
  */
 
 import { useCallback } from "react";
@@ -17,17 +18,17 @@ import { deriveNavTree, WORKSPACE_HREF_MAP } from "@athyper/navigation";
 import { useShellSession } from "@/components/providers/SessionProvider";
 
 export interface AppNavRailProps {
-  /** The currently expanded workspace key (null = no panel / home state). */
-  activeWorkspaceKey: string | null;
-  onWorkspaceChange: (key: string | null) => void;
+  /** The currently open utility panel key (null = no panel). */
+  activePanelKey: "favorites" | "recent" | null;
+  onPanelChange: (key: "favorites" | "recent" | null) => void;
   inboxCount?: number;
   /** Workbench accent CSS color forwarded from AppShellLayout. */
   accentColor?: string;
 }
 
 export function AppNavRail({
-  activeWorkspaceKey,
-  onWorkspaceChange,
+  activePanelKey,
+  onPanelChange,
   inboxCount = 0,
   accentColor,
 }: AppNavRailProps) {
@@ -48,11 +49,9 @@ export function AppNavRail({
     return null;
   }
 
-  // Derive the active rail key:
-  // - workspace clicks → workspace key (panel open)
-  // - route-driven → global key derived from pathname
+  // Derive the active rail key from utility panel state first, then the route.
   const routeKey: NavRailKey | null =
-    activeWorkspaceKey ??
+    activePanelKey ??
     (pathname === "/home" || pathname === "/dashboard" || pathname === "/"
       ? "home"
       : pathname.startsWith("/inbox")
@@ -65,11 +64,11 @@ export function AppNavRail({
     (key: NavRailKey) => {
       switch (key) {
         case "home":
-          onWorkspaceChange(null);
+          onPanelChange(null);
           router.push("/home");
           break;
         case "inbox":
-          onWorkspaceChange(null);
+          onPanelChange(null);
           router.push("/inbox");
           break;
         case "search":
@@ -77,34 +76,34 @@ export function AppNavRail({
           window.dispatchEvent(new CustomEvent("athyper:open-palette"));
           break;
         case "settings":
-          onWorkspaceChange(null);
+          onPanelChange(null);
           router.push("/settings");
           break;
         case "favorites":
-          onWorkspaceChange("favorites");
+          onPanelChange("favorites");
           break;
         case "recent":
-          onWorkspaceChange("recent");
+          onPanelChange("recent");
           break;
         default:
           if (key === "core") {
-            onWorkspaceChange(key);
+            onPanelChange(null);
             router.push("/core");
             break;
           }
 
           if (workspaceKeys.has(key)) {
-            onWorkspaceChange(key);
+            onPanelChange(null);
             const href = WORKSPACE_HREF_MAP[key];
             if (href) router.push(href);
             break;
           }
 
-          onWorkspaceChange(key === activeWorkspaceKey ? null : key);
+          onPanelChange(null);
           break;
       }
     },
-    [activeWorkspaceKey, onWorkspaceChange, router, workspaceKeys],
+    [onPanelChange, router, workspaceKeys],
   );
 
   return (

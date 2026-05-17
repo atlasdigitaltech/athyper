@@ -48,11 +48,7 @@ SELECT
     '{}'::jsonb,
     '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner","pii_bearing":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'party_tax_profile'
-      AND entity_code = 'business_partner_tax_profile' AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 UPDATE control.entity
 SET feature_flags = COALESCE(feature_flags, '{}'::jsonb)

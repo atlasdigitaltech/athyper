@@ -82,15 +82,15 @@ const FALLBACK_PROFILE_FIELDS = [
 ];
 
 const FALLBACK_POLICY_SECTIONS: PolicySectionConfig[] = [
-  { id: "spend_policies",    label: "Spend Policies",    entity_code: "company_code_supplier_spend_policy",     add_label: "Add Spend Policy" },
-  { id: "intent_policies",   label: "Intent Policies",   entity_code: "company_code_supplier_intent_policy",    add_label: "Add Intent Policy" },
-  { id: "posting_overrides", label: "Posting Overrides", entity_code: "company_code_supplier_posting_override", add_label: "Add Override" },
+  { id: "spend_policies",    label: "Buy Policies",      entity_code: "commodity_category_buy_policy", add_label: "Add Buy Policy" },
+  { id: "posting_overrides", label: "Posting Overrides", entity_code: "supplier_posting_override",       add_label: "Add Override" },
 ];
 
 // Fields that are always internal / parent-FK — never shown as primary in policy rows.
 const POLICY_SKIP_FIELDS = new Set([
   "id", "tenant_id",
   "supplier_profile_id",  // parent FK common to all three policy entities
+  "scope_type", "scope_id",
   "created_at", "updated_at", "created_by", "updated_by",
 ]);
 
@@ -200,16 +200,22 @@ function ProfileFormSheet({
 // ── Policy child-record sheet ─────────────────────────────────────────────────
 
 function PolicyFormSheet({
-  open, onOpenChange, section, profileId, existing, onSuccess,
+  open, onOpenChange, section, profile, existing, onSuccess,
 }: {
   open:         boolean;
   onOpenChange: (v: boolean) => void;
   section:      PolicySectionConfig;
-  profileId:    string;
+  profile:      CcProfile;
   existing?:    Record<string, unknown> | null;
   onSuccess:    () => void;
 }) {
   const formRef = useRef<EntityFormHandle>(null);
+  const profileId = profile.id;
+  const newRecordDefaults = section.entity_code === "commodity_category_buy_policy"
+    ? { scope_type: "SUPPLIER_PROFILE", scope_id: profileId, company_code_id: profile.company_code_id }
+    : section.entity_code === "supplier_posting_override"
+      ? { supplier_profile_id: profileId }
+      : { parent_id: profileId };
 
   const mutation = useMutation({
     mutationFn: async (formData: Record<string, unknown>) => {
@@ -219,7 +225,7 @@ function PolicyFormSheet({
         : `/api/relay/api/records/${encodeURIComponent(section.entity_code)}`;
       const body  = existing
         ? { data: formData }
-        : { data: { ...formData, parent_id: profileId } };
+        : { data: { ...newRecordDefaults, ...formData } };
       const res = await fetch(url, {
         method:  existing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -244,7 +250,7 @@ function PolicyFormSheet({
           <EntityForm
             ref={formRef}
             entityCode={section.entity_code}
-            initialData={existing ?? undefined}
+            initialData={existing ?? newRecordDefaults}
             onSubmit={async (fd) => { await mutation.mutateAsync(fd); }}
             submitting={mutation.isPending}
             hideActions
@@ -272,14 +278,15 @@ function PolicyFormSheet({
 type PolicyRecord = Record<string, unknown>;
 
 function PolicyRecordsSection({
-  section, profileId, editMode, viewOnlyReason,
+  section, profile, editMode, viewOnlyReason,
 }: {
   section:        PolicySectionConfig;
-  profileId:      string;
+  profile:        CcProfile;
   editMode:       boolean;
   viewOnlyReason: ViewOnlyReason | null;
 }) {
   const queryClient = useQueryClient();
+  const profileId = profile.id;
   const queryKey    = ["cc-policy-records", section.entity_code, profileId] as const;
 
   const [sheetOpen,     setSheetOpen]     = useState(false);
@@ -288,8 +295,17 @@ function PolicyRecordsSection({
   const { data, isLoading, isError } = useQuery<{ data: PolicyRecord[] }>({
     queryKey,
     queryFn: async ({ signal }) => {
+      const params = new URLSearchParams();
+      if (section.entity_code === "commodity_category_buy_policy") {
+        params.set("filter.scope_type", "SUPPLIER_PROFILE");
+        params.set("filter.scope_id", profileId);
+      } else if (section.entity_code === "supplier_posting_override") {
+        params.set("filter.supplier_profile_id", profileId);
+      } else {
+        params.set("parent_id", profileId);
+      }
       const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(section.entity_code)}?parent_id=${profileId}`,
+        `/api/relay/api/records/${encodeURIComponent(section.entity_code)}?${params.toString()}`,
         { signal },
       );
       if (!res.ok) return { data: [] };
@@ -403,14 +419,14 @@ function PolicyRecordsSection({
         )}
       </div>
 
-      <PolicyFormSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        section={section}
-        profileId={profileId}
-        existing={editingRecord}
-        onSuccess={() => void queryClient.invalidateQueries({ queryKey })}
-      />
+          <PolicyFormSheet
+            open={sheetOpen}
+            onOpenChange={setSheetOpen}
+            section={section}
+            profile={profile}
+            existing={editingRecord}
+            onSuccess={() => void queryClient.invalidateQueries({ queryKey })}
+          />
     </OperationalDisplayMetadataProvider>
   );
 }
@@ -501,7 +517,7 @@ function ProfileBody({
           {activePolicySection && (
             <PolicyRecordsSection
               section={activePolicySection}
-              profileId={profile.id}
+              profile={profile}
               editMode={editMode}
               viewOnlyReason={viewOnlyReason}
             />

@@ -85,7 +85,7 @@ export const AccountingDistributionSchema = z.object({
   account_code: z.string().nullable(),
   gl_account_id: UuidSchema.nullable(),
   business_intent_id: UuidSchema.nullable(),
-  spend_category_id: UuidSchema.nullable(),
+  commodity_category_id: UuidSchema.nullable(),
   cost_center_id: UuidSchema.nullable(),
   profit_center_id: UuidSchema.nullable(),
   project_id: UuidSchema.nullable(),

@@ -141,7 +141,7 @@ SELECT t.code AS tenant,
        count(DISTINCT sc.id) AS leaves_with_rules,
        count(DISTINCT r.id)  AS total_rules
   FROM master.spend_category sc
-  JOIN control.classification_to_intent_rule r
+  JOIN control.commodity_classification_to_intent_rule r
        ON  r.classification_id = sc.id
        AND r.is_active = true
   JOIN master.tenant t ON t.id = sc.tenant_id

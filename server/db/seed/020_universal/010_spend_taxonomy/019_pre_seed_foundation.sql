@@ -2,7 +2,7 @@
 -- UNIVERSAL — PRE-SEED FOUNDATION
 -- ============================================================================
 -- File:     019_pre_seed_foundation.sql
--- Schemas:  control.lookup_value, control.classification_config
+-- Schemas:  control.lookup_value, control.commodity_classification_config
 -- Purpose:  Prerequisites that MUST land before any Tier 2 seed file executes
 -- Depends:  010_platform/099_tenant_bootstrap (tenant must exist),
 --           010_platform/000_lookups (cc_provenance lookup must exist)
@@ -16,7 +16,7 @@
 --         Without it, trg_cc_provenance_lookup rejects all bridge rows
 --         with provenance = 'seed'. This INSERT adds the missing value.
 --
--- FIX B2: control.classification_config — 1-row tenant foundation that
+-- FIX B2: control.commodity_classification_config — 1-row tenant foundation that
 --         locks classification behavior (crosswalk strategy, confidence
 --         thresholds, auto-classification flags) explicitly rather than
 --         relying on application defaults.
@@ -67,7 +67,7 @@ BEGIN
     END IF;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- B2: Insert classification_config for tenant
+    -- B2: Insert commodity_classification_config for tenant
     -- ══════════════════════════════════════════════════════════════════════
     -- This row locks tenant-level classification behavior explicitly:
     --   • primary_commodity_domain: 'unspsc' (all bridge anchors use this)
@@ -77,14 +77,12 @@ BEGIN
     --   • auto-crosswalk enabled: HS↔UNSPSC mapping via crosswalk table
     --   • cross-border triggers: standard set for GCC operations
     -- ──────────────────────────────────────────────────────────────────────
-    INSERT INTO control.classification_config (
+    INSERT INTO control.commodity_classification_config (
         tenant_id,
         primary_commodity_domain,
         trade_commodity_domain,
         is_commodity_code_required,
         is_trade_code_required,
-        require_for_capex_above,
-        require_for_capex_currency,
         is_required_for_regulated,
         primary_industry_domain,
         is_auto_classify_enabled,
@@ -101,8 +99,6 @@ BEGIN
         'hs',                           -- trade commodity domain (HS tariff)
         false,                          -- commodity code not mandatory globally
         false,                          -- trade code not mandatory globally
-        50000.00,                       -- require classification for capex ≥50k (global default in AED)
-        'AED',                          -- global fallback currency; per-company overrides live in metadata.company_capex_currencies
         true,                           -- require classification for regulated items
         'isic',                         -- primary industry domain
         true,                           -- AI auto-classification enabled
@@ -117,11 +113,6 @@ BEGIN
                 'version',   v_version,
                 'seeded_at', now()::text
             ),
-            -- Per-company capex threshold currencies (company_code → functional currency).
-            -- Populate this map in the tenant-specific seed (040_tenants/<tenant>/).
-            -- Application logic uses it to convert the global AED threshold to each
-            -- company's functional currency before comparing against capex amounts.
-            -- Phase 2: move to a dedicated company_classification_config override table.
             'company_capex_currencies', '{}'::jsonb
         ),
         v_su
@@ -131,8 +122,6 @@ BEGIN
         trade_commodity_domain      = EXCLUDED.trade_commodity_domain,
         is_commodity_code_required  = EXCLUDED.is_commodity_code_required,
         is_trade_code_required      = EXCLUDED.is_trade_code_required,
-        require_for_capex_above     = EXCLUDED.require_for_capex_above,
-        require_for_capex_currency  = EXCLUDED.require_for_capex_currency,
         is_required_for_regulated   = EXCLUDED.is_required_for_regulated,
         primary_industry_domain     = EXCLUDED.primary_industry_domain,
         is_auto_classify_enabled    = EXCLUDED.is_auto_classify_enabled,
@@ -141,7 +130,7 @@ BEGIN
         min_confidence_suggest      = EXCLUDED.min_confidence_suggest,
         crosswalk_strategy          = EXCLUDED.crosswalk_strategy,
         cross_border_triggers       = EXCLUDED.cross_border_triggers,
-        metadata                  = control.classification_config.metadata
+        metadata                  = control.commodity_classification_config.metadata
                                     || jsonb_build_object(
                                            '_seed', jsonb_build_object(
                                                'pack',      v_pack,
@@ -152,27 +141,23 @@ BEGIN
                                        ),
         updated_at = now(),
         updated_by = v_su
-    WHERE (control.classification_config.primary_commodity_domain,
-           control.classification_config.trade_commodity_domain,
-           control.classification_config.is_commodity_code_required,
-           control.classification_config.is_trade_code_required,
-           control.classification_config.require_for_capex_above,
-           control.classification_config.require_for_capex_currency,
-           control.classification_config.is_required_for_regulated,
-           control.classification_config.primary_industry_domain,
-           control.classification_config.is_auto_classify_enabled,
-           control.classification_config.is_auto_crosswalk_enabled,
-           control.classification_config.min_confidence_auto,
-           control.classification_config.min_confidence_suggest,
-           control.classification_config.crosswalk_strategy,
-           control.classification_config.cross_border_triggers)
+    WHERE (control.commodity_classification_config.primary_commodity_domain,
+           control.commodity_classification_config.trade_commodity_domain,
+           control.commodity_classification_config.is_commodity_code_required,
+           control.commodity_classification_config.is_trade_code_required,
+           control.commodity_classification_config.is_required_for_regulated,
+           control.commodity_classification_config.primary_industry_domain,
+           control.commodity_classification_config.is_auto_classify_enabled,
+           control.commodity_classification_config.is_auto_crosswalk_enabled,
+           control.commodity_classification_config.min_confidence_auto,
+           control.commodity_classification_config.min_confidence_suggest,
+           control.commodity_classification_config.crosswalk_strategy,
+           control.commodity_classification_config.cross_border_triggers)
        IS DISTINCT FROM
           (EXCLUDED.primary_commodity_domain,
            EXCLUDED.trade_commodity_domain,
            EXCLUDED.is_commodity_code_required,
            EXCLUDED.is_trade_code_required,
-           EXCLUDED.require_for_capex_above,
-           EXCLUDED.require_for_capex_currency,
            EXCLUDED.is_required_for_regulated,
            EXCLUDED.primary_industry_domain,
            EXCLUDED.is_auto_classify_enabled,
@@ -184,11 +169,11 @@ BEGIN
 
     -- ── Assertions ───────────────────────────────────────────────────────
     IF NOT EXISTS (
-        SELECT 1 FROM control.classification_config WHERE tenant_id = v_tid
+        SELECT 1 FROM control.commodity_classification_config WHERE tenant_id = v_tid
     ) THEN
-        RAISE EXCEPTION '[019_base] classification_config row not created for tenant %', v_tid;
+        RAISE EXCEPTION '[019_base] commodity_classification_config row not created for tenant %', v_tid;
     END IF;
 
-    RAISE NOTICE '[019_base] Pre-seed foundation complete: provenance "seed" registered, classification_config ready';
+    RAISE NOTICE '[019_base] Pre-seed foundation complete: provenance "seed" registered, commodity_classification_config ready';
 
 END $seed$;

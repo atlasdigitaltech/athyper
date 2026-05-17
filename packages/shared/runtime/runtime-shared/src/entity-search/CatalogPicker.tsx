@@ -2,15 +2,15 @@
 
 /**
  * CatalogPicker — generic advanced picker for tenant-level catalog and
- * classification master entities (spend_category, business_intent, item, …).
+ * classification master entities (commodity_category, business_intent, item, ...).
  *
  * Embedded defaults provide full advanced-mode config (tabs, badges, recently-used)
  * without requiring the 990 seed to have run first. When field.reference_config
  * is present and carries variant='advanced', it takes precedence so the DB config
  * can still override the defaults.
  *
- * Unlike DimensionPicker, catalog entities are NOT company_code-scoped — no
- * automatic depends_on injection is applied.
+ * Catalog entities are mostly not company_code-scoped. Item is the exception:
+ * when a caller supplies company_code_id in formData, item search is scoped to it.
  *
  * SpendCategoryPicker, BusinessIntentPicker, and ItemPicker are thin named
  * wrappers exported from this file — they share all logic and just pin the
@@ -41,13 +41,13 @@ interface CatalogFieldMeta {
 // environment, and are overridden by field.reference_config when present.
 
 const CATALOG_DEFAULT_CONFIGS: Record<string, EntityPickerOptionConfig> = {
-  spend_category: {
+  commodity_category: {
     variant: "advanced",
     density: "mini",
     width: 420,
     maxListHeight: 320,
-    optionActionLabel: "Open spend category",
-    resultLabel: "spend category",
+    optionActionLabel: "Open category",
+    resultLabel: "category",
     showRecentlyUsed: true,
     recentLimit: 5,
     pageSize: 20,
@@ -202,7 +202,7 @@ function resolveOptionConfig(
 // ── Public component ───────────────────────────────────────────────────────────
 
 export interface CatalogPickerProps {
-  /** Catalog entity code — e.g. "spend_category", "business_intent", "item". */
+  /** Catalog entity code - e.g. "commodity_category", "business_intent", "item". */
   entityCode: string;
   /** Current stored value (record UUID). */
   value?: string | null;
@@ -246,13 +246,29 @@ export function CatalogPicker({
     [entityCode, field?.reference_config],
   );
 
+  const effectiveLookupConfig = useMemo<Record<string, unknown> | null>(() => {
+    const existing = (field?.lookup_config ?? {}) as Record<string, unknown>;
+    if (entityCode !== "item") return existing;
+    if (existing["depends_on"] || existing["dependent_filter"] || existing["dependency"]) {
+      return existing;
+    }
+    return {
+      ...existing,
+      depends_on: {
+        source_field: "company_code_id",
+        target_field: "company_code_id",
+        empty_behavior: "all",
+      },
+    };
+  }, [entityCode, field?.lookup_config]);
+
   const search = useCallback(
     async (query: string, context?: EntityPickerSearchContext) => {
       try {
         const result = await searchLookupOptions({
           entityCode,
           query,
-          lookupConfig: field?.lookup_config,
+          lookupConfig: effectiveLookupConfig,
           formData: formDataRef.current,
           optionConfig,
           context,
@@ -263,7 +279,7 @@ export function CatalogPicker({
         return { options: [] };
       }
     },
-    [entityCode, field?.lookup_config, optionConfig],
+    [effectiveLookupConfig, entityCode, optionConfig],
   );
 
   const humanEntityCode = entityCode.replace(/_/g, " ");
@@ -301,12 +317,17 @@ export function CatalogPicker({
 // ── Named thin wrappers ───────────────────────────────────────────────────────
 
 export type SpendCategoryPickerProps   = Omit<CatalogPickerProps, "entityCode">;
+export type CommodityCategoryPickerProps = Omit<CatalogPickerProps, "entityCode">;
 export type BusinessIntentPickerProps  = Omit<CatalogPickerProps, "entityCode">;
 export type ItemPickerProps            = Omit<CatalogPickerProps, "entityCode">;
 export type ProductPickerProps         = Omit<CatalogPickerProps, "entityCode">;
 
 export function SpendCategoryPicker(props: SpendCategoryPickerProps) {
-  return <CatalogPicker entityCode="spend_category" {...props} />;
+  return <CatalogPicker entityCode="commodity_category" {...props} />;
+}
+
+export function CommodityCategoryPicker(props: CommodityCategoryPickerProps) {
+  return <CatalogPicker entityCode="commodity_category" {...props} />;
 }
 
 export function BusinessIntentPicker(props: BusinessIntentPickerProps) {

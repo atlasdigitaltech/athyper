@@ -10,6 +10,22 @@ DECLARE
     v_ev uuid;
 BEGIN
 
+    DELETE FROM control.entity_field ef
+    USING control.entity_version ev, control.entity e
+    WHERE ef.entity_version_id = ev.id
+      AND ev.entity_id = e.id
+      AND e.name = 'business_intent'
+      AND ef.name IN (
+          'default_gl_account_id',
+          'default_tax_group_id',
+          'is_approval_required',
+          'max_auto_approve_amount',
+          'max_auto_approve_currency',
+          'default_tax_code',
+          'default_asset_profile_code',
+          'commodity_domain_affinities'
+      );
+
     -- ── dimension_type ────────────────────────────────────────────────────────
     -- No reference fields; validation column omitted.
     SELECT ev.id INTO v_ev FROM control.entity_version ev
@@ -119,10 +135,6 @@ FROM (VALUES
             (v_ev,'domain',                 'domain',                 'Domain',             'enum',   'select',   'one','standard',true, true,  true,  false,NULL::jsonb,                                  110,v_su),
             (v_ev,'subtype',                'subtype',                'Subtype',            'string', 'text',     'one','standard',false,true,  true,  false,NULL::jsonb,                                  120,v_su),
             (v_ev,'parent_id',              'parent_id',              'Parent Intent',      'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"business_intent"}'::jsonb,    130,v_su),
-            (v_ev,'default_gl_account_id',  'default_gl_account_id',  'Default GL Account', 'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"gl_account"}'::jsonb,         140,v_su),
-            (v_ev,'default_tax_group_id',   'default_tax_group_id',   'Default Tax Group',  'uuid',   'reference','one','standard',false,true,  false, false,'{"ref_entity":"tax_group"}'::jsonb,          150,v_su),
-            (v_ev,'is_approval_required',   'is_approval_required',   'Approval Required',  'boolean','hidden',   'one','standard',false,true,  false, false,NULL::jsonb,                                  160,v_su),
-            (v_ev,'max_auto_approve_amount','max_auto_approve_amount','Max Auto-Approve',   'money',  'money',    'one','standard',false,true,  true,  false,NULL::jsonb,                                  170,v_su),
             (v_ev,'visibility',             'visibility',             'Visibility',         'enum',   'select',   'one','standard',true, true,  true,  false,NULL::jsonb,                                  180,v_su),
             (v_ev,'sort_order',             'sort_order',             'Sort Order',         'integer','number',   'one','standard',false,false, true,  false,NULL::jsonb,                                  190,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
@@ -198,8 +210,6 @@ FROM (VALUES
         ('dimension_set_item',           'dimension_type_id',        '{"ref_entity":"dimension_type"}'::jsonb),
         ('dimension_set_item',           'dimension_value_id',       '{"ref_entity":"dimension_value"}'::jsonb),
         ('business_intent',              'parent_id',                '{"ref_entity":"business_intent"}'::jsonb),
-        ('business_intent',              'default_gl_account_id',    '{"ref_entity":"gl_account"}'::jsonb),
-        ('business_intent',              'default_tax_group_id',     '{"ref_entity":"tax_group"}'::jsonb),
         ('company_code_intent_policy',   'company_code_id',          '{"ref_entity":"company_code"}'::jsonb),
         ('company_code_intent_policy',   'intent_id',                '{"ref_entity":"business_intent"}'::jsonb),
         ('company_code_intent_policy',   'override_gl_account_id',   '{"ref_entity":"gl_account"}'::jsonb),

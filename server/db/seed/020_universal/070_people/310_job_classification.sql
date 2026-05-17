@@ -245,12 +245,15 @@ BEGIN
          'P&L ownership and cross-functional business unit leadership.')
     ) AS x(code, family, name, description)
     ON CONFLICT (tenant_id, code) DO UPDATE
-        SET name        = EXCLUDED.name,
-            description = EXCLUDED.description,
-            updated_at  = now(),
-            updated_by  = v_su
-        WHERE (master.job_function.name, master.job_function.description)
-              IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.description);
+        SET name          = EXCLUDED.name,
+            description   = EXCLUDED.description,
+            job_family_id = EXCLUDED.job_family_id,
+            updated_at    = now(),
+            updated_by    = v_su
+        WHERE (master.job_function.name, master.job_function.description,
+               master.job_function.job_family_id)
+              IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.description,
+                                EXCLUDED.job_family_id);
 
     GET DIAGNOSTICS v_n = ROW_COUNT;
     RAISE NOTICE '[%] job_function: % rows upserted', v_pack, v_n;
@@ -773,7 +776,7 @@ BEGIN
          'Resolves customer queries across chat, email, and phone channels.'),
 
         ('customer_success_manager',    'Customer Success Manager',
-         'customer_success','cust_success_mgmt','PROFESSIONAL','P2','G06','manager',
+         'customer_success','cust_success_mgmt','PROFESSIONAL','P2','G06','specialist',
          'Manages a portfolio of accounts; drives adoption, health scores, and retention.'),
 
         ('sr_customer_success_manager', 'Senior Customer Success Manager',
@@ -864,12 +867,24 @@ BEGIN
 
     ) AS x(code, name, fam, fn, band, lvl, grade, dsgn, description)
     ON CONFLICT (tenant_id, code) DO UPDATE
-        SET name        = EXCLUDED.name,
-            description = EXCLUDED.description,
-            updated_at  = now(),
-            updated_by  = v_su
-        WHERE (master.job.name, master.job.description)
-              IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.description);
+        SET name            = EXCLUDED.name,
+            description     = EXCLUDED.description,
+            job_family_id   = EXCLUDED.job_family_id,
+            job_function_id = EXCLUDED.job_function_id,
+            career_band_id  = EXCLUDED.career_band_id,
+            career_level_id = EXCLUDED.career_level_id,
+            pay_grade_id    = EXCLUDED.pay_grade_id,
+            designation_id  = EXCLUDED.designation_id,
+            updated_at      = now(),
+            updated_by      = v_su
+        WHERE (master.job.name, master.job.description,
+               master.job.job_family_id, master.job.job_function_id,
+               master.job.career_band_id, master.job.career_level_id,
+               master.job.pay_grade_id, master.job.designation_id)
+              IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.description,
+                                EXCLUDED.job_family_id, EXCLUDED.job_function_id,
+                                EXCLUDED.career_band_id, EXCLUDED.career_level_id,
+                                EXCLUDED.pay_grade_id, EXCLUDED.designation_id);
 
     GET DIAGNOSTICS v_n = ROW_COUNT;
     RAISE NOTICE '[%] job: % rows upserted', v_pack, v_n;
@@ -912,7 +927,15 @@ BEGIN
         RAISE EXCEPTION '[%] Assertion failed: expected >= 75 job rows, found %', v_pack, v_n;
     END IF;
 
-    -- Validate: no job has a broken job_function FK
+    -- Validate: no job has a NULL job_function_id (catches subquery misses from code typos)
+    SELECT COUNT(*) INTO v_n
+    FROM master.job
+    WHERE tenant_id = v_tid AND job_function_id IS NULL;
+    IF v_n > 0 THEN
+        RAISE EXCEPTION '[%] Assertion failed: % jobs have NULL job_function_id — check function codes', v_pack, v_n;
+    END IF;
+
+    -- Validate: no job has a broken job_function FK (catches stale / orphaned UUIDs)
     SELECT COUNT(*) INTO v_n
     FROM master.job j
     LEFT JOIN master.job_function jf
@@ -922,6 +945,14 @@ BEGIN
       AND jf.id IS NULL;
     IF v_n > 0 THEN
         RAISE EXCEPTION '[%] Assertion failed: % jobs have a broken job_function_id FK', v_pack, v_n;
+    END IF;
+
+    -- Validate: no job has a NULL career_level_id
+    SELECT COUNT(*) INTO v_n
+    FROM master.job
+    WHERE tenant_id = v_tid AND career_level_id IS NULL;
+    IF v_n > 0 THEN
+        RAISE EXCEPTION '[%] Assertion failed: % jobs have NULL career_level_id — check level codes', v_pack, v_n;
     END IF;
 
     -- Validate: no job has a broken career_level FK

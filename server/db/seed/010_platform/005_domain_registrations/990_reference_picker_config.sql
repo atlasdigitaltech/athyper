@@ -479,7 +479,7 @@ BEGIN
                     )
                   )
                 )
-              WHEN target_entity = 'spend_category' THEN
+              WHEN target_entity = 'commodity_category' THEN
                 jsonb_build_object(
                   'variant', 'advanced',
                   'density', 'mini',
@@ -487,8 +487,8 @@ BEGIN
                   'max_list_height', 320,
                   'page_size', 20,
                   'default_search_mode', 'server',
-                  'option_action_label', 'Open spend category',
-                  'result_label', 'spend category',
+                  'option_action_label', 'Open category',
+                  'result_label', 'category',
                   'show_recently_used', true,
                   'recent_limit', 5,
                   'default_control', 'active',
@@ -507,9 +507,9 @@ BEGIN
                       'tone_map',  jsonb_build_object('active','success','inactive','muted')
                     ),
                     jsonb_build_object(
-                      'field','procurement_type',
-                      'label_map', jsonb_build_object('goods','Goods','services','Services'),
-                      'tone_map',  jsonb_build_object('goods','secondary','services','muted')
+                      'field','buy_allowed',
+                      'label_map', jsonb_build_object('true','Buy','false','No buy'),
+                      'tone_map',  jsonb_build_object('true','secondary','false','muted')
                     )
                   )
                 )

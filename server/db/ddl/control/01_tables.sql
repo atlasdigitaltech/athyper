@@ -16,11 +16,11 @@
 --                  acct_profile_commitment_config, acct_profile_revenue_config,
 --                  acct_profile_settlement_config, acct_profile_event,
 --                  acct_profile_entry_template, acct_profile_book_rule,
---                  acct_profile_dimension_rule, classification_to_intent_rule,
+--                  acct_profile_dimension_rule, commodity_classification_to_intent_rule,
 --                  intent_to_accounting_profile_rule, intent_profile_override,
 --                  dimension_policy, dimension_policy_allowed_value,
 --                  document_sequence_config, document_sequence_counter,
---                  classification_config, commodity_to_spend_category_rule,
+--                  commodity_classification_config, commodity_code_to_category_rule,
 --                  rounding_rule, tax_rate_schedule, tax_group, tax_group_component
 --   ── Planning:   forecast_line, planning_driver, planning_driver_formula,
 --                  planning_driver_assumption, planning_driver_version,
@@ -3304,14 +3304,21 @@ COMMENT ON TABLE control.acct_profile_dimension_rule IS
     'Priority determines evaluation order when multiple rules apply.';
 
 
--- §10  classification_to_intent_rule — classification → intent resolution
-CREATE TABLE IF NOT EXISTS control.classification_to_intent_rule (
+-- §10  commodity_classification_to_intent_rule — classification → intent resolution
+DO $$ BEGIN
+    IF to_regclass('control.commodity_classification_to_intent_rule') IS NULL
+       AND to_regclass('control.classification_to_intent_rule') IS NOT NULL THEN
+        ALTER TABLE control.classification_to_intent_rule RENAME TO commodity_classification_to_intent_rule;
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS control.commodity_classification_to_intent_rule (
     -- Identity
     id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid        NOT NULL,
 
     -- Classification scope
-    classification_source   text        NOT NULL DEFAULT 'SPEND_CATEGORY',
+    classification_source   text        NOT NULL DEFAULT 'COMMODITY_CATEGORY',
     classification_id       uuid        NOT NULL,
     direction               text,
 
@@ -3348,7 +3355,7 @@ CREATE TABLE IF NOT EXISTS control.classification_to_intent_rule (
 
     CONSTRAINT cir_pkey           PRIMARY KEY (id),
     CONSTRAINT cir_source_chk     CHECK (classification_source IN (
-        'SPEND_CATEGORY','PRODUCT','SERVICE','ITEM_GROUP','REVENUE_TYPE')),
+        'COMMODITY_CATEGORY','SPEND_CATEGORY','PRODUCT','SERVICE','ITEM_GROUP','REVENUE_TYPE')),
     CONSTRAINT cir_condition_chk  CHECK (condition_type IN (
         'AMOUNT_ABOVE','AMOUNT_BELOW','IS_RECURRING','IS_ONE_TIME','COMPANY_MATCH',
         'PROCUREMENT_METHOD','CROSS_BORDER','DOC_TYPE_MATCH','COMMODITY_MATCH',
@@ -3360,13 +3367,256 @@ CREATE TABLE IF NOT EXISTS control.classification_to_intent_rule (
     CONSTRAINT cir_effective_chk  CHECK (effective_to IS NULL OR effective_to >= effective_from)
 );
 
-COMMENT ON TABLE control.classification_to_intent_rule IS
+COMMENT ON TABLE control.commodity_classification_to_intent_rule IS
     'ARCHETYPE=B;SCOPE=T. Engine 4.13: classification → intent resolution. All 16 condition types runtime-implemented. '
     'Does NOT modify existing category_intent_rule. Effective-dated for auditability.';
 
 
 -- §11  intent_to_accounting_profile_rule — intent + context → profile matching
 --      All predicates are nullable = wildcard. First match by ascending priority wins.
+-- =============================================================================
+ALTER TABLE control.commodity_classification_to_intent_rule DROP CONSTRAINT IF EXISTS cir_source_chk;
+ALTER TABLE control.commodity_classification_to_intent_rule ADD CONSTRAINT cir_source_chk CHECK (
+    classification_source IN ('COMMODITY_CATEGORY','SPEND_CATEGORY','PRODUCT','SERVICE','ITEM_GROUP','REVENUE_TYPE')
+);
+
+
+-- CGP1  commodity_category_buy_policy - commodity category + intent + scope
+-- =============================================================================
+DO $$ BEGIN
+    IF to_regclass('control.commodity_category_buy_policy') IS NULL
+       AND to_regclass('control.commodity_category_spend_policy') IS NOT NULL THEN
+        ALTER TABLE control.commodity_category_spend_policy RENAME TO commodity_category_buy_policy;
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS control.commodity_category_buy_policy (
+    id                              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                       uuid        NOT NULL,
+    commodity_category_id           uuid        NOT NULL,
+    business_intent_id              uuid        NOT NULL,
+    company_code_id                 uuid,
+    scope_type                      text        NOT NULL DEFAULT 'TENANT',
+    scope_id                        uuid,
+    mapping_mode                    text        NOT NULL DEFAULT 'ALLOW',
+    is_default                      boolean     NOT NULL DEFAULT false,
+    is_selectable                   boolean     NOT NULL DEFAULT true,
+    sort_order                      smallint    NOT NULL DEFAULT 0,
+    default_gl_account_id           uuid,
+    default_tax_group_id            uuid,
+    default_asset_class_id          uuid,
+    default_asset_profile_code      text,
+    default_budget_profile_id       uuid,
+    is_asset_tag_required           boolean,
+    capex_screening_threshold       numeric(18,4),
+    capex_screening_currency        character(3),
+    override_visibility                  text,
+    override_is_classification_required  boolean,
+    override_is_hs_required              boolean,
+    override_is_regulated                boolean,
+    effective_from                  date        NOT NULL DEFAULT CURRENT_DATE,
+    effective_to                    date,
+    metadata                        jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status                          shared.active_inactive_d NOT NULL DEFAULT 'active',
+    is_active                       boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at               timestamptz,
+    status_changed_by               uuid,
+    created_at                      timestamptz NOT NULL DEFAULT now(),
+    created_by                      uuid        NOT NULL,
+    updated_at                      timestamptz,
+    updated_by                      uuid,
+    CONSTRAINT ccbpol_pkey             PRIMARY KEY (id),
+    CONSTRAINT ccbpol_tenant_id_uq     UNIQUE (tenant_id, id),
+    CONSTRAINT ccbpol_mapping_mode_chk CHECK (mapping_mode IN ('ALLOW', 'DENY')),
+    CONSTRAINT ccbpol_scope_type_chk   CHECK (scope_type IN (
+        'TENANT','COMPANY','SITE','SUPPLIER_PROFILE','COST_CENTER','PROJECT')),
+    CONSTRAINT ccbpol_scope_tenant_chk CHECK (
+        (scope_type = 'TENANT' AND company_code_id IS NULL AND scope_id IS NULL)
+        OR (scope_type <> 'TENANT' AND company_code_id IS NOT NULL AND scope_id IS NOT NULL)),
+    CONSTRAINT ccbpol_company_scope_chk CHECK (scope_type <> 'COMPANY' OR scope_id = company_code_id),
+    CONSTRAINT ccbpol_deny_flags_chk    CHECK (
+        mapping_mode <> 'DENY' OR (is_default = false AND is_selectable = false)),
+    CONSTRAINT ccbpol_capex_nonneg_chk  CHECK (
+        capex_screening_threshold IS NULL OR capex_screening_threshold >= 0),
+    CONSTRAINT ccbpol_capex_curr_req_chk CHECK (
+        capex_screening_threshold IS NULL OR capex_screening_currency IS NOT NULL),
+    CONSTRAINT ccbpol_effective_chk     CHECK (effective_to IS NULL OR effective_to >= effective_from)
+);
+
+COMMENT ON TABLE control.commodity_category_buy_policy IS
+    'ARCHETYPE=B;SCOPE=T. Buy-side policy mapping commodity_category + business_intent + scope. '
+    'Controls allowed/default/selectable intents and buy-side GL, asset, budget, capex defaults.';
+
+
+-- =============================================================================
+-- CGP2  commodity_category_sell_policy - commodity category + intent + scope
+-- =============================================================================
+DO $$ BEGIN
+    IF to_regclass('control.commodity_category_sell_policy') IS NULL
+       AND to_regclass('control.commodity_category_sales_policy') IS NOT NULL THEN
+        ALTER TABLE control.commodity_category_sales_policy RENAME TO commodity_category_sell_policy;
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS control.commodity_category_sell_policy (
+    id                              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                       uuid        NOT NULL,
+    commodity_category_id           uuid        NOT NULL,
+    business_intent_id              uuid        NOT NULL,
+    company_code_id                 uuid,
+    scope_type                      text        NOT NULL DEFAULT 'TENANT',
+    scope_id                        uuid,
+    mapping_mode                    text        NOT NULL DEFAULT 'ALLOW',
+    is_default                      boolean     NOT NULL DEFAULT false,
+    is_selectable                   boolean     NOT NULL DEFAULT true,
+    sort_order                      smallint    NOT NULL DEFAULT 0,
+    default_revenue_gl_account_id          uuid,
+    default_deferred_revenue_gl_account_id uuid,
+    default_unbilled_ar_gl_account_id      uuid,
+    default_tax_group_id                   uuid,
+    default_accounting_profile_id          uuid,
+    paired_cogs_profile_id                 uuid,
+    revenue_recognition_method             text,
+    variable_consideration                 text,
+    standalone_selling_price_method        text,
+    effective_from                  date        NOT NULL DEFAULT CURRENT_DATE,
+    effective_to                    date,
+    metadata                        jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status                          shared.active_inactive_d NOT NULL DEFAULT 'active',
+    is_active                       boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at               timestamptz,
+    status_changed_by               uuid,
+    created_at                      timestamptz NOT NULL DEFAULT now(),
+    created_by                      uuid        NOT NULL,
+    updated_at                      timestamptz,
+    updated_by                      uuid,
+    CONSTRAINT ccselpol_pkey             PRIMARY KEY (id),
+    CONSTRAINT ccselpol_tenant_id_uq     UNIQUE (tenant_id, id),
+    CONSTRAINT ccselpol_mapping_mode_chk CHECK (mapping_mode IN ('ALLOW', 'DENY')),
+    CONSTRAINT ccselpol_scope_type_chk   CHECK (scope_type IN (
+        'TENANT','COMPANY','SITE','CUSTOMER_PROFILE','SALES_CHANNEL','PROFIT_CENTER','COST_CENTER')),
+    CONSTRAINT ccselpol_scope_tenant_chk CHECK (
+        (scope_type = 'TENANT' AND company_code_id IS NULL AND scope_id IS NULL)
+        OR (scope_type <> 'TENANT' AND company_code_id IS NOT NULL AND scope_id IS NOT NULL)),
+    CONSTRAINT ccselpol_company_scope_chk CHECK (scope_type <> 'COMPANY' OR scope_id = company_code_id),
+    CONSTRAINT ccselpol_deny_flags_chk    CHECK (
+        mapping_mode <> 'DENY' OR (is_default = false AND is_selectable = false)),
+    CONSTRAINT ccselpol_rev_method_chk    CHECK (
+        revenue_recognition_method IS NULL OR revenue_recognition_method IN (
+            'POINT_IN_TIME','OVER_TIME','PCT_COMPLETION','INPUT_METHOD','OUTPUT_METHOD')),
+    CONSTRAINT ccselpol_effective_chk     CHECK (effective_to IS NULL OR effective_to >= effective_from)
+);
+
+COMMENT ON TABLE control.commodity_category_sell_policy IS
+    'ARCHETYPE=B;SCOPE=T. Sell-side policy mapping commodity_category + business_intent + scope. '
+    'Controls allowed/default/selectable intents and revenue, deferral, tax, and recognition defaults.';
+
+
+-- =============================================================================
+-- CGP3  commodity_category_inventory_policy - commodity category + operations scope
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS control.commodity_category_inventory_policy (
+    id                              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                       uuid        NOT NULL,
+    commodity_category_id           uuid        NOT NULL,
+    company_code_id                 uuid,
+    scope_type                      text        NOT NULL DEFAULT 'TENANT',
+    scope_id                        uuid,
+    mapping_mode                    text        NOT NULL DEFAULT 'ALLOW',
+    stocking_status                 text        NOT NULL DEFAULT 'stocked',
+    sort_order                      smallint    NOT NULL DEFAULT 0,
+    valuation_method                text,
+    default_inventory_gl_account_id uuid,
+    default_wip_gl_account_id       uuid,
+    default_cogs_gl_account_id      uuid,
+    default_price_variance_gl_account_id uuid,
+    default_reorder_point           numeric(18,4),
+    default_reorder_qty             numeric(18,4),
+    default_safety_stock            numeric(18,4),
+    override_lot_tracking_required  boolean,
+    override_serial_tracking_required boolean,
+    effective_from                  date        NOT NULL DEFAULT CURRENT_DATE,
+    effective_to                    date,
+    metadata                        jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status                          shared.active_inactive_d NOT NULL DEFAULT 'active',
+    is_active                       boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at               timestamptz,
+    status_changed_by               uuid,
+    created_at                      timestamptz NOT NULL DEFAULT now(),
+    created_by                      uuid        NOT NULL,
+    updated_at                      timestamptz,
+    updated_by                      uuid,
+    CONSTRAINT ccipol_pkey             PRIMARY KEY (id),
+    CONSTRAINT ccipol_tenant_id_uq     UNIQUE (tenant_id, id),
+    CONSTRAINT ccipol_mapping_mode_chk CHECK (mapping_mode IN ('ALLOW', 'DENY')),
+    CONSTRAINT ccipol_scope_type_chk   CHECK (scope_type IN ('TENANT','COMPANY','SITE','WAREHOUSE')),
+    CONSTRAINT ccipol_scope_tenant_chk CHECK (
+        (scope_type = 'TENANT' AND company_code_id IS NULL AND scope_id IS NULL)
+        OR (scope_type <> 'TENANT' AND company_code_id IS NOT NULL AND scope_id IS NOT NULL)),
+    CONSTRAINT ccipol_company_scope_chk CHECK (scope_type <> 'COMPANY' OR scope_id = company_code_id),
+    CONSTRAINT ccipol_stocking_status_chk CHECK (stocking_status IN (
+        'stocked','non_stock','blocked','made_to_order')),
+    CONSTRAINT ccipol_reorder_nonneg_chk CHECK (
+        (default_reorder_point IS NULL OR default_reorder_point >= 0)
+        AND (default_reorder_qty IS NULL OR default_reorder_qty >= 0)
+        AND (default_safety_stock IS NULL OR default_safety_stock >= 0)),
+    CONSTRAINT ccipol_effective_chk     CHECK (effective_to IS NULL OR effective_to >= effective_from)
+);
+
+COMMENT ON TABLE control.commodity_category_inventory_policy IS
+    'ARCHETYPE=B;SCOPE=T. Inventory policy mapping commodity_category + operational scope. '
+    'Controls stockability, valuation, replenishment, and inventory posting defaults.';
+
+
+-- =============================================================================
+-- SPO1  supplier_posting_override - supplier-company AP posting role overrides
+-- =============================================================================
+DROP TABLE IF EXISTS master.company_code_supplier_posting_override CASCADE;
+
+CREATE TABLE IF NOT EXISTS control.supplier_posting_override (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    supplier_profile_id   uuid        NOT NULL,
+    posting_role_code     text        NOT NULL,
+    gl_account_id         uuid        NOT NULL,
+    book_code             text        NOT NULL DEFAULT 'PRIMARY',
+    effective_from        date        NOT NULL DEFAULT CURRENT_DATE,
+    effective_to          date,
+    reason                text,
+    metadata              jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status                shared.active_inactive_d NOT NULL DEFAULT 'active',
+    is_active             boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at     timestamptz,
+    status_changed_by     uuid,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+    updated_at            timestamptz,
+    updated_by            uuid,
+    CONSTRAINT spo_pkey                  PRIMARY KEY (id),
+    CONSTRAINT spo_tenant_id_uq          UNIQUE (tenant_id, id),
+    CONSTRAINT spo_posting_role_nonempty CHECK (btrim(posting_role_code) <> ''),
+    CONSTRAINT spo_book_code_nonempty    CHECK (btrim(book_code) <> ''),
+    CONSTRAINT spo_effective_chk         CHECK (effective_to IS NULL OR effective_to >= effective_from)
+);
+
+ALTER TABLE control.supplier_posting_override
+    DROP CONSTRAINT IF EXISTS spo_profile_role_book_temporal_excl;
+
+ALTER TABLE control.supplier_posting_override
+    ADD CONSTRAINT spo_profile_role_book_temporal_excl
+    EXCLUDE USING gist (
+        tenant_id           WITH =,
+        supplier_profile_id WITH =,
+        posting_role_code   WITH =,
+        book_code           WITH =,
+        daterange(effective_from, COALESCE(effective_to, '9999-12-31'::date), '[]') WITH &&
+    ) WHERE (is_active = true);
+
+COMMENT ON TABLE control.supplier_posting_override IS
+    'ARCHETYPE=B;SCOPE=T. Exceptional AP posting-role GL overrides for a supplier-company profile. '
+    'Use only for non-standard AP account assignment; commodity intent/default policy lives in commodity_category_buy_policy.';
+
+
 CREATE TABLE IF NOT EXISTS control.intent_to_accounting_profile_rule (
     -- Identity
     id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -3707,14 +3957,21 @@ COMMENT ON TABLE control.document_sequence_counter IS
 
 
 -- =============================================================================
--- §13  control.classification_config — per-tenant AI classification preferences
+-- §13  control.commodity_classification_config — per-tenant AI classification preferences
 -- =============================================================================
 -- Singleton per tenant (PK = tenant_id). Phase 2 note: add company_code_id to
 -- support company-specific overrides (NULL = tenant default).
 -- FK → master.tenant → 06_constraints/002_control.sql
 -- =============================================================================
 
-CREATE TABLE IF NOT EXISTS control.classification_config (
+DO $$ BEGIN
+    IF to_regclass('control.commodity_classification_config') IS NULL
+       AND to_regclass('control.classification_config') IS NOT NULL THEN
+        ALTER TABLE control.classification_config RENAME TO commodity_classification_config;
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS control.commodity_classification_config (
     -- Identity
     tenant_id                       uuid        NOT NULL,
 
@@ -3723,8 +3980,6 @@ CREATE TABLE IF NOT EXISTS control.classification_config (
     trade_commodity_domain          text,
     is_commodity_code_required      boolean     NOT NULL DEFAULT false,
     is_trade_code_required          boolean     NOT NULL DEFAULT false,
-    require_for_capex_above         numeric(18,4),
-    require_for_capex_currency      character(3),
     is_required_for_regulated       boolean     NOT NULL DEFAULT true,
 
     -- Industry classification
@@ -3759,14 +4014,10 @@ CREATE TABLE IF NOT EXISTS control.classification_config (
     CONSTRAINT clscfg_conf_sugg_chk  CHECK (
         min_confidence_suggest >= 0 AND min_confidence_suggest <= 100),
     CONSTRAINT clscfg_conf_order_chk CHECK (
-        min_confidence_auto >= min_confidence_suggest),
-    CONSTRAINT clscfg_capex_chk      CHECK (
-        require_for_capex_above IS NULL OR require_for_capex_above >= 0),
-    CONSTRAINT clscfg_capex_curr_chk CHECK (
-        require_for_capex_above IS NULL OR require_for_capex_currency IS NOT NULL)
+        min_confidence_auto >= min_confidence_suggest)
 );
 
-COMMENT ON TABLE control.classification_config IS
+COMMENT ON TABLE control.commodity_classification_config IS
     'ARCHETYPE=C;SCOPE=T. Per-tenant AI classification preferences. Singleton (PK = tenant_id). '
     'Phase 2: add company_code_id for company-specific overrides; '
     'precedence: company row → tenant row → platform defaults. '
@@ -3774,9 +4025,9 @@ COMMENT ON TABLE control.classification_config IS
 
 
 -- =============================================================================
--- §14  control.commodity_to_spend_category_rule — code → spend_category routing
+-- §14  control.commodity_code_to_category_rule — code → commodity_category routing
 -- =============================================================================
--- Answers: "Given incoming UNSPSC code 43211503, route to spend_category X."
+-- Answers: "Given incoming UNSPSC code 43211503, route to commodity_category X."
 -- Reverse direction of master.commodity_classification.
 -- Range-based: code_from..code_to for subtree matching. Exact = code_to IS NULL.
 -- Deterministic routing: UNIQUE(tenant, domain, code_from, priority) WHERE active.
@@ -3784,7 +4035,9 @@ COMMENT ON TABLE control.classification_config IS
 -- Indexes → 07_indexes/002_control.sql
 -- =============================================================================
 
-CREATE TABLE IF NOT EXISTS control.commodity_to_spend_category_rule (
+DROP TABLE IF EXISTS control.commodity_to_spend_category_rule CASCADE;
+
+CREATE TABLE IF NOT EXISTS control.commodity_code_to_category_rule (
     -- Identity
     id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid        NOT NULL,
@@ -3801,7 +4054,7 @@ CREATE TABLE IF NOT EXISTS control.commodity_to_spend_category_rule (
     -- If set, match only at this hierarchy level (e.g. level=2 → UNSPSC segment).
 
     -- Resolution target
-    spend_category_id       uuid        NOT NULL,
+    commodity_category_id   uuid        NOT NULL,
 
     -- Match priority + confidence
     priority                smallint    NOT NULL DEFAULT 0,
@@ -3832,15 +4085,15 @@ CREATE TABLE IF NOT EXISTS control.commodity_to_spend_category_rule (
     CONSTRAINT ccrr_priority_chk    CHECK (priority >= 0)
 );
 
-COMMENT ON TABLE control.commodity_to_spend_category_rule IS
-    'ARCHETYPE=B;SCOPE=T. Code → spend_category reverse-routing. match_mode governs strategy: '
+COMMENT ON TABLE control.commodity_code_to_category_rule IS
+    'ARCHETYPE=B;SCOPE=T. Code → commodity_category reverse-routing. match_mode governs strategy: '
     'EXACT, RANGE (default), PREFIX, CROSSWALK. '
     'Deterministic: UNIQUE(tenant, domain, code_from, priority) WHERE active '
     'prevents same-priority collisions. Tie-break: highest priority → exact over '
     'range → narrowest range → newest created_at. '
-    'Replaces legacy spend_category_commodity_map.';
+    'Replaces legacy spend_category_commodity_map and commodity_to_spend_category_rule.';
 
-COMMENT ON COLUMN control.commodity_to_spend_category_rule.match_mode IS
+COMMENT ON COLUMN control.commodity_code_to_category_rule.match_mode IS
     'Routing match strategy. Runtime resolver MUST implement all 4 modes: '
     'EXACT: code_from only, code_to must be NULL. Direct equality. '
     'RANGE: code_from..code_to inclusive lexical range (default). '
@@ -3951,7 +4204,7 @@ CREATE TABLE IF NOT EXISTS control.tax_rate_schedule (
 
     -- Scope filters (NULL = wildcard)
     scope_company_code_id           uuid,
-    scope_spend_category_id         uuid,
+    scope_commodity_category_id     uuid,
     scope_commodity_domain_code     text,
     scope_commodity_code            text,
     scope_industry_domain_code      text,
@@ -4019,6 +4272,21 @@ COMMENT ON TABLE control.tax_rate_schedule IS
     'trs_tenant_id_uq enables tenant-composite FK from tax_group_component and tax_calculation. '
     'Temporal EXCLUDE prevents overlapping active rules with same scope + priority.';
 
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'control' AND table_name = 'tax_rate_schedule'
+          AND column_name = 'scope_spend_category_id'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'control' AND table_name = 'tax_rate_schedule'
+          AND column_name = 'scope_commodity_category_id'
+    ) THEN
+        ALTER TABLE control.tax_rate_schedule RENAME COLUMN scope_spend_category_id TO scope_commodity_category_id;
+    END IF;
+END $$;
+
 -- Temporal non-overlap: two active rules with identical scope + priority cannot overlap in time.
 ALTER TABLE control.tax_rate_schedule DROP CONSTRAINT IF EXISTS trs_temporal_excl;
 ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_temporal_excl
@@ -4030,7 +4298,7 @@ ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_temporal_excl
         COALESCE(component_code, '')                                                    WITH =,
         priority                                                                        WITH =,
         COALESCE(scope_company_code_id,         '00000000-0000-0000-0000-000000000000') WITH =,
-        COALESCE(scope_spend_category_id,       '00000000-0000-0000-0000-000000000000') WITH =,
+        COALESCE(scope_commodity_category_id,   '00000000-0000-0000-0000-000000000000') WITH =,
         COALESCE(scope_commodity_domain_code,   '')                                     WITH =,
         COALESCE(scope_commodity_code,          '')                                     WITH =,
         COALESCE(scope_industry_domain_code,    '')                                     WITH =,
@@ -4199,7 +4467,7 @@ CREATE TABLE IF NOT EXISTS control.forecast_line (
 
     -- Account
     gl_account_id           uuid,
-    spend_category_id       uuid,
+    commodity_category_id   uuid,
     intent_id               uuid,
 
     -- Dimensions
@@ -4279,6 +4547,21 @@ COMMENT ON TABLE control.forecast_line IS
     'variance_amount = GENERATED (total - prior_year). '
     'Driver-linked lines (is_driver_calculated) are recalculated when assumptions change. '
     'budget_allocation_id narrows to a specific fund center.';
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'control' AND table_name = 'forecast_line'
+          AND column_name = 'spend_category_id'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'control' AND table_name = 'forecast_line'
+          AND column_name = 'commodity_category_id'
+    ) THEN
+        ALTER TABLE control.forecast_line RENAME COLUMN spend_category_id TO commodity_category_id;
+    END IF;
+END $$;
 
 
 -- ============================================================================

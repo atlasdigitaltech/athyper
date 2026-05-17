@@ -10,7 +10,7 @@
 -- from the detail view (e.g. after updating line links or resolving exceptions).
 --
 -- Idempotent: WHERE NOT EXISTS guards on both permission and entity_operation.
--- Depends on: 001_invoice_v2.sql, 020_ap_flow_permissions.sql
+-- Depends on: 001_invoice.sql, 020_ap_flow_permissions.sql
 -- =============================================================================
 
 DO $$

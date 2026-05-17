@@ -649,7 +649,7 @@ COMMENT ON TABLE master.dimension_set_item IS
 
 -- =============================================================================
 -- INTENT + CLASSIFICATION ENGINE
--- Tables: business_intent, company_code_intent_policy, company_code_dimension_default
+-- Tables: business_intent, company_code_dimension_default
 -- Depends on: master.tenant, master.operating_unit, master.gl_account,
 --             master.dimension_type, master.dimension_value
 -- spend_category.default_intent_id added inline in §P7 above (forward FK)
@@ -661,13 +661,25 @@ COMMENT ON TABLE master.dimension_set_item IS
 
 
 -- =============================================================================
--- §BI  master.business_intent — intent ontology
+-- §BI  master.business_intent — purpose/domain ontology
 -- =============================================================================
--- Hierarchical, tenant-scoped intent tree. Domain must be consistent within
--- a subtree (enforced by trg_bi_parent_guard in 09_triggers).
--- No default_accounting_profile_id — Engine 4.13 resolves profiles exclusively
--- via intent_to_accounting_profile_rule + intent_profile_override.
+-- Tenant-scoped intent tree. Seeded data stays at domain level only; tenant
+-- variants can be created as needed. Posting, tax, approval, and asset defaults
+-- are intentionally owned by commodity category buy/sell policies.
 -- =============================================================================
+
+ALTER TABLE IF EXISTS master.business_intent DROP CONSTRAINT IF EXISTS bi_gl_account_fk;
+ALTER TABLE IF EXISTS master.business_intent DROP CONSTRAINT IF EXISTS bi_default_tax_group_fk;
+ALTER TABLE IF EXISTS master.business_intent DROP CONSTRAINT IF EXISTS bi_auto_approve_chk;
+ALTER TABLE IF EXISTS master.business_intent DROP CONSTRAINT IF EXISTS bi_auto_approve_curr_chk;
+ALTER TABLE IF EXISTS master.business_intent DROP COLUMN IF EXISTS default_gl_account_id;
+ALTER TABLE IF EXISTS master.business_intent DROP COLUMN IF EXISTS default_tax_code;
+ALTER TABLE IF EXISTS master.business_intent DROP COLUMN IF EXISTS default_tax_group_id;
+ALTER TABLE IF EXISTS master.business_intent DROP COLUMN IF EXISTS default_asset_profile_code;
+ALTER TABLE IF EXISTS master.business_intent DROP COLUMN IF EXISTS is_approval_required;
+ALTER TABLE IF EXISTS master.business_intent DROP COLUMN IF EXISTS max_auto_approve_amount;
+ALTER TABLE IF EXISTS master.business_intent DROP COLUMN IF EXISTS max_auto_approve_currency;
+ALTER TABLE IF EXISTS master.business_intent DROP COLUMN IF EXISTS commodity_domain_affinities;
 
 CREATE TABLE IF NOT EXISTS master.business_intent (
     -- Identity
@@ -687,24 +699,6 @@ CREATE TABLE IF NOT EXISTS master.business_intent (
     parent_id                       uuid,
     path                            text,
     depth                           smallint    NOT NULL DEFAULT 0,
-
-    -- Financial defaults (last-resort; Engine 4.13 rules take precedence)
-    default_gl_account_id           uuid,
-    default_tax_code                text,
-    default_tax_group_id            uuid,       -- FK → control.tax_group (tenant-composite)
-    -- default_accounting_profile_id intentionally omitted.
-    -- Profile resolution is fully owned by:
-    --   control.intent_to_accounting_profile_rule (rule-based)
-    --   control.intent_profile_override        (governance-gated)
-    default_asset_profile_code      text,
-
-    -- Approval control
-    is_approval_required            boolean     NOT NULL DEFAULT true,
-    max_auto_approve_amount         numeric(18,4),
-    max_auto_approve_currency       character(3),
-
-    -- Commodity affinities
-    commodity_domain_affinities     text[],
 
     -- Visibility
     visibility                      text        NOT NULL DEFAULT 'STANDARD',
@@ -739,85 +733,20 @@ CREATE TABLE IF NOT EXISTS master.business_intent (
     CONSTRAINT bi_visibility_chk     CHECK (visibility IN (
         'STANDARD','RESTRICTED','CONFIDENTIAL')),
     CONSTRAINT bi_no_self_ref        CHECK (parent_id IS DISTINCT FROM id),
-    CONSTRAINT bi_depth_chk          CHECK (depth >= 0),
-    CONSTRAINT bi_auto_approve_chk   CHECK (
-        max_auto_approve_amount IS NULL OR max_auto_approve_amount >= 0),
-    CONSTRAINT bi_auto_approve_curr_chk CHECK (
-        max_auto_approve_amount IS NULL OR max_auto_approve_currency IS NOT NULL)
+    CONSTRAINT bi_depth_chk          CHECK (depth >= 0)
 );
 
 COMMENT ON TABLE master.business_intent IS
-    'ARCHETYPE=B;SCOPE=T. Business intent ontology. Tenant-scoped hierarchical tree. '
-    'domain must be consistent within a subtree — enforced by trg_bi_parent_guard. '
-    'default_accounting_profile_id intentionally absent: Engine 4.13 owns '
-    'profile resolution via intent_to_accounting_profile_rule + intent_profile_override. '
+    'ARCHETYPE=B;SCOPE=T. Business intent purpose/domain ontology. '
+    'Seeded records are domain-level only; commodity category buy/sell policies '
+    'own posting, tax, approval, asset, and selection behavior. '
     'UNIQUE(tenant_id, id) enables tenant-composite parent FK.';
 
 
 -- =============================================================================
--- §OIM  master.company_code_intent_policy — company code × intent availability
--- =============================================================================
--- ALLOW = intent is available to this company code.
--- DENY  = intent is explicitly blocked (only meaningful for STANDARD visibility).
--- STANDARD visibility intents available to all company codes unless a DENY row exists.
--- RESTRICTED visibility intents require an explicit ALLOW row to be visible.
--- Dimension overrides: use master.company_code_dimension_default.
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS master.company_code_intent_policy (
-    -- Identity
-    id                              uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id                       uuid        NOT NULL,
-
-    -- Mapping
-    company_code_id                 uuid        NOT NULL,
-    intent_id                       uuid        NOT NULL,
-
-    -- Allow / deny
-    mapping_mode                    text        NOT NULL DEFAULT 'ALLOW',
-
-    -- Flags
-    is_default                      boolean     NOT NULL DEFAULT false,
-
-    -- Company-code-level overrides (NULL = inherit from intent)
-    -- Dimension overrides intentionally omitted — use master.company_code_dimension_default.
-    override_gl_account_id          uuid,
-    override_fp_id                  uuid,
-    override_approval_template_id   uuid,
-    override_compliance_checks      text[],
-
-    -- Notes
-    notes                           text,
-
-    -- Metadata
-    metadata                        jsonb       NOT NULL DEFAULT '{}'::jsonb,
-
-    -- Lifecycle
-    status                          shared.active_inactive_d NOT NULL DEFAULT 'active',
-    is_active                       boolean     GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at               timestamptz,
-    status_changed_by               uuid,
-
-    -- Audit
-    created_at                      timestamptz NOT NULL DEFAULT now(),
-    created_by                      uuid        NOT NULL,
-    updated_at                      timestamptz,
-    updated_by                      uuid,
-
-    CONSTRAINT ccip_pkey              PRIMARY KEY (id),
-    CONSTRAINT ccip_cc_intent_uq      UNIQUE (tenant_id, company_code_id, intent_id),
-    CONSTRAINT ccip_mode_chk          CHECK (mapping_mode IN ('ALLOW','DENY')),
-    CONSTRAINT ccip_deny_not_default  CHECK (mapping_mode <> 'DENY' OR is_default = false)
-);
-
-COMMENT ON TABLE master.company_code_intent_policy IS
-    'ARCHETYPE=B;SCOPE=T. Company Code × Intent availability. mapping_mode ALLOW | DENY. '
-    'STANDARD intents visible to all company codes unless a DENY row exists. '
-    'RESTRICTED intents require an explicit ALLOW row. '
-    'Dimension overrides intentionally absent — use master.company_code_dimension_default.';
+DROP TABLE IF EXISTS master.company_code_intent_policy CASCADE;
 
 
--- =============================================================================
 -- §CCDD  master.company_code_dimension_default — company-code default dimension values (temporal)
 -- =============================================================================
 -- Truly temporal: EXCLUDE constraint prevents overlapping active defaults for

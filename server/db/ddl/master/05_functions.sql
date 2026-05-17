@@ -2842,10 +2842,10 @@ BEGIN
     CASE NEW.owner_type
         WHEN 'product' THEN
             SELECT EXISTS(SELECT 1 FROM master.product WHERE id = NEW.owner_id AND tenant_id = NEW.tenant_id) INTO v_exists;
-        WHEN 'item_category' THEN
-            SELECT EXISTS(SELECT 1 FROM master.item_category WHERE id = NEW.owner_id AND tenant_id = NEW.tenant_id) INTO v_exists;
         WHEN 'spend_category' THEN
             SELECT EXISTS(SELECT 1 FROM master.spend_category WHERE id = NEW.owner_id AND tenant_id = NEW.tenant_id) INTO v_exists;
+        WHEN 'commodity_category' THEN
+            SELECT EXISTS(SELECT 1 FROM master.commodity_category WHERE id = NEW.owner_id AND tenant_id = NEW.tenant_id) INTO v_exists;
         WHEN 'item' THEN
             SELECT EXISTS(SELECT 1 FROM master.item WHERE id = NEW.owner_id AND tenant_id = NEW.tenant_id) INTO v_exists;
         WHEN 'customer' THEN
@@ -2869,7 +2869,7 @@ $$;
 
 COMMENT ON FUNCTION master.trg_cc_validate_owner IS
     'Polymorphic owner FK validation for commodity_classification. '
-    'Dispatches to product, item_category, spend_category, item, customer, supplier.';
+    'Dispatches to product, spend_category, commodity_category, item, customer, supplier.';
 
 
 -- fn_trg_cc_validate_code — polymorphic code FK + domain_code match validation
@@ -3688,13 +3688,98 @@ COMMENT ON FUNCTION master.trg_sc_maintain_root_category IS
 -- =============================================================================
 -- §BI-FN  fn_resolve_intent_default_gl_account
 -- =============================================================================
+-- =============================================================================
+-- CCAT-ROOT  Commodity-category root-category maintenance
+-- =============================================================================
+CREATE OR REPLACE FUNCTION master.trg_ccat_maintain_root_category()
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = master AS $$
+DECLARE
+    v_root_id   uuid;
+    v_cursor    uuid;
+    v_depth     int := 0;
+    v_max_depth CONSTANT int := 50;
+BEGIN
+    IF NEW.parent_id IS NULL THEN
+        NEW.root_category_id := NEW.id;
+
+        IF TG_OP = 'UPDATE'
+           AND OLD.parent_id IS DISTINCT FROM NEW.parent_id
+        THEN
+            WITH RECURSIVE descendants AS (
+                SELECT id FROM master.commodity_category
+                WHERE parent_id = NEW.id AND tenant_id = NEW.tenant_id
+                UNION ALL
+                SELECT cc.id FROM master.commodity_category cc
+                INNER JOIN descendants d ON cc.parent_id = d.id
+                    AND cc.tenant_id = NEW.tenant_id
+            )
+            UPDATE master.commodity_category
+            SET root_category_id = NEW.root_category_id
+            WHERE id IN (SELECT id FROM descendants)
+              AND tenant_id = NEW.tenant_id;
+        END IF;
+
+        RETURN NEW;
+    END IF;
+
+    v_cursor := NEW.parent_id;
+    LOOP
+        SELECT cc.parent_id, cc.id INTO v_cursor, v_root_id
+        FROM master.commodity_category cc
+        WHERE cc.id = v_cursor AND cc.tenant_id = NEW.tenant_id;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'Broken parent chain: could not find commodity_category % for tenant %',
+                v_cursor, NEW.tenant_id
+                USING ERRCODE = 'foreign_key_violation';
+        END IF;
+
+        IF v_cursor IS NULL THEN
+            EXIT;
+        END IF;
+
+        v_depth := v_depth + 1;
+        IF v_depth > v_max_depth THEN
+            RAISE EXCEPTION 'Cycle or excessive depth (>%) in commodity_category hierarchy for tenant %',
+                v_max_depth, NEW.tenant_id
+                USING ERRCODE = 'program_limit_exceeded';
+        END IF;
+    END LOOP;
+
+    NEW.root_category_id := v_root_id;
+
+    IF TG_OP = 'UPDATE'
+       AND OLD.parent_id IS DISTINCT FROM NEW.parent_id
+    THEN
+        WITH RECURSIVE descendants AS (
+            SELECT id FROM master.commodity_category
+            WHERE parent_id = NEW.id AND tenant_id = NEW.tenant_id
+            UNION ALL
+            SELECT cc.id FROM master.commodity_category cc
+            INNER JOIN descendants d ON cc.parent_id = d.id
+                AND cc.tenant_id = NEW.tenant_id
+        )
+        UPDATE master.commodity_category
+        SET root_category_id = NEW.root_category_id
+        WHERE id IN (SELECT id FROM descendants)
+          AND tenant_id = NEW.tenant_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_ccat_maintain_root_category IS
+    'BEFORE INSERT/UPDATE trigger for master.commodity_category root_category_id maintenance.';
+
+
 -- Resolves a business intent default GL account for a specific company code.
 -- Resolution order:
---   1. Active company_code_intent_policy.override_gl_account_id.
---   2. business_intent.metadata->_coa_defaults exact framework code.
---   3. business_intent.metadata->_coa_defaults.group_map in the operating COA.
---   4. Legacy business_intent.default_gl_account_id, only if it belongs to the
---      same active operating COA.
+--   1. business_intent.metadata->_coa_defaults exact framework code.
+--   2. business_intent.metadata->_coa_defaults.group_map in the operating COA.
+--   3. NULL when no metadata mapping exists. Posting defaults are otherwise
+--      owned by control.commodity_category_buy_policy / sell_policy.
 
 CREATE OR REPLACE FUNCTION master.fn_resolve_intent_default_gl_account(
     p_tenant_id        uuid,
@@ -3736,28 +3821,6 @@ BEGIN
 
     IF v_chart_id IS NULL THEN
         RETURN NULL;
-    END IF;
-
-    SELECT ga.id
-    INTO v_gl_id
-    FROM master.company_code_intent_policy ccip
-    JOIN master.gl_account ga
-      ON ga.tenant_id = ccip.tenant_id
-     AND ga.id = ccip.override_gl_account_id
-     AND ga.chart_of_account_id = v_chart_id
-     AND ga.is_active = true
-     AND ga.node_type = 'posting'
-     AND COALESCE((ga.metadata->>'_journal_postable')::boolean, true) = true
-    WHERE ccip.tenant_id = p_tenant_id
-      AND ccip.company_code_id = p_company_code_id
-      AND ccip.intent_id = p_intent_id
-      AND ccip.mapping_mode = 'ALLOW'
-      AND ccip.is_active = true
-      AND ccip.override_gl_account_id IS NOT NULL
-    LIMIT 1;
-
-    IF v_gl_id IS NOT NULL THEN
-        RETURN v_gl_id;
     END IF;
 
     SELECT
@@ -3811,38 +3874,21 @@ BEGIN
         END IF;
     END IF;
 
-    SELECT ga.id
-    INTO v_gl_id
-    FROM master.business_intent bi
-    JOIN master.gl_account ga
-      ON ga.tenant_id = bi.tenant_id
-     AND ga.id = bi.default_gl_account_id
-     AND ga.chart_of_account_id = v_chart_id
-     AND ga.is_active = true
-     AND ga.node_type = 'posting'
-     AND COALESCE((ga.metadata->>'_journal_postable')::boolean, true) = true
-    WHERE bi.tenant_id = p_tenant_id
-      AND bi.id = p_intent_id
-      AND bi.is_active = true
-    LIMIT 1;
-
-    RETURN v_gl_id;
+    RETURN NULL;
 END;
 $$;
 
 COMMENT ON FUNCTION master.fn_resolve_intent_default_gl_account(uuid, uuid, uuid) IS
-    'Resolves business_intent default GL for a company code operating COA. '
-    'Uses company_code_intent_policy override first, then intent _coa_defaults '
-    'IFRS/USGAAP code, then _group_map, then legacy default_gl_account_id only '
-    'when the legacy account belongs to the same operating chart.';
+    'Resolves optional business intent metadata GL mapping for a company code operating COA. '
+    'Primary posting defaults live on commodity category buy/sell policy rows.';
 
 
 -- =============================================================================
 -- §P7b-FN  fn_resolve_spend_category_defaults
 -- =============================================================================
--- Resolves effective defaults for a spend category within a company code.
--- Looks up company_code_spend_policy directly (one row per company code + category).
--- NULL columns fall back to spend_category base governance.
+-- Resolves effective defaults for a commodity category within a company code.
+-- Looks up the default ALLOW commodity_category_buy_policy row for company scope,
+-- falling back to tenant scope and then spend_category base governance.
 -- Returns a single composite row with all resolved values.
 
 -- Drop old OU-hierarchy version if it exists from a prior schema revision.
@@ -3871,7 +3917,7 @@ RETURNS TABLE (
     resolved_is_regulated            boolean,
     -- Access control
     resolved_mapping_mode            text,
-    -- Source (NULL = fell back entirely to spend_category base)
+    -- Source (NULL = fell back entirely to commodity_category base)
     source_company_code_id           uuid
 )
 LANGUAGE plpgsql STABLE AS $$
@@ -3879,44 +3925,41 @@ DECLARE
     v_row    record;
     v_found  boolean := false;
 BEGIN
-    -- Direct lookup: one row per company_code + category (no hierarchy walk needed).
+    -- Direct lookup: prefer the company-scoped default row, then tenant default.
     SELECT * INTO v_row
-    FROM master.company_code_spend_policy m
+    FROM control.commodity_category_buy_policy m
     WHERE m.tenant_id = p_tenant_id
-      AND m.spend_category_id = p_spend_category_id
-      AND m.company_code_id = p_company_code_id
-      AND m.is_active = true;
+      AND m.commodity_category_id = p_spend_category_id
+      AND m.mapping_mode = 'ALLOW'
+      AND m.is_default = true
+      AND m.is_active = true
+      AND m.effective_from <= CURRENT_DATE
+      AND (m.effective_to IS NULL OR m.effective_to >= CURRENT_DATE)
+      AND (
+          (m.scope_type = 'COMPANY'
+           AND m.company_code_id = p_company_code_id
+           AND m.scope_id = p_company_code_id)
+          OR m.scope_type = 'TENANT'
+      )
+    ORDER BY
+      CASE WHEN m.scope_type = 'COMPANY' THEN 0 ELSE 1 END,
+      m.effective_from DESC,
+      m.sort_order,
+      m.created_at DESC
+    LIMIT 1;
 
     v_found := FOUND;
 
-    -- Merge with spend_category base defaults for NULL columns. GL and asset
-    -- defaults are company-aware through the resolved intent.
+    -- Merge with commodity_category base defaults for NULL columns. GL and asset
+    -- defaults are company-aware through the resolved intent/policy.
     RETURN QUERY
     WITH base AS (
         SELECT
-            sc.*,
-            COALESCE(v_row.default_intent_id, sc.default_intent_id) AS resolved_intent_id
-        FROM master.spend_category sc
-        WHERE sc.id = p_spend_category_id
-          AND sc.tenant_id = p_tenant_id
-    ),
-    intent AS (
-        SELECT bi.*
-        FROM master.business_intent bi
-        JOIN base b
-          ON b.resolved_intent_id = bi.id
-         AND bi.tenant_id = p_tenant_id
-    ),
-    asset_default AS (
-        SELECT ac.id AS asset_class_id
-        FROM master.asset_class ac
-        JOIN intent i
-          ON i.default_asset_profile_code IS NOT NULL
-         AND ac.code = i.default_asset_profile_code
-         AND ac.tenant_id = i.tenant_id
-         AND ac.is_active = true
-        ORDER BY ac.is_leaf DESC, ac.sort_order, ac.code
-        LIMIT 1
+            cc.*,
+            v_row.business_intent_id AS resolved_intent_id
+        FROM master.commodity_category cc
+        WHERE cc.id = p_spend_category_id
+          AND cc.tenant_id = p_tenant_id
     ),
     policy_gl AS (
         SELECT ga.id AS gl_account_id
@@ -3944,30 +3987,28 @@ BEGIN
                      base.resolved_intent_id,
                      p_company_code_id
                  )),
-        COALESCE(v_row.default_tax_group_id, intent.default_tax_group_id),
+        v_row.default_tax_group_id,
         base.resolved_intent_id,
-        COALESCE(v_row.asset_class_id, asset_default.asset_class_id),
+        v_row.default_asset_class_id,
         v_row.capex_screening_threshold,
         v_row.capex_screening_currency,
-        v_row.is_asset_tagging_required,
-        COALESCE(v_row.override_visibility,              base.visibility),
+        v_row.is_asset_tag_required,
+        v_row.override_visibility,
         COALESCE(v_row.override_is_classification_required, base.is_classification_required),
         COALESCE(v_row.override_is_hs_required,          base.is_hs_required),
         COALESCE(v_row.override_is_regulated,            base.is_regulated),
         COALESCE(v_row.mapping_mode, 'ALLOW'),
         CASE WHEN v_found THEN p_company_code_id ELSE NULL END
     FROM base
-    LEFT JOIN intent ON true
-    LEFT JOIN asset_default ON true
     LEFT JOIN policy_gl ON true;
 END;
 $$;
 
 COMMENT ON FUNCTION master.fn_resolve_spend_category_defaults IS
-    'Resolves effective operational defaults for a spend category within a company code. '
-    'Looks up company_code_spend_policy directly (no hierarchy walk). '
+    'Resolves effective operational defaults for a commodity category within a company code. '
+    'Looks up control.commodity_category_buy_policy default ALLOW rows for company or tenant scope. '
     'Governance columns (visibility, classification_required, hs_required, is_regulated) '
-    'and default_intent_id fall back to spend_category base if no company-code policy exists. '
+    'fall back to commodity_category base if no company-code policy exists. '
     'source_company_code_id is NULL when falling back entirely to base defaults.';
 
 

@@ -8,11 +8,11 @@ SELECT v.code, v.name, v.domain_code, v.description, v.sort_order, true, 'active
        '00000000-0000-0000-0000-000000000000'
 FROM (VALUES
     ('product',          'Product',          'master.cc_owner_type', 'Catalog item',               10),
-    ('item_category', 'Item Category',    'master.cc_owner_type', 'Item taxonomy node',          20),
-    ('spend_category',   'Spend category',   'master.cc_owner_type', 'Procurement category',       30),
-    ('item',             'Item',      'master.cc_owner_type', 'Company inventory config',   40),
-    ('customer',         'Customer',         'master.cc_owner_type', 'AR counterparty',            50),
-    ('supplier',         'Supplier',         'master.cc_owner_type', 'AP counterparty',            60)
+    ('spend_category',    'Spend category',    'master.cc_owner_type', 'Procurement category',       30),
+    ('commodity_category','Commodity Category','master.cc_owner_type', 'Shared commodity category',  35),
+    ('item',              'Item',              'master.cc_owner_type', 'Company inventory config',   40),
+    ('customer',          'Customer',          'master.cc_owner_type', 'AR counterparty',            50),
+    ('supplier',          'Supplier',          'master.cc_owner_type', 'AP counterparty',            60)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

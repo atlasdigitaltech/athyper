@@ -18,7 +18,7 @@ import {
 } from "@athyper/runtime-shared/validation";
 import { Card, CardContent, CardHeader, CardTitle, Button, Label, Separator, Skeleton } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
-import { resolveFieldRenderer } from "../field-renderers/registry";
+import { resolveFieldRenderer, BOOLEAN_UI_TYPES, BOOLEAN_FULL_WIDTH_UI_TYPES } from "../field-renderers";
 
 export interface EntityFormHandle {
   /** Validate and submit the form. Resolves after onSubmit completes. */
@@ -153,12 +153,17 @@ export const EntityForm = forwardRef<EntityFormHandle, EntityFormProps>(
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {section.fields.map((field) => {
                   const Renderer = resolveFieldRenderer(field);
+                  const effectiveUiType = field.ui_type ?? field.data_type;
+                  const embedsLabel = BOOLEAN_UI_TYPES.has(effectiveUiType);
+                  const isFullWidth = BOOLEAN_FULL_WIDTH_UI_TYPES.has(effectiveUiType);
                   return (
-                    <div key={field.name} className="space-y-1.5">
-                      <Label error={!!errors[field.name]}>
-                        {field.label ?? field.name}
-                        {field.is_required && <span className="ml-1 text-destructive">*</span>}
-                      </Label>
+                    <div key={field.name} className={isFullWidth ? "space-y-1.5 md:col-span-2" : "space-y-1.5"}>
+                      {!embedsLabel && (
+                        <Label error={!!errors[field.name]}>
+                          {field.label ?? field.name}
+                          {field.is_required && <span className="ml-1 text-destructive">*</span>}
+                        </Label>
+                      )}
                       <Renderer
                         value={formData[field.name]}
                         field={field}

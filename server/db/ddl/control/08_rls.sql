@@ -726,27 +726,87 @@ CREATE POLICY admin_write   ON control.acct_profile_dimension_rule FOR ALL    TO
 
 
 -- ============================================================================
--- §10  control.classification_to_intent_rule
+-- §10  control.commodity_classification_to_intent_rule
 -- ============================================================================
-ALTER TABLE control.classification_to_intent_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.classification_to_intent_rule FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.classification_to_intent_rule;
-DROP POLICY IF EXISTS tenant_insert ON control.classification_to_intent_rule;
-DROP POLICY IF EXISTS tenant_update ON control.classification_to_intent_rule;
-DROP POLICY IF EXISTS tenant_delete ON control.classification_to_intent_rule;
-DROP POLICY IF EXISTS admin_read    ON control.classification_to_intent_rule;
-DROP POLICY IF EXISTS admin_write   ON control.classification_to_intent_rule;
-CREATE POLICY tenant_read   ON control.classification_to_intent_rule FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.classification_to_intent_rule FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.classification_to_intent_rule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.classification_to_intent_rule FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.classification_to_intent_rule FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.classification_to_intent_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE control.commodity_classification_to_intent_rule ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.commodity_classification_to_intent_rule FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON control.commodity_classification_to_intent_rule;
+DROP POLICY IF EXISTS tenant_insert ON control.commodity_classification_to_intent_rule;
+DROP POLICY IF EXISTS tenant_update ON control.commodity_classification_to_intent_rule;
+DROP POLICY IF EXISTS tenant_delete ON control.commodity_classification_to_intent_rule;
+DROP POLICY IF EXISTS admin_read    ON control.commodity_classification_to_intent_rule;
+DROP POLICY IF EXISTS admin_write   ON control.commodity_classification_to_intent_rule;
+CREATE POLICY tenant_read   ON control.commodity_classification_to_intent_rule FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON control.commodity_classification_to_intent_rule FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON control.commodity_classification_to_intent_rule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON control.commodity_classification_to_intent_rule FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON control.commodity_classification_to_intent_rule FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON control.commodity_classification_to_intent_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
 
 -- ============================================================================
 -- §11  control.intent_to_accounting_profile_rule
 -- ============================================================================
+ALTER TABLE control.commodity_category_buy_policy ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.commodity_category_buy_policy FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON control.commodity_category_buy_policy;
+DROP POLICY IF EXISTS tenant_insert ON control.commodity_category_buy_policy;
+DROP POLICY IF EXISTS tenant_update ON control.commodity_category_buy_policy;
+DROP POLICY IF EXISTS tenant_delete ON control.commodity_category_buy_policy;
+DROP POLICY IF EXISTS admin_read    ON control.commodity_category_buy_policy;
+DROP POLICY IF EXISTS admin_write   ON control.commodity_category_buy_policy;
+CREATE POLICY tenant_read   ON control.commodity_category_buy_policy FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON control.commodity_category_buy_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON control.commodity_category_buy_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON control.commodity_category_buy_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON control.commodity_category_buy_policy FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON control.commodity_category_buy_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+ALTER TABLE control.commodity_category_sell_policy ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.commodity_category_sell_policy FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON control.commodity_category_sell_policy;
+DROP POLICY IF EXISTS tenant_insert ON control.commodity_category_sell_policy;
+DROP POLICY IF EXISTS tenant_update ON control.commodity_category_sell_policy;
+DROP POLICY IF EXISTS tenant_delete ON control.commodity_category_sell_policy;
+DROP POLICY IF EXISTS admin_read    ON control.commodity_category_sell_policy;
+DROP POLICY IF EXISTS admin_write   ON control.commodity_category_sell_policy;
+CREATE POLICY tenant_read   ON control.commodity_category_sell_policy FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON control.commodity_category_sell_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON control.commodity_category_sell_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON control.commodity_category_sell_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON control.commodity_category_sell_policy FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON control.commodity_category_sell_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+ALTER TABLE control.commodity_category_inventory_policy ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.commodity_category_inventory_policy FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON control.commodity_category_inventory_policy;
+DROP POLICY IF EXISTS tenant_insert ON control.commodity_category_inventory_policy;
+DROP POLICY IF EXISTS tenant_update ON control.commodity_category_inventory_policy;
+DROP POLICY IF EXISTS tenant_delete ON control.commodity_category_inventory_policy;
+DROP POLICY IF EXISTS admin_read    ON control.commodity_category_inventory_policy;
+DROP POLICY IF EXISTS admin_write   ON control.commodity_category_inventory_policy;
+CREATE POLICY tenant_read   ON control.commodity_category_inventory_policy FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON control.commodity_category_inventory_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON control.commodity_category_inventory_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON control.commodity_category_inventory_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON control.commodity_category_inventory_policy FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON control.commodity_category_inventory_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+ALTER TABLE control.supplier_posting_override ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.supplier_posting_override FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON control.supplier_posting_override;
+DROP POLICY IF EXISTS tenant_insert ON control.supplier_posting_override;
+DROP POLICY IF EXISTS tenant_update ON control.supplier_posting_override;
+DROP POLICY IF EXISTS tenant_delete ON control.supplier_posting_override;
+DROP POLICY IF EXISTS admin_read    ON control.supplier_posting_override;
+DROP POLICY IF EXISTS admin_write   ON control.supplier_posting_override;
+CREATE POLICY tenant_read   ON control.supplier_posting_override FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON control.supplier_posting_override FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON control.supplier_posting_override FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON control.supplier_posting_override FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON control.supplier_posting_override FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON control.supplier_posting_override FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
 ALTER TABLE control.intent_to_accounting_profile_rule ENABLE ROW LEVEL SECURITY;
 ALTER TABLE control.intent_to_accounting_profile_rule FORCE  ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_read   ON control.intent_to_accounting_profile_rule;

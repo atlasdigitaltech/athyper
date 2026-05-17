@@ -31,6 +31,37 @@ WHERE NOT EXISTS (
       AND tenant_id IS NULL
 );
 
+UPDATE control.entity
+   SET module_id = COALESCE((SELECT id::text FROM shared.module WHERE code = 'ACC'), module_id),
+       name = 'payment_entry',
+       slug = 'payment-entry',
+       entity_short = 'PAY',
+       entity_code = 'payment_entry',
+       entity_class = 'DOCUMENT',
+       ownership_model = 'system',
+       kind = 'ent',
+       backing_type = 'table',
+       governance_level = 'full',
+       security_tier = 'tenant_critical',
+       mutability = 'controlled',
+       label_singular = 'Payment Entry',
+       label_plural = 'Payment Entries',
+       icon_key = 'banknote',
+       color_token = 'emerald',
+       numbering_active = true,
+       naming_policy = '{"prefix":"PAY","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
+       feature_flags = '{"is_approvable":true,"document_category":"payments","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
+       display_config = CASE
+           WHEN feature_flags ->> 'metadata_coverage_source' = 'governed_schema_coverage' THEN '{}'::jsonb
+           ELSE COALESCE(display_config, '{}'::jsonb)
+       END,
+       status = 'ACTIVE',
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+ WHERE table_schema = 'document'
+   AND table_name = 'payment_entry'
+   AND tenant_id IS NULL;
+
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
     entity_id, tenant_id, version_no, status, effective_from, created_by)

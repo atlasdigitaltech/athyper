@@ -6,9 +6,9 @@
  *
  * Account resolution (in order):
  *   FIXED        → account_code (GL account code lookup)
- *   FROM_INTENT  → business_intent.default_gl_account_id
+ *   FROM_INTENT  → commodity category policy for selected business intent
  *                  (per invoice line — expands to one JE line per invoice line)
- *   FROM_CATEGORY→ spend_category → default_intent.default_gl_account_id
+ *   FROM_CATEGORY→ commodity category default policy
  *   POSTING_ROLE → subledger_type lookup via POSTING_ROLE_SUBLEDGER alias map,
  *                  then code fallback via account_fallback column
  *

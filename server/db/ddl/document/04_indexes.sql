@@ -120,9 +120,10 @@ CREATE INDEX IF NOT EXISTS ad_source_doc_idx
     ON document.accounting_distribution (tenant_id, source_doc_type, source_doc_id);
 CREATE INDEX IF NOT EXISTS ad_source_line_idx
     ON document.accounting_distribution (tenant_id, source_line_id);
-CREATE INDEX IF NOT EXISTS ad_spend_category_idx
-    ON document.accounting_distribution (tenant_id, spend_category_id)
-    WHERE spend_category_id IS NOT NULL;
+DROP INDEX IF EXISTS document.ad_spend_category_idx;
+CREATE INDEX IF NOT EXISTS ad_commodity_category_idx
+    ON document.accounting_distribution (tenant_id, commodity_category_id)
+    WHERE commodity_category_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ad_business_intent_idx
     ON document.accounting_distribution (tenant_id, business_intent_id)
     WHERE business_intent_id IS NOT NULL;
@@ -609,9 +610,10 @@ CREATE INDEX IF NOT EXISTS pil_invoice_idx
     ON document.purchase_invoice_line (tenant_id, purchase_invoice_id, line_no ASC);
 
 -- Spend category for analytics
-CREATE INDEX IF NOT EXISTS pil_spend_category_idx
-    ON document.purchase_invoice_line (tenant_id, spend_category_id)
-    WHERE spend_category_id IS NOT NULL;
+DROP INDEX IF EXISTS document.pil_spend_category_idx;
+CREATE INDEX IF NOT EXISTS pil_commodity_category_idx
+    ON document.purchase_invoice_line (tenant_id, commodity_category_id)
+    WHERE commodity_category_id IS NOT NULL;
 
 -- Business intent for budget allocation matching
 CREATE INDEX IF NOT EXISTS pil_business_intent_idx

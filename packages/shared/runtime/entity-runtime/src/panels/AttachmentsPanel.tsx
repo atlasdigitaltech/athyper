@@ -164,6 +164,55 @@ function detectPreviewKind(att: Attachment): "image" | "pdf" | "text" | "none" {
   return "none";
 }
 
+function normalizeUploadedAttachment(body: unknown, file: File, apiBase: string): Attachment | null {
+  if (!body || typeof body !== "object") return null;
+  const data = body as Partial<Attachment>;
+  const id   = typeof data.id === "string" ? data.id : null;
+  if (!id) return null;
+
+  const contentType = typeof data.content_type === "string" && data.content_type
+    ? data.content_type
+    : file.type || "application/octet-stream";
+  const status = typeof data.status === "string" && data.status ? data.status : "active";
+
+  return {
+    id,
+    filename:        typeof data.filename === "string" && data.filename ? data.filename : file.name,
+    size_bytes:      typeof data.size_bytes === "number" ? data.size_bytes : file.size,
+    content_type:    contentType,
+    created_at:      typeof data.created_at === "string" && data.created_at ? data.created_at : new Date().toISOString(),
+    created_by_name: data.created_by_name ?? null,
+    folder_id:       data.folder_id ?? null,
+    download_url:    typeof data.download_url === "string" && data.download_url
+      ? data.download_url
+      : `${apiBase}/${encodeURIComponent(id)}/download`,
+    kind:              data.kind ?? "attachment",
+    visibility:        data.visibility ?? "internal",
+    scan_status:       data.scan_status ?? (status === "quarantined" ? "quarantined" : "pending"),
+    preview_status:    data.preview_status,
+    preview_kind:      data.preview_kind,
+    thumbnail_url:     data.thumbnail_url,
+    preview_url:       data.preview_url,
+    extraction_status: data.extraction_status,
+    version_no:        typeof data.version_no === "number" ? data.version_no : 1,
+    is_current:        data.is_current ?? true,
+    status,
+    link_kind:         data.link_kind ?? "related",
+  };
+}
+
+function prependAttachments(current: Attachment[] | undefined, incoming: Attachment[]): Attachment[] {
+  if (incoming.length === 0) return current ?? [];
+  const incomingIds = new Set(incoming.map((att) => att.id));
+  return [...incoming, ...(current ?? []).filter((att) => !incomingIds.has(att.id))];
+}
+
+function mergeWithOptimistic(serverItems: Attachment[], optimisticItems: Attachment[]): Attachment[] {
+  if (optimisticItems.length === 0) return serverItems;
+  const serverIds = new Set(serverItems.map((att) => att.id));
+  return [...optimisticItems.filter((att) => !serverIds.has(att.id)), ...serverItems];
+}
+
 function parseDragItems(items: DataTransferItemList): DragInfo {
   const files = Array.from(items).filter((i) => i.kind === "file");
   const types = files.map((i) => i.type ?? "");
@@ -950,7 +999,7 @@ function FileRow({
   att:          Attachment;
   folders:      AttachmentFolder[];
   apiBase:      string;
-  onDeleted():  void;
+  onDeleted(removedId?: string): void;
   onMoved(folderId: string | null): void;
   onPreview(att: Attachment): void;
   isJustAdded?:   boolean;
@@ -987,7 +1036,7 @@ function FileRow({
       await fetch(`${apiBase}/${encodeURIComponent(att.id)}`, {
         method: "DELETE", headers: { "X-CSRF-Token": getCsrfToken() },
       });
-      onDeleted();
+      onDeleted(att.id);
     } finally { setIsDeleting(false); }
   };
 
@@ -1271,6 +1320,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
   // Upload state
   const [queuedFiles,   setQueuedFiles]   = useState<QueuedFile[]>([]);
   const [justAddedIds,  setJustAddedIds]  = useState<Set<string>>(new Set());
+  const [optimisticUploads, setOptimisticUploads] = useState<Attachment[]>([]);
   const [successStrip,  setSuccessStrip]  = useState<{ id: number; count: number } | null>(null);
   const [failedUploads, setFailedUploads] = useState<FailedUpload[]>([]);
 
@@ -1305,6 +1355,8 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
   const apiId      = recordUuid ?? recordId;
   const apiBase    = `/api/relay/api/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(apiId)}/attachments`;
   const folderBase = `/api/relay/api/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(apiId)}/folders`;
+  const attachmentQueryKey = useMemo(() => ["attachments", entityCode, apiId] as const, [entityCode, apiId]);
+  const folderQueryKey     = useMemo(() => ["attachment-folders", entityCode, apiId] as const, [entityCode, apiId]);
 
   // ── Cleanup ────────────────────────────────────────────────────────────────
 
@@ -1314,8 +1366,8 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
-  const { data: attachments = [], isLoading: loadingFiles } = useQuery<Attachment[]>({
-    queryKey: ["attachments", entityCode, apiId],
+  const { data: serverAttachments = [], isLoading: loadingFiles } = useQuery<Attachment[]>({
+    queryKey: attachmentQueryKey,
     queryFn:  async ({ signal }) => {
       const res = await fetch(apiBase, { signal });
       return res.ok ? (res.json() as Promise<Attachment[]>) : [];
@@ -1324,7 +1376,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
   });
 
   const { data: folders = [], isLoading: loadingFolders } = useQuery<AttachmentFolder[]>({
-    queryKey: ["attachment-folders", entityCode, apiId],
+    queryKey: folderQueryKey,
     queryFn:  async ({ signal }) => {
       const res = await fetch(folderBase, { signal });
       return res.ok ? (res.json() as Promise<AttachmentFolder[]>) : [];
@@ -1332,10 +1384,31 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
     staleTime: 30_000,
   });
 
-  const refresh = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["attachments",        entityCode, apiId] });
-    void queryClient.invalidateQueries({ queryKey: ["attachment-folders", entityCode, apiId] });
-  }, [queryClient, entityCode, apiId]);
+  const attachments = useMemo(
+    () => mergeWithOptimistic(serverAttachments, optimisticUploads),
+    [serverAttachments, optimisticUploads],
+  );
+
+  const forgetLocalAttachments = useCallback((ids: Iterable<string>) => {
+    const idSet = new Set(ids);
+    if (idSet.size === 0) return;
+
+    setOptimisticUploads((prev) => prev.filter((att) => !idSet.has(att.id)));
+    setJustAddedIds((prev) => {
+      const next = new Set(prev);
+      idSet.forEach((id) => next.delete(id));
+      return next;
+    });
+    queryClient.setQueryData<Attachment[]>(attachmentQueryKey, (current) =>
+      current?.filter((att) => !idSet.has(att.id)) ?? current,
+    );
+  }, [attachmentQueryKey, queryClient]);
+
+  const refresh = useCallback((removedId?: string) => {
+    if (removedId) forgetLocalAttachments([removedId]);
+    void queryClient.invalidateQueries({ queryKey: attachmentQueryKey });
+    void queryClient.invalidateQueries({ queryKey: folderQueryKey });
+  }, [queryClient, attachmentQueryKey, folderQueryKey, forgetLocalAttachments]);
 
   // ── Selection helpers ──────────────────────────────────────────────────────
 
@@ -1412,10 +1485,10 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
           }),
         ),
       );
-      void queryClient.invalidateQueries({ queryKey: ["attachments", entityCode, recordId] });
+      void queryClient.invalidateQueries({ queryKey: attachmentQueryKey });
       exitSelection();
     } finally { setBulkOpPending(false); }
-  }, [selectedIds, apiBase, queryClient, entityCode, recordId, exitSelection]);
+  }, [selectedIds, apiBase, queryClient, attachmentQueryKey, exitSelection]);
 
   const handleBulkDelete = useCallback(async () => {
     if (!deleteConfirm) return;
@@ -1430,15 +1503,16 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
           }),
         ),
       );
-      void queryClient.invalidateQueries({ queryKey: ["attachments", entityCode, recordId] });
+      forgetLocalAttachments(selectedIds);
+      void queryClient.invalidateQueries({ queryKey: attachmentQueryKey });
       exitSelection();
     } finally { setBulkOpPending(false); }
-  }, [deleteConfirm, selectedIds, apiBase, queryClient, entityCode, recordId, exitSelection]);
+  }, [deleteConfirm, selectedIds, apiBase, queryClient, attachmentQueryKey, forgetLocalAttachments, exitSelection]);
 
   // ── XHR upload ─────────────────────────────────────────────────────────────
 
   const uploadFileXhr = useCallback(
-    (file: File, qfId: string, csrf: string): Promise<{ id: string | null; error: string | null }> =>
+    (file: File, qfId: string, csrf: string): Promise<{ attachment: Attachment | null; error: string | null }> =>
       new Promise((resolve) => {
         setQueuedFiles((prev) => prev.map((qf) => qf.id === qfId ? { ...qf, state: "uploading" as const } : qf));
 
@@ -1456,20 +1530,20 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
         xhr.addEventListener("load", () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             setQueuedFiles((prev) => prev.map((qf) => qf.id === qfId ? { ...qf, state: "uploaded" as const, progress: 100 } : qf));
-            let id: string | null = null;
-            try { const d = JSON.parse(xhr.responseText) as { id?: string }; id = d.id ?? null; } catch {}
-            resolve({ id, error: null });
+            let attachment: Attachment | null = null;
+            try { attachment = normalizeUploadedAttachment(JSON.parse(xhr.responseText), file, apiBase); } catch {}
+            resolve({ attachment, error: null });
           } else {
             let errMsg = `Failed (${xhr.status})`;
             try { const d = JSON.parse(xhr.responseText) as { error?: string; message?: string }; errMsg = d.message ?? d.error ?? errMsg; } catch {}
             setQueuedFiles((prev) => prev.map((qf) => qf.id === qfId ? { ...qf, state: "failed" as const, error: errMsg } : qf));
-            resolve({ id: null, error: errMsg });
+            resolve({ attachment: null, error: errMsg });
           }
         });
 
         xhr.addEventListener("error", () => {
           setQueuedFiles((prev) => prev.map((qf) => qf.id === qfId ? { ...qf, state: "failed" as const, error: "Network error" } : qf));
-          resolve({ id: null, error: "Network error" });
+          resolve({ attachment: null, error: "Network error" });
         });
 
         xhr.open("POST", apiBase);
@@ -1489,12 +1563,12 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
 
     const results = await Promise.allSettled(entries.map((qf) => uploadFileXhr(qf.file, qf.id, csrf)));
 
-    const uploadedIds: string[] = [];
+    const uploadedAttachments: Attachment[] = [];
     const newFailures: FailedUpload[] = [];
     results.forEach((result, idx) => {
       const entry = entries[idx]!;
       if (result.status === "fulfilled") {
-        if (result.value.id) uploadedIds.push(result.value.id);
+        if (result.value.attachment) uploadedAttachments.push(result.value.attachment);
         else newFailures.push({ name: entry.file.name, error: result.value.error ?? "Upload failed" });
       } else {
         newFailures.push({ name: entry.file.name, error: "Upload failed" });
@@ -1503,19 +1577,25 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
 
     setQueuedFiles([]);
 
-    if (uploadedIds.length > 0) {
+    if (uploadedAttachments.length > 0) {
+      const uploadedIds = uploadedAttachments.map((att) => att.id);
+      setOptimisticUploads((prev) => prependAttachments(prev, uploadedAttachments));
+      queryClient.setQueryData<Attachment[]>(attachmentQueryKey, (current) =>
+        prependAttachments(current, uploadedAttachments),
+      );
       setJustAddedIds((prev) => new Set([...prev, ...uploadedIds]));
-      setSuccessStrip({ id: Date.now(), count: uploadedIds.length });
+      setSuccessStrip({ id: Date.now(), count: uploadedAttachments.length });
       if (justAddedTimerRef.current) clearTimeout(justAddedTimerRef.current);
       justAddedTimerRef.current = setTimeout(() => {
         setJustAddedIds(new Set());
+        setOptimisticUploads([]);
         justAddedTimerRef.current = null;
       }, 5 * 60 * 1000);
     }
     if (newFailures.length > 0) setFailedUploads((prev) => [...prev, ...newFailures]);
-    void queryClient.invalidateQueries({ queryKey: ["attachments", entityCode, recordId] });
+    void queryClient.invalidateQueries({ queryKey: attachmentQueryKey });
     if (fileInputRef.current) fileInputRef.current.value = "";
-  }, [uploadFileXhr, entityCode, recordId, queryClient]);
+  }, [uploadFileXhr, queryClient, attachmentQueryKey]);
 
   // ── Drag handling ──────────────────────────────────────────────────────────
 
@@ -1553,7 +1633,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
       if (res.ok) {
         const folder = await res.json() as AttachmentFolder;
         setExpandedFolders((prev) => new Set(prev).add(folder.id));
-        void queryClient.invalidateQueries({ queryKey: ["attachment-folders", entityCode, recordId] });
+        void queryClient.invalidateQueries({ queryKey: folderQueryKey });
         setCreatingFolder(false); setNewFolderName("");
       }
     } finally { setIsSavingFolder(false); }
@@ -1568,7 +1648,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
         method: "PATCH", headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body: JSON.stringify({ name }),
       });
-      void queryClient.invalidateQueries({ queryKey: ["attachment-folders", entityCode, recordId] });
+      void queryClient.invalidateQueries({ queryKey: folderQueryKey });
       setRenamingFolderId(null); setFolderRenameVal("");
     } finally { setIsSavingFolderRename(false); }
   };
@@ -1810,7 +1890,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                 attachments={attachments}
                 apiBase={apiBase}
                 onVisibilitySet={() => {
-                  void queryClient.invalidateQueries({ queryKey: ["attachments", entityCode, recordId] });
+                  void queryClient.invalidateQueries({ queryKey: attachmentQueryKey });
                 }}
               />
             }
@@ -1852,7 +1932,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
             <div className="space-y-1.5">
               {filteredFlat.map((att) => (
                 <FileRow key={att.id} att={att} folders={folders} apiBase={apiBase}
-                  onDeleted={refresh} onMoved={refresh} onPreview={onPreview}
+                  onDeleted={refresh} onMoved={() => refresh()} onPreview={onPreview}
                   isJustAdded={justAddedIds.has(att.id)}
                   selectionMode={selectionMode}
                   isSelected={selectedIds.has(att.id)}
@@ -1879,7 +1959,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                 <div className="space-y-1.5">
                   {sortedJustAdded.map((att) => (
                     <FileRow key={att.id} att={att} folders={folders} apiBase={apiBase}
-                      onDeleted={refresh} onMoved={refresh} onPreview={onPreview}
+                      onDeleted={refresh} onMoved={() => refresh()} onPreview={onPreview}
                       isJustAdded
                       selectionMode={selectionMode}
                       isSelected={selectedIds.has(att.id)}
@@ -1957,7 +2037,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                         <p className="py-4 text-center text-xs text-muted-foreground">No files in this folder — drag files here or use the Move button</p>
                       ) : folderFiles.map((att) => (
                         <FileRow key={att.id} att={att} folders={folders} apiBase={apiBase}
-                          onDeleted={refresh} onMoved={refresh} onPreview={onPreview}
+                          onDeleted={refresh} onMoved={() => refresh()} onPreview={onPreview}
                           selectionMode={selectionMode}
                           isSelected={selectedIds.has(att.id)}
                           onToggle={makeToggleHandler(att.id)} />
@@ -1981,7 +2061,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                 <div className="space-y-1.5">
                   {sortedUncategorizedEarlier.map((att) => (
                     <FileRow key={att.id} att={att} folders={folders} apiBase={apiBase}
-                      onDeleted={refresh} onMoved={refresh} onPreview={onPreview}
+                      onDeleted={refresh} onMoved={() => refresh()} onPreview={onPreview}
                       selectionMode={selectionMode}
                       isSelected={selectedIds.has(att.id)}
                       onToggle={makeToggleHandler(att.id)} />

@@ -3,20 +3,13 @@
 /**
  * AppShellLayout — client wrapper around ShellLayout.
  *
- * Owns the workspace selection state (which workspace icon was clicked in the
- * rail) and the panel-open state (derived from workspace selection + preference).
- *
- * State rules:
- *   - Clicking a new workspace → opens panel and sets that workspace as active
- *   - Clicking the same workspace again → toggles panel closed / open
- *   - Clicking a global action (home, inbox, search, settings) → closes panel
- *   - sidebarCollapsed preference → forces panel closed regardless of selection
+ * Workspace rail clicks navigate directly to landing pages. The collapsible side
+ * panel is now reserved for utility drawers such as favourites and recent items.
  *
  * Notification count is fetched here (shared by both NavRail badge and AppTopbar bell)
  * using the same React Query key — the request is deduplicated automatically.
  *
- * Workbench theme is derived from bff.activeWorkbench and passed down to both
- * AppNavRail (active bar color) and AppContextPanel (module accent + page dots).
+ * Workbench theme is derived from bff.activeWorkbench and passed to AppNavRail.
  */
 
 import { useState, useCallback, useEffect, type ReactNode } from "react";
@@ -26,7 +19,6 @@ import { ShellLayout } from "@athyper/shell";
 import { FavoritesPanel, type FavoritesPanelTab } from "@athyper/collaboration-ui/bookmarks";
 import { useBookmarksList } from "@athyper/query";
 import { AppNavRail } from "./AppNavRail";
-import { AppContextPanel } from "./AppContextPanel";
 import { usePreferencesStore } from "@/stores/preferences/usePreferencesStore";
 import { useShellSession } from "@/components/providers/SessionProvider";
 import { getWorkbenchTheme } from "@/lib/workbench-theme";
@@ -70,6 +62,8 @@ export interface AppShellLayoutProps {
   children: ReactNode;
 }
 
+type UtilityPanelKey = "favorites" | "recent";
+
 export function AppShellLayout({ topbar, banner, children }: AppShellLayoutProps) {
   const { bff } = useShellSession();
   const router = useRouter();
@@ -78,20 +72,17 @@ export function AppShellLayout({ topbar, banner, children }: AppShellLayoutProps
   // Track every route visit into the recent items store (feeds launcher Recent tab)
   useRecentTracker();
 
-  // Which workspace key the rail has last selected
-  const [activeWorkspaceKey, setActiveWorkspaceKey] = useState<string | null>(null);
+  // Which utility panel the rail has opened.
+  const [activePanelKey, setActivePanelKey] = useState<UtilityPanelKey | null>(null);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
 
   // Notification count — deduped by RQ with AppTopbar
   const { data: notifData } = useUnreadCount(!!bff.activeOrg);
   const inboxCount = notifData?.count ?? 0;
 
-  // Panel is open when a workspace is selected AND the user hasn't collapsed it
-  const panelOpen = !!activeWorkspaceKey && !sidebarCollapsed;
-  const specialPanelMode =
-    activeWorkspaceKey === "favorites" || activeWorkspaceKey === "recent"
-      ? activeWorkspaceKey
-      : null;
+  // Workspace icons navigate directly; the side panel is reserved for utilities.
+  const panelOpen = !!activePanelKey && !sidebarCollapsed;
+  const specialPanelMode = activePanelKey;
   const favoritesTab: FavoritesPanelTab = specialPanelMode === "recent" ? "recent" : "bookmarks";
 
   const {
@@ -134,35 +125,32 @@ export function AppShellLayout({ topbar, banner, children }: AppShellLayoutProps
   );
 
   const handleFavoritesTabChange = useCallback((tab: FavoritesPanelTab) => {
-    setActiveWorkspaceKey(tab === "recent" ? "recent" : "favorites");
+    setActivePanelKey(tab === "recent" ? "recent" : "favorites");
     setSidebarCollapsed(false);
   }, [setSidebarCollapsed]);
 
-  const handleWorkspaceChange = useCallback(
-    (key: string | null) => {
+  const handlePanelChange = useCallback(
+    (key: UtilityPanelKey | null) => {
       if (key === null) {
-        // Global action (home / inbox / settings) → close panel
-        setActiveWorkspaceKey(null);
+        setActivePanelKey(null);
         return;
       }
-      if (key === activeWorkspaceKey) {
-        // Same workspace clicked → toggle panel
+      if (key === activePanelKey) {
         setSidebarCollapsed(!sidebarCollapsed);
       } else {
-        // New workspace → expand panel
-        setActiveWorkspaceKey(key);
+        setActivePanelKey(key);
         setSidebarCollapsed(false);
       }
     },
-    [activeWorkspaceKey, sidebarCollapsed, setSidebarCollapsed],
+    [activePanelKey, sidebarCollapsed, setSidebarCollapsed],
   );
 
   return (
     <ShellLayout
       rail={
         <AppNavRail
-          activeWorkspaceKey={panelOpen ? activeWorkspaceKey : null}
-          onWorkspaceChange={handleWorkspaceChange}
+          activePanelKey={panelOpen ? activePanelKey : null}
+          onPanelChange={handlePanelChange}
           inboxCount={inboxCount}
           accentColor={theme.accent}
         />
@@ -185,14 +173,7 @@ export function AppShellLayout({ topbar, banner, children }: AppShellLayoutProps
             bookmarkActionPending={bookmarkRemoving}
             onDismissRecent={handleRecentDismiss}
           />
-        ) : (
-          <AppContextPanel
-            activeWorkspaceKey={activeWorkspaceKey}
-            onClose={() => setSidebarCollapsed(true)}
-            inboxCount={inboxCount}
-            accentColor={theme.accent}
-          />
-        )
+        ) : null
       }
       panelOpen={panelOpen}
       topbar={topbar}

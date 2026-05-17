@@ -26,7 +26,7 @@ export type BlockerCode = typeof BLOCKER_CODES[number];
 // ── Sub-schemas ───────────────────────────────────────────────────────────────
 
 const SuggestionSchema = z.object({
-  field:      z.literal("spend_category_id"),
+  field:      z.literal("commodity_category_id"),
   id:         z.string().uuid(),
   code:       z.string(),
   name:       z.string(),
@@ -41,7 +41,7 @@ const LineCommodityCodeSchema = z.object({
 });
 
 const SelectedSchema = z.object({
-  spend_category_id:   z.string().uuid().nullable(),
+  commodity_category_id:   z.string().uuid().nullable(),
   business_intent_id:  z.string().uuid().nullable(),
   profile_config_id:   z.string().uuid().nullable(),
   line_commodity_code: LineCommodityCodeSchema.nullable(),
@@ -59,7 +59,7 @@ const ResolvedSchema = z.object({
   confidence:             z.number().min(0).max(1),
   tax_group_resolved_via: z.enum([
     "override", "supplier_profile", "product",
-    "item_category", "spend_category", "fallback", "none",
+    "commodity_category", "spend_category", "fallback", "none",
   ]),
   wht_group_resolved_via: z.enum(["override", "supplier_profile", "none", "n/a"]),
 });

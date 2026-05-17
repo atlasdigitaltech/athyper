@@ -187,42 +187,8 @@ BEGIN
     SELECT id INTO v_pt_net30 FROM master.payment_term WHERE tenant_id=v_tid AND code='PT-NET30' AND is_current_version=true;
     SELECT id INTO v_pt_net45 FROM master.payment_term WHERE tenant_id=v_tid AND code='PT-NET45' AND is_current_version=true;
 
-    -- Certification types (platform-level, tenant_id = NULL — idempotent)
-    INSERT INTO master.certification_type (
-        tenant_id, code, name, issuing_body, category, description,
-        is_custom, metadata, status, created_by)
-    SELECT NULL, code, name, body, cat, descr, false, v_seed, 'active', v_sys
-    FROM (VALUES
-        ('iso-9001',
-         'ISO 9001 Quality Management Systems',
-         'International Organization for Standardization',
-         'quality',
-         'Requirements for a quality management system (QMS).'),
-        ('iso-14001',
-         'ISO 14001 Environmental Management Systems',
-         'International Organization for Standardization',
-         'esg',
-         'Framework for managing environmental responsibilities.'),
-        ('iso-27001',
-         'ISO/IEC 27001 Information Security Management',
-         'International Organization for Standardization',
-         'information_security',
-         'Requirements for establishing and maintaining an ISMS.'),
-        ('pci-dss',
-         'PCI DSS Payment Card Industry Data Security Standard',
-         'PCI Security Standards Council',
-         'financial',
-         'Security standard for organisations that handle branded payment cards.'),
-        ('soc-2',
-         'SOC 2 Service Organisation Control 2',
-         'American Institute of CPAs (AICPA)',
-         'information_security',
-         'Audit standard for service providers storing customer data in the cloud.')
-    ) AS v(code,name,body,cat,descr)
-    WHERE NOT EXISTS (
-        SELECT 1 FROM master.certification_type WHERE tenant_id IS NULL AND code=v.code
-    );
-
+    -- Certification types — resolved from platform seed
+    --   Guaranteed present by 010_platform/003_master/003_certification_type.sql.
     SELECT id INTO v_ct_iso9001  FROM master.certification_type WHERE tenant_id IS NULL AND code='iso-9001';
     SELECT id INTO v_ct_iso27001 FROM master.certification_type WHERE tenant_id IS NULL AND code='iso-27001';
     SELECT id INTO v_ct_iso14001 FROM master.certification_type WHERE tenant_id IS NULL AND code='iso-14001';
@@ -556,11 +522,11 @@ BEGIN
     -- BRT-001: Spend categories
     IF v_sup_brt IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id,supplier_id,spend_category_id,is_primary,metadata,created_by)
+            tenant_id,supplier_id,commodity_category_id,is_primary,metadata,created_by)
         SELECT v_tid,v_sup_brt,sc.id,is_pri,v_seed,v_sys
         FROM (VALUES ('SC-IT',true),('SC-SUBS',false)) AS v(code,is_pri)
         JOIN master.spend_category sc ON sc.tenant_id=v_tid AND sc.code=v.code
-        ON CONFLICT (tenant_id,supplier_id,spend_category_id) DO NOTHING;
+        ON CONFLICT (tenant_id,supplier_id,commodity_category_id) DO NOTHING;
     END IF;
 
     RAISE NOTICE '[001_ca_party_master] §SUP1: BRT-001 BrightTech Solutions seeded (bp=%, sup=%)', v_bp_brt, v_sup_brt;
@@ -883,11 +849,11 @@ BEGIN
     -- CSM-001: Spend categories
     IF v_sup_csm IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id,supplier_id,spend_category_id,is_primary,metadata,created_by)
+            tenant_id,supplier_id,commodity_category_id,is_primary,metadata,created_by)
         SELECT v_tid,v_sup_csm,sc.id,is_pri,v_seed,v_sys
         FROM (VALUES ('SC-IT',true),('SC-OUTSRC',false)) AS v(code,is_pri)
         JOIN master.spend_category sc ON sc.tenant_id=v_tid AND sc.code=v.code
-        ON CONFLICT (tenant_id,supplier_id,spend_category_id) DO NOTHING;
+        ON CONFLICT (tenant_id,supplier_id,commodity_category_id) DO NOTHING;
     END IF;
 
     RAISE NOTICE '[001_ca_party_master] §SUP2: CSM-001 CloudServe Managed IT seeded (bp=%, sup=%)', v_bp_csm, v_sup_csm;

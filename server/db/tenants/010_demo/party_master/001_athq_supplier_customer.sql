@@ -288,51 +288,10 @@ BEGIN
      WHERE tenant_id = v_tenant_id AND code = 'AR_STANDARD'
      LIMIT 1;
 
-    -- §1h  Certification types (platform-standard: tenant_id = NULL)
-    --      code must match '^[a-z][a-z0-9_-]*$'  (ctype_code_fmt constraint)
-    SELECT id INTO v_ct_iso9001 FROM master.certification_type
-     WHERE COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid)
-           = '00000000-0000-0000-0000-000000000000'::uuid
-       AND code = 'iso-9001';
-    IF v_ct_iso9001 IS NULL THEN
-        INSERT INTO master.certification_type (
-            tenant_id, code, name,
-            issuing_body, category, description,
-            is_custom, metadata, status, created_by
-        ) VALUES (
-            NULL,
-            'iso-9001',
-            'ISO 9001 Quality Management Systems',
-            'International Organization for Standardization',
-            'quality',
-            'Specifies requirements for a quality management system (QMS).',
-            false,
-            '{"_seed":{"pack":"001_athq_party_master","version":"1.0.0"}}'::jsonb,
-            'active', v_sys
-        ) RETURNING id INTO v_ct_iso9001;
-    END IF;
-
-    SELECT id INTO v_ct_iso27001 FROM master.certification_type
-     WHERE COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid)
-           = '00000000-0000-0000-0000-000000000000'::uuid
-       AND code = 'iso-27001';
-    IF v_ct_iso27001 IS NULL THEN
-        INSERT INTO master.certification_type (
-            tenant_id, code, name,
-            issuing_body, category, description,
-            is_custom, metadata, status, created_by
-        ) VALUES (
-            NULL,
-            'iso-27001',
-            'ISO/IEC 27001 Information Security Management',
-            'International Organization for Standardization',
-            'information_security',
-            'Requirements for establishing and maintaining an ISMS.',
-            false,
-            '{"_seed":{"pack":"001_athq_party_master","version":"1.0.0"}}'::jsonb,
-            'active', v_sys
-        ) RETURNING id INTO v_ct_iso27001;
-    END IF;
+    -- §1h  Certification types — resolved from platform seed
+    --      Guaranteed present by 010_platform/003_master/003_certification_type.sql.
+    SELECT id INTO v_ct_iso9001  FROM master.certification_type WHERE tenant_id IS NULL AND code = 'iso-9001';
+    SELECT id INTO v_ct_iso27001 FROM master.certification_type WHERE tenant_id IS NULL AND code = 'iso-27001';
 
     -- ══════════════════════════════════════════════════════════════════════
     -- §2  SUPPLIER — Gulf Construction Materials LLC

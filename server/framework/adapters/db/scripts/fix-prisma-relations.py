@@ -5,6 +5,14 @@ fix-prisma-relations.py
 Re-applies manual Prisma schema relation fixes that `prisma db pull` always
 overwrites. Run this immediately after every `prisma db pull`.
 
+Fixes applied (9 total):
+  1-3. acct_profile_config back-refs → []
+  4.   commitment.commitment_procurement back-ref → []
+  5-6. invoice_bank_snapshot / invoice_party_snapshot @@unique inject
+  7.   payment_term_discount_result self-ref back-ref → []
+  8.   brand_profile.tenant_profile back-ref → []
+  9.   letterhead.tenant_profile back-ref → []
+
 Usage:
     python3 scripts/fix-prisma-relations.py
 
@@ -130,17 +138,6 @@ def main():
         print("  OK   [letterhead.tenant_profile []]")
     else:
         print("  WARN [letterhead.tenant_profile []] pattern not found — already fixed or schema changed")
-
-    # ── Fix 10: company_code_supplier_profile.payment_method name collision ──────
-    # The model has a String column named `payment_method` AND a relation to the
-    # `payment_method` table. Prisma generates both with the same name → rename
-    # the relation to `payment_method_ref` to avoid the duplicate field error.
-    text = replace_once(
-        text,
-        '  payment_method                                                                        payment_method?    @relation(fields: [tenant_id, payment_method_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "scp_payment_method_id_fk")',
-        '  payment_method_ref                                                                    payment_method?    @relation(fields: [tenant_id, payment_method_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "scp_payment_method_id_fk")',
-        "company_code_supplier_profile.payment_method_ref rename",
-    )
 
     SCHEMA.write_text(text, encoding="utf-8")
     print(f"\nWrote {SCHEMA}")

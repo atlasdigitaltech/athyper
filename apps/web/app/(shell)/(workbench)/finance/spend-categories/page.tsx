@@ -1,5 +1,5 @@
-import { SpendCategoryWorkbench } from "@athyper/finance-workbench/views";
+import { CommodityCategoryWorkbench } from "@athyper/finance-workbench/views";
 
 export default function SpendCategoriesPage() {
-  return <SpendCategoryWorkbench />;
+  return <CommodityCategoryWorkbench />;
 }

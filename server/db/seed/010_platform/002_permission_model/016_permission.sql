@@ -1,5 +1,5 @@
 -- 900_seed_data/001_shared/016_permission.sql
--- Seed: 40 atomic permissions across 8 categories (36 operational + 4 special)
+-- Seed: Base atomic permissions across 8 categories.
 -- Schema: shared | Table: permission
 -- Depends on: 015_permission_category.sql
 -- Idempotent: on conflict (code) do nothing
@@ -12,6 +12,8 @@ JOIN (VALUES
     ('read',         'Read',         'entity', 'record', 'low',    false, 10),
     ('create',       'Create',       'entity', 'record', 'low',    false, 20),
     ('update',       'Update',       'entity', 'record', 'low',    false, 30),
+    ('edit',         'Edit',         'entity', 'record', 'low',    false, 30),
+    ('exit',         'Exit',         'entity', 'record', 'low',    false, 35),
     ('delete_draft', 'Delete draft', 'entity', 'record', 'low',    false, 40),
     ('delete',       'Delete',       'entity', 'record', 'high',   false, 50)
 ) AS v(code, name, cat, st, rl, pr, so) ON c.code = v.cat

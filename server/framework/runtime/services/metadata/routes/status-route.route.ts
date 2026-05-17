@@ -69,7 +69,7 @@ export function createStatusRouteRoute(router: Router, deps: StatusRouteRouteDep
 
       // ── 2. Fall back: build live from control tables ──────────────────────────
       // Find lifecycle bound to this entity (global binding, tenant_id IS NULL)
-      const binding = await db
+      let binding = await db
         .selectFrom("control.entity_lifecycle as el")
         .innerJoin("control.lifecycle as lc", "lc.id", "el.lifecycle_id")
         .select(["el.lifecycle_id", "lc.code as lifecycle_code"])
@@ -80,7 +80,35 @@ export function createStatusRouteRoute(router: Router, deps: StatusRouteRouteDep
         ]))
         .where("lc.is_active" as never, "=", true as never)
         .orderBy("el.priority" as never, "desc")
-        .executeTakeFirst();
+        .executeTakeFirst() as { lifecycle_id: string; lifecycle_code: string } | undefined;
+
+      if (!binding) {
+        const statusField = await db
+          .selectFrom("control.entity as e")
+          .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+          .innerJoin("control.entity_field as ef", "ef.entity_version_id", "ev.id")
+          .select(["e.id"])
+          .where((eb: any) => eb.or([
+            eb("e.entity_code" as never, "=", entityCode as never),
+            eb("e.name" as never, "=", entityCode as never),
+          ]))
+          .where("e.tenant_id" as never, "is", null)
+          .where("ev.tenant_id" as never, "is", null)
+          .where("ev.version_no" as never, "=", 1 as never)
+          .where("ef.name" as never, "=", "status" as never)
+          .where("ef.data_type" as never, "=", "lifecycle_state" as never)
+          .executeTakeFirst();
+
+        if (statusField) {
+          binding = await db
+            .selectFrom("control.lifecycle as lc")
+            .select(["lc.id as lifecycle_id", "lc.code as lifecycle_code"])
+            .where("lc.code" as never, "=", "lc_active_inactive" as never)
+            .where("lc.tenant_id" as never, "is", null)
+            .where("lc.is_active" as never, "=", true as never)
+            .executeTakeFirst() as { lifecycle_id: string; lifecycle_code: string } | undefined;
+        }
+      }
 
       if (!binding) {
         res.status(404).json({

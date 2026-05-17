@@ -1,5 +1,5 @@
--- 100_master/021_company_code_supplier_posting_override.sql
--- Purpose: Register master.company_code_supplier_posting_override as an entity
+-- 100_master/021_supplier_posting_override.sql
+-- Purpose: Register control.supplier_posting_override as an entity
 --          with version, fields, and display_config.
 -- Idempotent: WHERE NOT EXISTS / ON CONFLICT DO NOTHING
 
@@ -13,20 +13,15 @@ INSERT INTO control.entity (
     numbering_active, feature_flags, status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
-    'company_code_supplier_posting_override', 'CSPO', 'company_code_supplier_posting_override',
-    'MASTER', 'system', 'ent', 'table',
+    'supplier_posting_override', 'CSPO', 'supplier_posting_override',
+    'CONTROL', 'system', 'ent', 'table',
     'standard', 'sensitive', 'controlled',
-    'master', 'company_code_supplier_posting_override',
+    'control', 'supplier_posting_override',
     'Supplier Posting Override', 'Supplier Posting Overrides', 'book-open', 'rose',
     false,
     '{"parent_entity":"company_code_supplier_profile","parent_fk":"supplier_profile_id"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master'
-      AND table_name   = 'company_code_supplier_posting_override'
-      AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
@@ -34,7 +29,7 @@ INSERT INTO control.entity_version (
 SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
        '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
-WHERE  e.entity_code = 'company_code_supplier_posting_override' AND e.tenant_id IS NULL
+WHERE  e.entity_code = 'supplier_posting_override' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
 
 -- ── 3. control.entity_field ──────────────────────────────────────────────────
@@ -61,7 +56,7 @@ CROSS JOIN (VALUES
     ('status',              'status',              'Status',            'lifecycle_state','one',       NULL,       true,  true,  NULL,        80)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
        is_required, is_filterable, validation, sort_order)
-WHERE e.entity_code = 'company_code_supplier_posting_override' AND e.tenant_id IS NULL AND ev.version_no = 1
+WHERE e.entity_code = 'supplier_posting_override' AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
 -- ── 4. display_config + natural_key_fields ───────────────────────────────────
@@ -81,7 +76,7 @@ SET display_config     = jsonb_build_object(
         )
     ),
     natural_key_fields = ARRAY['supplier_profile_id', 'posting_role_code', 'book_code', 'effective_from']
-WHERE table_schema = 'master' AND table_name = 'company_code_supplier_posting_override'
+WHERE table_schema = 'control' AND table_name = 'supplier_posting_override'
   AND tenant_id IS NULL;
 
 UPDATE control.entity_field ef
@@ -96,7 +91,7 @@ CROSS JOIN (VALUES
 ) AS v(field_name, target_entity, reference_config)
 WHERE ef.entity_version_id = ev.id
   AND v.field_name = ef.name
-  AND e.entity_code = 'company_code_supplier_posting_override'
+  AND e.entity_code = 'supplier_posting_override'
   AND e.tenant_id IS NULL
   AND ev.version_no = 1
   AND (

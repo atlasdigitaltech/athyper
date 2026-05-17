@@ -2,7 +2,7 @@
 -- Lifecycle: lc_active_inactive — simple 2-state toggle
 -- Used by: label, brand_profile, letterhead, template (active/deprecated),
 --          ledger_book, holiday_calendar, payment_term, payment_method,
---          planning_model, item_category, spend_category, chart_of_account,
+--          planning_model, commodity_category, chart_of_account,
 --          tax_jurisdiction, tax_type, auth_group, team, dimension_set,
 --          asset_class, print_profile, and others.
 -- Idempotent: ON CONFLICT DO NOTHING throughout

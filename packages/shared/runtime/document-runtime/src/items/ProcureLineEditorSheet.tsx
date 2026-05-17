@@ -105,7 +105,8 @@ export interface ProcureLineEditorSheetProps {
   onLineSaved?:    (patch: Partial<DocumentLine>) => void;
   onMutated?:      () => void;
   /** Draft mode: skip server calls and hand the payload to the parent grid. */
-  onDraftSubmit?:  (payload: Record<string, unknown>) => void;
+  onDraftSubmit?:  (payload: Record<string, unknown>) => void | Promise<void>;
+  onDraftClassify?: (line: DocumentLine, mode?: string) => Promise<Record<string, unknown> | void>;
   onLineCopied?:   () => void;
   onLineDeleted?:  () => void;
   hasPreviousLine?: boolean;
@@ -143,6 +144,25 @@ function saveErrorMessage(body: SaveErrorBody, status: number): string {
 const PROCURE_FIELD_LABEL_CLASS = "text-sm font-medium leading-normal text-muted-foreground";
 const PROCURE_SECTION_LABEL_CLASS = "text-sm font-medium leading-normal text-muted-foreground";
 const PROCURE_TABLE_HEADER_CLASS = "text-xs font-medium text-muted-foreground";
+const PROCURE_CARD_CLASS = "rounded-lg border bg-card text-card-foreground shadow-sm";
+const PROCURE_FIELD_BOX_CLASS = `${PROCURE_CARD_CLASS} px-5 py-5`;
+
+function nonEmptyText(value: unknown): string | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const text = String(value).trim();
+  return text.length > 0 ? text : null;
+}
+
+function withHeaderCompanyCodeContext(
+  draft: Record<string, unknown>,
+  headerRecord?: Record<string, unknown> | null,
+  companyCodeId?: string,
+): Record<string, unknown> {
+  const headerCompanyCodeId = nonEmptyText(companyCodeId) ?? nonEmptyText(headerRecord?.["company_code_id"]);
+  const context = { ...(headerRecord ?? {}), ...draft };
+  if (headerCompanyCodeId) context["company_code_id"] = headerCompanyCodeId;
+  return context;
+}
 
 function displayProcureLabel(value: string | null | undefined): string {
   const text = String(value ?? "").replace(/_/g, " ").replace(/\s+/g, " ").trim();
@@ -265,24 +285,30 @@ function FieldCell({
   onDraftChange,
   disabled,
   requiredOverride,
+  suppressRequired,
+  formData,
 }: {
   field:         ReturnType<typeof fieldsForGroups>[number];
   draft:         Record<string, unknown>;
   onDraftChange: (next: Record<string, unknown>) => void;
   disabled?:     boolean;
   requiredOverride?: boolean;
+  suppressRequired?: boolean;
+  formData?:     Record<string, unknown>;
 }) {
   return (
     <label className="flex min-w-0 flex-col gap-1.5">
       <span className={PROCURE_FIELD_LABEL_CLASS}>
         {fieldLabel(field)}
-        {(field.is_required || requiredOverride) && <span className="ml-0.5 text-destructive">*</span>}
+        {!suppressRequired && (field.is_required || requiredOverride) && (
+          <span className="ml-0.5 text-destructive">*</span>
+        )}
       </span>
       <MetaFieldInput
         field={field}
         value={draft[field.name]}
         disabled={disabled}
-        formData={draft}
+        formData={formData ?? draft}
         onChange={(v) => onDraftChange({ ...draft, [field.name]: v })}
       />
     </label>
@@ -313,7 +339,7 @@ function DescriptionTextArea({
         value={value}
         disabled={disabled}
         onChange={(event) => onDraftChange({ ...draft, [field.name]: event.target.value })}
-        className="min-h-16 w-full resize-y rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
+        className="min-h-16 w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
       />
     </label>
   );
@@ -341,10 +367,14 @@ function FieldsGrid({
     [allFields, excludeNames],
   );
   if (fields.length === 0) {
-    return <p className="text-xs text-muted-foreground/50 py-2">No configurable fields.</p>;
+    return (
+      <div className={cn(PROCURE_FIELD_BOX_CLASS, "py-6")}>
+        <p className="text-xs text-muted-foreground/50">No configurable fields.</p>
+      </div>
+    );
   }
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className={cn(PROCURE_FIELD_BOX_CLASS, "grid gap-3 sm:grid-cols-2")}>
       {fields.map((f) => (
         <FieldCell
           key={f.name}
@@ -372,6 +402,7 @@ function ClassificationTabPanel({
   entityCode,
   parentRecordId,
   onRefresh,
+  onClassify,
 }: {
   groups: string[];
   entity: CompiledEntity;
@@ -382,18 +413,27 @@ function ClassificationTabPanel({
   entityCode: string;
   parentRecordId: string;
   onRefresh?: () => void;
+  onClassify?: (line: DocumentLine, mode?: string) => Promise<Record<string, unknown> | void>;
 }) {
   const fields = useMemo(() => resolveClassificationFields(entity, groups), [entity, groups]);
+  const lineSnapshot = useMemo(() => lineSnapshotWithDraft(line, draft), [draft, line]);
 
   return (
-    <div className="space-y-4">
+    <div className={cn(PROCURE_FIELD_BOX_CLASS, "space-y-4")}>
       <ClassificationDecisionPanel
-        line={line as Record<string, unknown>}
+        line={lineSnapshot as Record<string, unknown>}
         entityCode={entityCode}
         recordId={parentRecordId}
         onRefresh={onRefresh}
+        onClassify={onClassify ? async (mode) => {
+          const decision = await onClassify(lineSnapshot, mode);
+          if (decision && typeof decision === "object") {
+            onDraftChange(applyClassificationDecisionToDraft(draft, decision));
+          }
+          return decision;
+        } : undefined}
       />
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {fields.map((field) => (
           <FieldCell
             key={field.name}
@@ -401,6 +441,7 @@ function ClassificationTabPanel({
             draft={draft}
             onDraftChange={onDraftChange}
             disabled={disabled}
+            suppressRequired={isOptionalClassificationDraftField(field)}
           />
         ))}
       </div>
@@ -433,7 +474,7 @@ function ReadOnlyAmountGrid({
             <span className={PROCURE_FIELD_LABEL_CLASS}>
               {f.label}
             </span>
-            <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/30 px-3 text-sm tabular-nums text-foreground select-none cursor-default">
+            <div className="flex h-9 w-full items-center rounded-md border border-input bg-background px-3 text-sm tabular-nums text-foreground select-none cursor-default">
               {display}
             </div>
           </div>
@@ -467,7 +508,7 @@ function DistributionsPanel({
   }
   if (distributions.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border/50 bg-muted/10 px-4 py-6 text-center">
+      <div className={cn(PROCURE_FIELD_BOX_CLASS, "border-dashed px-4 py-6 text-center")}>
         <p className="text-sm text-muted-foreground">No accounting distributions yet.</p>
         <p className="mt-1 text-xs text-muted-foreground/60">
           Distributions are generated automatically when this line is posted.
@@ -476,7 +517,7 @@ function DistributionsPanel({
     );
   }
   return (
-    <div className="overflow-hidden rounded-lg border border-border/60">
+    <div className={cn(PROCURE_CARD_CLASS, "overflow-hidden")}>
       <div className={cn("grid grid-cols-[2rem_1fr_1fr_auto] gap-x-3 border-b border-border/40 bg-muted/30 px-3 py-2", PROCURE_TABLE_HEADER_CLASS)}>
         <span>#</span>
         <span>Account</span>
@@ -587,7 +628,7 @@ function ReferenceCard({
 
   if (!hasLink) {
     return (
-      <div className="flex items-center justify-between rounded-lg border border-dashed border-border/40 px-4 py-3">
+      <div className="flex items-center justify-between rounded-lg border border-dashed border-input bg-background px-4 py-3">
         <span className="text-xs font-medium text-muted-foreground">{link.label}</span>
         <span className="text-2xs text-muted-foreground/40">Not linked</span>
       </div>
@@ -599,7 +640,7 @@ function ReferenceCard({
     : null;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border/60 bg-background">
+    <div className="overflow-hidden rounded-lg border border-input bg-background">
       {/* Card header */}
       <button
         type="button"
@@ -722,14 +763,14 @@ function ExceptionsPanel({
   if (loading) return <div className="h-8 animate-pulse rounded-lg bg-muted/40" />;
   if (exceptions.length === 0) {
     return (
-      <div className="flex items-center justify-between rounded-lg border border-border/40 px-3.5 py-2.5">
+      <div className="flex items-center justify-between rounded-lg border border-input bg-background px-3.5 py-2.5">
         <span className="text-xs text-muted-foreground">Match exceptions</span>
         <span className="text-2xs font-semibold text-success">None</span>
       </div>
     );
   }
   return (
-    <div className="rounded-lg border border-destructive/30 overflow-hidden">
+    <div className="overflow-hidden rounded-lg border border-destructive/30 bg-background">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -834,7 +875,7 @@ function ReferenceTabPanel({
   );
 
   return (
-    <div className="space-y-3">
+    <div className={cn(PROCURE_FIELD_BOX_CLASS, "space-y-3")}>
       {/* Match status */}
       {matchStatus && (
         <div className="flex items-center justify-between">
@@ -941,6 +982,23 @@ function isItemReferenceField(field: EntityField): boolean {
   return field.name === "item_id" || refEntity === "item";
 }
 
+function assetFieldsForEntity(entity: CompiledEntity): EntityField[] {
+  const byName = new Map(entity.fields.map((field) => [field.name, field]));
+  return ["is_asset", "asset_category_id"]
+    .map((name) => byName.get(name))
+    .filter((field): field is EntityField =>
+      Boolean(field && !field.is_readonly && field.origin !== "system" && !field.is_computed),
+    );
+}
+
+function isTruthyDraftValue(value: unknown): boolean {
+  if (value === true) return true;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes";
+}
+
 function syntheticClassificationField(
   name: "unspsc_code" | "hs_code",
   label: string,
@@ -987,8 +1045,8 @@ function classificationFieldText(field: EntityField): string {
   return `${field.name} ${field.column_name} ${field.label ?? ""}`.toLowerCase();
 }
 
-function isSpendCategoryField(field: EntityField): boolean {
-  return /spend[_ -]?category/.test(classificationFieldText(field));
+function isCommodityCategoryField(field: EntityField): boolean {
+  return /(commodity|spend)[_ -]?category/.test(classificationFieldText(field));
 }
 
 function isUnspscField(field: EntityField): boolean {
@@ -1001,11 +1059,15 @@ function isHsTradeField(field: EntityField): boolean {
 }
 
 function classificationFieldRank(field: EntityField): number {
-  if (isSpendCategoryField(field)) return 10;
-  if (isBusinessIntentField(field)) return 20;
-  if (isUnspscField(field)) return 30;
-  if (isHsTradeField(field)) return 40;
+  if (isCommodityCategoryField(field)) return 10;
+  if (isUnspscField(field)) return 20;
+  if (isHsTradeField(field)) return 30;
+  if (isBusinessIntentField(field)) return 40;
   return 100 + (field.sort_order ?? 0);
+}
+
+function isOptionalClassificationDraftField(field: EntityField): boolean {
+  return isCommodityCategoryField(field) || isBusinessIntentField(field) || isUnspscField(field) || isHsTradeField(field);
 }
 
 function resolveClassificationFields(entity: CompiledEntity, groups: string[]): EntityField[] {
@@ -1018,6 +1080,49 @@ function resolveClassificationFields(entity: CompiledEntity, groups: string[]): 
   ].filter((field): field is EntityField => Boolean(field)));
 
   return fields.sort((a, b) => classificationFieldRank(a) - classificationFieldRank(b));
+}
+
+function asObjectRecord(value: unknown): Record<string, unknown> | null {
+  return value != null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function lineSnapshotWithDraft(line: DocumentLine, draft: Record<string, unknown>): DocumentLine {
+  const lineRecord = line as Record<string, unknown>;
+  const lineData = asObjectRecord(lineRecord["data"]) ?? {};
+  const draftData = asObjectRecord(draft["data"]) ?? {};
+  return {
+    ...lineRecord,
+    ...draft,
+    data: { ...lineData, ...draftData },
+  } as unknown as DocumentLine;
+}
+
+function applyClassificationDecisionToDraft(
+  draft: Record<string, unknown>,
+  decision: Record<string, unknown>,
+): Record<string, unknown> {
+  const selected = asObjectRecord(decision["selected"]);
+  const commodity = asObjectRecord(selected?.["line_commodity_code"]);
+  const next: Record<string, unknown> = {
+    ...draft,
+    classification_decision: decision,
+  };
+
+  const commodityCategoryId = selected?.["commodity_category_id"];
+  if (commodityCategoryId != null) next["commodity_category_id"] = commodityCategoryId;
+  const businessIntentId = selected?.["business_intent_id"];
+  if (businessIntentId != null) next["business_intent_id"] = businessIntentId;
+
+  const domain = typeof commodity?.["domain_code"] === "string"
+    ? commodity["domain_code"].toLowerCase()
+    : "";
+  const code = commodity?.["code"];
+  if (code != null && domain === "unspsc") next["unspsc_code"] = code;
+  if (code != null && domain === "hs") next["hs_code"] = code;
+
+  return next;
 }
 
 function isMissingRequiredValue(value: unknown): boolean {
@@ -1046,12 +1151,6 @@ function procureValidationMessage(
   const typeField = config.classifyFields.find(
     (f) => f.data_type === "enum" || f.data_type === "lifecycle_state",
   );
-  const spendCategoryField = config.classifyFields.find((f) => /spend[_-]?category/i.test(f.name));
-  const businessIntentField = config.classifyFields.find(
-    (f) => f !== spendCategoryField && isBusinessIntentField(f),
-  ) ?? config.classifyFields.find(
-    (f) => f !== spendCategoryField && f !== typeField && f.data_type === "reference",
-  );
   const amountField = amountConfig
     ? entity.fields.find((f) => f.name === amountConfig.amountField)
     : undefined;
@@ -1065,8 +1164,6 @@ function procureValidationMessage(
     typeField,
     descriptionField,
     ...(intakeMode === "catalog" ? [itemField] : []),
-    spendCategoryField,
-    businessIntentField,
     ...(amountMode ? [amountField] : config.quantityRow),
   ];
   const seen = new Set<string>();
@@ -1075,6 +1172,14 @@ function procureValidationMessage(
     seen.add(field.name);
     return isMissingRequiredValue(draft[field.name]) ? [fieldLabel(field)] : [];
   });
+  const assetCategoryField = entity.fields.find((field) => field.name === "asset_category_id");
+  if (
+    isTruthyDraftValue(draft["is_asset"]) &&
+    assetCategoryField &&
+    isMissingRequiredValue(draft[assetCategoryField.name])
+  ) {
+    missing.push(fieldLabel(assetCategoryField));
+  }
 
   return missing.length > 0 ? `Complete required fields: ${missing.join(", ")}.` : null;
 }
@@ -1094,7 +1199,7 @@ function CurrencyInput({
   const n      = Number(value ?? 0);
   const isZero = !Number.isFinite(n) || n === 0;
   return (
-    <div className="flex h-9 overflow-hidden rounded-lg border border-border/60 bg-transparent focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/30 disabled:opacity-50">
+    <div className="flex h-9 overflow-hidden rounded-lg border border-input bg-background focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/30 disabled:opacity-50">
       <span className="flex shrink-0 items-center border-r border-border/40 bg-muted/30 px-2.5 text-xs font-semibold text-muted-foreground">
         {currencyCode ?? "—"}
       </span>
@@ -1226,7 +1331,7 @@ function QtyUomInput({
   const n      = Number(value ?? 0);
   const isZero = !Number.isFinite(n) || n === 0;
   return (
-    <div className="flex h-9 overflow-hidden rounded-lg border border-border/60 bg-transparent focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/30">
+    <div className="flex h-9 overflow-hidden rounded-lg border border-input bg-background focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/30">
       <input
         type="number"
         step="any"
@@ -1323,7 +1428,7 @@ function TypePillsField({
   const opts        = staticOpts.length > 0 ? staticOpts : domainOpts;
 
   return (
-    <div className="flex w-full overflow-hidden rounded-lg border border-border/60 bg-background p-0.5">
+    <div className="flex w-full overflow-hidden rounded-lg border border-input bg-background p-0.5">
       {opts.map((opt) => {
         const active = String(value ?? "") === opt.value;
         return (
@@ -1356,6 +1461,7 @@ function ItemTabPanel({
   disabled,
   amtCfg,
   currencyCode,
+  formData,
   excludeNames,
 }: {
   config:        ItemTabConfig;
@@ -1366,30 +1472,23 @@ function ItemTabPanel({
   disabled?:     boolean;
   amtCfg?:       ProcureAmountConfig | null;
   currencyCode?: string;
+  formData?:     Record<string, unknown>;
   excludeNames?: string[];
 }) {
   const [qtyMode,  setQtyMode]  = useState<QtyMode>("qty_price");
 
-  const allFields = useMemo(() => fieldsForGroups(entity, groups), [entity, groups]);
+  const allFields = useMemo(
+    () => uniqueEntityFields([...fieldsForGroups(entity, groups), ...assetFieldsForEntity(entity)]),
+    [entity, groups],
+  );
 
   // ── WHAT section decomposition ──────────────────────────────────────────────
   const descriptionField = config.primaryFields[0];
   const itemRefField     = config.primaryFields[1];
 
-  // First reference in classifyFields → paired with item ref in row 2
-  const spendCatField         = config.classifyFields.find((f) => f.data_type === "reference");
   // First enum/lifecycle → type pills
   const typeEnumField         = config.classifyFields.find(
     (f) => f.data_type === "enum" || f.data_type === "lifecycle_state",
-  );
-  const businessIntentField   = config.classifyFields.find(
-    (f) => f !== spendCatField && /business[_-]?intent/i.test(f.name),
-  ) ?? config.classifyFields.find(
-    (f) => f !== spendCatField && f !== typeEnumField && f.data_type === "reference",
-  );
-  // Remaining classify fields (after separating spend cat + type)
-  const remainingClassifyFields = config.classifyFields.filter(
-    (f) => f !== spendCatField && f !== typeEnumField && f !== businessIntentField,
   );
 
   // ── HOW MUCH: type-based mode restriction ───────────────────────────────────
@@ -1452,7 +1551,7 @@ function ItemTabPanel({
   }
 
   return (
-    <div className="space-y-5">
+    <div className={cn(PROCURE_FIELD_BOX_CLASS, "space-y-5")}>
       <div className="space-y-3.5">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)]">
             <div className="space-y-3.5">
@@ -1491,60 +1590,17 @@ function ItemTabPanel({
                   draft={draft}
                   onDraftChange={onDraftChange}
                   disabled={disabled}
-                />
-              )}
-              {spendCatField && (
-                <FieldCell
-                  field={spendCatField}
-                  draft={draft}
-                  onDraftChange={onDraftChange}
-                  disabled={disabled}
-                  requiredOverride
-                />
-              )}
-              {businessIntentField && (
-                <FieldCell
-                  field={businessIntentField}
-                  draft={draft}
-                  onDraftChange={onDraftChange}
-                  disabled={disabled}
-                  requiredOverride
+                  formData={formData}
                 />
               )}
             </div>
           </div>
-
-          {/* Other classify fields */}
-          {remainingClassifyFields.map((f) =>
-            f.data_type === "enum" || f.data_type === "lifecycle_state" ? (
-              <div key={f.name} className="flex min-w-0 flex-col gap-1.5">
-                <span className={PROCURE_FIELD_LABEL_CLASS}>
-                  {fieldLabel(f)}
-                  {f.is_required && <span className="ml-0.5 text-destructive">*</span>}
-                </span>
-                <TypePillsField
-                  field={f}
-                  value={draft[f.name]}
-                  disabled={disabled}
-                  onChange={(v) => onDraftChange({ ...draft, [f.name]: v })}
-                />
-              </div>
-            ) : (
-              <FieldCell
-                key={f.name}
-                field={f}
-                draft={draft}
-                onDraftChange={onDraftChange}
-                disabled={disabled}
-              />
-            ),
-          )}
       </div>
 
       <div className="space-y-3.5">
           {/* Toggle: only for goods/services (or no type selected yet) */}
           {hasQtyToggle && !forceAmountOnly && (
-            <div className="inline-flex w-[220px] max-w-full overflow-hidden rounded-lg border border-border/60 p-0.5">
+            <div className="inline-flex w-[220px] max-w-full overflow-hidden rounded-lg border border-input bg-background p-0.5">
               {(["qty_price", "amount_only"] as QtyMode[]).map((mode) => (
                 <button
                   key={mode}
@@ -1627,6 +1683,7 @@ function ItemTabPanel({
                 draft={draft}
                 onDraftChange={onDraftChange}
                 disabled={disabled}
+                formData={formData}
               />
             ))}
           </div>
@@ -1658,7 +1715,7 @@ function TaxSectionCard({
   const pct = pctField ? Number(draft[pctField.name] ?? 0) : 0;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border/60">
+    <div className={cn(PROCURE_CARD_CLASS, "overflow-hidden")}>
       <div className="flex items-center justify-between border-b border-border/40 bg-muted/30 px-3.5 py-2">
         <span className={PROCURE_SECTION_LABEL_CLASS}>
           {displayProcureLabel(section.label)}
@@ -1701,13 +1758,17 @@ function TaxTabPanel({
   const otherFields  = allFields.filter((f) => !sectionNames.has(f.name));
 
   if (allFields.length === 0) {
-    return <p className="py-2 text-xs text-muted-foreground/50">No tax fields configured.</p>;
+    return (
+      <div className={cn(PROCURE_FIELD_BOX_CLASS, "py-6")}>
+        <p className="text-xs text-muted-foreground/50">No tax fields configured.</p>
+      </div>
+    );
   }
 
   // No sections → flat grid
   if (sections.length === 0) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={cn(PROCURE_FIELD_BOX_CLASS, "grid gap-3 sm:grid-cols-2")}>
         {allFields.map((f) => (
           <FieldCell key={f.name} field={f} draft={draft} onDraftChange={onDraftChange} disabled={disabled} />
         ))}
@@ -1727,7 +1788,7 @@ function TaxTabPanel({
         />
       ))}
       {otherFields.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={cn(PROCURE_FIELD_BOX_CLASS, "grid gap-3 sm:grid-cols-2")}>
           {otherFields.map((f) => (
             <FieldCell key={f.name} field={f} draft={draft} onDraftChange={onDraftChange} disabled={disabled} />
           ))}
@@ -1816,7 +1877,7 @@ function DiscountTabPanel({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-lg border border-border/60">
+      <div className={cn(PROCURE_CARD_CLASS, "overflow-hidden")}>
         <div className="flex items-center justify-between border-b border-border/40 bg-muted/30 px-3.5 py-2">
           <span className={PROCURE_SECTION_LABEL_CLASS}>
             {displayProcureLabel(config.sectionLabel)}
@@ -1847,7 +1908,7 @@ function DiscountTabPanel({
             )}
           </div>
           {preview.baseAmount > 0 && (
-            <div className="rounded-lg border border-border/40 bg-muted/15 px-3 py-2.5 text-xs">
+            <div className="rounded-lg border border-input bg-background px-3 py-2.5 text-xs">
               <span className="text-muted-foreground">
                 Base {fmtAmount(preview.baseAmount, currencyCode)} - discount
               </span>
@@ -1862,7 +1923,7 @@ function DiscountTabPanel({
         </div>
       </div>
       {otherFields.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={cn(PROCURE_FIELD_BOX_CLASS, "grid gap-3 sm:grid-cols-2")}>
           {otherFields.map((f) => (
             <FieldCell key={f.name} field={f} draft={draft} onDraftChange={onDraftChange} disabled={disabled} />
           ))}
@@ -1908,7 +1969,7 @@ function RetentionTabPanel({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-lg border border-border/60">
+      <div className={cn(PROCURE_CARD_CLASS, "overflow-hidden")}>
         <div className="flex items-center justify-between border-b border-border/40 bg-muted/30 px-3.5 py-2">
           <span className={PROCURE_SECTION_LABEL_CLASS}>
             {displayProcureLabel(config.sectionLabel)}
@@ -1925,7 +1986,7 @@ function RetentionTabPanel({
             {config.amtField && <FieldCell field={config.amtField} draft={draft} onDraftChange={onDraftChange} disabled={disabled} />}
           </div>
           {retentionAmt > 0 && (
-            <div className="flex items-center justify-between rounded-lg bg-muted/20 px-3 py-2 text-xs">
+            <div className="flex items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-xs">
               <span className="text-muted-foreground">
                 Retention held (on {fmtAmount(baseAmt, currencyCode)})
               </span>
@@ -1943,7 +2004,7 @@ function RetentionTabPanel({
               {displayProcureLabel(config.otherLabel)}
             </p>
           )}
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={cn(PROCURE_FIELD_BOX_CLASS, "grid gap-3 sm:grid-cols-2")}>
             {otherFields.map((f) => (
               <FieldCell key={f.name} field={f} draft={draft} onDraftChange={onDraftChange} disabled={disabled} />
             ))}
@@ -1960,7 +2021,7 @@ function RetentionTabPanel({
 
 function ChargesTabPanel() {
   return (
-    <div className="space-y-4 rounded-lg border border-dashed border-border/50 bg-muted/10 px-6 py-10 text-center">
+    <div className={cn(PROCURE_CARD_CLASS, "space-y-4 border-dashed px-6 py-10 text-center")}>
       <Receipt className="mx-auto h-6 w-6 text-muted-foreground/30" />
       <div>
         <p className="text-sm font-medium text-muted-foreground">No additional charges</p>
@@ -1971,7 +2032,7 @@ function ChargesTabPanel() {
       <button
         type="button"
         disabled
-        className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-border/40 px-3 py-1.5 text-xs font-medium text-muted-foreground/50"
+        className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground/50"
       >
         <Plus className="h-3.5 w-3.5" />
         Add charge
@@ -2119,6 +2180,7 @@ export function ProcureLineEditorSheet({
   entityCode,
   recordId: parentRecordId,
   currencyCode,
+  companyCodeId,
   record,
   lineEntity,
   lineEntityCode,
@@ -2131,6 +2193,7 @@ export function ProcureLineEditorSheet({
   onLineSaved,
   onMutated,
   onDraftSubmit,
+  onDraftClassify,
   hasPreviousLine,
   hasNextLine,
   onPreviousLine,
@@ -2170,6 +2233,10 @@ export function ProcureLineEditorSheet({
   const [draft,     setDraft]     = useState<Record<string, unknown>>({});
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const fieldFormData = useMemo(
+    () => withHeaderCompanyCodeContext(draft, record, companyCodeId),
+    [companyCodeId, draft, record],
+  );
 
   const lineKey = recordId(currentLine as LineRecord);
   const isCreating = createMode || !lineKey;
@@ -2231,8 +2298,17 @@ export function ProcureLineEditorSheet({
     }
 
     if (onDraftSubmit) {
-      onDraftSubmit(payload);
-      return true;
+      setSaving(true);
+      setSaveError(null);
+      try {
+        await onDraftSubmit(payload);
+        return true;
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : "Failed to update draft line");
+        return false;
+      } finally {
+        setSaving(false);
+      }
     }
 
     setSaving(true);
@@ -2328,6 +2404,7 @@ export function ProcureLineEditorSheet({
                 disabled={saving || readOnly}
                 amtCfg={amtCfg}
                 currencyCode={currencyCode}
+                formData={fieldFormData}
                 excludeNames={excludeNames}
               />
             );
@@ -2393,37 +2470,42 @@ export function ProcureLineEditorSheet({
             entityCode={entityCode}
             parentRecordId={parentRecordId}
             onRefresh={onMutated}
+            onClassify={isDraftBackedLine ? onDraftClassify : undefined}
           />
         );
 
       case "distributions":
         if (!isPersistedLine) {
           return (
-            <p className="text-xs text-muted-foreground/60">
-              {isDraftBackedLine
-                ? "Create the invoice before adding accounting distributions."
-                : "Save the line before adding accounting distributions."}
-            </p>
+            <div className={cn(PROCURE_FIELD_BOX_CLASS, "py-6")}>
+              <p className="text-xs text-muted-foreground/60">
+                {isDraftBackedLine
+                  ? "Create the invoice before adding accounting distributions."
+                  : "Save the line before adding accounting distributions."}
+              </p>
+            </div>
           );
         }
         return (
-          <SplitAccountingPanel
-            ref={accountingPanelRef}
-            line={currentLine}
-            distributions={distributions as unknown as AccountingDistribution[]}
-            currencyCode={currencyCode}
-            entityCode={entityCode}
-            recordId={parentRecordId}
-            entity={resolvedEntity}
-            formData={record}
-            readOnly={readOnly}
-            onDirtyChange={setAccountingDirty}
-            onMutated={() => {
-              void refetchDistributions();
-              onMutated?.();
-            }}
-            onClose={() => { void save(); }}
-          />
+          <div className={cn(PROCURE_CARD_CLASS, "overflow-hidden")}>
+            <SplitAccountingPanel
+              ref={accountingPanelRef}
+              line={currentLine}
+              distributions={distributions as unknown as AccountingDistribution[]}
+              currencyCode={currencyCode}
+              entityCode={entityCode}
+              recordId={parentRecordId}
+              entity={resolvedEntity}
+              formData={record}
+              readOnly={readOnly}
+              onDirtyChange={setAccountingDirty}
+              onMutated={() => {
+                void refetchDistributions();
+                onMutated?.();
+              }}
+              onClose={() => { void save(); }}
+            />
+          </div>
         );
 
       case "charges":
@@ -2432,11 +2514,13 @@ export function ProcureLineEditorSheet({
       case "reference_links":
         if (!isPersistedLine) {
           return (
-            <p className="text-xs text-muted-foreground/60">
-              {isDraftBackedLine
-                ? "Create the invoice before linking source documents."
-                : "Save the line before linking source documents."}
-            </p>
+            <div className={cn(PROCURE_FIELD_BOX_CLASS, "py-6")}>
+              <p className="text-xs text-muted-foreground/60">
+                {isDraftBackedLine
+                  ? "Create the invoice before linking source documents."
+                  : "Save the line before linking source documents."}
+              </p>
+            </div>
           );
         }
         return refCfg ? (
@@ -2449,7 +2533,9 @@ export function ProcureLineEditorSheet({
             tabActive={currentTab.key === activeTab}
           />
         ) : (
-          <p className="text-xs text-muted-foreground/50">Reference config not available.</p>
+          <div className={cn(PROCURE_FIELD_BOX_CLASS, "py-6")}>
+            <p className="text-xs text-muted-foreground/50">Reference config not available.</p>
+          </div>
         );
     }
   }

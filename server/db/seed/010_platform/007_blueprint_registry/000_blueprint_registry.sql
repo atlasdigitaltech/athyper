@@ -76,13 +76,12 @@ VALUES
         '020_universal/010_spend_taxonomy/019_pre_seed_foundation.sql',
         '020_universal/010_spend_taxonomy/020_spend_categories.sql',
         '020_universal/010_spend_taxonomy/021_business_intents.sql',
-        '020_universal/010_spend_taxonomy/025_base_item_categories.sql',
         '020_universal/010_spend_taxonomy/022_spend_intent_link.sql',
         '020_universal/010_spend_taxonomy/027_commodity_bridge.sql',
         '020_universal/010_spend_taxonomy/024_routing_rules.sql',
         '020_universal/010_spend_taxonomy/026_base_intent_rules.sql'
     ],
-    'Universal spend categories, business intents, item categories, commodity-to-intent bridge and routing rules. Applied first; required by all other packs.',
+    'Universal spend categories, business intents, commodity-to-intent bridge and routing rules. Applied first; required by all other packs.',
     v_sys
 ),
 
@@ -211,7 +210,7 @@ VALUES
     ARRAY['utilities'], NULL, '1.0.0', 'active',
     ARRAY['base'],
     ARRAY['030_industry/100_industry_packs/100_pack_utilities.sql'],
-    'Procurement taxonomy, business intents, item categories, commodity bridge and routing rules for electricity and water supply operations.',
+    'Procurement taxonomy, business intents, commodity bridge and routing rules for electricity and water supply operations.',
     v_sys
 ),
 (

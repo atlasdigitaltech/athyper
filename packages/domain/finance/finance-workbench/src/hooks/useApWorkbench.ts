@@ -96,7 +96,7 @@ export interface ApInvoiceLine {
   withholding_tax_group_id: string | null;
   withholding_tax_amount: number;
   gross_amount: number;
-  spend_category_id: string | null;
+  commodity_category_id: string | null;
   business_intent_id: string | null;
   cost_center_id: string | null;
   profit_center_id: string | null;
@@ -576,7 +576,7 @@ export interface CreateApInvoiceLinePayload {
   discount_pct?:              number;
   tax_group_id?:              string;
   withholding_tax_group_id?:  string;
-  spend_category_id?:         string;
+  commodity_category_id?:         string;
   business_intent_id?:        string;
   cost_center_id?:            string;
   profit_center_id?:          string;

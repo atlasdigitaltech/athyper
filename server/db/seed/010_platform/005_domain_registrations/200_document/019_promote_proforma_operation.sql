@@ -4,7 +4,7 @@
 -- §O2: promote_proforma modal flow — 1-step form to bind real invoice identity.
 -- The server handler runs: dedup probe → FX lock → fiscal period → state transition.
 -- Idempotent: WHERE NOT EXISTS for operation and flow; DELETE+INSERT for field bindings.
--- Depends on: 001_invoice.sql, 001_invoice_v2.sql, 020_ap_flow_permissions.sql
+-- Depends on: 001_invoice.sql, 020_ap_flow_permissions.sql
 -- =============================================================================
 
 DO $$

@@ -22,11 +22,14 @@ BEGIN
     -- audit_mode     : 'enabled'        — full audit trail for all entities
     -- company_scope  : 'none'           — no company-code scoping by default
     -- Highly sensitive entities get audit_mode='enabled'; LOG/RELATION entities get 'disabled'
+    -- NOTE: bank_account_house_config is excluded here — seeded explicitly below
+    --       as a demo-only entity (Athyper/Technostat/CirrusAtlantic only).
     FOR r IN
         SELECT e.id AS entity_id, e.entity_class
         FROM   control.entity e
         WHERE  e.table_schema = 'master'
           AND  e.ownership_model = 'system'
+          AND  e.entity_code != 'bank_account_house_config'
           AND  NOT EXISTS (
               SELECT 1 FROM control.entity_policy ep
               WHERE  ep.entity_id = e.id AND ep.entity_version_id IS NULL
@@ -60,6 +63,20 @@ BEGIN
         );
         cnt := cnt + 1;
     END LOOP;
+
+    -- ── bank_account_house_config: demo tenants only (Athyper · Technostat · CirrusAtlantic) ──
+    INSERT INTO control.entity_policy (
+        tenant_id, entity_id, entity_version_id,
+        access_mode, company_scope_mode, audit_mode,
+        retention_policy, default_filters, cache_flags,
+        created_by
+    )
+    SELECT v_tenant_id, e.id, NULL,
+           'default_deny', 'none', 'enabled',
+           '{}', '{}', '{}', v_su
+    FROM   control.entity e
+    WHERE  e.entity_code = 'bank_account_house_config'
+    ON CONFLICT ON CONSTRAINT ep_tenant_entity_version_uq DO NOTHING;
 
     RAISE NOTICE 'control.entity_policy: % rows inserted for tenant %', cnt, v_tenant_id;
 END $$;

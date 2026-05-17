@@ -475,7 +475,7 @@ type PurchaseInvoiceLineInput = {
   quantity?: unknown;
   unit_price?: unknown;
   price_unit?: unknown;
-  spend_category_id?: unknown;
+  commodity_category_id?: unknown;
   business_intent_id?: unknown;
   cost_center_id?: unknown;
   profit_center_id?: unknown;
@@ -496,7 +496,7 @@ function normalizePurchaseInvoiceLine(line: PurchaseInvoiceLineInput, headerData
   const itemDescription = invoiceLineText(line.item_description ?? line.description);
   const quantity = invoiceLineNumber(line.quantity, 1);
   const unitPrice = invoiceLineNumber(line.unit_price, 0);
-  const procurementType = invoiceLineText(line.procurement_type) || "services";
+  const procurementType = invoiceLineText(line.procurement_type) || "goods";
   const uomCode = invoiceLineText(line.uom_code).toUpperCase() || "EA";
 
   return {
@@ -507,7 +507,7 @@ function normalizePurchaseInvoiceLine(line: PurchaseInvoiceLineInput, headerData
     quantity,
     unit_price: unitPrice,
     price_unit: invoiceLineNumber(line.price_unit, 1) || 1,
-    spend_category_id: invoiceLineText(line.spend_category_id) || null,
+    commodity_category_id: invoiceLineText(line.commodity_category_id) || null,
     business_intent_id: invoiceLineText(line.business_intent_id) || null,
     cost_center_id: invoiceLineText(line.cost_center_id ?? headerData["cost_center_id"]) || null,
     profit_center_id: invoiceLineText(line.profit_center_id ?? headerData["profit_center_id"]) || null,

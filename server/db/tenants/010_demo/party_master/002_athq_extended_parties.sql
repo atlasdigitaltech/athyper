@@ -171,24 +171,9 @@ BEGIN
         ) RETURNING id INTO v_pm_wire_us;
     END IF;
 
-    -- §0c  ISO 45001 (Occupational Health & Safety) certification type
-    SELECT id INTO v_ct_iso45001 FROM master.certification_type
-     WHERE COALESCE(tenant_id, v_sys) = v_sys AND code = 'iso-45001';
-    IF v_ct_iso45001 IS NULL THEN
-        INSERT INTO master.certification_type (
-            tenant_id, code, name,
-            issuing_body, category, description,
-            is_custom, metadata, status, created_by
-        ) VALUES (
-            NULL, 'iso-45001', 'ISO 45001 Occupational Health & Safety Management',
-            'International Organization for Standardization',
-            'health_safety',
-            'Specifies requirements for an occupational health and safety (OH&S) management system.',
-            false,
-            '{"_seed":{"pack":"002_athq_ext_parties","version":"1.0.0"}}'::jsonb,
-            'active', v_sys
-        ) RETURNING id INTO v_ct_iso45001;
-    END IF;
+    -- §0c  Certification types — resolved from platform seed
+    --      Guaranteed present by 010_platform/003_master/003_certification_type.sql.
+    SELECT id INTO v_ct_iso45001 FROM master.certification_type WHERE tenant_id IS NULL AND code = 'iso-45001';
 
 
     -- ══════════════════════════════════════════════════════════════════════════

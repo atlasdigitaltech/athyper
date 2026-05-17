@@ -39,6 +39,7 @@ export default function FinanceWorkbenchLayout({ children }: { children: ReactNo
     "/finance/gl",
     "/finance/reports",
     "/finance/spend-categories",
+    "/finance/commodity-categories",
     "/finance/business-intents",
   ].includes(pathname);
 

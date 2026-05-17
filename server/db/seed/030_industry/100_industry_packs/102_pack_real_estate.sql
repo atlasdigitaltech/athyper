@@ -3,7 +3,7 @@
 -- ============================================================================
 -- File:     102_pack_real_estate.sql
 -- Schemas:  master.spend_category, master.business_intent,
---           master.commodity_classification, control.commodity_to_spend_category_rule
+--           master.commodity_classification, control.commodity_code_to_category_rule
 -- Purpose:  Industry pack for property development, management, and leasing
 -- Depends:  020_spend_categories.sql, 021_business_intents.sql,
 --           027_commodity_bridge.sql, 024_routing_rules.sql
@@ -11,8 +11,7 @@
 -- ============================================================================
 -- PACK OWNS:
 --   Spend categories : SC-RE, SC-RE-DEV, SC-RE-MGMT, SC-RE-LEASE, SC-RE-VAL
---   Business intents : BI-COGS-PROP, BI-REV-RENT, BI-REG-PROP
---   Item categories  : IC-RE-BUILDING, IC-RE-LAND, IC-RE-FIT
+--   Business intents : BI-COGS, BI-REV-RENT, BI-REG
 --   Commodity bridge : all rows with pack = '102_pack_real_estate'
 --   Routing rules    : all rows with pack = '102_pack_real_estate'
 -- ============================================================================
@@ -38,10 +37,6 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM master.business_intent
                    WHERE tenant_id = v_tid AND code = 'BI-COGS') THEN
         RAISE EXCEPTION 'Base business intents not loaded — run 021 first';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM master.item_category
-                   WHERE tenant_id = v_tid AND code = 'IC-EQUIP') THEN
-        RAISE EXCEPTION 'Base item categories not loaded — run 025 first';
     END IF;
 
     -- ── STAGE B: Stage data in temp tables ───────────────────────────────
@@ -86,9 +81,9 @@ BEGIN
     ) ON COMMIT DROP;
 
     INSERT INTO tmp_bi (code, name, description, domain, subtype, parent_code, sort_order) VALUES
-    ('BI-COGS-PROP', 'Property Cost of Sales',          'Direct costs of property management and operations',           'COST_OF_SALES', 'PROPERTY',           'BI-COGS', 38),
+    ('BI-COGS', 'Property Cost of Sales',          'Direct costs of property management and operations',           'COST_OF_SALES', 'PROPERTY',           'BI-COGS', 38),
     ('BI-REV-RENT',  'Rental Revenue Cost',             'Costs directly tied to rental income generation',              'COST_OF_SALES', 'RENTAL',             'BI-COGS', 39),
-    ('BI-REG-PROP',  'Property Regulatory Compliance',  'Zoning permits, title registration, and building compliance',  'REGULATORY',    'PROPERTY_COMPLIANCE','BI-REG',  56);
+    ('BI-REG',  'Property Regulatory Compliance',  'Zoning permits, title registration, and building compliance',  'REGULATORY',    'PROPERTY_COMPLIANCE','BI-REG',  56);
 
     -- B3: Commodity bridge
     CREATE TEMP TABLE tmp_bridge (
@@ -111,22 +106,6 @@ BEGIN
     ('SC-RE-LEASE', '80131700', 'broad',   85, true,  'Real estate rental — family'),
     ('SC-RE-VAL',   '80131500', 'related', 72, true,  'Real estate services — valuation related'),
     ('SC-RE-VAL',   '80101500', 'related', 65, false, 'Management advisory — appraisal related');
-
-    -- B4: Item categories
-    CREATE TEMP TABLE tmp_ic (
-        seed_id       uuid DEFAULT shared.uuidv7(),
-        code          text NOT NULL,
-        name          text NOT NULL,
-        description   text,
-        parent_code   text NOT NULL,
-        level_no      smallint NOT NULL DEFAULT 3,
-        sort_order    smallint NOT NULL DEFAULT 0
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_ic (code, name, description, parent_code, level_no, sort_order) VALUES
-    ('IC-RE-BUILDING', 'Buildings & Structures',    'Commercial and residential buildings, fit-out, and civil structures', 'IC-EQUIP', 3, 260),
-    ('IC-RE-LAND',     'Land & Site Assets',        'Land parcels, site improvements, rights-of-way, and ground leases',   'IC-EQUIP', 3, 261),
-    ('IC-RE-FIT',      'Fit-Out & Leasehold Impr.', 'Tenant fit-out, leasehold improvements, and interior installations', 'IC-EQUIP', 3, 262);
 
     -- B5: Routing rules
     CREATE TEMP TABLE tmp_route (
@@ -232,37 +211,7 @@ BEGIN
                              'seeded_at', now()::text
                          )),
         updated_at = now(), updated_by = v_su;
-
-    -- ── STAGE D: UPSERT business intent leaves ──────────────────────────
-    INSERT INTO master.business_intent (
-        id, tenant_id, code, name, description, domain, subtype,
-        parent_id, depth, sort_order, metadata, status, created_by
-    )
-    SELECT
-        s.seed_id, v_tid, s.code, s.name, s.description,
-        s.domain, s.subtype,
-        p.id, 1, s.sort_order,
-        jsonb_build_object('_seed', jsonb_build_object(
-            'pack', v_pack, 'version', v_version, 'seeded_at', now()::text
-        )),
-        'active', v_su
-    FROM tmp_bi s
-    JOIN master.business_intent p ON p.tenant_id = v_tid AND p.code = s.parent_code
-    ON CONFLICT (tenant_id, code) DO UPDATE SET
-        name        = EXCLUDED.name,
-        description = EXCLUDED.description,
-        domain      = EXCLUDED.domain,
-        subtype     = EXCLUDED.subtype,
-        parent_id   = EXCLUDED.parent_id,
-        depth       = EXCLUDED.depth,
-        sort_order  = EXCLUDED.sort_order,
-        metadata    = master.business_intent.metadata
-                      || jsonb_build_object('_seed', jsonb_build_object(
-                             'pack', v_pack, 'version', v_version,
-                             'seeded_at', now()::text
-                         )),
-        updated_at = now(), updated_by = v_su;
-
+    -- STAGE D: Business intent leaves retired; industry packs use domain-level intents.
     -- Link default intents to spend category leaves
     UPDATE master.spend_category sc SET
         default_intent_id = bi.id,
@@ -272,10 +221,10 @@ BEGIN
         )),
         updated_at = now(), updated_by = v_su
     FROM (VALUES
-        ('SC-RE-DEV',   'BI-CAPEX-PROP'),
-        ('SC-RE-MGMT',  'BI-COGS-PROP'),
-        ('SC-RE-LEASE', 'BI-COGS-PROP'),
-        ('SC-RE-VAL',   'BI-OPEX-PROF')
+        ('SC-RE-DEV',   'BI-CAPEX'),
+        ('SC-RE-MGMT',  'BI-COGS'),
+        ('SC-RE-LEASE', 'BI-COGS'),
+        ('SC-RE-VAL',   'BI-OPEX')
     ) AS lnk(sc_code, bi_code)
     JOIN master.business_intent bi ON bi.tenant_id = v_tid AND bi.code = lnk.bi_code
     WHERE sc.tenant_id = v_tid AND sc.code = lnk.sc_code;
@@ -327,94 +276,13 @@ BEGIN
            EXCLUDED.provenance,
            EXCLUDED.is_primary,
            EXCLUDED.description);
-
-    -- ── STAGE E2: UPSERT item_category leaves ───────────────────────────
-    INSERT INTO master.item_category (
-        id, tenant_id, code, name, description, parent_id,
-        level_no, sort_order, metadata, status, created_by
-    )
-    SELECT
-        s.seed_id, v_tid, s.code, s.name, s.description,
-        p.id, s.level_no, s.sort_order,
-        jsonb_build_object('_seed', jsonb_build_object(
-            'pack', v_pack, 'version', v_version, 'seeded_at', now()::text
-        )),
-        'active', v_su
-    FROM tmp_ic s
-    JOIN master.item_category p ON p.tenant_id = v_tid AND p.code = s.parent_code
-    ON CONFLICT (tenant_id, code) DO UPDATE SET
-        name        = EXCLUDED.name,
-        description = EXCLUDED.description,
-        parent_id   = EXCLUDED.parent_id,
-        level_no    = EXCLUDED.level_no,
-        sort_order  = EXCLUDED.sort_order,
-        metadata    = master.item_category.metadata
-                      || jsonb_build_object('_seed', jsonb_build_object(
-                             'pack', v_pack, 'version', v_version, 'seeded_at', now()::text
-                         )),
-        updated_at  = now(),
-        updated_by  = v_su;
-
-    -- ── STAGE E3: UPSERT item_category bridge ───────────────────────────
-    DROP TABLE IF EXISTS tmp_ic_map;
-    CREATE TEMP TABLE tmp_ic_map AS
-    SELECT code, id FROM master.item_category WHERE tenant_id = v_tid;
-
-    INSERT INTO master.commodity_classification (
-        tenant_id, owner_type, owner_id,
-        classification_type, domain_code, code_id,
-        mapping_type, confidence, provenance, is_primary,
-        description, metadata, status, created_by
-    )
-    SELECT
-        v_tid, 'item_category', im.id,
-        'commodity', 'unspsc', cc.id,
-        b.mapping_type, b.confidence, 'seed', b.is_primary,
-        b.description,
-        jsonb_build_object('_seed', jsonb_build_object(
-            'pack', v_pack, 'version', v_version, 'seeded_at', now()::text
-        )),
-        'active', v_su
-    FROM (VALUES
-        ('IC-RE-BUILDING', '30100000', 'broad', 85, true,  'Structural components — buildings'),
-        ('IC-RE-BUILDING', '72100000', 'broad', 80, false, 'Building and maintenance services'),
-        ('IC-RE-LAND',     '80131500', 'broad', 78, true,  'Real estate services — land acquisition'),
-        ('IC-RE-FIT',      '72150000', 'broad', 85, true,  'Building and facility maintenance — fit-out')
-    ) AS b(ic_code, cc_code, mapping_type, confidence, is_primary, description)
-    JOIN tmp_ic_map im ON im.code = b.ic_code
-    JOIN shared.commodity_code cc ON cc.domain_code = 'unspsc' AND cc.code = b.cc_code
-    ON CONFLICT (tenant_id, owner_type, owner_id, classification_type, domain_code, code_id)
-    DO UPDATE SET
-        mapping_type = EXCLUDED.mapping_type,
-        confidence   = EXCLUDED.confidence,
-        provenance   = EXCLUDED.provenance,
-        is_primary   = EXCLUDED.is_primary,
-        description  = EXCLUDED.description,
-        metadata     = master.commodity_classification.metadata
-                       || jsonb_build_object('_seed', jsonb_build_object(
-                              'pack', v_pack, 'version', v_version, 'seeded_at', now()::text
-                          )),
-        updated_at   = now(),
-        updated_by   = v_su
-    WHERE (master.commodity_classification.mapping_type,
-           master.commodity_classification.confidence,
-           master.commodity_classification.provenance,
-           master.commodity_classification.is_primary,
-           master.commodity_classification.description)
-       IS DISTINCT FROM
-          (EXCLUDED.mapping_type,
-           EXCLUDED.confidence,
-           EXCLUDED.provenance,
-           EXCLUDED.is_primary,
-           EXCLUDED.description);
-
-    -- ── STAGE F: UPSERT routing rules (delete-then-insert by pack) ──────
-    DELETE FROM control.commodity_to_spend_category_rule
+    -- STAGE F: UPSERT routing rules (delete-then-insert by pack) ──────
+    DELETE FROM control.commodity_code_to_category_rule
     WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack;
 
-    INSERT INTO control.commodity_to_spend_category_rule (
+    INSERT INTO control.commodity_code_to_category_rule (
         tenant_id, commodity_domain_code, match_mode,
-        code_from, code_to, spend_category_id,
+        code_from, code_to, commodity_category_id,
         priority, confidence, metadata, status, created_by
     )
     SELECT
@@ -430,7 +298,7 @@ BEGIN
     JOIN tmp_sc_map sm ON sm.code = r.sc_code
     ON CONFLICT (tenant_id, commodity_domain_code, code_from, priority) WHERE is_active = true
     DO UPDATE SET
-        spend_category_id = EXCLUDED.spend_category_id,
+        commodity_category_id = EXCLUDED.commodity_category_id,
         match_mode        = EXCLUDED.match_mode,
         code_to           = EXCLUDED.code_to,
         confidence        = EXCLUDED.confidence,
@@ -445,15 +313,7 @@ BEGIN
             (SELECT count(*) FROM master.spend_category
              WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack);
     END IF;
-
-    IF (SELECT count(*) FROM master.business_intent
-        WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack) < 1 THEN
-        RAISE EXCEPTION '[102_pack_real_estate] Business intent load incomplete: expected 3, got %',
-            (SELECT count(*) FROM master.business_intent
-             WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack);
-    END IF;
-
-    IF (SELECT count(*) FROM master.commodity_classification
+IF (SELECT count(*) FROM master.commodity_classification
         WHERE tenant_id = v_tid AND owner_type = 'spend_category'
           AND metadata->'_seed'->>'pack' = v_pack) < 1 THEN
         RAISE EXCEPTION '[102_pack_real_estate] Commodity bridge load incomplete: expected >=8, got %',
@@ -462,23 +322,16 @@ BEGIN
                AND metadata->'_seed'->>'pack' = v_pack);
     END IF;
 
-    IF (SELECT count(*) FROM control.commodity_to_spend_category_rule
+    IF (SELECT count(*) FROM control.commodity_code_to_category_rule
         WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack) < 1 THEN
         RAISE EXCEPTION '[102_pack_real_estate] Routing rule load incomplete: expected >=11, got %',
-            (SELECT count(*) FROM control.commodity_to_spend_category_rule
-             WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack);
-    END IF;
-
-    IF (SELECT count(*) FROM master.item_category
-        WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack) < 1 THEN
-        RAISE EXCEPTION '[102_pack_real_estate] Item category load incomplete: expected 3, got %',
-            (SELECT count(*) FROM master.item_category
+            (SELECT count(*) FROM control.commodity_code_to_category_rule
              WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack);
     END IF;
 
     -- Confidence tier validation
     IF EXISTS (
-        SELECT 1 FROM control.commodity_to_spend_category_rule
+        SELECT 1 FROM control.commodity_code_to_category_rule
         WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack
           AND match_mode = 'EXACT' AND confidence < 95
     ) THEN
@@ -486,24 +339,20 @@ BEGIN
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM control.commodity_to_spend_category_rule
+        SELECT 1 FROM control.commodity_code_to_category_rule
         WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack
           AND priority <= 9 AND confidence > 70
     ) THEN
         RAISE EXCEPTION '[102_pack_real_estate] Catchall rules (priority <= 9) must have confidence <= 70';
     END IF;
 
-    RAISE NOTICE '[102_pack_real_estate] Pack loaded: % spend categories, % intents, % item categories, % bridge rows, % routing rules',
+    RAISE NOTICE '[102_pack_real_estate] Pack loaded: % spend categories, domain intents, % bridge rows, % routing rules',
         (SELECT count(*) FROM master.spend_category
-         WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack),
-        (SELECT count(*) FROM master.business_intent
-         WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack),
-        (SELECT count(*) FROM master.item_category
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack),
         (SELECT count(*) FROM master.commodity_classification
          WHERE tenant_id = v_tid AND owner_type = 'spend_category'
            AND metadata->'_seed'->>'pack' = v_pack),
-        (SELECT count(*) FROM control.commodity_to_spend_category_rule
+        (SELECT count(*) FROM control.commodity_code_to_category_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack);
 
 END $seed$;

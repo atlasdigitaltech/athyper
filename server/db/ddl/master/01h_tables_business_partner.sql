@@ -252,7 +252,7 @@ CREATE TABLE master.supplier (
     supplier_type        text     NOT NULL DEFAULT 'general',
         -- 'general' | 'contractor' | 'manufacturer' | 'service' | 'utility' | 'intercompany'
     account_manager_id   uuid,
-    spend_category_id    uuid,
+    commodity_category_id uuid,
     payment_term_id      uuid,
     payment_method_id    uuid,
     is_payment_ready         boolean  NOT NULL DEFAULT false,
@@ -288,6 +288,21 @@ CREATE TABLE master.supplier (
                                               'onboarding', 'active', 'on_hold',
                                               'suspended', 'inactive', 'archived'))
 );
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'master' AND table_name = 'supplier'
+          AND column_name = 'spend_category_id'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'master' AND table_name = 'supplier'
+          AND column_name = 'commodity_category_id'
+    ) THEN
+        ALTER TABLE master.supplier RENAME COLUMN spend_category_id TO commodity_category_id;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS supp_tenant_idx
     ON master.supplier (tenant_id);
@@ -460,7 +475,7 @@ COMMENT ON TABLE master.company_code_supplier_profile IS
     'SAP LFB1 equivalent.';
 COMMENT ON COLUMN master.company_code_supplier_profile.default_accounting_profile_id IS
     'FK to master.accounting_profile. AP postings resolve via posting roles. '
-    'Supplier-specific GL exceptions live in company_code_supplier_posting_override.';
+    'Supplier-specific GL exceptions live in control.supplier_posting_override.';
 COMMENT ON COLUMN master.company_code_supplier_profile.payment_method_id IS
     'FK to master.payment_method. Direction must be OUTBOUND or BOTH.';
 COMMENT ON COLUMN master.company_code_supplier_profile.preferred_remittance_bank_link_id IS
@@ -473,181 +488,5 @@ COMMENT ON COLUMN master.company_code_supplier_profile.default_wht_tax_group_id 
 -- BP6  master.company_code_supplier_spend_policy
 -- Per-spend-category sourcing, qualification, PO, and invoice eligibility for a
 -- supplier inside one company-code extension.
--- ============================================================================
-
-CREATE TABLE master.company_code_supplier_spend_policy (
-    -- Identity
-    id                    uuid         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id             uuid         NOT NULL,
-
-    -- Scope
-    supplier_profile_id   uuid         NOT NULL,
-    spend_category_id     uuid         NOT NULL,
-
-    -- Eligibility controls
-    mapping_mode          text         NOT NULL DEFAULT 'ALLOW',
-    sourcing_status       text         NOT NULL DEFAULT 'allowed',
-    qualification_status  text         NOT NULL DEFAULT 'pending',
-    po_status             text         NOT NULL DEFAULT 'allowed',
-    invoice_status        text         NOT NULL DEFAULT 'allowed',
-
-    -- Validity and limits
-    valid_from            date,
-    valid_until           date,
-    max_po_amount         numeric(18,4),
-    max_po_currency_code  char(3),
-
-    -- Preference
-    is_preferred_supplier boolean      NOT NULL DEFAULT false,
-    notes                 text,
-
-    -- Metadata
-    metadata              jsonb        NOT NULL DEFAULT '{}'::jsonb,
-
-    -- Lifecycle
-    status                text         NOT NULL DEFAULT 'active',
-    is_active             boolean      GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at     timestamptz,
-    status_changed_by     uuid,
-
-    -- Audit
-    created_at            timestamptz  NOT NULL DEFAULT now(),
-    created_by            uuid         NOT NULL,
-    updated_at            timestamptz,
-    updated_by            uuid,
-
-    CONSTRAINT csspo_pkey                   PRIMARY KEY (id),
-    CONSTRAINT csspo_tenant_id_uq           UNIQUE (tenant_id, id),
-    CONSTRAINT csspo_profile_category_uq    UNIQUE (tenant_id, supplier_profile_id, spend_category_id),
-    CONSTRAINT csspo_mapping_mode_chk       CHECK (mapping_mode IN ('ALLOW', 'DENY')),
-    CONSTRAINT csspo_sourcing_chk           CHECK (sourcing_status IN ('allowed', 'restricted', 'blocked')),
-    CONSTRAINT csspo_po_chk                 CHECK (po_status IN ('allowed', 'restricted', 'blocked')),
-    CONSTRAINT csspo_invoice_chk            CHECK (invoice_status IN ('allowed', 'restricted', 'blocked')),
-    CONSTRAINT csspo_qual_chk               CHECK (qualification_status IN ('qualified', 'pending', 'expired', 'waived')),
-    CONSTRAINT csspo_max_po_nonneg          CHECK (max_po_amount IS NULL OR max_po_amount >= 0),
-    CONSTRAINT csspo_max_po_currency_req    CHECK (max_po_amount IS NULL OR max_po_currency_code IS NOT NULL),
-    CONSTRAINT csspo_validity_chk           CHECK (valid_until IS NULL OR valid_from IS NULL OR valid_until >= valid_from),
-    CONSTRAINT csspo_status_chk             CHECK (status IN ('active', 'inactive', 'archived'))
-);
-
-COMMENT ON TABLE master.company_code_supplier_spend_policy IS
-    'ARCHETYPE=B;SCOPE=T. Per-spend-category sourcing + PO + invoice eligibility for a supplier within a company code. '
-    'mapping_mode=DENY blocks regardless of parent ALLOW. '
-    'Resolution: company_code_spend_policy -> company_code_supplier_spend_policy -> transaction validation.';
-
-
--- ============================================================================
--- BP7  master.company_code_supplier_intent_policy
--- Per-business-intent sourcing, PO, and invoice eligibility for a supplier
--- inside one company-code extension.
--- ============================================================================
-
-CREATE TABLE master.company_code_supplier_intent_policy (
-    -- Identity
-    id                    uuid         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id             uuid         NOT NULL,
-
-    -- Scope
-    supplier_profile_id   uuid         NOT NULL,
-    business_intent_id    uuid         NOT NULL,
-
-    -- Eligibility controls
-    mapping_mode          text         NOT NULL DEFAULT 'ALLOW',
-    is_default            boolean      NOT NULL DEFAULT false,
-    is_sourcing_allowed   boolean      NOT NULL DEFAULT true,
-    is_po_allowed         boolean      NOT NULL DEFAULT true,
-    is_invoice_allowed    boolean      NOT NULL DEFAULT true,
-
-    -- Metadata
-    metadata              jsonb        NOT NULL DEFAULT '{}'::jsonb,
-
-    -- Lifecycle
-    status                text         NOT NULL DEFAULT 'active',
-    is_active             boolean      GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at     timestamptz,
-    status_changed_by     uuid,
-
-    -- Audit
-    created_at            timestamptz  NOT NULL DEFAULT now(),
-    created_by            uuid         NOT NULL,
-    updated_at            timestamptz,
-    updated_by            uuid,
-
-    CONSTRAINT csip_pkey                   PRIMARY KEY (id),
-    CONSTRAINT csip_tenant_id_uq           UNIQUE (tenant_id, id),
-    CONSTRAINT csip_profile_intent_uq      UNIQUE (tenant_id, supplier_profile_id, business_intent_id),
-    CONSTRAINT csip_mapping_mode_chk       CHECK (mapping_mode IN ('ALLOW', 'DENY')),
-    CONSTRAINT csip_deny_not_default_chk   CHECK (mapping_mode <> 'DENY' OR is_default = false),
-    CONSTRAINT csip_status_chk             CHECK (status IN ('active', 'inactive', 'archived'))
-);
-
-COMMENT ON TABLE master.company_code_supplier_intent_policy IS
-    'ARCHETYPE=B;SCOPE=T. Per-business-intent invoice, PO, and sourcing eligibility for a supplier within a company code. '
-    'Sits below company_code_intent_policy in the resolution stack. DENY overrides all.';
-
-
--- ============================================================================
--- BP8  master.company_code_supplier_posting_override
--- Exceptional GL overrides for specific posting roles at supplier-company level.
--- ============================================================================
-
-CREATE TABLE master.company_code_supplier_posting_override (
-    -- Identity
-    id                    uuid         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id             uuid         NOT NULL,
-
-    -- Scope
-    supplier_profile_id   uuid         NOT NULL,
-
-    -- Posting role override
-    posting_role_code     text         NOT NULL,
-    gl_account_id         uuid         NOT NULL,
-    book_code             text         NOT NULL DEFAULT 'PRIMARY',
-
-    -- Effective dating
-    effective_from        date         NOT NULL DEFAULT CURRENT_DATE,
-    effective_to          date,
-
-    -- Explanation
-    reason                text,
-
-    -- Metadata
-    metadata              jsonb        NOT NULL DEFAULT '{}'::jsonb,
-
-    -- Lifecycle
-    status                text         NOT NULL DEFAULT 'active',
-    is_active             boolean      GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at     timestamptz,
-    status_changed_by     uuid,
-
-    -- Audit
-    created_at            timestamptz  NOT NULL DEFAULT now(),
-    created_by            uuid         NOT NULL,
-    updated_at            timestamptz,
-    updated_by            uuid,
-
-    CONSTRAINT cspo_pkey                  PRIMARY KEY (id),
-    CONSTRAINT cspo_tenant_id_uq          UNIQUE (tenant_id, id),
-    CONSTRAINT cspo_posting_role_nonempty CHECK (btrim(posting_role_code) <> ''),
-    CONSTRAINT cspo_book_code_nonempty    CHECK (btrim(book_code) <> ''),
-    CONSTRAINT cspo_validity_chk          CHECK (effective_to IS NULL OR effective_to >= effective_from),
-    CONSTRAINT cspo_status_chk            CHECK (status IN ('active', 'inactive', 'archived'))
-);
-
-ALTER TABLE master.company_code_supplier_posting_override
-    DROP CONSTRAINT IF EXISTS cspo_profile_role_book_temporal_excl;
-
-ALTER TABLE master.company_code_supplier_posting_override
-    ADD CONSTRAINT cspo_profile_role_book_temporal_excl
-    EXCLUDE USING gist (
-        tenant_id           WITH =,
-        supplier_profile_id WITH =,
-        posting_role_code   WITH =,
-        book_code           WITH =,
-        daterange(effective_from, COALESCE(effective_to, '9999-12-31'::date), '[]') WITH &&
-    ) WHERE (is_active = true);
-
-COMMENT ON TABLE master.company_code_supplier_posting_override IS
-    'ARCHETYPE=B;SCOPE=T. Exceptional GL overrides for specific AP posting roles per supplier-company intersection. '
-    'Resolution: supplier override -> company posting-role map -> accounting profile entry template fallback. '
-    'Only used for non-standard AP account assignments.';
+-- Supplier spend/intent policy tables moved to control.commodity_category_buy_policy.
+-- Supplier posting overrides moved to control.supplier_posting_override.

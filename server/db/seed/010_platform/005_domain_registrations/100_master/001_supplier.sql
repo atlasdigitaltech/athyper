@@ -36,11 +36,7 @@ SELECT
     '{"prefix":"SUP","prefix_configurable":true,"separator":"-","segments":[{"type":"sequence","padding":5}]}'::jsonb,
     '{"is_approvable":false,"party_category":"supplier","allow_address":true,"allow_contact":true,"identity_via":"business_partner","list_entity_code":"supplier_app_index"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'supplier'
-      AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
@@ -232,7 +228,7 @@ SELECT ev.id,
 FROM control.entity_version ev
 JOIN control.entity e ON e.id = ev.entity_id
 CROSS JOIN (VALUES
-    ('spend_category_id', 'spend_category_id', 'Spend Category',  'uuid', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"spend_category","target_field":"id","display_field":"name","picker":{"code_field":"code","description_field":"description","navigation_field":"code","show_code":true,"show_description":true,"show_view_action":true}}'::jsonb, false, true,  false, NULL::jsonb, 40),
+    ('commodity_category_id', 'commodity_category_id', 'Commodity Category',  'uuid', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"commodity_category","target_field":"id","display_field":"name","picker":{"code_field":"code","description_field":"description","navigation_field":"code","show_code":true,"show_description":true,"show_view_action":true}}'::jsonb, false, true,  false, '{"ref_entity":"commodity_category"}'::jsonb, 40),
     ('payment_term_id',   'payment_term_id',   'Payment Terms',   'uuid', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"payment_term","target_field":"id","display_field":"name","picker":{"code_field":"code","description_field":"description","navigation_field":"code","show_code":true,"show_description":true,"show_view_action":true}}'::jsonb, false, true,  false, NULL::jsonb, 50),
     ('payment_method_id', 'payment_method_id', 'Payment Method',  'uuid', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"payment_method","target_field":"id","display_field":"name","picker":{"code_field":"code","description_field":"description","navigation_field":"code","show_code":true,"show_description":true,"show_view_action":true}}'::jsonb, false, true,  false, NULL::jsonb, 60),
     ('supplier_code',     'supplier_code',     'Supplier Code',   'text', NULL::text,   'one',         NULL::text, NULL::jsonb,                                                                 false, true,  true,  '{"max_length":30}'::jsonb, 10),
@@ -260,7 +256,7 @@ SET label            = f.label,
 FROM control.entity_version ev
 JOIN control.entity e ON e.id = ev.entity_id
 CROSS JOIN (VALUES
-    ('spend_category_id', 'spend_category_id', 'Spend Category',  'uuid', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"spend_category","target_field":"id","display_field":"name","picker":{"code_field":"code","description_field":"description","navigation_field":"code","show_code":true,"show_description":true,"show_view_action":true}}'::jsonb, false, true,  false, NULL::jsonb, 40),
+    ('commodity_category_id', 'commodity_category_id', 'Commodity Category',  'uuid', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"commodity_category","target_field":"id","display_field":"name","picker":{"code_field":"code","description_field":"description","navigation_field":"code","show_code":true,"show_description":true,"show_view_action":true}}'::jsonb, false, true,  false, '{"ref_entity":"commodity_category"}'::jsonb, 40),
     ('payment_term_id',   'payment_term_id',   'Payment Terms',   'uuid', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"payment_term","target_field":"id","display_field":"name","picker":{"code_field":"code","description_field":"description","navigation_field":"code","show_code":true,"show_description":true,"show_view_action":true}}'::jsonb, false, true,  false, NULL::jsonb, 50),
     ('payment_method_id', 'payment_method_id', 'Payment Method',  'uuid', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"payment_method","target_field":"id","display_field":"name","picker":{"code_field":"code","description_field":"description","navigation_field":"code","show_code":true,"show_description":true,"show_view_action":true}}'::jsonb, false, true,  false, NULL::jsonb, 60),
     ('supplier_code',     'supplier_code',     'Supplier Code',   'text', NULL::text,   'one',         NULL::text, NULL::jsonb,                                                                 false, true,  true,  '{"max_length":30}'::jsonb, 10),
@@ -294,19 +290,19 @@ DO $dc$ DECLARE
             'composite_sections', jsonb_build_array(
                 jsonb_build_object('id','__profile_role','label','Role Profile','type','fields',
                     'display_fields',jsonb_build_array(
-                        'spend_category_id',
+                        'commodity_category_id',
                         'payment_term_id','payment_method_id','is_payment_ready',
                         'payment_ready_at','payment_ready_reason','status'
                     )),
-                jsonb_build_object('id','__profile_spend_categories','label','Spend Categories','type','child_list',
-                    'entity_code','supplier_spend_category',
-                    'display_fields',jsonb_build_array('spend_category_id','is_primary','effective_from','effective_until','status'),
-                    'add_href_template','/app/supplier_spend_category/new?parent_id={uuid}',
+                jsonb_build_object('id','__profile_spend_categories','label','Commodity Categories','type','child_list',
+                    'entity_code','supplier_commodity_category',
+                    'display_fields',jsonb_build_array('commodity_category_id','is_primary','effective_from','effective_until','status'),
+                    'add_href_template','/app/supplier_commodity_category/new?parent_id={uuid}',
                     'add_label','Add Category',
-                    'empty_title','No spend categories',
+                    'empty_title','No commodity categories',
                     'empty_description','Supplier category memberships appear here.',
                     'config',jsonb_build_object(
-                        'title','spend_category_id',
+                        'title','commodity_category_id',
                         'facts',jsonb_build_array('effective_from','effective_until'),
                         'badges',jsonb_build_array('primary','status','expiry'),
                         'defaultSort',jsonb_build_array('is_primary:desc','status:asc')
@@ -434,11 +430,11 @@ DO $dc$ DECLARE
                         ),
                         'defaultSort',jsonb_build_array('created_at:desc')
                     )),
-                jsonb_build_object('id','__company_spend_policies','label','Spend Policies','type','child_list',
-                    'entity_code','company_code_supplier_spend_policy',
+                jsonb_build_object('id','__company_spend_policies','label','Buy Policies','type','child_list',
+                    'entity_code','commodity_category_buy_policy',
                     'through_entity','company_code_supplier_profile',
                     'display_fields',jsonb_build_array(
-                        'supplier_profile_id','spend_category_id','mapping_mode',
+                        'supplier_profile_id','commodity_category_id','mapping_mode',
                         'sourcing_status','qualification_status','po_status','invoice_status',
                         'valid_from','valid_until','max_po_amount','max_po_currency_code',
                         'is_preferred_supplier','notes','status'
@@ -446,7 +442,7 @@ DO $dc$ DECLARE
                     'empty_title','No spend policies',
                     'empty_description','Company-specific spend eligibility appears here.',
                     'config',jsonb_build_object(
-                        'title','spend_category_id',
+                        'title','commodity_category_id',
                         'facts',jsonb_build_array('mapping_mode','sourcing_status','qualification_status','po_status','invoice_status','valid_from','valid_until','max_po_amount'),
                         'badges',jsonb_build_array('status','expiry'),
                         'presentation','policy_matrix',
@@ -454,10 +450,10 @@ DO $dc$ DECLARE
                             'filter_field','supplier_profile_id',
                             'references',jsonb_build_object(
                                 'supplier_profile_id',jsonb_build_object('target_entity','company_code_supplier_profile','target_field','id','display_field','company_code_id'),
-                                'spend_category_id',jsonb_build_object('target_entity','spend_category','target_field','id','display_field','name','picker',jsonb_build_object('code_field','code','show_code',true))
+                                'commodity_category_id',jsonb_build_object('target_entity','commodity_category','target_field','id','display_field','name','picker',jsonb_build_object('code_field','code','show_code',true))
                             ),
                             'columns',jsonb_build_array(
-                                jsonb_build_object('field','spend_category_id','label','Category'),
+                                jsonb_build_object('field','commodity_category_id','label','Category'),
                                 jsonb_build_object('field','mapping_mode','label','Mapping'),
                                 jsonb_build_object('field','sourcing_status','label','Sourcing','kind','status'),
                                 jsonb_build_object('field','qualification_status','label','Qualification','kind','status'),
@@ -476,7 +472,7 @@ DO $dc$ DECLARE
                         'defaultSort',jsonb_build_array('status:asc','valid_until:asc')
                     )),
                 jsonb_build_object('id','__company_intent_policies','label','Intent Policies','type','child_list',
-                    'entity_code','company_code_supplier_intent_policy',
+                    'entity_code','commodity_category_buy_policy',
                     'through_entity','company_code_supplier_profile',
                     'display_fields',jsonb_build_array('supplier_profile_id','business_intent_id','mapping_mode','is_default','is_sourcing_allowed','is_po_allowed','is_invoice_allowed','status'),
                     'empty_title','No intent policies',
@@ -509,7 +505,7 @@ DO $dc$ DECLARE
                         'defaultSort',jsonb_build_array('is_default:desc','status:asc')
                     )),
                 jsonb_build_object('id','__company_posting_overrides','label','Posting Overrides','type','child_list',
-                    'entity_code','company_code_supplier_posting_override',
+                    'entity_code','supplier_posting_override',
                     'through_entity','company_code_supplier_profile',
                     'display_fields',jsonb_build_array('supplier_profile_id','posting_role_code','gl_account_id','book_code','effective_from','effective_to','reason','status'),
                     'empty_title','No posting overrides',
@@ -694,20 +690,20 @@ SET display_config = jsonb_set(
                     'policy_sections', jsonb_build_array(
                         jsonb_build_object(
                             'id',          'spend_policies',
-                            'label',       'Spend Policies',
-                            'entity_code', 'company_code_supplier_spend_policy',
-                            'add_label',   'Add Spend Policy'
+                            'label',       'Buy Policies',
+                            'entity_code', 'commodity_category_buy_policy',
+                            'add_label',   'Add Buy Policy'
                         ),
                         jsonb_build_object(
                             'id',          'intent_policies',
                             'label',       'Intent Policies',
-                            'entity_code', 'company_code_supplier_intent_policy',
+                            'entity_code', 'commodity_category_buy_policy',
                             'add_label',   'Add Intent Policy'
                         ),
                         jsonb_build_object(
                             'id',          'posting_overrides',
                             'label',       'Posting Overrides',
-                            'entity_code', 'company_code_supplier_posting_override',
+                            'entity_code', 'supplier_posting_override',
                             'add_label',   'Add Override'
                         )
                     )

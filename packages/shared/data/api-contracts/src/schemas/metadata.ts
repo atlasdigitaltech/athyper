@@ -701,7 +701,7 @@ export const CompiledEntitySchema = z.object({
     /** Journal reference targets consumed by journal line renderers. */
     journal_reference_targets: z.array(z.record(z.string(), z.unknown())).optional(),
     /** Metadata-driven classification presentation and endpoint config. */
-    classification_config: z.record(z.string(), z.unknown()).optional(),
+    commodity_classification_config: z.record(z.string(), z.unknown()).optional(),
     /** Metadata-driven procurement intake field map, keyed by display role. */
     intake_fields: z.record(z.string(), z.unknown()).optional(),
     /** Payment/allocation amount columns and labels. */

@@ -99,6 +99,24 @@ VALUES
      'control', false, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
+    ('entity_field.ui_type',
+     'Field UI Type',
+     'Renderer hint for an entity field — controls which input/display component is used in forms and lists.',
+     'control', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('entity_field.compute_mode',
+     'Field Compute Mode',
+     'When/where a computed field value is derived (database trigger, server function, client formula, projection).',
+     'control', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('entity.kind',
+     'Entity Kind',
+     'Structural role of the entity within the platform registry (ent = standard managed entity).',
+     'control', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
     ('overlay_change.kind',
      'Overlay Change Kind',
      'Type of change operation within an overlay.',
@@ -625,7 +643,7 @@ VALUES
 
     ('master.cc_owner_type',
      'Classification owner type',
-     'Which entity types can be classified (product, item_category, spend_category, item, customer, supplier).',
+     'Which entity types can be classified (product, spend_category, commodity_category, item, customer, supplier).',
      'master', false, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
@@ -1144,5 +1162,289 @@ VALUES
      'Classification of directional links between content items in master.content_item_link. '
      'Tenant-extensible — tenants may register custom relation types.',
      'master', true, 'active', '00000000-0000-0000-0000-000000000000')
+
+ON CONFLICT (code) DO NOTHING;
+
+
+-- ── Classification Engine lookup domains ─────────────────────────────────────
+-- Domains for commodity_classification_to_intent_rule and commodity_code_to_category_rule.
+-- Values stored UPPERCASE in DB; EnumRenderer uses case-insensitive matching.
+
+INSERT INTO control.lookup_domain (code, name, description, source_schema, is_extensible, status, created_by)
+VALUES
+    ('control.classification_direction',
+     'Classification Rule Direction',
+     'Flow direction scope for commodity_classification_to_intent_rule.direction (INBOUND, OUTBOUND, BOTH). '
+     'is_extensible=false — directions are engine-governed.',
+     'control', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('control.classification_condition_type',
+     'Classification Condition Type',
+     'Evaluation strategy discriminator for commodity_classification_to_intent_rule.condition_type. '
+     'Determines how condition_config is interpreted (fallback, amount_above, commodity_based, etc.). '
+     'is_extensible=false — new types require matching engine support.',
+     'control', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('control.classification_source',
+     'Classification Source Type',
+     'Entity type providing the classification signal in commodity_classification_to_intent_rule.classification_source. '
+     'is_extensible=false — new sources require engine implementation.',
+     'control', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('control.accounting_domain',
+     'Accounting Domain',
+     'Economic domain classification resolved by commodity_classification_to_intent_rule.resolved_domain. '
+     'Drives GL account selection and budget bucket assignment (OPEX, CAPEX, ADMIN, etc.). '
+     'is_extensible=false — domains are accounting-governed.',
+     'control', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('control.procurement_flow_type',
+     'Procurement Flow Type',
+     'P2P flow type codes stored in commodity_classification_to_intent_rule.applies_to_flows (text[]). '
+     'Identifies the document flow pattern a rule applies to (NON_PO, PO_BASED, etc.). '
+     'is_extensible=false — flow types are engine-governed.',
+     'control', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('control.commodity_match_mode',
+     'Commodity Match Mode',
+     'Code matching precision for commodity_code_to_category_rule.match_mode. '
+     'Controls how code_from/code_to are compared against commodity codes (exact, prefix, range). '
+     'is_extensible=false — match modes require engine support.',
+     'control', false, 'active', '00000000-0000-0000-0000-000000000000')
+
+ON CONFLICT (code) DO NOTHING;
+
+
+-- ── IAM / Identity Extension Domains ────────────────────────────────────────
+
+INSERT INTO control.lookup_domain (code, name, description, source_schema, is_extensible, status, created_by)
+VALUES
+    ('master.principal_source',
+     'Principal Source',
+     'How the principal was originally provisioned (local, sso, scim, api, import). '
+     'is_extensible=false — provisioning channels are platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.idp_provider_type',
+     'Identity Provider Type',
+     'Type of IdP bound to a principal via principal_identity_binding.provider_code. '
+     'is_extensible=true — tenants may add custom SAML/OIDC providers.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.contact_phone_line_type',
+     'Phone Line Type',
+     'Physical/logical type of a phone number in contact_phone.line_type. '
+     'is_extensible=true — tenants may add VoIP/UCaaS subtypes.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.access_effect',
+     'Access Grant Effect',
+     'Whether an access_grant ALLOWS or DENIES the permission. '
+     'is_extensible=false — two-state allow/deny is a platform invariant.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.visibility_scope',
+     'Visibility Scope',
+     'Scope at which a role assignment or grant is visible (global, company, department, personal). '
+     'Shared across auth_group_role.visibility_scope and access_grant.visibility_scope. '
+     'is_extensible=false — scopes are RBAC engine constants.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.assignment_scope_type',
+     'Assignment Scope Type',
+     'Scope boundary for a role or access grant assignment (global, company, department, project, cost_center). '
+     'Shared across auth_group_role.assignment_scope_type and access_grant.assignment_scope_type. '
+     'is_extensible=false — scope types are RBAC engine constants.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.feature_access_type',
+     'Feature Access Type',
+     'Level of access granted to a feature flag (read, write, admin, none). '
+     'Shared across group_feature_grant.access_type and principal_feature_grant.access_type. '
+     'is_extensible=false — access levels are platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.team_type',
+     'Team Type',
+     'Classification of a team by purpose and membership mode (functional, project, virtual, cross_functional, committee). '
+     'is_extensible=true — tenants may add custom team types.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.owner_type_category',
+     'Owner Type Category',
+     'Category of the owning entity class in owner_type.category. '
+     'is_extensible=false — platform invariant tied to entity class taxonomy.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.acl_access_level',
+     'ACL Access Level',
+     'Access level granted in attachment_acl.access_level. '
+     'owner = full control; editor = read/write; commenter = comment only; viewer = read only. '
+     'is_extensible=false — levels are a closed permission hierarchy.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.business_unit_type',
+     'Business Unit Type',
+     'Classification of a business unit by strategic function (operational, strategic, support, shared_services, product). '
+     'is_extensible=true — tenants may add custom unit types.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.tax_jurisdiction_type',
+     'Tax Jurisdiction Type',
+     'Hierarchical level of a tax jurisdiction (country, state, province, county, city, district, union). '
+     'is_extensible=false — jurisdiction levels are legally defined.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.tax_filing_frequency',
+     'Tax Filing Frequency',
+     'How often tax returns must be filed with the jurisdiction (monthly, quarterly, semi_annually, annually, on_demand). '
+     'is_extensible=false — filing frequencies are jurisdiction-regulated.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.tax_category',
+     'Tax Type Category',
+     'Functional category of a tax type (income, sales, vat, gst, withholding, excise, customs, payroll, property, stamp_duty). '
+     'is_extensible=false — categories drive accounting treatment rules.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.fx_rate_type',
+     'FX Rate Type',
+     'Classification of an FX rate by economic purpose (spot, forward, average, closing, opening, official, budget). '
+     'is_extensible=true — tenants may add custom rate types for internal transfers.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.fx_rate_source',
+     'FX Rate Source',
+     'Origin of the FX rate data (manual, ecb, rbi, fed, bloomberg, reuters, api). '
+     'is_extensible=true — tenants may add new data feed integrations.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.budget_fund_type',
+     'Budget Fund Type',
+     'Nature of budget funding (capex, opex, project, general, emergency, reserve, grant). '
+     'is_extensible=true — tenants may add custom fund types.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.budget_fund_source',
+     'Budget Fund Source',
+     'Origin of budget funds (internal, grant, revenue, debt, equity, carry_forward, joint_venture). '
+     'is_extensible=true — tenants may add custom fund sources.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.budget_multi_year_strategy',
+     'Multi-Year Budget Strategy',
+     'How uncommitted funds roll across fiscal years (annual, rolling, carry_forward, periodic, cumulative). '
+     'is_extensible=false — strategy drives period-close engine logic.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.budget_overspend_policy',
+     'Budget Overspend Policy',
+     'What happens when a transaction exceeds the budget (block, warn, allow, require_approval). '
+     'is_extensible=false — policy drives validation gate logic.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.planning_model_type',
+     'Planning Model Type',
+     'Methodology for the planning model (top_down, bottom_up, hybrid, driver_based, zero_based). '
+     'is_extensible=true — tenants may add custom planning approaches.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.planning_model_horizon',
+     'Planning Horizon',
+     'Time horizon covered by the planning model (annual, quarterly, rolling_12, rolling_24, rolling_36, multi_year). '
+     'is_extensible=false — horizon drives engine period generation.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.planning_granularity',
+     'Planning Granularity',
+     'Time unit granularity for planning periods (weekly, monthly, quarterly, annually). '
+     'is_extensible=false — granularity drives engine period generation.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_term_applicable_to',
+     'Payment Term Applicable To',
+     'Party direction for which a payment term applies (supplier, customer, intercompany, both). '
+     'is_extensible=false — direction is a platform-governed billing invariant.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_due_rule_type',
+     'Payment Due Rule Type',
+     'Algorithm for computing the due date (net_days, end_of_month, specific_day, installment). '
+     'is_extensible=false — due rule drives the date calculation engine.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_date_flexibility',
+     'Payment Date Flexibility',
+     'Adjustment rule when due date falls on a non-business day '
+     '(none, next_business_day, last_business_day, nearest_business_day). '
+     'is_extensible=false — flexibility modes are engine constants.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.business_day_convention',
+     'Business Day Convention',
+     'ISDA / ICMA convention for adjusting dates that fall on non-business days '
+     '(following, preceding, modified_following, modified_preceding, unadjusted). '
+     'is_extensible=false — conventions are defined by ISDA/ICMA standards.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_term_clause_type',
+     'Payment Term Clause Type',
+     'Functional classification of a payment clause (advance, milestone, retention, holdback, earnest_money, drawdown, balloon). '
+     'is_extensible=true — tenants may add custom clause types.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_term_calc_mode',
+     'Payment Term Calc Mode',
+     'How clause amounts are computed (percentage, fixed_amount, formula, rate_table). '
+     'is_extensible=false — calc modes require matching engine support.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_term_flexibility_mode',
+     'Payment Term Flexibility Mode',
+     'Editability of a clause after term application (fixed, flexible, negotiable). '
+     'is_extensible=false — engine constant.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_term_application_scope',
+     'Payment Term Application Scope',
+     'Amount basis for applying a clause (invoice, line, total_contract, partial_invoice). '
+     'is_extensible=false — scope drives amount aggregation logic.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_term_basis_amount_mode',
+     'Payment Term Basis Amount Mode',
+     'What the percentage/formula is calculated on (gross, net, pre_tax, line_total). '
+     'is_extensible=false — basis drives engine calculation.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_term_discount_basis_mode',
+     'Payment Discount Basis Mode',
+     'Calculation basis for early-payment discount tiers (percentage_of_gross, percentage_of_net, fixed_amount, tiered). '
+     'is_extensible=false — basis drives discount engine.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.payment_rounding_method',
+     'Payment Rounding Method',
+     'Rounding algorithm for computed payment amounts (half_up, half_down, bankers, ceiling, floor, truncate). '
+     'is_extensible=false — rounding methods are ISO 80000-1 governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.holiday_weekend_pattern',
+     'Holiday Calendar Weekend Pattern',
+     'Which days are non-working weekends in a calendar (sat_sun, fri_sat, fri_only, sat_only, sun_only, thu_fri). '
+     'is_extensible=false — patterns are jurisdiction-defined.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.holiday_day_type',
+     'Holiday Day Type',
+     'Classification of a holiday or non-working day (national, regional, local, religious, observance, compensatory). '
+     'is_extensible=true — tenants may add custom holiday categories.',
+     'master', true, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.holiday_observance_type',
+     'Holiday Observance Type',
+     'How the holiday date is determined (fixed, floating, calculated, transferred). '
+     'is_extensible=false — observance types are jurisdiction-defined.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000')
 
 ON CONFLICT (code) DO NOTHING;

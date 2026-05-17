@@ -7,7 +7,7 @@
 --          entity_version_id via JOIN on entity_code, so rows for entities
 --          that do not exist yet are silently skipped (no error).
 -- Depends on: 001_invoice.sql, 004_invoice_line.sql, 005_accounting_distribution.sql
--- Idempotent: ON CONFLICT (entity_version_id, name) DO NOTHING
+-- Idempotent: ON CONFLICT (entity_version_id, name) DO UPDATE
 
 DO $$
 DECLARE
@@ -25,8 +25,9 @@ BEGIN
     END IF;
 
     INSERT INTO control.entity_relation
-        (entity_version_id, name, relation_kind, target_entity, fk_field, on_delete, created_by)
+        (tenant_id, entity_version_id, name, relation_kind, target_entity, fk_field, on_delete, created_by)
     SELECT
+        NULL,
         ev.id,
         r.rel_name,
         r.kind,
@@ -53,12 +54,12 @@ BEGIN
         -- ── purchase_invoice_line ─────────────────────────────────────────────
         --
         --  belongs_to purchase_invoice : parent document (cascade delete)
-        --  belongs_to spend_category   : drives accounting profile resolution
+        --  belongs_to commodity_category: drives accounting profile resolution
         --  has_many   distributions    : 1:N to accounting_distribution
         --                               (polymorphic — source_doc_type = PURCHASE_INVOICE_LINE)
         --
         ('purchase_invoice_line', 'purchase_invoice',   'belongs_to', 'purchase_invoice',        'purchase_invoice_id',  'cascade'),
-        ('purchase_invoice_line', 'spend_category',     'belongs_to', 'spend_category',           'spend_category_id',    'set_null'),
+        ('purchase_invoice_line', 'commodity_category', 'belongs_to', 'commodity_category',           'commodity_category_id',    'set_null'),
         ('purchase_invoice_line', 'distributions',      'has_many',   'accounting_distribution',  'source_line_id',       'cascade'),
 
         -- ── accounting_distribution ───────────────────────────────────────────
@@ -79,9 +80,15 @@ BEGIN
     JOIN control.entity_version ev ON ev.entity_id  = e.id
                                   AND ev.version_no  = 1
                                   AND ev.tenant_id   IS NULL
-    ON CONFLICT (entity_version_id, name) DO NOTHING;
+    ON CONFLICT (entity_version_id, name) DO UPDATE
+       SET relation_kind = EXCLUDED.relation_kind,
+           target_entity = EXCLUDED.target_entity,
+           fk_field = EXCLUDED.fk_field,
+           on_delete = EXCLUDED.on_delete,
+           updated_at = now(),
+           updated_by = v_su;
 
     GET DIAGNOSTICS cnt = ROW_COUNT;
-    RAISE NOTICE '006_document_relations: % rows inserted', cnt;
+    RAISE NOTICE '006_document_relations: % rows upserted', cnt;
 
 END $$;

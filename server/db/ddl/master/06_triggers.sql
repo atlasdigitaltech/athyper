@@ -1279,16 +1279,29 @@ CREATE TRIGGER trg_emp_type_lookup
 
 
 -- =============================================================================
--- §P4  master.item_category
+-- §P4  master.commodity_category
 -- =============================================================================
 
-DROP TRIGGER IF EXISTS trg_pcat_updated_at ON master.item_category;
-CREATE TRIGGER trg_pcat_updated_at BEFORE UPDATE ON master.item_category
+-- Commodity category
+DROP TRIGGER IF EXISTS trg_ccat_updated_at ON master.commodity_category;
+CREATE TRIGGER trg_ccat_updated_at BEFORE UPDATE ON master.commodity_category
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_pcat_status_changed ON master.item_category;
-CREATE TRIGGER trg_pcat_status_changed BEFORE UPDATE ON master.item_category
+DROP TRIGGER IF EXISTS trg_ccat_status_changed ON master.commodity_category;
+CREATE TRIGGER trg_ccat_status_changed BEFORE UPDATE ON master.commodity_category
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+DROP TRIGGER IF EXISTS trg_ccat_maintain_root_category ON master.commodity_category;
+CREATE TRIGGER trg_ccat_maintain_root_category
+    BEFORE INSERT OR UPDATE OF parent_id ON master.commodity_category
+    FOR EACH ROW EXECUTE FUNCTION master.trg_ccat_maintain_root_category();
+
+DROP TRIGGER IF EXISTS trg_ccat_valuation_lookup ON master.commodity_category;
+CREATE TRIGGER trg_ccat_valuation_lookup
+    BEFORE INSERT OR UPDATE OF default_valuation_method ON master.commodity_category
+    FOR EACH ROW
+    WHEN (NEW.default_valuation_method IS NOT NULL)
+    EXECUTE FUNCTION control.trg_validate_lookup_columns('master.valuation_method', 'default_valuation_method');
 
 
 -- =============================================================================
@@ -1360,22 +1373,6 @@ CREATE TRIGGER trg_sc_maintain_root_category
 -- =============================================================================
 -- §P7b  master.company_code_spend_policy
 -- =============================================================================
-
-DROP TRIGGER IF EXISTS trg_scou_updated_at ON master.company_code_spend_policy;
-CREATE TRIGGER trg_scou_updated_at BEFORE UPDATE ON master.company_code_spend_policy
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_scou_status_changed ON master.company_code_spend_policy;
-CREATE TRIGGER trg_scou_status_changed BEFORE UPDATE ON master.company_code_spend_policy
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_scou_visibility_lookup ON master.company_code_spend_policy;
-CREATE TRIGGER trg_scou_visibility_lookup
-    BEFORE INSERT OR UPDATE OF override_visibility ON master.company_code_spend_policy
-    FOR EACH ROW
-    WHEN (NEW.override_visibility IS NOT NULL)
-    EXECUTE FUNCTION control.trg_validate_lookup_columns('master.spend_visibility', 'override_visibility');
-
 
 -- =============================================================================
 -- §P8  master.commodity_classification
@@ -1705,17 +1702,6 @@ CREATE TRIGGER trg_bi_parent_guard
 -- =============================================================================
 -- §OIM  master.company_code_intent_policy
 -- =============================================================================
-
-DROP TRIGGER IF EXISTS trg_oim_updated_at ON master.company_code_intent_policy;
-CREATE TRIGGER trg_oim_updated_at
-    BEFORE UPDATE ON master.company_code_intent_policy
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_oim_status_changed ON master.company_code_intent_policy;
-CREATE TRIGGER trg_oim_status_changed
-    BEFORE UPDATE OF status ON master.company_code_intent_policy
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
 
 -- =============================================================================
 -- §ODD  master.company_code_dimension_default
@@ -2984,33 +2970,6 @@ CREATE TRIGGER trg_leib_updated_at BEFORE UPDATE ON master.legal_entity_identity
 -- =============================================================================
 
 -- ── master.company_code_supplier_spend_policy ────────────────────────────────
-DROP TRIGGER IF EXISTS trg_csspo_updated_at ON master.company_code_supplier_spend_policy;
-CREATE TRIGGER trg_csspo_updated_at BEFORE UPDATE ON master.company_code_supplier_spend_policy
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_csspo_status_changed ON master.company_code_supplier_spend_policy;
-CREATE TRIGGER trg_csspo_status_changed BEFORE UPDATE ON master.company_code_supplier_spend_policy
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
--- ── master.company_code_supplier_intent_policy ───────────────────────────────
-DROP TRIGGER IF EXISTS trg_csip_updated_at ON master.company_code_supplier_intent_policy;
-CREATE TRIGGER trg_csip_updated_at BEFORE UPDATE ON master.company_code_supplier_intent_policy
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_csip_status_changed ON master.company_code_supplier_intent_policy;
-CREATE TRIGGER trg_csip_status_changed BEFORE UPDATE ON master.company_code_supplier_intent_policy
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
--- ── master.company_code_supplier_posting_override ────────────────────────────
-DROP TRIGGER IF EXISTS trg_cspo_updated_at ON master.company_code_supplier_posting_override;
-CREATE TRIGGER trg_cspo_updated_at BEFORE UPDATE ON master.company_code_supplier_posting_override
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_cspo_status_changed ON master.company_code_supplier_posting_override;
-CREATE TRIGGER trg_cspo_status_changed BEFORE UPDATE ON master.company_code_supplier_posting_override
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-
 -- ── master.legal_entity_business_partner_link ────────────────────────────────
 DROP TRIGGER IF EXISTS trg_lebpl_updated_at ON master.legal_entity_business_partner_link;
 CREATE TRIGGER trg_lebpl_updated_at BEFORE UPDATE ON master.legal_entity_business_partner_link

@@ -225,7 +225,7 @@ DO UPDATE SET
     updated_at = now(), updated_by = EXCLUDED.created_by;
 
 
--- ── spend_category / item_category ──────────────────────────────────────────
+-- ── spend_category / commodity_category ──────────────────────────────────────────
 
 INSERT INTO master.owner_type (
     tenant_id, code, name, description,
@@ -247,9 +247,9 @@ INSERT INTO master.owner_type (
     'active', '00000000-0000-0000-0000-000000000000'
 ),
 (
-    NULL, 'item_category', 'Item Category',
-    'Inventory item category. Target for commodity classification bridges.',
-    'master', 'item_category', 'id',
+    NULL, 'commodity_category', 'Commodity Category',
+    'Shared commodity category. Target for commodity classification bridges across spend, sales, and inventory.',
+    'master', 'commodity_category', 'id',
     true, 'tenant_id',
     false, false,
     true, 'custom',

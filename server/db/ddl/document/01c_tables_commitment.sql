@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS document.commitment_line (
     item_code               text,
     item_description        text            NOT NULL,
     procurement_type        text            NOT NULL DEFAULT 'goods',
-    spend_category_id       uuid,
+    commodity_category_id   uuid,
     business_intent_id      uuid,
 
     -- Quantity / price
@@ -384,6 +384,21 @@ CREATE TABLE IF NOT EXISTS document.commitment_line (
     CONSTRAINT cl_discount_chk      CHECK (discount_pct IS NULL OR discount_pct BETWEEN 0 AND 100),
     CONSTRAINT cl_no_self_parent    CHECK (parent_contract_line_id IS DISTINCT FROM id)
 );
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'document' AND table_name = 'commitment_line'
+          AND column_name = 'spend_category_id'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'document' AND table_name = 'commitment_line'
+          AND column_name = 'commodity_category_id'
+    ) THEN
+        ALTER TABLE document.commitment_line RENAME COLUMN spend_category_id TO commodity_category_id;
+    END IF;
+END $$;
 
 COMMENT ON TABLE document.commitment_line IS
     'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. PO / contract line items. Mutable operational detail – document schema, not ledger. '

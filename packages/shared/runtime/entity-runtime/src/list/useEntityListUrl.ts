@@ -122,7 +122,7 @@ function parseState(
 
   // pageSize
   const size = parseInt(searchParams.get(P.PAGE_SIZE) ?? "", 10);
-  if (!Number.isNaN(size) && size > 0 && size <= 200) state.pageSize = size;
+  if (!Number.isNaN(size) && size > 0 && size <= 500) state.pageSize = size;
 
   // viewMode
   const view = searchParams.get(P.VIEW_MODE) as EntityListViewMode | null;
@@ -287,6 +287,11 @@ export function useEntityListUrl(entityCode: string) {
     [state, applyState],
   );
 
+  const setPageSize = useCallback(
+    (pageSize: number | undefined) => applyViewEdit({ pageSize, page: undefined }),
+    [applyViewEdit],
+  );
+
   const setViewMode = useCallback(
     (viewMode: EntityListViewMode) => applyViewEdit({ viewMode }),
     [applyViewEdit],
@@ -379,6 +384,7 @@ export function useEntityListUrl(entityCode: string) {
     hasActiveQuery ||
     state.searchMode ||
     state.viewMode ||
+    state.pageSize ||
     state.density ||
     (state.columns && state.columns.length > 0) ||
     (state.pinnedCols && state.pinnedCols.length > 0)
@@ -391,6 +397,7 @@ export function useEntityListUrl(entityCode: string) {
     setFilters,
     setGroup,
     setPage,
+    setPageSize,
     setViewMode,
     setColumns,
     setDensity,

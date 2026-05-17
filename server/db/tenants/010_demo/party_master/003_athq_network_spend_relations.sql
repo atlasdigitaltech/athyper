@@ -19,66 +19,8 @@
 -- ============================================================================
 
 -- ════════════════════════════════════════════════════════════════════════════
--- §A  GLOBAL CERTIFICATION TYPES
--- ════════════════════════════════════════════════════════════════════════════
-DO $cert_types$
-DECLARE
-    v_sys uuid := '00000000-0000-0000-0000-000000000000';
-BEGIN
-
-    -- ISO 14001 — Environmental Management
-    INSERT INTO master.certification_type (
-        tenant_id, code, name, issuing_body, category, description,
-        is_custom, metadata, status, created_by
-    )
-    SELECT NULL, 'iso-14001', 'ISO 14001 Environmental Management Systems',
-        'International Organization for Standardization',
-        'environment',
-        'Specifies requirements for an environmental management system (EMS).',
-        false,
-        '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb,
-        'active', v_sys
-    WHERE NOT EXISTS (
-        SELECT 1 FROM master.certification_type WHERE tenant_id IS NULL AND code = 'iso-14001'
-    );
-
-    -- PCI-DSS — Payment Card Industry Data Security Standard
-    INSERT INTO master.certification_type (
-        tenant_id, code, name, issuing_body, category, description,
-        is_custom, metadata, status, created_by
-    )
-    SELECT NULL, 'pci-dss', 'PCI DSS Payment Card Industry Data Security Standard',
-        'PCI Security Standards Council',
-        'information_security',
-        'Security standard for organizations that handle branded credit cards.',
-        false,
-        '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb,
-        'active', v_sys
-    WHERE NOT EXISTS (
-        SELECT 1 FROM master.certification_type WHERE tenant_id IS NULL AND code = 'pci-dss'
-    );
-
-    -- SOC 2 Type II — Service Organisation Controls
-    INSERT INTO master.certification_type (
-        tenant_id, code, name, issuing_body, category, description,
-        is_custom, metadata, status, created_by
-    )
-    SELECT NULL, 'soc-2', 'SOC 2 Type II Service Organisation Controls',
-        'American Institute of CPAs (AICPA)',
-        'information_security',
-        'Audit report on controls relevant to security, availability, processing integrity, '
-        'confidentiality, and privacy of customer data.',
-        false,
-        '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb,
-        'active', v_sys
-    WHERE NOT EXISTS (
-        SELECT 1 FROM master.certification_type WHERE tenant_id IS NULL AND code = 'soc-2'
-    );
-
-    RAISE NOTICE '[003_athq_network §A] Certification types seeded (iso-14001, pci-dss, soc-2)';
-END $cert_types$;
-
-
+-- §A  (removed) — Certification types now seeded centrally by
+--     010_platform/003_master/003_certification_type.sql.
 -- ════════════════════════════════════════════════════════════════════════════
 -- §B  BUSINESS PARTNER NETWORK CAPABILITIES
 -- ════════════════════════════════════════════════════════════════════════════
@@ -388,7 +330,7 @@ BEGIN
     -- GCM-001: SC-OUTSRC (primary — construction outsourcing), SC-SAFETY (secondary)
     IF v_gcm_id IS NOT NULL AND v_sc_outsrc IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id, supplier_id, spend_category_id, is_primary,
+            tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_gcm_id, v_sc_outsrc, true,
@@ -397,13 +339,13 @@ BEGIN
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
             SELECT 1 FROM master.supplier_spend_category
-             WHERE tenant_id = v_tid AND supplier_id = v_gcm_id AND spend_category_id = v_sc_outsrc
+             WHERE tenant_id = v_tid AND supplier_id = v_gcm_id AND commodity_category_id = v_sc_outsrc
         );
     END IF;
 
     IF v_gcm_id IS NOT NULL AND v_sc_safety IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id, supplier_id, spend_category_id, is_primary,
+            tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_gcm_id, v_sc_safety, false,
@@ -412,14 +354,14 @@ BEGIN
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
             SELECT 1 FROM master.supplier_spend_category
-             WHERE tenant_id = v_tid AND supplier_id = v_gcm_id AND spend_category_id = v_sc_safety
+             WHERE tenant_id = v_tid AND supplier_id = v_gcm_id AND commodity_category_id = v_sc_safety
         );
     END IF;
 
     -- PSM-001: SC-FAC (primary), SC-UTIL (secondary)
     IF v_psm_id IS NOT NULL AND v_sc_fac IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id, supplier_id, spend_category_id, is_primary,
+            tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_psm_id, v_sc_fac, true,
@@ -428,13 +370,13 @@ BEGIN
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
             SELECT 1 FROM master.supplier_spend_category
-             WHERE tenant_id = v_tid AND supplier_id = v_psm_id AND spend_category_id = v_sc_fac
+             WHERE tenant_id = v_tid AND supplier_id = v_psm_id AND commodity_category_id = v_sc_fac
         );
     END IF;
 
     IF v_psm_id IS NOT NULL AND v_sc_util IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id, supplier_id, spend_category_id, is_primary,
+            tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_psm_id, v_sc_util, false,
@@ -443,14 +385,14 @@ BEGIN
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
             SELECT 1 FROM master.supplier_spend_category
-             WHERE tenant_id = v_tid AND supplier_id = v_psm_id AND spend_category_id = v_sc_util
+             WHERE tenant_id = v_tid AND supplier_id = v_psm_id AND commodity_category_id = v_sc_util
         );
     END IF;
 
     -- GFL-001: SC-FLEET (primary), SC-TRAVEL (secondary)
     IF v_gfl_id IS NOT NULL AND v_sc_fleet IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id, supplier_id, spend_category_id, is_primary,
+            tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_gfl_id, v_sc_fleet, true,
@@ -459,13 +401,13 @@ BEGIN
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
             SELECT 1 FROM master.supplier_spend_category
-             WHERE tenant_id = v_tid AND supplier_id = v_gfl_id AND spend_category_id = v_sc_fleet
+             WHERE tenant_id = v_tid AND supplier_id = v_gfl_id AND commodity_category_id = v_sc_fleet
         );
     END IF;
 
     IF v_gfl_id IS NOT NULL AND v_sc_travel IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id, supplier_id, spend_category_id, is_primary,
+            tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_gfl_id, v_sc_travel, false,
@@ -474,14 +416,14 @@ BEGIN
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
             SELECT 1 FROM master.supplier_spend_category
-             WHERE tenant_id = v_tid AND supplier_id = v_gfl_id AND spend_category_id = v_sc_travel
+             WHERE tenant_id = v_tid AND supplier_id = v_gfl_id AND commodity_category_id = v_sc_travel
         );
     END IF;
 
     -- NIC-001: SC-IT (primary), SC-SUBS (secondary — software subscriptions)
     IF v_nic_id IS NOT NULL AND v_sc_it IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id, supplier_id, spend_category_id, is_primary,
+            tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_nic_id, v_sc_it, true,
@@ -490,13 +432,13 @@ BEGIN
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
             SELECT 1 FROM master.supplier_spend_category
-             WHERE tenant_id = v_tid AND supplier_id = v_nic_id AND spend_category_id = v_sc_it
+             WHERE tenant_id = v_tid AND supplier_id = v_nic_id AND commodity_category_id = v_sc_it
         );
     END IF;
 
     IF v_nic_id IS NOT NULL AND v_sc_subs IS NOT NULL THEN
         INSERT INTO master.supplier_spend_category (
-            tenant_id, supplier_id, spend_category_id, is_primary,
+            tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_nic_id, v_sc_subs, false,
@@ -505,7 +447,7 @@ BEGIN
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
             SELECT 1 FROM master.supplier_spend_category
-             WHERE tenant_id = v_tid AND supplier_id = v_nic_id AND spend_category_id = v_sc_subs
+             WHERE tenant_id = v_tid AND supplier_id = v_nic_id AND commodity_category_id = v_sc_subs
         );
     END IF;
 

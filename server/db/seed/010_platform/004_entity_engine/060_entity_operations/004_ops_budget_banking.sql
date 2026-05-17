@@ -3,7 +3,7 @@
 -- Covers: budget_profile, budget_allocation, planning_model,
 --         bank_party, bank_account, bank_account_mandate, bank_branch, payment_method,
 --         holiday_calendar, holiday_calendar_day, payment_term, payment_term_clause,
---         payment_term_discount_tier, product, item, item_category, spend_category,
+--         payment_term_discount_tier, product, item, commodity_category,
 --         commodity_classification, company_code_spend_policy
 -- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
 
@@ -174,23 +174,18 @@ VALUES
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
--- item_category / spend_category  (Set B)
+-- commodity_category  (Set B)
 -- ══════════════════════════════════════════════════════════════════════════════
 INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    (NULL,'item_category','create','LIST',  'PRIMARY', 'NAVIGATE','/app/item_category/new',       false,10,v_su),
-    (NULL,'item_category','update','DETAIL','PRIMARY', 'NAVIGATE','/app/item_category/{id}/edit', true, 20,v_su),
-    (NULL,'item_category','cancel','DETAIL','OVERFLOW','MODAL',   'deactivate',                   true, 30,v_su),
-    (NULL,'item_category','delete','DETAIL','OVERFLOW','MODAL',   'delete',                       true, 40,v_su),
-    (NULL,'item_category','export','LIST',  'TOOLBAR', 'API',     'export',                       false,50,v_su),
 
-    (NULL,'spend_category','create','LIST',  'PRIMARY', 'NAVIGATE','/app/spend_category/new',       false,10,v_su),
-    (NULL,'spend_category','update','DETAIL','PRIMARY', 'NAVIGATE','/app/spend_category/{id}/edit', true, 20,v_su),
-    (NULL,'spend_category','cancel','DETAIL','OVERFLOW','MODAL',   'deactivate',                    true, 30,v_su),
-    (NULL,'spend_category','delete','DETAIL','OVERFLOW','MODAL',   'delete',                        true, 40,v_su),
-    (NULL,'spend_category','export','LIST',  'TOOLBAR', 'API',     'export',                        false,50,v_su)
+    (NULL,'commodity_category','create','LIST',  'PRIMARY', 'NAVIGATE','/app/commodity_category/new',       false,10,v_su),
+    (NULL,'commodity_category','update','DETAIL','PRIMARY', 'NAVIGATE','/app/commodity_category/{id}/edit', true, 20,v_su),
+    (NULL,'commodity_category','cancel','DETAIL','OVERFLOW','MODAL',   'deactivate',                       true, 30,v_su),
+    (NULL,'commodity_category','delete','DETAIL','OVERFLOW','MODAL',   'delete',                           true, 40,v_su),
+    (NULL,'commodity_category','export','LIST',  'TOOLBAR', 'API',     'export',                           false,50,v_su)
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
@@ -214,7 +209,8 @@ VALUES
     (NULL,'holiday_calendar_day',       'delete','DETAIL','OVERFLOW','MODAL','delete',true, 20,v_su),
     (NULL,'holiday_calendar_day',       'import','LIST',  'TOOLBAR', 'API',  'import',false,30,v_su),
     (NULL,'commodity_classification',   'create','LIST',  'PRIMARY', 'MODAL','create',false,10,v_su),
-    (NULL,'commodity_classification',   'delete','DETAIL','OVERFLOW','MODAL','delete',true, 20,v_su),
+    (NULL,'commodity_classification',   'update','DETAIL','PRIMARY', 'NAVIGATE','/app/commodity_classification/{id}?mode=edit',true,20,v_su),
+    (NULL,'commodity_classification',   'delete','DETAIL','OVERFLOW','MODAL','delete',true, 30,v_su),
     (NULL,'company_code_spend_policy',  'update','DETAIL','PRIMARY', 'MODAL','edit',  true, 10,v_su)
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 

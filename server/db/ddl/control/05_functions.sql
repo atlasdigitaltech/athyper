@@ -1362,7 +1362,7 @@ COMMENT ON FUNCTION control.trg_field_flag_defaults() IS
 
 -- ============================================================================
 -- §F1  control.resolve_business_intent
--- Maps classification (spend category / product / etc.) to a business intent
+-- Maps classification (commodity category / product / etc.) to a business intent
 -- using prioritised rule evaluation. All 16 condition types implemented inline.
 -- Returns JSONB:  intent_id, domain, rule_id, confidence, explanation, method,
 --                direction, flow_code, rules_checked.
@@ -1413,7 +1413,7 @@ BEGIN
 
     FOR v_rule IN
         SELECT *
-        FROM control.classification_to_intent_rule
+        FROM control.commodity_classification_to_intent_rule
         WHERE tenant_id        = p_tenant_id
           AND classification_source = p_classification_source
           AND classification_id     = p_classification_id
@@ -1475,8 +1475,26 @@ BEGIN
         END IF;
     END LOOP;
 
-    -- Fallback: classification default intent (spend_category only)
-    IF p_classification_source = 'SPEND_CATEGORY' THEN
+    -- Fallback: classification default intent.
+    IF p_classification_source = 'COMMODITY_CATEGORY' THEN
+        BEGIN
+            SELECT p.business_intent_id INTO v_default
+            FROM control.commodity_category_buy_policy p
+            WHERE p.tenant_id = p_tenant_id
+              AND p.commodity_category_id = p_classification_id
+              AND p.scope_type = 'TENANT'
+              AND p.scope_id IS NULL
+              AND p.mapping_mode = 'ALLOW'
+              AND p.is_default = true
+              AND p.is_active = true
+              AND p.effective_from <= p_as_of_date
+              AND (p.effective_to IS NULL OR p.effective_to >= p_as_of_date)
+            ORDER BY p.effective_from DESC, p.created_at DESC
+            LIMIT 1;
+        EXCEPTION WHEN undefined_table THEN
+            v_default := NULL;
+        END;
+    ELSIF p_classification_source = 'SPEND_CATEGORY' THEN
         BEGIN
             SELECT default_intent_id INTO v_default
             FROM master.spend_category
@@ -1508,7 +1526,7 @@ $$;
 COMMENT ON FUNCTION control.resolve_business_intent IS
     'Engine 4.13 §F1: classification → business intent. '
     'Evaluates all 16 condition types in priority order. '
-    'Fallback: classification default (SPEND_CATEGORY only). '
+    'Fallback: classification default (COMMODITY_CATEGORY policy, then legacy SPEND_CATEGORY). '
     'Returns JSONB with method=RULE_MATCH|CLASSIFICATION_DEFAULT|FAILED.';
 
 
@@ -1724,7 +1742,7 @@ COMMENT ON FUNCTION control.resolve_accounting_profile IS
 --   POSTING_ROLE → resolve_posting_role_account() → account_fallback
 --   FIXED        → gl_account by code in the company operating COA
 --   FROM_INTENT  → company-aware intent default GL
---   FROM_CATEGORY→ company spend policy → intent default GL
+--   FROM_CATEGORY→ company buy policy → intent default GL
 -- Called by the JE generation orchestrator for each entry template line.
 -- Returns JSONB: gl_account_id, method, fallback_used, resolved.
 -- ============================================================================
@@ -1874,7 +1892,7 @@ COMMENT ON FUNCTION control.resolve_entry_account IS
     'POSTING_ROLE → resolve_posting_role_account() → account_fallback, '
     'FIXED → company operating COA gl_account by code, '
     'FROM_INTENT → company-aware business_intent default GL, '
-    'FROM_CATEGORY → company spend policy / intent default GL. '
+    'FROM_CATEGORY → company buy policy / intent default GL. '
     'Called by the JE generation orchestrator for each entry template line. '
     'Returns JSONB: gl_account_id, method, fallback_used, resolved.';
 
@@ -3478,11 +3496,11 @@ COMMENT ON FUNCTION control.trg_fn_validate_target_entity() IS
 -- IntentResolutionService.ts:
 --
 --   Step 2 → control.resolve_spend_category_policy()
---            Merges master.spend_category base attributes with
---            master.company_code_spend_policy overrides.
+--            Merges master.commodity_category base attributes with
+--            control.commodity_category_buy_policy defaults.
 --
 --   Step 3 → control.resolve_classification_to_intent()
---            Walks classification_to_intent_rule rows in priority order,
+--            Walks commodity_classification_to_intent_rule rows in priority order,
 --            evaluating condition_type against the transaction context.
 --            Returns first match or FAILED.
 --
@@ -3498,9 +3516,9 @@ COMMENT ON FUNCTION control.trg_fn_validate_target_entity() IS
 -- ── Step 2: spend category policy ────────────────────────────────────────────
 
 CREATE OR REPLACE FUNCTION control.resolve_spend_category_policy(
-    p_tenant_id         uuid,
+    p_tenant_id             uuid,
     p_spend_category_id uuid,
-    p_company_code_id   uuid
+    p_company_code_id       uuid
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -3508,62 +3526,73 @@ STABLE
 SET search_path = control, master
 AS $$
 DECLARE
-    v_sc     record;
+    v_category record;
     v_policy record;
 BEGIN
-    SELECT sc.id, sc.code, sc.name, sc.procurement_type, sc.default_intent_id,
-           sc.is_classification_required, sc.is_hs_required,
-           sc.is_regulated, sc.visibility
-    INTO   v_sc
-    FROM   master.spend_category sc
-    WHERE  sc.id        = p_spend_category_id
-      AND  sc.tenant_id = p_tenant_id
-      AND  sc.is_active = true;
+    SELECT cc.id, cc.code, cc.name,
+           cc.is_classification_required, cc.is_hs_required,
+           cc.is_regulated
+    INTO   v_category
+    FROM   master.commodity_category cc
+    WHERE  cc.id        = p_spend_category_id
+      AND  cc.tenant_id = p_tenant_id
+      AND  cc.is_active = true;
 
     IF NOT FOUND THEN
         RETURN jsonb_build_object('error', 'CATEGORY_NOT_FOUND');
     END IF;
 
     SELECT csp.mapping_mode,
-           csp.default_intent_id,
+           csp.business_intent_id,
            csp.capex_screening_threshold,
-           csp.asset_class_id,
+           csp.default_asset_class_id,
            csp.override_visibility,
            csp.override_is_classification_required,
            csp.override_is_hs_required,
            csp.override_is_regulated
     INTO   v_policy
-    FROM   master.company_code_spend_policy csp
+    FROM   control.commodity_category_buy_policy csp
     WHERE  csp.tenant_id        = p_tenant_id
-      AND  csp.company_code_id  = p_company_code_id
-      AND  csp.spend_category_id = p_spend_category_id
-      AND  csp.status           = 'active'
+      AND  csp.commodity_category_id = p_spend_category_id
+      AND  csp.mapping_mode     = 'ALLOW'
+      AND  csp.is_default       = true
+      AND  csp.is_active        = true
+      AND  csp.effective_from  <= CURRENT_DATE
+      AND  (csp.effective_to IS NULL OR csp.effective_to >= CURRENT_DATE)
+      AND  (
+             (csp.scope_type = 'COMPANY'
+              AND csp.company_code_id = p_company_code_id
+              AND csp.scope_id = p_company_code_id)
+             OR csp.scope_type = 'TENANT'
+           )
+    ORDER BY CASE WHEN csp.scope_type = 'COMPANY' THEN 0 ELSE 1 END,
+             csp.effective_from DESC,
+             csp.sort_order,
+             csp.created_at DESC
     LIMIT  1;
 
     RETURN jsonb_strip_nulls(jsonb_build_object(
         'category_id',             p_spend_category_id,
-        'category_code',           v_sc.code,
-        'category_name',           v_sc.name,
-        'procurement_type',        v_sc.procurement_type,
+        'category_code',           v_category.code,
+        'category_name',           v_category.name,
         'resolved_mapping_mode',   COALESCE(v_policy.mapping_mode, 'ALLOW'),
-        'default_intent_id',       COALESCE(v_policy.default_intent_id, v_sc.default_intent_id),
+        'default_intent_id',       v_policy.business_intent_id,
         'capex_screening_threshold', v_policy.capex_screening_threshold,
-        'asset_class_id',          v_policy.asset_class_id,
+        'asset_class_id',          v_policy.default_asset_class_id,
         'classification_required', COALESCE(v_policy.override_is_classification_required,
-                                            v_sc.is_classification_required),
+                                            v_category.is_classification_required),
         'hs_required',             COALESCE(v_policy.override_is_hs_required,
-                                            v_sc.is_hs_required),
+                                            v_category.is_hs_required),
         'is_regulated',            COALESCE(v_policy.override_is_regulated,
-                                            v_sc.is_regulated),
-        'visibility',              COALESCE(v_policy.override_visibility,
-                                            v_sc.visibility)
+                                            v_category.is_regulated),
+        'visibility',              v_policy.override_visibility
     ));
 END;
 $$;
 
 COMMENT ON FUNCTION control.resolve_spend_category_policy(uuid, uuid, uuid) IS
-    'Step 2 of the procurement intake pipeline. Merges spend_category base attributes '
-    'with company_code_spend_policy overrides. Returns ALLOW/DENY mapping_mode, '
+    'Step 2 of the procurement intake pipeline. Merges commodity_category base attributes '
+    'with commodity_category_buy_policy overrides. Returns ALLOW/DENY mapping_mode, '
     'effective intent, capex threshold, and classification/HS requirement flags. '
     'Called by IntentResolutionService.ts.';
 
@@ -3599,7 +3628,7 @@ BEGIN
         SELECT r.id, r.condition_type, r.condition_config,
                r.resolved_intent_id, r.resolved_domain,
                r.explanation_template, r.confidence, r.priority
-        FROM   control.classification_to_intent_rule r
+        FROM   control.commodity_classification_to_intent_rule r
         WHERE  r.tenant_id              = p_tenant_id
           AND  r.classification_source  = p_classification_source
           AND  r.classification_id      = p_classification_id
@@ -3679,7 +3708,7 @@ $$;
 COMMENT ON FUNCTION control.resolve_classification_to_intent(
     uuid, text, uuid, text, text, numeric, text, boolean, boolean, boolean, uuid, text
 ) IS
-    'Step 3 of the procurement intake pipeline. Evaluates classification_to_intent_rule '
+    'Step 3 of the procurement intake pipeline. Evaluates commodity_classification_to_intent_rule '
     'rows for the given classification in priority order. Supports 16 condition types. '
     'Returns first match with explanation, or FAILED. Called by IntentResolutionService.ts.';
 

@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChevronDown, Zap } from "lucide-react";
+import { AlertTriangle, ChevronDown } from "lucide-react";
 import { DrawerShell } from "@athyper/ui/primitives";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
@@ -73,6 +73,37 @@ function saveErrorMessage(body: SaveErrorBody, status: number): string {
 
 const PROCURE_FIELD_LABEL_CLASS = "text-sm font-medium leading-normal text-muted-foreground";
 const PROCURE_SECTION_LABEL_CLASS = "text-sm font-medium leading-normal text-muted-foreground";
+const PROCURE_FIELD_BOX_CLASS = "rounded-lg border bg-card px-5 py-5 text-card-foreground shadow-sm";
+const DEFAULT_PROCUREMENT_TYPE_PARAMETER_CODE = "finance.ap.default_procurement_line_type";
+const DEFAULT_PROCUREMENT_UOM_PARAMETER_CODE = "finance.ap.default_procurement_line_uom";
+const DEFAULT_PROCUREMENT_TYPE_NAMESPACE = "finance.ap";
+const PROCURE_LINE_DEFAULT_TYPE_FALLBACK = "goods";
+const PROCURE_LINE_DEFAULT_UOM_FALLBACK = "EA";
+const PROCUREMENT_TYPE_CODES = new Set(["goods", "services", "mixed", "freight", "misc"]);
+const HEADER_DOCUMENT_REFERENCE_FIELDS = [
+  "commitment_id",
+  "purchase_order_id",
+  "po_id",
+  "goods_receipt_id",
+  "service_entry_sheet_id",
+  "ses_id",
+  "source_document_id",
+  "source_doc_id",
+  "reference_document_id",
+  "ref_doc_id",
+];
+const SOURCE_DOCUMENT_REFERENCE_TOKENS = [
+  "commitment",
+  "purchase_order",
+  "purchase order",
+  "po line",
+  "goods_receipt",
+  "goods receipt",
+  "gr line",
+  "service_entry",
+  "service entry",
+  "ses",
+];
 const DIMENSION_COMPOSER_FIELD_ORDER = [
   "cost_center_id",
   "project_id",
@@ -113,6 +144,65 @@ function nonEmptyText(value: unknown): string | null {
   if (value == null || typeof value === "object") return null;
   const text = String(value).replace(/\s+/g, " ").trim();
   return text.length > 0 ? text : null;
+}
+
+function normalizedProcurementType(value: unknown): string {
+  const text = nonEmptyText(value)?.toLowerCase();
+  return text && PROCUREMENT_TYPE_CODES.has(text) ? text : PROCURE_LINE_DEFAULT_TYPE_FALLBACK;
+}
+
+function normalizedProcurementUom(value: unknown): string {
+  const text = nonEmptyText(value);
+  if (!text) return PROCURE_LINE_DEFAULT_UOM_FALLBACK;
+  if (text.toLowerCase() === "each") return PROCURE_LINE_DEFAULT_UOM_FALLBACK;
+  return text.toUpperCase();
+}
+
+type DefaultProcurementLineSettings = {
+  procurementType: string;
+  uomCode: string;
+};
+
+function useDefaultProcurementLineSettings(enabled: boolean): DefaultProcurementLineSettings {
+  const [settings, setSettings] = useState<DefaultProcurementLineSettings>({
+    procurementType: PROCURE_LINE_DEFAULT_TYPE_FALLBACK,
+    uomCode: PROCURE_LINE_DEFAULT_UOM_FALLBACK,
+  });
+
+  useEffect(() => {
+    if (!enabled) {
+      setSettings({
+        procurementType: PROCURE_LINE_DEFAULT_TYPE_FALLBACK,
+        uomCode: PROCURE_LINE_DEFAULT_UOM_FALLBACK,
+      });
+      return;
+    }
+
+    let cancelled = false;
+    void fetch(`/api/iam/parameters/effective?namespace=${encodeURIComponent(DEFAULT_PROCUREMENT_TYPE_NAMESPACE)}`, {
+      cache: "no-store",
+    })
+      .then((response) => response.ok ? response.json() as Promise<{ values?: Record<string, unknown> }> : null)
+      .then((body) => {
+        if (cancelled) return;
+        setSettings({
+          procurementType: normalizedProcurementType(body?.values?.[DEFAULT_PROCUREMENT_TYPE_PARAMETER_CODE]),
+          uomCode: normalizedProcurementUom(body?.values?.[DEFAULT_PROCUREMENT_UOM_PARAMETER_CODE]),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSettings({
+            procurementType: PROCURE_LINE_DEFAULT_TYPE_FALLBACK,
+            uomCode: PROCURE_LINE_DEFAULT_UOM_FALLBACK,
+          });
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [enabled]);
+
+  return settings;
 }
 
 function draftValue(draft: Record<string, unknown>, fieldOrName: EntityField | string): unknown {
@@ -386,6 +476,11 @@ function isMoneyField(field: EntityField): boolean {
   return field.data_type === "money" || (field.data_type === "decimal" && PRICE_NAME_RE.test(field.name));
 }
 
+function isPriceUnitField(field: EntityField): boolean {
+  const name = field.name.toLowerCase();
+  return name === "price_unit" || name === "price_per";
+}
+
 function typeFieldFirst(fields: EntityField[]): EntityField[] {
   const typeIndex = fields.findIndex(
     (field) =>
@@ -401,14 +496,50 @@ function isBusinessIntentField(field: EntityField): boolean {
   return /business[_-]?intent/i.test(field.name);
 }
 
+function isCommodityCategoryField(field: EntityField): boolean {
+  return /(commodity|spend)[_-]?category/i.test(field.name);
+}
+
 function isItemReferenceField(field: EntityField): boolean {
   const ref = field.reference_config as Record<string, unknown> | null | undefined;
   const refEntity = ref?.["ref_entity"] ?? ref?.["target_entity"] ?? ref?.["entity"];
   return field.name === "item_id" || refEntity === "item";
 }
 
+function assetFieldsForEntity(entity: CompiledEntity): EntityField[] {
+  return fieldsForNames(entity, ["is_asset", "asset_category_id"]);
+}
+
+function isTruthyDraftValue(value: unknown): boolean {
+  if (value === true) return true;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes";
+}
+
+function procurementTypeField(entity: CompiledEntity | null | undefined): EntityField | undefined {
+  return entity?.fields.find(
+    (field) =>
+      field.name === "procurement_type" ||
+      field.label?.trim().toLowerCase() === "type",
+  );
+}
+
 function isTaxonomyCodeField(field: EntityField): boolean {
-  return field.name === "unspsc_code" || field.name === "hs_code";
+  const text = `${field.name} ${field.column_name ?? ""} ${field.label ?? ""}`.toLowerCase();
+  return (
+    text.includes("unspsc") ||
+    text.includes("commodity code") ||
+    text.includes("commodity_code") ||
+    /\bhs\b/.test(text) ||
+    text.includes("trade code") ||
+    text.includes("tariff")
+  );
+}
+
+function isOptionalClassificationDraftField(field: EntityField): boolean {
+  return isCommodityCategoryField(field) || isBusinessIntentField(field) || isTaxonomyCodeField(field);
 }
 
 function emptyDraftValueForField(field: EntityField): unknown {
@@ -493,6 +624,119 @@ function withNewProcureLineDefaults(draft: Record<string, unknown>): Record<stri
   return { ...draft, price_unit: 1 };
 }
 
+function withDefaultProcurementType(
+  draft: Record<string, unknown>,
+  entity: CompiledEntity | null | undefined,
+  defaultType: string,
+  options: { replaceExisting?: boolean; replaceFallback?: boolean } = {},
+): Record<string, unknown> {
+  const typeField = procurementTypeField(entity);
+  if (!typeField) return draft;
+
+  const current = nonEmptyText(draft[typeField.name])?.toLowerCase();
+  const nextType = normalizedProcurementType(defaultType);
+  const canReplace =
+    !current ||
+    options.replaceExisting === true ||
+    (options.replaceFallback === true && current === PROCURE_LINE_DEFAULT_TYPE_FALLBACK);
+
+  if (!canReplace || current === nextType) return draft;
+  return { ...draft, [typeField.name]: nextType };
+}
+
+function isUomIdLikeField(field: EntityField): boolean {
+  return /(^|_)id$/i.test(field.name);
+}
+
+function itemReferenceHasValue(
+  draft: Record<string, unknown>,
+  entity: CompiledEntity | null | undefined,
+): boolean {
+  return entity?.fields
+    .filter(isItemReferenceField)
+    .some((field) => !isMissingRequiredValue(draftValue(draft, field))) === true;
+}
+
+function objectValueText(record: Record<string, unknown> | null | undefined, key: string): string | null {
+  return record ? nonEmptyText(record[key]) : null;
+}
+
+function headerHasSourceDocumentReference(headerRecord?: Record<string, unknown> | null): boolean {
+  return HEADER_DOCUMENT_REFERENCE_FIELDS.some((fieldName) => Boolean(objectValueText(headerRecord, fieldName)));
+}
+
+function isSourceDocumentReferenceField(field: EntityField): boolean {
+  const ref = field.reference_config as Record<string, unknown> | null | undefined;
+  const hint = field.ui_hint as Record<string, unknown> | null | undefined;
+  const text = [
+    field.name,
+    field.column_name,
+    field.label,
+    ref?.["ref_entity"],
+    ref?.["target_entity"],
+    ref?.["entity"],
+    hint?.["group_key"],
+  ]
+    .filter((value) => value != null)
+    .join(" ")
+    .replace(/-/g, "_")
+    .toLowerCase();
+  return SOURCE_DOCUMENT_REFERENCE_TOKENS.some((token) => text.includes(token));
+}
+
+function draftHasSourceDocumentReference(
+  draft: Record<string, unknown>,
+  entity: CompiledEntity | null | undefined,
+): boolean {
+  return entity?.fields
+    .filter(isSourceDocumentReferenceField)
+    .some((field) => !isMissingRequiredValue(draftValue(draft, field))) === true;
+}
+
+function withStandaloneDefaultUom(
+  draft: Record<string, unknown>,
+  entity: CompiledEntity | null | undefined,
+  defaultUomCode: string,
+  options: {
+    headerRecord?: Record<string, unknown> | null;
+    replaceExisting?: boolean;
+    replaceFallback?: boolean;
+  } = {},
+): Record<string, unknown> {
+  if (!entity) return draft;
+  if (itemReferenceHasValue(draft, entity)) return draft;
+  if (headerHasSourceDocumentReference(options.headerRecord)) return draft;
+  if (draftHasSourceDocumentReference(draft, entity)) return draft;
+
+  const nextUom = normalizedProcurementUom(defaultUomCode);
+  const uomFields = entity.fields.filter((field) => isUomLikeField(field) && !isUomIdLikeField(field));
+  if (uomFields.length === 0) return draft;
+
+  let next = draft;
+  for (const field of uomFields) {
+    const current = nonEmptyText(draftValue(next, field));
+    const canReplace =
+      !current ||
+      options.replaceExisting === true ||
+      (options.replaceFallback === true && normalizedProcurementUom(current) === PROCURE_LINE_DEFAULT_UOM_FALLBACK);
+    if (!canReplace || (current && normalizedProcurementUom(current) === nextUom)) continue;
+    next = next === draft ? { ...draft } : next;
+    next[field.name] = nextUom;
+  }
+  return next;
+}
+
+function withHeaderCompanyCodeContext(
+  draft: Record<string, unknown>,
+  headerRecord?: Record<string, unknown> | null,
+  companyCodeId?: string,
+): Record<string, unknown> {
+  const headerCompanyCodeId = nonEmptyText(companyCodeId) ?? nonEmptyText(headerRecord?.["company_code_id"]);
+  const context = { ...(headerRecord ?? {}), ...draft };
+  if (headerCompanyCodeId) context["company_code_id"] = headerCompanyCodeId;
+  return context;
+}
+
 function procureValidationMessage(
   entity:       CompiledEntity,
   config:       ItemTabConfig,
@@ -507,12 +751,6 @@ function procureValidationMessage(
   const typeField = config.classifyFields.find(
     (f) => f.data_type === "enum" || f.data_type === "lifecycle_state",
   );
-  const spendCategoryField = config.classifyFields.find((f) => /spend[_-]?category/i.test(f.name));
-  const businessIntentField = config.classifyFields.find(
-    (f) => f !== spendCategoryField && isBusinessIntentField(f),
-  ) ?? config.classifyFields.find(
-    (f) => f !== spendCategoryField && f !== typeField && f.data_type === "reference",
-  );
   const amountField = amountConfig
     ? entity.fields.find((f) => f.name === amountConfig.amountField)
     : undefined;
@@ -526,8 +764,6 @@ function procureValidationMessage(
     typeField,
     descriptionField,
     ...(composerMode === "catalog" ? [itemField] : []),
-    spendCategoryField,
-    businessIntentField,
     ...(amountMode ? [amountField] : config.quantityRow),
   ];
   const seen = new Set<string>();
@@ -536,6 +772,14 @@ function procureValidationMessage(
     seen.add(field.name);
     return isMissingRequiredValue(draft[field.name]) ? [fieldLabel(field)] : [];
   });
+  const assetCategoryField = entity.fields.find((field) => field.name === "asset_category_id");
+  if (
+    isTruthyDraftValue(draft["is_asset"]) &&
+    assetCategoryField &&
+    isMissingRequiredValue(draft[assetCategoryField.name])
+  ) {
+    missing.push(fieldLabel(assetCategoryField));
+  }
 
   return missing.length > 0 ? `Complete required fields: ${missing.join(", ")}.` : null;
 }
@@ -564,7 +808,7 @@ function DescriptionTextArea({
         value={value}
         disabled={disabled}
         onChange={(event) => onDraftChange({ ...draft, [field.name]: event.target.value })}
-        className="min-h-16 w-full resize-y rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
+        className="min-h-16 w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-ring/50 focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
       />
     </label>
   );
@@ -586,7 +830,7 @@ function TypePillsField({
   const opts        = staticOpts.length > 0 ? staticOpts : domainOpts;
 
   return (
-    <div className="flex w-full overflow-hidden rounded-lg border border-border/60 bg-background p-0.5">
+    <div className="flex w-full overflow-hidden rounded-lg border border-input bg-background p-0.5">
       {opts.map((opt) => {
         const active = String(value ?? "") === opt.value;
         return (
@@ -624,7 +868,7 @@ function CurrencyInput({
   const n      = Number(value ?? 0);
   const isZero = !Number.isFinite(n) || n === 0;
   return (
-    <div className="flex h-9 overflow-hidden rounded-lg border border-border/60 bg-transparent focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/30">
+    <div className="flex h-9 overflow-hidden rounded-lg border border-input bg-background focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/30">
       <span className="flex shrink-0 items-center border-r border-border/40 bg-muted/30 px-2.5 text-xs font-semibold text-muted-foreground">
         {currencyCode ?? "-"}
       </span>
@@ -657,7 +901,7 @@ function QtyUomInput({
   const n      = Number(value ?? 0);
   const isZero = !Number.isFinite(n) || n === 0;
   return (
-    <div className="flex h-9 overflow-hidden rounded-lg border border-border/60 bg-transparent focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/30">
+    <div className="flex h-9 overflow-hidden rounded-lg border border-input bg-background focus-within:border-ring/50 focus-within:ring-2 focus-within:ring-ring/30">
       <input
         type="number"
         step="any"
@@ -685,6 +929,7 @@ function QuantityRowCell({
   onDraftChange,
   disabled,
   currencyCode,
+  formData,
 }: {
   field:         EntityField;
   quantityRow:   EntityField[];
@@ -692,6 +937,7 @@ function QuantityRowCell({
   onDraftChange: (next: Record<string, unknown>) => void;
   disabled?:     boolean;
   currencyCode?: string;
+  formData?:     Record<string, unknown>;
 }) {
   const uomField = quantityRow.find(isUomLikeField);
   const uomCode  = uomField ? String(draft[uomField.name] ?? "") : "";
@@ -702,7 +948,7 @@ function QuantityRowCell({
         {fieldLabel(field)}
         {field.is_required && <span className="ml-0.5 text-destructive">*</span>}
       </span>
-      {isMoneyField(field) ? (
+      {isMoneyField(field) || isPriceUnitField(field) ? (
         <CurrencyInput
           value={draft[field.name]}
           onChange={(v) => onDraftChange({ ...draft, [field.name]: v })}
@@ -714,7 +960,7 @@ function QuantityRowCell({
           field={field}
           value={draft[field.name]}
           disabled={disabled}
-          formData={draft}
+          formData={formData ?? draft}
           onChange={(v) => onDraftChange({ ...draft, [field.name]: v })}
         />
       ) : field.data_type === "decimal" || field.data_type === "integer" ? (
@@ -729,7 +975,7 @@ function QuantityRowCell({
           field={field}
           value={draft[field.name]}
           disabled={disabled}
-          formData={draft}
+          formData={formData ?? draft}
           onChange={(v) => onDraftChange({ ...draft, [field.name]: v })}
         />
       )}
@@ -765,6 +1011,8 @@ function ComposerHowMuchPanel({
   onDraftChange,
   disabled,
   currencyCode,
+  formData,
+  variant = "default",
 }: {
   entity:         CompiledEntity;
   config?:        ItemTabConfig;
@@ -774,8 +1022,11 @@ function ComposerHowMuchPanel({
   onDraftChange:  (next: Record<string, unknown>) => void;
   disabled?:      boolean;
   currencyCode?:  string;
+  formData?:      Record<string, unknown>;
+  variant?:       "default" | "simple";
 }) {
   const [qtyMode, setQtyMode] = useState<QtyMode>("qty_price");
+  const simpleVariant = variant === "simple";
   const typeField = config?.classifyFields.find(
     (f) => f.data_type === "enum" || f.data_type === "lifecycle_state",
   );
@@ -805,9 +1056,13 @@ function ComposerHowMuchPanel({
   if (!hasQtyToggle && quantityRow.length === 0 && !amountOnlyField && overflowFields.length === 0) return null;
 
   return (
-    <div className="space-y-3.5">
+    <div className={cn(simpleVariant ? "space-y-5" : "space-y-3.5")}>
       {hasQtyToggle && !forceAmountOnly && (
-        <div className="inline-flex w-[220px] max-w-full overflow-hidden rounded-lg border border-border/60 p-0.5">
+        <div
+          className={cn(
+            "inline-flex w-[220px] max-w-full overflow-hidden rounded-lg border border-input bg-background p-0.5",
+          )}
+        >
           {(["qty_price", "amount_only"] as QtyMode[]).map((mode) => (
             <button
               key={mode}
@@ -828,7 +1083,7 @@ function ComposerHowMuchPanel({
       )}
 
       {effectiveMode === "qty_price" && quantityRow.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className={cn("grid gap-3", simpleVariant ? "md:grid-cols-3" : "grid-cols-3")}>
           {quantityRow.map((field) => (
             <QuantityRowCell
               key={field.name}
@@ -838,6 +1093,7 @@ function ComposerHowMuchPanel({
               onDraftChange={onDraftChange}
               disabled={disabled}
               currencyCode={currencyCode}
+              formData={formData}
             />
           ))}
         </div>
@@ -859,7 +1115,7 @@ function ComposerHowMuchPanel({
       )}
 
       {effectiveMode === "qty_price" && overflowFields.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={cn("grid gap-3", simpleVariant ? "md:grid-cols-2" : "sm:grid-cols-2")}>
           {overflowFields.map((field) => (
             <QuantityRowCell
               key={field.name}
@@ -869,6 +1125,7 @@ function ComposerHowMuchPanel({
               onDraftChange={onDraftChange}
               disabled={disabled}
               currencyCode={currencyCode}
+              formData={formData}
             />
           ))}
         </div>
@@ -888,6 +1145,7 @@ function ItemFieldsLayout({
   disabled,
   formulaFields,
   amountField,
+  formData,
   composerMode,
 }: {
   fields:        EntityField[];
@@ -896,6 +1154,7 @@ function ItemFieldsLayout({
   disabled?:     boolean;
   formulaFields?: EntityField[];
   amountField?:   EntityField | null;
+  formData?:      Record<string, unknown>;
   composerMode:   ProcureLineComposerMode;
 }) {
   const typeField = fields.find(
@@ -908,13 +1167,13 @@ function ItemFieldsLayout({
     (field) => field.name === "item_description" || field.data_type === "text",
   );
   const itemField = fields.find(isItemReferenceField);
-  const spendCategoryField = fields.find((field) => /spend[_-]?category/i.test(field.name));
+  const commodityCategoryField = fields.find(isCommodityCategoryField);
   const businessIntentField = fields.find(isBusinessIntentField);
   const usedNames = new Set([
     typeField?.name,
     descriptionField?.name,
     itemField?.name,
-    spendCategoryField?.name,
+    commodityCategoryField?.name,
     businessIntentField?.name,
   ].filter((name): name is string => Boolean(name)));
   const remainingFields = fields.filter((field) => !usedNames.has(field.name) && !isTaxonomyCodeField(field));
@@ -974,25 +1233,8 @@ function ItemFieldsLayout({
               draft={draft}
               onDraftChange={onDraftChange}
               disabled={disabled}
+              formData={formData}
               requiredOverride={composerMode === "catalog"}
-            />
-          )}
-          {spendCategoryField && (
-            <FieldCell
-              field={spendCategoryField}
-              draft={draft}
-              onDraftChange={onDraftChange}
-              disabled={disabled}
-              requiredOverride
-            />
-          )}
-          {businessIntentField && (
-            <FieldCell
-              field={businessIntentField}
-              draft={draft}
-              onDraftChange={onDraftChange}
-              disabled={disabled}
-              requiredOverride
             />
           )}
         </div>
@@ -1007,10 +1249,177 @@ function ItemFieldsLayout({
               draft={draft}
               onDraftChange={onDraftChange}
               disabled={disabled}
+              suppressRequired={isOptionalClassificationDraftField(field)}
+              formData={formData}
             />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function normalizedEntityCode(value: string | null | undefined): string {
+  return String(value ?? "").trim().replace(/-/g, "_").toLowerCase();
+}
+
+function isPurchaseInvoiceLineComposer(
+  parentEntityCode: string,
+  lineEntityCode: string | null | undefined,
+  lineEntity: CompiledEntity | null | undefined,
+): boolean {
+  const parentCode = normalizedEntityCode(parentEntityCode);
+  const lineCode = normalizedEntityCode(lineEntityCode || lineEntity?.entity_code || lineEntity?.table_name);
+  return parentCode === "purchase_invoice" || lineCode === "purchase_invoice_line";
+}
+
+function AdvancedViewToggle({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: boolean;
+  onChange: (value: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className={cn(PROCURE_SECTION_LABEL_CLASS, "whitespace-nowrap")}>Advanced view</span>
+      <div className="inline-flex h-8 overflow-hidden rounded-lg border border-input bg-background p-0.5">
+        {[
+          { label: "No", value: false },
+          { label: "Yes", value: true },
+        ].map((option) => (
+          <button
+            key={option.label}
+            type="button"
+            disabled={disabled}
+            aria-pressed={value === option.value}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "min-w-14 rounded-md px-3 text-xs font-semibold transition-colors disabled:opacity-40",
+              value === option.value
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SimplePurchaseLineFields({
+  entity,
+  config,
+  amountConfig,
+  draft,
+  onDraftChange,
+  disabled,
+  currencyCode,
+  formData,
+  composerMode,
+}: {
+  entity: CompiledEntity;
+  config: ItemTabConfig;
+  amountConfig: ProcureAmountConfig | null;
+  draft: Record<string, unknown>;
+  onDraftChange: (next: Record<string, unknown>) => void;
+  disabled?: boolean;
+  currencyCode?: string;
+  formData?: Record<string, unknown>;
+  composerMode: ProcureLineComposerMode;
+}) {
+  const typeField = config.classifyFields.find(
+    (field) =>
+      field.name === "procurement_type" ||
+      field.label?.trim().toLowerCase() === "type" ||
+      field.data_type === "lifecycle_state",
+  ) ?? fieldsForNames(entity, ["procurement_type"])[0];
+  const descriptionField = config.primaryFields.find((field) => field.name === "item_description")
+    ?? config.primaryFields.find((field) => field.data_type === "text")
+    ?? fieldsForNames(entity, ["item_description"])[0];
+  const itemField = config.primaryFields.find(isItemReferenceField)
+    ?? fieldsForNames(entity, ["item_id"])[0];
+  const assetFields = useMemo(() => assetFieldsForEntity(entity), [entity]);
+  const overflowFields = useMemo(
+    () => resolveHowMuchOverflow(entity, config, amountConfig).filter(isPriceUnitField),
+    [amountConfig, config, entity],
+  );
+
+  return (
+    <div className="px-5 py-5">
+      <div className={cn(PROCURE_FIELD_BOX_CLASS, "space-y-4")}>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)]">
+          {typeField && (
+            <label className="flex min-w-0 flex-col gap-1.5">
+              <span className={PROCURE_FIELD_LABEL_CLASS}>
+                {fieldLabel(typeField)}
+                {typeField.is_required && <span className="ml-0.5 text-destructive">*</span>}
+              </span>
+              <TypePillsField
+                field={typeField}
+                value={draft[typeField.name]}
+                disabled={disabled}
+                onChange={(value) => onDraftChange({ ...draft, [typeField.name]: value })}
+              />
+            </label>
+          )}
+
+          {itemField && (
+            <FieldCell
+              field={itemField}
+              draft={draft}
+              onDraftChange={onDraftChange}
+              disabled={disabled}
+              formData={formData}
+              requiredOverride={composerMode === "catalog"}
+            />
+          )}
+        </div>
+
+        {descriptionField && (
+          <DescriptionTextArea
+            field={descriptionField}
+            draft={draft}
+            onDraftChange={onDraftChange}
+            disabled={disabled}
+          />
+        )}
+
+        <ComposerHowMuchPanel
+          entity={entity}
+          config={config}
+          amountConfig={amountConfig}
+          overflowFields={overflowFields}
+          draft={draft}
+          onDraftChange={onDraftChange}
+          disabled={disabled}
+          currencyCode={currencyCode}
+          formData={formData}
+          variant="simple"
+        />
+
+        {assetFields.length > 0 && (
+          <>
+            <div className="border-t border-border/30" />
+            <div className="grid gap-3 pt-1 sm:grid-cols-2">
+              {assetFields.map((field) => (
+                <FieldCell
+                  key={field.name}
+                  field={field}
+                  draft={draft}
+                  onDraftChange={onDraftChange}
+                  disabled={disabled}
+                  formData={formData}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -1025,6 +1434,7 @@ function AccordionSection({
   amountConfig,
   explicitFieldOwners,
   currencyCode,
+  formData,
   composerMode,
 }: {
   section:        ProcureComposerSection;
@@ -1036,6 +1446,7 @@ function AccordionSection({
   amountConfig?:  ProcureAmountConfig | null;
   explicitFieldOwners: Map<string, string>;
   currencyCode?:  string;
+  formData?:      Record<string, unknown>;
   composerMode:   ProcureLineComposerMode;
 }) {
   const [open, setOpen] = useState(section.defaultOpen);
@@ -1080,7 +1491,11 @@ function AccordionSection({
           return !owner || owner === section.key;
         })
         .filter((field) => !sectionFieldNames.has(field.name));
-      const merged = uniqueEntityFields([...explicitFields, ...raw]);
+      const merged = uniqueEntityFields([
+        ...explicitFields,
+        ...raw,
+        ...(isItemSection ? assetFieldsForEntity(entity) : []),
+      ]);
       const ordered = isDimensionsSection ? orderDimensionComposerFields(merged) : merged;
       if (isItemSection) return typeFieldFirst(ordered.filter((field) => !howMuchFieldNames.has(field.name)));
       if (isHowMuchSection) {
@@ -1128,32 +1543,21 @@ function AccordionSection({
       {open && (
         <div className="px-5 pb-5">
           {section.type === "classification" ? (
-            <>
-              {/* Classification placeholder — line doesn't exist yet in the composer */}
-              <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center space-y-2">
-                <Zap className="mx-auto h-5 w-5 text-muted-foreground/30" />
-                <p className="text-sm font-medium text-muted-foreground">
-                  Set a spend category to classify
-                </p>
-                <p className="text-xs text-muted-foreground/60">
-                  Select a spend category on this line to trigger automatic intent and profile resolution.
-                </p>
+            fields.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {fields.map((field) => (
+                  <FieldCell
+                    key={field.name}
+                    field={field}
+                    draft={draft}
+                    onDraftChange={onDraftChange}
+                    disabled={disabled}
+                    suppressRequired={isOptionalClassificationDraftField(field)}
+                    formData={formData}
+                  />
+                ))}
               </div>
-              {/* Any editable classification fields still surface below the placeholder */}
-              {fields.length > 0 && (
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {fields.map((field) => (
-                    <FieldCell
-                      key={field.name}
-                      field={field}
-                      draft={draft}
-                      onDraftChange={onDraftChange}
-                      disabled={disabled}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
+            ) : null
           ) : hasHowMuchPanel || fields.length > 0 ? (
             <div className="space-y-4">
               {isHowMuchSection && (
@@ -1166,6 +1570,7 @@ function AccordionSection({
                   onDraftChange={onDraftChange}
                   disabled={disabled}
                   currencyCode={currencyCode}
+                  formData={formData}
                 />
               )}
               {isItemSection && fields.length > 0 ? (
@@ -1176,6 +1581,7 @@ function AccordionSection({
                   disabled={disabled}
                   formulaFields={formulaFields}
                   amountField={amountOnlyField}
+                  formData={formData}
                   composerMode={composerMode}
                 />
               ) : fields.length > 0 && (
@@ -1187,6 +1593,7 @@ function AccordionSection({
                       draft={draft}
                       onDraftChange={onDraftChange}
                       disabled={disabled}
+                      formData={formData}
                     />
                   ))}
                 </div>
@@ -1208,18 +1615,24 @@ function FieldCell({
   onDraftChange,
   disabled,
   requiredOverride,
+  suppressRequired,
+  formData,
 }: {
   field:         ReturnType<typeof fieldsForGroups>[number];
   draft:         Record<string, unknown>;
   onDraftChange: (next: Record<string, unknown>) => void;
   disabled?:     boolean;
   requiredOverride?: boolean;
+  suppressRequired?: boolean;
+  formData?:     Record<string, unknown>;
 }) {
   return (
     <label className="flex min-w-0 flex-col gap-1.5">
       <span className={PROCURE_FIELD_LABEL_CLASS}>
         {fieldLabel(field)}
-        {(field.is_required || requiredOverride) && <span className="ml-0.5 text-destructive">*</span>}
+        {!suppressRequired && (field.is_required || requiredOverride) && (
+          <span className="ml-0.5 text-destructive">*</span>
+        )}
       </span>
       {field.data_type === "enum" || field.data_type === "lifecycle_state" ? (
         <TypePillsField
@@ -1233,7 +1646,7 @@ function FieldCell({
           field={field}
           value={draft[field.name]}
           disabled={disabled}
-          formData={draft}
+          formData={formData ?? draft}
           onChange={(v) => onDraftChange({ ...draft, [field.name]: v })}
         />
       )}
@@ -1253,6 +1666,7 @@ export interface ProcureLineComposerSheetProps {
   recordId:          string;
   currencyCode?:     string;
   companyCodeId?:    string;
+  record?:           Record<string, unknown>;
   lineEntity?:       CompiledEntity | null;
   lineEntityCode?:   string | null;
   suggestBaseUrl?:   string;
@@ -1260,7 +1674,7 @@ export interface ProcureLineComposerSheetProps {
   composerMode?:     ProcureLineComposerMode;
   onMutated?:        () => void;
   /** Draft mode: skip server call, hand payload to caller instead. */
-  onDraftSubmit?:    (payload: Record<string, unknown>) => void;
+  onDraftSubmit?:    (payload: Record<string, unknown>) => void | Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1274,6 +1688,8 @@ export function ProcureLineComposerSheet({
   entityCode,
   recordId: parentRecordId,
   currencyCode,
+  companyCodeId,
+  record,
   lineEntity,
   lineEntityCode,
   composerMode = "manual",
@@ -1307,16 +1723,64 @@ export function ProcureLineComposerSheet({
   const [draft,     setDraft]     = useState<Record<string, unknown>>({});
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [advancedView, setAdvancedView] = useState(false);
+  const fieldFormData = useMemo(
+    () => withHeaderCompanyCodeContext(draft, record, companyCodeId),
+    [companyCodeId, draft, record],
+  );
 
   const isNew   = !line;
   const lineKey = recordId(line as LineRecord | null | undefined);
+  const hasPurchaseInvoiceSimpleView = isPurchaseInvoiceLineComposer(entityCode, lineEntityCode, resolvedEntity);
+  const defaultProcurementSettings = useDefaultProcurementLineSettings(hasPurchaseInvoiceSimpleView);
 
   useEffect(() => {
     if (!open || !resolvedEntity) return;
     const nextDraft = initialDraft(resolvedEntity, line as LineRecord | null | undefined);
-    setDraft(isNew ? withNewProcureLineDefaults(nextDraft) : nextDraft);
+    const withDefaults = isNew ? withNewProcureLineDefaults(nextDraft) : nextDraft;
+    const purchaseInvoiceDefaults = isNew && hasPurchaseInvoiceSimpleView
+      ? withStandaloneDefaultUom(
+          withDefaultProcurementType(
+            withDefaults,
+            resolvedEntity,
+            defaultProcurementSettings.procurementType,
+            { replaceExisting: true },
+          ),
+          resolvedEntity,
+          defaultProcurementSettings.uomCode,
+          { headerRecord: record, replaceExisting: true },
+        )
+      : withDefaults;
+    setDraft(purchaseInvoiceDefaults);
     setSaveError(null);
-  }, [isNew, lineKey, line, open, resolvedEntity]);
+  }, [hasPurchaseInvoiceSimpleView, isNew, lineKey, line, open, resolvedEntity]);
+
+  useEffect(() => {
+    if (!open || !isNew || !hasPurchaseInvoiceSimpleView || !resolvedEntity) return;
+    setDraft((prev) => withStandaloneDefaultUom(
+      withDefaultProcurementType(
+        prev,
+        resolvedEntity,
+        defaultProcurementSettings.procurementType,
+        { replaceFallback: true },
+      ),
+      resolvedEntity,
+      defaultProcurementSettings.uomCode,
+      { headerRecord: record, replaceFallback: true },
+    ));
+  }, [
+    defaultProcurementSettings.procurementType,
+    defaultProcurementSettings.uomCode,
+    hasPurchaseInvoiceSimpleView,
+    isNew,
+    open,
+    record,
+    resolvedEntity,
+  ]);
+
+  useEffect(() => {
+    if (open && hasPurchaseInvoiceSimpleView) setAdvancedView(false);
+  }, [composerMode, hasPurchaseInvoiceSimpleView, lineKey, open]);
 
   const title    = useMemo(() => {
     const currentTitle = titleFor(resolvedEntity, line, draft);
@@ -1348,8 +1812,16 @@ export function ProcureLineComposerSheet({
 
     // Draft mode (intake wizard) — skip network, hand full payload to caller.
     if (onDraftSubmit) {
-      onDraftSubmit(payload);
-      onOpenChange(false);
+      setSaving(true);
+      setSaveError(null);
+      try {
+        await onDraftSubmit(payload);
+        onOpenChange(false);
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : "Failed to update draft line");
+      } finally {
+        setSaving(false);
+      }
       return;
     }
 
@@ -1395,6 +1867,15 @@ export function ProcureLineComposerSheet({
       )}
       title={<span title={title}>{compactHeaderTitle(title)}</span>}
       subtitle={subtitle}
+      headerRight={
+        hasPurchaseInvoiceSimpleView ? (
+          <AdvancedViewToggle
+            value={advancedView}
+            onChange={setAdvancedView}
+            disabled={saving}
+          />
+        ) : undefined
+      }
       footerStart={
         saveError ? (
           <span className="flex items-center gap-1.5 text-xs text-destructive">
@@ -1439,21 +1920,36 @@ export function ProcureLineComposerSheet({
       {resolvedEntity ? (
         sections.length > 0 ? (
           <div>
-            {sections.map((section) => (
-              <AccordionSection
-                key={section.key}
-                section={section}
+            {hasPurchaseInvoiceSimpleView && !advancedView ? (
+              <SimplePurchaseLineFields
                 entity={resolvedEntity}
+                config={itemTabConfig}
+                amountConfig={amountConfig}
                 draft={draft}
                 onDraftChange={setDraft}
                 disabled={saving}
-                itemConfig={itemTabConfig}
-                amountConfig={amountConfig}
-                explicitFieldOwners={explicitFieldOwners}
                 currencyCode={currencyCode}
+                formData={fieldFormData}
                 composerMode={composerMode}
               />
-            ))}
+            ) : (
+              sections.map((section) => (
+                <AccordionSection
+                  key={section.key}
+                  section={section}
+                  entity={resolvedEntity}
+                  draft={draft}
+                  onDraftChange={setDraft}
+                  disabled={saving}
+                  itemConfig={itemTabConfig}
+                  amountConfig={amountConfig}
+                  explicitFieldOwners={explicitFieldOwners}
+                  currencyCode={currencyCode}
+                  formData={fieldFormData}
+                  composerMode={composerMode}
+                />
+              ))
+            )}
           </div>
         ) : (
           /* Fallback: generic flat form — identical to LineComposerSheet */

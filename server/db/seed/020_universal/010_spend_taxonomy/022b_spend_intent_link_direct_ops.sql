@@ -5,8 +5,8 @@
 -- Schema:   master.spend_category (UPDATE default_intent_id)
 -- Purpose:  Backfill default_intent_id on all Layer B selectable nodes (35)
 -- Depends:  020b_spend_categories_direct_ops.sql (Layer B categories)
---           021b_business_intents_direct_ops.sql (BI-COGS-*, BI-OPEX-MRO,
---             BI-CAPEX-MACH, BI-CAPEX-TOOL, BI-CAPEX-EQUIP)
+--           021b_business_intents_direct_ops.sql (BI-COGS-*, BI-OPEX,
+--             BI-CAPEX, BI-CAPEX, BI-CAPEX)
 --           022_spend_intent_link.sql (021_base intents must also exist)
 -- Idempotent: Yes — UPDATE with resolved IDs
 -- Spec ref: §6 default_intent_id Rule (Layer B extension)
@@ -38,8 +38,8 @@ BEGIN
 
     -- Verify direct-ops intents loaded (021b)
     IF NOT EXISTS (SELECT 1 FROM master.business_intent
-                   WHERE tenant_id = v_tid AND code = 'BI-COGS-MAT') THEN
-        RAISE EXCEPTION '[022_base_direct_ops] BI-COGS-MAT not found — run 021b_business_intents_direct_ops.sql first';
+                   WHERE tenant_id = v_tid AND code = 'BI-COGS') THEN
+        RAISE EXCEPTION '[022_base_direct_ops] BI-COGS not found — run 021b_business_intents_direct_ops.sql first';
     END IF;
 
     -- ── STAGE B: Stage linkage map ───────────────────────────────────────
@@ -56,65 +56,65 @@ BEGIN
 
     INSERT INTO tmp_link (sc_code, bi_code) VALUES
     -- ── Raw Materials ────────────────────────────────────────────────────
-    ('SC-RAW-METAL',     'BI-COGS-MAT'),
-    ('SC-RAW-CHEM',      'BI-COGS-MAT'),
-    ('SC-RAW-AGRI',      'BI-COGS-MAT'),
+    ('SC-RAW-METAL',     'BI-COGS'),
+    ('SC-RAW-CHEM',      'BI-COGS'),
+    ('SC-RAW-AGRI',      'BI-COGS'),
 
     -- ── Components ───────────────────────────────────────────────────────
-    ('SC-COMP-MECH',     'BI-COGS-MAT'),
-    ('SC-COMP-ELEC',     'BI-COGS-MAT'),
-    ('SC-COMP-STRUCT',   'BI-COGS-MAT'),
+    ('SC-COMP-MECH',     'BI-COGS'),
+    ('SC-COMP-ELEC',     'BI-COGS'),
+    ('SC-COMP-STRUCT',   'BI-COGS'),
 
     -- ── Packaging ────────────────────────────────────────────────────────
-    ('SC-PKG-PRIMARY',   'BI-COGS-MAT'),
-    ('SC-PKG-SECONDARY', 'BI-COGS-MAT'),
-    ('SC-PKG-TRANSIT',   'BI-COGS-FREIGHT'),
+    ('SC-PKG-PRIMARY',   'BI-COGS'),
+    ('SC-PKG-SECONDARY', 'BI-COGS'),
+    ('SC-PKG-TRANSIT',   'BI-COGS'),
 
     -- ── Consumables & Chemicals ──────────────────────────────────────────
-    ('SC-CONSUM-CHEM',   'BI-COGS-MAT'),
-    ('SC-CONSUM-LAB',    'BI-COGS-OH'),
-    ('SC-CONSUM-CLEAN',  'BI-COGS-OH'),
+    ('SC-CONSUM-CHEM',   'BI-COGS'),
+    ('SC-CONSUM-LAB',    'BI-COGS'),
+    ('SC-CONSUM-CLEAN',  'BI-COGS'),
 
     -- ── MRO & Spare Parts ────────────────────────────────────────────────
-    ('SC-MRO-SPARE',     'BI-OPEX-MRO'),
-    ('SC-MRO-TOOL',      'BI-OPEX-MRO'),
-    ('SC-MRO-SUPPLY',    'BI-OPEX-MRO'),
+    ('SC-MRO-SPARE',     'BI-OPEX'),
+    ('SC-MRO-TOOL',      'BI-OPEX'),
+    ('SC-MRO-SUPPLY',    'BI-OPEX'),
 
     -- ── Production Services ──────────────────────────────────────────────
-    ('SC-PRODSVC-CALIB', 'BI-COGS-OH'),
-    ('SC-PRODSVC-PLANT', 'BI-COGS-OH'),
+    ('SC-PRODSVC-CALIB', 'BI-COGS'),
+    ('SC-PRODSVC-PLANT', 'BI-COGS'),
 
     -- ── Contract Manufacturing ───────────────────────────────────────────
-    ('SC-CONTRACT-MFG',  'BI-COGS-SUB'),
-    ('SC-CONTRACT-ASM',  'BI-COGS-SUB'),
+    ('SC-CONTRACT-MFG',  'BI-COGS'),
+    ('SC-CONTRACT-ASM',  'BI-COGS'),
 
     -- ── Freight & Logistics ──────────────────────────────────────────────
-    ('SC-FREIGHT-ROAD',  'BI-COGS-FREIGHT'),
-    ('SC-FREIGHT-SEA',   'BI-COGS-FREIGHT'),
-    ('SC-FREIGHT-AIR',   'BI-COGS-FREIGHT'),
-    ('SC-FREIGHT-CUST',  'BI-COGS-FREIGHT'),
+    ('SC-FREIGHT-ROAD',  'BI-COGS'),
+    ('SC-FREIGHT-SEA',   'BI-COGS'),
+    ('SC-FREIGHT-AIR',   'BI-COGS'),
+    ('SC-FREIGHT-CUST',  'BI-COGS'),
 
     -- ── Warehousing ──────────────────────────────────────────────────────
-    ('SC-WHSE-STORE',    'BI-COGS-OH'),
-    ('SC-WHSE-COLD',     'BI-COGS-OH'),
+    ('SC-WHSE-STORE',    'BI-COGS'),
+    ('SC-WHSE-COLD',     'BI-COGS'),
 
     -- ── Quality, Lab & Testing ───────────────────────────────────────────
-    ('SC-QC-TEST',       'BI-COGS-OH'),
-    ('SC-QC-CERT',       'BI-REG-COMP'),
-    ('SC-QC-INSPECT',    'BI-COGS-OH'),
+    ('SC-QC-TEST',       'BI-COGS'),
+    ('SC-QC-CERT',       'BI-REG'),
+    ('SC-QC-INSPECT',    'BI-COGS'),
 
     -- ── Capital Equipment ────────────────────────────────────────────────
-    ('SC-CAPEQUIP-MACH', 'BI-CAPEX-MACH'),
-    ('SC-CAPEQUIP-TOOL', 'BI-CAPEX-TOOL'),
-    ('SC-CAPEQUIP-LINE', 'BI-CAPEX-EQUIP'),
+    ('SC-CAPEQUIP-MACH', 'BI-CAPEX'),
+    ('SC-CAPEQUIP-TOOL', 'BI-CAPEX'),
+    ('SC-CAPEQUIP-LINE', 'BI-CAPEX'),
 
     -- ── Temporary Works ──────────────────────────────────────────────────
-    ('SC-TEMPWK-SCAF',   'BI-COGS-OH'),
-    ('SC-TEMPWK-SITE',   'BI-COGS-OH'),
+    ('SC-TEMPWK-SCAF',   'BI-COGS'),
+    ('SC-TEMPWK-SITE',   'BI-COGS'),
 
     -- ── Process Energy ───────────────────────────────────────────────────
-    ('SC-PROCNRG-STEAM', 'BI-COGS-OH'),
-    ('SC-PROCNRG-COMP',  'BI-COGS-OH');
+    ('SC-PROCNRG-STEAM', 'BI-COGS'),
+    ('SC-PROCNRG-COMP',  'BI-COGS');
 
 
     -- STAGE C: Validate coverage — every Layer B selectable leaf must be in tmp_link.

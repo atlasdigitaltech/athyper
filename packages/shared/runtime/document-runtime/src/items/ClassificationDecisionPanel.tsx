@@ -16,7 +16,7 @@
  *   • Inline override-reason dialog
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle, CheckCircle2, XCircle, Zap,
   ChevronRight, RefreshCw, Pencil, Info,
@@ -90,6 +90,18 @@ function isFullDecision(d: unknown): d is ClassificationDecision {
 
 // ── Prop types ────────────────────────────────────────────────────────────────
 
+function normaliseEntityCode(value: string): string {
+  return value.replace(/-/g, "_").toLowerCase();
+}
+
+function defaultClassifyEndpointTemplate(entityCode: string): string | undefined {
+  const code = normaliseEntityCode(entityCode);
+  if (code === "purchase_invoice" || code === "purchase_invoice_line") {
+    return "/api/finance/ap/invoices/{recordId}/lines/{lineId}/classify?mode={mode}";
+  }
+  return undefined;
+}
+
 export interface ClassificationDecisionPanelProps {
   /** Raw line record; persisted decision field is configured by metadata. */
   line: Record<string, unknown>;
@@ -97,6 +109,8 @@ export interface ClassificationDecisionPanelProps {
   recordId: string;
   /** Called after a successful classify so the parent can refresh the line. */
   onRefresh?: () => void;
+  /** Optional draft/local classifier. Used when no persisted line UUID exists yet. */
+  onClassify?: (mode: string) => Promise<Record<string, unknown> | void> | Record<string, unknown> | void;
   /** Optional live-preview decision to overlay (from debounced preview calls). */
   previewDecision?: Record<string, unknown> | null;
   /** If true, a preview call is in flight. */
@@ -215,6 +229,7 @@ export function ClassificationDecisionPanel({
   entityCode,
   recordId,
   onRefresh,
+  onClassify,
   previewDecision,
   isPreviewing,
   classificationConfig,
@@ -227,15 +242,19 @@ export function ClassificationDecisionPanel({
 }: ClassificationDecisionPanelProps) {
   const lineAny = line as Record<string, unknown>;
   const resolvedConfig = resolveClassificationConfig(classificationConfig);
-  const resolvedDecisionField = decisionField ?? resolvedConfig.decisionField;
-  const resolvedLineIdField = lineIdField ?? resolvedConfig.lineIdField;
+  const resolvedDecisionField = decisionField ?? resolvedConfig.decisionField ?? "classification_decision";
+  const resolvedLineIdField = lineIdField ?? resolvedConfig.lineIdField ?? "id";
   const resolvedRequiredField = classificationRequiredField ?? resolvedConfig.requiredInputField;
-  const resolvedEndpointTemplate = classifyEndpointTemplate ?? resolvedConfig.classifyEndpointTemplate;
-  const resolvedSaveMode = saveMode ?? resolvedConfig.saveMode;
-  const resolvedPreviewMode = previewMode ?? resolvedConfig.previewMode;
+  const resolvedEndpointTemplate =
+    classifyEndpointTemplate ?? resolvedConfig.classifyEndpointTemplate ?? defaultClassifyEndpointTemplate(entityCode);
+  const resolvedSaveMode = saveMode ?? resolvedConfig.saveMode ?? "save";
+  const resolvedPreviewMode = previewMode ?? resolvedConfig.previewMode ?? "preview";
 
-  // Prefer live preview decision; fall back to persisted decision on line object
-  const rawDecision = previewDecision ?? (resolvedDecisionField ? lineAny[resolvedDecisionField] : null);
+  const persistedDecision = resolvedDecisionField ? lineAny[resolvedDecisionField] : null;
+  const [localDecision, setLocalDecision] = useState<Record<string, unknown> | null>(null);
+
+  // Prefer live preview decision; fall back to a local draft decision, then persisted line data.
+  const rawDecision = previewDecision ?? localDecision ?? persistedDecision;
   const decision = isFullDecision(rawDecision) ? rawDecision : null;
 
   const [classifying,  setClassifying]  = useState(false);
@@ -244,7 +263,15 @@ export function ClassificationDecisionPanel({
 
   const lineId   = resolvedLineIdField ? String(lineAny[resolvedLineIdField] ?? "") : "";
   const hasLineId = lineId.trim().length > 0;
-  const canClassify = hasLineId && Boolean(resolvedEndpointTemplate);
+  const isDraftTarget =
+    recordId === "__draft__" ||
+    lineId === "__draft__" ||
+    lineId.startsWith("draft-line-");
+  const canClassify = Boolean(onClassify) || (hasLineId && !isDraftTarget && Boolean(resolvedEndpointTemplate));
+
+  useEffect(() => {
+    setLocalDecision(null);
+  }, [lineId, persistedDecision]);
 
   function classifyUrl(mode?: string) {
     return (resolvedEndpointTemplate ?? "")
@@ -259,12 +286,22 @@ export function ClassificationDecisionPanel({
     setClassifying(true);
     setClassifyErr(null);
     try {
+      if (onClassify) {
+        const nextDecision = await onClassify(mode);
+        if (nextDecision && typeof nextDecision === "object") {
+          setLocalDecision(nextDecision);
+        } else {
+          setClassifyErr("Classify did not return a decision.");
+        }
+        onRefresh?.();
+        return;
+      }
       const res = await relayMutate(classifyUrl(mode), { method: "POST" });
       if (res.ok) {
         onRefresh?.();
       } else {
-        const body = await res.json().catch(() => ({})) as { error?: string };
-        setClassifyErr(body.error ?? `Classify failed (${res.status})`);
+        const body = await res.json().catch(() => ({})) as { error?: string; message?: string };
+        setClassifyErr(body.message ?? body.error ?? `Classify failed (${res.status})`);
       }
     } catch (e) {
       setClassifyErr(e instanceof Error ? e.message : "Network error");
@@ -290,7 +327,7 @@ export function ClassificationDecisionPanel({
           </p>
         </div>
 
-        {!isEmpty && canClassify && (
+        {canClassify && (
           <div className="flex justify-center">
             <button
               onClick={() => void runClassify(resolvedSaveMode)}
@@ -324,6 +361,19 @@ export function ClassificationDecisionPanel({
     ? policyBadgeActive(policyRecord, denyMappingBadge.key, denyMappingBadge.value)
     : false;
   const thresholdValue = resolvedConfig.thresholdField ? policyRecord[resolvedConfig.thresholdField] : undefined;
+  const rawCommodityCode = decision.selected["line_commodity_code"];
+  const selectedCommodityCode =
+    rawCommodityCode && typeof rawCommodityCode === "object" && !Array.isArray(rawCommodityCode)
+      ? rawCommodityCode as Record<string, unknown>
+      : null;
+  const selectedCommodityDomain = typeof selectedCommodityCode?.["domain_code"] === "string"
+    ? selectedCommodityCode["domain_code"].toUpperCase()
+    : null;
+  const selectedCommodityLabel = typeof selectedCommodityCode?.["label"] === "string"
+    ? selectedCommodityCode["label"]
+    : typeof selectedCommodityCode?.["code"] === "string"
+    ? selectedCommodityCode["code"]
+    : null;
 
   return (
     <div className="space-y-3">
@@ -425,6 +475,16 @@ export function ClassificationDecisionPanel({
                 <span className="text-muted-foreground text-2xs block mb-0.5">WHT via</span>
                 <span className="text-xs text-foreground/80">{decision.resolved.wht_group_resolved_via}</span>
               </div>
+              {selectedCommodityLabel && (
+                <div className="col-span-2">
+                  <span className="text-muted-foreground text-2xs block mb-0.5">
+                    Commodity code
+                  </span>
+                  <span className="text-xs text-foreground/80">
+                    {selectedCommodityDomain ? `${selectedCommodityDomain} ` : ""}{selectedCommodityLabel}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">

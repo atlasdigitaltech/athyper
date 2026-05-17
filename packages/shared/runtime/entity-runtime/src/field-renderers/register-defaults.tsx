@@ -6,7 +6,8 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Input, Checkbox, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@athyper/ui/primitives";
+import { Check, Plus } from "lucide-react";
+import { Input, Switch, Badge, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@athyper/ui/primitives";
 // Select primitives kept for EnumRenderer (LookupSelect).
 import { DatePicker, AsyncCombobox } from "@athyper/ui/composites";
 import {
@@ -98,9 +99,25 @@ function NumberRenderer({ value, field, mode, density, onChange, error }: FieldR
   );
 }
 
-// ── Boolean ─────────────────────────────────────────────────────
+// ── Boolean UI type sets (exported for EntityForm layout decisions) ──
 
-function BooleanRenderer({ value, mode, density, onChange }: FieldRendererProps) {
+/** All ui_types that embed their label — EntityForm must skip its own Label */
+export const BOOLEAN_UI_TYPES = new Set([
+  "boolean",
+  "boolean_switch_card",
+  "boolean_chip",
+]);
+
+/** Subset that need full-width (md:col-span-2) in the form grid */
+export const BOOLEAN_FULL_WIDTH_UI_TYPES = new Set([
+  "boolean",
+  "boolean_switch_card",
+]);
+
+// ── Boolean — Pattern A: Switch Card ────────────────────────────
+// Best for governance / settings sections. Full-width card, label on left, toggle on right.
+
+function BooleanSwitchCardRenderer({ value, field, mode, density, onChange }: FieldRendererProps) {
   if (mode === "view") {
     return (
       <Badge variant={value ? "success" : "muted"} size={badgeSize(density)} className={viewBadgeClass(density)}>
@@ -108,11 +125,61 @@ function BooleanRenderer({ value, mode, density, onChange }: FieldRendererProps)
       </Badge>
     );
   }
+  if (density === "compact" || density === "table" || density === "sheet") {
+    return (
+      <Switch
+        checked={Boolean(value)}
+        onCheckedChange={(checked) => onChange?.(checked)}
+      />
+    );
+  }
   return (
-    <Checkbox
-      checked={Boolean(value)}
-      onCheckedChange={(checked) => onChange?.(checked)}
-    />
+    <div className="flex items-center justify-between rounded-lg border px-4 py-3 bg-muted/30">
+      <span className="text-sm font-medium leading-none">
+        {field.label ?? field.name}
+      </span>
+      <Switch
+        checked={Boolean(value)}
+        onCheckedChange={(checked) => onChange?.(checked)}
+      />
+    </div>
+  );
+}
+
+// ── Boolean — Pattern C: Pressable Chip ─────────────────────────
+// Best for governance flag groups. Compact pill — checked = filled, unchecked = outlined.
+
+function BooleanChipRenderer({ value, field, mode, density, onChange }: FieldRendererProps) {
+  if (mode === "view") {
+    return (
+      <Badge variant={value ? "success" : "muted"} size={badgeSize(density)} className={viewBadgeClass(density)}>
+        {value ? "Yes" : "No"}
+      </Badge>
+    );
+  }
+  if (density === "compact" || density === "table" || density === "sheet") {
+    return (
+      <Switch
+        checked={Boolean(value)}
+        onCheckedChange={(checked) => onChange?.(checked)}
+      />
+    );
+  }
+  const isOn = Boolean(value);
+  return (
+    <button
+      type="button"
+      onClick={() => onChange?.(!isOn)}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+        isOn
+          ? "border-transparent bg-foreground text-background"
+          : "border-border bg-background text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+      )}
+    >
+      {isOn ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+      {field.label ?? field.name}
+    </button>
   );
 }
 
@@ -160,6 +227,7 @@ function MoneyRenderer({ value, mode, density, onChange, error }: FieldRendererP
 
 function EnumRenderer({ value, field, mode, density, onChange, error }: FieldRendererProps) {
   const domainCode = field.enum_domain_code ?? "";
+  const valueCase = readLookupValueCase(field.lookup_config);
   const { data } = useLookupDomain(domainCode, { enabled: mode === "view" && !!domainCode });
 
   if (mode === "view") {
@@ -167,35 +235,63 @@ function EnumRenderer({ value, field, mode, density, onChange, error }: FieldRen
       return <span className={viewEmptyClass(density)}>—</span>;
     }
     const code = String(value);
-    const label = data?.values?.find((v) => v.code === code)?.name ?? humanizeToken(code);
+    const codeLower = code.toLowerCase();
+    const label = data?.values?.find((v) => v.code.toLowerCase() === codeLower)?.name ?? humanizeToken(code);
     return <Badge variant="outline" size={badgeSize(density)} className={viewBadgeClass(density)}>{label}</Badge>;
   }
   return (
     <LookupSelect
       domainCode={domainCode}
       value={String(value ?? "")}
+      valueCase={valueCase}
       onChange={(v) => onChange?.(v)}
       error={error}
     />
   );
 }
 
+type LookupValueCase = "preserve" | "upper" | "lower";
+
+function readLookupValueCase(lookupConfig: Record<string, unknown> | null | undefined): LookupValueCase {
+  const raw = typeof lookupConfig?.["value_case"] === "string"
+    ? lookupConfig["value_case"].trim().toLowerCase()
+    : "";
+  if (raw === "upper" || raw === "uppercase") return "upper";
+  if (raw === "lower" || raw === "lowercase") return "lower";
+  return "preserve";
+}
+
+function applyLookupValueCase(value: string, valueCase: LookupValueCase): string {
+  if (valueCase === "upper") return value.toUpperCase();
+  if (valueCase === "lower") return value.toLowerCase();
+  return value;
+}
+
 interface LookupSelectProps {
   domainCode: string;
   value: string;
+  valueCase?: LookupValueCase;
   onChange: (value: string) => void;
   error?: string;
 }
 
-function LookupSelect({ domainCode, value, onChange, error }: LookupSelectProps) {
+function LookupSelect({ domainCode, value, valueCase = "preserve", onChange, error }: LookupSelectProps) {
   const { data, isLoading } = useLookupDomain(domainCode);
   const activeValues = (data?.values ?? [])
     .filter((v) => v.status === "active")
     .sort((a, b) => a.sort_order - b.sort_order);
 
+  // Normalize to lowercase so stored uppercase values (e.g. entity_class='MASTER')
+  // match the lowercase lookup codes required by the DB constraint.
+  const normalizedValue = value ? value.toLowerCase() : value;
+
   return (
     <div className="space-y-1">
-      <Select value={value} onValueChange={onChange} disabled={isLoading || !domainCode}>
+      <Select
+        value={normalizedValue}
+        onValueChange={(next) => onChange(applyLookupValueCase(next, valueCase))}
+        disabled={isLoading || !domainCode}
+      >
         <SelectTrigger className={error ? "border-destructive" : undefined}>
           <SelectValue placeholder={isLoading ? "Loading…" : "Select…"} />
         </SelectTrigger>
@@ -418,7 +514,7 @@ function ReferenceRenderer({ value, field, mode, density, formData, onChange, er
     );
   }
 
-  if (entityCode === "spend_category") {
+  if (entityCode === "commodity_category") {
     return (
       <SpendCategoryPicker
         value={uuid}
@@ -685,8 +781,11 @@ export function registerDefaults(): void {
   registerFieldRenderer("decimal", NumberRenderer);
   registerFieldRenderer("numeric", NumberRenderer);
 
-  // Boolean
-  registerFieldRenderer("boolean", BooleanRenderer);
+  // Boolean — data_type default → Pattern A (switch card)
+  registerFieldRenderer("boolean", BooleanSwitchCardRenderer);
+  registerFieldRenderer("boolean_switch_card", BooleanSwitchCardRenderer);
+  // Boolean — Pattern C (pressable chip)
+  registerFieldRenderer("boolean_chip", BooleanChipRenderer);
 
   // Date family
   registerFieldRenderer("date", DateRenderer);

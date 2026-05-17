@@ -487,15 +487,135 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-ALTER TABLE control.classification_to_intent_rule DROP CONSTRAINT IF EXISTS cir_tenant_fk;
+ALTER TABLE control.commodity_classification_to_intent_rule DROP CONSTRAINT IF EXISTS cir_tenant_fk;
 DO $$ BEGIN
-    ALTER TABLE control.classification_to_intent_rule
+    ALTER TABLE control.commodity_classification_to_intent_rule
         ADD CONSTRAINT cir_tenant_fk
         FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 ALTER TABLE control.intent_to_accounting_profile_rule DROP CONSTRAINT IF EXISTS iprr_tenant_fk;
+-- commodity_category policy external references
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_intent_fk
+    FOREIGN KEY (tenant_id, business_intent_id)
+    REFERENCES master.business_intent (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_company_fk
+    FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_gl_fk
+    FOREIGN KEY (tenant_id, default_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_tax_group_fk
+    FOREIGN KEY (tenant_id, default_tax_group_id) REFERENCES control.tax_group (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_asset_class_fk
+    FOREIGN KEY (tenant_id, default_asset_class_id) REFERENCES master.asset_class (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_budget_profile_fk
+    FOREIGN KEY (tenant_id, default_budget_profile_id) REFERENCES master.budget_profile (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_capex_currency_fk
+    FOREIGN KEY (capex_screening_currency) REFERENCES shared.currency (code);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_buy_policy ADD CONSTRAINT ccbpol_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_intent_fk
+    FOREIGN KEY (tenant_id, business_intent_id)
+    REFERENCES master.business_intent (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_company_fk
+    FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_revenue_gl_fk
+    FOREIGN KEY (tenant_id, default_revenue_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_defrev_gl_fk
+    FOREIGN KEY (tenant_id, default_deferred_revenue_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_unbilled_gl_fk
+    FOREIGN KEY (tenant_id, default_unbilled_ar_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_tax_group_fk
+    FOREIGN KEY (tenant_id, default_tax_group_id) REFERENCES control.tax_group (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_accounting_profile_fk
+    FOREIGN KEY (tenant_id, default_accounting_profile_id) REFERENCES master.accounting_profile (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_cogs_profile_fk
+    FOREIGN KEY (tenant_id, paired_cogs_profile_id) REFERENCES master.accounting_profile (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_sell_policy ADD CONSTRAINT ccselpol_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.commodity_category_inventory_policy ADD CONSTRAINT ccipol_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_inventory_policy ADD CONSTRAINT ccipol_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_inventory_policy ADD CONSTRAINT ccipol_company_fk
+    FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_inventory_policy ADD CONSTRAINT ccipol_inventory_gl_fk
+    FOREIGN KEY (tenant_id, default_inventory_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_inventory_policy ADD CONSTRAINT ccipol_wip_gl_fk
+    FOREIGN KEY (tenant_id, default_wip_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_inventory_policy ADD CONSTRAINT ccipol_cogs_gl_fk
+    FOREIGN KEY (tenant_id, default_cogs_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_inventory_policy ADD CONSTRAINT ccipol_ppv_gl_fk
+    FOREIGN KEY (tenant_id, default_price_variance_gl_account_id) REFERENCES master.gl_account (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.commodity_category_inventory_policy ADD CONSTRAINT ccipol_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.supplier_posting_override ADD CONSTRAINT spo_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN
+    DELETE FROM control.supplier_posting_override spo
+     WHERE NOT EXISTS (
+        SELECT 1
+          FROM master.company_code_supplier_profile sp
+         WHERE sp.tenant_id = spo.tenant_id
+           AND sp.id = spo.supplier_profile_id
+     );
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN ALTER TABLE control.supplier_posting_override ADD CONSTRAINT spo_profile_fk
+    FOREIGN KEY (tenant_id, supplier_profile_id)
+    REFERENCES master.company_code_supplier_profile (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.supplier_posting_override ADD CONSTRAINT spo_gl_account_fk
+    FOREIGN KEY (tenant_id, gl_account_id) REFERENCES master.gl_account (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.supplier_posting_override ADD CONSTRAINT spo_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_table THEN NULL; END $$;
+
 DO $$ BEGIN
     ALTER TABLE control.intent_to_accounting_profile_rule
         ADD CONSTRAINT iprr_tenant_fk
@@ -678,9 +798,9 @@ EXCEPTION
     WHEN undefined_table  THEN NULL;
 END $$;
 
--- classification_to_intent_rule → master.business_intent
+-- commodity_classification_to_intent_rule → master.business_intent
 DO $$ BEGIN
-    ALTER TABLE control.classification_to_intent_rule
+    ALTER TABLE control.commodity_classification_to_intent_rule
         ADD CONSTRAINT cir_intent_fk
         FOREIGN KEY (resolved_intent_id) REFERENCES master.business_intent (id);
 EXCEPTION
@@ -759,21 +879,21 @@ DO $$ BEGIN ALTER TABLE control.document_sequence_counter ADD CONSTRAINT dscc_co
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
--- ── §CLSCFG  control.classification_config ───────────────────────────────────
-DO $$ BEGIN ALTER TABLE control.classification_config ADD CONSTRAINT clscfg_tenant_fk
+-- ── §CLSCFG  control.commodity_classification_config ───────────────────────────────────
+DO $$ BEGIN ALTER TABLE control.commodity_classification_config ADD CONSTRAINT clscfg_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
--- ── §CCRR  control.commodity_to_spend_category_rule ───────────────────────────
-DO $$ BEGIN ALTER TABLE control.commodity_to_spend_category_rule ADD CONSTRAINT ccrr_tenant_fk
+-- ── §CCRR  control.commodity_code_to_category_rule ───────────────────────────
+DO $$ BEGIN ALTER TABLE control.commodity_code_to_category_rule ADD CONSTRAINT ccrr_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Composite FK — routing rule targets a spend_category within the same tenant
-DO $$ BEGIN ALTER TABLE control.commodity_to_spend_category_rule ADD CONSTRAINT ccrr_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id)
-    REFERENCES master.spend_category (tenant_id, id) ON DELETE RESTRICT;
+-- Composite FK — routing rule targets a commodity_category within the same tenant
+DO $$ BEGIN ALTER TABLE control.commodity_code_to_category_rule ADD CONSTRAINT ccrr_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
@@ -805,9 +925,11 @@ DO $$ BEGIN ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_company_fk
     FOREIGN KEY (tenant_id, scope_company_code_id)
     REFERENCES master.company_code (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_spend_cat_fk
-    FOREIGN KEY (tenant_id, scope_spend_category_id)
-    REFERENCES master.spend_category (tenant_id, id);
+DO $$ BEGIN
+ALTER TABLE control.tax_rate_schedule DROP CONSTRAINT IF EXISTS trs_spend_cat_fk;
+ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_commodity_category_fk
+    FOREIGN KEY (tenant_id, scope_commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
@@ -870,6 +992,14 @@ DO $$ BEGIN
         ADD CONSTRAINT fk_fl_company_code
             FOREIGN KEY (tenant_id, company_code_id)
                 REFERENCES master.company_code (tenant_id, id)
+            ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE control.forecast_line
+        ADD CONSTRAINT fk_fl_commodity_category
+            FOREIGN KEY (tenant_id, commodity_category_id)
+                REFERENCES master.commodity_category (tenant_id, id)
             ON DELETE SET NULL ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 

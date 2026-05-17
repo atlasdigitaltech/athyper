@@ -367,8 +367,8 @@ export const EntityListQueryStateSchema = z.object({
 
   /** Current page (1-based). Omit for page 1 (cleaner URLs). */
   page: z.number().int().positive().optional(),
-  /** Records per page. Server hard cap: 200. */
-  pageSize: z.number().int().positive().max(200).optional(),
+  /** Records per page. Server hard cap: 500; lower tenant limits may come from api.pagination.max_page_size. */
+  pageSize: z.number().int().positive().max(500).optional(),
 
   // ── View ──────────────────────────────────────────────────────
 
@@ -538,9 +538,9 @@ export const EntityListPresentationConfigSchema = z.object({
 
   /**
    * Default page size.
-   * Falls back to 25 when absent. Server hard cap: 200.
+   * Falls back to 25 when absent. Server default hard cap: 500.
    */
-  defaultPageSize: z.number().int().positive().max(200).optional(),
+  defaultPageSize: z.number().int().positive().max(500).optional(),
 
   /** Default sort applied when no user/view sort is active. */
   defaultSort: z.array(EntityListSortEntrySchema).optional(),

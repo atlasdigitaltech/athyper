@@ -12,7 +12,7 @@
 --      template becomes the catch-all for purchase_invoice (replacing the
 --      inv_std_approval fallback that requires supervisor resolution).
 --
--- Depends on: 001_invoice_v2.sql (entity_version), 016_purchase_invoice_flow.sql
+-- Depends on: 001_invoice.sql (entity_version), 016_purchase_invoice_flow.sql
 --             (entity_field bindings already present), 003_invoice_workflow.sql
 --             (workflow_definition seeded with nil-UUID placeholder tenant_id).
 -- Idempotent: WHERE NOT EXISTS for flow+step, ON CONFLICT DO NOTHING for template,

@@ -13,7 +13,7 @@
  *   DELETE /api/platform/classifications/:ownerType/:ownerId/:classificationId
  *   DELETE /api/platform/classifications/:ownerType/:ownerId
  *
- * Valid ownerType:          product | item_category | spend_category | item | customer | supplier
+ * Valid ownerType:          product | commodity_category | spend_category | item | customer | supplier
  * Valid classificationType: commodity | industry
  *
  * Bulk POST accepts items with either:
@@ -54,7 +54,7 @@ export interface ClassificationRoutesDeps {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const VALID_OWNER_TYPES = new Set([
-  "product", "item_category", "spend_category", "item", "customer", "supplier",
+  "product", "commodity_category", "spend_category", "item", "customer", "supplier",
 ]);
 
 const VALID_CLASSIFICATION_TYPES = new Set(["commodity", "industry"]);

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpDown, ChevronDown, Copy, Download, Eye, FileText, PackagePlus, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowUpDown, ChevronDown, Copy, Download, Eye, FileText, PackagePlus, Pencil, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +44,7 @@ type AddLineMode = "manual" | "catalog";
 const PROCURE_COLUMN_CANDIDATES: string[][] = [
   ["line_no", "line_number"],
   ["item_id", "item_code"],
-  ["spend_category_id"],
+  ["commodity_category_id"],
   ["business_intent_id"],
   ["item_description", "description"],
   ["quantity", "qty"],
@@ -163,7 +163,7 @@ function applyOrganizerFilter(
         break;
       }
       case "missing_classification":
-        if (!recordValue(lineRec, "spend_category_id") && !recordValue(lineRec, "item_id")) return true;
+        if (!recordValue(lineRec, "commodity_category_id") && !recordValue(lineRec, "item_id")) return true;
         break;
       default:
         // kind not resolvable client-side — no-op, treat as passing
@@ -281,6 +281,7 @@ function isUnmatchedLine(line: DocumentLine): boolean {
 
 let draftLineCounter = 0;
 const DRAFT_LINE_ID_FIELD = "__draft_line_id";
+const DRAFT_PURCHASE_INVOICE_CLASSIFY_URL = "/api/finance/ap/invoices/draft-lines/classify";
 
 function createDraftLineId(): string {
   draftLineCounter += 1;
@@ -319,6 +320,74 @@ function withNewDraftLineId(payload: Record<string, unknown>): DocumentLine {
 
 function isBlankDraftValue(value: unknown): boolean {
   return value == null || value === "";
+}
+
+function isPurchaseInvoiceEntity(entityCode: string): boolean {
+  return entityCode.replace(/-/g, "_").toLowerCase() === "purchase_invoice";
+}
+
+function draftLineHasSourceDocument(line: DocumentLine): boolean {
+  const record = line as LineRecord;
+  return Boolean(
+    recordValue(record, "commitment_line_id") ||
+    recordValue(record, "goods_receipt_line_id") ||
+    recordValue(record, "ses_line_id")
+  );
+}
+
+function classificationDecisionFromResponse(body: Record<string, unknown>): Record<string, unknown> | null {
+  const data = isObjectRecord(body["data"]) ? body["data"] : null;
+  const candidates = [
+    body["classification"],
+    body["decision"],
+    data?.["classification"] ?? data?.["decision"],
+  ];
+  for (const candidate of candidates) {
+    if (isObjectRecord(candidate) && candidate["status"]) return candidate;
+  }
+  return null;
+}
+
+function applyClassificationDecision(
+  line: DocumentLine,
+  decision: Record<string, unknown>,
+): DocumentLine {
+  const lineRecord = line as LineRecord;
+  const data = isObjectRecord(lineRecord.data) ? lineRecord.data : {};
+  const selected = isObjectRecord(decision["selected"]) ? decision["selected"] : {};
+  const commodity = isObjectRecord(selected["line_commodity_code"])
+    ? selected["line_commodity_code"]
+    : null;
+  const nextData: Record<string, unknown> = { ...data };
+  const next: Record<string, unknown> = {
+    ...lineRecord,
+    classification_decision: decision,
+    classification_status: decision["status"],
+  };
+
+  const commodityCategoryId = selected["commodity_category_id"];
+  if (commodityCategoryId != null) next["commodity_category_id"] = commodityCategoryId;
+  const businessIntentId = selected["business_intent_id"];
+  if (businessIntentId != null) next["business_intent_id"] = businessIntentId;
+
+  const domain = typeof commodity?.["domain_code"] === "string"
+    ? commodity["domain_code"].toLowerCase()
+    : "";
+  const code = commodity?.["code"];
+  if (code != null && domain === "unspsc") {
+    next["unspsc_code"] = code;
+    nextData["unspsc_code"] = code;
+  }
+  if (code != null && domain === "hs") {
+    next["hs_code"] = code;
+    next["trade_code"] = code;
+    nextData["hs_code"] = code;
+  }
+
+  return asDraftDocumentLine({
+    ...next,
+    data: nextData,
+  });
 }
 
 function firstDraftValue(record: LineRecord, fieldNames: Array<string | undefined>): unknown {
@@ -443,6 +512,8 @@ export function LinesGrid(props: LinesGridProps) {
     entityCode,
     recordId: parentRecordId,
     lineEntityCode: lineEntityCodeOverride,
+    companyCodeId,
+    record,
     currencyCode = "USD",
     lines,
     distributions,
@@ -525,6 +596,7 @@ export function LinesGrid(props: LinesGridProps) {
   const canMutateLines = editMode === true || draftMode === true;
   const canUseCatalogItems = catalogFeatureEnabled(entity);
   const showCatalogAddOption = lineVariant === "procure" && supportsCatalogItemMode(lineEntity);
+  const canReclassifySelection = lineVariant === "procure" && isPurchaseInvoiceEntity(entityCode);
 
   const singleSelectedLine = useMemo(
     () => selectedIds.size === 1
@@ -700,6 +772,41 @@ export function LinesGrid(props: LinesGridProps) {
     setDrawerReadOnly(false);
   }
 
+  async function classifyDraftProcureLine(line: DocumentLine, mode = "preview"): Promise<DocumentLine> {
+    if (
+      !draftMode ||
+      lineVariant !== "procure" ||
+      !isPurchaseInvoiceEntity(entityCode) ||
+      draftLineHasSourceDocument(line)
+    ) {
+      return line;
+    }
+
+    try {
+      const res = await relayMutate(DRAFT_PURCHASE_INVOICE_CLASSIFY_URL, {
+        method: "POST",
+        body: JSON.stringify({ record: record ?? {}, line, mode }),
+      });
+      if (!res.ok) return line;
+      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+      const decision = classificationDecisionFromResponse(body);
+      return decision ? applyClassificationDecision(line, decision) : line;
+    } catch {
+      return line;
+    }
+  }
+
+  async function classifyAndPublishDraftLine(line: DocumentLine, mode = "preview"): Promise<Record<string, unknown> | void> {
+    const lineId = recordId(line as LineRecord);
+    if (!lineId) return undefined;
+    const classified = await classifyDraftProcureLine(line, mode);
+    publishDraftLines(displayLines.map((existing) =>
+      recordId(existing as LineRecord) === lineId ? classified : existing,
+    ));
+    const decision = recordValue(classified as LineRecord, "classification_decision");
+    return isObjectRecord(decision) ? decision : undefined;
+  }
+
   function applyDraftPatchToSelection(patch: Record<string, unknown>) {
     const next = displayLines.map((line) => {
       const lineId = recordId(line as LineRecord);
@@ -714,39 +821,44 @@ export function LinesGrid(props: LinesGridProps) {
     clearSelection();
   }
 
-  function handleDraftComposerSubmit(payload: Record<string, unknown>) {
+  async function handleDraftComposerSubmit(payload: Record<string, unknown>) {
     const editingId = composerLine ? recordId(composerLine as LineRecord) : "";
     if (editingId) {
-      publishDraftLines(displayLines.map((line) => {
+      const nextLines = await Promise.all(displayLines.map(async (line) => {
         const lineId = recordId(line as LineRecord);
         if (lineId !== editingId) return line;
         const merged = mergeDraftLineRecord(line, payload);
         const normalized = lineVariant === "procure"
           ? normalizeProcureDraftLine(merged, lineEntity, displayLines, line)
           : merged;
-        return asDraftDocumentLine({ ...normalized, id: editingId, [DRAFT_LINE_ID_FIELD]: editingId });
+        const nextLine = asDraftDocumentLine({ ...normalized, id: editingId, [DRAFT_LINE_ID_FIELD]: editingId });
+        return classifyDraftProcureLine(nextLine);
       }));
+      publishDraftLines(nextLines);
     } else {
       const normalized = lineVariant === "procure"
         ? normalizeProcureDraftLine(payload, lineEntity, displayLines)
         : payload;
-      publishDraftLines([...displayLines, withNewDraftLineId(normalized)]);
+      const nextLine = await classifyDraftProcureLine(withNewDraftLineId(normalized));
+      publishDraftLines([...displayLines, nextLine]);
     }
     setComposerLine(null);
   }
 
-  function handleDraftEditorSubmit(payload: Record<string, unknown>) {
+  async function handleDraftEditorSubmit(payload: Record<string, unknown>) {
     const editingId = drawerLine ? recordId(drawerLine as LineRecord) : "";
     if (!editingId) return;
-    publishDraftLines(displayLines.map((line) => {
+    const nextLines = await Promise.all(displayLines.map(async (line) => {
       const lineId = recordId(line as LineRecord);
       if (lineId !== editingId) return line;
       const merged = mergeDraftLineRecord(line, payload);
       const normalized = lineVariant === "procure"
         ? normalizeProcureDraftLine(merged, lineEntity, displayLines, line)
         : merged;
-      return asDraftDocumentLine({ ...normalized, id: editingId, [DRAFT_LINE_ID_FIELD]: editingId });
+      const nextLine = asDraftDocumentLine({ ...normalized, id: editingId, [DRAFT_LINE_ID_FIELD]: editingId });
+      return classifyDraftProcureLine(nextLine);
     }));
+    publishDraftLines(nextLines);
     setDrawerLine(null);
   }
 
@@ -803,6 +915,38 @@ export function LinesGrid(props: LinesGridProps) {
       );
       setSelectedIds(new Set());
       onRefresh?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reclassifySelection() {
+    if (!canReclassifySelection) return;
+    const rows = selectedLines(displayLines, selectedIds);
+    if (rows.length === 0) return;
+
+    setBusy(true);
+    try {
+      if (draftMode) {
+        const selectedIdSet = new Set(rows.map((line) => recordId(line as LineRecord)));
+        const nextLines = await Promise.all(displayLines.map((line) =>
+          selectedIdSet.has(recordId(line as LineRecord))
+            ? classifyDraftProcureLine(line, "preview")
+            : line,
+        ));
+        publishDraftLines(nextLines);
+      } else {
+        await Promise.all(rows.map((line) => {
+          const lineId = recordId(line as LineRecord);
+          if (!lineId) return Promise.resolve();
+          return relayMutate(
+            `/api/finance/ap/invoices/${encodeURIComponent(parentRecordId)}/lines/${encodeURIComponent(lineId)}/classify?mode=save`,
+            { method: "POST" },
+          );
+        }));
+        onRefresh?.();
+      }
+      setSelectedIds(new Set());
     } finally {
       setBusy(false);
     }
@@ -1035,6 +1179,14 @@ export function LinesGrid(props: LinesGridProps) {
                 <div className="w-px self-stretch bg-border/50" />
               </>
             )}
+            {canReclassifySelection && (
+              <>
+                <button type="button" onClick={() => void reclassifySelection()} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/60 disabled:opacity-40">
+                  <RefreshCw className={`h-3.5 w-3.5${busy ? " animate-spin" : ""}`} />Reclassify
+                </button>
+                <div className="w-px self-stretch bg-border/50" />
+              </>
+            )}
             <button type="button" onClick={() => void duplicateSelection()} disabled={busy} className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/60 disabled:opacity-40">
               <Copy className="h-3.5 w-3.5" />Copy
             </button>
@@ -1089,6 +1241,11 @@ export function LinesGrid(props: LinesGridProps) {
                     <Pencil className="h-4.5 w-4.5 text-muted-foreground" />Mass edit {selectedIds.size} lines
                   </button>
                 )}
+                {canReclassifySelection && (
+                  <button type="button" onClick={() => { void reclassifySelection(); }} disabled={busy} className="flex w-full items-center gap-3.5 px-5 py-4 text-sm font-medium text-foreground active:bg-muted/60 disabled:opacity-40">
+                    <RefreshCw className={`h-4.5 w-4.5 text-muted-foreground${busy ? " animate-spin" : ""}`} />Reclassify
+                  </button>
+                )}
                 <button type="button" onClick={() => { void duplicateSelection(); }} disabled={busy} className="flex w-full items-center gap-3.5 px-5 py-4 text-sm font-medium text-foreground active:bg-muted/60 disabled:opacity-40">
                   <Copy className="h-4.5 w-4.5 text-muted-foreground" />Copy
                 </button>
@@ -1118,6 +1275,8 @@ export function LinesGrid(props: LinesGridProps) {
           line={drawerLine}
           distributions={[]}
           currencyCode={currencyCode}
+          companyCodeId={companyCodeId}
+          record={record}
           entityCode={entityCode}
           recordId={parentRecordId}
           lineEntity={lineEntity}
@@ -1128,6 +1287,7 @@ export function LinesGrid(props: LinesGridProps) {
           canEdit={canMutateLines && drawerReadOnly}
           onPromoteToEdit={() => setDrawerReadOnly(false)}
           onDraftSubmit={draftMode ? handleDraftEditorSubmit : undefined}
+          onDraftClassify={draftMode ? classifyAndPublishDraftLine : undefined}
           hasPreviousLine={hasPreviousDrawerLine}
           hasNextLine={hasNextDrawerLine}
           onPreviousLine={() => navigateDrawerLine(-1)}
@@ -1174,6 +1334,8 @@ export function LinesGrid(props: LinesGridProps) {
           entityCode={entityCode}
           recordId={parentRecordId}
           currencyCode={currencyCode}
+          companyCodeId={companyCodeId}
+          record={record}
           lineEntity={lineEntity}
           lineEntityCode={lineEntityCode}
           composerMode={addLineMode}
@@ -1189,6 +1351,7 @@ export function LinesGrid(props: LinesGridProps) {
           entityCode={entityCode}
           recordId={parentRecordId}
           currencyCode={currencyCode}
+          companyCodeId={companyCodeId}
           lineEntity={lineEntity}
           lineEntityCode={lineEntityCode}
           onMutated={draftMode ? undefined : onRefresh}

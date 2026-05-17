@@ -1,5 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from "react";
-import { Slot } from "@radix-ui/react-slot";
+import { Slot, Slottable } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@athyper/theme/utils";
 
@@ -52,7 +52,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             <path d="M12 2v4m0 12v4m10-10h-4M6 12H2m15.07-5.07-2.83 2.83M9.76 14.24l-2.83 2.83m11.14 0-2.83-2.83M9.76 9.76 6.93 6.93" />
           </svg>
         )}
-        {children}
+        {asChild ? <Slottable>{children}</Slottable> : children}
       </Comp>
     );
   },

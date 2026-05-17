@@ -376,7 +376,7 @@ WHERE name = 'payment_term' AND tenant_id IS NULL
 UPDATE control.entity
 SET display_config = jsonb_build_object(
     'detail_renderer',    'master',
-    'list_columns',       '["code","name","item_category_id","unit_of_measure","status"]'::jsonb,
+    'list_columns',       '["code","name","commodity_category_id","unit_of_measure","status"]'::jsonb,
     'default_sort_field', 'name',
     'default_sort_order', 'asc'
 )
@@ -387,47 +387,13 @@ WHERE name = 'product' AND tenant_id IS NULL
 UPDATE control.entity
 SET display_config = jsonb_build_object(
     'detail_renderer',    'master',
-    'list_columns',       '["code","name","item_category_id","spend_category_id","unit_of_measure","status"]'::jsonb,
+    'list_columns',       '["code","name","commodity_category_id","unit_of_measure","status"]'::jsonb,
     'default_sort_field', 'name',
     'default_sort_order', 'asc'
 )
 WHERE name = 'item' AND tenant_id IS NULL
   AND display_config->>'list_columns' = '["code","name","status"]';
 
--- ── item_category ─────────────────────────────────────────────────────────────
-UPDATE control.entity
-SET display_config = jsonb_build_object(
-    'detail_renderer',    'master',
-    'list_columns',       '["code","name","parent_id","status"]'::jsonb,
-    'default_sort_field', 'name',
-    'default_sort_order', 'asc'
-)
-WHERE name = 'item_category' AND tenant_id IS NULL
-  AND display_config->>'list_columns' = '["code","name","status"]';
-
--- ── spend_category ────────────────────────────────────────────────────────────
-UPDATE control.entity
-SET display_config = jsonb_build_object(
-    'detail_renderer',    'master',
-    'list_columns',       '["code","name","parent_id","gl_account_id","status"]'::jsonb,
-    'default_sort_field', 'name',
-    'default_sort_order', 'asc'
-)
-WHERE name = 'spend_category' AND tenant_id IS NULL
-  AND display_config->>'list_columns' = '["code","name","status"]';
-
--- company_code_spend_policy
-UPDATE control.entity
-SET display_config = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
-    'detail_renderer',    'master',
-    'list_columns',       '["company_code_id","spend_category_id","mapping_mode","default_intent_id","default_gl_account_id","override_visibility","status"]'::jsonb,
-    'search_fields',      '["mapping_mode","capex_screening_currency","override_visibility","status"]'::jsonb,
-    'default_sort_field', 'priority',
-    'default_sort_order', 'asc'
-),
-natural_key_fields = ARRAY['company_code_id','spend_category_id']
-WHERE name = 'company_code_spend_policy'
-  AND tenant_id IS NULL;
 
 -- ── content_item ──────────────────────────────────────────────────────────────
 UPDATE control.entity

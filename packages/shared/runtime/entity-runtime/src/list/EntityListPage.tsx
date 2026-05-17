@@ -152,6 +152,22 @@ const B5_TO_LEGACY_MODE: Record<string, ViewMode> = {
 };
 
 const DESKTOP_VIEW_QUERY = "(min-width: 1280px)";
+const LIST_PAGE_SIZE_OPTIONS = [20, 50, 100, 500] as const;
+const DEFAULT_LOAD_MORE_SIZE = 50;
+const DEFAULT_MAX_LIST_PAGE_SIZE = 500;
+
+interface ParameterSnapshot {
+  values?: Record<string, unknown>;
+}
+
+function positiveIntegerParam(
+  snapshot: ParameterSnapshot | undefined,
+  code: string,
+  fallback: number,
+): number {
+  const value = Number(snapshot?.values?.[code]);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+}
 
 function useIsDesktopViewport(): boolean | undefined {
   const [isDesktop, setIsDesktop] = useState<boolean | undefined>(undefined);
@@ -1896,6 +1912,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     setFilters,
     setGroup,
     setPage,
+    setPageSize,
     setColumns,
     setViewMode,
     setDensity,
@@ -1911,6 +1928,16 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const { data: entity,     isLoading: metaLoading, error: metaError } = useCompiledEntity(entityCode);
   const { data: operations }                                            = useEntityOperations(entityCode);
   const { data: savedViews = [] }                                       = useSavedViews(entityCode);
+  const { data: paginationParams } = useQuery<ParameterSnapshot>({
+    queryKey: ["iam", "parameters", "effective", "api.pagination"],
+    queryFn: async () => {
+      const res = await fetch("/api/iam/parameters/effective?namespace=api.pagination", { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load pagination parameters");
+      return res.json() as Promise<ParameterSnapshot>;
+    },
+    staleTime: 60 * 1000,
+    retry: false,
+  });
 
   // A1 — Kanban column order: lifecycle state order takes priority; enum sort_order is fallback.
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -2299,10 +2326,43 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
     .filter(Boolean);
 
   // Server pagination from API response (server emits snake_case keys)
-  const pagination     = listData?.pagination as { total?: number; page?: number; total_pages?: number } | undefined;
+  const pagination     = listData?.pagination as { total?: number; page?: number; page_size?: number; total_pages?: number } | undefined;
   const serverTotal    = pagination?.total;
   const serverPage     = pagination?.page;
+  const serverPageSize = pagination?.page_size;
   const serverTotalPgs = pagination?.total_pages;
+  const maxListPageSize = Math.min(
+    DEFAULT_MAX_LIST_PAGE_SIZE,
+    positiveIntegerParam(
+      paginationParams,
+      "api.pagination.max_page_size",
+      DEFAULT_MAX_LIST_PAGE_SIZE,
+    ),
+  );
+  const loadMoreSize = Math.min(
+    maxListPageSize,
+    positiveIntegerParam(
+      paginationParams,
+      "api.pagination.load_more_increment",
+      DEFAULT_LOAD_MORE_SIZE,
+    ),
+  );
+  const currentPageSize = Math.min(
+    maxListPageSize,
+    serverPageSize ?? state.pageSize ?? presentationConfig?.defaultPageSize ?? 25,
+  );
+  const configuredPageSizeOptions = LIST_PAGE_SIZE_OPTIONS.filter((option) => option <= maxListPageSize);
+  const pageSizeOptions = configuredPageSizeOptions.length > 0
+    ? configuredPageSizeOptions
+    : [currentPageSize];
+  const handlePageSizeChange = (nextPageSize: number) => {
+    setPageSize(Math.min(maxListPageSize, Math.max(1, nextPageSize)));
+  };
+  const handleLoadMore = () => {
+    const loadMoreLimit = Math.min(maxListPageSize, serverTotal ?? maxListPageSize);
+    const nextPageSize = Math.min(loadMoreLimit, currentPageSize + loadMoreSize);
+    if (nextPageSize > currentPageSize) setPageSize(nextPageSize);
+  };
 
   // Facets from API response — populated when filterPanelOpen = true and facets=cheap
   const facetData = (listData?.facets ?? {}) as Record<string, { value: string; count: number }[]>;
@@ -2753,7 +2813,12 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
               selectable
               rowSelection={rowSelection}
               onRowSelectionChange={setRowSelection}
-              pageSize={state.pageSize ?? presentationConfig?.defaultPageSize ?? 25}
+              pageSize={currentPageSize}
+              pageSizeOptions={pageSizeOptions}
+              onPageSizeChange={handlePageSizeChange}
+              loadMoreSize={loadMoreSize}
+              maxPageSize={maxListPageSize}
+              onLoadMore={handleLoadMore}
               onRowClick={handleRowClick}
               onRowContextMenu={(row, e) => handleRowContextMenu(row as Record<string, unknown>, e)}
               sortingState={tableSortingState}

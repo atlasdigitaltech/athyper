@@ -307,9 +307,10 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-    ALTER TABLE document.accounting_distribution ADD CONSTRAINT ad_spend_category_fk
-        FOREIGN KEY (tenant_id, spend_category_id)
-        REFERENCES master.spend_category (tenant_id, id);
+    ALTER TABLE document.accounting_distribution DROP CONSTRAINT IF EXISTS ad_spend_category_fk;
+    ALTER TABLE document.accounting_distribution ADD CONSTRAINT ad_commodity_category_fk
+        FOREIGN KEY (tenant_id, commodity_category_id)
+        REFERENCES master.commodity_category (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -401,9 +402,11 @@ DO $$ BEGIN ALTER TABLE document.commitment_line ADD CONSTRAINT cl_parent_line_f
     FOREIGN KEY (tenant_id, parent_contract_line_id)
     REFERENCES document.commitment_line (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE document.commitment_line ADD CONSTRAINT cl_spend_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id)
-    REFERENCES master.spend_category (tenant_id, id);
+DO $$ BEGIN
+ALTER TABLE document.commitment_line DROP CONSTRAINT IF EXISTS cl_spend_category_fk;
+ALTER TABLE document.commitment_line ADD CONSTRAINT cl_commodity_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE document.commitment_line ADD CONSTRAINT cl_business_intent_fk
     FOREIGN KEY (tenant_id, business_intent_id)
@@ -636,9 +639,11 @@ DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_ses_li
     FOREIGN KEY (tenant_id, ses_line_id)
     REFERENCES document.service_entry_sheet_line (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_spend_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id)
-    REFERENCES master.spend_category (tenant_id, id);
+DO $$ BEGIN
+ALTER TABLE document.purchase_invoice_line DROP CONSTRAINT IF EXISTS pil_spend_category_fk;
+ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_commodity_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE document.purchase_invoice_line ADD CONSTRAINT pil_business_intent_fk
     FOREIGN KEY (tenant_id, business_intent_id)
@@ -1257,9 +1262,11 @@ DO $$ BEGIN ALTER TABLE document.purchase_requisition_line ADD CONSTRAINT prl_pr
     FOREIGN KEY (tenant_id, purchase_requisition_id)
     REFERENCES document.purchase_requisition (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE document.purchase_requisition_line ADD CONSTRAINT prl_spend_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id)
-    REFERENCES master.spend_category (tenant_id, id);
+DO $$ BEGIN
+ALTER TABLE document.purchase_requisition_line DROP CONSTRAINT IF EXISTS prl_spend_category_fk;
+ALTER TABLE document.purchase_requisition_line ADD CONSTRAINT prl_commodity_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE document.purchase_requisition_line ADD CONSTRAINT prl_business_intent_fk
     FOREIGN KEY (tenant_id, business_intent_id)
@@ -1453,9 +1460,11 @@ DO $$ BEGIN ALTER TABLE document.service_entry_sheet_line ADD CONSTRAINT sesl_fu
     FOREIGN KEY (tenant_id, fulfillment_id)
     REFERENCES ledger.commitment_fulfillment (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE document.service_entry_sheet_line ADD CONSTRAINT sesl_spend_category_fk
-    FOREIGN KEY (tenant_id, spend_category_id)
-    REFERENCES master.spend_category (tenant_id, id);
+DO $$ BEGIN
+ALTER TABLE document.service_entry_sheet_line DROP CONSTRAINT IF EXISTS sesl_spend_category_fk;
+ALTER TABLE document.service_entry_sheet_line ADD CONSTRAINT sesl_commodity_category_fk
+    FOREIGN KEY (tenant_id, commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE document.service_entry_sheet_line ADD CONSTRAINT sesl_business_intent_fk
     FOREIGN KEY (tenant_id, business_intent_id)

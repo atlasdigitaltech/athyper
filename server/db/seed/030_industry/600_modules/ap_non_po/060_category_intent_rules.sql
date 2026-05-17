@@ -2,7 +2,7 @@
 -- FILE: blueprint/060_category_intent_rules.sql
 -- Purpose: Seed three generic fallback business_intents + root-container
 --          classification → intent rules for each of the 30 base spend roots
--- Depends on: master.spend_category (base pack 020), master.business_intent
+-- Depends on: master.commodity_category (from universal 028), master.business_intent
 -- Idempotent: business_intents via ON CONFLICT DO NOTHING;
 --             rules via WHERE NOT EXISTS
 --
@@ -103,7 +103,7 @@ BEGIN
         FOR v_map IN SELECT * FROM tmp_root_intent_map LOOP
 
             SELECT id INTO v_sc_id
-              FROM master.spend_category
+              FROM master.commodity_category
              WHERE tenant_id = v_tenant.tenant_id AND code = v_map.sc_code;
 
             SELECT id INTO v_bi_id
@@ -112,21 +112,22 @@ BEGIN
 
             CONTINUE WHEN v_sc_id IS NULL OR v_bi_id IS NULL;
 
-            INSERT INTO control.classification_to_intent_rule (
+            INSERT INTO control.commodity_classification_to_intent_rule (
                 tenant_id, classification_source, classification_id, direction,
                 condition_type, condition_config, applies_to_flows,
                 resolved_intent_id, resolved_domain,
                 explanation_template, confidence, priority,
                 effective_from, status, created_by
             )
-            SELECT v_tenant.tenant_id, 'SPEND_CATEGORY', v_sc_id, 'INBOUND',
+            SELECT v_tenant.tenant_id, 'COMMODITY_CATEGORY', v_sc_id, 'INBOUND',
                    'FALLBACK', '{}'::jsonb, ARRAY['NON_PO','DIRECT_PURCHASE'],
                    v_bi_id, v_map.bi_domain,
                    v_map.explanation, 0.60, 999,
                    CURRENT_DATE, 'active', v_sys
             WHERE NOT EXISTS (
-                SELECT 1 FROM control.classification_to_intent_rule
+                SELECT 1 FROM control.commodity_classification_to_intent_rule
                  WHERE tenant_id            = v_tenant.tenant_id
+                   AND classification_source = 'COMMODITY_CATEGORY'
                    AND classification_id   = v_sc_id
                    AND condition_type      = 'FALLBACK'
                    AND resolved_intent_id  = v_bi_id

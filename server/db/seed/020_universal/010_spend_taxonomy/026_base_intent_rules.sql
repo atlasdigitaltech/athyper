@@ -2,7 +2,7 @@
 -- UNIVERSAL — BASE CLASSIFICATION-TO-INTENT RULES
 -- ============================================================================
 -- File:     026_base_intent_rules.sql
--- Schema:   control.classification_to_intent_rule
+-- Schema:   control.commodity_classification_to_intent_rule
 -- Purpose:  Context-sensitive intent resolution rules for spend categories
 -- Depends:  020_spend_categories.sql, 021_business_intents.sql,
 --           022_spend_intent_link.sql (default_intent_id already set)
@@ -51,7 +51,7 @@ BEGIN
         RAISE EXCEPTION 'Base seed not loaded. Run 020 + 022 first.';
     END IF;
     IF NOT EXISTS (SELECT 1 FROM master.business_intent
-                   WHERE tenant_id = v_tid AND code = 'BI-CAPEX-IT') THEN
+                   WHERE tenant_id = v_tid AND code = 'BI-CAPEX') THEN
         RAISE EXCEPTION 'Base intents not loaded. Run 021 first.';
     END IF;
 
@@ -78,33 +78,33 @@ BEGIN
 
     -- IT hardware above threshold → CAPEX-IT
     ('SC-IT-HW',    'AMOUNT_ABOVE', '{"threshold": 5000, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-IT', 'CAPEX', 'IT hardware purchase ≥5,000 AED classified as capital expenditure', 0.95, 90),
+     'BI-CAPEX', 'CAPEX', 'IT hardware purchase ≥5,000 AED classified as capital expenditure', 0.95, 90),
 
     -- IT software above threshold → CAPEX-IT (perpetual licence vs SaaS)
     ('SC-IT-SW',    'AMOUNT_ABOVE', '{"threshold": 25000, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-IT', 'CAPEX', 'Software purchase ≥25,000 AED classified as capital expenditure', 0.95, 90),
+     'BI-CAPEX', 'CAPEX', 'Software purchase ≥25,000 AED classified as capital expenditure', 0.95, 90),
 
     -- Office furniture above threshold → CAPEX-PROP
     ('SC-OFFICE-FURN', 'AMOUNT_ABOVE', '{"threshold": 10000, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-PROP', 'CAPEX', 'Furniture purchase ≥10,000 AED classified as capital expenditure', 0.95, 90),
+     'BI-CAPEX', 'CAPEX', 'Furniture purchase ≥10,000 AED classified as capital expenditure', 0.95, 90),
 
     -- Fleet vehicle purchase → CAPEX-FLEET (always capex, no threshold)
     ('SC-FLEET-VEH', 'AMOUNT_ABOVE', '{"threshold": 0, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-FLEET', 'CAPEX', 'Vehicle acquisition classified as capital expenditure', 0.98, 95),
+     'BI-CAPEX', 'CAPEX', 'Vehicle acquisition classified as capital expenditure', 0.98, 95),
 
     -- Capital equipment → CAPEX (machinery, always capex)
     ('SC-CAPEQUIP-MACH', 'AMOUNT_ABOVE', '{"threshold": 0, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-MACH', 'CAPEX', 'Machinery acquisition classified as capital expenditure', 0.98, 95),
+     'BI-CAPEX', 'CAPEX', 'Machinery acquisition classified as capital expenditure', 0.98, 95),
 
     ('SC-CAPEQUIP-TOOL', 'AMOUNT_ABOVE', '{"threshold": 0, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-TOOL', 'CAPEX', 'Tooling acquisition classified as capital expenditure', 0.98, 95),
+     'BI-CAPEX', 'CAPEX', 'Tooling acquisition classified as capital expenditure', 0.98, 95),
 
     ('SC-CAPEQUIP-LINE', 'AMOUNT_ABOVE', '{"threshold": 0, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-EQUIP', 'CAPEX', 'Production line classified as capital expenditure', 0.98, 95),
+     'BI-CAPEX', 'CAPEX', 'Production line classified as capital expenditure', 0.98, 95),
 
     -- Facility rent above threshold → CAPEX-LEASE (IFRS 16 right-of-use)
     ('SC-FAC-RENT', 'AMOUNT_ABOVE', '{"threshold": 50000, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-LEASE', 'CAPEX', 'Lease ≥50,000 AED may qualify for IFRS 16 capitalisation', 0.85, 70);
+     'BI-CAPEX', 'CAPEX', 'Lease ≥50,000 AED may qualify for IFRS 16 capitalisation', 0.85, 70);
 
 
     -- ══════════════════════════════════════════════════════════════════════
@@ -116,23 +116,23 @@ BEGIN
 
     -- Recurring IT services → OPEX-IT (not capex)
     ('SC-IT-SVC',   'IS_RECURRING', '{}'::jsonb,
-     'BI-OPEX-IT', 'OPEX', 'Recurring IT service contract classified as operating expenditure', 0.85, 60),
+     'BI-OPEX', 'OPEX', 'Recurring IT service contract classified as operating expenditure', 0.85, 60),
 
     -- Recurring maintenance → OPEX-MAINT
     ('SC-FAC-MAINT', 'IS_RECURRING', '{}'::jsonb,
-     'BI-OPEX-MAINT', 'OPEX', 'Recurring facility maintenance classified as operating expenditure', 0.85, 60),
+     'BI-OPEX', 'OPEX', 'Recurring facility maintenance classified as operating expenditure', 0.85, 60),
 
     -- One-time large facility maintenance → CAPEX-PROP (major renovation)
     ('SC-FAC-MAINT', 'AMOUNT_ABOVE', '{"threshold": 100000, "currency": "AED"}'::jsonb,
-     'BI-CAPEX-PROP', 'CAPEX', 'Major facility works ≥100,000 AED classified as capital expenditure', 0.90, 80),
+     'BI-CAPEX', 'CAPEX', 'Major facility works ≥100,000 AED classified as capital expenditure', 0.90, 80),
 
     -- Recurring outsourcing → OPEX-OUTSRC
     ('SC-OUTSRC-BPO', 'IS_RECURRING', '{}'::jsonb,
-     'BI-OPEX-OUTSRC', 'OPEX', 'Recurring BPO contract classified as operating expenditure', 0.85, 60),
+     'BI-OPEX', 'OPEX', 'Recurring BPO contract classified as operating expenditure', 0.85, 60),
 
     -- Recurring cleaning → OPEX-FAC
     ('SC-FAC-CLEAN', 'IS_RECURRING', '{}'::jsonb,
-     'BI-OPEX-FAC', 'OPEX', 'Recurring cleaning contract classified as operating expenditure', 0.85, 60);
+     'BI-OPEX', 'OPEX', 'Recurring cleaning contract classified as operating expenditure', 0.85, 60);
 
 
     -- ══════════════════════════════════════════════════════════════════════
@@ -145,14 +145,14 @@ BEGIN
 
     -- Cross-border raw materials → still COGS-MAT but flagged
     ('SC-RAW-METAL', 'CROSS_BORDER', '{}'::jsonb,
-     'BI-COGS-MAT', 'COST_OF_SALES', 'Cross-border raw material import — customs duty may apply', 0.80, 50),
+     'BI-COGS', 'COST_OF_SALES', 'Cross-border raw material import — customs duty may apply', 0.80, 50),
 
     ('SC-RAW-CHEM',  'CROSS_BORDER', '{}'::jsonb,
-     'BI-COGS-MAT', 'COST_OF_SALES', 'Cross-border chemical import — hazmat compliance may apply', 0.80, 50),
+     'BI-COGS', 'COST_OF_SALES', 'Cross-border chemical import — hazmat compliance may apply', 0.80, 50),
 
     -- Cross-border freight → COGS-FREIGHT with duty awareness
     ('SC-FREIGHT-CUST', 'CROSS_BORDER', '{}'::jsonb,
-     'BI-COGS-FREIGHT', 'COST_OF_SALES', 'Cross-border customs brokerage — duty and tariff handling', 0.85, 55);
+     'BI-COGS', 'COST_OF_SALES', 'Cross-border customs brokerage — duty and tariff handling', 0.85, 55);
 
 
     -- ══════════════════════════════════════════════════════════════════════
@@ -164,11 +164,11 @@ BEGIN
 
     -- Contract manufacturing via formal tender → COGS-SUB
     ('SC-CONTRACT-MFG', 'PROCUREMENT_METHOD', '{"method": "FORMAL_TENDER"}'::jsonb,
-     'BI-COGS-SUB', 'COST_OF_SALES', 'Formal tender subcontracting classified as cost of sales', 0.90, 70),
+     'BI-COGS', 'COST_OF_SALES', 'Formal tender subcontracting classified as cost of sales', 0.90, 70),
 
     -- Professional services via sole-source → OPEX-PROF (advisory, no tender)
     ('SC-PROF-CONSULT', 'PROCUREMENT_METHOD', '{"method": "SOLE_SOURCE"}'::jsonb,
-     'BI-OPEX-PROF', 'OPEX', 'Sole-source consulting classified as professional services opex', 0.80, 55);
+     'BI-OPEX', 'OPEX', 'Sole-source consulting classified as professional services opex', 0.80, 55);
 
 
     -- ══════════════════════════════════════════════════════════════════════
@@ -182,23 +182,23 @@ BEGIN
 
     -- Tax categories → REGULATORY domain
     ('SC-TAX-CORP',  'FALLBACK', '{}'::jsonb,
-     'BI-REG-TAX', 'REGULATORY', 'Corporate tax classified as regulatory obligation', 0.70, 10),
+     'BI-REG', 'REGULATORY', 'Corporate tax classified as regulatory obligation', 0.70, 10),
     ('SC-TAX-DUTY',  'FALLBACK', '{}'::jsonb,
-     'BI-REG-TAX', 'REGULATORY', 'Import duty classified as regulatory obligation', 0.70, 10),
+     'BI-REG', 'REGULATORY', 'Import duty classified as regulatory obligation', 0.70, 10),
     ('SC-TAX-STAT',  'FALLBACK', '{}'::jsonb,
-     'BI-REG-TAX', 'REGULATORY', 'Statutory fee classified as regulatory obligation', 0.70, 10),
+     'BI-REG', 'REGULATORY', 'Statutory fee classified as regulatory obligation', 0.70, 10),
 
     -- Inter-company transfers → TRANSFER domain
     ('SC-OUTSRC-SHARED', 'FALLBACK', '{}'::jsonb,
-     'BI-TRANSFER-IC', 'TRANSFER', 'Shared service centre charge classified as inter-company transfer', 0.65, 10),
+     'BI-TRANSFER', 'TRANSFER', 'Shared service centre charge classified as inter-company transfer', 0.65, 10),
 
     -- Certification → REGULATORY
     ('SC-QC-CERT', 'FALLBACK', '{}'::jsonb,
-     'BI-REG-COMP', 'REGULATORY', 'Certification and accreditation classified as compliance cost', 0.70, 10),
+     'BI-REG', 'REGULATORY', 'Certification and accreditation classified as compliance cost', 0.70, 10),
 
     -- Environmental remediation → REGULATORY (not just OPEX)
     ('SC-ENV-REMEDN', 'FALLBACK', '{}'::jsonb,
-     'BI-REG-ENV', 'REGULATORY', 'Environmental remediation classified as regulatory compliance', 0.70, 10);
+     'BI-REG', 'REGULATORY', 'Environmental remediation classified as regulatory compliance', 0.70, 10);
 
 
     -- ── STAGE B.5: Pre-checks — all codes must resolve before DELETE/INSERT ──
@@ -237,21 +237,21 @@ BEGIN
     END IF;
 
     -- ── STAGE C: Idempotent cleanup — remove old pack rules ──────────────
-    DELETE FROM control.classification_to_intent_rule
+    DELETE FROM control.commodity_classification_to_intent_rule
     WHERE tenant_id = v_tid
       AND metadata->'_seed'->>'pack' = v_pack;
 
     -- ── STAGE D: Build resolve maps ──────────────────────────────────────
     DROP TABLE IF EXISTS tmp_sc_map;
     CREATE TEMP TABLE tmp_sc_map AS
-    SELECT code, id FROM master.spend_category WHERE tenant_id = v_tid;
+    SELECT code, id FROM master.commodity_category WHERE tenant_id = v_tid;
 
     DROP TABLE IF EXISTS tmp_bi_map;
     CREATE TEMP TABLE tmp_bi_map AS
     SELECT code, id FROM master.business_intent WHERE tenant_id = v_tid;
 
     -- ── STAGE E: INSERT intent rules ─────────────────────────────────────
-    INSERT INTO control.classification_to_intent_rule (
+    INSERT INTO control.commodity_classification_to_intent_rule (
         tenant_id, classification_source, classification_id, direction,
         condition_type, condition_config, applies_to_flows,
         resolved_intent_id, resolved_domain, explanation_template,
@@ -261,7 +261,7 @@ BEGIN
     )
     SELECT
         v_tid,
-        'SPEND_CATEGORY',
+        'COMMODITY_CATEGORY',
         sm.id,
         NULL,                                    -- applies to all directions
         r.condition_type,
@@ -286,18 +286,18 @@ BEGIN
     JOIN tmp_bi_map bm ON bm.code = r.resolved_intent_code;
 
     -- ── STAGE F: Assertions ──────────────────────────────────────────────
-    IF (SELECT count(*) FROM control.classification_to_intent_rule
+    IF (SELECT count(*) FROM control.commodity_classification_to_intent_rule
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack) < 24 THEN
         RAISE EXCEPTION '[026_base] Intent rule load incomplete: expected ≥24, got %',
-            (SELECT count(*) FROM control.classification_to_intent_rule
+            (SELECT count(*) FROM control.commodity_classification_to_intent_rule
              WHERE tenant_id = v_tid
                AND metadata->'_seed'->>'pack' = v_pack);
     END IF;
 
     -- Confidence tier validation
     IF EXISTS (
-        SELECT 1 FROM control.classification_to_intent_rule
+        SELECT 1 FROM control.commodity_classification_to_intent_rule
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack
           AND condition_type = 'AMOUNT_ABOVE'
@@ -307,7 +307,7 @@ BEGIN
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM control.classification_to_intent_rule
+        SELECT 1 FROM control.commodity_classification_to_intent_rule
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack
           AND condition_type = 'FALLBACK'
@@ -317,21 +317,21 @@ BEGIN
     END IF;
 
     RAISE NOTICE '[026_base] Intent rules loaded: % total (AMOUNT_ABOVE=%, IS_RECURRING=%, CROSS_BORDER=%, PROCUREMENT_METHOD=%, FALLBACK=%)',
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack),
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack
            AND condition_type = 'AMOUNT_ABOVE'),
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack
            AND condition_type = 'IS_RECURRING'),
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack
            AND condition_type = 'CROSS_BORDER'),
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack
            AND condition_type = 'PROCUREMENT_METHOD'),
-        (SELECT count(*) FROM control.classification_to_intent_rule
+        (SELECT count(*) FROM control.commodity_classification_to_intent_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack
            AND condition_type = 'FALLBACK');
 

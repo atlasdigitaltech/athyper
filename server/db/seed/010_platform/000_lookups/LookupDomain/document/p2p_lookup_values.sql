@@ -202,7 +202,7 @@ SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,
 FROM (VALUES
     ('posting_role',   'Posting Role',      'document.acct_dist_account_source', 'Resolved via control.posting_role mapping',                   10),
     ('fixed',          'Fixed Account',     'document.acct_dist_account_source', 'Explicit GL account ID or code on the distribution row',      20),
-    ('from_intent',    'From Intent',       'document.acct_dist_account_source', 'Resolved via business_intent.default_gl_account_id',          30),
+    ('from_intent',    'From Intent',       'document.acct_dist_account_source', 'Resolved via commodity category policy for the business intent', 30),
     ('from_category',  'From Category',     'document.acct_dist_account_source', 'Resolved via spend_category → intent → GL (default path)',    40)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (

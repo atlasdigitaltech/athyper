@@ -2,7 +2,7 @@
 -- UNIVERSAL — DIRECT-OPS ROUTING RULES (Layer B)
 -- ============================================================================
 -- File:     024b_routing_rules_direct_ops.sql
--- Schema:   control.commodity_to_spend_category_rule
+-- Schema:   control.commodity_code_to_category_rule
 -- Purpose:  Route UNSPSC codes → Layer B direct-operations spend categories
 -- Depends:  020b_spend_categories_direct_ops.sql (Layer B categories)
 --           024_routing_rules.sql (Layer A routing already applied)
@@ -36,10 +36,84 @@ BEGIN
         RAISE EXCEPTION '[024_base_direct_ops] SC-RAW-METAL not found — run 020b_spend_categories_direct_ops.sql first';
     END IF;
 
-    -- ── STAGE B: Build spend_category resolve map ────────────────────────
+    -- Ensure commodity_category exists before routing rules reference it.
+    INSERT INTO master.commodity_category (
+        id, tenant_id, code, name, description, parent_id, root_category_id,
+        level_no, sort_order, buy_allowed, metadata, status, created_by
+    )
+    SELECT
+        sc.id, sc.tenant_id, sc.code, sc.name, sc.description,
+        NULL, sc.id, 1, sc.sort_order, true,
+        COALESCE(sc.metadata, '{}'::jsonb) || jsonb_build_object(
+            '_commodity_model', jsonb_build_object(
+                'pack', v_pack, 'version', v_version,
+                'source_table', 'master.spend_category',
+                'source_id', sc.id, 'seeded_at', now()::text
+            )
+        ),
+        sc.status, v_su
+    FROM master.spend_category sc
+    WHERE sc.tenant_id = v_tid
+      AND sc.parent_id IS NULL
+    ON CONFLICT (tenant_id, code) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        parent_id = NULL,
+        root_category_id = master.commodity_category.id,
+        level_no = EXCLUDED.level_no,
+        sort_order = EXCLUDED.sort_order,
+        buy_allowed = true,
+        status = EXCLUDED.status,
+        updated_at = now(),
+        updated_by = v_su;
+
+    INSERT INTO master.commodity_category (
+        id, tenant_id, code, name, description, parent_id, root_category_id,
+        level_no, sort_order, buy_allowed, metadata, status, created_by
+    )
+    SELECT
+        sc.id, sc.tenant_id, sc.code, sc.name, sc.description,
+        parent_cc.id, root_cc.id, COALESCE(parent_cc.level_no + 1, 2),
+        sc.sort_order, true,
+        COALESCE(sc.metadata, '{}'::jsonb) || jsonb_build_object(
+            '_commodity_model', jsonb_build_object(
+                'pack', v_pack, 'version', v_version,
+                'source_table', 'master.spend_category',
+                'source_id', sc.id, 'seeded_at', now()::text
+            )
+        ),
+        sc.status, v_su
+    FROM master.spend_category sc
+    JOIN master.spend_category parent_sc
+      ON parent_sc.tenant_id = sc.tenant_id
+     AND parent_sc.id = sc.parent_id
+    JOIN master.spend_category root_sc
+      ON root_sc.tenant_id = sc.tenant_id
+     AND root_sc.id = sc.root_category_id
+    JOIN master.commodity_category parent_cc
+      ON parent_cc.tenant_id = sc.tenant_id
+     AND parent_cc.code = parent_sc.code
+    JOIN master.commodity_category root_cc
+      ON root_cc.tenant_id = sc.tenant_id
+     AND root_cc.code = root_sc.code
+    WHERE sc.tenant_id = v_tid
+      AND sc.parent_id IS NOT NULL
+    ON CONFLICT (tenant_id, code) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        parent_id = EXCLUDED.parent_id,
+        root_category_id = EXCLUDED.root_category_id,
+        level_no = EXCLUDED.level_no,
+        sort_order = EXCLUDED.sort_order,
+        buy_allowed = true,
+        status = EXCLUDED.status,
+        updated_at = now(),
+        updated_by = v_su;
+
+    -- ── STAGE B: Build commodity_category resolve map ─────────────────────
     DROP TABLE IF EXISTS tmp_sc_map;
     CREATE TEMP TABLE tmp_sc_map AS
-    SELECT code, id FROM master.spend_category WHERE tenant_id = v_tid;
+    SELECT code, id FROM master.commodity_category WHERE tenant_id = v_tid;
 
     -- ── STAGE C: Stage routing rules ─────────────────────────────────────
     DROP TABLE IF EXISTS tmp_route;
@@ -121,13 +195,13 @@ BEGIN
     END IF;
 
     -- ── STAGE D: Delete-then-insert by pack ──────────────────────────────
-    DELETE FROM control.commodity_to_spend_category_rule
+    DELETE FROM control.commodity_code_to_category_rule
     WHERE tenant_id = v_tid
       AND metadata->'_seed'->>'pack' = v_pack;
 
-    INSERT INTO control.commodity_to_spend_category_rule (
+    INSERT INTO control.commodity_code_to_category_rule (
         tenant_id, commodity_domain_code, match_mode,
-        code_from, code_to, spend_category_id,
+        code_from, code_to, commodity_category_id,
         priority, confidence, metadata, status, created_by
     )
     SELECT
@@ -154,24 +228,24 @@ BEGIN
     DO UPDATE SET
         match_mode        = EXCLUDED.match_mode,
         code_to           = EXCLUDED.code_to,
-        spend_category_id = EXCLUDED.spend_category_id,
+        commodity_category_id = EXCLUDED.commodity_category_id,
         confidence        = EXCLUDED.confidence,
         metadata          = EXCLUDED.metadata,
         updated_at        = now(),
         updated_by        = EXCLUDED.created_by;
 
     -- ── STAGE E: Assertions ──────────────────────────────────────────────
-    IF (SELECT count(*) FROM control.commodity_to_spend_category_rule
+    IF (SELECT count(*) FROM control.commodity_code_to_category_rule
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack) < 25 THEN
         RAISE EXCEPTION '[024_base_direct_ops] Routing rule load incomplete: expected ≥25, got %',
-            (SELECT count(*) FROM control.commodity_to_spend_category_rule
+            (SELECT count(*) FROM control.commodity_code_to_category_rule
              WHERE tenant_id = v_tid
                AND metadata->'_seed'->>'pack' = v_pack);
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM control.commodity_to_spend_category_rule
+        SELECT 1 FROM control.commodity_code_to_category_rule
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack
           AND match_mode = 'EXACT' AND confidence < 95
@@ -180,7 +254,7 @@ BEGIN
     END IF;
 
     IF EXISTS (
-        SELECT 1 FROM control.commodity_to_spend_category_rule
+        SELECT 1 FROM control.commodity_code_to_category_rule
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack
           AND priority <= 9 AND confidence > 70
@@ -189,13 +263,13 @@ BEGIN
     END IF;
 
     RAISE NOTICE '[024_base_direct_ops] Direct-ops routing rules loaded: % total (L1=%, L2=%, L3=%)',
-        (SELECT count(*) FROM control.commodity_to_spend_category_rule
+        (SELECT count(*) FROM control.commodity_code_to_category_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack),
-        (SELECT count(*) FROM control.commodity_to_spend_category_rule
+        (SELECT count(*) FROM control.commodity_code_to_category_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack AND priority >= 30),
-        (SELECT count(*) FROM control.commodity_to_spend_category_rule
+        (SELECT count(*) FROM control.commodity_code_to_category_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack AND priority BETWEEN 10 AND 29),
-        (SELECT count(*) FROM control.commodity_to_spend_category_rule
+        (SELECT count(*) FROM control.commodity_code_to_category_rule
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = v_pack AND priority <= 9);
 
 END $seed$;

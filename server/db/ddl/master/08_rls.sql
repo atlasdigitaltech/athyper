@@ -1256,21 +1256,21 @@ CREATE POLICY tenant_delete ON master.employee FOR DELETE USING     (tenant_id =
 CREATE POLICY admin_read    ON master.employee FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.employee FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
--- ── master.item_category ────────────────────────────────────────────────
-ALTER TABLE master.item_category ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.item_category FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON master.item_category;
-DROP POLICY IF EXISTS tenant_insert ON master.item_category;
-DROP POLICY IF EXISTS tenant_update ON master.item_category;
-DROP POLICY IF EXISTS tenant_delete ON master.item_category;
-DROP POLICY IF EXISTS admin_read    ON master.item_category;
-DROP POLICY IF EXISTS admin_write   ON master.item_category;
-CREATE POLICY tenant_read   ON master.item_category FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON master.item_category FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON master.item_category FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON master.item_category FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON master.item_category FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON master.item_category FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+-- ── master.commodity_category ────────────────────────────────────────────────
+ALTER TABLE master.commodity_category ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.commodity_category FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON master.commodity_category;
+DROP POLICY IF EXISTS tenant_insert ON master.commodity_category;
+DROP POLICY IF EXISTS tenant_update ON master.commodity_category;
+DROP POLICY IF EXISTS tenant_delete ON master.commodity_category;
+DROP POLICY IF EXISTS admin_read    ON master.commodity_category;
+DROP POLICY IF EXISTS admin_write   ON master.commodity_category;
+CREATE POLICY tenant_read   ON master.commodity_category FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.commodity_category FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.commodity_category FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.commodity_category FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON master.commodity_category FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON master.commodity_category FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
 -- ── master.product ─────────────────────────────────────────────────────────
 ALTER TABLE master.product ENABLE ROW LEVEL SECURITY;
@@ -2064,53 +2064,6 @@ CREATE POLICY admin_write   ON master.legal_entity_identity_binding FOR ALL    T
 -- =============================================================================
 
 -- ── master.company_code_supplier_spend_policy ────────────────────────────────
-ALTER TABLE master.company_code_supplier_spend_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.company_code_supplier_spend_policy FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON master.company_code_supplier_spend_policy;
-DROP POLICY IF EXISTS tenant_insert ON master.company_code_supplier_spend_policy;
-DROP POLICY IF EXISTS tenant_update ON master.company_code_supplier_spend_policy;
-DROP POLICY IF EXISTS tenant_delete ON master.company_code_supplier_spend_policy;
-DROP POLICY IF EXISTS admin_read    ON master.company_code_supplier_spend_policy;
-DROP POLICY IF EXISTS admin_write   ON master.company_code_supplier_spend_policy;
-CREATE POLICY tenant_read   ON master.company_code_supplier_spend_policy FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON master.company_code_supplier_spend_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON master.company_code_supplier_spend_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON master.company_code_supplier_spend_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON master.company_code_supplier_spend_policy FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON master.company_code_supplier_spend_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
--- ── master.company_code_supplier_intent_policy ───────────────────────────────
-ALTER TABLE master.company_code_supplier_intent_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.company_code_supplier_intent_policy FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON master.company_code_supplier_intent_policy;
-DROP POLICY IF EXISTS tenant_insert ON master.company_code_supplier_intent_policy;
-DROP POLICY IF EXISTS tenant_update ON master.company_code_supplier_intent_policy;
-DROP POLICY IF EXISTS tenant_delete ON master.company_code_supplier_intent_policy;
-DROP POLICY IF EXISTS admin_read    ON master.company_code_supplier_intent_policy;
-DROP POLICY IF EXISTS admin_write   ON master.company_code_supplier_intent_policy;
-CREATE POLICY tenant_read   ON master.company_code_supplier_intent_policy FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON master.company_code_supplier_intent_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON master.company_code_supplier_intent_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON master.company_code_supplier_intent_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON master.company_code_supplier_intent_policy FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON master.company_code_supplier_intent_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
--- ── master.company_code_supplier_posting_override ────────────────────────────
-ALTER TABLE master.company_code_supplier_posting_override ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.company_code_supplier_posting_override FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON master.company_code_supplier_posting_override;
-DROP POLICY IF EXISTS tenant_insert ON master.company_code_supplier_posting_override;
-DROP POLICY IF EXISTS tenant_update ON master.company_code_supplier_posting_override;
-DROP POLICY IF EXISTS tenant_delete ON master.company_code_supplier_posting_override;
-DROP POLICY IF EXISTS admin_read    ON master.company_code_supplier_posting_override;
-DROP POLICY IF EXISTS admin_write   ON master.company_code_supplier_posting_override;
-CREATE POLICY tenant_read   ON master.company_code_supplier_posting_override FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON master.company_code_supplier_posting_override FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON master.company_code_supplier_posting_override FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON master.company_code_supplier_posting_override FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON master.company_code_supplier_posting_override FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON master.company_code_supplier_posting_override FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
 -- ── master.legal_entity_business_partner_link ────────────────────────────────
 ALTER TABLE master.legal_entity_business_partner_link ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.legal_entity_business_partner_link FORCE  ROW LEVEL SECURITY;

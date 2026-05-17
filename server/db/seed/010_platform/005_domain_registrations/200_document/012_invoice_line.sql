@@ -5,7 +5,7 @@
 -- Module:  PROC (Procurement)
 -- Depends on: 001_invoice.sql, p2p_lookup_values.sql
 --             (domains: document.procurement_type, document.invoice_match_status)
--- Idempotent: WHERE NOT EXISTS / ON CONFLICT DO NOTHING throughout
+-- Idempotent: WHERE NOT EXISTS / ON CONFLICT / canonical UPDATEs throughout
 
 -- ── 1. control.entity ────────────────────────────────────────────────────────
 INSERT INTO control.entity (
@@ -36,6 +36,37 @@ WHERE NOT EXISTS (
       AND tenant_id IS NULL
 );
 
+UPDATE control.entity
+   SET module_id = COALESCE((SELECT id::text FROM shared.module WHERE code = 'PROC'), module_id),
+       name = 'purchase_invoice_line',
+       slug = 'purchase-invoice-line',
+       entity_short = 'PINV_L',
+       entity_code = 'purchase_invoice_line',
+       entity_class = 'DOCUMENT_RELATION',
+       ownership_model = 'system',
+       kind = 'ent',
+       backing_type = 'table',
+       governance_level = 'full',
+       security_tier = 'tenant_critical',
+       mutability = 'controlled',
+       label_singular = 'Invoice Line',
+       label_plural = 'Invoice Lines',
+       icon_key = 'list',
+       color_token = 'violet',
+       numbering_active = false,
+       feature_flags = jsonb_build_object(
+           'parent_entity', 'purchase_invoice',
+           'has_accounting_distribution', true,
+           'has_matching', true
+       ),
+       natural_key_fields = ARRAY['line_no']::text[],
+       status = 'ACTIVE',
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+ WHERE table_schema = 'document'
+   AND table_name = 'purchase_invoice_line'
+   AND tenant_id IS NULL;
+
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
     entity_id, tenant_id, version_no, status, effective_from, created_by)
@@ -44,7 +75,11 @@ SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
 FROM   control.entity e
 WHERE  e.table_schema = 'document' AND e.table_name = 'purchase_invoice_line'
   AND  e.tenant_id IS NULL
-ON CONFLICT (entity_id, version_no) DO NOTHING;
+ON CONFLICT (entity_id, version_no) DO UPDATE
+SET status = 'EFFECTIVE',
+    effective_from = COALESCE(control.entity_version.effective_from, EXCLUDED.effective_from),
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000';
 
 -- ── 3. control.entity_field (27 fields) ──────────────────────────────────────
 -- Group A: Identity & Parent          (5-10)
@@ -73,7 +108,7 @@ CROSS JOIN (VALUES
     ('item_description',    'item_description',    'Description',         'text',      'one',         NULL::text,                                 true,  false, '{"max_length":500}'::jsonb,                  20),
     ('procurement_type',    'procurement_type',    'Type',                'enum',      'one',         'document.procurement_type'::text,          true,  true,  NULL::jsonb,                                  30),
     ('item_id',             'item_id',             'Item',                'reference', 'zero_or_one', NULL::text,                                 false, false, '{"ref_entity":"item"}'::jsonb,               35),
-    ('spend_category_id',   'spend_category_id',   'Spend Category',      'reference', 'zero_or_one', NULL::text,                                 false, true,  '{"ref_entity":"spend_category"}'::jsonb,     40),
+    ('commodity_category_id',   'commodity_category_id',   'Commodity Category',      'reference', 'zero_or_one', NULL::text,                                 false, true,  '{"ref_entity":"commodity_category"}'::jsonb,     40),
     ('business_intent_id',  'business_intent_id',  'Business Intent',     'reference', 'zero_or_one', NULL::text,                                 false, false, '{"ref_entity":"business_intent"}'::jsonb,    45),
     ('unspsc_code',         'metadata',             'UNSPSC Code',         'text',      'zero_or_one', NULL::text,                                 false, false, '{"max_length":32}'::jsonb,                    46),
     ('hs_code',             'metadata',             'HS / Trade Code',     'text',      'zero_or_one', NULL::text,                                 false, false, '{"max_length":32}'::jsonb,                    47),
@@ -106,6 +141,81 @@ CROSS JOIN (VALUES
 WHERE e.table_schema = 'document' AND e.table_name = 'purchase_invoice_line'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
+
+-- Folded in from retired runtime repair: canonical field metadata for line rows.
+WITH line_fields(
+    name, column_name, label, data_type, cardinality, enum_domain_code,
+    reference_config, validation, is_required, is_filterable, is_read_only,
+    sort_order, group_key
+) AS (
+    VALUES
+    ('purchase_invoice_id', 'purchase_invoice_id', 'Invoice', 'reference', 'one', NULL::text, '{"target_entity":"purchase_invoice","display_field":"document_no"}'::jsonb, '{"ref_entity":"purchase_invoice"}'::jsonb, true, false, true, 5, NULL::text),
+    ('line_no', 'line_no', 'Line No.', 'integer', 'one', NULL::text, NULL::jsonb, '{"min":1}'::jsonb, true, false, true, 10, NULL::text),
+    ('item_description', 'item_description', 'Description', 'text', 'one', NULL::text, NULL::jsonb, '{"max_length":500}'::jsonb, true, false, false, 20, 'item'),
+    ('procurement_type', 'procurement_type', 'Type', 'enum', 'one', 'document.procurement_type', NULL::jsonb, NULL::jsonb, true, true, false, 30, 'item'),
+    ('item_id', 'item_id', 'Item', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"item"}'::jsonb, '{"ref_entity":"item"}'::jsonb, false, false, false, 35, 'item'),
+    ('commodity_category_id', 'commodity_category_id', 'Commodity Category', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"commodity_category"}'::jsonb, '{"ref_entity":"commodity_category"}'::jsonb, false, true, false, 40, 'classification'),
+    ('business_intent_id', 'business_intent_id', 'Business Intent', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"business_intent"}'::jsonb, '{"ref_entity":"business_intent"}'::jsonb, false, false, false, 45, 'classification'),
+    ('unspsc_code', 'metadata', 'UNSPSC Code', 'text', 'zero_or_one', NULL::text, NULL::jsonb, '{"max_length":32}'::jsonb, false, false, false, 46, 'classification'),
+    ('hs_code', 'metadata', 'HS / Trade Code', 'text', 'zero_or_one', NULL::text, NULL::jsonb, '{"max_length":32}'::jsonb, false, false, false, 47, 'classification'),
+    ('uom_code', 'uom_code', 'UoM', 'text', 'one', NULL::text, NULL::jsonb, '{"max_length":20}'::jsonb, true, false, false, 50, 'item'),
+    ('quantity', 'quantity', 'Quantity', 'decimal', 'one', NULL::text, NULL::jsonb, '{"nonzero":true}'::jsonb, true, false, false, 60, 'item'),
+    ('unit_price', 'unit_price', 'Unit Price', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, true, false, false, 70, 'item'),
+    ('price_unit', 'price_unit', 'Price Per', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 72, 'item'),
+    ('discount_pct', 'discount_pct', 'Discount %', 'decimal', 'zero_or_one', NULL::text, NULL::jsonb, '{"min":0,"max":100}'::jsonb, false, false, false, 75, 'discount'),
+    ('net_amount', 'net_amount', 'Net Amount', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 80, 'financial'),
+    ('discount_amount', 'discount_amount', 'Discount Amount', 'decimal', 'zero_or_one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 82, 'discount'),
+    ('tax_amount', 'tax_amount', 'Tax Amount', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 90, 'tax'),
+    ('withholding_tax_amount', 'withholding_tax_amount', 'WHT Amount', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 95, 'tax'),
+    ('gross_amount', 'gross_amount', 'Gross Amount', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, true, false, false, 100, 'financial'),
+    ('retention_pct', 'retention_pct', 'Retention %', 'decimal', 'zero_or_one', NULL::text, NULL::jsonb, '{"min":0,"max":100}'::jsonb, false, false, false, 102, 'retention'),
+    ('retention_amount', 'retention_amount', 'Retention Amt', 'decimal', 'zero_or_one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 104, 'retention'),
+    ('cost_center_id', 'cost_center_id', 'Cost Centre', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"cost_center"}'::jsonb, '{"ref_entity":"cost_center"}'::jsonb, false, true, false, 110, 'dimensions'),
+    ('profit_center_id', 'profit_center_id', 'Profit Centre', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"profit_center"}'::jsonb, '{"ref_entity":"profit_center"}'::jsonb, false, false, false, 115, 'dimensions'),
+    ('project_id', 'project_id', 'Project', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"project"}'::jsonb, '{"ref_entity":"project"}'::jsonb, false, true, false, 120, 'dimensions'),
+    ('site_id', 'site_id', 'Site', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"site"}'::jsonb, '{"ref_entity":"site"}'::jsonb, false, false, false, 125, 'dimensions'),
+    ('match_status', 'match_status', 'Match Status', 'enum', 'one', 'document.invoice_match_status', NULL::jsonb, NULL::jsonb, false, true, true, 130, 'matching'),
+    ('matched_quantity', 'matched_quantity', 'Matched Qty', 'decimal', 'zero_or_one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, true, 135, 'matching'),
+    ('is_asset', 'is_asset', 'Is Asset', 'boolean', 'one', NULL::text, NULL::jsonb, NULL::jsonb, false, true, false, 140, 'matching'),
+    ('asset_category_id', 'asset_category_id', 'Asset Category', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"asset_class"}'::jsonb, '{"ref_entity":"asset_class"}'::jsonb, false, false, false, 145, 'matching'),
+    ('commitment_line_id', 'commitment_line_id', 'PO Line', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"commitment_line"}'::jsonb, '{"ref_entity":"commitment_line"}'::jsonb, false, false, true, 150, 'matching'),
+    ('goods_receipt_line_id', 'goods_receipt_line_id', 'GR Line', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"goods_receipt_line"}'::jsonb, '{"ref_entity":"goods_receipt_line"}'::jsonb, false, false, true, 151, 'matching'),
+    ('ses_line_id', 'ses_line_id', 'SES Line', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"service_entry_sheet_line"}'::jsonb, '{"ref_entity":"service_entry_sheet_line"}'::jsonb, false, false, true, 152, 'matching')
+)
+UPDATE control.entity_field ef
+   SET column_name = lf.column_name,
+       label = lf.label,
+       data_type = lf.data_type,
+       ui_type = NULL,
+       cardinality = lf.cardinality,
+       origin = 'standard',
+       enum_config = NULL,
+       enum_domain_code = lf.enum_domain_code,
+       reference_config = lf.reference_config,
+       validation = lf.validation,
+       is_required = lf.is_required,
+       is_filterable = lf.is_filterable,
+       is_read_only = lf.is_read_only,
+       is_computed = false,
+       is_active = true,
+       ui_hint = CASE
+           WHEN lf.group_key IS NULL THEN COALESCE(ef.ui_hint, '{}'::jsonb) - 'group_key'
+           ELSE COALESCE(ef.ui_hint, '{}'::jsonb) || jsonb_build_object('group_key', lf.group_key)
+       END,
+       sort_order = lf.sort_order,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+  FROM line_fields lf,
+       control.entity_version ev,
+       control.entity e
+ WHERE e.entity_code = 'purchase_invoice_line'
+   AND e.tenant_id IS NULL
+   AND e.id = ev.entity_id
+   AND ev.version_no = 1
+   AND ev.tenant_id IS NULL
+   AND ev.id = ef.entity_version_id
+   AND ef.tenant_id IS NULL
+   AND ef.name = lf.name;
 
 -- ── 4. display_config ────────────────────────────────────────────────────────
 UPDATE control.entity
@@ -323,7 +433,7 @@ SET ui_hint = COALESCE(ef.ui_hint, '{}'::jsonb)
                      WHEN 'price_unit'              THEN 'item'
                      WHEN 'net_amount'              THEN 'financial'
                      WHEN 'gross_amount'            THEN 'financial'
-                     WHEN 'spend_category_id'       THEN 'classification'
+                     WHEN 'commodity_category_id'       THEN 'classification'
                      WHEN 'business_intent_id'      THEN 'classification'
                      WHEN 'unspsc_code'             THEN 'classification'
                      WHEN 'hs_code'                 THEN 'classification'
@@ -352,7 +462,7 @@ WHERE ef.entity_version_id = ev.id
     'item_description', 'procurement_type', 'item_id', 'uom_code',
     'quantity', 'unit_price', 'price_unit',
     'net_amount', 'gross_amount',
-    'spend_category_id', 'business_intent_id', 'unspsc_code', 'hs_code',
+    'commodity_category_id', 'business_intent_id', 'unspsc_code', 'hs_code',
     'tax_amount', 'withholding_tax_amount',
     'discount_pct', 'discount_amount',
     'retention_pct', 'retention_amount',
@@ -611,3 +721,27 @@ WHERE table_schema = 'document'
   AND tenant_id    IS NULL
   AND (display_config ? 'line_ui_variant')
   AND NOT (display_config->'procure_line' ? 'item_tab');
+
+-- Folded in from retired runtime repair: normalize the runtime display identity.
+UPDATE control.entity
+   SET display_config =
+       (COALESCE(display_config, '{}'::jsonb)
+           - 'coverage_mode'
+           - 'list_renderer'
+           - 'detail_renderer'
+           - 'readOnly'
+           - 'hidden')
+       || jsonb_build_object(
+           'detail_renderer', 'master',
+           'title_field', 'item_description',
+           'subtitle_field', 'procurement_type',
+           'list_columns', '["line_no","item_description","quantity","unit_price","gross_amount"]'::jsonb,
+           'default_sort_field', 'line_no',
+           'default_sort_order', 'asc',
+           'field_metadata_repair_version', 1
+       ),
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+ WHERE table_schema = 'document'
+   AND table_name = 'purchase_invoice_line'
+   AND tenant_id IS NULL;

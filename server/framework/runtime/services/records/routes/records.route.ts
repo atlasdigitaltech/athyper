@@ -49,11 +49,15 @@ import type { CacheClient } from "../../iam/session/session.service.js";
 import {
   resolveParameterSnapshot,
   getIntParam,
+  getStringParam,
 } from "../../iam/parameters/parameter-resolver.service.js";
+import { resolveLineClassification } from "../../business/procurement-intake/IntentResolutionService.js";
 
 const DEFAULT_PAGE_SIZE = 20;
-const MAX_PAGE_SIZE     = 100;
+const MAX_PAGE_SIZE     = 500;
 const DEFAULT_LOCK_TTL_SECONDS = 300;
+const DEFAULT_PROCUREMENT_LINE_UOM_PARAMETER_CODE = "finance.ap.default_procurement_line_uom";
+const DEFAULT_PROCUREMENT_LINE_UOM_FALLBACK = "EA";
 const TEXT_SEARCH_DATA_TYPES = new Set([
   "email",
   "enum",
@@ -63,6 +67,32 @@ const TEXT_SEARCH_DATA_TYPES = new Set([
   "text",
   "url",
 ]);
+const LINE_CLASSIFICATION_INPUT_FIELDS = [
+  "commodity_category_id",
+  "business_intent_id",
+  "item_id",
+  "item_description",
+  "description",
+  "metadata",
+  "data",
+  "unspsc_code",
+  "hs_code",
+  "trade_code",
+  "commodity_code",
+  "commodity_domain",
+  "commodity_domain_code",
+  "line_commodity_code",
+  "quantity",
+  "unit_price",
+  "price_unit",
+  "gross_amount",
+  "line_amount",
+  "discount_pct",
+  "tax_group_id",
+  "withholding_tax_group_id",
+  "is_asset",
+  "asset_category_id",
+];
 
 export interface RecordsRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,12 +129,20 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
     .where("e.tenant_id", "is", null)
     .executeTakeFirst() as Record<string, unknown> | undefined;
   if (!row) return null;
+
+  const featureFlags = (row["feature_flags"] && typeof row["feature_flags"] === "object")
+    ? (row["feature_flags"] as Record<string, unknown>)
+    : {};
+  if (featureFlags["generic_runtime_disabled"] === true || featureFlags["records_api_disabled"] === true) {
+    return null;
+  }
+
   return {
     table_schema:        String(row["table_schema"]),
     table_name:          String(row["table_name"]),
     natural_key_fields:  Array.isArray(row["natural_key_fields"]) ? (row["natural_key_fields"] as string[]) : [],
     entity_class:        String(row["entity_class"] ?? ""),
-    feature_flags:       (row["feature_flags"]      && typeof row["feature_flags"]      === "object") ? (row["feature_flags"]      as Record<string, unknown>) : {},
+    feature_flags:       featureFlags,
     concurrency_policy:  (row["concurrency_policy"] && typeof row["concurrency_policy"] === "object") ? (row["concurrency_policy"] as Record<string, unknown>) : {},
   };
 }
@@ -564,6 +602,22 @@ function resolveRelativeRange(token: string): { from: string; to: string } | nul
 export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Router {
   const { db, auth, logger, cache } = deps;
 
+  function normalizeDefaultProcurementLineUom(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) return DEFAULT_PROCUREMENT_LINE_UOM_FALLBACK;
+    if (trimmed.toLowerCase() === "each") return DEFAULT_PROCUREMENT_LINE_UOM_FALLBACK;
+    return trimmed.toUpperCase();
+  }
+
+  async function resolveDefaultProcurementLineUom(tenantId: string | null): Promise<string> {
+    const snapshot = tenantId && cache
+      ? await resolveParameterSnapshot(db, cache, tenantId, "finance.ap").catch(() => null)
+      : null;
+    return normalizeDefaultProcurementLineUom(
+      getStringParam(snapshot, DEFAULT_PROCUREMENT_LINE_UOM_PARAMETER_CODE, DEFAULT_PROCUREMENT_LINE_UOM_FALLBACK),
+    );
+  }
+
   // Best-effort insert into log.activity_log. Never throws — main operation already succeeded.
   const logActivityRecord = async (
     tenantId: string, entityType: string, entityId: string,
@@ -592,7 +646,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   //
   // Query params (canonical — matches EntityListQueryState URL serialization):
   //   ?page=<n>          current page (1-based, default 1)
-  //   ?page_size=<n>     records per page (default 20, max 100; picker_tree can raise this)
+  //   ?page_size=<n>     records per page (default 20, max 500; picker_tree can raise this)
   //   ?q=<term>          free-text ILIKE search on is_searchable fields
   //   ?filter.<field>=<sigil>   per-field operator filter (preferred)
   //   ?filters=<json>    legacy JSON map (deprecated, still accepted)
@@ -678,14 +732,17 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         ? await resolveParameterSnapshot(db, cache, tenantId, "api.pagination").catch(() => null)
         : null;
       const defaultPageSize = getIntParam(paginationSnap, "api.pagination.default_page_size", DEFAULT_PAGE_SIZE);
-      const maxPageSize     = getIntParam(paginationSnap, "api.pagination.max_page_size",     MAX_PAGE_SIZE);
+      const maxPageSize = Math.min(
+        MAX_PAGE_SIZE,
+        getIntParam(paginationSnap, "api.pagination.max_page_size", MAX_PAGE_SIZE),
+      );
       const pickerTreeMinPageSize = getIntParam(
         paginationSnap,
         "api.pagination.picker_tree_min_page_size",
         500,
       );
       const effectiveMaxPageSize = pickerTreeMode
-        ? Math.max(maxPageSize, Math.max(500, pickerTreeMinPageSize))
+        ? Math.max(maxPageSize, Math.min(MAX_PAGE_SIZE, Math.max(500, pickerTreeMinPageSize)))
         : maxPageSize;
       const requestedPageSize = pickerTreeMode
         ? Math.max(rawPageSize || defaultPageSize, 500)
@@ -927,7 +984,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           return;
         }
 
-        const ownerType = ownerTypeValues[0] ?? null;
+        const defaultOwnerType = singleStringQueryParam(listTable.feature_flags["default_owner_type_scope"])
+          ?? singleStringQueryParam(listTable.feature_flags["default_owner_type"]);
+        const ownerType = ownerTypeValues[0] ?? defaultOwnerType ?? null;
         if (!ownerType) {
           res.status(400).json({
             error: "OWNER_TYPE_SCOPE_REQUIRED",
@@ -2583,6 +2642,33 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     return value == null || (typeof value === "string" && value.trim() === "");
   }
 
+  function isPresentLineValue(value: unknown): boolean {
+    return value != null && (typeof value !== "string" || value.trim() !== "");
+  }
+
+  function requestHasLineSourceDocument(body: Record<string, unknown>, row: Record<string, unknown>): boolean {
+    return [
+      body["commitment_line_id"],
+      body["goods_receipt_line_id"],
+      body["ses_line_id"],
+      row["commitment_line_id"],
+      row["goods_receipt_line_id"],
+      row["ses_line_id"],
+    ].some(isPresentLineValue);
+  }
+
+  async function purchaseInvoiceHasSourceDocument(invoiceId: string, tenantId: string | null): Promise<boolean> {
+    if (!tenantId) return false;
+    const row = await sql<{ commitment_id: string | null }>`
+      SELECT commitment_id
+      FROM document.purchase_invoice
+      WHERE id = ${invoiceId}::uuid
+        AND tenant_id = ${tenantId}::uuid
+      LIMIT 1
+    `.execute(db);
+    return Boolean(row.rows[0]?.commitment_id);
+  }
+
   function explicitLineAmount(body: Record<string, unknown>): number | null {
     const raw = hasOwnBodyField(body, "gross_amount") && !isEmptyAmountValue(body["gross_amount"])
       ? body["gross_amount"]
@@ -2620,7 +2706,6 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       row["unit_price"]   = amount;
       row["price_unit"]   = 1;
       row["gross_amount"] = amount;
-      if (!row["uom_code"]) row["uom_code"] = "EA";
       return;
     }
     row["gross_amount"] = lineGrossAmount(
@@ -2714,7 +2799,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       "item_description",
       "procurement_type",
       "item_id",
-      "spend_category_id",
+      "commodity_category_id",
       "business_intent_id",
       "uom_code",
       "quantity",
@@ -2735,6 +2820,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       "site_id",
       "match_status",
       "matched_quantity",
+      "commitment_line_id",
+      "goods_receipt_line_id",
+      "ses_line_id",
       "is_asset",
       "asset_category_id",
     ];
@@ -2745,7 +2833,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
     if (body["line_number"] != null)           row["line_no"]        = Number(body["line_number"]);
     if (body["description"]   !== undefined)   row["item_description"] = body["description"] ?? "";
-    if (body["unit_code"]     !== undefined)   row["uom_code"]       = body["unit_code"]   ?? "EA";
+    if (body["unit_code"]     !== undefined)   row["uom_code"]       = body["unit_code"]   ?? "";
     if (body["quantity"]      !== undefined)   row["quantity"]       = body["quantity"]    ?? 1;
     if (body["unit_price"]    !== undefined)   row["unit_price"]     = body["unit_price"]  ?? 0;
     if (body["line_amount"]   !== undefined)   row["gross_amount"]   = body["line_amount"] ?? 0;
@@ -2764,7 +2852,17 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     // Metadata-backed logical fields have no dedicated DB column.
     const data = body["data"];
     const hasData = data && typeof data === "object" && !Array.isArray(data);
-    const metadataAliases = ["item_code", "tax_code", "unspsc_code", "hs_code", "trade_code"];
+    const metadataAliases = [
+      "item_code",
+      "tax_code",
+      "unspsc_code",
+      "hs_code",
+      "trade_code",
+      "commodity_code",
+      "commodity_domain",
+      "commodity_domain_code",
+      "line_commodity_code",
+    ];
     const hasMetaAliases = metadataAliases.some((alias) => body[alias] !== undefined);
     if (hasData || hasMetaAliases) {
       const aliasData = Object.fromEntries(
@@ -2807,12 +2905,84 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     };
   }
 
+  function isPurchaseInvoiceLineMutation(table: EntityTableInfo): boolean {
+    return table.table_schema === "document" && table.table_name === "purchase_invoice";
+  }
+
+  function lineHasSourceDocument(row: Record<string, unknown>): boolean {
+    return Boolean(
+      row["commitment_line_id"]
+      || row["goods_receipt_line_id"]
+      || row["ses_line_id"],
+    );
+  }
+
+  function hasLineClassificationInput(body: Record<string, unknown>): boolean {
+    return LINE_CLASSIFICATION_INPUT_FIELDS.some((field) => hasOwnBodyField(body, field));
+  }
+
+  async function refreshLineRow(
+    linesTable: `${string}.${string}`,
+    fkCol: string,
+    parentId: string,
+    lineId: string,
+    tenantId: string | null,
+  ): Promise<Record<string, unknown> | null> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: any = (db as any)
+      .selectFrom(linesTable)
+      .selectAll()
+      .where("id" as never, "=", lineId as never)
+      .where(fkCol as never, "=", parentId as never);
+    if (tenantId) q = q.where("tenant_id" as never, "=", tenantId as never);
+    const row = await q.executeTakeFirst() as Record<string, unknown> | undefined;
+    return row ?? null;
+  }
+
+  async function maybeClassifyPurchaseInvoiceLine(args: {
+    table:       EntityTableInfo;
+    linesTable:  `${string}.${string}`;
+    fkCol:       string;
+    tenantId:    string | null;
+    principalId: string | null;
+    invoiceId:   string;
+    lineId:      string;
+    lineRow:     Record<string, unknown>;
+    body?:       Record<string, unknown>;
+  }): Promise<Record<string, unknown>> {
+    if (!isPurchaseInvoiceLineMutation(args.table)) return args.lineRow;
+    if (!args.tenantId || !args.principalId || !args.lineId) return args.lineRow;
+    if (lineHasSourceDocument(args.lineRow)) return args.lineRow;
+    if (args.body && !hasLineClassificationInput(args.body)) return args.lineRow;
+
+    try {
+      await resolveLineClassification(
+        { db, logger },
+        {
+          tenantId:    args.tenantId,
+          principalId: args.principalId,
+          invoiceId:   args.invoiceId,
+          lineId:      args.lineId,
+          mode:        "save",
+        },
+      );
+      return await refreshLineRow(args.linesTable, args.fkCol, args.invoiceId, args.lineId, args.tenantId)
+        ?? args.lineRow;
+    } catch (err) {
+      logger?.error("records_purchase_invoice_line_classify_error", {
+        err: String(err),
+        invoiceId: args.invoiceId,
+        lineId: args.lineId,
+      });
+      return args.lineRow;
+    }
+  }
+
   // ── POST /:entity/:id/lines — create a new line ───────────────────────────────
   const createLineHandler: RequestHandler = async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
-      const { sub } = claims as { sub: string };
 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
       const id         = req.params["id"] as string;
@@ -2826,6 +2996,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const xOrg    = (req.headers["x-org"]   as string) ?? "";
       const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      const sub = typeof (claims as { sub?: unknown }).sub === "string"
+        ? String((claims as { sub: string }).sub)
+        : "";
+      const principalId = sub && tenantId
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        : sub;
 
       if (rejectNonConventionalLineMutation(res, entityCode)) return;
 
@@ -2851,14 +3027,23 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Defaults for NOT NULL columns when creating a blank line.
       // quantity uses falsy-check (not == null) because lineBodyToDb converts null → 0,
       // which would violate the pil_qty_nonzero CHECK constraint.
+      const isPurchaseInvoiceLine = isPurchaseInvoiceLineMutation(table);
+      const parentHasSourceDocument = isPurchaseInvoiceLine
+        ? await purchaseInvoiceHasSourceDocument(id, tenantId)
+        : false;
+      const shouldDefaultStandaloneUom =
+        isPurchaseInvoiceLine
+        && !isPresentLineValue(insertRow["item_id"])
+        && !requestHasLineSourceDocument(body, insertRow)
+        && !parentHasSourceDocument;
+      const defaultUomCode = shouldDefaultStandaloneUom
+        ? await resolveDefaultProcurementLineUom(tenantId)
+        : null;
       if (!insertRow["item_description"]) insertRow["item_description"] = "";
-      if (!insertRow["uom_code"])         insertRow["uom_code"]         = "EA";
+      if (!insertRow["uom_code"] && defaultUomCode) insertRow["uom_code"] = defaultUomCode;
       if (!insertRow["quantity"])          insertRow["quantity"]         = 1;
       if (insertRow["unit_price"] == null) insertRow["unit_price"]      = 0;
       applyDerivedCreateLineAmounts(insertRow, body);
-      const principalId = sub && tenantId
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
-        : sub;
       insertRow["created_by"] = principalId;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2867,7 +3052,19 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         .returningAll()
         .executeTakeFirstOrThrow() as Record<string, unknown>;
 
-      res.status(201).json(normaliseLineRow(inserted, fkCol));
+      const lineId = typeof inserted["id"] === "string" ? inserted["id"] : "";
+      const classified = await maybeClassifyPurchaseInvoiceLine({
+        table,
+        linesTable,
+        fkCol,
+        tenantId,
+        principalId: principalId || null,
+        invoiceId: id,
+        lineId,
+        lineRow: inserted,
+      });
+
+      res.status(201).json(normaliseLineRow(classified, fkCol));
     } catch (err) {
       logger?.error("records_create_line_error", { err: String(err) });
       next(err);
@@ -2893,6 +3090,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const xOrg    = (req.headers["x-org"]   as string) ?? "";
       const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      const sub = typeof (claims as { sub?: unknown }).sub === "string"
+        ? String((claims as { sub: string }).sub)
+        : "";
+      const principalId = sub && tenantId
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        : sub;
 
       if (rejectNonConventionalLineMutation(res, entityCode)) return;
 
@@ -2925,7 +3128,19 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
 
-      res.json(normaliseLineRow(updated, fkCol));
+      const classified = await maybeClassifyPurchaseInvoiceLine({
+        table,
+        linesTable,
+        fkCol,
+        tenantId,
+        principalId: principalId || null,
+        invoiceId: id,
+        lineId,
+        lineRow: updated,
+        body,
+      });
+
+      res.json(normaliseLineRow(classified, fkCol));
     } catch (err) {
       logger?.error("records_patch_line_error", { err: String(err) });
       next(err);
@@ -3032,7 +3247,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         account_code:       body["account_code"]       ?? null,
         gl_account_id:      body["gl_account_id"]      ?? null,
         business_intent_id: body["business_intent_id"] ?? null,
-        spend_category_id:  body["spend_category_id"]  ?? null,
+        commodity_category_id:  body["commodity_category_id"]  ?? null,
         cost_center_id:     body["cost_center_id"]     ?? null,
         profit_center_id:   body["profit_center_id"]   ?? null,
         project_id:         body["project_id"]         ?? null,
@@ -3078,7 +3293,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const allowedKeys = [
         "distribution_basis","split_pct","split_amount","split_quantity",
         "distributed_amount","account_source","posting_role_code","account_code",
-        "gl_account_id","business_intent_id","spend_category_id",
+        "gl_account_id","business_intent_id","commodity_category_id",
         "cost_center_id","profit_center_id","project_id","site_id",
         "is_capex","asset_class_id","description",
       ];

@@ -326,6 +326,8 @@ export function FlowWizard({
                       entityCode={normalizedEntityCode ?? entityCode ?? ""}
                       recordId="__draft__"
                       lineEntityCode={section.entity_code ?? undefined}
+                      companyCodeId={String(state.draft.company_code_id ?? "")}
+                      record={state.draft}
                       lines={normalizeDraftLines(state.draft[payloadKey])}
                       distributions={[]}
                       currencyCode={currencyCode}

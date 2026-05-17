@@ -155,7 +155,7 @@ BEGIN
         -- ── Products ──────────────────────────────────────────────────────────
         ('product', 'tenant',                'belongs_to', 'tenant',                'tenant_id',   'restrict'),
         ('item', 'tenant',                   'belongs_to', 'tenant',                'tenant_id',   'restrict'),
-        ('item', 'category',                 'belongs_to', 'item_category',         'category_id', 'set_null'),
+        ('item', 'commodity_category',       'belongs_to', 'commodity_category',    'commodity_category_id', 'restrict'),
 
         -- ── DOC: Template & document ──────────────────────────────────────────
         ('template',      'tenant',          'belongs_to', 'tenant',          'tenant_id', 'restrict'),

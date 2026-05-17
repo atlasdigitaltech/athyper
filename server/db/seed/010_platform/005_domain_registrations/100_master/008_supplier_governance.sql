@@ -36,11 +36,7 @@ SELECT
     '{"parent_entity":"business_partner","parent_fk":"party_id","parent_scope":"party_type=business_partner",'
     '"pii_bearing":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE table_schema = 'master' AND table_name = 'party_governance_relation'
-      AND entity_code = 'business_partner_governance' AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- Repair existing installs that were previously registered as BP-owned governance.
 -- Business Partner is the canonical owner for governance.

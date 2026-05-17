@@ -11,7 +11,7 @@
 -- CHECK constraint; the entity-flow route ignores trigger_context when a
 -- flow_code is supplied explicitly in the query string.
 --
--- Depends on: 001_invoice_v2.sql (entity_version),
+-- Depends on: 001_invoice.sql (entity_version),
 --             016_purchase_invoice_flow.sql (entity_field seeds present)
 -- Idempotent: WHERE NOT EXISTS for flow, ON CONFLICT DO NOTHING for step,
 --             DELETE+INSERT for field bindings.

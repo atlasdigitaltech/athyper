@@ -6,7 +6,7 @@
  * GET    /api/finance/ap/invoices/:id           — single AP invoice with lines
  * PATCH  /api/finance/ap/invoices/:id           — update AP invoice header fields (draft/proforma only)
  * POST   /api/finance/ap/invoices/:id/lines          — add a line item
- * PATCH  /api/finance/ap/invoices/:id/lines/:lid    — update a line item (auto-classifies when spend_category_id changes)
+ * PATCH  /api/finance/ap/invoices/:id/lines/:lid    — update a line item (auto-classifies when commodity_category_id changes)
  * DELETE /api/finance/ap/invoices/:id/lines/:lid    — remove a line item
  * POST   /api/finance/ap/invoices/:id/lines/:lid/classify — explicit classify trigger (?mode=preview|save)
  * GET    /api/finance/ap/invoices/:id/lines/suggest — spend-category text suggestions (?q=)
@@ -35,7 +35,10 @@ import { randomUUID } from "node:crypto";
 import { handleCreateApInvoice } from "../../business/ap/invoice-create.handler.js";
 import { handleAddInvoiceLine, handleUpdateInvoiceLine, handleDeleteInvoiceLine } from "../../business/ap/invoice-lines.handler.js";
 import { handlePostPayment, handleSubmitPayment, handleVoidPayment } from "../../business/ap/payment-posting.service.js";
-import { resolveLineClassification } from "../../business/procurement-intake/IntentResolutionService.js";
+import {
+  resolveDraftLineClassification,
+  resolveLineClassification,
+} from "../../business/procurement-intake/IntentResolutionService.js";
 import { suggestSpendCategories } from "../../business/procurement-intake/SpendCategorySuggestService.js";
 import { extractInvoiceDraft } from "../../business/ap/invoice-extraction.service.js";
 
@@ -1108,6 +1111,27 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         body as unknown as Parameters<typeof handleAddInvoiceLine>[4],
         logger,
       );
+
+      const addedLine = (respBody as { line?: Record<string, unknown> }).line;
+      const addedLineId = typeof addedLine?.["id"] === "string" ? addedLine["id"] : "";
+      const hasSourceLine = Boolean(
+        addedLine?.["commitment_line_id"]
+        || addedLine?.["goods_receipt_line_id"]
+        || addedLine?.["ses_line_id"],
+      );
+      if (status === 201 && principalId && addedLineId && !hasSourceLine) {
+        try {
+          const decision = await resolveLineClassification(
+            { db, logger },
+            { tenantId, principalId, invoiceId, lineId: addedLineId, mode: "save" },
+          );
+          res.status(status).json({ ...respBody, classification: decision });
+          return;
+        } catch (e) {
+          logger?.error("auto_classify_added_line_error", { err: String(e), lineId: addedLineId });
+        }
+      }
+
       res.status(status).json(respBody);
     } catch (err) {
       logger?.error("finance_ap_invoice_line_add_error", { err: String(err) });
@@ -1137,10 +1161,19 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         logger,
       );
 
-      // Auto-classify when spend_category_id or business_intent_id is being set
-      if (status === 200 && principalId &&
-          (Object.prototype.hasOwnProperty.call(body, "spend_category_id") ||
-           Object.prototype.hasOwnProperty.call(body, "business_intent_id"))) {
+      const classificationInputs = [
+        "commodity_category_id", "business_intent_id",
+        "item_id", "item_description", "metadata", "data",
+        "quantity", "unit_price", "price_unit", "discount_pct",
+        "tax_group_id", "withholding_tax_group_id",
+        "is_asset", "asset_category_id",
+      ];
+      const shouldClassify = classificationInputs.some((key) =>
+        Object.prototype.hasOwnProperty.call(body, key),
+      );
+
+      // Auto-classify when category inputs, commodity metadata, or amount drivers change.
+      if (status === 200 && principalId && shouldClassify) {
         try {
           const decision = await resolveLineClassification(
             { db, logger },
@@ -1258,6 +1291,56 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
   }) as RequestHandler);
 
 
+  // POST /api/finance/ap/invoices/draft-lines/classify
+  // Draft intake lines do not have invoice/line UUIDs yet. Run the same
+  // resolver in preview mode from the submitted header + line snapshot.
+  router.post("/finance/ap/invoices/draft-lines/classify", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const record = body["record"] ?? body["header"] ?? {};
+      const line = body["line"] ?? {};
+      if (
+        !record || typeof record !== "object" || Array.isArray(record) ||
+        !line || typeof line !== "object" || Array.isArray(line)
+      ) {
+        res.status(400).json({ error: "INVALID_PAYLOAD", message: "record and line objects are required" });
+        return;
+      }
+
+      const classification = await resolveDraftLineClassification(
+        { db, logger },
+        {
+          tenantId,
+          principalId,
+          record: record as Record<string, unknown>,
+          line: line as Record<string, unknown>,
+          mode: "preview",
+        },
+      );
+
+      res.json({ ok: true, classification });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/company_code_id/.test(message)) {
+        res.status(422).json({ error: "MISSING_COMPANY_CODE", message });
+        return;
+      }
+      logger?.error("finance_ap_classify_draft_line_error", { err: message });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
   // ── GET /api/finance/ap/invoices/:id/lines/suggest ────────────────────────
   // Returns up to 5 spend-category suggestions based on a text query.
   // Query params: q (required), companyCodeId (optional, unused in Phase 1)
@@ -1269,10 +1352,23 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.json({ suggestions: [] }); return; }
 
+      const commodityDomain = String(
+        req.query["commodityDomain"] ?? req.query["domain"] ?? "",
+      ).trim();
+      const commodityCode = String(
+        req.query["commodityCode"] ?? req.query["code"] ?? "",
+      ).trim();
       const q = String(req.query["q"] ?? "").trim();
-      if (!q) { res.json({ suggestions: [] }); return; }
+      if (!q && !(commodityDomain && commodityCode)) {
+        res.json({ suggestions: [] });
+        return;
+      }
 
-      const suggestions = await suggestSpendCategories(db, tenantId, q, 5);
+      const suggestions = await suggestSpendCategories(db, tenantId, q, 5, {
+        commodityCode: commodityDomain && commodityCode
+          ? { domain_code: commodityDomain, code: commodityCode }
+          : null,
+      });
       res.json({ suggestions });
     } catch (err) {
       logger?.error("finance_ap_lines_suggest_error", { err: String(err) });

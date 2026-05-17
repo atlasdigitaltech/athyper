@@ -23,10 +23,7 @@ SELECT
     '{}'::jsonb,
     '{"parent_entity":"business_partner","parent_fk":"owner_id"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.entity
-    WHERE entity_code = 'business_partner_address' AND tenant_id IS NULL
-);
+ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (

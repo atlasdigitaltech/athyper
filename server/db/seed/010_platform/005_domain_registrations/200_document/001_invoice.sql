@@ -1,10 +1,10 @@
 -- 100_finance/200_document/001_invoice.sql
 -- Purpose: control.entity + entity_version + entity_field for Purchase Invoice
 --          (document.purchase_invoice)
--- Module: ACC (Finance Core Accounting)
+-- Module: PROC (Procurement)
 -- Depends on: LookupDomain/document/p2p_lookup_values.sql
 --             (domain: document.purchase_invoice_type, document.purchase_invoice_source)
--- Idempotent: WHERE NOT EXISTS / ON CONFLICT DO NOTHING
+-- Idempotent: WHERE NOT EXISTS / ON CONFLICT / canonical UPDATEs
 
 -- ── 1. control.entity ────────────────────────────────────────────────────────
 INSERT INTO control.entity (
@@ -33,17 +33,29 @@ WHERE NOT EXISTS (
 );
 
 UPDATE control.entity
-   SET label_singular = 'Purchase Invoice',
+   SET module_id = COALESCE((SELECT id::text FROM shared.module WHERE code = 'PROC'), module_id),
+       name = 'purchase_invoice',
+       slug = 'purchase-invoice',
+       entity_short = 'INV',
+       entity_code = 'purchase_invoice',
+       entity_class = 'DOCUMENT',
+       ownership_model = 'system',
+       kind = 'ent',
+       backing_type = 'table',
+       governance_level = 'full',
+       security_tier = 'tenant_critical',
+       mutability = 'controlled',
+       label_singular = 'Purchase Invoice',
        label_plural = 'Purchase Invoices',
+       icon_key = 'file-text',
+       color_token = 'violet',
+       numbering_active = true,
+       status = 'ACTIVE',
        updated_at = now(),
        updated_by = '00000000-0000-0000-0000-000000000000'
  WHERE table_schema = 'document'
    AND table_name = 'purchase_invoice'
-   AND tenant_id IS NULL
-   AND (
-     label_singular IS DISTINCT FROM 'Purchase Invoice'
-     OR label_plural IS DISTINCT FROM 'Purchase Invoices'
-   );
+   AND tenant_id IS NULL;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
@@ -53,7 +65,11 @@ SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
 FROM   control.entity e
 WHERE  e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND  e.tenant_id IS NULL
-ON CONFLICT (entity_id, version_no) DO NOTHING;
+ON CONFLICT (entity_id, version_no) DO UPDATE
+SET status = 'EFFECTIVE',
+    effective_from = COALESCE(control.entity_version.effective_from, EXCLUDED.effective_from),
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000';
 
 -- ── 3. control.entity_field (26 fields) ──────────────────────────────────────
 -- Group A: Identity / Classification (10-30)
@@ -89,6 +105,8 @@ CROSS JOIN (VALUES
     -- ── C: Currency & Amounts ─────────────────────────────────────────────────
     ('currency_code',            'currency_code',           'Currency',           'text',           'one',         NULL::text,                                   true,  true,  '{"max_length":3}'::jsonb,              70),
     ('total_amount',             'total_amount',            'Gross Amount',       'decimal',        'one',         NULL::text,                                   true,  false, '{"min":0}'::jsonb,                     80),
+    ('tax_mode',                 'tax_mode',                'Tax Mode',           'lookup',         'zero_or_one', 'document.purchase_invoice_tax_mode'::text,   false, true,  NULL::jsonb,                            85),
+    ('tax_mode_source',          'tax_mode_source',         'Tax Mode Source',    'lookup',         'zero_or_one', 'document.purchase_invoice_tax_mode_source'::text, false, true, NULL::jsonb,                       86),
     ('tax_amount',               'tax_amount',              'Tax Amount',         'decimal',        'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                     90),
     ('withholding_tax_amount',   'withholding_tax_amount',  'WHT Amount',         'decimal',        'one',         NULL::text,                                   false, false, '{"min":0}'::jsonb,                     95),
     ('net_amount',               'subtotal_amount',         'Net Amount',         'decimal',        'one',         NULL::text,                                   true,  false, '{"min":0}'::jsonb,                    100),
@@ -198,6 +216,34 @@ WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND e.tenant_id IS NULL AND ev.version_no = 1
   AND ef.name IN ('document_no', 'supplier_invoice_number', 'description');
+
+-- Folded in from retired patch seeds: keep canonical invoice field names/labels.
+UPDATE control.entity_field ef
+   SET label = 'Invoice Name',
+       validation = '{"max_length":200}'::jsonb,
+       constraints = '{"max_length":200}'::jsonb,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+  FROM control.entity_version ev
+  JOIN control.entity e ON e.id = ev.entity_id
+ WHERE ef.entity_version_id = ev.id
+   AND e.table_schema = 'document'
+   AND e.table_name = 'purchase_invoice'
+   AND e.tenant_id IS NULL
+   AND ev.version_no = 1
+   AND ef.name = 'description'
+   AND ef.tenant_id IS NULL;
+
+DELETE FROM control.entity_field ef
+USING control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND e.table_schema = 'document'
+  AND e.table_name = 'purchase_invoice'
+  AND e.tenant_id IS NULL
+  AND ev.version_no = 1
+  AND ef.name IN ('gross_amount', 'vendor_invoice_ref')
+  AND ef.tenant_id IS NULL;
 
 -- ── 4. display_config — detail renderer + document_header field map ───────────
 -- Applied only when the column still holds the default empty object so that
@@ -426,6 +472,16 @@ WHERE table_schema    = 'document'
   AND tenant_id       IS NULL
   AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
 
+-- Folded in from retired runtime repair: mark canonical field metadata ownership.
+UPDATE control.entity
+   SET display_config = COALESCE(display_config, '{}'::jsonb)
+                        || jsonb_build_object('field_metadata_repair_version', 1),
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+ WHERE table_schema = 'document'
+   AND table_name = 'purchase_invoice'
+   AND tenant_id IS NULL;
+
 -- ── 3b. Full-coverage entity fields — all remaining business columns ───────────
 -- Excluded (intentionally): id, tenant_id, code, name (system identity);
 -- term_snapshot, dimension_set_id, ap_je_id, workflow_request_id (internal);
@@ -485,11 +541,16 @@ ON CONFLICT DO NOTHING;
 
 -- ── Patch: rename 'Vendor Ref' / 'Vendor Invoice No.' → 'Supplier Invoice No.' on already-seeded rows ──
 UPDATE control.entity_field ef
-   SET label = 'Supplier Invoice No.'
+   SET name = 'supplier_invoice_number',
+       column_name = 'supplier_invoice_number',
+       label = 'Supplier Invoice No.',
+       validation = COALESCE(ef.validation, '{"max_length":100}'::jsonb),
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
   FROM control.entity_version ev
   JOIN control.entity e ON e.id = ev.entity_id
  WHERE ef.entity_version_id = ev.id
    AND e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
    AND e.tenant_id IS NULL AND ev.version_no = 1
-   AND ef.name = 'vendor_invoice_ref'
-   AND ef.label IN ('Vendor Ref', 'Vendor Invoice No.');
+   AND ef.name IN ('supplier_invoice_number', 'vendor_invoice_ref')
+   AND ef.tenant_id IS NULL;

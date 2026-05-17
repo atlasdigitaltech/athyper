@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  BadgeCheck,
   Database,
   GitBranch,
   Landmark,
@@ -21,15 +20,14 @@ import {
   type BusinessIntentSummary,
 } from "../hooks/useTaxonomyWorkbenches";
 
-type IntentMode = "all" | "approval" | "gl-defaults" | "restricted" | "overrides";
+type IntentMode = "all" | "defaults" | "restricted" | "overlays";
 
 const EMPTY_SUMMARY: BusinessIntentSummary = {
   total: 0,
   roots: 0,
   leaves: 0,
   domains: 0,
-  approvalRequired: 0,
-  glDefaults: 0,
+  policyDefaults: 0,
   restricted: 0,
   companyPolicies: 0,
   supplierPolicies: 0,
@@ -51,11 +49,6 @@ function includesText(value: string | null | undefined, search: string): boolean
   return (value ?? "").toLowerCase().includes(search);
 }
 
-function displayPct(part: number, total: number): string {
-  if (!total) return "0%";
-  return `${Math.round((part / total) * 100)}%`;
-}
-
 function domainClass(domain: string): string {
   switch (domain) {
     case "OPEX":
@@ -64,6 +57,7 @@ function domainClass(domain: string): string {
     case "CAPEX":
       return "border-warning/30 bg-warning/10 text-warning";
     case "COST_OF_SALES":
+    case "REVENUE":
       return "border-success/30 bg-success/10 text-success";
     case "REGULATORY":
       return "border-destructive/30 bg-destructive/10 text-destructive";
@@ -80,11 +74,6 @@ function visibilityClass(value: string): string {
     default:
       return "border-info/30 bg-info/10 text-info";
   }
-}
-
-function formatLimit(row: BusinessIntentRow): string {
-  if (row.maxAutoApproveAmount === null) return "Manual";
-  return `${row.maxAutoApproveCurrency ?? ""} ${row.maxAutoApproveAmount.toLocaleString()}`.trim();
 }
 
 function StatusLine({
@@ -149,7 +138,7 @@ function DomainRail({
         {domains.map((domain) => {
           const domainItems = items.filter((item) => item.domain === domain);
           const active = activeDomain === domain;
-          const defaulted = domainItems.filter((item) => item.defaultGlAccountCode).length;
+          const defaultRows = domainItems.reduce((sum, item) => sum + item.companyDefaultCount, 0);
           return (
             <button
               key={domain}
@@ -164,7 +153,7 @@ function DomainRail({
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{domain.replace(/_/g, " ")}</span>
                 <span className={cn("block truncate text-xs", active ? "text-primary-foreground/75" : "text-muted-foreground")}>
-                  {domainItems.length} intents / {displayPct(defaulted, domainItems.length)} GL defaults
+                  {domainItems.length} intents / {defaultRows} defaults
                 </span>
               </span>
             </button>
@@ -186,15 +175,15 @@ function IntentTable({
 }) {
   return (
     <div className="overflow-hidden rounded-lg border">
-      <div className="grid min-w-[920px] grid-cols-[1.15fr_1.6fr_1fr_1fr_1fr_0.8fr] border-b bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+      <div className="grid min-w-[880px] grid-cols-[1.15fr_1.6fr_1fr_0.85fr_0.85fr_0.8fr] border-b bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
         <span>Code</span>
         <span>Name</span>
         <span>Domain</span>
-        <span>GL default</span>
-        <span>Approval</span>
+        <span>Visibility</span>
+        <span>Defaults</span>
         <span className="text-right">Policies</span>
       </div>
-      <div className="max-h-[44vh] min-w-[920px] overflow-auto">
+      <div className="max-h-[44vh] min-w-[880px] overflow-auto">
         {rows.length === 0 ? (
           <div className="px-3 py-10 text-center text-sm text-muted-foreground">No business intents matched.</div>
         ) : rows.map((row) => {
@@ -206,7 +195,7 @@ function IntentTable({
               type="button"
               onClick={() => onSelect(row)}
               className={cn(
-                "grid w-full grid-cols-[1.15fr_1.6fr_1fr_1fr_1fr_0.8fr] items-center gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted/40",
+                "grid w-full grid-cols-[1.15fr_1.6fr_1fr_0.85fr_0.85fr_0.8fr] items-center gap-3 border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted/40",
                 active && "bg-primary/10",
               )}
             >
@@ -222,14 +211,12 @@ function IntentTable({
                   {row.domain.replace(/_/g, " ")}
                 </Badge>
               </span>
-              <span className="truncate text-xs text-muted-foreground">
-                {row.defaultGlAccountCode ? `${row.defaultGlAccountCode} / ${row.defaultGlAccountName}` : "Rule resolved"}
-              </span>
               <span>
-                <Badge variant="outline" className={row.isApprovalRequired ? "border-warning/30 bg-warning/10 text-warning" : "border-success/30 bg-success/10 text-success"}>
-                  {row.isApprovalRequired ? "Required" : "Auto"}
+                <Badge variant="outline" className={visibilityClass(row.visibility)}>
+                  {row.visibility}
                 </Badge>
               </span>
+              <span className="text-sm font-medium text-foreground">{row.companyDefaultCount}</span>
               <span className="text-right">
                 <Badge variant="outline" className={policyCount ? "border-success/30 bg-success/10 text-success" : "border-border bg-muted text-muted-foreground"}>
                   {policyCount}
@@ -280,27 +267,21 @@ function IntentDetail({ row }: { row?: BusinessIntentRow }) {
         />
         <StatusLine
           icon={<Landmark className="h-4 w-4" />}
-          label="Financial defaults"
-          value={row.defaultGlAccountCode ?? "Rules"}
-          detail={row.defaultGlAccountName ?? "Engine resolves profiles through intent accounting profile rules."}
-        />
-        <StatusLine
-          icon={<BadgeCheck className="h-4 w-4" />}
-          label="Approval"
-          value={row.isApprovalRequired ? "Required" : "Optional"}
-          detail={`Auto-approve ceiling: ${formatLimit(row)}`}
+          label="Policy defaults"
+          value={row.companyDefaultCount}
+          detail="GL, tax, asset, capex, and selectable behavior are resolved from commodity category buy and sell policies."
         />
         <StatusLine
           icon={<SlidersHorizontal className="h-4 w-4" />}
           label="Policy overlays"
           value={policyCount}
-          detail={`${row.companyPolicyCount} company-code policies / ${row.supplierPolicyCount} supplier policies / ${row.companyDefaultCount} defaults`}
+          detail={`${row.companyPolicyCount} company policies / ${row.supplierPolicyCount} supplier policies / ${row.supplierDenyCount + row.companyDenyCount} denies`}
         />
         <StatusLine
           icon={<Database className="h-4 w-4" />}
           label="DDL map"
-          value="master"
-          detail="business_intent -> company_code_intent_policy -> company_code_supplier_intent_policy"
+          value="policy tables"
+          detail="business_intent -> commodity_category_buy_policy / commodity_category_sell_policy"
         />
       </div>
     </section>
@@ -334,31 +315,25 @@ export function BusinessIntentWorkbench() {
   const filtered = useMemo(() => {
     return items.filter((item) => {
       if (activeDomain !== "all" && item.domain !== activeDomain) return false;
-      if (mode === "approval" && !item.isApprovalRequired) return false;
-      if (mode === "gl-defaults" && !item.defaultGlAccountCode) return false;
+      if (mode === "defaults" && item.companyDefaultCount === 0) return false;
       if (mode === "restricted" && item.visibility === "STANDARD") return false;
-      if (mode === "overrides" && item.companyPolicyCount + item.supplierPolicyCount === 0) return false;
+      if (mode === "overlays" && item.companyPolicyCount + item.supplierPolicyCount === 0) return false;
       if (!searchKey) return true;
       return (
         includesText(item.code, searchKey) ||
         includesText(item.name, searchKey) ||
         includesText(item.description, searchKey) ||
         includesText(item.domain, searchKey) ||
-        includesText(item.subtype, searchKey) ||
-        includesText(item.defaultGlAccountCode, searchKey) ||
-        includesText(item.defaultGlAccountName, searchKey)
+        includesText(item.subtype, searchKey)
       );
     });
   }, [activeDomain, items, mode, searchKey]);
-
-  const approvalPct = displayPct(summary.approvalRequired, summary.total);
-  const defaultPct = displayPct(summary.glDefaults, summary.total);
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-y-auto sm:gap-3 sm:overflow-hidden">
       <TaxonomyWorkbenchHeader
         active="intent"
-        subtitle="master.business_intent / GL fallback / approval and supplier eligibility policy"
+        subtitle="master.business_intent / domain purpose / commodity category buy and sell policies"
         actions={
           <Button
             type="button"
@@ -378,8 +353,8 @@ export function BusinessIntentWorkbench() {
         <ReportMetricGrid className="lg:grid-cols-5">
           <ReportMetricCard label="Intents" value={summary.total.toLocaleString()} detail={`${summary.roots} domain roots / ${summary.leaves} leaves`} />
           <ReportMetricCard label="Domains" value={summary.domains.toLocaleString()} detail="OPEX, CAPEX, COGS, admin, regulatory" />
-          <ReportMetricCard label="Approval" value={approvalPct} detail={`${summary.approvalRequired} require approval`} tone="warning" />
-          <ReportMetricCard label="GL Defaults" value={defaultPct} detail={`${summary.glDefaults} direct fallbacks`} tone="success" />
+          <ReportMetricCard label="Policy Defaults" value={summary.policyDefaults.toLocaleString()} detail="default rows in commodity policies" tone="success" />
+          <ReportMetricCard label="Restricted" value={summary.restricted.toLocaleString()} detail="visibility requires explicit policy" tone="warning" />
           <ReportMetricCard label="Policy Overlay" value={(summary.companyPolicies + summary.supplierPolicies).toLocaleString()} detail={`${summary.deniedPolicies} deny rows`} tone={summary.deniedPolicies ? "danger" : "neutral"} />
         </ReportMetricGrid>
       </section>
@@ -394,12 +369,12 @@ export function BusinessIntentWorkbench() {
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search intents, domains, and GL defaults..."
+                placeholder="Search intents, domains, and policies..."
                 className="h-8 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               />
             </div>
             <div className="flex items-center gap-1">
-              {(["all", "approval", "gl-defaults", "restricted", "overrides"] as const).map((value) => (
+              {(["all", "defaults", "restricted", "overlays"] as const).map((value) => (
                 <Button
                   key={value}
                   type="button"
@@ -408,7 +383,7 @@ export function BusinessIntentWorkbench() {
                   className="h-8 capitalize"
                   onClick={() => setMode(value)}
                 >
-                  {value.replace("-", " ")}
+                  {value}
                 </Button>
               ))}
             </div>
@@ -434,8 +409,8 @@ export function BusinessIntentWorkbench() {
 
       <section className="shrink-0 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> 021_base seeds domain roots and leaves</span>
-          <span className="inline-flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5" /> GL defaults remain last-resort fallback</span>
+          <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> 021_base seeds domain-level intents</span>
+          <span className="inline-flex items-center gap-1.5"><Landmark className="h-3.5 w-3.5" /> posting defaults live in commodity category policies</span>
           <span className="inline-flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5" /> restricted intents require explicit ALLOW policy</span>
         </div>
       </section>

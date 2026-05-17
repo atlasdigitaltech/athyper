@@ -16,10 +16,11 @@ import {
   type RowSelectionState,
 } from "@tanstack/react-table";
 import { type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode, useState } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ListPlus } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Button } from "../primitives/Button";
 import { Checkbox } from "../primitives/Checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../primitives/Select";
 
 const ROW_CLICK_INTERACTIVE_SELECTOR = [
   "a",
@@ -74,6 +75,11 @@ export interface DataTableProps<TData> {
   currentPage?: number;   // 1-based
   totalPages?: number;
   onPageChange?: (page: number) => void;
+  pageSizeOptions?: number[];
+  onPageSizeChange?: (pageSize: number) => void;
+  loadMoreSize?: number;
+  maxPageSize?: number;
+  onLoadMore?: () => void;
   /**
    * Row density — controls cell padding and header height.
    * "compact"     → tight rows (py-1, h-7 header)
@@ -130,6 +136,11 @@ export function DataTable<TData>({
   currentPage,
   totalPages,
   onPageChange,
+  pageSizeOptions,
+  onPageSizeChange,
+  loadMoreSize,
+  maxPageSize,
+  onLoadMore,
   rowActions,
   tableContainerClassName,
   tableContainerRef,
@@ -172,6 +183,33 @@ export function DataTable<TData>({
 
   // Server-side pagination when all three pagination props are provided
   const isServerPage = totalCount !== undefined && currentPage !== undefined && totalPages !== undefined && onPageChange !== undefined;
+  const resolvedMaxPageSize = maxPageSize && maxPageSize > 0 ? maxPageSize : undefined;
+  const normalizedPageSizeOptions = Array.from(
+    new Set(
+      [...(pageSizeOptions ?? []), pageSize]
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .filter((value) => !resolvedMaxPageSize || value <= resolvedMaxPageSize),
+    ),
+  ).sort((a, b) => a - b);
+  const showPageSizeControl = normalizedPageSizeOptions.length > 0 && !!onPageSizeChange;
+  const loadMoreLimit = Math.min(
+    resolvedMaxPageSize ?? Number.POSITIVE_INFINITY,
+    totalCount ?? Number.POSITIVE_INFINITY,
+  );
+  const canLoadMore = !!onLoadMore
+    && pageSize < loadMoreLimit;
+  const remainingLoadMore = Number.isFinite(loadMoreLimit)
+    ? Math.max(0, loadMoreLimit - pageSize)
+    : undefined;
+  const displayedLoadMoreSize = loadMoreSize && remainingLoadMore !== undefined
+    ? Math.min(loadMoreSize, remainingLoadMore)
+    : loadMoreSize;
+  const loadMoreTitle = !canLoadMore && resolvedMaxPageSize && pageSize >= resolvedMaxPageSize && (totalCount ?? 0) > pageSize
+    ? `Maximum ${resolvedMaxPageSize} rows loaded. Use Next to continue.`
+    : displayedLoadMoreSize
+      ? `Load ${displayedLoadMoreSize} more records`
+      : "Load more records";
+  const loadMoreLabel = displayedLoadMoreSize ? `Load ${displayedLoadMoreSize} More` : "Load More";
 
   const rowSelection    = controlledSelection ?? internalSelection;
   const setRowSelection = onRowSelectionChange ?? setInternalSelection;
@@ -387,13 +425,47 @@ export function DataTable<TData>({
       </div>
 
       {/* Server-side pagination controls */}
-      {isServerPage && totalPages! > 1 && (
-        <div className="flex items-center justify-between px-1">
-          <p className="text-sm text-muted-foreground">
-            {selectable && Object.keys(rowSelection).length > 0
-              ? `${Object.keys(rowSelection).length} of ${totalCount} selected`
-              : `${totalCount} records`}
-          </p>
+      {isServerPage && totalCount! > 0 && (
+        <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              {selectable && Object.keys(rowSelection).length > 0
+                ? `${Object.keys(rowSelection).length} of ${totalCount} selected`
+                : `${totalCount} records`}
+            </p>
+            {showPageSizeControl && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-muted-foreground">Rows</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => onPageSizeChange?.(Number(value))}
+                >
+                  <SelectTrigger className="h-8 w-[5.25rem] px-2 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {normalizedPageSizeOptions.map((option) => (
+                      <SelectItem key={option} value={String(option)} className="text-xs">
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {onLoadMore && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onLoadMore}
+                disabled={!canLoadMore}
+                title={loadMoreTitle}
+              >
+                <ListPlus className="size-4" />
+                {loadMoreLabel}
+              </Button>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"

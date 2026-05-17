@@ -70,7 +70,7 @@ BEGIN
     -- Count ALL active classification→intent rules for this tenant.
     -- (Prior query only counted the 3 generic-intent rules, missing 061/062 rules.)
     SELECT count(*) INTO v_rule_count
-      FROM control.classification_to_intent_rule
+      FROM control.commodity_classification_to_intent_rule
      WHERE tenant_id = v_tid
        AND is_active  = true;
 

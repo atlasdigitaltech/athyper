@@ -1042,51 +1042,118 @@ COMMENT ON TABLE master.employee IS
     'Party for expense claims, payroll, advances. manager_id = self-ref hierarchy.';
 
 
--- §P4  master.item_category — hierarchical product taxonomy
-CREATE TABLE IF NOT EXISTS master.item_category (
-    -- Identity
+-- §P4  master.commodity_category - shared commodity taxonomy
+-- =============================================================================
+-- CG1  master.commodity_category - shared commodity taxonomy
+-- =============================================================================
+DROP TABLE IF EXISTS master.commodity_category_spend_profile CASCADE;
+DROP TABLE IF EXISTS master.commodity_category_sales_profile CASCADE;
+DROP TABLE IF EXISTS master.commodity_category_inventory_profile CASCADE;
+
+CREATE TABLE IF NOT EXISTS master.commodity_category (
     id               uuid         NOT NULL DEFAULT shared.uuidv7(),
     tenant_id        uuid         NOT NULL,
     code             text         NOT NULL,
     name             text         NOT NULL,
-
-    -- Table-specific
     description      text,
     parent_id        uuid,
+    root_category_id uuid         NOT NULL,
     level_no         smallint,
     sort_order       smallint     NOT NULL DEFAULT 0,
-
-    -- Tax default (FK → control.tax_group)
-    default_tax_group_id uuid,
-
-    -- Metadata
+    buy_allowed      boolean      NOT NULL DEFAULT false,
+    sell_allowed     boolean      NOT NULL DEFAULT false,
+    inventory_allowed boolean     NOT NULL DEFAULT false,
+    is_classification_required boolean NOT NULL DEFAULT false,
+    is_hs_required   boolean      NOT NULL DEFAULT false,
+    is_regulated     boolean      NOT NULL DEFAULT false,
+    allowed_classification_domains jsonb NOT NULL DEFAULT '[]'::jsonb,
+    uom_code         text,
+    sales_revenue_recognition_method text NOT NULL DEFAULT 'POINT_IN_TIME',
+    sales_variable_consideration text,
+    sales_standalone_selling_price_method text,
+    is_stockable     boolean      NOT NULL DEFAULT false,
+    is_consumable    boolean      NOT NULL DEFAULT false,
+    default_valuation_method text,
+    is_lot_tracking_allowed boolean NOT NULL DEFAULT false,
+    is_lot_tracking_required boolean NOT NULL DEFAULT false,
+    is_serial_tracking_allowed boolean NOT NULL DEFAULT false,
+    is_serial_tracking_required boolean NOT NULL DEFAULT false,
     metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
-
-    -- Lifecycle
     status           text         NOT NULL DEFAULT 'active',
     is_active        boolean      GENERATED ALWAYS AS (status = 'active') STORED,
     status_changed_at timestamptz,
     status_changed_by uuid,
-
-    -- Audit
     created_at       timestamptz  NOT NULL DEFAULT now(),
     created_by       uuid         NOT NULL,
     updated_at       timestamptz,
     updated_by       uuid,
-
-    CONSTRAINT item_category_pkey           PRIMARY KEY (id),
-    CONSTRAINT item_category_tenant_id_uq   UNIQUE (tenant_id, id),
-    CONSTRAINT item_category_tenant_code_uq UNIQUE (tenant_id, code),
-    CONSTRAINT item_category_code_nonempty  CHECK (btrim(code) <> ''),
-    CONSTRAINT item_category_name_nonempty  CHECK (btrim(name) <> ''),
-    CONSTRAINT item_category_no_self_parent CHECK (parent_id IS DISTINCT FROM id)
+    CONSTRAINT commodity_category_pkey           PRIMARY KEY (id),
+    CONSTRAINT commodity_category_tenant_id_uq   UNIQUE (tenant_id, id),
+    CONSTRAINT commodity_category_tenant_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT commodity_category_code_nonempty  CHECK (btrim(code) <> ''),
+    CONSTRAINT commodity_category_name_nonempty  CHECK (btrim(name) <> ''),
+    CONSTRAINT commodity_category_no_self_parent CHECK (parent_id IS DISTINCT FROM id),
+    CONSTRAINT commodity_category_root_is_self   CHECK (parent_id IS NOT NULL OR root_category_id = id),
+    CONSTRAINT commodity_category_domains_array_chk CHECK (jsonb_typeof(allowed_classification_domains) = 'array'),
+    CONSTRAINT commodity_category_hs_domain_chk CHECK (
+        NOT is_hs_required OR allowed_classification_domains ? 'hs'
+    ),
+    CONSTRAINT commodity_category_rev_method_chk CHECK (sales_revenue_recognition_method IN (
+        'POINT_IN_TIME','OVER_TIME','PCT_COMPLETION','INPUT_METHOD','OUTPUT_METHOD')),
+    CONSTRAINT commodity_category_inventory_gate_chk CHECK (
+        inventory_allowed OR (NOT is_stockable AND NOT is_consumable)
+    ),
+    CONSTRAINT commodity_category_lot_req_allowed_chk CHECK (NOT is_lot_tracking_required OR is_lot_tracking_allowed),
+    CONSTRAINT commodity_category_serial_req_allowed_chk CHECK (NOT is_serial_tracking_required OR is_serial_tracking_allowed),
+    CONSTRAINT commodity_category_status_chk     CHECK (status IN ('active', 'inactive', 'archived'))
 );
 
-COMMENT ON TABLE master.item_category IS
-    'ARCHETYPE=B;SCOPE=T. Hierarchical product taxonomy. Self-referential tree via parent_id. '
-    'Classifications via commodity_classification bridge.';
-COMMENT ON COLUMN master.item_category.default_tax_group_id IS
-    'FK → control.tax_group (tenant-composite). Category-level fallback tax group.';
+COMMENT ON TABLE master.commodity_category IS
+    'ARCHETYPE=B;SCOPE=T. Shared commodity taxonomy: what the product/item/service is. '
+    'Base buy, sell, inventory, classification, sales, and stock behavior lives on this table. '
+    'Scoped intent, GL, asset, tax, revenue, and warehouse overrides live in control.commodity_category_*_policy tables. '
+    'External standards such as UNSPSC, HS, and NAICS are linked through master.commodity_classification '
+    'with owner_type=commodity_category.';
+
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS buy_allowed boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS sell_allowed boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS inventory_allowed boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS is_classification_required boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS is_hs_required boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS is_regulated boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS allowed_classification_domains jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS uom_code text;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS sales_revenue_recognition_method text NOT NULL DEFAULT 'POINT_IN_TIME';
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS sales_variable_consideration text;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS sales_standalone_selling_price_method text;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS is_stockable boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS is_consumable boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS default_valuation_method text;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS is_lot_tracking_allowed boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS is_lot_tracking_required boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS is_serial_tracking_allowed boolean NOT NULL DEFAULT false;
+ALTER TABLE master.commodity_category ADD COLUMN IF NOT EXISTS is_serial_tracking_required boolean NOT NULL DEFAULT false;
+
+ALTER TABLE master.commodity_category DROP CONSTRAINT IF EXISTS commodity_category_domains_array_chk;
+ALTER TABLE master.commodity_category ADD CONSTRAINT commodity_category_domains_array_chk
+    CHECK (jsonb_typeof(allowed_classification_domains) = 'array');
+ALTER TABLE master.commodity_category DROP CONSTRAINT IF EXISTS commodity_category_hs_domain_chk;
+ALTER TABLE master.commodity_category ADD CONSTRAINT commodity_category_hs_domain_chk
+    CHECK (NOT is_hs_required OR allowed_classification_domains ? 'hs');
+ALTER TABLE master.commodity_category DROP CONSTRAINT IF EXISTS commodity_category_rev_method_chk;
+ALTER TABLE master.commodity_category ADD CONSTRAINT commodity_category_rev_method_chk
+    CHECK (sales_revenue_recognition_method IN ('POINT_IN_TIME','OVER_TIME','PCT_COMPLETION','INPUT_METHOD','OUTPUT_METHOD'));
+ALTER TABLE master.commodity_category DROP CONSTRAINT IF EXISTS commodity_category_inventory_gate_chk;
+ALTER TABLE master.commodity_category ADD CONSTRAINT commodity_category_inventory_gate_chk
+    CHECK (inventory_allowed OR (NOT is_stockable AND NOT is_consumable));
+ALTER TABLE master.commodity_category DROP CONSTRAINT IF EXISTS commodity_category_lot_req_allowed_chk;
+ALTER TABLE master.commodity_category ADD CONSTRAINT commodity_category_lot_req_allowed_chk
+    CHECK (NOT is_lot_tracking_required OR is_lot_tracking_allowed);
+ALTER TABLE master.commodity_category DROP CONSTRAINT IF EXISTS commodity_category_serial_req_allowed_chk;
+ALTER TABLE master.commodity_category ADD CONSTRAINT commodity_category_serial_req_allowed_chk
+    CHECK (NOT is_serial_tracking_required OR is_serial_tracking_allowed);
+
+
 
 
 -- §P5  master.product — tenant-level catalog item (SKU, pricing, tax)
@@ -1100,8 +1167,7 @@ CREATE TABLE IF NOT EXISTS master.product (
     -- Table-specific
     description      text,
     sku              text,
-    category_id      uuid,
-    spend_category_id uuid,
+    commodity_category_id uuid,
     product_type     text         NOT NULL DEFAULT 'physical',
     unit_of_measure  text,
     base_price       numeric(18,4),
@@ -1137,23 +1203,57 @@ CREATE TABLE IF NOT EXISTS master.product (
 );
 
 COMMENT ON TABLE master.product IS
-    'ARCHETYPE=B;SCOPE=T. Tenant-level catalog item. Sellable/purchasable. SKU optional (partial unique). '
-    'category_id → item_category, spend_category_id → spend_category. '
+    'ARCHETYPE=B;SCOPE=T. Tenant-level sellable catalog object. SKU optional (partial unique). '
+    'commodity_category_id -> commodity_category. '
     'Classifications via commodity_classification bridge.';
 COMMENT ON COLUMN master.product.default_tax_group_id IS
     'FK → control.tax_group (tenant-composite). Replaces free-text tax_code. '
-    'Resolution order: product → item_category → spend_category → scoped tax_rate_schedule.';
+    'Resolution order: product -> spend_category -> scoped tax_rate_schedule.';
 
 
 -- §P6  master.item — company-level inventory config (dual-path entry)
 --
 -- Two paths into item:
 --   Path A (product-centric): Retail, manufacturing, distribution
---     item_category → product → item
---     product_id NOT NULL, category_id optional (inherit from product)
+--     commodity_category → product → item
+--     product_id NOT NULL, commodity_category_id optional (inherit from product)
 --   Path B (item-centric): Utilities, MRO, facilities, government
---     item_category → item
---     product_id NULL, category_id NOT NULL (direct classification)
+--     commodity_category → item
+--     product_id NULL, commodity_category_id NOT NULL (direct classification)
+ALTER TABLE master.product
+    ADD COLUMN IF NOT EXISTS commodity_category_id uuid;
+DO $$
+BEGIN
+    IF to_regclass('master.product') IS NOT NULL
+       AND EXISTS (
+           SELECT 1
+           FROM information_schema.columns
+           WHERE table_schema = 'master'
+             AND table_name = 'product'
+             AND column_name = 'spend_category_id'
+       )
+       AND EXISTS (
+           SELECT 1
+           FROM information_schema.columns
+           WHERE table_schema = 'master'
+             AND table_name = 'product'
+             AND column_name = 'commodity_category_id'
+       ) THEN
+        UPDATE master.product p
+           SET commodity_category_id = cc.id
+          FROM master.spend_category sc
+          JOIN master.commodity_category cc
+            ON cc.tenant_id = sc.tenant_id
+           AND cc.code = sc.code
+         WHERE p.tenant_id = sc.tenant_id
+           AND p.spend_category_id = sc.id
+           AND p.commodity_category_id IS NULL;
+    END IF;
+END $$;
+ALTER TABLE master.product DROP CONSTRAINT IF EXISTS prod_spend_category_fk;
+DROP INDEX IF EXISTS master.prod_spend_cat_idx;
+ALTER TABLE master.product DROP COLUMN IF EXISTS spend_category_id;
+
 CREATE TABLE IF NOT EXISTS master.item (
     -- Identity
     id               uuid         NOT NULL DEFAULT shared.uuidv7(),
@@ -1166,14 +1266,11 @@ CREATE TABLE IF NOT EXISTS master.item (
 
     -- Table-specific (dual-path entry)
     product_id       uuid,                    -- Path A: product-centric (nullable)
-    category_id      uuid,                    -- Path B: item-centric (direct FK → item_category)
+    commodity_category_id uuid,
 
     -- Table-specific (valuation)
     valuation_method text         NOT NULL,
     standard_cost    numeric(18,4),
-
-    -- Table-specific (procurement)
-    spend_category_id uuid,
 
     -- Table-specific (inventory)
     reorder_point    numeric(18,4),
@@ -1204,7 +1301,8 @@ CREATE TABLE IF NOT EXISTS master.item (
     CONSTRAINT im_code_nonempty     CHECK (btrim(code) <> ''),
     CONSTRAINT im_name_nonempty     CHECK (btrim(name) <> ''),
     CONSTRAINT im_standard_cost_chk          CHECK (valuation_method != 'standard_cost' OR standard_cost IS NOT NULL),
-    CONSTRAINT im_classification_chk         CHECK (product_id IS NOT NULL OR category_id IS NOT NULL)
+    CONSTRAINT im_classification_chk         CHECK (
+        product_id IS NOT NULL OR commodity_category_id IS NOT NULL)
 );
 
 -- Partial unique: one item per product per company (Path A only)
@@ -1214,15 +1312,68 @@ CREATE UNIQUE INDEX IF NOT EXISTS im_company_product_uq
 
 COMMENT ON TABLE master.item IS
     'ARCHETYPE=B;SCOPE=T. Company-level inventory configuration. Dual-path entry: '
-    'Path A (product-centric): product_id set, category inherited from product. '
-    'Path B (item-centric): category_id set, no product (MRO, utilities, facilities). '
-    'Both paths may coexist (product with explicit category override). '
+    'Path A (product-centric): product_id set, commodity category inherited from product. '
+    'Path B (item-centric): commodity_category_id set, no product (MRO, utilities, facilities). '
+    'Both paths may coexist (product with explicit commodity category override). '
     'UNIQUE(tenant, company, code) universal; partial UNIQUE(tenant, company, product) for Path A.';
 
 
--- §P7  master.spend_category — "What is this category?" Pure definition.
--- Operational defaults (GL, tax, capex, asset routing) live on
--- master.company_code_spend_policy; fall back to spend_category base.
+-- §P7  master.spend_category — legacy procurement taxonomy bridge.
+-- Commodity behavior and accounting defaults are resolved through
+-- master.commodity_category and control.commodity_category_buy_policy.
+ALTER TABLE master.item
+    ADD COLUMN IF NOT EXISTS commodity_category_id uuid;
+DO $$
+BEGIN
+    IF to_regclass('master.item') IS NOT NULL
+       AND EXISTS (
+           SELECT 1
+           FROM information_schema.columns
+           WHERE table_schema = 'master'
+             AND table_name = 'item'
+             AND column_name = 'spend_category_id'
+       )
+       AND EXISTS (
+           SELECT 1
+           FROM information_schema.columns
+           WHERE table_schema = 'master'
+             AND table_name = 'item'
+             AND column_name = 'commodity_category_id'
+       ) THEN
+        WITH resolved AS (
+            SELECT
+                i.id,
+                i.tenant_id,
+                COALESCE(cc.id, p.commodity_category_id) AS commodity_category_id
+            FROM master.item i
+            LEFT JOIN master.spend_category sc
+              ON sc.tenant_id = i.tenant_id
+             AND sc.id = i.spend_category_id
+            LEFT JOIN master.commodity_category cc
+              ON cc.tenant_id = sc.tenant_id
+             AND cc.code = sc.code
+            LEFT JOIN master.product p
+              ON p.tenant_id = i.tenant_id
+             AND p.id = i.product_id
+        )
+        UPDATE master.item i
+           SET commodity_category_id = r.commodity_category_id
+          FROM resolved r
+         WHERE i.tenant_id = r.tenant_id
+           AND i.id = r.id
+           AND i.commodity_category_id IS NULL
+           AND r.commodity_category_id IS NOT NULL;
+    END IF;
+END $$;
+ALTER TABLE master.item DROP CONSTRAINT IF EXISTS im_spend_category_fk;
+DROP INDEX IF EXISTS master.im_spend_category_idx;
+ALTER TABLE master.item DROP COLUMN IF EXISTS spend_category_id;
+
+ALTER TABLE master.item DROP CONSTRAINT IF EXISTS im_classification_chk;
+ALTER TABLE master.item
+    ADD CONSTRAINT im_classification_chk
+    CHECK (product_id IS NOT NULL OR commodity_category_id IS NOT NULL);
+
 CREATE TABLE IF NOT EXISTS master.spend_category (
     -- Identity
     id               uuid         NOT NULL DEFAULT shared.uuidv7(),
@@ -1278,82 +1429,9 @@ CREATE TABLE IF NOT EXISTS master.spend_category (
 );
 
 COMMENT ON TABLE master.spend_category IS
-    'ARCHETYPE=B;SCOPE=T. Procurement spend taxonomy — pure definition only. '
-    'Hierarchical via parent_id; root_category_id is trigger-maintained '
-    'denormalization pointing to the tree root. '
-    'Classifications via commodity_classification bridge. '
-    'default_intent_id = base-level intent fallback; company-code overrides via '
-    'master.company_code_spend_policy (direct lookup, no hierarchy). '
-    'Operational defaults (GL, tax, capex) live on company_code_spend_policy.';
+    'ARCHETYPE=B;SCOPE=T. Legacy procurement taxonomy bridge. Commodity behavior, allowed intents, and accounting defaults are resolved through master.commodity_category and control.commodity_category_buy_policy.';
 
-
--- =============================================================================
--- §P7b  master.company_code_spend_policy — "How does this category behave in this company code?"
--- =============================================================================
--- Resolution order: company code → tenant → spend_category base governance.
---                   NULL = inherit from parent level.
-CREATE TABLE IF NOT EXISTS master.company_code_spend_policy (
-    -- Identity
-    id               uuid         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id        uuid         NOT NULL,
-
-    -- Scope
-    company_code_id  uuid         NOT NULL,             -- FK → company_code
-    spend_category_id uuid        NOT NULL,             -- FK → spend_category
-
-    -- Access control
-    mapping_mode     text         NOT NULL DEFAULT 'ALLOW',  -- ALLOW | DENY
-
-    -- Financial defaults (NULL = inherit from parent level)
-    default_gl_account_id    uuid,                      -- FK → gl_account
-    default_tax_group_id     uuid,                      -- FK → control.tax_group
-    default_intent_id        uuid,                      -- FK → business_intent (deferred)
-
-    -- Asset routing (typically company level)
-    asset_class_id           uuid,                      -- FK → asset_class
-
-    -- Capex screening (NULL = inherit)
-    capex_screening_threshold    numeric(18,4),
-    capex_screening_currency     character(3),           -- FK → shared.currency
-    is_asset_tagging_required    boolean,                -- NULL = inherit
-
-    -- Governance overrides (NULL = inherit from spend_category base)
-    override_visibility                  text,           -- lookup: master.spend_visibility
-    override_is_classification_required  boolean,
-    override_is_hs_required              boolean,
-    override_is_regulated                boolean,
-
-    -- Priority
-    is_default       boolean      NOT NULL DEFAULT false,
-    priority         smallint     NOT NULL DEFAULT 0,
-
-    -- Metadata
-    metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
-
-    -- Lifecycle
-    status           text         NOT NULL DEFAULT 'active',
-    is_active        boolean      GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at timestamptz,
-    status_changed_by uuid,
-
-    -- Audit
-    created_at       timestamptz  NOT NULL DEFAULT now(),
-    created_by       uuid         NOT NULL,
-    updated_at       timestamptz,
-    updated_by       uuid,
-
-    CONSTRAINT sccp_pkey                    PRIMARY KEY (id),
-    CONSTRAINT sccp_tenant_id_uq            UNIQUE (tenant_id, id),
-    CONSTRAINT sccp_tenant_cc_category_uq   UNIQUE (tenant_id, company_code_id, spend_category_id),
-    CONSTRAINT sccp_mapping_mode_ck         CHECK (mapping_mode IN ('ALLOW', 'DENY')),
-    CONSTRAINT sccp_cap_nonneg              CHECK (capex_screening_threshold IS NULL OR capex_screening_threshold >= 0),
-    CONSTRAINT sccp_priority_nonneg         CHECK (priority >= 0)
-);
-
-COMMENT ON TABLE master.company_code_spend_policy IS
-    'ARCHETYPE=B;SCOPE=T. Company-code-scoped operational defaults and overrides for spend categories. '
-    'Resolution: company code → tenant → spend_category base governance. '
-    'NULL columns inherit from parent level. DENY mapping_mode overrides parent ALLOW.';
+DROP TABLE IF EXISTS master.company_code_spend_policy CASCADE;
 
 
 -- §P8  master.commodity_classification — unified M:N bridge (entity → system code)
