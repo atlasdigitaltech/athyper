@@ -23,7 +23,6 @@ BEGIN
            label_plural = 'Purchase Invoices',
            icon_key = 'file-text',
            color_token = 'violet',
-           numbering_active = true,
            feature_flags = jsonb_build_object(
                'is_approvable', true,
                'document_category', 'payables',
@@ -77,18 +76,9 @@ BEGIN
                    'title_field', 'description'
                )
            ),
-           naming_policy = jsonb_build_object(
-               'prefix', 'PINV',
-               'prefix_configurable', true,
-               'separator', '-',
-               'segments', jsonb_build_array(
-                   jsonb_build_object('type', 'tenant_code'),
-                   jsonb_build_object('type', 'year', 'format', 'YYYY'),
-                   jsonb_build_object('type', 'sequence', 'padding', 5)
-               ),
                'reset_strategy', 'yearly'
            ),
-           natural_key_fields = ARRAY['document_no']::text[],
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['document_no']::text[]), true),
            status = 'ACTIVE',
            updated_at = now(),
            updated_by = v_su
@@ -113,7 +103,6 @@ BEGIN
            label_plural = 'Invoice Lines',
            icon_key = 'list',
            color_token = 'violet',
-           numbering_active = false,
            feature_flags = jsonb_build_object(
                'parent_entity', 'purchase_invoice',
                'has_accounting_distribution', true,
@@ -134,7 +123,7 @@ BEGIN
                    'default_sort_field', 'line_no',
                    'default_sort_order', 'asc'
                ),
-           natural_key_fields = ARRAY['line_no']::text[],
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['line_no']::text[]), true),
            status = 'ACTIVE',
            updated_at = now(),
            updated_by = v_su
@@ -159,7 +148,6 @@ BEGIN
            label_plural = 'Account Assignment Splits',
            icon_key = 'split',
            color_token = 'slate',
-           numbering_active = false,
            feature_flags = jsonb_build_object(
                'polymorphic_parent', true,
                'parent_source_type_field', 'source_doc_type',
@@ -175,7 +163,7 @@ BEGIN
                'default_sort_field', 'distribution_no',
                'default_sort_order', 'asc'
            ),
-           natural_key_fields = ARRAY['distribution_no']::text[],
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['distribution_no']::text[]), true),
            status = 'ACTIVE',
            updated_at = now(),
            updated_by = v_su

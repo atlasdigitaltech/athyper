@@ -11,7 +11,6 @@
 --
 -- Also seeds:
 --   - entity_field rows for is_payment_ready + anticipated_risk_tier on supplier
---   (numbering_series is tenant+company scoped — seeded per tenant, not here)
 --
 -- Depends on:
 --   001_supplier.sql, control/01g_tables_flow_engine_ext.sql,
@@ -76,7 +75,6 @@ BEGIN
      AND origin IS DISTINCT FROM 'system';
 
   -- ── 1. Flow header ──────────────────────────────────────────────────────────
-  -- Note: master.numbering_series is tenant+company scoped (NOT NULL constraints).
   -- Supplier codes are seeded per-tenant by the onboarding process. The intake
   -- route falls back to SUP-{timestamp} when no series row exists.
   INSERT INTO control.entity_flow (

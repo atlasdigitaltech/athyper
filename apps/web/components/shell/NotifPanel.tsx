@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Badge, Button } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
 import { bffFetch } from "@/lib/bff-fetch";
 import { useIntl } from "@/components/providers/IntlProvider";
 
@@ -54,7 +55,7 @@ function relativeTime(iso: string): string {
 
 function entityHref(type: string | null, id: string | null): string | null {
   if (!type || !id) return null;
-  return `/app/${type}/${id}`;
+  return appEntityDetailHref(type, id);
 }
 
 // ── Data hooks ────────────────────────────────────────────────────────────────

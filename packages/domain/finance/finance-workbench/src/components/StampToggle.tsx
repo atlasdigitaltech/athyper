@@ -24,12 +24,22 @@ function StampContent({
   inactiveText = "OFF",
 }: Pick<StampToggleProps, "icon" | "label" | "pressed" | "activeText" | "inactiveText">) {
   return (
-    <span className="flex min-w-0 flex-col items-center gap-2">
-      {icon && <span className="text-current">{icon}</span>}
-      <span className="text-doc-label font-semibold uppercase text-current">
+    <span className="flex min-w-0 flex-col items-center gap-1.5">
+      {icon && (
+        <span className={cn(
+          "flex size-7 items-center justify-center rounded-lg",
+          pressed ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
+        )}>
+          {icon}
+        </span>
+      )}
+      <span className="text-doc-label font-semibold uppercase text-muted-foreground">
         {label}
       </span>
-      <span className="text-doc-support font-semibold uppercase text-current opacity-70">
+      <span className={cn(
+        "text-doc-subtitle font-semibold",
+        pressed ? "text-foreground" : "text-muted-foreground",
+      )}>
         {pressed ? activeText : inactiveText}
       </span>
     </span>
@@ -46,7 +56,7 @@ export function StampToggle({
   onPressedChange,
 }: StampToggleProps) {
   const stateClass = pressed
-    ? "border-warning/70 bg-warning/10 text-warning ring-1 ring-inset ring-warning/30"
+    ? "border-border bg-muted/20 text-foreground shadow-sm"
     : "border-dashed border-border bg-background text-muted-foreground";
 
   if (onPressedChange) {
@@ -54,7 +64,7 @@ export function StampToggle({
       <button
         type="button"
         aria-pressed={pressed}
-        className={cn(stampBaseClass, stateClass, "hover:bg-warning/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40", className)}
+        className={cn(stampBaseClass, stateClass, "hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40", className)}
         onClick={() => onPressedChange(!pressed)}
       >
         <StampContent

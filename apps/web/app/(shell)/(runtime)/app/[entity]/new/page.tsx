@@ -25,6 +25,13 @@ import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { EntityForm } from "@athyper/entity-runtime/form";
 import {
+  appEntityDetailHref,
+  appEntityListHref,
+  appEntityNewHref,
+  entitySlugFromCode,
+  normalizeAppEntityHref,
+} from "@athyper/runtime-shared/core";
+import {
   EntityIntakeLauncher,
   normalizeModes,
   type EntityIntakeMode,
@@ -41,6 +48,7 @@ import {
 import { bffFetch } from "@/lib/bff-fetch";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
 import EntityModeFlow from "../../_components/EntityModeFlow";
+import { canonicalEntityCode } from "../../_lib/entity-aliases";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
 import type { CompiledEntity, EntityCreateRedirect } from "@athyper/api-contracts/metadata";
 
@@ -50,10 +58,13 @@ export default function AppEntityNewRoute({
   params: Promise<{ entity: string }>;
 }) {
   const { entity } = use(params);
+  const entityCode = canonicalEntityCode(entity);
+  const entityListHref = appEntityListHref(entityCode);
+  const entityNewHref = appEntityNewHref(entityCode);
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const createMutation = useCreateEntity(entity);
+  const createMutation = useCreateEntity(entityCode);
   const [journalSubmitting, setJournalSubmitting] = useState(false);
   const [purchaseInvoiceSubmitting, setPurchaseInvoiceSubmitting] = useState(false);
   const [preflightSelection, setPreflightSelection] = useState<FlowPreflightSelection | null>(null);
@@ -86,6 +97,7 @@ export default function AppEntityNewRoute({
     const values: Record<string, unknown> = {};
 
     if (sourceInvoice) {
+      values.company_code_id = sourceInvoice["company_code_id"] ?? undefined;
       values.supplier_id = sourceInvoice["supplier_id"] ?? undefined;
       values.currency_code = sourceInvoice["currency_code"] ?? undefined;
       values.payment_amount = sourceInvoice["payable_amount"] ?? sourceInvoice["total_amount"] ?? undefined;
@@ -107,24 +119,24 @@ export default function AppEntityNewRoute({
   }, [initialValues, preflightSelection]);
 
   // Default flow (is_default=true, trigger=new)
-  const { data: defaultBundle, isLoading: flowLoading } = useEntityFlow(entity, "new");
+  const { data: defaultBundle, isLoading: flowLoading } = useEntityFlow(entityCode, "new");
 
   // ── Alternate flows — driven by display_config.alternate_flows ─────────────
   // The entity's display_config carries an array of alternate flow codes.
   // We eagerly fetch all alternate bundles so their labels are available before
   // the user interacts with the switcher.
-  const { data: compiledEntity, isLoading: metaLoading } = useCompiledEntity(entity);
+  const { data: compiledEntity, isLoading: metaLoading } = useCompiledEntity(entityCode);
   const entityDisplayLabel = useMemo(
-    () => resolveEntityDisplayLabel(compiledEntity, entity),
-    [compiledEntity, entity],
+    () => resolveEntityDisplayLabel(compiledEntity, entityCode),
+    [compiledEntity, entityCode],
   );
   const createRedirectHref = useMemo(
     () => resolveCreateRedirect(
       compiledEntity?.display_config.create_redirect as EntityCreateRedirect | undefined,
-      entity,
+      entityCode,
       searchParams,
     ),
-    [compiledEntity?.display_config.create_redirect, entity, searchParams],
+    [compiledEntity?.display_config.create_redirect, entityCode, searchParams],
   );
   const alternateFlowCodes = useMemo(
     () => (compiledEntity?.display_config?.alternate_flows ?? []) as string[],
@@ -145,12 +157,12 @@ export default function AppEntityNewRoute({
   );
 
   const { data: alternateBundles = [], isLoading: alternatesLoading } = useQuery({
-    queryKey: ["entity-flow-alternates", entity, alternateFlowCodes],
+    queryKey: ["entity-flow-alternates", entityCode, alternateFlowCodes],
     queryFn: async () => {
       const results = await Promise.all(
         alternateFlowCodes.map(async (code) => {
           const res = await fetch(
-            `/api/relay/api/metadata/entities/${encodeURIComponent(entity)}/flow?flow_code=${encodeURIComponent(code)}`,
+            `/api/relay/api/metadata/entities/${encodeURIComponent(entityCode)}/flow?flow_code=${encodeURIComponent(code)}`,
           );
           if (!res.ok) return null;
           const json = await res.json() as { bundle: FlowBundle } | FlowBundle;
@@ -208,21 +220,21 @@ export default function AppEntityNewRoute({
   }, [profileData]);
 
   // Guard — all hooks above; safe to return early from here
-  const { guardLoading, denied } = useSubrouteGuard(entity, "hasEdit");
+  const { guardLoading, denied } = useSubrouteGuard(entityCode, "hasEdit");
   if (createRedirectHref) redirect(createRedirectHref);
   if (guardLoading) return <GuardSkeleton />;
-  if (denied) return <FeatureUnavailablePage entityCode={entity} />;
+  if (denied) return <FeatureUnavailablePage entityCode={entityCode} />;
 
   async function handleSubmit(data: Record<string, unknown>) {
     let created: unknown;
-    if (entity === "journal_entry") {
+    if (entityCode === "journal_entry") {
       setJournalSubmitting(true);
       try {
         created = await createJournalEntryFromIntake(data);
       } finally {
         setJournalSubmitting(false);
       }
-    } else if (entity === "purchase_invoice") {
+    } else if (entityCode === "purchase_invoice") {
       setPurchaseInvoiceSubmitting(true);
       try {
         const { lines: _lines, ...headerData } = data;
@@ -242,7 +254,7 @@ export default function AppEntityNewRoute({
     // reliably served by GET (Traefik upstream timing). Without this the detail
     // page fires immediately and gets 502s on the main record + lines + distributions.
     await new Promise((resolve) => setTimeout(resolve, 700));
-    router.push(id ? `/app/${entity}/${id}` : `/app/${entity}`);
+    router.push(id ? appEntityDetailHref(entityCode, id) : entityListHref);
   }
 
   // Loading state — wait for default flow + alternates (if any) + source invoice
@@ -260,7 +272,7 @@ export default function AppEntityNewRoute({
     return (
       <EntityModeFlow
         mode={activeIntakeMode}
-        hostEntityCode={entity}
+        hostEntityCode={entityCode}
         hostEntityLabel={entityDisplayLabel}
         initialValues={initialValues}
         roleModeCodes={intakeRoleModeCodes}
@@ -271,13 +283,13 @@ export default function AppEntityNewRoute({
   if (intakeModes.length > 0) {
     return (
       <EntityIntakeLauncher
-        entityCode={entity}
+        entityCode={entityCode}
         title={`${entityDisplayLabel} Management`}
         description={`Create and extend ${entityDisplayLabel.toLowerCase()} records`}
         modes={intakeModes}
-        listHref={`/app/${entity}`}
+        listHref={entityListHref}
         listLabel={`View ${entityDisplayLabel}s`}
-        baseNewHref={`/app/${entity}/new`}
+        baseNewHref={entityNewHref}
       />
     );
   }
@@ -312,7 +324,7 @@ export default function AppEntityNewRoute({
           </div>
           <button
             type="button"
-            onClick={() => router.push(`/app/${entity}`)}
+            onClick={() => router.push(entityListHref)}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Cancel
@@ -328,7 +340,7 @@ export default function AppEntityNewRoute({
       <FlowPreflightChooser
         bundle={bundle}
         entityLabel={entityDisplayLabel}
-        onCancel={() => router.push(`/app/${entity}`)}
+        onCancel={() => router.push(entityListHref)}
         onContinue={setPreflightSelection}
       />
     );
@@ -355,14 +367,14 @@ export default function AppEntityNewRoute({
         initialValues={wizardInitialValues}
         onSubmit={handleSubmit}
         entityLabel={entityDisplayLabel}
-        entityCode={entity}
+        entityCode={entityCode}
         headerLeadingAction={headerLeadingAction}
         lockedFieldNames={preflightSelection?.lockedFields}
-        onCancel={() => router.push(`/app/${entity}`)}
+        onCancel={() => router.push(entityListHref)}
         submitting={
-          entity === "journal_entry"
+          entityCode === "journal_entry"
             ? journalSubmitting
-            : entity === "purchase_invoice"
+            : entityCode === "purchase_invoice"
               ? purchaseInvoiceSubmitting || createMutation.isPending
               : createMutation.isPending
         }
@@ -373,7 +385,7 @@ export default function AppEntityNewRoute({
   // Fallback — flat EntityForm for master records and entities without a flow
   return (
     <EntityForm
-      entityCode={entity}
+      entityCode={entityCode}
       onSubmit={handleSubmit}
       onCancel={() => router.back()}
       submitting={createMutation.isPending}
@@ -549,9 +561,10 @@ function resolveCreateRedirect(
   const template = createRedirect.href_template.trim();
   if (!template) return undefined;
 
+  const entitySlug = entitySlugFromCode(entityCode);
   const templatedHref = template
     .replaceAll("{entity_code}", encodeURIComponent(entityCode))
-    .replaceAll("{entity}", encodeURIComponent(entityCode));
+    .replaceAll("{entity}", encodeURIComponent(entitySlug));
   const queryIndex = templatedHref.indexOf("?");
   const targetPath = queryIndex >= 0 ? templatedHref.slice(0, queryIndex) : templatedHref;
   const targetQuery = queryIndex >= 0 ? templatedHref.slice(queryIndex + 1) : "";
@@ -565,9 +578,10 @@ function resolveCreateRedirect(
   targetParams.forEach((value, key) => mergedParams.set(key, value));
 
   const mergedQuery = mergedParams.toString();
-  const resolvedHref = mergedQuery ? `${targetPath}?${mergedQuery}` : targetPath;
+  const normalizedTargetPath = normalizeAppEntityHref(targetPath);
+  const resolvedHref = mergedQuery ? `${normalizedTargetPath}?${mergedQuery}` : normalizedTargetPath;
   const currentQuery = searchParams.toString();
-  const currentHref = `/app/${encodeURIComponent(entityCode)}/new${currentQuery ? `?${currentQuery}` : ""}`;
+  const currentHref = appEntityNewHref(entityCode, currentQuery);
 
   return resolvedHref === currentHref ? undefined : resolvedHref;
 }

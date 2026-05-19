@@ -64,7 +64,7 @@ BEGIN
     (tenant_id, flow_id, step_key, label, icon_key, sort_order, advance_rule, layout_hint, created_by)
   VALUES
     (NULL, v_flow_id, 'details', 'Payment Details', 'banknote', 10,
-     '{"required_fields":["payment_type","supplier_id","document_date","posting_date","currency_code","payment_amount"]}'::jsonb,
+     '{"required_fields":["payment_type","company_code_id","supplier_id","document_date","posting_date","currency_code","payment_amount"]}'::jsonb,
      'two_column', v_su)
   ON CONFLICT (flow_id, step_key) DO UPDATE SET
     advance_rule = EXCLUDED.advance_rule;
@@ -91,6 +91,7 @@ BEGIN
          v.sr, v.sp, v.ht, v.so, v_su
   FROM control.entity_field ef
   JOIN (VALUES
+    ('company_code_id',   'required',  'derived_overrideable', 'inline_search', 1, NULL::text, 'ctx.user.default_company_code', 'ap.override_company_code', NULL, 'Company code paying this entry.', 15),
     -- payment_type: radio_cards → bank_transfer / cheque / cash / online_transfer
     ('payment_type',      'required',  'manual', 'radio_cards',   2, NULL::text,     NULL::text, NULL, NULL, 'Type of payment — choose bank transfer, cheque, cash, or online.', 10),
     -- supplier_id: inline_search → EntityRefPicker backed by /records/supplier

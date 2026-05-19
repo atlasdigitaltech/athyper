@@ -10,7 +10,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -19,8 +19,6 @@ SELECT
     'standard', 'business', 'locked',
     'master', 'v_business_partner_app_index',
     'Business Partner Index', 'Business Partner Index', 'combine', 'indigo',
-    false,
-    '{}'::jsonb,
     '{"is_readonly":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 ON CONFLICT (table_schema, table_name) DO NOTHING;
@@ -33,9 +31,11 @@ WHERE entity_code = 'business_partner_app_index'
   AND tenant_id IS NULL;
 
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM control.entity e
 WHERE e.entity_code = 'business_partner_app_index'
   AND e.tenant_id IS NULL
@@ -112,6 +112,6 @@ SET display_config = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object
         ),
         'search_fields',      jsonb_build_array('search_text')
     ),
-    natural_key_fields = ARRAY['code']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['code']::text[]), true)
 WHERE entity_code = 'business_partner_app_index'
   AND tenant_id IS NULL;

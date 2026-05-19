@@ -46,7 +46,7 @@ BEGIN
         'Europe/London',
         'en',
         4,                          -- Fiscal year starts April
-        '%d/%m/%Y',                 -- DD/MM/YYYY
+        '%d %b %Y',                 -- DD Mon YYYY
         '#,##0.00',
         1,                          -- Week starts Monday (ISO standard)
         ARRAY[0, 6]::smallint[],   -- Sun(0) + Sat(6) weekend (UK standard, 0=Sun…6=Sat)

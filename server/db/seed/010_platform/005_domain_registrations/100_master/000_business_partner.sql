@@ -12,7 +12,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -21,8 +21,6 @@ SELECT
     'full', 'operational', 'extensible',
     'master', 'business_partner',
     'Business Partner', 'Business Partners', 'building', 'indigo',
-    true,
-    '{"prefix":"BP","prefix_configurable":true,"separator":"-","segments":[{"type":"sequence","padding":6}]}'::jsonb,
     '{
       "is_approvable": false,
       "party_category": "business_partner",
@@ -77,9 +75,11 @@ WHERE table_schema = 'master' AND table_name = 'business_partner'
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'master' AND e.table_name = 'business_partner'
   AND  e.tenant_id IS NULL
@@ -248,7 +248,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -257,16 +257,16 @@ SELECT
     'standard', 'business', 'controlled',
     'master', 'business_partner_network_link',
     'Network Link', 'Network Links', 'network', 'indigo',
-    false,
-    '{}'::jsonb,
     '{"parent_entity":"business_partner","parent_fk":"business_partner_id"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM control.entity e
 WHERE e.entity_code = 'business_partner_network_link'
   AND e.tenant_id IS NULL
@@ -329,7 +329,7 @@ WHERE ef.entity_version_id = ev.id
   AND ef.is_read_only IS DISTINCT FROM true;
 
 UPDATE control.entity
-SET natural_key_fields = ARRAY['provider_code','network_account_id'],
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['provider_code','network_account_id']::text[]), true),
     display_config = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
         'detail_renderer', 'master',
         'detail_profile',  'simple',
@@ -893,7 +893,7 @@ END $filters$;
 
 -- ── Correct natural_key_fields + default_sort_field ───────────────────────────
 UPDATE control.entity
-SET natural_key_fields = ARRAY['code'],
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['code']::text[]), true),
     display_config     = display_config || '{"default_sort_field":"name"}'::jsonb,
     feature_flags      = COALESCE(feature_flags, '{}'::jsonb) || '{
       "is_readonly": false,
@@ -917,7 +917,7 @@ SET natural_key_fields = ARRAY['code'],
     }'::jsonb
 WHERE table_schema = 'master' AND table_name = 'business_partner'
   AND tenant_id IS NULL
-  AND (natural_key_fields != ARRAY['code']
+  AND (COALESCE(identity_config->'natural_key_fields', '[]'::jsonb) IS DISTINCT FROM to_jsonb(ARRAY['code']::text[])
        OR display_config->>'default_sort_field' IS DISTINCT FROM 'name'
        OR feature_flags->>'is_readonly' IS DISTINCT FROM 'false'
        OR feature_flags->'duplicate_check' IS NULL

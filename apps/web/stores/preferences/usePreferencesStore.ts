@@ -19,6 +19,7 @@
 import { create } from "zustand";
 
 import { i18nConfig, getLocaleDir, isValidLocale, type Locale } from "@athyper/i18n/config";
+import { DEFAULT_USER_DATE_FORMAT, DEFAULT_USER_TIME_ZONE } from "@athyper/runtime-shared/preferences";
 import type { ThemePresetMeta } from "@athyper/theme";
 import {
   normalizeAppearanceMode,
@@ -47,6 +48,8 @@ export const PREFERENCES_DEFAULTS = {
   themePreset: "base" as ThemePresetValue,
   densityCode: "comfortable" as DensityCode,
   languageCode: i18nConfig.defaultLocale as LanguageCode,
+  timezoneCode: DEFAULT_USER_TIME_ZONE,
+  dateFormat: DEFAULT_USER_DATE_FORMAT,
   sidebarCollapsed: false,
 } as const;
 
@@ -58,6 +61,8 @@ export interface PreferencesState {
   themePreset: ThemePresetValue;
   densityCode: DensityCode;
   languageCode: LanguageCode;
+  timezoneCode: string;
+  dateFormat: string;
   sidebarCollapsed: boolean;
 
   /** True once seeded from bootstrap response. */
@@ -69,6 +74,8 @@ export interface PreferencesState {
   setThemePreset: (preset: ThemePresetValue) => void;
   setDensityCode: (density: DensityCode) => void;
   setLanguageCode: (locale: LanguageCode) => void;
+  setTimezoneCode: (timezone: string) => void;
+  setDateFormat: (format: string) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
   setIsSynced: (synced: boolean) => void;
@@ -85,6 +92,8 @@ export interface PreferencesBootstrapInput {
   densityCode?: string | null;
   themePreset?: string | null;
   languageCode?: string | null;
+  timezoneCode?: string | null;
+  dateFormat?: string | null;
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -95,6 +104,8 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
   themePreset: PREFERENCES_DEFAULTS.themePreset,
   densityCode: PREFERENCES_DEFAULTS.densityCode,
   languageCode: PREFERENCES_DEFAULTS.languageCode,
+  timezoneCode: PREFERENCES_DEFAULTS.timezoneCode,
+  dateFormat: PREFERENCES_DEFAULTS.dateFormat,
   sidebarCollapsed: PREFERENCES_DEFAULTS.sidebarCollapsed,
   isSynced: false,
 
@@ -129,6 +140,14 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
     syncLocaleToDom(locale);
   },
 
+  setTimezoneCode: (timezone) => {
+    set({ timezoneCode: timezone || PREFERENCES_DEFAULTS.timezoneCode });
+  },
+
+  setDateFormat: (format) => {
+    set({ dateFormat: format || PREFERENCES_DEFAULTS.dateFormat });
+  },
+
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
   toggleSidebar: () =>
     set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
@@ -148,6 +167,12 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
     const languageCode =
       normalizeLanguageCode(profile.languageCode) ??
       PREFERENCES_DEFAULTS.languageCode;
+    const timezoneCode =
+      profile.timezoneCode?.trim() ||
+      PREFERENCES_DEFAULTS.timezoneCode;
+    const dateFormat =
+      profile.dateFormat?.trim() ||
+      PREFERENCES_DEFAULTS.dateFormat;
 
     const resolved: ResolvedAppearanceMode =
       appearanceMode === "system"
@@ -163,6 +188,8 @@ export const usePreferencesStore = create<PreferencesState>((set) => ({
       resolvedAppearanceMode: resolved,
       densityCode,
       languageCode,
+      timezoneCode,
+      dateFormat,
       isSynced: true,
     });
 

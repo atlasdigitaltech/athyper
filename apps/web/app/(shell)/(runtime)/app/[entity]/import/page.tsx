@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { EntityImportPage } from "@athyper/entity-runtime/import";
 import { getCompiledEntity } from "@/lib/entity-meta";
 import { resolveCapabilities } from "@/lib/entity-capabilities";
+import { canonicalEntityCode } from "../../_lib/entity-aliases";
 
 /**
  * Runtime entity import — /app/[entity]/import
@@ -20,7 +21,8 @@ export default async function AppEntityImportRoute({
   params: Promise<{ entity: string }>;
 }) {
   const { entity } = await params;
-  const meta = await getCompiledEntity(entity);
+  const entityCode = canonicalEntityCode(entity);
+  const meta = await getCompiledEntity(entityCode);
   if (!meta || !resolveCapabilities(meta).hasImport) notFound();
-  return <EntityImportPage entityCode={entity} />;
+  return <EntityImportPage entityCode={entityCode} />;
 }

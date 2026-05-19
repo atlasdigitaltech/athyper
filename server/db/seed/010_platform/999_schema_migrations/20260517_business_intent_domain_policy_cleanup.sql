@@ -34,14 +34,23 @@ BEGIN
     FROM master.business_intent old_bi
     JOIN LATERAL (
         SELECT CASE
-            WHEN old_bi.code LIKE 'BI-OPEX-%' THEN 'BI-OPEX'
-            WHEN old_bi.code LIKE 'BI-CAPEX-%' THEN 'BI-CAPEX'
-            WHEN old_bi.code LIKE 'BI-COGS-%' THEN 'BI-COGS'
-            WHEN old_bi.code LIKE 'BI-ADMIN-%' THEN 'BI-ADMIN'
-            WHEN old_bi.code LIKE 'BI-REG-%' THEN 'BI-REG'
-            WHEN old_bi.code LIKE 'BI-TRANSFER-%' THEN 'BI-TRANSFER'
-            WHEN old_bi.code LIKE 'BI-REV-%' THEN 'BI-REV'
-            WHEN old_bi.code LIKE 'BI-DEFREV-%' THEN 'BI-DEFREV'
+            WHEN old_bi.code IN ('BI-OPEX','BI-CAPEX','BI-COGS','BI-ADMIN','BI-REG','BI-TRANSFER','BI-REV','BI-DEFREV') THEN NULL
+            WHEN old_bi.code = 'OPEX_GENERAL' OR old_bi.code LIKE 'OPEX-%' OR old_bi.code LIKE 'BI-OPEX-%' THEN 'BI-OPEX'
+            WHEN old_bi.code = 'CAPEX_GENERAL' OR old_bi.code LIKE 'CAPEX-%' OR old_bi.code LIKE 'BI-CAPEX-%' THEN 'BI-CAPEX'
+            WHEN old_bi.code = 'ADMIN_GENERAL' OR old_bi.code LIKE 'ADMIN-%' OR old_bi.code LIKE 'BI-ADMIN-%' THEN 'BI-ADMIN'
+            WHEN old_bi.code LIKE 'COGS-%' OR old_bi.code LIKE 'BI-COGS-%' THEN 'BI-COGS'
+            WHEN old_bi.code LIKE 'REG-%' OR old_bi.code LIKE 'BI-REG-%' THEN 'BI-REG'
+            WHEN old_bi.code LIKE 'TRANSFER-%' OR old_bi.code LIKE 'BI-TRANSFER-%' THEN 'BI-TRANSFER'
+            WHEN old_bi.code LIKE 'REV-%' OR old_bi.code LIKE 'BI-REV-%' THEN 'BI-REV'
+            WHEN old_bi.code LIKE 'DEFREV-%' OR old_bi.code LIKE 'BI-DEFREV-%' THEN 'BI-DEFREV'
+            WHEN old_bi.domain = 'OPEX' THEN 'BI-OPEX'
+            WHEN old_bi.domain = 'CAPEX' THEN 'BI-CAPEX'
+            WHEN old_bi.domain = 'COST_OF_SALES' THEN 'BI-COGS'
+            WHEN old_bi.domain = 'ADMIN' THEN 'BI-ADMIN'
+            WHEN old_bi.domain = 'REGULATORY' THEN 'BI-REG'
+            WHEN old_bi.domain = 'TRANSFER' THEN 'BI-TRANSFER'
+            WHEN old_bi.domain = 'REVENUE' THEN 'BI-REV'
+            WHEN old_bi.domain = 'DEFERRED_REVENUE' THEN 'BI-DEFREV'
             ELSE NULL
         END AS new_code
     ) domain_map ON domain_map.new_code IS NOT NULL
@@ -50,6 +59,16 @@ BEGIN
      AND new_bi.code = domain_map.new_code
     WHERE old_bi.code <> domain_map.new_code;
 
+    UPDATE master.business_intent bi
+       SET parent_id = NULL,
+           path = bi.code,
+           depth = 0,
+           updated_at = now(),
+           updated_by = v_su
+      FROM tmp_business_intent_domain_map m
+     WHERE bi.tenant_id = m.tenant_id
+       AND (bi.id = m.old_id OR bi.parent_id = m.old_id);
+
     UPDATE master.spend_category sc
        SET default_intent_id = m.new_id,
            updated_at = now(),
@@ -57,6 +76,18 @@ BEGIN
       FROM tmp_business_intent_domain_map m
      WHERE sc.tenant_id = m.tenant_id
        AND sc.default_intent_id = m.old_id;
+
+    IF to_regclass('master.company_code_spend_policy') IS NOT NULL THEN
+        EXECUTE $sql$
+            UPDATE master.company_code_spend_policy csp
+               SET default_intent_id = m.new_id,
+                   updated_at = now(),
+                   updated_by = $1
+              FROM tmp_business_intent_domain_map m
+             WHERE csp.tenant_id = m.tenant_id
+               AND csp.default_intent_id = m.old_id
+        $sql$ USING v_su;
+    END IF;
 
     IF to_regclass('control.commodity_classification_to_intent_rule') IS NOT NULL THEN
         UPDATE control.commodity_classification_to_intent_rule r
@@ -110,6 +141,16 @@ BEGIN
           FROM tmp_business_intent_domain_map m
          WHERE o.tenant_id = m.tenant_id
            AND o.intent_id = m.old_id;
+    END IF;
+
+    IF to_regclass('control.forecast_line') IS NOT NULL THEN
+        UPDATE control.forecast_line f
+           SET intent_id = m.new_id,
+               updated_at = now(),
+               updated_by = v_su
+          FROM tmp_business_intent_domain_map m
+         WHERE f.tenant_id = m.tenant_id
+           AND f.intent_id = m.old_id;
     END IF;
 
     IF to_regclass('document.purchase_invoice_line') IS NOT NULL THEN
@@ -216,20 +257,10 @@ BEGIN
            AND r.commodity_category_id IS NOT NULL;
     END IF;
 
-    UPDATE master.business_intent old_bi
-       SET status = 'inactive',
-           metadata = COALESCE(old_bi.metadata, '{}'::jsonb)
-              || jsonb_build_object('_retired', jsonb_build_object(
-                  'reason', 'domain_intent_policy_cleanup',
-                  'replacement_code', m.new_code,
-                  'retired_at', now()::text
-              )),
-           updated_at = now(),
-           updated_by = v_su
-      FROM tmp_business_intent_domain_map m
+    DELETE FROM master.business_intent old_bi
+      USING tmp_business_intent_domain_map m
      WHERE old_bi.tenant_id = m.tenant_id
-       AND old_bi.id = m.old_id
-       AND old_bi.status <> 'inactive';
+       AND old_bi.id = m.old_id;
 
     ALTER TABLE IF EXISTS master.business_intent DROP CONSTRAINT IF EXISTS bi_gl_account_fk;
     ALTER TABLE IF EXISTS master.business_intent DROP CONSTRAINT IF EXISTS bi_default_tax_group_fk;

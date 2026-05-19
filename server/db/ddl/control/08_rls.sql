@@ -379,11 +379,13 @@ DO $body$ DECLARE t text; BEGIN
 END $body$;
 
 -- ─── Tables with tenant_id nullable (system rows visible to all) ─────────────
+-- entity_publish_state is 1:1 with entity; platform rows have tenant_id=NULL
+-- so it belongs here, not in the NOT NULL group.
 
 DO $body$ DECLARE t text; BEGIN
     FOR t IN SELECT unnest(ARRAY[
-        'control.entity','control.entity_version','control.entity_field',
-        'control.entity_lifecycle','control.entity_operation',
+        'control.entity','control.entity_publish_state','control.entity_version',
+        'control.entity_field','control.entity_lifecycle','control.entity_operation',
         'control.entity_relation','snapshot.entity_compiled',
         'snapshot.entity_compiled_overlay'
     ]) LOOP
@@ -406,7 +408,7 @@ END $body$;
 
 DO $body$ DECLARE t text; BEGIN
     FOR t IN SELECT unnest(ARRAY[
-        'control.entity_publish_state','control.field_security_policy',
+        'control.field_security_policy',
         'control.overlay','control.overlay_change','control.entity_policy'
     ]) LOOP
         EXECUTE format(

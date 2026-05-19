@@ -151,5 +151,13 @@ export function EntityDetailPage({
     );
   }
 
-  return null;
+  return (
+    <div className="rounded-xl border border-border bg-card p-6">
+      <p className="text-sm font-medium text-foreground">Detail renderer unavailable</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Entity <code className="font-mono">{entityCode}</code> resolved to{" "}
+        <code className="font-mono">{renderer}</code>, but no matching renderer was available.
+      </p>
+    </div>
+  );
 }

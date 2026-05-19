@@ -18,6 +18,8 @@ import { type Notification, type SavedView } from "@athyper/api-contracts/platfo
 import { type MetadataClient, type RecordsClient, type WorkflowClient, type PlatformClient, type DocumentsClient, type EntityListParams } from "@athyper/api-client";
 import { type DocumentDetail, type FlowBundle, type StatusTransitionRequest } from "@athyper/api-contracts/documents";
 
+declare const process: { env?: { NODE_ENV?: string } };
+
 // ── Client singletons ───────────────────────────────────────────
 // Initialized once at app boot via setClients().
 
@@ -68,11 +70,17 @@ function documents(): DocumentsClient {
 
 // ── Metadata Hooks ──────────────────────────────────────────────
 
+const IS_DEVELOPMENT_RUNTIME =
+  typeof process !== "undefined" && process.env?.NODE_ENV === "development";
+
+const COMPILED_ENTITY_STALE_TIME_MS = IS_DEVELOPMENT_RUNTIME ? 0 : 5 * 60 * 1000;
+
 export function useCompiledEntity(entityCode: string) {
   return useQuery<CompiledEntity>({
     queryKey: queryKeys.compiledEntity.byCode(entityCode),
     queryFn: () => meta().getCompiledEntity(entityCode),
-    staleTime: 5 * 60 * 1000, // compiled entities change infrequently
+    staleTime: COMPILED_ENTITY_STALE_TIME_MS, // production descriptors change infrequently
+    refetchOnMount: IS_DEVELOPMENT_RUNTIME ? "always" : true,
   });
 }
 
@@ -113,7 +121,7 @@ export function useEntityFlow(entityCode: string, trigger: string = "new") {
   return useQuery<FlowBundle | null>({
     queryKey: ["meta", "flow", entityCode, trigger],
     queryFn: () => meta().getEntityFlow(entityCode, trigger),
-    staleTime: 10 * 60 * 1000,
+    staleTime: (query) => query.state.data ? 10 * 60 * 1000 : 0,
     retry: false,
   });
 }

@@ -27,6 +27,8 @@ export function useLegalEntities() {
         consolidationMethod:  r.consolidationMethod as LegalEntity["consolidationMethod"],
         ownershipPct:         r.ownershipPct,
         country:              r.countryName ?? r.countryCode,
+        countryCode:          r.countryCode,
+        countryName:          r.countryName,
         functionalCurrency:   r.functionalCurrency ?? "",
         reportingCurrency:    r.reportingCurrency ?? "",
         companyCodes:         r.companyCodes ?? [],

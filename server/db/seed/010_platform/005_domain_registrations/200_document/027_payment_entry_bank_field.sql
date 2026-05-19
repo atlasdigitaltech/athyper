@@ -9,6 +9,7 @@
 -- Changes:
 --   1. Register bank_account_id in control.entity_field for payment_entry v1
 --   2. Add bank_account_id field binding to the create_payment flow step
+--   3. Scope bank account choices to the selected company_code_id
 --
 -- Depends on: 010_payment_entry.sql, 026_payment_entry_new_flow.sql
 -- Idempotent: ON CONFLICT DO NOTHING / DELETE+INSERT for field bindings
@@ -20,6 +21,26 @@ DECLARE
   v_ev_id    uuid;
   v_flow_id  uuid;
   v_step_id  uuid;
+  v_bank_account_lookup constant jsonb := '{
+    "search_fields": ["code", "name", "account_holder_name", "account_id_value", "account_last4"],
+    "filters": {
+      "status": "active"
+    },
+    "dependent_filter": {
+      "source_field": "company_code_id",
+      "target_field": "id",
+      "through_entity": "bank_account_link",
+      "through_source_field": "owner_id",
+      "through_target_field": "bank_account_id",
+      "through_filters": {
+        "owner_type": "company_code",
+        "purpose": ["default", "disbursement"]
+      },
+      "sort_field": "is_primary",
+      "sort_direction": "desc",
+      "empty_behavior": "empty"
+    }
+  }'::jsonb;
 BEGIN
 
   -- ── Resolve entity version ──────────────────────────────────────────────────
@@ -38,16 +59,29 @@ BEGIN
   INSERT INTO control.entity_field (
     entity_version_id, name, column_name, label, data_type,
     cardinality, origin, enum_domain_code, is_required, is_filterable,
-    validation, sort_order, created_by)
+    validation, lookup_config, sort_order, created_by)
   VALUES (
     v_ev_id,
     'bank_account_id', 'bank_account_id', 'Paying From (Bank Account)',
     'reference', 'zero_or_one', 'standard', NULL,
     false, true,
     '{"ref_entity":"bank_account"}'::jsonb,
+    v_bank_account_lookup,
     55,   -- between payment_method_id area and document_date (sort_order 60)
     v_su)
   ON CONFLICT DO NOTHING;
+
+  UPDATE control.entity_field
+     SET validation = '{"ref_entity":"bank_account"}'::jsonb,
+         lookup_config = v_bank_account_lookup,
+         updated_at = now(),
+         updated_by = v_su
+   WHERE entity_version_id = v_ev_id
+     AND name = 'bank_account_id'
+     AND (
+       validation IS DISTINCT FROM '{"ref_entity":"bank_account"}'::jsonb
+       OR COALESCE(lookup_config, '{}'::jsonb) IS DISTINCT FROM v_bank_account_lookup
+     );
 
   -- ── 2. Add to create_payment flow step ─────────────────────────────────────
   SELECT f.id INTO v_flow_id
@@ -69,6 +103,26 @@ BEGIN
     RAISE NOTICE 'create_payment details step not found — bank_account_id flow binding skipped';
     RETURN;
   END IF;
+
+  UPDATE control.entity_flow_step
+     SET advance_rule = COALESCE(advance_rule, '{}'::jsonb)
+         || jsonb_build_object(
+              'required_fields',
+              jsonb_build_array(
+                'payment_type',
+                'company_code_id',
+                'supplier_id',
+                'document_date',
+                'posting_date',
+                'currency_code',
+                'payment_amount',
+                'bank_account_id'
+              )
+            ),
+         updated_at = now(),
+         updated_by = v_su
+   WHERE id = v_step_id
+     AND tenant_id IS NULL;
 
   -- Delete existing binding if any, then re-insert
   DELETE FROM control.entity_flow_field

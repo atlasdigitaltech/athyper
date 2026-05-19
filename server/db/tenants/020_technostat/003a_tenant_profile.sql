@@ -47,7 +47,7 @@ BEGIN
         'Asia/Riyadh',
         'en',
         1,                          -- January fiscal year start (TKSA / SSK)
-        '%d/%m/%Y',                 -- DD/MM/YYYY
+        '%d %b %Y',                 -- DD Mon YYYY
         '#,##0.00',
         6,                          -- Week starts Saturday (GCC Arabic calendar display)
         ARRAY[5, 6]::smallint[],   -- Fri(5) + Sat(6) weekend (KSA standard)

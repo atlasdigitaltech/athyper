@@ -60,7 +60,7 @@ export function TypeChip({
   return (
     <span
       className={cn(
-        "inline-flex h-[32px] shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground text-xs font-semibold tracking-wider text-background",
+        "inline-flex h-8 shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground text-[13px] font-semibold leading-none text-background",
         className,
       )}
     >
@@ -68,13 +68,13 @@ export function TypeChip({
         <button
           type="button"
           onClick={onBack}
-          className="flex h-full w-9 items-center justify-center border-r border-r-ring bg-inherit text-inherit transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"
+          className="flex h-full w-9 items-center justify-center border-r border-background/20 bg-inherit text-inherit transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"
           aria-label="Go back"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="size-4" />
         </button>
       )}
-      <span className="flex h-full items-center px-3 leading-none">{children}</span>
+      <span className="flex h-full items-center px-3 text-[12px] leading-none">{children}</span>
     </span>
   );
 }

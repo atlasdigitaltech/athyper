@@ -11,9 +11,9 @@ export function getRuntimePrefix(entityClass: EntityClass): "/master/" | "/docum
 }
 
 export function buildEntityRoute(entityClass: EntityClass, entityCode: string): string {
-  return `${getRuntimePrefix(entityClass)}${entityCode}`;
+  return `${getRuntimePrefix(entityClass)}${entityCode.replace(/_/g, "-")}`;
 }
 
 export function buildDetailRoute(entityClass: EntityClass, entityCode: string, recordId: string): string {
-  return `${getRuntimePrefix(entityClass)}${entityCode}/${recordId}`;
+  return `${getRuntimePrefix(entityClass)}${entityCode.replace(/_/g, "-")}/${recordId}`;
 }

@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { BookmarkToggle } from "@athyper/collaboration-ui/bookmarks";
 import { CommentCountBadge, AttachmentCountBadge } from "@athyper/collaboration-ui/badges";
 import { RelativeTimeCell } from "@athyper/ui/primitives";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
 
 export interface RowMetaStripProps {
   row:                Record<string, unknown>;
@@ -66,7 +67,7 @@ export function RowMetaStrip({
       <CommentCountBadge
         total={commentCount}
         hasOpen={commentHasOpen}
-        onClick={() => router.push(`/app/${entityCode}/${encodeURIComponent(recordNavId ?? recordId)}#comments`)}
+        onClick={() => router.push(`${appEntityDetailHref(entityCode, recordNavId ?? recordId)}#comments`)}
       />
 
       {attachCount !== undefined && <AttachmentCountBadge count={attachCount} />}

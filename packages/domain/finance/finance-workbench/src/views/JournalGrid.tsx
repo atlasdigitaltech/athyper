@@ -537,6 +537,8 @@ function NewJournalDialog({
 export interface JournalGridProps {
   scope: FinanceScope;
   search?: string;
+  statusFilter?: string;
+  sourceDocTypeFilter?: string;
   hideSearch?: boolean;
   hideCreateAction?: boolean;
   entityListStyle?: boolean;
@@ -558,6 +560,8 @@ const PAGE_SIZE = 50;
 export function JournalGrid({
   scope,
   search: controlledSearch,
+  statusFilter,
+  sourceDocTypeFilter,
   hideSearch = false,
   hideCreateAction = false,
   entityListStyle = false,
@@ -576,6 +580,7 @@ export function JournalGrid({
 
   const reverseJournal = useReverseJournal();
   const effectiveSearch = controlledSearch ?? search;
+  const effectiveStatus = statusFilter ?? status;
 
   useEffect(() => {
     if (controlledSearch === undefined) return;
@@ -584,11 +589,16 @@ export function JournalGrid({
     setPage(1);
   }, [controlledSearch]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [sourceDocTypeFilter, statusFilter]);
+
   const { data, isLoading } = useJournalList(scope, {
-    status:  status === "all" ? undefined : status,
-    search:  effectiveSearch || undefined,
+    status:        effectiveStatus === "all" ? undefined : effectiveStatus,
+    sourceDocType: sourceDocTypeFilter || undefined,
+    search:        effectiveSearch || undefined,
     page,
-    limit:   PAGE_SIZE,
+    limit:         PAGE_SIZE,
   });
 
   function handleSearch() {

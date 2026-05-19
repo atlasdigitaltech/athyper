@@ -14,7 +14,7 @@
  *   7.  table_reference_set    — table_schema + table_name are both non-null
  *   8.  module_assigned        — entity.module_id is non-null
  *   9.  display_config_set     — display_config is not empty ({})
- *  10.  natural_key_configured — natural_key_fields has at least one entry
+ *  10.  natural_key_configured — identity_config.natural_key_fields has at least one entry
  *
  * Checks 5–6 are skipped (marked as not-applicable) when check 4 fails.
  */
@@ -57,7 +57,7 @@ export async function checkEntityCompliance(db: Kysely<any>, entityCode: string)
     .select([
       "e.id", "e.status", "e.entity_class",
       "e.table_schema", "e.table_name",
-      "e.module_id", "e.display_config", "e.natural_key_fields",
+      "e.module_id", "e.display_config", "e.identity_config",
     ])
     .where("e.name", "=", entityCode)
     .where("e.tenant_id", "is", null)
@@ -153,11 +153,14 @@ export async function checkEntityCompliance(db: Kysely<any>, entityCode: string)
   }
 
   // ── 10. natural_key_configured ────────────────────────────────────────────
-  const nk = entity["natural_key_fields"] as string[] | null;
+  const identityConfig = entity["identity_config"] && typeof entity["identity_config"] === "object"
+    ? entity["identity_config"] as Record<string, unknown>
+    : {};
+  const nk = identityConfig["natural_key_fields"];
   if (Array.isArray(nk) && nk.length > 0) {
     pass("natural_key_configured");
   } else {
-    fail("natural_key_configured", "natural_key_fields is empty — business-key URL routing unavailable");
+    fail("natural_key_configured", "identity_config.natural_key_fields is empty — business-key URL routing unavailable");
   }
 
   const failCount = items.filter((i) => !i.passed).length;

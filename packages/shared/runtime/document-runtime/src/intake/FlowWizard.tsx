@@ -21,7 +21,7 @@ import React from "react";
 import { AlertCircle, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent, Skeleton } from "@athyper/ui/primitives";
-import type { DocumentLine, FlowBundle } from "@athyper/api-contracts/documents";
+import type { DocumentLine, FlowBundle, FlowFieldBinding as FlowFieldBindingContract } from "@athyper/api-contracts/documents";
 import { EntityHeader } from "@athyper/entity-runtime/header";
 import { FlowSummaryPanel } from "./FlowSummaryPanel";
 import { FlowFieldBinding } from "./FlowFieldBinding";
@@ -60,9 +60,14 @@ type IntakeFlowSection = {
   display_role?: string | null;
   payload_key?: string | null;
   min_rows?: number | null;
+  sort_order?: number | null;
   visible_when?: unknown;
   default_row?: unknown;
   intake_fields?: unknown;
+  permission_code?: string | null;
+  restricted_view_only?: boolean | null;
+  help_text?: string | null;
+  fields?: unknown;
   display_config?: Record<string, unknown> | null;
 };
 
@@ -118,6 +123,35 @@ function normalizeDraftLines(value: unknown): DocumentLine[] {
   );
 }
 
+function normalizeIntakeFields(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const fields = value
+    .map((entry) => typeof entry === "string" ? entry.trim() : "")
+    .filter(Boolean);
+  return fields.length > 0 ? fields : null;
+}
+
+function fieldSectionKey(field: FlowFieldBindingContract): string | null {
+  const sectionKey = (field as FlowFieldBindingContract & { section_key?: unknown }).section_key;
+  return typeof sectionKey === "string" && sectionKey.trim() ? sectionKey.trim() : null;
+}
+
+function canUseSection(section: IntakeFlowSection, userPermissions: string[]): boolean {
+  const permissionCode = section.permission_code?.trim();
+  return !permissionCode || userPermissions.includes(permissionCode);
+}
+
+function isSectionReadOnly(section: IntakeFlowSection, userPermissions: string[]): boolean {
+  return Boolean(section.restricted_view_only) || !canUseSection(section, userPermissions);
+}
+
+function fieldsForSection(
+  fields: FlowFieldBindingContract[],
+  section: IntakeFlowSection,
+): FlowFieldBindingContract[] {
+  return fields.filter((field) => fieldSectionKey(field) === section.section_key);
+}
+
 export function FlowWizard({
   bundle,
   userPermissions,
@@ -137,6 +171,7 @@ export function FlowWizard({
   const [lineFxStatuses, setLineFxStatuses] = React.useState<Record<string, JournalExchangeRateStatus>>({});
   const {
     state,
+    steps,
     currentStep,
     visibleFields,
     canAdvance,
@@ -179,8 +214,20 @@ export function FlowWizard({
   const visibleSections = flowSections(currentStep).filter((section) =>
     isTruthy(section.visible_when ?? null, sectionRuleCtx),
   );
-  const lineSections = visibleSections.filter(isJournalLineSection);
-  const invoiceLineSections = visibleSections.filter(isInvoiceLineSection);
+  const fieldSections = visibleSections
+    .filter((section) => (section.section_type ?? "fields") === "fields")
+    .sort((a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0));
+  const visibleFieldSectionKeys = new Set(fieldSections.map((section) => section.section_key));
+  const unsectionedGridFields = gridFields.filter((field) => {
+    const sectionKey = fieldSectionKey(field);
+    return !sectionKey || !visibleFieldSectionKeys.has(sectionKey);
+  });
+  const unsectionedChipFields = chipFields.filter((field) => {
+    const sectionKey = fieldSectionKey(field);
+    return !sectionKey || !visibleFieldSectionKeys.has(sectionKey);
+  });
+  const lineSections = visibleSections.filter((section) => canUseSection(section, userPermissions)).filter(isJournalLineSection);
+  const invoiceLineSections = visibleSections.filter((section) => canUseSection(section, userPermissions)).filter(isInvoiceLineSection);
   const currentLineFxBlocking = lineSections.some((section) =>
     Boolean(lineFxStatuses[sectionPayloadKey(section)]?.blocking),
   );
@@ -202,6 +249,7 @@ export function FlowWizard({
     submitting,
     entityTypeLabel: entityLabel,
     entityCode,
+    steps,
   });
 
   async function handleSubmit() {
@@ -248,9 +296,70 @@ export function FlowWizard({
           <div className="flex flex-col gap-4">
             <Card>
               <CardContent className="pt-5 space-y-4">
-                {gridFields.length > 0 && (
+                {fieldSections.map((section) => {
+                  const sectionGridFields = fieldsForSection(gridFields, section);
+                  const sectionChipFields = fieldsForSection(chipFields, section);
+                  if (sectionGridFields.length === 0 && sectionChipFields.length === 0) return null;
+                  const sectionReadOnly = isSectionReadOnly(section, userPermissions);
+
+                  return (
+                    <section key={section.section_key} className="space-y-3 border-t border-border/50 pt-4 first:border-t-0 first:pt-0">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-foreground">{section.label ?? section.section_key}</h3>
+                        {section.help_text && (
+                          <p className="mt-0.5 text-xs text-muted-foreground">{section.help_text}</p>
+                        )}
+                      </div>
+
+                      {sectionGridFields.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                          {sectionGridFields.map((f) => (
+                            <FlowFieldBinding
+                              key={f.id}
+                              binding={f}
+                              value={state.draft[f.field_name]}
+                              displayLabel={state.displayLabels[f.field_name]}
+                              error={state.errors[f.field_name]}
+                              userPermissions={userPermissions}
+                              isOverridden={state.overrides.has(f.field_name)}
+                              disabled={sectionReadOnly}
+                              draftCtx={state.draft}
+                              onChange={(v) => setField(f.field_name, v)}
+                              onOverride={(v) => setOverride(f.field_name, v)}
+                              onReset={() => setDerivedValue(f.field_name, null)}
+                              onDisplayLabel={(label) => setDisplayLabel(f.field_name, label)}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {sectionChipFields.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {sectionChipFields.map((f) => (
+                            <FlowFieldBinding
+                              key={f.id}
+                              binding={f}
+                              value={state.draft[f.field_name]}
+                              displayLabel={state.displayLabels[f.field_name]}
+                              error={state.errors[f.field_name]}
+                              userPermissions={userPermissions}
+                              isOverridden={state.overrides.has(f.field_name)}
+                              disabled={sectionReadOnly}
+                              onChange={(v) => setField(f.field_name, v)}
+                              onOverride={(v) => setOverride(f.field_name, v)}
+                              onReset={() => setDerivedValue(f.field_name, null)}
+                              onDisplayLabel={(label) => setDisplayLabel(f.field_name, label)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
+
+                {unsectionedGridFields.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-                    {gridFields.map((f) => (
+                    {unsectionedGridFields.map((f) => (
                       <FlowFieldBinding
                         key={f.id}
                         binding={f}
@@ -269,9 +378,9 @@ export function FlowWizard({
                   </div>
                 )}
 
-                {chipFields.length > 0 && (
+                {unsectionedChipFields.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {chipFields.map((f) => (
+                    {unsectionedChipFields.map((f) => (
                       <FlowFieldBinding
                         key={f.id}
                         binding={f}
@@ -311,6 +420,7 @@ export function FlowWizard({
                       }}
                       currencySelectorEditable
                       headerContext={state.draft}
+                      intakeFields={normalizeIntakeFields(section.intake_fields)}
                       lineEntityCode={section.entity_code?.trim()}
                       minRows={section.min_rows ?? 2}
                       onChange={(lines) => setField(payloadKey, lines)}

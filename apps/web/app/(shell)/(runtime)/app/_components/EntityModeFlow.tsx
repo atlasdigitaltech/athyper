@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { PageFrame } from "@athyper/ui/layout";
 import { Button } from "@athyper/ui/primitives";
+import { appEntityDetailHref, appEntityListHref, appEntityNewHref } from "@athyper/runtime-shared/core";
 import { getCsrfToken } from "@/lib/bff-fetch";
 import { FlowWizard, FlowWizardSkeleton } from "@athyper/document-runtime/intake";
 import {
@@ -39,7 +40,7 @@ export default function EntityModeFlow({
   const router = useRouter();
   const flowEntity = mode.flow_entity ?? (mode.code === "extension" ? hostEntityCode : mode.code);
   const flowCode = mode.flow_code;
-  const resolvedBackHref = backHref ?? `/app/${hostEntityCode}/new`;
+  const resolvedBackHref = backHref ?? appEntityNewHref(hostEntityCode);
 
   const { data: bundle, isLoading } = useQuery({
     queryKey: ["entity-mode-flow", hostEntityCode, flowEntity, flowCode],
@@ -329,6 +330,6 @@ function unwrapFlowBundle(json: unknown): CompositeFlowBundle {
 function resolveRecordHref(body: Record<string, unknown>, hostEntityCode: string): string {
   const recordId = body[`${hostEntityCode}_id`] ?? body["id"];
   return typeof recordId === "string" && recordId
-    ? `/app/${hostEntityCode}/${encodeURIComponent(recordId)}`
-    : `/app/${hostEntityCode}`;
+    ? appEntityDetailHref(hostEntityCode, recordId)
+    : appEntityListHref(hostEntityCode);
 }

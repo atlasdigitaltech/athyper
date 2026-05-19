@@ -8,8 +8,7 @@
 -- Depends on:
 --   020_spend_categories.sql  (base pack — SC-* codes must exist)
 --   021_business_intents.sql  (base pack — BI-* codes must exist)
---   061_min_intake_rules.sql  (pack-specific intents: OPEX-TRAVEL, OPEX-MKTG,
---                              OPEX-SUBS created there are used below)
+--   061_min_intake_rules.sql  (canonical BI-* domain intents used below)
 --
 -- Intent targets used (all from base pack 021 unless noted):
 --   BI-OPEX, BI-OPEX, BI-OPEX, BI-OPEX, BI-OPEX,
@@ -18,7 +17,7 @@
 --   BI-CAPEX, BI-CAPEX, BI-CAPEX, BI-CAPEX, BI-CAPEX,
 --   BI-COGS, BI-COGS, BI-COGS,
 --   BI-REG, BI-ADMIN
---   Pack-specific (061): OPEX-TRAVEL, OPEX-MKTG, OPEX-SUBS
+--   Canonical domain intent coverage from 061/062
 --
 -- Idempotent: WHERE NOT EXISTS guard on (tenant_id, classification_id,
 --             condition_type, resolved_intent_id).
@@ -30,10 +29,20 @@ DO $seed_full_coverage$
 DECLARE
     v_tenant  record;
     v_row     record;
+    v_tid     uuid;
     v_sys     uuid := '00000000-0000-0000-0000-000000000000';
     v_sc_id   uuid;
     v_bi_id   uuid;
 BEGIN
+    v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    IF v_tid IS NULL THEN
+        RAISE EXCEPTION '[seed] app.seed_tenant_id not set - run: SET app.seed_tenant_id = ''<uuid>''';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM master.tenant WHERE id = v_tid AND status = 'active') THEN
+        RAISE EXCEPTION '[seed] active tenant % not found', v_tid;
+    END IF;
+
 
     -- ── Mapping table: (sc_code, bi_code, bi_domain, condition, cfg, priority, conf) ──
     CREATE TEMP TABLE tmp_cat_map (
@@ -78,26 +87,25 @@ BEGIN
 
     -- ══════════════════════════════════════════════════════════════════════
     -- SC-TRAVEL remaining children (3)
-    -- Try OPEX-TRAVEL (from 061) first; engine resolves by bi_code lookup.
-    -- Falls back to BI-ADMIN if OPEX-TRAVEL not seeded for this tenant.
+    -- Travel rules use BI-OPEX first, with BI-ADMIN as a low-priority fallback.
     -- Rule is inserted per bi_code, so two separate lookups are NOT needed —
     -- the engine uses whichever intent ID is resolved.
     -- ══════════════════════════════════════════════════════════════════════
-    ('SC-TRAVEL-HOTEL',  'OPEX-TRAVEL', 'OPEX', 'FALLBACK', '{}', 500, 0.90, 'Hotel accommodation — travel OPEX'),
-    ('SC-TRAVEL-GROUND', 'OPEX-TRAVEL', 'OPEX', 'FALLBACK', '{}', 500, 0.90, 'Ground transportation — travel OPEX'),
-    ('SC-TRAVEL-EVENTS', 'OPEX-TRAVEL', 'OPEX', 'FALLBACK', '{}', 500, 0.88, 'Events & conferences — travel OPEX'),
-    -- BI-ADMIN fallback if OPEX-TRAVEL intent absent
+    ('SC-TRAVEL-HOTEL',  'BI-OPEX', 'OPEX', 'FALLBACK', '{}', 500, 0.90, 'Hotel accommodation — travel OPEX'),
+    ('SC-TRAVEL-GROUND', 'BI-OPEX', 'OPEX', 'FALLBACK', '{}', 500, 0.90, 'Ground transportation — travel OPEX'),
+    ('SC-TRAVEL-EVENTS', 'BI-OPEX', 'OPEX', 'FALLBACK', '{}', 500, 0.88, 'Events & conferences — travel OPEX'),
+    -- BI-ADMIN fallback if BI-OPEX is not selected
     ('SC-TRAVEL-HOTEL',  'BI-ADMIN', 'ADMIN', 'FALLBACK', '{}', 900, 0.75, 'Hotel accommodation — admin general fallback'),
     ('SC-TRAVEL-GROUND', 'BI-ADMIN', 'ADMIN', 'FALLBACK', '{}', 900, 0.75, 'Ground transport — admin general fallback'),
     ('SC-TRAVEL-EVENTS', 'BI-ADMIN', 'ADMIN', 'FALLBACK', '{}', 900, 0.75, 'Events & conferences — admin general fallback'),
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- SC-MKTG remaining children (3) → OPEX-MKTG (061) / BI-OPEX (base)
+    -- SC-MKTG remaining children (3) -> BI-OPEX
     -- ══════════════════════════════════════════════════════════════════════
-    ('SC-MKTG-TRAD', 'OPEX-MKTG',    'OPEX', 'FALLBACK', '{}', 500, 0.88, 'Traditional advertising — marketing OPEX'),
+    ('SC-MKTG-TRAD', 'BI-OPEX',    'OPEX', 'FALLBACK', '{}', 500, 0.88, 'Traditional advertising — marketing OPEX'),
     ('SC-MKTG-PR',   'BI-OPEX', 'OPEX', 'FALLBACK', '{}', 500, 0.88, 'PR & communications — marketing OPEX'),
     ('SC-MKTG-CX',   'BI-OPEX', 'OPEX', 'FALLBACK', '{}', 500, 0.88, 'Customer experience & research — marketing OPEX'),
-    -- BI-OPEX fallback for MKTG-TRAD if OPEX-MKTG absent
+    -- Low-priority duplicate fallback for MKTG-TRAD
     ('SC-MKTG-TRAD', 'BI-OPEX', 'OPEX', 'FALLBACK', '{}', 900, 0.75, 'Traditional advertising — marketing OPEX base fallback'),
 
     -- ══════════════════════════════════════════════════════════════════════
@@ -167,11 +175,11 @@ BEGIN
 
     -- ══════════════════════════════════════════════════════════════════════
     -- SC-SUBS children (3)
-    -- Software licenses → BI-OPEX; memberships/pubs → OPEX-SUBS (061) or BI-ADMIN
+    -- Software licenses, memberships, and publications -> BI-OPEX, with BI-ADMIN fallback
     -- ══════════════════════════════════════════════════════════════════════
     ('SC-SUBS-LIC',  'BI-OPEX',   'OPEX', 'FALLBACK', '{}', 500, 0.90, 'Software licenses — IT OPEX'),
-    ('SC-SUBS-MEMB', 'OPEX-SUBS',    'OPEX', 'FALLBACK', '{}', 500, 0.88, 'Memberships & associations — subscriptions OPEX'),
-    ('SC-SUBS-PUB',  'OPEX-SUBS',    'OPEX', 'FALLBACK', '{}', 500, 0.88, 'Publications & subscriptions — subscriptions OPEX'),
+    ('SC-SUBS-MEMB', 'BI-OPEX',    'OPEX', 'FALLBACK', '{}', 500, 0.88, 'Memberships & associations — subscriptions OPEX'),
+    ('SC-SUBS-PUB',  'BI-OPEX',    'OPEX', 'FALLBACK', '{}', 500, 0.88, 'Publications & subscriptions — subscriptions OPEX'),
     ('SC-SUBS-MEMB', 'BI-ADMIN', 'ADMIN','FALLBACK', '{}', 900, 0.72, 'Memberships — admin general fallback'),
     ('SC-SUBS-PUB',  'BI-ADMIN', 'ADMIN','FALLBACK', '{}', 900, 0.72, 'Publications — admin general fallback'),
 
@@ -264,7 +272,7 @@ BEGIN
 
     -- ── Insert rules per tenant ───────────────────────────────────────────────
     FOR v_tenant IN
-        SELECT id AS tenant_id FROM master.tenant WHERE status = 'active'
+        SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
         FOR v_row IN SELECT * FROM tmp_cat_map LOOP
 
@@ -307,5 +315,5 @@ BEGIN
         END LOOP;
     END LOOP;
 
-    RAISE NOTICE '062_full_coverage_rules: classification → intent rules seeded for 75 remaining leaf categories across all active tenants';
+    RAISE NOTICE '062_full_coverage_rules: classification to intent rules seeded for tenant %', v_tid;
 END $seed_full_coverage$;

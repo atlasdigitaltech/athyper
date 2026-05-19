@@ -532,7 +532,7 @@ DO $$ BEGIN
         OWNER TO athyperadmin;
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN
-    ALTER FUNCTION control.next_document_number(uuid, text, text, text, text, uuid, uuid)
+    ALTER FUNCTION control.next_entity_number(uuid, text, text, uuid, smallint, smallint, text, date)
         OWNER TO athyperadmin;
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN

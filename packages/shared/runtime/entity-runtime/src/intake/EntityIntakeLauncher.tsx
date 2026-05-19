@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
 import { Button } from "@athyper/ui/primitives";
+import { appEntityListHref, appEntityNewHref } from "@athyper/runtime-shared/core";
 import type { EntityIntakeMode } from "@athyper/api-contracts/metadata";
 import { normalizeModes } from "./normalizeModes";
 
@@ -67,8 +68,8 @@ export function EntityIntakeLauncher({
     () => normalizeModes(modes, fallbackModes),
     [modes, fallbackModes],
   );
-  const newHref = baseNewHref ?? `/app/${entityCode}/new`;
-  const resolvedListHref = listHref ?? `/app/${entityCode}`;
+  const newHref = baseNewHref ?? appEntityNewHref(entityCode);
+  const resolvedListHref = listHref ?? appEntityListHref(entityCode);
   const resolvedListLabel = listLabel ?? `View ${title}`;
 
   return (

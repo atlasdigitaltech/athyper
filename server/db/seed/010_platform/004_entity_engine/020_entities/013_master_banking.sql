@@ -14,11 +14,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_pay, 'bank_party', 'BKPTY', 'bank_party', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'bank_party',
         'Bank', 'Banks', 'landmark', 'blue',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- â”€â”€ 88. bank_account â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -26,11 +26,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_pay, 'bank_account', 'BKACC', 'bank_account', 'MASTER', 'system', 'ent', 'table',
         'full', 'tenant_critical', 'controlled', 'master', 'bank_account',
         'Bank Account', 'Bank Accounts', 'credit-card', 'blue',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- â”€â”€ 89. bank_account_link â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -38,11 +38,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_pay, 'bank_account_link', 'BKACCL', 'bank_account_link', 'RELATION', 'system', 'ent', 'table',
         'full', 'tenant_critical', 'controlled', 'master', 'bank_account_link',
         'Bank Account Link', 'Bank Account Links', 'link', 'blue',
-        false, '{"requires_owner_type_scope":true,"owner_type_column":"owner_type"}'::jsonb, 'ACTIVE', v_su)
+        '{"requires_owner_type_scope":true,"owner_type_column":"owner_type"}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- â”€â”€ 89b. business_partner_bank_account (view entity) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -52,11 +52,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
-    VALUES (v_pay, 'business_partner_bank_account', 'BPBKACC', 'business_partner_bank_account', 'RELATION', 'system', 'ent', 'table',
+        feature_flags, status, created_by)
+    VALUES (v_pay, 'business_partner_bank_account', 'BPBKACC', 'business_partner_bank_account', 'RELATION', 'system', 'ent', 'view',
         'full', 'tenant_critical', 'controlled', 'master', 'v_business_partner_bank_account',
         'Business Partner Bank Account', 'Business Partner Bank Accounts', 'credit-card', 'blue',
-        false, '{"parent_entity":"business_partner","parent_fk":"business_partner_id"}'::jsonb, 'ACTIVE', v_su)
+        '{"parent_entity":"business_partner","parent_fk":"business_partner_id"}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- â”€â”€ 90. bank_account_house_config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -64,11 +64,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_pay, 'bank_account_house_config', 'BKHCFG', 'bank_account_house_config', 'CONTROL', 'system', 'ent', 'table',
         'full', 'tenant_critical', 'controlled', 'master', 'bank_account_house_config',
         'House Bank Config', 'House Bank Configs', 'settings', 'blue',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- â”€â”€ 91. payment_method â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -76,11 +76,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_pay, 'payment_method', 'PMTM', 'payment_method', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'payment_method',
         'Payment Method', 'Payment Methods', 'wallet', 'blue',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 END $$;
@@ -142,5 +142,5 @@ SET display_config        = COALESCE(display_config, '{}'::jsonb) || jsonb_build
         'default_sort_field', 'is_primary',
         'default_sort_order', 'desc'
     ),
-    natural_key_fields    = ARRAY['id']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['id']::text[]), true)
 WHERE entity_code = 'business_partner_bank_account' AND tenant_id IS NULL;

@@ -4,6 +4,7 @@ import { ArrowRight, type LucideIcon } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { PageFrame } from "@athyper/ui/layout";
 import { Badge, Card, CardContent, buttonVariants } from "@athyper/ui/primitives";
+import { normalizeAppEntityHref } from "@athyper/runtime-shared/core";
 
 export type WorkspaceArchetype = "Simple" | "Rich" | "Doc";
 export type WorkspaceSectionKey = "work" | "masterData" | "setup" | "reports";
@@ -94,9 +95,10 @@ function MetricStrip({ metrics }: { metrics: WorkspaceMetric[] }) {
 }
 
 function EntityRow({ item }: { item: WorkspaceEntityLink }) {
+  const href = normalizeAppEntityHref(item.href);
   return (
     <Link
-      href={item.href}
+      href={href}
       className="group grid gap-2 border-t px-3 py-2.5 transition-colors first:border-t-0 hover:bg-accent/35 md:grid-cols-[minmax(180px,1.1fr)_auto_minmax(260px,1.8fr)_auto]"
     >
       <div className="min-w-0">
@@ -197,10 +199,11 @@ export function WorkspaceDashboard({
           <div className="flex flex-wrap gap-2">
             {model.quickActions.map((action, index) => {
               const Icon = action.icon;
+              const href = normalizeAppEntityHref(action.href);
               return (
                 <Link
                   key={action.href}
-                  href={action.href}
+                  href={href}
                   className={buttonVariants({
                     variant: action.variant ?? (index === 0 ? "primary" : "outline"),
                     size: "sm",

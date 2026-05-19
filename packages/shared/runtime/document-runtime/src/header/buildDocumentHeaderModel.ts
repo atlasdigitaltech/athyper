@@ -23,7 +23,7 @@ import type {
   HeaderFact,
   HeaderProgressStage,
 } from "@athyper/entity-runtime/header";
-import { statusToIntent, fmtDate, fmtMoneyNumber } from "@athyper/runtime-shared/core";
+import { appEntityListHref, statusToIntent, fmtDate, fmtMoneyNumber } from "@athyper/runtime-shared/core";
 import {
   DEFAULT_LIFECYCLE_STAGES,
   asConfigRecord,
@@ -384,7 +384,7 @@ export function buildDocumentHeaderModel(
   const model: EntityHeaderModel = {
     identity: {
       typeLabel,
-      typeHref:        `/app/${entityCode}`,
+      typeHref:        appEntityListHref(entityCode),
       typeTooltip:     `View all ${entity.entity_name.toLowerCase()}`,
       name:             opts.resolvedPartyName ?? nameVal ?? numberVal,
       number:           numberVal,

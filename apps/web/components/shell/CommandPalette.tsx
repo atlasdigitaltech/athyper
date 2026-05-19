@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 
 import { CommandPaletteBase, type PaletteTab } from "@athyper/ui/composites";
+import { normalizeAppEntityHref } from "@athyper/runtime-shared/core";
 import type { RuntimeModule } from "@athyper/auth";
 import {
   getRecentItems,
@@ -103,48 +104,48 @@ interface CreateAction {
 const MODULE_CREATE_ACTIONS: Partial<Record<string, CreateAction[]>> = {
   ACC: [
     { label: "New Journal Entry", href: "/app/journal/new", moduleCode: "ACC", keywords: ["journal", "entry", "je", "posting", "debit", "credit"] },
-    { label: "New Purchase Invoice", href: "/app/purchase_invoice/new", moduleCode: "ACC", keywords: ["purchase", "invoice", "ap", "payable", "supplier invoice"] },
-    { label: "New Business Partner", href: "/app/business_partner/new", moduleCode: "ACC", keywords: ["business partner", "bp", "customer", "supplier", "partner"] },
+    { label: "New Purchase Invoice", href: "/app/purchase-invoice/new", moduleCode: "ACC", keywords: ["purchase", "invoice", "ap", "payable", "supplier invoice"] },
+    { label: "New Business Partner", href: "/app/business-partner/new", moduleCode: "ACC", keywords: ["business partner", "bp", "customer", "supplier", "partner"] },
   ],
   AP: [
-    { label: "New Purchase Invoice", href: "/app/purchase_invoice/new", moduleCode: "AP", keywords: ["purchase", "invoice", "ap", "payable", "vendor", "supplier invoice", "pi"] },
+    { label: "New Purchase Invoice", href: "/app/purchase-invoice/new", moduleCode: "AP", keywords: ["purchase", "invoice", "ap", "payable", "vendor", "supplier invoice", "pi"] },
   ],
   PAY: [
     { label: "New Payment", href: "/app/payment/new", moduleCode: "PAY", keywords: ["payment", "pay", "disbursement"] },
     { label: "New Expense Claim", href: "/app/expense/new", moduleCode: "PAY", keywords: ["expense", "claim", "reimburse", "travel"] },
   ],
   PRC: [
-    { label: "New Purchase Order", href: "/app/purchase_order/new", moduleCode: "PRC", keywords: ["po", "purchase", "order"] },
-    { label: "New Requisition", href: "/app/requisition/new", moduleCode: "PRC", keywords: ["pr", "requisition", "request", "purchase request"] },
+    { label: "New Purchase Order", href: "/app/purchase-order/new", moduleCode: "PRC", keywords: ["po", "purchase", "order"] },
+    { label: "New Requisition", href: "/app/purchase-requisition/new", moduleCode: "PRC", keywords: ["pr", "requisition", "request", "purchase request"] },
   ],
   BUY: [
-    { label: "New Requisition", href: "/app/requisition/new", moduleCode: "BUY", keywords: ["pr", "requisition", "request"] },
-    { label: "New Purchase Order", href: "/app/purchase_order/new", moduleCode: "BUY", keywords: ["po", "purchase", "order", "buy"] },
-    { label: "New Business Partner", href: "/app/business_partner/new?mode=supplier", moduleCode: "BUY", keywords: ["supplier", "vendor", "business partner", "bp"] },
+    { label: "New Requisition", href: "/app/purchase-requisition/new", moduleCode: "BUY", keywords: ["pr", "requisition", "request"] },
+    { label: "New Purchase Order", href: "/app/purchase-order/new", moduleCode: "BUY", keywords: ["po", "purchase", "order", "buy"] },
+    { label: "New Business Partner", href: "/app/business-partner/new?mode=supplier", moduleCode: "BUY", keywords: ["supplier", "vendor", "business partner", "bp"] },
   ],
   SRM: [
-    { label: "New Supplier BP", href: "/app/business_partner/new?mode=supplier", moduleCode: "SRM", keywords: ["supplier", "vendor", "srm", "new supplier", "business partner"] },
-    { label: "New Supplier Evaluation", href: "/app/supplier_eval/new", moduleCode: "SRM", keywords: ["evaluation", "assess", "qualify", "approve supplier"] },
+    { label: "New Supplier BP", href: "/app/business-partner/new?mode=supplier", moduleCode: "SRM", keywords: ["supplier", "vendor", "srm", "new supplier", "business partner"] },
+    { label: "New Supplier Evaluation", href: "/app/supplier-eval/new", moduleCode: "SRM", keywords: ["evaluation", "assess", "qualify", "approve supplier"] },
   ],
   SOURCE: [
     { label: "Submit RFQ", href: "/app/rfq/new", moduleCode: "SOURCE", keywords: ["rfq", "quote", "request for quotation", "source", "bid"] },
-    { label: "New Sourcing Event", href: "/app/sourcing_event/new", moduleCode: "SOURCE", keywords: ["sourcing", "event", "tender", "auction"] },
+    { label: "New Sourcing Event", href: "/app/sourcing-event/new", moduleCode: "SOURCE", keywords: ["sourcing", "event", "tender", "auction"] },
   ],
   CONTRACT: [
     { label: "New Contract", href: "/app/contract/new", moduleCode: "CONTRACT", keywords: ["contract", "agreement", "legal"] },
-    { label: "New Contract Amendment", href: "/app/contract_amendment/new", moduleCode: "CONTRACT", keywords: ["amendment", "change", "modify contract"] },
+    { label: "New Contract Amendment", href: "/app/contract-amendment/new", moduleCode: "CONTRACT", keywords: ["amendment", "change", "modify contract"] },
   ],
   INV: [
     { label: "New Invoice", href: "/app/invoice/new", moduleCode: "INV", keywords: ["invoice", "billing", "ar", "receivable"] },
-    { label: "New Credit Note", href: "/app/credit_note/new", moduleCode: "INV", keywords: ["credit", "note", "refund", "adjustment"] },
+    { label: "New Credit Note", href: "/app/credit-note/new", moduleCode: "INV", keywords: ["credit", "note", "refund", "adjustment"] },
   ],
   HR: [
     { label: "New Employee", href: "/app/employee/new", moduleCode: "HR", keywords: ["employee", "hire", "onboard", "staff", "headcount"] },
     { label: "New Leave Request", href: "/app/leave/new", moduleCode: "HR", keywords: ["leave", "holiday", "absence", "pto", "time off"] },
   ],
   BUDGET: [
-    { label: "New Budget Request", href: "/app/budget_request/new", moduleCode: "BUDGET", keywords: ["budget", "request", "allocation", "fund"] },
-    { label: "New Budget Version", href: "/app/budget_version/new", moduleCode: "BUDGET", keywords: ["budget", "version", "plan", "revision"] },
+    { label: "New Budget Request", href: "/app/budget-request/new", moduleCode: "BUDGET", keywords: ["budget", "request", "allocation", "fund"] },
+    { label: "New Budget Version", href: "/app/budget-version/new", moduleCode: "BUDGET", keywords: ["budget", "version", "plan", "revision"] },
   ],
 };
 
@@ -161,7 +162,7 @@ interface NavPage {
 
 const MODULE_PAGES_NAV: Partial<Record<string, NavPage[]>> = {
   ACC: [
-    { label: "Business Partners", href: "/app/business_partner", keywords: ["business partner", "bp", "supplier", "customer", "master"] },
+    { label: "Business Partners", href: "/app/business-partner", keywords: ["business partner", "bp", "supplier", "customer", "master"] },
     { label: "GL Workbench", href: "/finance/gl", keywords: ["gl", "general ledger", "workbench", "journals", "ledger entries"] },
     { label: "Chart of Accounts", href: "/finance/coa", keywords: ["coa", "chart", "accounts", "account tree", "account structure"] },
     { label: "Trial Balance", href: "/finance/views/trial-balance", keywords: ["trial balance", "tb", "debit credit summary"] },
@@ -202,7 +203,7 @@ export interface CommandPaletteProps {
 // generic records CRUD. Domain-specific overrides can be added here as they
 // surface (e.g. finance pages have their own routes for invoices + JEs).
 function hitHref(hit: SearchHit): string {
-  return `/app/${hit.entity_type.replace(/_/g, "-")}/${hit.entity_id}`;
+  return normalizeAppEntityHref(`/app/${hit.entity_type}/${hit.entity_id}`);
 }
 
 export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) {
@@ -226,9 +227,10 @@ export function CommandPalette({ open, onClose, modules }: CommandPaletteProps) 
 
   const navigate = useCallback(
     (href: string, item: Omit<RecentItem, "visitedAt">) => {
+      const normalizedHref = normalizeAppEntityHref(href);
       onClose();
-      pushRecentItem(item);
-      router.push(href);
+      pushRecentItem({ ...item, href: normalizedHref });
+      router.push(normalizedHref);
     },
     [onClose, router],
   );

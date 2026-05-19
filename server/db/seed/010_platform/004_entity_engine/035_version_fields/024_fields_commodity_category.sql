@@ -73,7 +73,7 @@ BEGIN
                'default_sort_field', 'sort_order',
                'default_sort_order', 'asc'
            ),
-           natural_key_fields = ARRAY['code'],
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['code']::text[]), true),
            updated_at = now(),
            updated_by = v_su
      WHERE entity_code = 'commodity_category'

@@ -1,13 +1,17 @@
 -- 990_reference_picker_config.sql
 -- Purpose:
---   Normalize every metadata reference field into a consistent EntityPicker
---   contract. Older seeds may only have validation.ref_entity; newer seeds may
---   have reference_config but no picker hints. This pass makes both shapes
---   produce clear chooser rows: label + code + optional description + view link.
+--   Normalize every metadata reference target into a consistent EntityPicker
+--   profile on control.entity.display_config.reference_picker, then compact
+--   field-level reference_config down to target_entity plus real overrides.
+--   Older seeds may still provide validation.ref_entity; this pass consumes it
+--   for compatibility and reports it as legacy metadata.
 
 DO $$
 DECLARE
-  v_updated integer := 0;
+  v_profiles_updated integer := 0;
+  v_fields_updated integer := 0;
+  v_legacy_ref_entity integer := 0;
+  v_repeated_picker_blobs integer := 0;
 BEGIN
   WITH ref_fields AS (
     SELECT
@@ -37,7 +41,16 @@ BEGIN
       rf.*,
       e.id AS target_entity_id,
       e.display_config,
-      e.natural_key_fields,
+      e.identity_config,
+      ARRAY(
+        SELECT jsonb_array_elements_text(
+          CASE
+            WHEN jsonb_typeof(COALESCE(e.identity_config, '{}'::jsonb)->'natural_key_fields') = 'array'
+            THEN COALESCE(e.identity_config, '{}'::jsonb)->'natural_key_fields'
+            ELSE '[]'::jsonb
+          END
+        )
+      ) AS natural_key_fields,
       ev.id AS target_version_id
     FROM ref_fields rf
     LEFT JOIN control.entity e
@@ -53,6 +66,7 @@ BEGIN
       tm.id,
       tm.rc,
       tm.target_entity,
+      tm.target_entity_id,
       COALESCE(NULLIF(tm.rc->>'target_field', ''), 'id') AS target_field,
       COALESCE(
         explicit_label_f.field_name,
@@ -284,9 +298,12 @@ BEGIN
       LIMIT 1
     ) sort_f ON true
   ),
-  next_config AS (
+  full_config AS (
     SELECT
       id,
+      target_entity,
+      target_field,
+      rc,
       jsonb_strip_nulls(
         rc
         || jsonb_build_object(
@@ -333,6 +350,11 @@ BEGIN
                       'tone_map', jsonb_build_object('debit','success','credit','destructive')
                     )
                   )
+                )
+              WHEN target_entity = 'company_code' THEN
+                jsonb_build_object(
+                  'label_template', '{name} - {code}',
+                  'show_code', false
                 )
               WHEN target_entity = 'supplier' THEN
                 jsonb_build_object(
@@ -616,13 +638,105 @@ BEGIN
         )
       ) AS reference_config
     FROM resolved
+  ),
+  picker_profiles AS (
+    SELECT DISTINCT ON (fc.target_entity)
+      fc.target_entity,
+      r.target_entity_id,
+      COALESCE(fc.reference_config->'picker', '{}'::jsonb) AS reference_picker
+    FROM full_config fc
+    JOIN resolved r
+      ON r.id = fc.id
+    WHERE r.target_entity_id IS NOT NULL
+    ORDER BY fc.target_entity, CASE WHEN fc.rc ? 'picker' THEN 1 ELSE 0 END, fc.id
+  ),
+  profile_updates AS (
+    UPDATE control.entity e
+       SET display_config = jsonb_set(
+         COALESCE(e.display_config, '{}'::jsonb),
+         '{reference_picker}',
+         pp.reference_picker,
+         true
+       )
+      FROM picker_profiles pp
+     WHERE e.id = pp.target_entity_id
+       AND COALESCE(e.display_config, '{}'::jsonb)->'reference_picker' IS DISTINCT FROM pp.reference_picker
+     RETURNING e.id
+  ),
+  next_config AS (
+    SELECT
+      fc.id,
+      jsonb_strip_nulls(
+        jsonb_build_object('target_entity', fc.target_entity)
+        || CASE
+          WHEN fc.target_field IS NOT NULL AND fc.target_field <> 'id' THEN
+            jsonb_build_object('target_field', fc.target_field)
+          ELSE '{}'::jsonb
+        END
+        || CASE
+          WHEN NULLIF(fc.reference_config->>'display_field', '') IS NOT NULL
+           AND NULLIF(fc.reference_config->>'display_field', '') IS DISTINCT FROM NULLIF(pp.reference_picker->>'label_field', '')
+          THEN jsonb_build_object('display_field', fc.reference_config->>'display_field')
+          ELSE '{}'::jsonb
+        END
+        || (
+          ((((((((((((COALESCE(fc.rc, '{}'::jsonb)
+            - 'ref_entity') - 'target_entity') - 'target_field') - 'display_field')
+            - 'label_field') - 'code_field') - 'description_field') - 'navigation_field')
+            - 'record_id_field') - 'show_code') - 'show_description') - 'show_view_action') - 'picker'
+        )
+        || CASE
+          WHEN picker_override.picker <> '{}'::jsonb THEN jsonb_build_object('picker', picker_override.picker)
+          ELSE '{}'::jsonb
+        END
+      ) AS reference_config
+    FROM full_config fc
+    LEFT JOIN picker_profiles pp
+      ON pp.target_entity = fc.target_entity
+    CROSS JOIN LATERAL (
+      SELECT COALESCE(jsonb_object_agg(pe.key, pe.value), '{}'::jsonb) AS picker
+      FROM jsonb_each(COALESCE(fc.reference_config->'picker', '{}'::jsonb)) AS pe(key, value)
+      WHERE NOT (COALESCE(pp.reference_picker, '{}'::jsonb) ? pe.key)
+         OR COALESCE(pp.reference_picker, '{}'::jsonb)->pe.key IS DISTINCT FROM pe.value
+    ) picker_override
+  ),
+  field_updates AS (
+    UPDATE control.entity_field ef
+       SET reference_config = nc.reference_config
+      FROM next_config nc
+     WHERE ef.id = nc.id
+       AND ef.reference_config IS DISTINCT FROM nc.reference_config
+     RETURNING ef.id
   )
-  UPDATE control.entity_field ef
-     SET reference_config = nc.reference_config
-    FROM next_config nc
-   WHERE ef.id = nc.id
-     AND ef.reference_config IS DISTINCT FROM nc.reference_config;
+  SELECT
+    (SELECT COUNT(*) FROM profile_updates),
+    (SELECT COUNT(*) FROM field_updates)
+    INTO v_profiles_updated, v_fields_updated;
 
-  GET DIAGNOSTICS v_updated = ROW_COUNT;
-  RAISE NOTICE '990 reference picker config normalized (% rows updated)', v_updated;
+  SELECT COUNT(*)
+    INTO v_legacy_ref_entity
+    FROM control.entity_field ef
+   WHERE ef.is_active = true
+     AND COALESCE(ef.validation ? 'ref_entity', false);
+
+  SELECT COUNT(*)
+    INTO v_repeated_picker_blobs
+    FROM control.entity_field ef
+    JOIN control.entity e
+      ON COALESCE(e.entity_code, e.name) = ef.reference_config->>'target_entity'
+     AND e.tenant_id IS NULL
+   WHERE ef.is_active = true
+     AND ef.reference_config ? 'picker'
+     AND COALESCE(e.display_config, '{}'::jsonb) ? 'reference_picker'
+     AND ef.reference_config->'picker' = COALESCE(e.display_config, '{}'::jsonb)->'reference_picker';
+
+  RAISE NOTICE '990 reference picker config normalized (% target profiles updated, % field configs compacted)', v_profiles_updated, v_fields_updated;
+
+  IF v_legacy_ref_entity > 0 THEN
+    RAISE WARNING '990 reference metadata audit: % active fields still use legacy validation.ref_entity; migrate these to reference_config.target_entity and keep validation validation-only', v_legacy_ref_entity;
+  END IF;
+
+  IF v_repeated_picker_blobs > 0 THEN
+    RAISE WARNING '990 reference metadata audit: % active fields still repeat the target reference_picker blob; keep only field-specific overrides', v_repeated_picker_blobs;
+  END IF;
 END $$;

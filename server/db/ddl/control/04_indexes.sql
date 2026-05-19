@@ -465,14 +465,41 @@ CREATE INDEX IF NOT EXISTS dpav_policy_idx       ON control.dimension_policy_all
 -- Reverse lookup — which policies allow a given value
 CREATE INDEX IF NOT EXISTS dpav_value_idx        ON control.dimension_policy_allowed_value (dimension_value_id);
 
--- ── control.document_sequence_config ─────────────────────────────────────────
--- Active configs by company — used to find available doc types for a company
-CREATE INDEX IF NOT EXISTS dsc_company_active_pidx ON control.document_sequence_config (tenant_id, company_code_id)
+
+-- Entity flow: active default lookup and flow bundle loading
+DROP INDEX IF EXISTS control.ef_default_per_ctx_uq;
+
+CREATE UNIQUE INDEX IF NOT EXISTS eflow_default_per_ctx_uq
+    ON control.entity_flow (
+        COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        entity_version_id,
+        trigger_context
+    )
+    WHERE is_default = true AND status = 'active';
+
+CREATE INDEX IF NOT EXISTS eflow_entity_version_idx
+    ON control.entity_flow (entity_version_id, status)
+    WHERE status = 'active';
+
+COMMENT ON INDEX control.eflow_default_per_ctx_uq IS
+    'Exactly one active default flow per (tenant, entity_version, trigger_context).';
+
+
+-- Entity numbering: active config lookup and counter inspection
+CREATE INDEX IF NOT EXISTS encfg_entity_active_pidx
+    ON control.entity_numbering_config (entity_id, tenant_id, company_code_id)
     WHERE is_active = true;
 
--- ── control.document_sequence_counter ────────────────────────────────────────
--- No additional indexes — composite PK (tenant_id, config_id, fiscal_year, period_number)
--- is the hot path for the UPDATE in next_document_number(). PK covers all access.
+CREATE INDEX IF NOT EXISTS encfg_tenant_active_pidx
+    ON control.entity_numbering_config (tenant_id, entity_id)
+    WHERE is_active = true;
+
+CREATE INDEX IF NOT EXISTS enctr_config_idx
+    ON control.entity_numbering_counter (config_id);
+
+CREATE INDEX IF NOT EXISTS enctr_company_idx
+    ON control.entity_numbering_counter (tenant_id, company_code_id)
+    WHERE company_code_id IS NOT NULL;
 
 
 -- ── §CCRR  control.commodity_code_to_category_rule ───────────────────────────

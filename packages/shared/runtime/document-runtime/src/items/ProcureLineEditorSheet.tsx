@@ -34,7 +34,7 @@ import { DrawerShell } from "@athyper/ui/primitives";
 import type { AccountingDistribution, DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
-import { fmtAmount } from "@athyper/runtime-shared/core";
+import { appEntityDetailHref, fmtAmount } from "@athyper/runtime-shared/core";
 import { cn } from "@athyper/theme/utils";
 import { SplitAccountingPanel, type SplitAccountingPanelHandle } from "./SplitAccountingPanel";
 import {
@@ -698,7 +698,7 @@ function ReferenceCard({
               {link.parentNav && record[link.parentNav.idField] && (
                 <div className="mt-3 border-t border-border/40 pt-2.5">
                   <a
-                    href={`/app/${link.parentNav.entity}/${String(record[link.parentNav.idField])}`}
+                    href={appEntityDetailHref(link.parentNav.entity, String(record[link.parentNav.idField]))}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"

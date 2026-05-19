@@ -25,6 +25,9 @@ export function TaxonomyWorkbenchHeader({
   const router = useRouter();
   const definition = getTaxonomyWorkbenchDefinition(active);
   const homeLabel = `Back to ${definition.workspace === "supply-chain" ? "Supply Chain" : "Finance"}`;
+  const modes = active === "spend"
+    ? definition.modes.filter((mode) => !["explorer", "classification", "editor", "matrix"].includes(mode.key))
+    : definition.modes;
 
   function handleModeChange(mode: WorkbenchModeItem) {
     const target = definition.modes.find((item) => item.key === mode.key);
@@ -39,7 +42,7 @@ export function TaxonomyWorkbenchHeader({
       subtitle={subtitle}
       backLabel={homeLabel}
       onBack={() => router.push(definition.homeHref)}
-      modes={definition.modes}
+      modes={modes}
       activeMode={activeMode ?? definition.activeMode}
       onModeChange={handleModeChange}
       actions={actions}

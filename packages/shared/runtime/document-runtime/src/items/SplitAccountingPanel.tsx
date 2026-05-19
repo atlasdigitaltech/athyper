@@ -5,7 +5,7 @@ import { Plus, Trash2, X, XCircle } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
-import { fmtAmount } from "@athyper/runtime-shared/core";
+import { appEntityDetailHref, fmtAmount } from "@athyper/runtime-shared/core";
 import { getCsrfToken } from "@athyper/runtime-shared/client";
 import {
   CostCenterPicker,
@@ -596,7 +596,7 @@ function AssetClassPicker({
       optionConfig={optionConfig}
       getOptionHref={(option) => {
         const recordId = option.recordId ?? option.value;
-        return `/app/asset_class/${encodeURIComponent(recordId)}`;
+        return appEntityDetailHref("asset_class", recordId);
       }}
       optionActionLabel={optionConfig.optionActionLabel ?? "Open asset class"}
       loadOnOpen

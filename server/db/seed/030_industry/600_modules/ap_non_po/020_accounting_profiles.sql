@@ -18,12 +18,23 @@
 DO $seed_ap_profiles$
 DECLARE
     v_tenant    record;
+    v_tid       uuid;
     v_sys uuid := '00000000-0000-0000-0000-000000000000';
 BEGIN
+    v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    IF v_tid IS NULL THEN
+        RAISE EXCEPTION '[seed] app.seed_tenant_id not set - run: SET app.seed_tenant_id = ''<uuid>''';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM master.tenant WHERE id = v_tid AND status = 'active') THEN
+        RAISE EXCEPTION '[seed] active tenant % not found', v_tid;
+    END IF;
+
     FOR v_tenant IN
         SELECT id AS tenant_id, code AS tenant_code
           FROM master.tenant
-         WHERE status = 'active'
+         WHERE id = v_tid
+           AND status = 'active'
     LOOP
         INSERT INTO master.accounting_profile (
             tenant_id, code, name, description,
@@ -72,5 +83,5 @@ BEGIN
     END LOOP;
 
     RAISE NOTICE 'blueprint/020_accounting_profiles: % tenants processed',
-        (SELECT count(*) FROM master.tenant WHERE status = 'active');
+        1;
 END $seed_ap_profiles$;

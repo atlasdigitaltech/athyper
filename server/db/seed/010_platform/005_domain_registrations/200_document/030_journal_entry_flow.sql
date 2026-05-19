@@ -10,7 +10,6 @@ DECLARE
     v_flow_id uuid;
     v_step_1  uuid;
     v_step_2  uuid;
-    v_step_3  uuid;
 BEGIN
     SELECT ev.id INTO v_ev_id
     FROM control.entity e
@@ -31,7 +30,7 @@ BEGIN
     SELECT
         NULL, v_ev_id, 'create',
         'Create Journal Entry',
-        'Manual journal entry create flow with posting header, balanced lines, and review controls.',
+        'Manual journal entry create flow with posting header and balanced lines.',
         'book-plus',
         'new', true,
         jsonb_build_object(
@@ -95,11 +94,8 @@ BEGIN
          '{"required_fields":["company_code_id","posting_date","document_date","transaction_currency","description"]}'::jsonb,
          'summary_side', v_su),
         (NULL, v_flow_id, 'journal_lines', 'Journal Lines', 'list-plus', 20,
-         '{"required_sections":["lines"],"min_rows":{"lines":2},"balance_rule":"debit_equals_credit"}'::jsonb,
-         'line_editor', v_su),
-        (NULL, v_flow_id, 'review', 'Review', 'check-circle', 30,
-         '{"required_fields":[],"pre_submit_checks":["line_count_min_2","debits_equal_credits","period_open","posting_controls"]}'::jsonb,
-         'summary_side', v_su)
+         '{"required_sections":["lines"],"min_rows":{"lines":2},"balance_rule":"debit_equals_credit","pre_submit_checks":["line_count_min_2","debits_equal_credits","period_open","posting_controls"]}'::jsonb,
+         'line_editor', v_su)
     ON CONFLICT (flow_id, step_key) DO UPDATE SET
         label = EXCLUDED.label,
         icon_key = EXCLUDED.icon_key,
@@ -109,10 +105,9 @@ BEGIN
 
     SELECT id INTO v_step_1 FROM control.entity_flow_step WHERE flow_id = v_flow_id AND step_key = 'posting_header';
     SELECT id INTO v_step_2 FROM control.entity_flow_step WHERE flow_id = v_flow_id AND step_key = 'journal_lines';
-    SELECT id INTO v_step_3 FROM control.entity_flow_step WHERE flow_id = v_flow_id AND step_key = 'review';
 
     DELETE FROM control.entity_flow_field
-    WHERE flow_step_id IN (v_step_1, v_step_2, v_step_3)
+    WHERE flow_step_id IN (v_step_1, v_step_2)
       AND tenant_id IS NULL;
 
     INSERT INTO control.entity_flow_section (
@@ -138,12 +133,9 @@ BEGIN
          2,
          '{"transaction_debit":0,"transaction_credit":0}'::jsonb,
          v_su),
-        (NULL, v_step_3, 'summary', 'Summary', NULL, 10,
+        (NULL, v_step_2, 'summary', 'Summary', NULL, 20,
          false, NULL, 'honor_default',
-         'summary', NULL, NULL, NULL, NULL, NULL, v_su),
-        (NULL, v_step_3, 'controls', 'Controls', NULL, 20,
-         true, NULL, 'honor_default',
-         'fields', NULL, NULL, NULL, NULL, NULL, v_su)
+         'summary', NULL, NULL, NULL, NULL, NULL, v_su)
     ON CONFLICT (flow_step_id, section_key) DO UPDATE SET
         label = EXCLUDED.label,
         description = EXCLUDED.description,
@@ -193,7 +185,7 @@ BEGIN
         default_source, derive_expression, override_permission,
         summary_role, ui_variant, span, display_size,
         help_text, sort_order, created_by)
-    SELECT NULL, v_step_3, ef.id,
+    SELECT NULL, v_step_2, ef.id,
            v.section_key, v.mode, v.derivation_mode,
            v.visible_when::jsonb, v.required_when::jsonb,
            v.default_source, v.derive_expression, v.override_permission,
@@ -204,14 +196,8 @@ BEGIN
         ('total_debit',            'summary',  'summary_only', 'derived_locked', NULL::text, NULL::text, NULL, 'lines.sum(base_debit)', NULL, 'total', 'money_big', 1, 'prominent', NULL, 10),
         ('total_credit',           'summary',  'summary_only', 'derived_locked', NULL, NULL, NULL, 'lines.sum(base_credit)', NULL, 'total', 'money_big', 1, 'prominent', NULL, 20),
         ('line_count',             'summary',  'summary_only', 'derived_locked', NULL, NULL, NULL, 'lines.count()', NULL, 'meta', 'chip', 1, 'compact', NULL, 30),
-        ('fiscal_year',            'summary',  'chip',         'derived_locked', NULL, NULL, NULL, 'fiscal.year_from(posting_date, company_code_id)', NULL, 'meta', 'chip', 1, 'compact', NULL, 40),
-        ('period_number',          'summary',  'chip',         'derived_locked', NULL, NULL, NULL, 'fiscal.period_from(posting_date, company_code_id)', NULL, 'meta', 'chip', 1, 'compact', NULL, 50),
-        ('is_auto_reverse',        'controls', 'editable',     'manual', NULL, NULL, 'const:false', NULL, NULL, NULL, 'switch', 1, 'standard', NULL, 100),
-        ('auto_reverse_date',      'controls', 'editable',     'manual', '{"==":[{"var":"is_auto_reverse"},true]}', '{"==":[{"var":"is_auto_reverse"},true]}', NULL, NULL, NULL, NULL, NULL, 1, 'standard', NULL, 110),
-        ('is_prior_period',        'controls', 'editable',     'manual', NULL, NULL, 'const:false', NULL, NULL, NULL, 'switch', 1, 'standard', NULL, 120),
-        ('original_period_year',   'controls', 'editable',     'manual', '{"==":[{"var":"is_prior_period"},true]}', '{"==":[{"var":"is_prior_period"},true]}', NULL, NULL, NULL, NULL, NULL, 1, 'standard', NULL, 130),
-        ('original_period_number', 'controls', 'editable',     'manual', '{"==":[{"var":"is_prior_period"},true]}', '{"==":[{"var":"is_prior_period"},true]}', NULL, NULL, NULL, NULL, NULL, 1, 'standard', NULL, 140),
-        ('tags',                   'controls', 'editable',     'manual', NULL, NULL, NULL, NULL, NULL, NULL, 'tags', 3, 'standard', NULL, 150)
+        ('fiscal_year',            'summary',  'summary_only', 'derived_locked', NULL, NULL, NULL, 'fiscal.year_from(posting_date, company_code_id)', NULL, 'meta', 'chip', 1, 'compact', NULL, 40),
+        ('period_number',          'summary',  'summary_only', 'derived_locked', NULL, NULL, NULL, 'fiscal.period_from(posting_date, company_code_id)', NULL, 'meta', 'chip', 1, 'compact', NULL, 50)
     ) AS v(field_name, section_key, mode, derivation_mode, visible_when, required_when,
            default_source, derive_expression, override_permission,
            summary_role, ui_variant, span, display_size, help_text, sort_order)

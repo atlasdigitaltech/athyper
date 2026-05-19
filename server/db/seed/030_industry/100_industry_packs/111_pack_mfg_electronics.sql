@@ -55,15 +55,7 @@ BEGIN
     ('SC-ELEC-SEMI',  'Semiconductors & Wafers','Silicon wafers, bare die, memory chips, and ASIC procurement',           'SC-ELEC', 'goods', 534, true),
     ('SC-ELEC-PACK',  'ESD & Electronics Pack.','Anti-static bags, ESD trays, moisture barrier bags, and reel packaging', 'SC-ELEC', 'goods', 535, false);
 
-    CREATE TEMP TABLE tmp_bi (
-        seed_id uuid DEFAULT shared.uuidv7(), code text NOT NULL, name text NOT NULL,
-        description text, domain text NOT NULL, subtype text, parent_code text,
-        sort_order smallint NOT NULL DEFAULT 0
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_bi (code, name, description, domain, subtype, parent_code, sort_order) VALUES
-    ('BI-COGS',  'Electronics Cost of Sales',   'Direct component and conversion costs for electronics manufacturing', 'COST_OF_SALES', 'ELECTRONICS',    'BI-COGS',  44),
-    ('BI-CAPEX', 'Electronics Capital Equipment','Capital investment in SMT lines, test equipment, and clean rooms',   'CAPEX',         'ELECTRONICS_MFG','BI-CAPEX', 34);
+    -- Business intent rows are domain-level only; this pack links categories to the canonical BI-* records.
 
     CREATE TEMP TABLE tmp_bridge (
         sc_code text NOT NULL, domain text NOT NULL DEFAULT 'unspsc', cc_code text NOT NULL,
@@ -138,23 +130,6 @@ BEGIN
         updated_at = now(), updated_by = v_su;
 
     -- ── STAGE D: UPSERT business intents ─────────────────────────────────
-    INSERT INTO master.business_intent (
-        id, tenant_id, code, name, description, domain, subtype,
-        parent_id, depth, sort_order, metadata, status, created_by
-    )
-    SELECT s.seed_id, v_tid, s.code, s.name, s.description, s.domain, s.subtype,
-        p.id, 1, s.sort_order,
-        jsonb_build_object('_seed', jsonb_build_object('pack', v_pack, 'version', v_version, 'seeded_at', now()::text)),
-        'active', v_su
-    FROM tmp_bi s
-    JOIN master.business_intent p ON p.tenant_id = v_tid AND p.code = s.parent_code
-    ON CONFLICT (tenant_id, code) DO UPDATE SET
-        name = EXCLUDED.name, description = EXCLUDED.description,
-        domain = EXCLUDED.domain, subtype = EXCLUDED.subtype,
-        parent_id = EXCLUDED.parent_id, depth = EXCLUDED.depth, sort_order = EXCLUDED.sort_order,
-        metadata = master.business_intent.metadata || jsonb_build_object('_seed', jsonb_build_object('pack', v_pack, 'version', v_version, 'seeded_at', now()::text)),
-        updated_at = now(), updated_by = v_su;
-
     UPDATE master.spend_category sc SET default_intent_id = bi.id, updated_at = now(), updated_by = v_su
     FROM master.business_intent bi
     WHERE sc.tenant_id = v_tid AND bi.tenant_id = v_tid

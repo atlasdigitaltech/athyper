@@ -137,20 +137,20 @@ CREATE TRIGGER trg_ap_status_changed
 -- The AP module is installed after the base entity-engine pass, so register the
 -- metadata needed by reference displays and runtime search here.
 INSERT INTO control.entity (
-    module_id, name, entity_short, entity_code,
+    module_id, name, slug, entity_short, entity_code,
     entity_class, ownership_model, kind, backing_type,
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, feature_flags, status, created_by)
+    feature_flags, status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
-    'accounting_profile', 'ACCP', 'accounting_profile',
+    'accounting_profile', 'accounting-profile', 'ACCP', 'accounting_profile',
     'MASTER', 'system', 'ent', 'table',
     'full', 'tenant_critical', 'controlled',
     'master', 'accounting_profile',
     'Accounting Profile', 'Accounting Profiles', 'layers', 'blue',
-    false, '{}'::jsonb, 'ACTIVE', '00000000-0000-0000-0000-000000000000'
+    '{}'::jsonb, 'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1
     FROM control.entity
@@ -187,14 +187,26 @@ CROSS JOIN (VALUES
     ('direction',      'direction',      'Direction',       'string',          'select',   'one',         'standard', true,  true,  true,  false, false,  60),
     ('subledger_type', 'subledger_type', 'Subledger Type',  'string',          'select',   'one',         'standard', true,  true,  true,  false, false,  70),
     ('domain_hint',    'domain_hint',    'Domain',          'string',          'text',     'zero_or_one', 'standard', false, true,  true,  false, false,  80),
-    ('status',         'status',         'Status',          'lifecycle_state', 'select',   'one',         'standard', true,  true,  true,  false, false,  90)
+    ('icon_key',       'icon_key',       'Icon',            'string',          'text',     'zero_or_one', 'standard', false, false, false, false, false,  85),
+    ('color_token',    'color_token',    'Color',           'string',          'text',     'zero_or_one', 'standard', false, false, false, false, false,  86),
+    ('sort_order',     'sort_order',     'Sort Order',      'integer',         'number',   'one',         'standard', true,  false, true,  false, false,  87),
+    ('metadata',       'metadata',       'Metadata',        'jsonb',           'json',     'one',         'system',   true,  false, false, false, false,  88),
+    ('status',         'status',         'Status',          'lifecycle_state', 'select',   'one',         'standard', true,  true,  true,  false, false,  90),
+    ('is_active',      'is_active',      'Active',          'boolean',         'checkbox', 'one',         'system',   true,  true,  true,  false, true,  100),
+    ('status_changed_at','status_changed_at','Status Changed At','timestamptz','datetime','zero_or_one', 'system',   false, false, true,  false, true,  110),
+    ('status_changed_by','status_changed_by','Status Changed By','uuid',       'hidden',   'zero_or_one', 'system',   false, false, false, false, true,  120),
+    ('created_at',     'created_at',     'Created At',      'timestamptz',     'datetime', 'one',         'system',   true,  false, true,  false, true,  130),
+    ('created_by',     'created_by',     'Created By',      'uuid',            'hidden',   'one',         'system',   true,  false, false, false, true,  140),
+    ('updated_at',     'updated_at',     'Updated At',      'timestamptz',     'datetime', 'zero_or_one', 'system',   false, false, true,  false, true,  150),
+    ('updated_by',     'updated_by',     'Updated By',      'uuid',            'hidden',   'zero_or_one', 'system',   false, false, false, false, true,  160)
 ) AS f(name, column_name, label, data_type, ui_type, cardinality, origin,
        is_required, is_filterable, is_sortable, is_searchable, is_read_only, sort_order)
 WHERE e.entity_code = 'accounting_profile' AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT DO NOTHING;
 
 UPDATE control.entity
-SET display_config = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
+SET slug = 'accounting-profile',
+    display_config = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
         'detail_renderer',    'master',
         'list_columns',       jsonb_build_array('code','name','direction','subledger_type','status'),
         'default_sort_field', 'name',
@@ -202,5 +214,75 @@ SET display_config = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object
         'code_field',         'code',
         'title_field',        'name'
     ),
-    natural_key_fields = ARRAY['code']
+    search_config = jsonb_build_object(
+        'enabled', true,
+        'fields', jsonb_build_array('code','name','description'),
+        'rank', jsonb_build_object('code', 10, 'name', 5, 'description', 1),
+        'min_query_length', 1,
+        'operator', 'contains'
+    ),
+    identity_config = jsonb_build_object(
+        'primary_key_field', 'id',
+        'business_key_fields', jsonb_build_array('code'),
+        'natural_key_fields', jsonb_build_array('code')
+    ),
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000'
 WHERE entity_code = 'accounting_profile' AND tenant_id IS NULL;
+
+UPDATE control.entity_version ev
+SET version_hash = encode(sha256(convert_to(
+        jsonb_build_object(
+            'version', jsonb_build_object(
+                'id', ev.id,
+                'entity_id', ev.entity_id,
+                'version_no', ev.version_no,
+                'behaviors', ev.behaviors
+            ),
+            'entity', jsonb_build_object(
+                'entity_code', e.entity_code,
+                'name', e.name,
+                'slug', e.slug,
+                'entity_class', e.entity_class,
+                'table_schema', e.table_schema,
+                'table_name', e.table_name,
+                'backing_type', e.backing_type
+            ),
+            'fields', COALESCE((
+                SELECT jsonb_agg(
+                    jsonb_build_object(
+                        'id', ef.id,
+                        'name', ef.name,
+                        'column_name', ef.column_name,
+                        'label', ef.label,
+                        'data_type', ef.data_type,
+                        'ui_type', ef.ui_type,
+                        'cardinality', ef.cardinality,
+                        'origin', ef.origin,
+                        'is_required', ef.is_required,
+                        'is_searchable', ef.is_searchable,
+                        'is_filterable', ef.is_filterable,
+                        'is_sortable', ef.is_sortable,
+                        'is_read_only', ef.is_read_only,
+                        'validation', ef.validation,
+                        'reference_config', ef.reference_config,
+                        'sort_order', ef.sort_order
+                    )
+                    ORDER BY ef.sort_order, ef.name, ef.id
+                )
+                FROM control.entity_field ef
+                WHERE ef.entity_version_id = ev.id
+                  AND ef.tenant_id IS NULL
+                  AND ef.is_active = true
+            ), '[]'::jsonb)
+        )::text,
+        'UTF8'
+    )), 'hex'),
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000'
+FROM control.entity e
+WHERE ev.entity_id = e.id
+  AND ev.tenant_id IS NULL
+  AND e.tenant_id IS NULL
+  AND e.entity_code = 'accounting_profile'
+  AND ev.version_no = 1;

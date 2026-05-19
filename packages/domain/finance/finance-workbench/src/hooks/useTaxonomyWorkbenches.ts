@@ -21,6 +21,20 @@ export interface CommodityCategoryRow {
   rootName: string | null;
   procurementType: string;
   visibility: string;
+  isBuyAllowed: boolean;
+  isSellAllowed: boolean;
+  isInventoryAllowed: boolean;
+  uomCode: string | null;
+  salesRevenueRecognitionMethod: string | null;
+  salesVariableConsideration: string | null;
+  salesStandaloneSellingPriceMethod: string | null;
+  isStockable: boolean;
+  isConsumable: boolean;
+  defaultValuationMethod: string | null;
+  isLotTrackingAllowed: boolean;
+  isLotTrackingRequired: boolean;
+  isSerialTrackingAllowed: boolean;
+  isSerialTrackingRequired: boolean;
   isClassificationRequired: boolean;
   isHsRequired: boolean;
   isRegulated: boolean;
@@ -146,6 +160,183 @@ export interface BusinessIntentSummary {
 export interface BusinessIntentPayload {
   items: BusinessIntentRow[];
   summary: BusinessIntentSummary;
+  asAt: string;
+  isLive: boolean;
+}
+
+export interface AccountingProfileRow {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  description: string | null;
+  direction: string;
+  subledgerType: string;
+  domainHint: string | null;
+  iconKey: string | null;
+  colorToken: string | null;
+  metadata: unknown;
+  status: string;
+  isActive: boolean | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string | null;
+  configCount: number;
+  activeConfigCount: number;
+  eventCount: number;
+  templateCount: number;
+  intentRuleCount: number;
+  bookRuleCount: number;
+  dimensionRuleCount: number;
+  commitmentConfigCount: number;
+  revenueConfigCount: number;
+  settlementConfigCount: number;
+  activeConfigId: string | null;
+  activeConfigVersion: number | null;
+  activeProfileType: string | null;
+  activeRecognitionTiming: string | null;
+  activeTaxTreatment: string | null;
+  activeMatchingType: string | null;
+  activeFlowCodes: string[];
+  activeDocTypes: string[];
+}
+
+export interface AccountingProfileConfigRow {
+  id: string;
+  tenantId: string;
+  accountingProfileId: string;
+  profileCode: string;
+  profileName: string;
+  direction: string;
+  profileType: string;
+  subledgerType: string;
+  applicableFlowCodes: string[];
+  applicableDocTypes: string[];
+  recognitionTiming: string;
+  deferralScheduleType: string | null;
+  deferralPeriods: number | null;
+  autoReverse: boolean;
+  reversalPeriodOffset: number | null;
+  taxTreatment: string;
+  defaultTaxGroupId: string | null;
+  isReverseCharge: boolean;
+  matchingType: string;
+  version: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  status: string;
+  isActive: boolean | null;
+  eventCount: number;
+  templateCount: number;
+  intentRuleCount: number;
+}
+
+export interface AccountingProfileRuleRow {
+  id: string;
+  tenantId: string;
+  direction: string | null;
+  intentId: string | null;
+  intentCode: string | null;
+  intentName: string | null;
+  intentDomain: string | null;
+  flowCode: string | null;
+  companyCodeId: string | null;
+  companyCode: string | null;
+  companyName: string | null;
+  docType: string | null;
+  currencyCode: string | null;
+  minAmount: number | null;
+  maxAmount: number | null;
+  isCrossBorder: boolean | null;
+  isIntercompany: boolean | null;
+  commodityDomain: string | null;
+  commitmentType: string | null;
+  counterpartyTier: string | null;
+  contractValueMin: number | null;
+  contractValueMax: number | null;
+  revenueType: string | null;
+  resolvedProfileConfigId: string;
+  accountingProfileId: string;
+  profileCode: string;
+  profileName: string;
+  profileType: string;
+  explanationTemplate: string;
+  confidence: number | null;
+  priority: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  status: string;
+  isActive: boolean | null;
+}
+
+export interface AccountingProfileEventRow {
+  id: string;
+  tenantId: string;
+  profileConfigId: string;
+  accountingProfileId: string;
+  profileCode: string;
+  eventCode: string;
+  eventName: string;
+  createsJe: boolean;
+  reversesEvent: string | null;
+  isAutoReverse: boolean;
+  autoReverseOffset: number | null;
+  commitmentAction: string;
+  commitmentAmountSource: string | null;
+  firesPairedProfile: boolean;
+  eventSeq: number;
+  status: string;
+  isActive: boolean | null;
+  templateCount: number;
+}
+
+export interface AccountingProfileTemplateRow {
+  id: string;
+  tenantId: string;
+  profileEventId: string;
+  profileConfigId: string;
+  accountingProfileId: string;
+  profileCode: string;
+  eventCode: string;
+  lineSeq: number;
+  description: string;
+  postingSide: string;
+  accountSource: string;
+  accountCode: string | null;
+  accountLookupKey: string | null;
+  accountFallback: string | null;
+  amountSource: string;
+  amountFormula: string | null;
+  amountPercentage: number | null;
+  isBalancingLine: boolean;
+  appliesToDocTypes: string[];
+  sortOrder: number;
+  status: string;
+  isActive: boolean | null;
+}
+
+export interface AccountingProfileSummary {
+  total: number;
+  activeProfiles: number;
+  activeConfigs: number;
+  intentRules: number;
+  activeIntentRules: number;
+  events: number;
+  entryTemplates: number;
+  optionalConfigs: number;
+  profilesWithoutConfig: number;
+  profilesWithoutRules: number;
+  profilesWithoutTemplates: number;
+}
+
+export interface AccountingProfilePayload {
+  items: AccountingProfileRow[];
+  configs: AccountingProfileConfigRow[];
+  rules: AccountingProfileRuleRow[];
+  events: AccountingProfileEventRow[];
+  templates: AccountingProfileTemplateRow[];
+  summary: AccountingProfileSummary;
+  hasIdentityTable: boolean;
   asAt: string;
   isLive: boolean;
 }
@@ -357,6 +548,15 @@ export function useBusinessIntents() {
   return useQuery<BusinessIntentPayload>({
     queryKey: ["finance", "taxonomy", "business-intents"],
     queryFn: () => fetchJson<BusinessIntentPayload>("/api/finance/business-intents"),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAccountingProfiles() {
+  return useQuery<AccountingProfilePayload>({
+    queryKey: ["finance", "taxonomy", "accounting-profiles"],
+    queryFn: () => fetchJson<AccountingProfilePayload>("/api/finance/accounting-profiles"),
     retry: false,
     staleTime: 5 * 60 * 1000,
   });

@@ -94,6 +94,42 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conname = 'efsec_section_shape_chk'
+       AND conrelid = 'control.entity_flow_section'::regclass
+  ) THEN
+    ALTER TABLE control.entity_flow_section
+      ADD CONSTRAINT efsec_section_shape_chk
+        CHECK (
+          (
+            section_type = 'repeater'
+            AND entity_code IS NOT NULL
+            AND btrim(entity_code) <> ''
+            AND payload_key IS NOT NULL
+            AND btrim(payload_key) <> ''
+            AND field_codes IS NOT NULL
+            AND jsonb_typeof(field_codes) = 'array'
+            AND jsonb_array_length(field_codes) > 0
+          )
+          OR (
+            section_type = 'singleton'
+            AND entity_code IS NOT NULL
+            AND btrim(entity_code) <> ''
+            AND payload_key IS NOT NULL
+            AND btrim(payload_key) <> ''
+          )
+          OR (
+            section_type = 'summary'
+            AND entity_code IS NULL
+            AND payload_key IS NULL
+          )
+          OR section_type = 'fields'
+        );
+  END IF;
+END $$;
+
 -- ---------------------------------------------------------------------------
 -- 1b. Extend master.supplier with composite intake driver fields
 --     These columns are populated by the supplier intake wizard and remain

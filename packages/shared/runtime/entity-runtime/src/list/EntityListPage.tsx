@@ -120,9 +120,12 @@ import {
   entityRowToPickerOption,
   resolveEntityPickerOptionConfig,
 } from "@athyper/runtime-shared/entity-search";
+import { appEntityDetailHref, appEntityListHref } from "@athyper/runtime-shared/core";
 import {
   configuredAuditFieldNames,
+  configuredBusinessKeyFieldNames,
   configuredCodeFieldName,
+  configuredNaturalKeyFieldNames,
   configuredStatusFieldNames,
   configuredTitleFieldName,
   fieldValueByName,
@@ -155,6 +158,32 @@ const DESKTOP_VIEW_QUERY = "(min-width: 1280px)";
 const LIST_PAGE_SIZE_OPTIONS = [20, 50, 100, 500] as const;
 const DEFAULT_LOAD_MORE_SIZE = 50;
 const DEFAULT_MAX_LIST_PAGE_SIZE = 500;
+const ENTITY_LIST_TYPOGRAPHY_SCOPE = [
+  "text-[13px] leading-5",
+  "[--doc-subtitle-size:0.8125rem]",
+  "[--doc-subtitle-line-height:1.45]",
+  "[--doc-support-size:0.75rem]",
+  "[--doc-support-line-height:1.45]",
+  "[--doc-action-size:0.8125rem]",
+  "[--doc-action-line-height:1]",
+  "[--doc-badge-size:0.75rem]",
+  "[--doc-badge-line-height:1]",
+  "[--doc-field-label-size:0.6875rem]",
+  "[--doc-field-label-line-height:1.1]",
+  "[--doc-field-label-tracking:0]",
+  "[--doc-compact-code-size:0.75rem]",
+  "[--doc-compact-code-line-height:1.2]",
+  "[--doc-compact-code-tracking:0]",
+  "[--doc-field-value-size:0.8125rem]",
+  "[--doc-field-value-line-height:1.35]",
+  "[&_input]:text-[13px]",
+  "[&_input]:leading-5",
+  "[&_select]:text-[13px]",
+  "[&_select]:leading-5",
+  "[&_[role=combobox]]:text-[13px]",
+  "[&_[role=combobox]]:leading-5",
+  "[&_button]:text-[13px]",
+].join(" ");
 
 interface ParameterSnapshot {
   values?: Record<string, unknown>;
@@ -211,6 +240,7 @@ function resolveEntityListArchetype(entity: CompiledEntity): EntityListArchetype
   if (
     renderer === "document" ||
     entity.entity_class === "DOCUMENT" ||
+    entity.feature_flags.has_workflow ||
     entity.feature_flags.is_approvable
   ) {
     return "doc";
@@ -318,6 +348,12 @@ function normalizeEntityCodeForNav(entityCode: string): string {
 function hasBusinessIdentifierField(entity: CompiledEntity): boolean {
   const entityCode = normalizeEntityCodeForNav(entity.entity_code);
   const fieldNames = new Set(entity.fields.map((field) => field.name.toLowerCase()));
+  const configuredIdentityFields = [
+    ...configuredBusinessKeyFieldNames(entity),
+    ...configuredNaturalKeyFieldNames(entity),
+  ].map((fieldName) => fieldName.toLowerCase())
+    .filter((fieldName) => fieldName !== "id" && fieldName !== "tenant_id" && !fieldName.endsWith("_id"));
+  if (configuredIdentityFields.some((fieldName) => fieldNames.has(fieldName))) return true;
   return [
     "code",
     "document_no",
@@ -343,11 +379,20 @@ function hasAssociationStyleEntityCode(entity: CompiledEntity): boolean {
   return /(^|_)(rule|policy|classification|link|override|assignment|binding|mapping)$/.test(entityCode);
 }
 
+function hasIdentityParentConfig(entity: CompiledEntity): boolean {
+  const identityConfig = entity.identity_config as Record<string, unknown> | undefined;
+  const parentConfig = identityConfig?.["parent"];
+  if (!parentConfig || typeof parentConfig !== "object" || Array.isArray(parentConfig)) return false;
+  const parent = parentConfig as Record<string, unknown>;
+  return typeof parent["field"] === "string" || typeof parent["entity"] === "string";
+}
+
 function usesRecordIdNavigation(entity: CompiledEntity): boolean {
   const flags = entity.feature_flags as Record<string, unknown>;
   return entity.entity_class === "RELATION" ||
     entity.entity_class === "DOCUMENT_RELATION" ||
     flags["requires_owner_type_scope"] === true ||
+    hasIdentityParentConfig(entity) ||
     typeof flags["parent_fk"] === "string" ||
     typeof flags["parent_entity"] === "string" ||
     hasAssociationStyleEntityCode(entity) ||
@@ -910,12 +955,12 @@ function ListSettingsMenu({ entityCode, onReload, reloading = false, operations 
     }
 
     if (normalizedKey === "import" || action.permissionCode.endsWith(".import")) {
-      nav(`/app/${entityCode}/import`);
+      nav(`${appEntityListHref(entityCode)}/import`);
       return;
     }
 
     if (normalizedKey === "bulk_update" || action.permissionCode.endsWith(".bulk_update")) {
-      nav(`/app/${entityCode}/bulk`);
+      nav(`${appEntityListHref(entityCode)}/bulk`);
       return;
     }
 
@@ -1975,12 +2020,17 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   );
   const searchableFieldNames = useMemo(() => {
     const names = new Set<string>();
+    if (entity?.search_config?.enabled === false) return names;
+    const configuredFields = entity?.search_config?.fields?.length
+      ? entity.search_config.fields
+      : undefined;
+    configuredFields?.forEach((fieldName) => names.add(fieldName));
+    if (configuredFields?.length) return names;
     entity?.fields.forEach((field) => {
       if (field.is_searchable) names.add(field.name);
     });
-    displayConfig?.search_fields?.forEach((fieldName) => names.add(fieldName));
     return names;
-  }, [displayConfig?.search_fields, entity?.fields]);
+  }, [entity?.fields, entity?.search_config]);
   const hasSearchableFields = searchableFieldNames.size > 0;
 
   const entityArchetype = useMemo<EntityListArchetype>(
@@ -2022,12 +2072,14 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   // Resolve active sort: URL state → metadata default → undefined
   const activeSort = (state.sort && state.sort.length > 0) ? state.sort : presentationConfig?.defaultSort;
   const searchMode = state.searchMode ?? "client";
+  const minSearchLength = Math.max(1, Math.floor(entity?.search_config?.min_query_length ?? 1));
 
   // Build server request params from canonical URL state.
   // Search in View (default/client): strip q from server request — rows are filtered in-browser instead.
   // facets: honour state.facets (user may upgrade to "all" via Load all button); default "cheap".
   const apiParams = useMemo(() => {
-    const effectiveState = searchMode === "client"
+    const searchTooShort = !!state.search?.trim() && state.search.trim().length < minSearchLength;
+    const effectiveState = searchMode === "client" || searchTooShort
       ? { ...state, search: undefined }
       : state;
     const base = stateToApiParams({ ...effectiveState, sort: activeSort });
@@ -2041,7 +2093,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
       }
     }
     return base;
-  }, [state, activeSort, viewMode, searchMode]);
+  }, [state, activeSort, viewMode, searchMode, minSearchLength]);
 
   const {
     data: listData,
@@ -2132,12 +2184,13 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const allRows = useMemo(() => {
     if (searchMode !== "client" || !state.search?.trim()) return rawRows;
     const q = state.search.toLowerCase();
+    if (q.trim().length < minSearchLength) return rawRows;
     const searchableCols = entity?.fields.filter((f) => searchableFieldNames.has(f.name)).map((f) => f.name) ?? [];
     if (searchableCols.length === 0) return rawRows;
     return rawRows.filter((row) =>
       searchableCols.some((col) => String(row[col] ?? "").toLowerCase().includes(q)),
     );
-  }, [rawRows, searchMode, state.search, entity?.fields, searchableFieldNames]);
+  }, [rawRows, searchMode, state.search, entity?.fields, searchableFieldNames, minSearchLength]);
 
   // ── Social signals — batch-fetched for all visible rows (S1.A/S1.B) ─────────
   // Called unconditionally before any early return (Rules of Hooks).
@@ -2310,6 +2363,8 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const navFieldNames = uniqueFieldNames([
     codeFieldName,
     explicitTitleFieldName,
+    ...configuredBusinessKeyFieldNames(entity),
+    ...configuredNaturalKeyFieldNames(entity).filter((fieldName) => fieldName !== "tenant_id" && fieldName !== "id"),
   ]);
 
   // Status field resolver from presentation config (for compact view badges)
@@ -2423,7 +2478,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
         if (field.name === codeFieldName && field.data_type === "text" && value != null && value !== "") {
           return (
             <span
-              className="text-xs font-medium tabular-nums text-muted-foreground cursor-context-menu"
+              className="text-[13px] font-medium leading-5 tabular-nums text-muted-foreground cursor-context-menu"
               onContextMenu={(e) => handleCellContextMenu(row.original, e)}
             >
               {String(value)}
@@ -2468,7 +2523,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
 
   const getRecordHref = (row: Record<string, unknown>) => {
     const navId = resolveEntityRecordNavId(entity, row, navFieldNames);
-    return navId ? `/app/${entityCode}/${encodeURIComponent(navId)}` : undefined;
+    return navId ? appEntityDetailHref(entityCode, navId) : undefined;
   };
 
   const handleRowClick = (row: Record<string, unknown>) => {
@@ -2494,6 +2549,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
   const listEntityTypeLabel = entityTypeLabel(entity);
   return (
     <PageShell
+      className={ENTITY_LIST_TYPOGRAPHY_SCOPE}
       header={
         <PageHeader
           typeChip={listEntityTypeLabel}
@@ -2650,7 +2706,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
 
           {/* State bar — single row: count · filter chips · sort · group · columns */}
           {(serverTotal !== undefined || activeSort || state.group || visibleColumnNames.length > 0 || hasActiveFilters) && (
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-1.5 text-[13px] leading-5 text-muted-foreground">
 
               {/* Record count */}
               {serverTotal !== undefined && (
@@ -2684,7 +2740,7 @@ export function EntityListPage({ entityCode }: EntityListPageProps) {
                 .filter(([k]) => !isVirtualFilter(k))
                 .filter(([, entry]) => Array.isArray(entry) ? (entry as unknown[]).length > 0 : true)
                 .map(([field, entry]) => (
-                  <span key={field} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-xs text-foreground">
+                  <span key={field} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-[13px] leading-5 text-foreground">
                     <span className="text-muted-foreground">{fieldLabelMap[field] ?? field}:</span>
                     <ReferenceAwareFilterValue entry={entry as FilterEntry} field={fieldMetaMap[field]} />
                     <button

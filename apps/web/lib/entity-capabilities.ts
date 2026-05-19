@@ -42,11 +42,12 @@ export function resolveCapabilities(meta: CompiledEntity): EntityCapabilities {
   const tabs = resolveTabs(meta, null, []);
   const renderer = resolveRendererFamily(meta);
 
+  const hasWorkflow = Boolean(flags.has_workflow ?? flags.is_approvable);
   const hasVersions = Boolean(flags.version_control);
 
   return {
     // Subroutes
-    hasFlow:        Boolean(flags.is_approvable),
+    hasFlow:        hasWorkflow,
     hasAttachments: flags.has_attachments !== false,
     hasVersions,
     hasCompare:     hasVersions,   // compare requires version_control too

@@ -7,7 +7,7 @@
  * "purchase_invoice" → "Purchase Invoice"
  */
 export function formatTitle(code: string): string {
-  return code.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return code.replace(/-/g, "_").split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
 /**

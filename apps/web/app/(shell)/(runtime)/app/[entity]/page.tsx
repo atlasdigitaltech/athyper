@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { EntityListPage } from "@athyper/entity-runtime/list";
 import { Skeleton } from "@athyper/ui/primitives";
-import { canonicalEntityCode } from "../_lib/entity-aliases";
+import { canonicalEntityCode, canonicalEntitySlug } from "../_lib/entity-aliases";
 
 /**
  * Runtime entity list — /app/[entity]
@@ -41,7 +41,8 @@ export default async function AppEntityListRoute({
 }) {
   const { entity } = await params;
   const canonicalEntity = canonicalEntityCode(entity);
-  if (canonicalEntity !== entity) {
+  const canonicalSlug = canonicalEntitySlug(entity);
+  if (canonicalSlug !== entity) {
     const currentSearchParams = await searchParams;
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(currentSearchParams)) {
@@ -52,7 +53,7 @@ export default async function AppEntityListRoute({
       }
     }
     const queryText = query.toString();
-    redirect(`/app/${canonicalEntity}${queryText ? `?${queryText}` : ""}`);
+    redirect(`/app/${canonicalSlug}${queryText ? `?${queryText}` : ""}`);
   }
 
   // Suspense boundary is required because EntityListPage uses useSearchParams()

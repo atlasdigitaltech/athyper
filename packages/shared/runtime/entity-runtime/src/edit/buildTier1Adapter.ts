@@ -14,6 +14,7 @@
  */
 
 import type { EntityViewDescriptor } from "@athyper/runtime-shared/descriptors";
+import { appEntityListHref } from "@athyper/runtime-shared/core";
 import {
   fieldErrorsFromApiErrorBody,
   validationSummaryMessage,
@@ -77,7 +78,7 @@ function buildTier1HeaderModel(
   return {
     identity: {
       typeLabel:        identity.typeLabel,
-      typeHref:         `/app/${descriptor.entityCode}`,
+      typeHref:         appEntityListHref(descriptor.entityCode),
       number,
       name:             title && title !== number ? title : undefined,
       identifierAction: "copy",

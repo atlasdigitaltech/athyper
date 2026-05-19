@@ -26,11 +26,13 @@ import { ArrowLeft, ArrowRight, FileDiff } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
 import { Badge, Button, Skeleton } from "@athyper/ui/primitives";
 import { useCompiledEntity } from "@athyper/query";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
 import type { RecordVersionDetail } from "@athyper/api-contracts/records";
 import { bffFetch } from "@/lib/bff-fetch";
 import { formatTitle } from "@/lib/format";
 import { resolveCapabilities } from "@/lib/entity-capabilities";
 import { GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
+import { canonicalEntityCode } from "../../../_lib/entity-aliases";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -256,19 +258,20 @@ function CompareContent() {
   const searchParams = useSearchParams();
 
   const entity = params["entity"] as string;
+  const entityCode = canonicalEntityCode(entity);
   const id     = params["id"]     as string;
 
   const fromNo = parseInt(searchParams.get("from") ?? "1", 10);
   const toNo   = parseInt(searchParams.get("to")   ?? "2", 10);
 
-  const { data: entityMeta, isLoading: metaLoading } = useCompiledEntity(entity);
-  const { data: fromResp, isLoading: fromLoading } = useVersionDetail(entity, id, isNaN(fromNo) ? null : fromNo);
-  const { data: toResp,   isLoading: toLoading   } = useVersionDetail(entity, id, isNaN(toNo)   ? null : toNo);
+  const { data: entityMeta, isLoading: metaLoading } = useCompiledEntity(entityCode);
+  const { data: fromResp, isLoading: fromLoading } = useVersionDetail(entityCode, id, isNaN(fromNo) ? null : fromNo);
+  const { data: toResp,   isLoading: toLoading   } = useVersionDetail(entityCode, id, isNaN(toNo)   ? null : toNo);
 
   // Guard — all hooks above; safe to return early from here
   if (metaLoading) return <GuardSkeleton />;
   if (!entityMeta || !resolveCapabilities(entityMeta).hasVersions) {
-    return <FeatureUnavailablePage entityCode={entity} entityId={id} />;
+    return <FeatureUnavailablePage entityCode={entityCode} entityId={id} />;
   }
 
   const fromDetail = fromResp?.data;
@@ -298,9 +301,7 @@ function CompareContent() {
             variant="ghost"
             size="sm"
             onClick={() =>
-              router.push(
-                `/app/${encodeURIComponent(entity)}/${encodeURIComponent(id)}/versions`,
-              )
+              router.push(appEntityDetailHref(entityCode, id, "versions"))
             }
           >
             <ArrowLeft className="mr-1.5 h-4 w-4" />

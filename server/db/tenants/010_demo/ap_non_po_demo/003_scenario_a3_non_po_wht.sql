@@ -33,7 +33,7 @@ BEGIN
       ORDER BY sort_order LIMIT 1;
 
     SELECT id INTO v_bi_opex_id FROM master.business_intent
-      WHERE tenant_id = v_tenant_id AND code = 'OPEX_GENERAL';
+      WHERE tenant_id = v_tenant_id AND code = 'BI-OPEX';
 
     SELECT id INTO v_tg_wht_id FROM control.tax_group
       WHERE tenant_id = v_tenant_id AND code = 'WHT_CONSULT_10PCT';

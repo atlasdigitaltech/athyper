@@ -25,20 +25,26 @@ export interface CompiledField {
   is_required: boolean;
   is_readonly: boolean;
   is_unique: boolean;
+  unique_scope: string | null;
   is_searchable: boolean;
   is_filterable: boolean;
   is_sortable: boolean;
   is_groupable: boolean;
   is_aggregatable: boolean;
   is_pii: boolean;
+  is_computed: boolean;
+  is_write_once: boolean;
   default_value: unknown;
   validation_rules: Record<string, unknown> | null;
   enum_domain_code: string | null;
   reference_config: Record<string, unknown> | null;
   money_config: Record<string, unknown> | null;
+  json_config: Record<string, unknown> | null;
   sort_order: number;
   group_key: string | null;
   ui_hint: Record<string, unknown> | null;
+  visibility: Record<string, unknown> | null;
+  editability: Record<string, unknown> | null;
   lookup_config: Record<string, unknown> | null;
   filter_config: Record<string, unknown> | null;
   i18n_key: string | null;
@@ -47,6 +53,7 @@ export interface CompiledField {
 export interface CompiledEntity {
   entity_id: string;
   entity_code: string;
+  slug: string;
   entity_name: string;
   entity_class: string;
   table_schema: string;
@@ -63,6 +70,8 @@ export interface CompiledEntity {
     fields: string[];
   }>;
   display_config: Record<string, unknown>;
+  identity_config: Record<string, unknown>;
+  search_config: Record<string, unknown>;
   feature_flags: Record<string, unknown>;
   governance_level: string;
   security_tier: string;
@@ -81,6 +90,7 @@ export interface CompileAllSummary {
 interface EntityRow {
   id: string;
   name: string;
+  slug: string | null;
   entity_code: string;
   label_singular: string | null;
   label_plural: string | null;
@@ -88,6 +98,8 @@ interface EntityRow {
   table_schema: string;
   table_name: string;
   display_config: unknown;
+  identity_config: unknown;
+  search_config: unknown;
   feature_flags: unknown;
   governance_level: string;
   security_tier: string;
@@ -116,19 +128,27 @@ interface EntityFieldRow {
   origin: string;
   is_required: boolean;
   is_unique: boolean;
+  unique_scope: string | null;
   is_searchable: boolean;
   is_filterable: boolean;
   is_sortable: boolean;
   is_groupable: boolean;
   is_aggregatable: boolean;
   is_read_only: boolean;
+  is_computed: boolean;
+  is_write_once: boolean;
   sort_order: number;
   default_value: unknown | null;
   validation: unknown | null;
   enum_domain_code: string | null;
   reference_config: unknown | null;
   money_config: unknown | null;
+  json_config: unknown | null;
   ui_hint: unknown | null;
+  visibility: unknown | null;
+  editability: unknown | null;
+  group_key: string | null;
+  filter_config: unknown | null;
   lookup_config: unknown | null;
 }
 
@@ -175,7 +195,7 @@ function coerceRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function stringValue(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function sha256(value: string): string {
@@ -188,8 +208,204 @@ function withDefinedValues(record: Record<string, unknown>): Record<string, unkn
   );
 }
 
+const MOVED_DISPLAY_CONFIG_KEYS = new Set([
+  "code_field",
+  "search_fields",
+  "default_sort_dir",
+  "hidden",
+  "readOnly",
+  "read_only",
+  "coverage_mode",
+  "reference_model",
+  "field_metadata_repair_version",
+]);
+
+function textConfig(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function booleanConfig(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (["true", "t", "yes", "y", "1", "enabled", "on"].includes(normalized)) return true;
+  if (["false", "f", "no", "n", "0", "disabled", "off"].includes(normalized)) return false;
+  return undefined;
+}
+
+function normalizeDetailRenderer(value: unknown): "master" | "document" | "ledger" | undefined {
+  const normalized = textConfig(value)?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (!normalized) return undefined;
+  if (normalized === "document" || normalized === "document_detail") return "document";
+  if (normalized === "ledger" || normalized === "log") return "ledger";
+  if (["master", "standard", "readonly", "read_only", "read_only_master"].includes(normalized)) return "master";
+  return undefined;
+}
+
+function normalizeDetailProfile(raw: Record<string, unknown>): "simple" | "rich" | "read-only" | undefined {
+  const renderer = textConfig(raw["detail_renderer"])?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (renderer === "readonly" || renderer === "read_only"
+    || booleanConfig(raw["readOnly"]) === true
+    || booleanConfig(raw["read_only"]) === true) {
+    return "read-only";
+  }
+  const profile = textConfig(raw["detail_profile"])?.toLowerCase().replace(/[\s_]+/g, "-");
+  if (profile === "simple" || profile === "rich" || profile === "read-only") return profile;
+  if (renderer === "standard") return "simple";
+  return undefined;
+}
+
+function normalizeListRenderer(value: unknown): "table" | "kanban" | "dashboard" | "spreadsheet" | undefined {
+  const normalized = textConfig(value)?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (!normalized) return undefined;
+  if (normalized === "list" || normalized === "grid" || normalized === "data_table") return "table";
+  if (normalized === "board") return "kanban";
+  if (normalized === "excel") return "spreadsheet";
+  if (normalized === "table" || normalized === "kanban" || normalized === "dashboard" || normalized === "spreadsheet") {
+    return normalized;
+  }
+  return undefined;
+}
+
+function normalizeViewMode(value: unknown): string | undefined {
+  const normalized = textConfig(value)?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (!normalized) return undefined;
+  if (normalized === "list" || normalized === "grid" || normalized === "data_table") return "table";
+  if (normalized === "board") return "kanban";
+  if (normalized === "excel") return "spreadsheet";
+  return ["table", "compact", "kanban", "dashboard", "spreadsheet"].includes(normalized)
+    ? normalized
+    : undefined;
+}
+
+function normalizeDisplayConfig(
+  raw: Record<string, unknown>,
+  iconKey: unknown,
+  colorToken: unknown,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...raw };
+  for (const key of MOVED_DISPLAY_CONFIG_KEYS) delete out[key];
+
+  const detailRenderer = normalizeDetailRenderer(raw["detail_renderer"]);
+  if (detailRenderer) out["detail_renderer"] = detailRenderer;
+  else delete out["detail_renderer"];
+
+  const detailProfile = normalizeDetailProfile(raw);
+  if (detailProfile) out["detail_profile"] = detailProfile;
+
+  const listRenderer = normalizeListRenderer(raw["list_renderer"]);
+  if (listRenderer) out["list_renderer"] = listRenderer;
+  else if ("list_renderer" in out) delete out["list_renderer"];
+
+  if (Array.isArray(raw["view_modes"])) {
+    const modes = raw["view_modes"].map(normalizeViewMode).filter((mode): mode is string => Boolean(mode));
+    out["view_modes"] = [...new Set(modes)];
+  }
+
+  const sortOrder = textConfig(raw["default_sort_order"]) ?? textConfig(raw["default_sort_dir"]);
+  if (sortOrder?.toLowerCase() === "asc" || sortOrder?.toLowerCase() === "desc") {
+    out["default_sort_order"] = sortOrder.toLowerCase();
+  }
+
+  if (!out["icon"] && iconKey) out["icon"] = iconKey;
+  if (!out["color"] && colorToken) out["color"] = colorToken;
+
+  return withDefinedValues(out);
+}
+
+const BOOLEAN_FEATURE_KEYS = new Set([
+  "has_attachments",
+  "has_workflow",
+  "has_lifecycle",
+  "is_importable",
+  "is_exportable",
+  "is_bulk_editable",
+  "is_approvable",
+  "is_readonly",
+  "records_api_disabled",
+  "generic_runtime_disabled",
+  "is_hidden",
+  "comments_enabled",
+  "event_history",
+  "version_control",
+  "has_lines",
+  "has_accounting_distribution",
+  "has_tasks",
+  "has_watchers",
+  "has_rules",
+  "has_integrations",
+  "quality_checks",
+  "record_reports",
+  "has_payment_schedule",
+  "has_budget_impact",
+  "has_related_documents",
+  "has_ai_classification",
+  "has_line_composer",
+  "line_references",
+  "catalog_feature_enabled",
+  "catalog_enabled",
+  "catalog_items_enabled",
+  "has_catalog_items",
+  "has_catalog",
+  "requires_owner_type_scope",
+  "is_company_scoped",
+  "singleton",
+  "pii_bearing",
+  "allow_address",
+  "allow_contact",
+  "has_roles",
+  "append_only_after_submission",
+  "reference_picker",
+  "line_editor",
+  "posting_controlled",
+  "dimension_controlled",
+]);
+
+const FEATURE_FLAG_ALIASES: Record<string, string[]> = {
+  is_approvable: ["approval_workflow"],
+  has_attachments: ["allow_attachments", "allow_attachment"],
+  is_exportable: ["allow_export", "export_enabled"],
+  is_importable: ["allow_import", "import_enabled"],
+  is_bulk_editable: ["allow_bulk_edit", "bulk_edit_enabled"],
+  comments_enabled: ["has_comments", "comments"],
+  event_history: ["has_events", "has_event_history", "audit_history"],
+  version_control: ["has_versions"],
+  has_lines: ["has_line_items", "line_editor"],
+  has_accounting_distribution: ["accounting_distribution", "has_distributions"],
+  is_readonly: ["readonly", "readOnly", "read_only"],
+};
+
+const LEGACY_FEATURE_FLAG_KEYS = new Set([
+  ...Object.values(FEATURE_FLAG_ALIASES).flat(),
+  "line_entity_code",
+  "identity_via",
+  "list_entity_code",
+  "parent_entity",
+  "parent_fk",
+  "parent_scope",
+  "duplicate_check",
+  "replacement_entity",
+]);
+
+function coerceFeatureBoolean(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (["true", "t", "yes", "y", "1", "enabled", "on"].includes(normalized)) return true;
+  if (["false", "f", "no", "n", "0", "disabled", "off"].includes(normalized)) return false;
+  return undefined;
+}
+
 function normalizeFeatureFlags(raw: Record<string, unknown>): Record<string, unknown> {
   const canonical: Record<string, unknown> = { ...raw };
+
+  for (const [target, aliases] of Object.entries(FEATURE_FLAG_ALIASES)) {
+    if (target in canonical) continue;
+    const alias = aliases.find((key) => key in raw);
+    if (alias) canonical[target] = raw[alias];
+  }
 
   if (!("is_approvable" in canonical) && "approval_workflow" in raw) {
     canonical["is_approvable"] = Boolean(raw["approval_workflow"]);
@@ -201,35 +417,123 @@ function normalizeFeatureFlags(raw: Record<string, unknown>): Record<string, unk
     canonical["is_exportable"] = Boolean(raw["allow_export"]);
   }
 
+  if (!("has_workflow" in canonical) && canonical["is_approvable"] === true) {
+    canonical["has_workflow"] = true;
+  }
+  for (const key of BOOLEAN_FEATURE_KEYS) {
+    if (!(key in canonical)) continue;
+    const boolValue = coerceFeatureBoolean(canonical[key]);
+    if (boolValue !== undefined) canonical[key] = boolValue;
+  }
+  for (const key of LEGACY_FEATURE_FLAG_KEYS) {
+    delete canonical[key];
+  }
+
   return canonical;
 }
 
-function normalizeReferenceConfig(row: EntityFieldRow): Record<string, unknown> | null {
+const VALIDATION_REFERENCE_KEYS = new Set([
+  "ref_entity",
+  "ref_hint",
+  "target_field",
+  "display_field",
+  "picker",
+  "label_field",
+  "code_field",
+  "description_field",
+  "navigation_field",
+  "record_id_field",
+  "show_code",
+  "show_description",
+  "show_view_action",
+]);
+
+function normalizeValidationRules(validation: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!validation) return null;
+  const entries = Object.entries(validation)
+    .filter(([key, value]) => !VALIDATION_REFERENCE_KEYS.has(key) && value !== undefined && value !== null);
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+function referenceTargetEntity(row: Pick<EntityFieldRow, "reference_config" | "validation">): string | null {
   const rawConfig = coerceRecord(row.reference_config);
+  const validation = coerceRecord(row.validation);
+  return stringValue(rawConfig?.["target_entity"])
+    ?? stringValue(rawConfig?.["ref_entity"])
+    ?? stringValue(validation?.["ref_entity"])
+    ?? stringValue(validation?.["ref_hint"]);
+}
+
+function mergeReferencePickerProfile(
+  referenceConfig: Record<string, unknown>,
+  referencePickerProfile?: Record<string, unknown> | null,
+): Record<string, unknown> {
+  const pickerOverride = coerceRecord(referenceConfig["picker"]);
+  const displayField = stringValue(referenceConfig["display_field"]);
+  const topLevelPickerOverrides = withDefinedValues({
+    label_field: referenceConfig["label_field"] ?? displayField ?? undefined,
+    code_field: referenceConfig["code_field"],
+    description_field: referenceConfig["description_field"],
+    navigation_field: referenceConfig["navigation_field"] ?? referenceConfig["record_id_field"],
+    show_code: referenceConfig["show_code"],
+    show_description: referenceConfig["show_description"],
+    show_view_action: referenceConfig["show_view_action"],
+  });
+  const mergedPicker = withDefinedValues({
+    ...(referencePickerProfile ?? {}),
+    ...topLevelPickerOverrides,
+    ...(pickerOverride ?? {}),
+  });
+  const picker = Object.keys(mergedPicker).length > 0 ? mergedPicker : undefined;
+
+  return withDefinedValues({
+    ...referenceConfig,
+    target_field: referenceConfig["target_field"] ?? "id",
+    display_field: referenceConfig["display_field"]
+      ?? referenceConfig["label_field"]
+      ?? picker?.["label_field"],
+    picker,
+  });
+}
+
+function normalizeReferenceConfig(
+  row: EntityFieldRow,
+  referencePickerProfile?: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  const rawConfig = coerceRecord(row.reference_config);
+  const validation = coerceRecord(row.validation);
+  const targetEntity = referenceTargetEntity(row);
+
   if (rawConfig) {
-    return withDefinedValues({
+    const normalized = withDefinedValues({
       ...rawConfig,
-      target_entity: rawConfig["target_entity"] ?? rawConfig["ref_entity"] ?? "",
+      target_entity: targetEntity ?? "",
       target_field: rawConfig["target_field"],
       display_field: rawConfig["display_field"],
     });
+    return mergeReferencePickerProfile(normalized, referencePickerProfile);
   }
 
-  const validation = coerceRecord(row.validation);
-  if (validation?.["ref_entity"]) {
-    return withDefinedValues({
-      target_entity: validation["ref_entity"],
-      target_field: validation["target_field"],
-      display_field: validation["display_field"],
+  if (targetEntity) {
+    const normalized = withDefinedValues({
+      target_entity: targetEntity,
+      target_field: validation?.["target_field"],
+      display_field: validation?.["display_field"],
     });
+    return mergeReferencePickerProfile(normalized, referencePickerProfile);
   }
 
   return null;
 }
 
-function mapField(row: EntityFieldRow): CompiledField {
+function mapField(
+  row: EntityFieldRow,
+  referencePickerProfiles?: Map<string, Record<string, unknown>>,
+): CompiledField {
   const uiHint = coerceRecord(row.ui_hint);
   const validation = coerceRecord(row.validation);
+  const targetEntity = referenceTargetEntity(row);
+  const referencePickerProfile = targetEntity ? referencePickerProfiles?.get(targetEntity) : undefined;
 
   return {
     id: row.id,
@@ -246,22 +550,28 @@ function mapField(row: EntityFieldRow): CompiledField {
     is_required: row.is_required,
     is_readonly: row.is_read_only,
     is_unique: row.is_unique,
+    unique_scope: row.unique_scope ?? null,
     is_searchable: row.is_searchable,
     is_filterable: row.is_filterable,
     is_sortable: row.is_sortable,
     is_groupable: row.is_groupable,
     is_aggregatable: row.is_aggregatable,
     is_pii: false,
+    is_computed: row.is_computed,
+    is_write_once: row.is_write_once,
     default_value: coerceJson(row.default_value),
-    validation_rules: validation && !validation["ref_entity"] ? validation : null,
+    validation_rules: normalizeValidationRules(validation),
     enum_domain_code: row.enum_domain_code,
-    reference_config: normalizeReferenceConfig(row),
+    reference_config: normalizeReferenceConfig(row, referencePickerProfile),
     money_config: coerceRecord(row.money_config),
+    json_config: coerceRecord(row.json_config),
     sort_order: row.sort_order,
-    group_key: stringValue(uiHint?.["group_key"]),
+    group_key: row.group_key ?? stringValue(uiHint?.["group_key"]),
     ui_hint: uiHint,
+    visibility: coerceRecord(row.visibility),
+    editability: coerceRecord(row.editability),
     lookup_config: coerceRecord(row.lookup_config),
-    filter_config: coerceRecord(uiHint?.["filter"]),
+    filter_config: coerceRecord(row.filter_config) ?? coerceRecord(uiHint?.["filter"]),
     i18n_key: stringValue(uiHint?.["i18n_key"]),
   };
 }
@@ -372,6 +682,7 @@ export class EntityCompilerService {
       .select([
         "e.id",
         "e.name",
+        "e.slug",
         "e.entity_code",
         "e.label_singular",
         "e.label_plural",
@@ -379,6 +690,8 @@ export class EntityCompilerService {
         "e.table_schema",
         "e.table_name",
         "e.display_config",
+        "e.identity_config",
+        "e.search_config",
         "e.feature_flags",
         "e.governance_level",
         "e.security_tier",
@@ -389,6 +702,7 @@ export class EntityCompilerService {
       .where((eb: any) => eb.or([
         eb("e.name", "=", entityCode),
         eb("e.entity_code", "=", entityCode),
+        eb("e.slug", "=", entityCode),
       ]))
       .where("e.tenant_id" as never, "is" as never, null as never)
       .where("e.is_active" as never, "=" as never, true as never)
@@ -414,14 +728,22 @@ export class EntityCompilerService {
       .execute() as EntityFieldRow[];
 
     const classProfile = await this.loadClassProfile(entityRow.entity_class);
-    const fields = fieldRows.map(mapField);
-    const displayConfig = coerceRecord(entityRow.display_config) ?? {};
+    const referencePickerProfiles = await this.loadReferencePickerProfiles(fieldRows);
+    const fields = fieldRows.map((row) => mapField(row, referencePickerProfiles));
+    const displayConfig = normalizeDisplayConfig(
+      coerceRecord(entityRow.display_config) ?? {},
+      entityRow.icon_key,
+      entityRow.color_token,
+    );
+    const identityConfig = coerceRecord(entityRow.identity_config) ?? {};
+    const searchConfig = coerceRecord(entityRow.search_config) ?? {};
     const featureFlags = normalizeFeatureFlags(coerceRecord(entityRow.feature_flags) ?? {});
     const versionHash = versionRow.version_hash ?? sha256(`${entityRow.id}:v${versionRow.version_no}`);
 
     const payloadWithoutHash = {
       entity_id: entityRow.id,
       entity_code: entityRow.entity_code ?? entityRow.name,
+      slug: entityRow.slug ?? entityRow.table_name.replace(/_/g, "-"),
       entity_name: entityRow.label_singular ?? entityRow.name,
       entity_class: entityRow.entity_class,
       table_schema: entityRow.table_schema,
@@ -431,11 +753,9 @@ export class EntityCompilerService {
       version_hash: versionHash,
       fields,
       field_groups: [],
-      display_config: withDefinedValues({
-        ...displayConfig,
-        icon: displayConfig["icon"] ?? entityRow.icon_key ?? undefined,
-        color: displayConfig["color"] ?? entityRow.color_token ?? undefined,
-      }),
+      display_config: displayConfig,
+      identity_config: identityConfig,
+      search_config: searchConfig,
       feature_flags: featureFlags,
       governance_level: entityRow.governance_level,
       security_tier: entityRow.security_tier,
@@ -486,6 +806,37 @@ export class EntityCompilerService {
       security_tiers: coerceJson(row.security_tiers),
       compliance_profile: coerceJson(row.compliance_profile),
     };
+  }
+
+  private async loadReferencePickerProfiles(
+    fieldRows: EntityFieldRow[],
+  ): Promise<Map<string, Record<string, unknown>>> {
+    const targetEntities = [
+      ...new Set(fieldRows.map(referenceTargetEntity).filter((value): value is string => Boolean(value))),
+    ];
+    const profiles = new Map<string, Record<string, unknown>>();
+    if (targetEntities.length === 0) return profiles;
+
+    const rows = await this.db
+      .selectFrom("control.entity as e" as never)
+      .select(["e.name", "e.entity_code", "e.display_config"] as never[])
+      .where((eb: any) => eb.or([
+        eb("e.name", "in", targetEntities),
+        eb("e.entity_code", "in", targetEntities),
+      ]))
+      .where("e.tenant_id" as never, "is" as never, null as never)
+      .where("e.is_active" as never, "=" as never, true as never)
+      .execute() as Array<{ name: string; entity_code: string | null; display_config: unknown }>;
+
+    for (const row of rows) {
+      const displayConfig = coerceRecord(row.display_config);
+      const referencePicker = coerceRecord(displayConfig?.["reference_picker"]);
+      if (!referencePicker) continue;
+      profiles.set(row.name, referencePicker);
+      if (row.entity_code) profiles.set(row.entity_code, referencePicker);
+    }
+
+    return profiles;
   }
 
   private async writeSnapshot(compiled: CompiledEntity): Promise<void> {

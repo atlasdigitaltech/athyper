@@ -1568,8 +1568,8 @@ COMMENT ON COLUMN master.tenant_profile.week_start IS
     '0=Sunday, 1=Monday … 6=Saturday. NULL = Monday (ISO week). '
     'Affects weekly digest scheduling and calendar display.';
 COMMENT ON COLUMN master.tenant_profile.date_format IS
-    'strftime-style format string e.g. ''%d/%m/%Y''. '
-    'NULL = ISO 8601 (YYYY-MM-DD).';
+    'strftime-style format string e.g. ''%d %b %Y''. '
+    'NULL = DD Mon YYYY.';
 COMMENT ON COLUMN master.tenant_profile.number_format IS
     'Decimal/thousands separator style e.g. ''1,234.56'' or ''1.234,56''. '
     'NULL = system default derived from locale_code.';
@@ -2804,4 +2804,3 @@ COMMENT ON COLUMN master.trusted_device.device_name IS
 -- Triggers → 09_triggers/003_master.sql
 -- Lookup validation → 09_triggers/003_master.sql via control.trg_validate_lookup_columns()
 -- ============================================================================
-

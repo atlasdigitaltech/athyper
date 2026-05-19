@@ -32,6 +32,7 @@ import {
   type AdvancedEntityChooserSection,
 } from "@athyper/ui/composites";
 import { getCsrfToken } from "../client/csrf";
+import { appEntityDetailHref } from "../core/entity-route";
 import { useEntitySearch } from "./useEntitySearch";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -841,7 +842,7 @@ export const EntityPicker = forwardRef<HTMLDivElement, EntityPickerProps>(
     const defaultOptionHref = !isCustomMode && entityCode && optionConfig?.showViewAction !== false
       ? (option: EntityPickerOption) => {
           const recordId = option.recordId ?? option.value;
-          return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`;
+          return appEntityDetailHref(entityCode, recordId);
         }
       : undefined;
     const recentAdvancedOptions = useMemo(

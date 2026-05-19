@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./core": "./src/core/index.ts",
     "./client": "./src/client/index.ts",
+    "./preferences": "./src/preferences/index.ts",
     "./entity-search": "./src/entity-search/index.ts",
     "./renderer-registry": "./src/renderer-registry/index.ts",
     "./descriptors": "./src/descriptors/types.ts",

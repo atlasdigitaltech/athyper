@@ -34,8 +34,23 @@ BEGIN
     NEW.principal_id := COALESCE(NEW.principal_id, NEW.created_by);
 
     -- 4. code — sequence-based UPUPR-YYYY-NNNNN
-    SELECT nextval('document.upupr_code_seq') INTO v_seq;
-    NEW.code := 'UPUPR-' || v_year || '-' || lpad(v_seq::text, 5, '0');
+    IF NEW.code IS NULL OR btrim(NEW.code) = '' THEN
+        BEGIN
+            NEW.code := control.next_entity_number(
+                NEW.tenant_id,
+                'user_profile_update_request',
+                'code',
+                NULL,
+                EXTRACT(YEAR FROM CURRENT_DATE)::smallint,
+                EXTRACT(MONTH FROM CURRENT_DATE)::smallint,
+                NULL,
+                CURRENT_DATE
+            );
+        EXCEPTION WHEN OTHERS THEN
+            SELECT nextval('document.upupr_code_seq') INTO v_seq;
+            NEW.code := 'UPUPR-' || v_year || '-' || lpad(v_seq::text, 5, '0');
+        END;
+    END IF;
 
     -- 5. name — derived from principal display name + date
     SELECT COALESCE(pp.display_name, p.name)
@@ -1659,73 +1674,6 @@ $$;
 -- ============================================================================
 
 
--- ── fn_next_document_number ─────────────────────────────────────────────────
--- Atomically increments master.numbering_series.last_number and returns the
--- formatted document number string.  Uses SELECT FOR UPDATE to prevent races.
--- Returns NULL if no active series exists (caller generates a UUID fallback).
---
--- Format: {prefix}-{fiscal_year}-{last_number zero-padded to padding}
--- Example: 'PI-2026-00043'  (prefix='PI', fiscal_year=2026, padding=5)
-
-CREATE OR REPLACE FUNCTION master.fn_next_document_number(
-    p_tenant_id      uuid,
-    p_company_id     uuid,
-    p_document_type  text,
-    p_fiscal_year    smallint DEFAULT NULL
-)
-RETURNS text
-LANGUAGE plpgsql
-SET search_path = master, shared, pg_catalog
-AS $$
-DECLARE
-    v_series  master.numbering_series%ROWTYPE;
-    v_next    integer;
-    v_str     text;
-BEGIN
-    -- Lock the matching series row (most specific first: company+year > company+null > null)
-    SELECT * INTO v_series
-    FROM master.numbering_series
-    WHERE tenant_id      = p_tenant_id
-      AND company_code_id = p_company_id
-      AND document_type  = p_document_type
-      AND is_active      = true
-      AND (fiscal_year = p_fiscal_year OR (fiscal_year IS NULL AND p_fiscal_year IS NULL))
-    ORDER BY fiscal_year NULLS LAST
-    LIMIT 1
-    FOR UPDATE;
-
-    IF NOT FOUND THEN
-        RETURN NULL;   -- caller falls back to auto-generated code
-    END IF;
-
-    v_next := v_series.last_number + 1;
-
-    UPDATE master.numbering_series
-       SET last_number = v_next,
-           updated_at  = now()
-     WHERE id = v_series.id;
-
-    -- Build: PREFIX-YEAR-NNNNN  or  PREFIX-NNNNN  (if no fiscal year)
-    IF v_series.prefix <> '' AND v_series.fiscal_year IS NOT NULL THEN
-        v_str := v_series.prefix || '-'
-              || v_series.fiscal_year::text || '-'
-              || lpad(v_next::text, v_series.padding, '0');
-    ELSIF v_series.prefix <> '' THEN
-        v_str := v_series.prefix || '-'
-              || lpad(v_next::text, v_series.padding, '0');
-    ELSE
-        v_str := lpad(v_next::text, v_series.padding, '0');
-    END IF;
-
-    RETURN v_str;
-END;
-$$;
-
-COMMENT ON FUNCTION master.fn_next_document_number(uuid, uuid, text, smallint) IS
-    'Atomic document-number generator using SELECT FOR UPDATE on master.numbering_series. '
-    'Returns formatted string (PREFIX-YEAR-NNNNN) or NULL if no series exists.';
-
-
 -- ── fn_refresh_purchase_invoice_totals ─────────────────────────────────────
 -- Callable aggregate sync: recomputes all writable numeric aggregates on the
 -- purchase_invoice header from its child lines.
@@ -1784,7 +1732,7 @@ COMMENT ON FUNCTION document.fn_refresh_purchase_invoice_totals(uuid) IS
 -- ── trg_pi_before_insert ────────────────────────────────────────────────────
 -- BEFORE INSERT on document.purchase_invoice:
 --   1. Sets created_by from session if not explicitly provided
---   2. Auto-generates invoice_number from master.numbering_series if empty
+--   2. Auto-generates invoice_number from control.entity_numbering_config if empty
 --   3. Sets code = invoice_number (display code)
 
 CREATE OR REPLACE FUNCTION document.trg_pi_before_insert()
@@ -1803,14 +1751,22 @@ BEGIN
         -- Determine fiscal year for the number series
         v_fy := EXTRACT(YEAR FROM COALESCE(NEW.posting_date, CURRENT_DATE))::smallint;
 
-        v_num := master.fn_next_document_number(
-            NEW.tenant_id,
-            NEW.company_code_id,
-            'purchase_invoice',
-            v_fy
-        );
+        BEGIN
+            v_num := control.next_entity_number(
+                NEW.tenant_id,
+                'purchase_invoice',
+                'document_no',
+                NEW.company_code_id,
+                v_fy,
+                NEW.period_number,
+                NULL,
+                COALESCE(NEW.posting_date, CURRENT_DATE)
+            );
+        EXCEPTION WHEN OTHERS THEN
+            v_num := NULL;
+        END;
 
-        -- Fallback if no numbering series exists yet
+        -- Fallback if entity numbering config is not available yet
         IF v_num IS NULL THEN
             v_num := 'PI-' || to_char(now(), 'YYYY') || '-'
                      || lpad(nextval('document.upupr_code_seq')::text, 6, '0');
@@ -1821,6 +1777,55 @@ BEGIN
 
     -- 3. code mirrors invoice_number for entity-engine display
     NEW.code := NEW.invoice_number;
+
+    RETURN NEW;
+END;
+$$;
+
+
+-- ── trg_pe_before_insert ────────────────────────────────────────────────────
+-- BEFORE INSERT on document.payment_entry:
+--   1. Sets created_by from session if not explicitly provided
+--   2. Auto-generates payment_number from control.entity_numbering_config if empty
+--   3. Sets code = payment_number
+
+CREATE OR REPLACE FUNCTION document.trg_pe_before_insert()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, control, shared, pg_catalog AS $$
+DECLARE
+    v_actor uuid;
+    v_num   text;
+BEGIN
+    v_actor := nullif(current_setting('app.current_principal_id', true), '')::uuid;
+    NEW.created_by := COALESCE(v_actor, NEW.created_by);
+
+    IF NEW.payment_number IS NULL OR btrim(NEW.payment_number) = '' THEN
+        BEGIN
+            v_num := control.next_entity_number(
+                NEW.tenant_id,
+                'payment_entry',
+                'document_no',
+                NEW.company_code_id,
+                NEW.fiscal_year,
+                NEW.period_number,
+                NULL,
+                COALESCE(NEW.posting_date, CURRENT_DATE)
+            );
+        EXCEPTION WHEN OTHERS THEN
+            v_num := NULL;
+        END;
+
+        NEW.payment_number := COALESCE(
+            v_num,
+            'PAY-' || NEW.fiscal_year::text || '-' || substring(shared.uuidv7()::text from 1 for 8)
+        );
+    END IF;
+
+    IF NEW.code IS NULL OR btrim(NEW.code) = '' THEN
+        NEW.code := NEW.payment_number;
+    END IF;
+    IF NEW.name IS NULL OR btrim(NEW.name) = '' THEN
+        NEW.name := NEW.payment_number;
+    END IF;
 
     RETURN NEW;
 END;
@@ -2622,39 +2627,37 @@ $$;
 -- =============================================================================
 -- §JE  document.journal_entry — BEFORE INSERT: code + name auto-population
 -- =============================================================================
--- Reads naming_policy.auto_name_rule from control.entity (meta-driven, no
--- hardcodes) so customers can reconfigure the rule without a code deploy.
---
--- code  ← je_number (already set by the app route via numbering_series)
--- name  ← description when non-empty; else fallback template from meta
---
--- auto_name_rule shape (in naming_policy):
---   { "strategy": "description_or_fallback",
---     "fallback_template": "{prefix} – {date}",
---     "date_format": "DD Mon YYYY" }
+-- code  ? je_number
+-- name  ? description when non-empty; else JE + posting date fallback
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION document.trg_je_before_insert()
 RETURNS trigger LANGUAGE plpgsql
-SET search_path = document, control AS $$
+SET search_path = document, control, shared, pg_catalog AS $$
 DECLARE
-    v_naming   jsonb;
-    v_rule     jsonb;
-    v_prefix   text;
-    v_date_fmt text;
+    v_prefix   text := 'JE';
+    v_date_fmt text := 'DD Mon YYYY';
+    v_num      text;
 BEGIN
-    -- Load naming policy from entity meta (platform-level, tenant_id IS NULL)
-    SELECT e.naming_policy
-      INTO v_naming
-      FROM control.entity e
-     WHERE e.entity_code = 'journal_entry'
-       AND e.tenant_id IS NULL;
+    -- code ← je_number (generated by canonical entity numbering)
+    IF NEW.je_number IS NULL OR btrim(NEW.je_number) = '' THEN
+        BEGIN
+            v_num := control.next_entity_number(
+                NEW.tenant_id,
+                'journal_entry',
+                'document_no',
+                NEW.company_code_id,
+                NEW.fiscal_year,
+                NEW.period_number,
+                NULL,
+                COALESCE(NEW.posting_date, CURRENT_DATE)
+            );
+        EXCEPTION WHEN OTHERS THEN
+            v_num := NULL;
+        END;
+        NEW.je_number := COALESCE(v_num, 'JE-' || NEW.fiscal_year::text || '-' || substring(shared.uuidv7()::text from 1 for 8));
+    END IF;
 
-    v_rule     := COALESCE(v_naming -> 'auto_name_rule', '{}'::jsonb);
-    v_prefix   := COALESCE(v_naming ->> 'prefix', 'JE');
-    v_date_fmt := COALESCE(v_rule ->> 'date_format', 'DD Mon YYYY');
-
-    -- code ← je_number (already generated by app route)
     IF NEW.code IS NULL OR btrim(NEW.code) = '' THEN
         NEW.code := COALESCE(NEW.je_number, '');
     END IF;
@@ -2675,8 +2678,7 @@ $$;
 
 COMMENT ON FUNCTION document.trg_je_before_insert() IS
     'BEFORE INSERT on document.journal_entry. Sets code from je_number and '
-    'derives name from description or naming_policy.auto_name_rule fallback. '
-    'Meta-driven: rule lives in control.entity.naming_policy.';
+    'derives name from description or JE/date fallback.';
 
 CREATE OR REPLACE FUNCTION document.trg_jlr_append_only_guard()
 RETURNS trigger LANGUAGE plpgsql SET search_path = document AS $$

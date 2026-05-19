@@ -314,6 +314,20 @@ function normalizeLookupValues(values: LookupValue[] | undefined): Option[] {
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.name.localeCompare(b.name));
 }
 
+function lookupDomainForField(field: FlowFieldBinding): string | null {
+  const explicit = stringValue(field.enum_domain_code);
+  if (explicit) return explicit;
+
+  const defaultSource = stringValue(field.default_source);
+  if (!defaultSource?.startsWith("lookup.")) return null;
+
+  const lastDot = defaultSource.lastIndexOf(".");
+  if (lastDot <= "lookup.".length) return null;
+
+  const domainCode = defaultSource.slice("lookup.".length, lastDot).trim();
+  return domainCode || null;
+}
+
 function useLookupOptions(bundle: FlowBundle, dimensions: FlowPreflightDimensionConfig[]) {
   const [options, setOptions] = React.useState<Record<string, Option[]>>({});
   const [loading, setLoading] = React.useState(false);
@@ -322,9 +336,12 @@ function useLookupOptions(bundle: FlowBundle, dimensions: FlowPreflightDimension
   React.useEffect(() => {
     const controller = new AbortController();
     const fields = dimensions
-      .map((dimension) => ({ dimension, field: findField(bundle, dimension.field) }))
-      .filter((item): item is { dimension: FlowPreflightDimensionConfig; field: FlowFieldBinding } =>
-        Boolean(item.field?.enum_domain_code),
+      .map((dimension) => {
+        const field = findField(bundle, dimension.field);
+        return { dimension, field, domainCode: field ? lookupDomainForField(field) : null };
+      })
+      .filter((item): item is { dimension: FlowPreflightDimensionConfig; field: FlowFieldBinding; domainCode: string } =>
+        Boolean(item.field && item.domainCode),
       );
 
     if (fields.length === 0) {
@@ -335,9 +352,9 @@ function useLookupOptions(bundle: FlowBundle, dimensions: FlowPreflightDimension
 
     setLoading(true);
     void Promise.all(
-      fields.map(async ({ dimension, field }) => {
+      fields.map(async ({ dimension, domainCode }) => {
         const res = await fetch(
-          `/api/relay/api/metadata/lookups/${encodeURIComponent(field.enum_domain_code!)}`,
+          `/api/relay/api/metadata/lookups/${encodeURIComponent(domainCode)}`,
           { signal: controller.signal },
         );
         if (!res.ok) return [dimension.field, []] as const;
@@ -485,9 +502,10 @@ export function FlowPreflightChooser({
   const [selection, setSelection] = React.useState<Record<string, string>>({});
   const [showMore, setShowMore] = React.useState<Record<string, boolean>>({});
   const [recents, setRecents] = React.useState<RecentSelection[]>([]);
+  const uploadConfig = config?.upload;
   const uploadParameterEnabled = useBooleanParameter(
-    config?.upload?.parameter_code,
-    config?.upload?.parameter_namespace,
+    uploadConfig?.enabled ? uploadConfig.parameter_code : undefined,
+    uploadConfig?.parameter_namespace,
   );
 
   React.useEffect(() => {
@@ -519,7 +537,7 @@ export function FlowPreflightChooser({
     [config, selection],
   );
   const canContinue = Boolean(config) && !loading && !invalidReason && dimensions.every((dimension) => selection[dimension.field]);
-  const uploadEnabled = Boolean(config?.upload?.enabled && uploadParameterEnabled);
+  const uploadEnabled = Boolean(uploadConfig?.enabled && (!uploadConfig.parameter_code || uploadParameterEnabled));
 
   const acceptSelection = React.useCallback((values: Record<string, string>) => {
     if (!config) return;
@@ -607,6 +625,10 @@ export function FlowPreflightChooser({
                     <div className="rounded-md border border-border bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
                       Loading choices...
                     </div>
+                  ) : allOptions.length === 0 ? (
+                    <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
+                      No choices configured for {dimension.label ?? field?.field_label ?? dimension.field}.
+                    </div>
                   ) : (
                     visible.map((option) => {
                       const candidate = { ...selection, [dimension.field]: option.code };
@@ -678,26 +700,23 @@ export function FlowPreflightChooser({
           })}
         </div>
         <aside className="flex flex-col gap-4">
-          <div
-            className={cn(
-              "flex min-h-28 items-start gap-3 rounded-lg border border-dashed px-4 py-4",
-              uploadEnabled ? "border-primary/40 bg-primary/5" : "border-border bg-muted/20 text-muted-foreground",
-            )}
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-background">
-              <FileUp className="h-4 w-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">
-                {config.upload?.label ?? "Drop file to auto-detect"}
-              </p>
-              {config.upload?.helper && (
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {config.upload.helper}
+          {uploadEnabled && (
+            <div className="flex min-h-28 items-start gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-4 py-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-background">
+                <FileUp className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">
+                  {uploadConfig?.label ?? "Drop file to auto-detect"}
                 </p>
-              )}
+                {uploadConfig?.helper && (
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {uploadConfig.helper}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="rounded-lg border border-border bg-card px-4 py-4">
             <div className="mb-3 flex items-center justify-between gap-2">

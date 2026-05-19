@@ -35,6 +35,7 @@ export interface DatePickerProps {
   error?: string;
   className?: string;
   id?: string;
+  formatDisplay?: (value: string | null | undefined, mode: DatePickerMode) => string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -75,10 +76,13 @@ export function DatePicker({
   error,
   className,
   id: externalId,
+  formatDisplay: customFormatDisplay,
 }: DatePickerProps) {
   const generatedId = useId();
   const id = externalId ?? generatedId;
-  const display = formatDisplay(value, mode);
+  const display = value
+    ? customFormatDisplay ? customFormatDisplay(value, mode) : formatDisplay(value, mode)
+    : "";
 
   // Controlled open state — required to programmatically close the popover
   const [open, setOpen] = useState(false);

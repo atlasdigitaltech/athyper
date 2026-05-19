@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useCompiledEntity } from "@athyper/query";
 import { resolveListConfig } from "@athyper/metadata-client/compiled-reader";
+import { appEntityListHref } from "@athyper/runtime-shared/core";
 import { PageFrame } from "@athyper/ui/layout";
 import { Badge, Button, Input, Label, Progress, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from "@athyper/ui/primitives";
 import { DragDropUploadZone } from "@athyper/content-ui";
@@ -465,7 +466,7 @@ function ResultStep({
         <Button variant="outline" size="sm" onClick={onImportAnother}>
           Import another file
         </Button>
-        <Button size="sm" onClick={() => router.push(`/app/${entityCode}`)}>
+        <Button size="sm" onClick={() => router.push(appEntityListHref(entityCode))}>
           View {formatTitle(entityCode)}
         </Button>
       </div>

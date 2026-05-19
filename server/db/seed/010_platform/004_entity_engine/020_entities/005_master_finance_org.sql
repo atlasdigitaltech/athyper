@@ -14,11 +14,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'legal_entity', 'LE', 'legal_entity', 'MASTER', 'system', 'ent', 'table',
         'full', 'tenant_critical', 'controlled', 'master', 'legal_entity',
         'Legal Entity', 'Legal Entities', 'building-2', 'emerald',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 50. company_code ─────────────────────────────────────────────────────
@@ -26,11 +26,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'company_code', 'CC', 'company_code', 'MASTER', 'system', 'ent', 'table',
         'full', 'tenant_critical', 'controlled', 'master', 'company_code',
         'Company Code', 'Company Codes', 'briefcase', 'emerald',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 51. cost_center ──────────────────────────────────────────────────────
@@ -38,11 +38,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'cost_center', 'CCTR', 'cost_center', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'cost_center',
         'Cost Center', 'Cost Centers', 'target', 'emerald',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 52. profit_center ────────────────────────────────────────────────────
@@ -50,11 +50,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'profit_center', 'PCTR', 'profit_center', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'profit_center',
         'Profit Center', 'Profit Centers', 'trending-up', 'emerald',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 53. site ─────────────────────────────────────────────────────────────
@@ -62,11 +62,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'site', 'SITE', 'site', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'site',
         'Site', 'Sites', 'map-pin', 'emerald',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 54. warehouse ────────────────────────────────────────────────────────
@@ -74,11 +74,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'warehouse', 'WHS', 'warehouse', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'warehouse',
         'Warehouse', 'Warehouses', 'warehouse', 'emerald',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 END $$;

@@ -40,6 +40,8 @@ import {
   type LedgerBookOption,
   type ScopeOptionsData,
 } from "../hooks/useScopeOptions";
+import type { GlDetailData, GlDetailLine } from "../hooks/useGlDetail";
+import type { JournalEntry } from "../hooks/useJournalList";
 import { TrialBalanceView, type TrialBalanceViewMode } from "./TrialBalanceView";
 import { BalanceSheetView } from "./BalanceSheetView";
 import { ProfitLossView } from "./ProfitLossView";
@@ -91,7 +93,7 @@ const GL_FILTER_SECTIONS = [
       { label: "Fiscal Year", placeholder: "FY 2026" },
       { label: "Fiscal Period", placeholder: "Period 1 - 12 or full year" },
       { label: "Period Range", placeholder: "From period - to period" },
-      { label: "Posting Date", placeholder: "Custom date range" },
+      { label: "Date Preset", placeholder: "This period, quarter to date, year to date..." },
     ],
     quickValues: ["This period", "Quarter to date", "Year to date", "Prior year"],
   },
@@ -228,6 +230,7 @@ const FILTER_LABELS: Record<string, string> = {
   accumulatedValues: "Accumulated Values",
   periodRange: "Period Range",
   sourceDocType: "Document Type",
+  documentType: "Document Type",
   journalSource: "Journal Source",
 };
 
@@ -241,11 +244,16 @@ const FILTER_VALUE_LABELS: Record<string, string> = {
   this_week: "This Week",
   this_quarter: "This Quarter",
   this_year: "This Year",
+  this_period: "This Period",
   last_month: "Last Month",
   last_quarter: "Last Quarter",
   last_year: "Last Year",
   ytd: "YTD",
+  qtd: "QTD",
   mtd: "MTD",
+  quarter_to_date: "Quarter to Date",
+  year_to_date: "Year to Date",
+  prior_year: "Prior Year",
   fiscal_ytd: "Fiscal YTD",
   custom: "Custom",
   last_7_days: "Last 7 Days",
@@ -304,9 +312,78 @@ function buildResultFilterChips(searchKey: string, ledgerBooks: LedgerBookOption
   });
 }
 
-type GlAdditionalFilterKey = "supplier" | "costCenter";
+type CsvColumn<T> = {
+  header: string;
+  value: (row: T) => unknown;
+};
 
-const LIVE_ADDITIONAL_FILTERS: Partial<Record<string, { key: GlAdditionalFilterKey; placeholder: string }>> = {
+function csvCell(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const text = String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadCsv<T>(filename: string, rows: T[], columns: CsvColumn<T>[]) {
+  const csv = [
+    columns.map((column) => csvCell(column.header)).join(","),
+    ...rows.map((row) => columns.map((column) => csvCell(column.value(row))).join(",")),
+  ].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportDateStamp(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+type GlAdditionalFilterKey =
+  | "supplier"
+  | "costCenter"
+  | "account"
+  | "postingStatus"
+  | "datePreset"
+  | "journalSource"
+  | "sourceDocType";
+
+const GL_ADDITIONAL_FILTER_KEYS: GlAdditionalFilterKey[] = [
+  "supplier",
+  "costCenter",
+  "account",
+  "postingStatus",
+  "datePreset",
+  "journalSource",
+  "sourceDocType",
+];
+
+interface GlAdditionalFilterDefinition {
+  key: GlAdditionalFilterKey;
+  placeholder: string;
+  options?: GlSelectOption[];
+}
+
+const LIVE_ADDITIONAL_FILTERS: Partial<Record<string, GlAdditionalFilterDefinition>> = {
+  "GL Account": {
+    key: "account",
+    placeholder: "Account number or name...",
+  },
+  "Date Preset": {
+    key: "datePreset",
+    placeholder: "Any date preset",
+    options: [
+      { value: "this_period", label: "This period" },
+      { value: "quarter_to_date", label: "Quarter to date" },
+      { value: "year_to_date", label: "Year to date" },
+      { value: "prior_year", label: "Prior year" },
+      { value: "custom", label: "Custom" },
+    ],
+  },
   Supplier: {
     key: "supplier",
     placeholder: "Supplier name or code...",
@@ -314,6 +391,38 @@ const LIVE_ADDITIONAL_FILTERS: Partial<Record<string, { key: GlAdditionalFilterK
   "Cost Center": {
     key: "costCenter",
     placeholder: "Cost center name or code...",
+  },
+  "Journal Source": {
+    key: "journalSource",
+    placeholder: "Manual, AP, AR, bank, asset...",
+    options: [
+      { value: "manual", label: "Manual" },
+      { value: "ap", label: "AP" },
+      { value: "ar", label: "AR" },
+      { value: "bank", label: "Bank" },
+      { value: "asset", label: "Asset" },
+    ],
+  },
+  "Document Type": {
+    key: "sourceDocType",
+    placeholder: "Any document type",
+    options: [
+      { value: "journal_entry", label: "Journal Entry" },
+      { value: "purchase_invoice", label: "Purchase Invoice" },
+      { value: "sales_invoice", label: "Sales Invoice" },
+      { value: "payment", label: "Payment" },
+      { value: "accrual", label: "Accrual" },
+    ],
+  },
+  "Posting Status": {
+    key: "postingStatus",
+    placeholder: "Any posting status",
+    options: [
+      { value: "created", label: "Draft" },
+      { value: "posted", label: "Posted" },
+      { value: "reversed", label: "Reversed" },
+      { value: "parked", label: "Parked" },
+    ],
   },
 };
 
@@ -745,6 +854,24 @@ function GlFilterDrawer({
               {section.fields.map((field) => {
                 const liveFilter = LIVE_ADDITIONAL_FILTERS[field.label];
                 if (liveFilter) {
+                  if (liveFilter.options) {
+                    return (
+                      <GlFilterSelect
+                        key={field.label}
+                        label={field.label}
+                        value={draftAdditionalFilters[liveFilter.key] ?? ""}
+                        placeholder={liveFilter.placeholder}
+                        options={liveFilter.options}
+                        onChange={(value) => {
+                          setDraftAdditionalFilters((prev) => ({
+                            ...prev,
+                            [liveFilter.key]: value,
+                          }));
+                        }}
+                      />
+                    );
+                  }
+
                   return (
                     <GlTextFilterField
                       key={field.label}
@@ -818,6 +945,11 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance" }: GlWo
   const { data: ledgerBooks = [] } = useLedgerBookOptions(scope);
   const additionalFilterValues = useMemo<Partial<Record<GlAdditionalFilterKey, string>>>(
     () => ({
+      account: rawParams.account ?? "",
+      postingStatus: rawParams.postingStatus ?? "",
+      datePreset: rawParams.datePreset ?? "",
+      journalSource: rawParams.journalSource ?? "",
+      sourceDocType: rawParams.sourceDocType ?? rawParams.documentType ?? "",
       supplier: rawParams.supplier ?? "",
       costCenter: rawParams.costCenter ?? "",
     }),
@@ -877,6 +1009,62 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance" }: GlWo
     if (downloadUrl) window.open(downloadUrl, "_blank");
   }, [scope]);
 
+  const exportJournals = useCallback(async () => {
+    const params = scopeToParams(scope);
+    params.set("limit", "1000");
+    params.set("offset", "0");
+    if (additionalFilterValues.postingStatus) params.set("status", additionalFilterValues.postingStatus);
+    if (additionalFilterValues.sourceDocType) params.set("source_doc_type", additionalFilterValues.sourceDocType);
+
+    const res = await fetch(`/api/finance/journals?${params}`);
+    if (!res.ok) return;
+
+    const data = await res.json() as { items?: JournalEntry[] };
+    downloadCsv(`journals_${exportDateStamp()}.csv`, data.items ?? [], [
+      { header: "JE Number", value: (row) => row.jeNumber },
+      { header: "Status", value: (row) => row.status },
+      { header: "Posting Date", value: (row) => row.postingDate },
+      { header: "Fiscal Year", value: (row) => row.fiscalYear },
+      { header: "Period", value: (row) => row.periodNumber },
+      { header: "Currency", value: (row) => row.currencyCode },
+      { header: "Source Document Type", value: (row) => row.sourceDocType },
+      { header: "Source Document Ref", value: (row) => row.sourceDocRef },
+      { header: "Description", value: (row) => row.description },
+      { header: "Total Debit", value: (row) => row.totalDebit },
+      { header: "Total Credit", value: (row) => row.totalCredit },
+      { header: "Posted At", value: (row) => row.postedAt },
+      { header: "Line Count", value: (row) => row.lineCount },
+    ]);
+  }, [additionalFilterValues.postingStatus, additionalFilterValues.sourceDocType, scope]);
+
+  const exportGlDetail = useCallback(async () => {
+    if (!accountCode) return;
+
+    const params = scopeToParams(scope);
+    params.set("accountCode", accountCode);
+    const res = await fetch(`/api/finance/gl-detail?${params}`);
+    if (!res.ok) return;
+
+    const data = await res.json() as GlDetailData;
+    downloadCsv<GlDetailLine>(`gl_detail_${accountCode}_${exportDateStamp()}.csv`, data.lines ?? [], [
+      { header: "Account Code", value: () => data.accountCode },
+      { header: "Account Name", value: () => data.accountName },
+      { header: "Company Code", value: (row) => row.companyCode },
+      { header: "Posting Date", value: (row) => row.postingDate },
+      { header: "Entry Number", value: (row) => row.entryNumber },
+      { header: "Narration", value: (row) => row.narration },
+      { header: "Source Document Type", value: (row) => row.sourceDocType },
+      { header: "Source Document Ref", value: (row) => row.sourceDocRef },
+      { header: "Cost Center", value: (row) => row.costCenter },
+      { header: "Project", value: (row) => row.project },
+      { header: "Debit", value: (row) => row.debitAmount },
+      { header: "Credit", value: (row) => row.creditAmount },
+      { header: "Running Balance", value: (row) => row.runningBalance },
+      { header: "Posted At", value: (row) => row.postedAt },
+      { header: "Posted By", value: (row) => row.postedBy },
+    ]);
+  }, [accountCode, scope]);
+
   const applyFilters = useCallback((
     nextScope: FinanceScope,
     nextFilters: Partial<Record<GlAdditionalFilterKey, string>>,
@@ -896,7 +1084,8 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance" }: GlWo
       }
       scopeToParams(nextScope).forEach((value, key) => params.set(key, value));
 
-      for (const key of ["supplier", "costCenter"] as const) {
+      params.delete("documentType");
+      for (const key of GL_ADDITIONAL_FILTER_KEYS) {
         const value = nextFilters[key]?.trim();
         if (value) params.set(key, value);
         else params.delete(key);
@@ -938,6 +1127,15 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance" }: GlWo
     periodDisplayLabel,
   ].filter(Boolean).join(" / ");
 
+  const activeExportAction =
+    tab === "trial-balance"
+      ? { label: "Export Trial Balance CSV", onSelect: exportTrialBalance }
+      : tab === "journals"
+        ? { label: "Export Journals CSV", onSelect: exportJournals }
+        : tab === "gl-detail" && accountCode
+          ? { label: "Export GL Detail CSV", onSelect: exportGlDetail }
+          : null;
+
   let content: ReactNode;
   if (scopeLoading && !scopeOptions) {
     content = (
@@ -971,6 +1169,8 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance" }: GlWo
       <JournalGrid
         scope={scope}
         search=""
+        statusFilter={additionalFilterValues.postingStatus || undefined}
+        sourceDocTypeFilter={additionalFilterValues.sourceDocType || undefined}
         hideSearch
         hideCreateAction
         entityListStyle
@@ -1055,30 +1255,28 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance" }: GlWo
               )}
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-8 shrink-0"
-                  title="More actions"
-                  aria-label="More actions"
-                >
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[170px]">
-                {tab === "trial-balance" ? (
-                  <DropdownMenuItem onSelect={() => void exportTrialBalance()}>
+            {activeExportAction && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-8 shrink-0"
+                    title="More actions"
+                    aria-label="More actions"
+                  >
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[190px]">
+                  <DropdownMenuItem onSelect={() => void activeExportAction.onSelect()}>
                     <Download className="h-3.5 w-3.5" />
-                    Export CSV
+                    {activeExportAction.label}
                   </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem disabled>No actions</DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </section>

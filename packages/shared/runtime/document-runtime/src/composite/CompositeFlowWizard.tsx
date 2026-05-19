@@ -24,6 +24,7 @@ import { ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Card, CardContent } from "@athyper/ui/primitives";
 import { EntityHeader } from "@athyper/entity-runtime/header";
+import { appEntityListHref } from "@athyper/runtime-shared/core";
 import { FlowFieldBinding } from "../intake/FlowFieldBinding";
 import { isTruthy } from "../intake/evaluateRule";
 import type { EntityHeaderModel } from "@athyper/entity-runtime/header";
@@ -365,7 +366,7 @@ function buildHeaderModel(
   return {
     identity: {
       typeLabel,
-      typeHref: opts.entityCode ? `/app/${opts.entityCode}` : undefined,
+      typeHref: opts.entityCode ? appEntityListHref(opts.entityCode) : undefined,
       number: "New",
       identifierAction: "none",
       status: { label: "Draft", intent: "neutral" },

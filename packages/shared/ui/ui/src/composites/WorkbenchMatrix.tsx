@@ -203,14 +203,18 @@ export function WorkbenchMatrix({
   return (
     <section className={cn("flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card", className)}>
       {(controls || summary) && (
-        <div className="flex min-h-12 flex-wrap items-center gap-3 border-b px-3 py-2">
-          {controls && <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{controls}</div>}
-          {legend.length > 0 && (
-            <div className="flex min-w-0 flex-wrap items-center gap-2 border-l pl-3 text-xs text-muted-foreground">
-              {legend.map((item) => <LegendToken key={item.key} item={item} />)}
+        <div className="grid gap-2 border-b px-3 py-2">
+          {controls && <div className="flex min-w-0 flex-wrap items-center gap-3">{controls}</div>}
+          {(legend.length > 0 || summary) && (
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-3 text-xs text-muted-foreground">
+              {legend.length > 0 && (
+                <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+                  {legend.map((item) => <LegendToken key={item.key} item={item} />)}
+                </div>
+              )}
+              {summary && <div className="shrink-0 text-right text-sm font-semibold">{summary}</div>}
             </div>
           )}
-          {summary && <div className="shrink-0 text-right text-sm font-semibold text-muted-foreground">{summary}</div>}
         </div>
       )}
 
@@ -227,17 +231,17 @@ export function WorkbenchMatrix({
                   <th
                     key={column.key}
                     className={cn(
-                      "sticky top-0 z-30 min-w-32 border-b bg-muted px-2 py-2 text-center text-xs font-semibold text-foreground shadow-sm",
+                      "sticky top-0 z-30 min-w-32 border-b bg-muted px-2 py-1 text-center text-xs font-semibold text-foreground shadow-sm",
                       selected && "bg-accent text-accent-foreground ring-1 ring-inset ring-primary/20",
                     )}
                   >
                     <button
                       type="button"
-                      className="inline-flex max-w-28 flex-col items-center gap-0.5 rounded px-2 py-1 text-center outline-none transition-colors hover:bg-background/70 focus-visible:ring-2 focus-visible:ring-ring/40"
+                      className="inline-flex max-w-32 flex-col items-center gap-0.5 rounded px-1.5 py-0.5 text-center outline-none transition-colors hover:bg-background/70 focus-visible:ring-2 focus-visible:ring-ring/40"
                       onClick={() => onSelectColumn?.(column)}
                     >
-                      <span className="max-w-full truncate">{column.label}</span>
-                      {column.subLabel && <span className="max-w-full truncate text-[11px] font-normal text-muted-foreground">{column.subLabel}</span>}
+                      <span className="max-w-full truncate text-[13px] leading-4">{column.label}</span>
+                      {column.subLabel && <span className="max-w-full truncate text-[11px] font-normal leading-4 text-muted-foreground">{column.subLabel}</span>}
                       {column.badge && <Badge variant="outline" size="sm">{column.badge}</Badge>}
                     </button>
                   </th>
@@ -273,8 +277,8 @@ export function WorkbenchMatrix({
                       className="flex w-full min-w-0 flex-col rounded text-left outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring/40"
                       onClick={() => onSelectRow?.(row)}
                     >
-                      <span className="truncate font-mono text-[11px] font-medium uppercase text-muted-foreground">{row.subLabel}</span>
-                      <span className="truncate text-sm font-semibold text-foreground">{row.label}</span>
+                      <span className="truncate font-mono text-[12px] leading-4 text-muted-foreground">{row.subLabel}</span>
+                      <span className="truncate text-[13px] font-semibold leading-5 text-foreground">{row.label}</span>
                       {row.badge && <span className="mt-1">{row.badge}</span>}
                     </button>
                   </th>
@@ -338,7 +342,7 @@ export function WorkbenchMatrix({
       </div>
 
       {selection && (
-        <div className="flex flex-wrap items-center gap-3 border-t bg-foreground px-3 py-2 text-background">
+        <div className="flex flex-wrap items-center gap-2 border-t bg-foreground px-3 py-2 text-background">
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold">{selection.title}</div>
             {selection.detail && <div className="truncate text-xs text-background/70">{selection.detail}</div>}

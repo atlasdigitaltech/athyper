@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useQueries, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeftRight, CheckCircle2, Clock,
-  FileClock, GitBranch, MessageSquare, Paperclip, Pencil, RotateCcw, Search, SlidersHorizontal, XCircle,
+  FileClock, GitBranch, Info, MessageSquare, Paperclip, Pencil, RotateCcw, Search, SlidersHorizontal, XCircle,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
@@ -34,7 +34,7 @@ import {
   validationFieldsAffectedByChange,
   validationSummaryMessage,
 } from "@athyper/runtime-shared/validation";
-import { normaliseCurrencyCode } from "@athyper/runtime-shared/core";
+import { appEntityDetailHref, normaliseCurrencyCode } from "@athyper/runtime-shared/core";
 import { useOperationDispatch } from "@athyper/entity-runtime/actions";
 import { resolveDetailConfig, resolveTabs } from "@athyper/metadata-client/compiled-reader";
 import type { CompiledEntity, EntityField, EntityOperation } from "@athyper/api-contracts/metadata";
@@ -102,7 +102,7 @@ function dispatchRecentDocumentSnapshot({
   const displayName = name && name.toLowerCase() !== code.toLowerCase() ? name : undefined;
 
   const detail = {
-    href: `/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`,
+    href: appEntityDetailHref(entity.entity_code, recordId),
     label: displayName ?? code,
     refCode: code,
     entityCode: entity.entity_code,
@@ -465,7 +465,7 @@ function VersionsPanel({ entity, entityCode, recordId }: { entity: CompiledEntit
           onSelectCompare={(vNo) => setPinnedVersion((prev) => (prev === vNo ? null : vNo))}
           onNavigateCompare={(from, to) =>
             router.push(
-              `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/compare?from=${from}&to=${to}`,
+              appEntityDetailHref(entityCode, recordId, "compare", `from=${from}&to=${to}`),
             )
           }
           onAmend={() => amendMutation.mutate()}
@@ -874,6 +874,66 @@ function normaliseFieldValueForEdit(value: unknown, field: EntityField): unknown
   return value;
 }
 
+function fieldUiHint(field: EntityField): Record<string, unknown> | null {
+  return asConfigRecord(field.ui_hint);
+}
+
+function fieldHelpText(field: EntityField): string | undefined {
+  const hint = fieldUiHint(field);
+  return textConfig(hint?.["help_text"] ?? hint?.["helpText"]);
+}
+
+function fieldTooltip(field: EntityField): string | undefined {
+  const hint = fieldUiHint(field);
+  return textConfig(hint?.["tooltip"] ?? hint?.["tooltip_text"] ?? hint?.["tooltipText"]);
+}
+
+function DocumentFieldLabel({
+  field,
+  required = false,
+  className,
+}: {
+  field: EntityField;
+  required?: boolean;
+  className?: string;
+}) {
+  const label = field.label ?? field.name;
+  const helpText = fieldHelpText(field);
+  const tooltip = fieldTooltip(field);
+
+  return (
+    <div className={cn("space-y-0.5", className)}>
+      <div className="flex items-center gap-1.5">
+        <span>{label}</span>
+        {required && <span className="text-destructive">*</span>}
+        {tooltip && (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`${label} help`}
+                  className="inline-flex size-3.5 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <Info aria-hidden className="size-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                {tooltip}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
+      {helpText && (
+        <p className="text-[11px] font-normal leading-snug text-muted-foreground/70">
+          {helpText}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /**
  * Extracts the raw field value from a record, correctly handling fields whose
  * physical column_name is "metadata" (JSONB). For those fields the logical
@@ -951,7 +1011,7 @@ function DocumentFieldsPanel({
                 return (
                   <div key={field.name}>
                     <dt className="text-xs font-medium text-muted-foreground leading-normal mb-1">
-                      {field.label ?? field.name}
+                      <DocumentFieldLabel field={field} />
                     </dt>
                     <dd className="text-sm font-normal text-foreground leading-snug">
                       {text}
@@ -1021,10 +1081,11 @@ function DocumentEditableFieldsPanel({
                 return (
                   <div key={field.name} className={isFullWidth ? "space-y-1.5 md:col-span-2 lg:col-span-3" : "space-y-1.5"}>
                     {!embedsLabel && (
-                      <label className="text-xs font-medium text-muted-foreground leading-normal">
-                        {field.label ?? field.name}
-                        {field.is_required && <span className="ml-1 text-destructive">*</span>}
-                      </label>
+                      <DocumentFieldLabel
+                        field={field}
+                        required={field.is_required}
+                        className="text-xs font-medium text-muted-foreground leading-normal"
+                      />
                     )}
                     <Renderer
                       value={value}
@@ -1771,13 +1832,13 @@ export function DocumentDetailPage({
       if (action === "__document_save") {
         const saved = await saveDraftChanges();
         if (saved) {
-          router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
+          router.push(appEntityDetailHref(entity.entity_code, recordId));
         }
         return;
       }
       if (action === "__document_discard" || action === "__document_exit") {
         resetDraftChanges();
-        router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
+        router.push(appEntityDetailHref(entity.entity_code, recordId));
         return;
       }
       if (action === "submit") {
@@ -1785,7 +1846,7 @@ export function DocumentDetailPage({
         if (!saved) return;
         const handled = await runConfiguredDocumentAction(action);
         if (handled !== null) {
-          if (handled) router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
+          if (handled) router.push(appEntityDetailHref(entity.entity_code, recordId));
           return;
         }
         await opDispatch.dispatch(action, operations ?? []);
@@ -1796,13 +1857,13 @@ export function DocumentDetailPage({
     const configuredActionHandled = await runConfiguredDocumentAction(action);
     if (configuredActionHandled !== null) {
       if (configuredActionHandled && action === "submit") {
-        router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`);
+        router.push(appEntityDetailHref(entity.entity_code, recordId));
       }
       return;
     }
 
     if (action === "edit" || action === "update") {
-      router.push(`/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}?mode=edit`);
+      router.push(appEntityDetailHref(entity.entity_code, recordId, undefined, "mode=edit"));
       return;
     }
     if (action === "copy") { void navigator.clipboard?.writeText(title); return; }

@@ -17,7 +17,7 @@
  *   - tax_mode: required by pi_tax_mode_req CHECK for status <> 'proforma'
  *
  * Idempotency: checks document.command_log before INSERT.
- * Number generation: uses master.fn_next_document_number via DB trigger.
+ * Number generation: uses control.next_entity_number via DB trigger.
  */
 
 import type { Kysely } from "kysely";

@@ -162,18 +162,15 @@ async function suggestFromItem(
   if (!itemId) return [];
 
   const { rows } = await sql<{ id: string; code: string; name: string }>`
-    SELECT sc.id::text AS id, sc.code, sc.name
+    SELECT cc.id::text AS id, cc.code, cc.name
     FROM   master.item im
     LEFT JOIN master.product prod
            ON prod.tenant_id = im.tenant_id
           AND prod.id = im.product_id
-    LEFT JOIN master.commodity_category cc
+    JOIN master.commodity_category cc
            ON cc.tenant_id = im.tenant_id
           AND cc.id = COALESCE(im.commodity_category_id, prod.commodity_category_id)
-    JOIN   master.spend_category sc
-           ON sc.tenant_id = cc.tenant_id
-          AND sc.code = cc.code
-          AND sc.is_active = true
+          AND cc.is_active = true
     WHERE  im.tenant_id = ${tenantId}::uuid
       AND  im.id = ${itemId}::uuid
       AND  im.is_active = true
@@ -232,9 +229,9 @@ async function suggestFromCommodityCode(
     ),
     matches AS (
       SELECT
-        sc.id::text AS id,
-        sc.code,
-        sc.name,
+        cc.id::text AS id,
+        cc.code,
+        cc.name,
         LEAST(
           1.00,
           GREATEST(
@@ -260,10 +257,6 @@ async function suggestFromCommodityCode(
         ON cc.tenant_id = r.tenant_id
        AND cc.id = r.commodity_category_id
        AND cc.is_active = true
-      JOIN master.spend_category sc
-        ON sc.tenant_id = cc.tenant_id
-       AND sc.code = cc.code
-       AND sc.is_active = true
       WHERE r.tenant_id = ${tenantId}::uuid
         AND r.is_active = true
         AND (
@@ -360,8 +353,8 @@ async function suggestFromDescription(
       parent.code AS parent_code,
       parent.name AS parent_name,
       sc.metadata::text AS metadata
-    FROM master.spend_category sc
-    LEFT JOIN master.spend_category parent
+    FROM master.commodity_category sc
+    LEFT JOIN master.commodity_category parent
       ON parent.tenant_id = sc.tenant_id
      AND parent.id = sc.parent_id
     WHERE sc.tenant_id = ${tenantId}::uuid

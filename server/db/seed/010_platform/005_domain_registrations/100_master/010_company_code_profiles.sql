@@ -37,7 +37,7 @@ SET display_config     = COALESCE(display_config, '{}'::jsonb) || jsonb_build_ob
             )
         )
     ),
-    natural_key_fields = ARRAY['id'],
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['id']::text[]), true),
     feature_flags      = COALESCE(feature_flags, '{}'::jsonb) || '{"parent_entity":"customer","parent_fk":"customer_id"}'::jsonb
 WHERE table_schema = 'master' AND table_name = 'company_code_customer_profile'
   AND tenant_id IS NULL;
@@ -170,7 +170,7 @@ SET display_config     = COALESCE(display_config, '{}'::jsonb) || jsonb_build_ob
             )
         )
     ),
-    natural_key_fields = ARRAY['id'],
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['id']::text[]), true),
     feature_flags      = COALESCE(feature_flags, '{}'::jsonb) || '{"parent_entity":"supplier","parent_fk":"supplier_id"}'::jsonb
 WHERE table_schema = 'master' AND table_name = 'company_code_supplier_profile'
   AND tenant_id IS NULL;

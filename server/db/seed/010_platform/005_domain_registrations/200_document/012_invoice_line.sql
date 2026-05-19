@@ -14,7 +14,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -23,7 +23,6 @@ SELECT
     'full', 'tenant_critical', 'controlled',
     'document', 'purchase_invoice_line',
     'Invoice Line', 'Invoice Lines', 'list', 'violet',
-    false,
     '{
         "parent_entity":              "purchase_invoice",
         "has_accounting_distribution": true,
@@ -53,13 +52,12 @@ UPDATE control.entity
        label_plural = 'Invoice Lines',
        icon_key = 'list',
        color_token = 'violet',
-       numbering_active = false,
        feature_flags = jsonb_build_object(
            'parent_entity', 'purchase_invoice',
            'has_accounting_distribution', true,
            'has_matching', true
        ),
-       natural_key_fields = ARRAY['line_no']::text[],
+       identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['line_no']::text[]), true),
        status = 'ACTIVE',
        updated_at = now(),
        updated_by = '00000000-0000-0000-0000-000000000000'
@@ -69,9 +67,11 @@ UPDATE control.entity
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'document' AND e.table_name = 'purchase_invoice_line'
   AND  e.tenant_id IS NULL
@@ -379,12 +379,11 @@ WHERE ef.entity_version_id = ev.id
 
 -- ── 5. Natural key — line_no is the business key within a parent invoice ─────
 UPDATE control.entity
-SET natural_key_fields = ARRAY['line_no']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['line_no']::text[]), true)
 WHERE table_schema    = 'document'
   AND table_name      = 'purchase_invoice_line'
   AND tenant_id       IS NULL
-  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
-
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;
 -- ── 6. Module → PROC (Procurement) ───────────────────────────────────────────
 -- Inner-join style: no-op if PROC does not exist yet.
 UPDATE control.entity e

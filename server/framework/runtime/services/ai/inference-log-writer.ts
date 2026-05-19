@@ -67,7 +67,7 @@ export class InferenceLogWriter {
           inference_type, model_id, model_version, target_engine,
           txn_id, confidence, reasoning_chain,
           input, output,
-          prediction_type, is_accepted,
+          action_type, is_accepted,
           correlation_id,
           created_by
         ) VALUES (

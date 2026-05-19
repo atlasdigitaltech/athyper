@@ -56,6 +56,7 @@ export const financeWorkspaceModel: WorkspaceDashboardModel = {
           { label: "Chart of Accounts", href: "/finance/coa", archetype: "Rich", description: "Account hierarchy explorer and posting controls." },
           { label: "Commodity Categories", href: "/workbench/supply-chain/commodity-categories", archetype: "Rich", description: "Commodity taxonomy, intent defaults, and company-code overrides." },
           { label: "Business Intents", href: "/finance/business-intents", archetype: "Rich", description: "Intent ontology, GL fallback, and approval policy overlays." },
+          { label: "Accounting Profiles", href: "/finance/accounting-profiles", archetype: "Rich", description: "Intent-to-profile routing, posting events, and Dr/Cr templates." },
           { label: "Business Partners", href: "/app/business_partner", archetype: "Rich", description: "Supplier and customer roles with company-code settings." },
           { label: "Cost Centers", href: "/app/cost_center", archetype: "Rich", description: "Cost accounting dimensions for posting and reporting." },
           { label: "Legal Entities", href: "/finance/admin?tab=legal-entities", archetype: "Rich", description: "Group hierarchy, consolidation, and operating entities.", adminOnly: true },
@@ -65,6 +66,7 @@ export const financeWorkspaceModel: WorkspaceDashboardModel = {
           { label: "Company Controls", href: "/finance/admin?tab=controls", archetype: "Rich", description: "Account class rules, reconciliation flags, and posting controls.", adminOnly: true },
           { label: "COA Mapping", href: "/finance/admin?tab=mapping", archetype: "Rich", description: "Cross-chart translation and reporting mappings.", adminOnly: true },
           { label: "Taxonomy Controls", href: "/workbench/supply-chain/commodity-categories", archetype: "Rich", description: "Category and intent resolution controls.", adminOnly: true },
+          { label: "Accounting Profile Controls", href: "/finance/accounting-profiles", archetype: "Rich", description: "Profile rules, events, and posting templates.", adminOnly: true },
         ]),
       ],
     },
@@ -153,7 +155,7 @@ export const supplyChainWorkspaceModel: WorkspaceDashboardModel = {
     { label: "Shipments", value: "11", detail: "In transit" },
   ],
   quickActions: [
-    { label: "Create Requisition", href: "/app/requisition/new", icon: Plus },
+    { label: "Create Requisition", href: "/app/purchase_requisition/new", icon: Plus },
     { label: "Create Purchase Order", href: "/app/purchase_order/new", icon: ShoppingCart, variant: "outline" },
     { label: "Review Approvals", href: "/inbox?workspace=supply-chain", icon: CheckCircle2, variant: "outline" },
     { label: "Supplier Intake", href: "/app/business_partner/new?mode=supplier", icon: Users, variant: "outline" },
@@ -309,7 +311,7 @@ export const peopleWorkspaceModel: WorkspaceDashboardModel = {
       sections: [
         section("work", "Work", [
           { label: "Leave Requests", href: "/app/leave_request", archetype: "Doc", description: "Employee leave requests and approval flow.", primaryAction: "Approve" },
-          { label: "Attendance", href: "/app/attendance", archetype: "Rich", description: "Attendance records, exceptions, and corrections." },
+          { label: "Attendance", href: "/app/attendance_day", archetype: "Rich", description: "Attendance records, exceptions, and corrections." },
         ]),
         section("masterData", "Master Data", [
           { label: "Employees", href: "/app/employee", archetype: "Rich", description: "Employee profiles, assignments, and lifecycle state." },

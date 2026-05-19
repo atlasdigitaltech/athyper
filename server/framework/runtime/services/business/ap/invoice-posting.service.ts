@@ -167,12 +167,25 @@ async function resolveWhtPayableAccount(
 
 async function nextJeCode(db: AnyDb, tenantId: string, companyId: string): Promise<string> {
   const year = new Date().getFullYear();
-  const num = await sql<{ n: number }>`
-    SELECT master.fn_next_document_number(
-      ${tenantId}::uuid, ${companyId}::uuid, 'journal_entry', ${year}::smallint
-    ) AS n
-  `.execute(db);
-  return String(num.rows[0]?.n ?? `JE-${year}-${Date.now()}`);
+  try {
+    const num = await sql<{ n: string }>`
+      SELECT control.next_entity_number(
+        ${tenantId}::uuid,
+        'journal_entry',
+        'document_no',
+        ${companyId}::uuid,
+        NULL,
+        NULL,
+        NULL,
+        CURRENT_DATE
+      ) AS n
+    `.execute(db);
+    if (num.rows[0]?.n) return String(num.rows[0].n);
+  } catch {
+    // Fall back to timestamp code below.
+  }
+
+  return `JE-${year}-${Date.now()}`;
 }
 
 // ── Post invoice ──────────────────────────────────────────────────────────────

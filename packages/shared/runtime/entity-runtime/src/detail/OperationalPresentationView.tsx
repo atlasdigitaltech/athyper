@@ -25,7 +25,7 @@ import { FilterPillBar } from "@athyper/ui/composites";
 import type { EntityField } from "@athyper/api-contracts/metadata";
 import type { MasterTab, SummaryCardsConfig } from "@athyper/metadata-client/compiled-reader";
 import { useCompiledEntity } from "@athyper/query";
-import { titleCase } from "@athyper/runtime-shared/core";
+import { appEntityDetailHref, titleCase } from "@athyper/runtime-shared/core";
 import {
   entityRowToPickerOption,
   resolveEntityPickerOptionConfig,
@@ -271,7 +271,7 @@ function roleAppHref(rec: ChildRecord, settings: PresentationSettings): string |
   const entityCode = entityField && typeof rec[entityField] === "string" ? rec[entityField].trim() : "";
   const recordId = recordField && typeof rec[recordField] === "string" ? rec[recordField].trim() : "";
   if (!entityCode || !recordId) return null;
-  return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`;
+  return appEntityDetailHref(entityCode, recordId);
 }
 
 export function OperationalFieldLabel({

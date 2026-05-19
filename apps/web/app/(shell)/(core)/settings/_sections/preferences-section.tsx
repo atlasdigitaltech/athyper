@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { themePresets } from "@athyper/theme/presets";
+import { DEFAULT_USER_DATE_FORMAT } from "@athyper/runtime-shared/preferences";
 import {
   Badge, Button, Card, CardContent,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -283,7 +284,7 @@ interface PrefsBaseline {
 }
 
 export function PreferencesSection({ active }: { active: boolean }) {
-  const { appearanceMode, themePreset, densityCode, languageCode, setAppearanceMode, setThemePreset, setDensityCode, setLanguageCode, seedFromBootstrap } =
+  const { appearanceMode, themePreset, densityCode, languageCode, setAppearanceMode, setThemePreset, setDensityCode, setLanguageCode, setTimezoneCode, setDateFormat: setStoreDateFormat, seedFromBootstrap } =
     usePreferencesStore();
   const { bff } = useShellSession();
   const { formatMessage } = useIntl();
@@ -291,7 +292,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
 
   // Extended prefs from principal_ui_profile
   const [timezone,   setTimezone]   = useState("Asia/Dubai");
-  const [dateFormat, setDateFormat] = useState("%d/%m/%Y");
+  const [dateFormat, setDateFormat] = useState(DEFAULT_USER_DATE_FORMAT);
   const [weekStart,  setWeekStart]  = useState("1");
   const [homeWs,     setHomeWs]     = useState("FIN");
   const [homeMod,    setHomeMod]    = useState("ACC");
@@ -344,7 +345,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
         const metadata = readPreferenceMetadata(d);
 
         const nextTz     = d["timezone_code"]       ? String(d["timezone_code"])       : "Asia/Dubai";
-        const nextDateFmt= d["date_format"]         ? String(d["date_format"])         : "%d/%m/%Y";
+        const nextDateFmt= d["date_format"]         ? String(d["date_format"])         : DEFAULT_USER_DATE_FORMAT;
         const nextWeek   = d["week_start"] != null  ? String(d["week_start"])          : "1";
         const nextHomeWs = d["home_workspace_code"] ? String(d["home_workspace_code"]) : "FIN";
         const nextHomeMod= d["home_module_code"]    ? String(d["home_module_code"])    : "ACC";
@@ -354,6 +355,8 @@ export function PreferencesSection({ active }: { active: boolean }) {
 
         setTimezone(nextTz);
         setDateFormat(nextDateFmt);
+        setTimezoneCode(nextTz);
+        setStoreDateFormat(nextDateFmt);
         setWeekStart(nextWeek);
         setHomeWs(nextHomeWs);
         setHomeMod(nextHomeMod);
@@ -378,7 +381,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
         setDirty(false);
       })
       .catch(() => { /* use defaults */ });
-  }, [active, prefsLoaded, seedFromBootstrap]);
+  }, [active, prefsLoaded, seedFromBootstrap, setStoreDateFormat, setTimezoneCode]);
 
   // Load saved views once
   useEffect(() => {
@@ -421,6 +424,8 @@ export function PreferencesSection({ active }: { active: boolean }) {
         timezone, dateFormat, weekStart, homeWs, homeMod, digest,
       };
       setSaveStatus("saved"); setDirty(false);
+      setTimezoneCode(timezone);
+      setStoreDateFormat(dateFormat);
     } catch {
       setSaveStatus("error");
     } finally {
@@ -439,6 +444,8 @@ export function PreferencesSection({ active }: { active: boolean }) {
     setLanguageCode(b.languageCode);
     setTimezone(b.timezone);
     setDateFormat(b.dateFormat);
+    setTimezoneCode(b.timezone);
+    setStoreDateFormat(b.dateFormat);
     setWeekStart(b.weekStart);
     setHomeWs(b.homeWs);
     setHomeMod(b.homeMod);
@@ -593,7 +600,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
               label: formatMessage({ id: "settings.preferences.regional.timezone" }),
               key: "timezone_code",
               value: timezone,
-              setter: setTimezone,
+              setter: (v: string) => { setTimezone(v); setTimezoneCode(v); },
               source: "principal_ui_profile",
               options: [
                 { value: "Asia/Dubai",       label: "Asia/Dubai (GST +4)" },
@@ -608,9 +615,10 @@ export function PreferencesSection({ active }: { active: boolean }) {
               label: formatMessage({ id: "settings.preferences.regional.dateFormat" }),
               key: "date_format",
               value: dateFormat,
-              setter: setDateFormat,
-              source: "tenant_profile",
+              setter: (v: string) => { setDateFormat(v); setStoreDateFormat(v); },
+              source: "principal_ui_profile",
               options: [
+                { value: "%d %b %Y", label: "DD Mon YYYY" },
                 { value: "%d/%m/%Y", label: "DD/MM/YYYY" },
                 { value: "%m/%d/%Y", label: "MM/DD/YYYY" },
                 { value: "%Y-%m-%d", label: "YYYY-MM-DD" },

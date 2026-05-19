@@ -19,7 +19,6 @@ import {
   LockKeyhole,
   Globe2,
   MoreVertical,
-  Pencil,
   Pin,
   Plus,
   RefreshCw,
@@ -38,6 +37,7 @@ import {
   type EntityPickerOption,
   type EntityPickerOptionConfig,
 } from "@athyper/runtime-shared/entity-search";
+import { appEntityDetailHref, appEntityListHref, appEntityNewHref } from "@athyper/runtime-shared/core";
 import {
   AsyncCombobox,
   MoneyInput,
@@ -60,11 +60,13 @@ import {
 } from "../components/taxonomyWorkbenchManifest";
 import {
   useLazyCommodityCategoryHierarchy,
+  useBusinessIntents,
   useCommodityCategories,
   useCommodityCategoryDetail,
   useCommodityCategorySummary,
   useCommodityCategoryTreeBatchSize,
   DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE,
+  type BusinessIntentRow,
   type CommodityCategoryRow,
   type CommodityCategoryRuleRow,
   type CommodityCategorySummary,
@@ -141,6 +143,9 @@ interface CurrencyRow {
 type EditorVerb = "configure" | "govern" | "route" | "link" | "audit";
 type SpendEditorScope = "tenant" | "company" | "supplier";
 type SpendMatrixSourceKey = "company" | "supplier" | "classification" | "intent";
+type SelectedCategoryViewMode = Extract<TaxonomyWorkbenchMode, "profile" | "explorer" | "classification">;
+type SelectedCategoryBodyTab = "profile" | "intent" | "classification" | "buyPolicy" | "sellPolicy" | "inventoryPolicy";
+type CategoryPolicyKind = "buy" | "sell" | "inventory";
 
 interface EditorVerbDefinition {
   key: EditorVerb;
@@ -158,7 +163,7 @@ interface SpendEditorScopeDefinition {
 }
 
 interface SpendMatrixCompany extends WorkbenchMatrixAxisItem {
-  country: string;
+  country?: string;
 }
 
 interface SpendMatrixToken {
@@ -176,6 +181,54 @@ interface SpendMatrixCellSource {
   legend: WorkbenchMatrixLegendItem[];
 }
 
+interface CategoryPolicyTabDefinition {
+  key: CategoryPolicyKind;
+  entityCode: string;
+  label: string;
+  title: string;
+  detail: string;
+  empty: string;
+  icon: LucideIcon;
+}
+
+interface ProfileEnablementItem {
+  key: CategoryPolicyKind;
+  label: string;
+  enabled: boolean;
+  facts: Array<{ label: string; value: string }>;
+}
+
+interface CategoryPolicyRow {
+  id: string;
+  entityCode: string;
+  businessIntentId: string | null;
+  mappingMode: string;
+  isDefault: boolean | null;
+  isSelectable: boolean | null;
+  scopeType: string | null;
+  scopeId: string | null;
+  companyCodeId: string | null;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  status: string;
+  sortOrder: number | null;
+  defaultGlAccountId: string | null;
+  defaultRevenueGlAccountId: string | null;
+  defaultDeferredRevenueGlAccountId: string | null;
+  defaultInventoryGlAccountId: string | null;
+  defaultCogsGlAccountId: string | null;
+  revenueRecognitionMethod: string | null;
+  variableConsideration: string | null;
+  standaloneSellingPriceMethod: string | null;
+  stockingStatus: string | null;
+  valuationMethod: string | null;
+}
+
+interface PolicyReferenceMaps {
+  companyCodes?: Map<string, string>;
+  glAccounts?: Map<string, string>;
+}
+
 const EMPTY_SUMMARY: CommodityCategorySummary = {
   total: 0,
   roots: 0,
@@ -189,6 +242,31 @@ const EMPTY_SUMMARY: CommodityCategorySummary = {
   supplierPolicies: 0,
   deniedPolicies: 0,
 };
+
+const WORKBENCH_TYPOGRAPHY_SCOPE = [
+  "text-[13px] leading-5",
+  "[--doc-subtitle-size:0.8125rem]",
+  "[--doc-subtitle-line-height:1.45]",
+  "[--doc-support-size:0.75rem]",
+  "[--doc-support-line-height:1.45]",
+  "[--doc-action-size:0.8125rem]",
+  "[--doc-action-line-height:1]",
+  "[--doc-badge-size:0.75rem]",
+  "[--doc-badge-line-height:1]",
+  "[--doc-field-label-size:0.6875rem]",
+  "[--doc-field-label-line-height:1.1]",
+  "[--doc-field-label-tracking:0]",
+  "[--doc-compact-code-size:0.75rem]",
+  "[--doc-compact-code-line-height:1.2]",
+  "[--doc-compact-code-tracking:0]",
+  "[--doc-field-value-size:0.8125rem]",
+  "[--doc-field-value-line-height:1.35]",
+  "[&_input]:text-[13px]",
+  "[&_select]:text-[13px]",
+  "[&_[role=combobox]]:text-[13px]",
+].join(" ");
+
+const CATEGORY_CODE_TEXT_CLASS = "font-mono text-doc-support leading-4 text-muted-foreground";
 
 const DEFAULT_SIMULATOR_INPUTS: SimulatorInputs = {
   companyCodeId: null,
@@ -328,13 +406,53 @@ const SPEND_EDITOR_SCOPES: SpendEditorScopeDefinition[] = [
   },
 ];
 
-const SPEND_MATRIX_COMPANIES: SpendMatrixCompany[] = [
-  { key: "athq-MY", label: "athq-MY", country: "Malaysia" },
-  { key: "athq-SG", label: "athq-SG", country: "Singapore" },
-  { key: "athq-US", label: "athq-US", country: "United States" },
-  { key: "athq-UK", label: "athq-UK", country: "United Kingdom" },
-  { key: "athq-IN", label: "athq-IN", country: "India" },
+const SELECTED_CATEGORY_BODY_TABS: Array<{ key: SelectedCategoryBodyTab; label: string }> = [
+  { key: "profile", label: "Profile" },
+  { key: "classification", label: "Classification" },
+  { key: "buyPolicy", label: "Buy Policy" },
+  { key: "sellPolicy", label: "Sell Policy" },
+  { key: "inventoryPolicy", label: "Inventory Policy" },
 ];
+
+const CATEGORY_POLICY_TAB_CONFIG: Record<CategoryPolicyKind, CategoryPolicyTabDefinition> = {
+  buy: {
+    key: "buy",
+    entityCode: "commodity_category_buy_policy",
+    label: "Buy Policy",
+    title: "Allowed buy intents",
+    detail: "Allowed intents and defaults used when this category appears in buy flows.",
+    empty: "No allowed buy intent policies are defined for this category.",
+    icon: Target,
+  },
+  sell: {
+    key: "sell",
+    entityCode: "commodity_category_sell_policy",
+    label: "Sell Policy",
+    title: "Allowed sell intents",
+    detail: "Allowed intents and revenue defaults used when this category appears in sell flows.",
+    empty: "No allowed sell intent policies are defined for this category.",
+    icon: Tag,
+  },
+  inventory: {
+    key: "inventory",
+    entityCode: "commodity_category_inventory_policy",
+    label: "Inventory Policy",
+    title: "Allowed inventory policies",
+    detail: "Stocking, valuation, and posting defaults used for inventory flows.",
+    empty: "No allowed inventory policies are defined for this category.",
+    icon: Layers3,
+  },
+};
+
+const OVERVIEW_APP_ENTITY_CODES = [
+  "commodity_category",
+  "commodity_classification",
+  "commodity_classification_to_intent_rule",
+  "commodity_code_to_category_rule",
+  "commodity_category_buy_policy",
+  "commodity_category_sell_policy",
+  "commodity_category_inventory_policy",
+] as const;
 
 const SPEND_MATRIX_CELL_SOURCES: SpendMatrixCellSource[] = [
   {
@@ -434,6 +552,10 @@ function countText(count: number, singular: string, plural = `${singular}s`): st
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
+function matrixSummaryText(rowCount: number, totalRows: number, companyCount: number): string {
+  return `${rowCount} of ${totalRows} rows / ${countText(companyCount, "company", "companies")}`;
+}
+
 function contextValue(row: CommodityCategoryRow, source: NonNullable<TaxonomyRelatedApp["context"]>["source"]): string | null {
   switch (source) {
     case "id":
@@ -478,6 +600,7 @@ function relatedAppKey(app: TaxonomyRelatedApp): string {
 
 function modeFromParam(value: string | null): TaxonomyWorkbenchMode | null {
   return value === "overview"
+    || value === "profile"
     || value === "explorer"
     || value === "classification"
     || value === "simulator"
@@ -504,6 +627,15 @@ function hashText(value: string): number {
 
 function getSpendMatrixSource(key: SpendMatrixSourceKey): SpendMatrixCellSource {
   return SPEND_MATRIX_CELL_SOURCES.find((source) => source.key === key) ?? SPEND_MATRIX_CELL_SOURCES[0]!;
+}
+
+function companyToSpendMatrixColumn(company: CompanyOption): SpendMatrixCompany {
+  return {
+    key: company.code,
+    label: company.code,
+    subLabel: company.name,
+    badge: company.functionalCurrency,
+  };
 }
 
 function orderedMatrixCompanies(row: CommodityCategoryRow, companies: SpendMatrixCompany[], seed: string): SpendMatrixCompany[] {
@@ -590,6 +722,11 @@ function booleanValue(value: unknown): boolean {
   return false;
 }
 
+function nullableBooleanValue(value: unknown): boolean | null {
+  if (value === null || value === undefined || value === "") return null;
+  return booleanValue(value);
+}
+
 function objectRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -614,6 +751,65 @@ async function fetchEntityRecordList(entityCode: string, params: URLSearchParams
   if (!res.ok) throw new Error(`Failed to load ${entityCode}`);
   const body = await res.json() as { data?: unknown[] };
   return Array.isArray(body.data) ? body.data : [];
+}
+
+async function fetchEntityRecordDetail(entityCode: string, id: string): Promise<unknown | null> {
+  const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(id)}`, { cache: "no-store" });
+  if (!res.ok) return null;
+  const body = await res.json() as { data?: unknown; record?: unknown };
+  return body.data ?? body.record ?? body;
+}
+
+function readableReferenceLabel(record: unknown, codeNames: string[], nameNames: string[]): string | null {
+  const code = stringValue(entityRecordValue(record, codeNames));
+  const name = stringValue(entityRecordValue(record, nameNames));
+  if (!code && !name) return null;
+  return codeName(code, name);
+}
+
+function companyCodeReferenceLabel(record: unknown): string | null {
+  return readableReferenceLabel(
+    record,
+    ["code", "company_code", "companyCode", "company_code_code", "companyCodeCode"],
+    ["display_name", "displayName", "name", "company_name", "companyName", "company_code_name", "companyCodeName"],
+  );
+}
+
+function glAccountReferenceLabel(record: unknown): string | null {
+  return readableReferenceLabel(
+    record,
+    ["code", "account_code", "accountCode", "gl_account_code", "glAccountCode"],
+    ["name", "account_name", "accountName", "gl_account_name", "glAccountName", "display_name", "displayName"],
+  );
+}
+
+function uniqueStrings(values: Array<string | null | undefined>): string[] {
+  return Array.from(new Set(values.filter((value): value is string => !!value))).sort();
+}
+
+function useReferenceDisplayMap(
+  entityCode: string,
+  ids: string[],
+  toLabel: (record: unknown) => string | null,
+  { enabled = true }: { enabled?: boolean } = {},
+) {
+  return useQuery<Map<string, string>>({
+    queryKey: ["finance", "taxonomy", "reference-display", entityCode, ids.join("|")],
+    queryFn: async () => {
+      const entries = await Promise.all(ids.map(async (id) => {
+        try {
+          const record = await fetchEntityRecordDetail(entityCode, id);
+          return [id, record ? toLabel(record) ?? "Unavailable" : "Unavailable"] as const;
+        } catch {
+          return [id, "Unavailable"] as const;
+        }
+      }));
+      return new Map(entries);
+    },
+    enabled: enabled && ids.length > 0,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 function mapCommodityClassification(record: unknown): CommodityClassificationRow {
@@ -688,6 +884,61 @@ function useCommodityRoutingRules(commodityCategoryId?: string | null, { enabled
   });
 }
 
+function mapCategoryPolicyRecord(record: unknown, entityCode: string): CategoryPolicyRow {
+  return {
+    id: stringValue(entityRecordValue(record, ["id"])) ?? "",
+    entityCode,
+    businessIntentId: stringValue(entityRecordValue(record, ["business_intent_id", "businessIntentId"])),
+    mappingMode: stringValue(entityRecordValue(record, ["mapping_mode", "mappingMode"])) ?? "ALLOW",
+    isDefault: nullableBooleanValue(entityRecordValue(record, ["is_default", "isDefault"])),
+    isSelectable: nullableBooleanValue(entityRecordValue(record, ["is_selectable", "isSelectable"])),
+    scopeType: stringValue(entityRecordValue(record, ["scope_type", "scopeType"])),
+    scopeId: stringValue(entityRecordValue(record, ["scope_id", "scopeId"])),
+    companyCodeId: stringValue(entityRecordValue(record, ["company_code_id", "companyCodeId"])),
+    effectiveFrom: stringValue(entityRecordValue(record, ["effective_from", "effectiveFrom"])),
+    effectiveTo: stringValue(entityRecordValue(record, ["effective_to", "effectiveTo"])),
+    status: stringValue(entityRecordValue(record, ["status"])) ?? "active",
+    sortOrder: numberValue(entityRecordValue(record, ["sort_order", "sortOrder"])),
+    defaultGlAccountId: stringValue(entityRecordValue(record, ["default_gl_account_id", "defaultGlAccountId"])),
+    defaultRevenueGlAccountId: stringValue(entityRecordValue(record, ["default_revenue_gl_account_id", "defaultRevenueGlAccountId"])),
+    defaultDeferredRevenueGlAccountId: stringValue(entityRecordValue(record, ["default_deferred_revenue_gl_account_id", "defaultDeferredRevenueGlAccountId"])),
+    defaultInventoryGlAccountId: stringValue(entityRecordValue(record, ["default_inventory_gl_account_id", "defaultInventoryGlAccountId"])),
+    defaultCogsGlAccountId: stringValue(entityRecordValue(record, ["default_cogs_gl_account_id", "defaultCogsGlAccountId"])),
+    revenueRecognitionMethod: stringValue(entityRecordValue(record, ["revenue_recognition_method", "revenueRecognitionMethod"])),
+    variableConsideration: stringValue(entityRecordValue(record, ["variable_consideration", "variableConsideration"])),
+    standaloneSellingPriceMethod: stringValue(entityRecordValue(record, ["standalone_selling_price_method", "standaloneSellingPriceMethod"])),
+    stockingStatus: stringValue(entityRecordValue(record, ["stocking_status", "stockingStatus"])),
+    valuationMethod: stringValue(entityRecordValue(record, ["valuation_method", "valuationMethod"])),
+  };
+}
+
+function useCategoryPolicyRows(
+  kind: CategoryPolicyKind,
+  commodityCategoryId?: string | null,
+  { enabled = true }: { enabled?: boolean } = {},
+) {
+  const config = CATEGORY_POLICY_TAB_CONFIG[kind];
+  return useQuery<CategoryPolicyRow[]>({
+    queryKey: ["finance", "taxonomy", "commodity-category-policy", kind, commodityCategoryId ?? ""],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        "filter.commodity_category_id": commodityCategoryId ?? "",
+        "filter.mapping_mode": "ALLOW",
+        "filter.status": "active",
+        page_size: "50",
+        sort: "sort_order:asc",
+      });
+      const rows = await fetchEntityRecordList(config.entityCode, params);
+      return rows
+        .map((record) => mapCategoryPolicyRecord(record, config.entityCode))
+        .filter((row) => row.id);
+    },
+    enabled: enabled && !!commodityCategoryId,
+    retry: false,
+    staleTime: 30 * 1000,
+  });
+}
+
 function companyFromPickerOption(option: EntityPickerOption): CompanyOption | null {
   const raw = option.raw ?? {};
   const id = stringValue(raw["id"]) ?? option.value;
@@ -743,23 +994,6 @@ function stepTone(status: SimulationStep["status"]): string {
   }
 }
 
-function statusLabel(status: SimulationStep["status"]): string {
-  switch (status) {
-    case "resolved":
-      return "resolved";
-    case "applied":
-      return "applied";
-    case "review":
-      return "review";
-    case "no-rule":
-      return "no rule";
-    case "skipped":
-      return "skipped";
-    default:
-      return "applied";
-  }
-}
-
 function buildSimulation(row: CommodityCategoryRow | undefined, inputs: SimulatorInputs) {
   if (!row) {
     return {
@@ -800,7 +1034,7 @@ function buildSimulation(row: CommodityCategoryRow | undefined, inputs: Simulato
         ? `${row.supplierPolicyCount} supplier overlay${row.supplierPolicyCount === 1 ? "" : "s"}`
         : "no supplier override",
       detail: row.supplierBlockCount > 0
-        ? `${row.supplierBlockCount} blocked supplier policy rows exist for this category.`
+        ? `${row.supplierBlockCount} blocked supplier policies exist for this category.`
         : `${inputs.supplierName || "Selected supplier"} inherits company or base rules.`,
     },
     {
@@ -810,7 +1044,7 @@ function buildSimulation(row: CommodityCategoryRow | undefined, inputs: Simulato
       value: row.companyDenyCount > 0
         ? `${row.companyDenyCount} deny overlay${row.companyDenyCount === 1 ? "" : "s"}`
         : row.companyPolicyCount > 0
-          ? `${row.companyPolicyCount} policy row${row.companyPolicyCount === 1 ? "" : "s"}`
+          ? countText(row.companyPolicyCount, "policy")
           : "inherits base rules",
       detail: row.glDefaultCount > 0
         ? `${row.glDefaultCount} GL default override${row.glDefaultCount === 1 ? "" : "s"} available.`
@@ -940,18 +1174,21 @@ function ruleTone(rule: CommodityCategoryRuleRow): string {
 }
 
 function explorerActionHref(entityCode: string, recordId?: string | null, query?: Record<string, string>): string {
-  const path = recordId
-    ? `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`
-    : `/app/${encodeURIComponent(entityCode)}/new`;
-  const params = new URLSearchParams(query);
-  const qs = params.toString();
-  return qs ? `${path}?${qs}` : path;
+  return recordId
+    ? appEntityDetailHref(entityCode, recordId, undefined, new URLSearchParams(query))
+    : appEntityNewHref(entityCode, new URLSearchParams(query));
 }
 
 function entityListHref(entityCode: string, query?: Record<string, string>): string {
-  const params = new URLSearchParams(query);
-  const qs = params.toString();
-  return `/app/${encodeURIComponent(entityCode)}${qs ? `?${qs}` : ""}`;
+  return appEntityListHref(entityCode, new URLSearchParams(query));
+}
+
+function categoryPolicyAppHref(entityCode: string, row: CommodityCategoryRow, returnToHref?: string): string {
+  const params = new URLSearchParams({
+    "filter.commodity_category_id": row.id,
+  });
+  if (returnToHref) params.set("returnTo", returnToHref);
+  return appEntityListHref(entityCode, params);
 }
 
 function CategoryHierarchyRail({
@@ -1004,11 +1241,6 @@ function CategoryHierarchyRail({
       }
       return row.defaultIntentCode ? `/ ${row.defaultIntentCode}` : "/ inherits base";
     },
-    getBadge: (row) => row.isRegulated ? (
-      <Badge variant="outline" size="sm" className="shrink-0 border-warning/30 bg-warning/10 text-warning">
-        regulated
-      </Badge>
-    ) : null,
     getSearchText: (row) => [
       row.code,
       row.name,
@@ -1072,30 +1304,38 @@ function ExplorerProjectionHeader({
   );
 }
 
-function SelectedCommodityCategorySummary({
-  row,
-  rulesCount,
-  countLabel = "Rule",
-  countLabelPlural = `${countLabel}s`,
+function ProjectionOpenLink({
+  href,
+  icon,
+  children,
 }: {
-  row: CommodityCategoryRow;
-  rulesCount: number;
-  countLabel?: string;
-  countLabelPlural?: string;
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
+    <Link
+      href={href}
+      className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 text-doc-action font-semibold text-foreground hover:bg-muted/60"
+    >
+      {icon}
+      {children}
+      <ExternalLink className="size-3" aria-hidden="true" />
+    </Link>
+  );
+}
+
+function SelectedCommodityCategorySummary({ row }: { row: CommodityCategoryRow }) {
+  return (
     <section className="rounded-lg border bg-card px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary text-primary-foreground shadow-sm">
             <Building2 className="size-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-doc-support text-muted-foreground">{row.code}</span>
-              <Badge variant={row.status === "active" ? "success" : "muted"} size="sm" className="capitalize">
-                {row.status}
-              </Badge>
+              <span className={CATEGORY_CODE_TEXT_CLASS}>{row.code}</span>
             </div>
             <div className="mt-1.5 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
               <h2 className="break-words text-doc-subtitle font-semibold text-foreground">{row.name}</h2>
@@ -1103,12 +1343,42 @@ function SelectedCommodityCategorySummary({
             </div>
           </div>
         </div>
-        <div className="hidden shrink-0 text-right sm:block">
-          <div className="text-base font-semibold leading-tight text-foreground">{rulesCount}</div>
-          <div className="mt-1 text-doc-label font-medium uppercase text-muted-foreground">
-            {rulesCount === 1 ? countLabel : countLabelPlural}
-          </div>
-        </div>
+      </div>
+    </section>
+  );
+}
+
+function SelectedCategoryBodyTabBar({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: SelectedCategoryBodyTab;
+  onTabChange: (tab: SelectedCategoryBodyTab) => void;
+}) {
+  return (
+    <section className="flex min-h-10 items-end overflow-x-auto rounded-lg border bg-card px-4">
+      <div className="flex min-w-max items-end gap-5" role="tablist" aria-label="Selected category body tabs">
+        {SELECTED_CATEGORY_BODY_TABS.map((tab) => {
+          const active = tab.key === activeTab;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => onTabChange(tab.key)}
+              className={cn(
+                "inline-flex h-10 items-center whitespace-nowrap border-b-2 px-0 text-[13px] font-semibold leading-5 transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                active
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
     </section>
   );
@@ -1170,52 +1440,87 @@ function IntentOutcomeCard({
   );
 }
 
-function DefaultIntentProjection({ row, returnToHref }: { row: CommodityCategoryRow; returnToHref?: string }) {
-  const editHref = explorerActionHref("commodity_category", row.id, {
-    mode: "edit",
-    ...(returnToHref ? { returnTo: returnToHref } : {}),
-  });
-  const intentHref = row.defaultIntentId ? explorerActionHref("business_intent", row.defaultIntentId) : "/app/business_intent";
+function ResolutionFlowStep({
+  step,
+  title,
+  value,
+  detail,
+  icon,
+}: {
+  step: string;
+  title: string;
+  value: string;
+  detail: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border bg-background px-3 py-2.5">
+      <div className="flex min-w-0 items-start gap-2.5">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-doc-support font-semibold text-muted-foreground">
+              {step}
+            </span>
+            <span className="text-doc-label font-semibold uppercase text-muted-foreground">{title}</span>
+          </div>
+          <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{value}</div>
+          <div className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">{detail}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IntentResolutionFlowProjection({ row, rules }: { row: CommodityCategoryRow; rules: CommodityCategoryRuleRow[] }) {
+  const sortedRules = [...rules].sort((left, right) => left.priority - right.priority || left.conditionType.localeCompare(right.conditionType));
+  const fallbackRule = sortedRules.find((rule) => rule.conditionType === "FALLBACK");
+  const activeRules = sortedRules.filter((rule) => rule.status === "active");
+  const noMatchValue = fallbackRule
+    ? codeName(fallbackRule.resolvedIntentCode, fallbackRule.resolvedIntentName)
+    : "No default intent";
+  const noMatchDetail = fallbackRule
+    ? "The fallback rule handles the no-match path."
+    : "Add a fallback rule if every transaction must resolve a default intent.";
 
   return (
     <section className="rounded-lg border bg-card p-3">
       <ExplorerProjectionHeader
-        label="Resolves to"
-        title="Default intent used when no conditional rule fires."
-        action={(
-          <Link
-            href={editHref}
-            className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 text-doc-action font-semibold text-foreground hover:bg-muted/60"
-          >
-            <Pencil className="size-3" aria-hidden="true" />
-            Edit
-          </Link>
-        )}
+        label="Default resolution"
+        title="The category does not store a default business intent. Active rules are evaluated top-to-bottom; the first match becomes the default."
       />
 
-      <div className="mt-2.5 grid items-stretch gap-2 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="grid items-stretch gap-2 md:grid-cols-[5rem_1rem_minmax(0,1fr)]">
-          <div className="flex min-h-20 flex-col items-center justify-center rounded-lg border bg-muted/30 px-2 py-2.5 text-center">
-            <Building2 className="size-3.5 text-muted-foreground" aria-hidden="true" />
-            <div className="mt-1.5 font-mono text-doc-support font-semibold text-foreground">{row.code}</div>
-            <div className="mt-1 text-doc-support text-muted-foreground">this category</div>
-          </div>
-
-          <div className="hidden items-center justify-center text-muted-foreground md:flex">
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </div>
-
-          <IntentOutcomeCard
-            code={row.defaultIntentCode}
-            name={row.defaultIntentName}
-            domain={row.defaultIntentDomain}
-            effectiveFrom={row.createdAt}
-            href={intentHref}
-            className="min-h-20"
-          />
-        </div>
-
-        <CategoryAttributeGrid row={row} />
+      <div className="mt-2.5 grid gap-2 md:grid-cols-2">
+        <ResolutionFlowStep
+          step="1"
+          title="Context"
+          value={codeName(row.code, row.name)}
+          detail="Use the selected category and transaction context."
+          icon={<Building2 className="size-4" aria-hidden="true" />}
+        />
+        <ResolutionFlowStep
+          step="2"
+          title="Rule order"
+          value={countText(activeRules.length, "active rule")}
+          detail="Sort by priority ascending, then evaluate each condition."
+          icon={<Route className="size-4" aria-hidden="true" />}
+        />
+        <ResolutionFlowStep
+          step="3"
+          title="First match"
+          value="Resolved intent"
+          detail="When a rule matches, its resolved intent becomes the default for that transaction."
+          icon={<Target className="size-4" aria-hidden="true" />}
+        />
+        <ResolutionFlowStep
+          step="4"
+          title="No match"
+          value={noMatchValue}
+          detail={noMatchDetail}
+          icon={<CircleAlert className="size-4" aria-hidden="true" />}
+        />
       </div>
     </section>
   );
@@ -1245,6 +1550,330 @@ function CategoryAttributeGrid({ row }: { row: CommodityCategoryRow }) {
       <div className="flex min-h-9 flex-col justify-center rounded-lg border bg-card px-2.5 py-1.5">
         <div className="text-doc-label font-semibold uppercase text-muted-foreground">Controls</div>
         <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{controls}</div>
+      </div>
+    </section>
+  );
+}
+
+function ProfileEnablementProjection({ row }: { row: CommodityCategoryRow }) {
+  const items: ProfileEnablementItem[] = [
+    {
+      key: "buy",
+      label: "Buy",
+      enabled: row.isBuyAllowed,
+      facts: [
+        { label: "Procurement", value: titleize(row.procurementType) },
+        { label: "UOM", value: row.uomCode ?? "Not set" },
+      ],
+    },
+    {
+      key: "sell",
+      label: "Sell",
+      enabled: row.isSellAllowed,
+      facts: [
+        { label: "Revenue recognition", value: titleize(row.salesRevenueRecognitionMethod) },
+        { label: "Variable consideration", value: titleize(row.salesVariableConsideration) },
+      ],
+    },
+    {
+      key: "inventory",
+      label: "Inventory",
+      enabled: row.isInventoryAllowed,
+      facts: [
+        { label: "Stockable", value: enabledText(row.isStockable) },
+        { label: "Consumable", value: enabledText(row.isConsumable) },
+      ],
+    },
+  ];
+  const enabledCount = items.filter((item) => item.enabled).length;
+
+  return (
+    <section className="rounded-lg border bg-card p-4">
+      <div>
+        <div className="text-doc-label font-semibold uppercase text-foreground">Category profile</div>
+        <p className="mt-1 text-doc-subtitle text-muted-foreground">
+          Base business flows enabled for this category / {enabledCount} of 3 enabled
+        </p>
+      </div>
+
+      <div className="mt-3 grid gap-2 md:grid-cols-3">
+        {items.map((item) => (
+          <div
+            key={item.key}
+            className={cn(
+              "min-h-28 rounded-lg border px-3 py-3",
+              item.enabled
+                ? "border-border bg-muted/20 text-foreground shadow-sm"
+                : "border-dashed bg-background text-muted-foreground",
+            )}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                  item.enabled ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
+                )}
+              >
+                {item.enabled ? <CheckCircle2 className="size-4" aria-hidden="true" /> : <CircleAlert className="size-4" aria-hidden="true" />}
+              </span>
+              <div className="min-w-0">
+                <div className="text-doc-label font-semibold uppercase text-muted-foreground">{item.label}</div>
+                <div className={cn(
+                  "mt-0.5 text-doc-subtitle font-semibold",
+                  item.enabled ? "text-foreground" : "text-muted-foreground",
+                )}>
+                  {item.enabled ? "Enabled" : "Disabled"}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-2">
+              {item.facts.map((fact) => (
+                <div key={fact.label} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-doc-support">
+                  <span className="min-w-0 truncate font-medium text-muted-foreground">{fact.label}</span>
+                  <span className={cn(
+                    "min-w-0 truncate text-right font-semibold",
+                    item.enabled ? "text-foreground" : "text-muted-foreground",
+                  )}>
+                    {fact.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function enabledText(value: boolean): string {
+  return value ? "Enabled" : "Disabled";
+}
+
+function policyRecordHref(item: CategoryPolicyRow, returnToHref?: string): string {
+  const params = new URLSearchParams();
+  if (returnToHref) params.set("returnTo", returnToHref);
+  return appEntityDetailHref(item.entityCode, item.id, undefined, params);
+}
+
+function referenceDisplayText(id?: string | null, labels?: Map<string, string>): string {
+  if (!id) return "Not set";
+  return labels?.get(id) ?? "Loading...";
+}
+
+function policyScopeText(item: CategoryPolicyRow, companyCodeLabels?: Map<string, string>): string {
+  const scope = titleize(item.scopeType);
+  const scopedCompanyId = item.companyCodeId
+    ?? ((item.scopeType ?? "").toUpperCase().includes("COMPANY") ? item.scopeId : null);
+  if (scopedCompanyId) return `${scope} / ${referenceDisplayText(scopedCompanyId, companyCodeLabels)}`;
+  if (item.scopeId) return `${scope} / Specific scope`;
+  return scope;
+}
+
+function policyBooleanText(value: boolean | null): string {
+  if (value === null) return "Not set";
+  return value ? "Yes" : "No";
+}
+
+function policyIntentTitle(item: CategoryPolicyRow, intent?: BusinessIntentRow): string {
+  if (intent) return codeName(intent.code, intent.name);
+  if (item.businessIntentId) return "Business intent";
+  return titleize(item.stockingStatus) === "Not set" ? "Inventory policy" : `${titleize(item.stockingStatus)} inventory`;
+}
+
+function policyIntentDetail(kind: CategoryPolicyKind, item: CategoryPolicyRow, intent?: BusinessIntentRow): string {
+  if (kind === "inventory") {
+    return `${titleize(item.mappingMode)} / ${titleize(item.valuationMethod)} valuation`;
+  }
+  const domain = intent?.domain ? intent.domain : "intent";
+  return `${titleize(item.mappingMode)} / ${domain} / ${effectiveWindowText(item.effectiveFrom, item.effectiveTo)}`;
+}
+
+function policyFactRows(
+  kind: CategoryPolicyKind,
+  item: CategoryPolicyRow,
+  references: PolicyReferenceMaps = {},
+): Array<{ label: string; value: string }> {
+  if (kind === "buy") {
+    return [
+      { label: "Scope", value: policyScopeText(item, references.companyCodes) },
+      { label: "Default GL", value: referenceDisplayText(item.defaultGlAccountId, references.glAccounts) },
+    ];
+  }
+  if (kind === "sell") {
+    return [
+      { label: "Scope", value: policyScopeText(item, references.companyCodes) },
+      { label: "Revenue GL", value: referenceDisplayText(item.defaultRevenueGlAccountId, references.glAccounts) },
+    ];
+  }
+  return [
+    { label: "Scope", value: policyScopeText(item, references.companyCodes) },
+    { label: "Stocking", value: titleize(item.stockingStatus) },
+    { label: "Valuation", value: titleize(item.valuationMethod) },
+    { label: "Inventory GL", value: referenceDisplayText(item.defaultInventoryGlAccountId, references.glAccounts) },
+  ];
+}
+
+function CategoryPolicyRecordCard({
+  kind,
+  item,
+  intent,
+  returnToHref,
+  references,
+}: {
+  kind: CategoryPolicyKind;
+  item: CategoryPolicyRow;
+  intent?: BusinessIntentRow;
+  returnToHref?: string;
+  references?: PolicyReferenceMaps;
+}) {
+  const config = CATEGORY_POLICY_TAB_CONFIG[kind];
+  const Icon = config.icon;
+  const href = policyRecordHref(item, returnToHref);
+  const facts = policyFactRows(kind, item, references);
+
+  return (
+    <Link
+      href={href}
+      className="group block rounded-md border bg-card px-3 py-2 transition-colors hover:bg-muted/40"
+    >
+      <div className="grid min-w-0 gap-2">
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-2.5">
+          <div className="flex min-w-0 flex-1 items-start gap-2.5">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
+              <Icon className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-doc-subtitle font-semibold text-foreground">
+                {policyIntentTitle(item, intent)}
+              </div>
+              <div className="mt-0.5 truncate text-doc-support text-muted-foreground">
+                {policyIntentDetail(kind, item, intent)}
+              </div>
+
+              <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
+                <span className="text-doc-label font-semibold uppercase text-muted-foreground">{config.label}</span>
+                <span className="rounded-full border bg-muted/30 px-2 py-0.5 text-doc-support font-semibold text-muted-foreground">
+                  {titleize(item.mappingMode)}
+                </span>
+                {item.isDefault && (
+                  <span className="rounded-full border bg-muted/30 px-2 py-0.5 text-doc-support font-semibold text-foreground">
+                    Default
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-start gap-2">
+            <ExternalLink className="mt-1 size-3.5 shrink-0 text-muted-foreground opacity-70 group-hover:text-foreground" aria-hidden="true" />
+          </div>
+        </div>
+
+        <div className={cn(
+          "grid min-w-0 gap-1.5",
+          kind === "inventory" ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2",
+        )}>
+          {facts.map((fact) => (
+            <div key={fact.label} className="min-w-0 rounded-md border bg-background px-2 py-1">
+              <div className="text-doc-label font-semibold uppercase text-muted-foreground">{fact.label}</div>
+              <div className="truncate text-doc-support font-semibold text-foreground">{fact.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function CategoryPolicyProjection({
+  kind,
+  row,
+  returnToHref,
+}: {
+  kind: CategoryPolicyKind;
+  row: CommodityCategoryRow;
+  returnToHref?: string;
+}) {
+  const config = CATEGORY_POLICY_TAB_CONFIG[kind];
+  const policiesQuery = useCategoryPolicyRows(kind, row.id, { enabled: true });
+  const intentsQuery = useBusinessIntents();
+  const policies = policiesQuery.data ?? [];
+  const companyCodeIds = useMemo(() => uniqueStrings(policies.flatMap((item) => [
+    item.companyCodeId,
+    (item.scopeType ?? "").toUpperCase().includes("COMPANY") ? item.scopeId : null,
+  ])), [policies]);
+  const glAccountIds = useMemo(() => uniqueStrings(policies.flatMap((item) => [
+    item.defaultGlAccountId,
+    item.defaultRevenueGlAccountId,
+    item.defaultDeferredRevenueGlAccountId,
+    item.defaultInventoryGlAccountId,
+    item.defaultCogsGlAccountId,
+  ])), [policies]);
+  const companyCodeLabelsQuery = useReferenceDisplayMap(
+    "company_code",
+    companyCodeIds,
+    companyCodeReferenceLabel,
+    { enabled: policies.length > 0 },
+  );
+  const glAccountLabelsQuery = useReferenceDisplayMap(
+    "gl_account",
+    glAccountIds,
+    glAccountReferenceLabel,
+    { enabled: policies.length > 0 },
+  );
+  const intentById = useMemo(() => {
+    const map = new Map<string, BusinessIntentRow>();
+    for (const intent of intentsQuery.data?.items ?? []) map.set(intent.id, intent);
+    return map;
+  }, [intentsQuery.data?.items]);
+  const references = useMemo<PolicyReferenceMaps>(() => ({
+    companyCodes: companyCodeLabelsQuery.data,
+    glAccounts: glAccountLabelsQuery.data,
+  }), [companyCodeLabelsQuery.data, glAccountLabelsQuery.data]);
+
+  return (
+    <section className="rounded-lg border bg-card p-3">
+      <ExplorerProjectionHeader
+        label={config.label}
+        count={policies.length}
+        title={config.detail}
+        action={(
+          <ProjectionOpenLink
+            href={categoryPolicyAppHref(config.entityCode, row, returnToHref)}
+            icon={<AppWindow className="size-3.5" aria-hidden="true" />}
+          >
+            Open policies
+          </ProjectionOpenLink>
+        )}
+      />
+
+      <div className="mt-2.5 grid gap-2">
+        {policiesQuery.isLoading ? (
+          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-doc-support text-muted-foreground">
+            Loading policies...
+          </div>
+        ) : policiesQuery.isError ? (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2.5 text-doc-support text-destructive">
+            Policies are unavailable.
+          </div>
+        ) : policies.length === 0 ? (
+          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-doc-support text-muted-foreground">
+            {config.empty}
+          </div>
+        ) : (
+          policies.map((item) => (
+            <CategoryPolicyRecordCard
+              key={item.id}
+              kind={kind}
+              item={item}
+              intent={item.businessIntentId ? intentById.get(item.businessIntentId) : undefined}
+              returnToHref={returnToHref}
+              references={references}
+            />
+          ))
+        )}
       </div>
     </section>
   );
@@ -1302,7 +1931,7 @@ function RuleProjectionRow({ rule, row, returnToHref }: { rule: CommodityCategor
       <div className="min-w-0 rounded-lg border bg-muted/20 p-2.5 text-foreground">
         <div className="flex h-full min-w-0 items-center gap-2.5">
           <span className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-lg font-mono text-sm font-semibold leading-none",
+            "flex size-7 shrink-0 items-center justify-center rounded-lg font-mono text-doc-subtitle font-semibold",
             isFallback ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
           )}>
             {isFallback ? "else" : rule.priority}
@@ -1336,7 +1965,6 @@ function RuleProjectionRow({ rule, row, returnToHref }: { rule: CommodityCategor
 
       <div className="flex items-start justify-between gap-2 md:block md:text-right">
         <div className="text-doc-subtitle font-semibold text-foreground">{confidenceText(rule.confidence)}</div>
-        <div className="mt-1 text-doc-support capitalize text-muted-foreground">{rule.status}</div>
       </div>
 
       <div className="flex justify-end gap-1">
@@ -1390,9 +2018,9 @@ function ConditionalOverridesProjection({
   return (
     <section className="rounded-lg border bg-card p-4">
       <ExplorerProjectionHeader
-        label="Conditional overrides"
+        label="Resolution rules"
         count={sortedRules.length}
-        title="Evaluated top-to-bottom by priority. First match wins."
+        title="Rules are the defaulting path. Evaluated top-to-bottom by priority; first match wins."
         action={(
           <Link
             href={explorerActionHref("commodity_classification_to_intent_rule", null, {
@@ -1411,15 +2039,15 @@ function ConditionalOverridesProjection({
       <div className="mt-2.5 grid gap-2">
         {rulesLoading ? (
           <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-doc-support text-muted-foreground">
-            Loading rule rows...
+            Loading rules...
           </div>
         ) : rulesError ? (
           <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-doc-support text-destructive">
-            Rule data is unavailable.
+            Rules are unavailable.
           </div>
         ) : sortedRules.length === 0 ? (
           <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-doc-support text-muted-foreground">
-            No conditional overrides. The default intent is the only active path.
+            No resolution rules yet. Add a conditional or fallback rule before this category can default an intent.
           </div>
         ) : (
           sortedRules.map((rule, index) => (
@@ -1434,40 +2062,87 @@ function ConditionalOverridesProjection({
   );
 }
 
-function SpendCategoryExplorerData({
+function bodyTabFromMode(mode: TaxonomyWorkbenchMode): SelectedCategoryBodyTab {
+  if (mode === "classification") return "classification";
+  return "profile";
+}
+
+function SpendCategorySelectedData({
   row,
   rules = [],
   rulesLoading,
   rulesError,
   returnToHref,
+  activeMode,
+  onModeChange,
 }: {
   row?: CommodityCategoryRow;
   rules?: CommodityCategoryRuleRow[];
   rulesLoading?: boolean;
   rulesError?: boolean;
   returnToHref?: string;
+  activeMode: TaxonomyWorkbenchMode;
+  onModeChange?: (mode: SelectedCategoryViewMode) => void;
 }) {
+  const [bodyTab, setBodyTab] = useState<SelectedCategoryBodyTab>(() => bodyTabFromMode(activeMode));
+
+  useEffect(() => {
+    if (activeMode === "classification") {
+      setBodyTab("classification");
+      return;
+    }
+    if (activeMode === "profile" || activeMode === "explorer") setBodyTab("profile");
+  }, [activeMode]);
+
+  function handleBodyTabChange(tab: SelectedCategoryBodyTab) {
+    setBodyTab(tab);
+    if (tab === "profile") {
+      onModeChange?.("profile");
+    } else if (tab === "intent") {
+      onModeChange?.("explorer");
+    } else if (tab === "classification") {
+      onModeChange?.("classification");
+    }
+  }
+
   if (!row) {
     return (
-      <section className="flex min-h-[320px] items-center justify-center rounded-lg border bg-card text-sm text-muted-foreground">
+      <section className="flex min-h-[320px] items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground">
         Select a category.
       </section>
     );
   }
 
   return (
-    <section className="h-full min-h-0 overflow-auto">
+    <section className="h-full min-h-0 overflow-auto text-[13px] leading-5">
       <div className="grid gap-2.5">
-        <SelectedCommodityCategorySummary row={row} rulesCount={rules.length} />
-        <DefaultIntentProjection row={row} returnToHref={returnToHref} />
-        <GovernancePostureProjection row={row} />
-        <ConditionalOverridesProjection
-          row={row}
-          rules={rules}
-          rulesLoading={rulesLoading}
-          rulesError={rulesError}
-          returnToHref={returnToHref}
-        />
+        <SelectedCommodityCategorySummary row={row} />
+        <SelectedCategoryBodyTabBar activeTab={bodyTab} onTabChange={handleBodyTabChange} />
+        {bodyTab === "profile" ? (
+          <>
+            <ProfileEnablementProjection row={row} />
+            <GovernancePostureProjection row={row} />
+          </>
+        ) : bodyTab === "intent" ? (
+          <>
+            <IntentResolutionFlowProjection row={row} rules={rules} />
+            <ConditionalOverridesProjection
+              row={row}
+              rules={rules}
+              rulesLoading={rulesLoading}
+              rulesError={rulesError}
+              returnToHref={returnToHref}
+            />
+          </>
+        ) : bodyTab === "buyPolicy" ? (
+          <CategoryPolicyProjection kind="buy" row={row} returnToHref={returnToHref} />
+        ) : bodyTab === "sellPolicy" ? (
+          <CategoryPolicyProjection kind="sell" row={row} returnToHref={returnToHref} />
+        ) : bodyTab === "inventoryPolicy" ? (
+          <CategoryPolicyProjection kind="inventory" row={row} returnToHref={returnToHref} />
+        ) : (
+          <SpendCategoryClassificationProjection row={row} returnToHref={returnToHref} />
+        )}
       </div>
     </section>
   );
@@ -1519,13 +2194,10 @@ function ClassificationConceptCard({ item, returnToHref }: { item: CommodityClas
               {item.domainCode ?? "DOMAIN"}
             </span>
             {item.isPrimary && (
-              <Badge variant="success" size="sm">
+              <Badge variant="outline" size="sm">
                 Primary
               </Badge>
             )}
-            <Badge variant={item.status === "active" ? "outline" : "muted"} size="sm" className="capitalize">
-              {item.status}
-            </Badge>
           </div>
           <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{codeLabel}</div>
           <div className="mt-1 text-doc-support text-muted-foreground">
@@ -1561,9 +2233,6 @@ function RoutingRuleCard({ item, returnToHref }: { item: CommodityRoutingRuleRow
             <Badge variant="outline" size="sm">
               {titleize(item.matchMode)}
             </Badge>
-            <Badge variant={item.status === "active" ? "success" : "muted"} size="sm" className="capitalize">
-              {item.status}
-            </Badge>
           </div>
           <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{codeRange}</div>
           <div className="mt-1 text-doc-support text-muted-foreground">
@@ -1583,7 +2252,6 @@ function ClassificationColumn({
   loading,
   error,
   empty,
-  action,
   children,
 }: {
   title: string;
@@ -1592,7 +2260,6 @@ function ClassificationColumn({
   loading?: boolean;
   error?: boolean;
   empty: string;
-  action: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -1607,7 +2274,6 @@ function ClassificationColumn({
           </div>
           <p className="mt-1 text-doc-support text-muted-foreground">{detail}</p>
         </div>
-        {action}
       </div>
 
       <div className="mt-2.5 grid gap-2">
@@ -1629,110 +2295,73 @@ function ClassificationColumn({
   );
 }
 
-function SpendCategoryClassificationData({
+function SpendCategoryClassificationProjection({
   row,
   returnToHref,
 }: {
-  row?: CommodityCategoryRow;
+  row: CommodityCategoryRow;
   returnToHref?: string;
 }) {
-  const classificationsQuery = useCommodityClassifications(row?.id, { enabled: !!row });
-  const routingRulesQuery = useCommodityRoutingRules(row?.id, { enabled: !!row });
+  const classificationsQuery = useCommodityClassifications(row.id, { enabled: true });
+  const routingRulesQuery = useCommodityRoutingRules(row.id, { enabled: true });
   const classifications = classificationsQuery.data ?? [];
   const routingRules = routingRulesQuery.data ?? [];
   const totalItems = classifications.length + routingRules.length;
 
-  if (!row) {
-    return (
-      <section className="flex min-h-[320px] items-center justify-center rounded-lg border bg-card text-sm text-muted-foreground">
-        Select a category.
-      </section>
-    );
-  }
-
   return (
-    <section className="h-full min-h-0 overflow-auto">
-      <div className="grid gap-2.5">
-        <SelectedCommodityCategorySummary
-          row={row}
-          rulesCount={totalItems}
-          countLabel="Item"
-          countLabelPlural="Items"
-        />
-
-        <section className="rounded-lg border bg-card p-3">
-          <ExplorerProjectionHeader
-            label="Classification"
-            count={totalItems}
-            title="Commodity concepts attached to this category and incoming code rules that route here."
-            action={(
-              <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  href={entityListHref("commodity_classification", classificationCreateQuery(row, returnToHref))}
-                  className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 text-doc-action font-semibold text-foreground hover:bg-muted/60"
-                >
-                  Codes
-                </Link>
-                <Link
-                  href={entityListHref("commodity_code_to_category_rule", routingCreateQuery(row, returnToHref))}
-                  className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 text-doc-action font-semibold text-foreground hover:bg-muted/60"
-                >
-                  Rules
-                </Link>
-              </div>
-            )}
-          />
-
-          <div className="mt-2.5 grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)]">
-            <ClassificationColumn
-              title="Commodity concepts"
-              detail="Rows from commodity_classification for this category."
-              count={classifications.length}
-              loading={classificationsQuery.isLoading}
-              error={classificationsQuery.isError}
-              empty="No commodity concepts are attached to this category yet."
-              action={(
-                <Link
-                  href={explorerActionHref("commodity_classification", null, classificationCreateQuery(row, returnToHref))}
-                  className="inline-flex h-6 items-center gap-1 rounded-md border bg-card px-1.5 text-doc-support font-semibold text-foreground hover:bg-muted/60"
-                >
-                  <Plus className="size-3" aria-hidden="true" />
-                  Add
-                </Link>
-              )}
+    <section className="rounded-lg border bg-card p-3">
+      <ExplorerProjectionHeader
+        label="Classification"
+        count={totalItems}
+        title="Commodity concepts attached to this category and incoming code rules that route here."
+        action={(
+          <div className="flex flex-wrap items-center gap-2">
+            <ProjectionOpenLink
+              href={entityListHref("commodity_classification", classificationCreateQuery(row, returnToHref))}
+              icon={<Tag className="size-3.5" aria-hidden="true" />}
             >
-              {classifications.map((item) => (
-                <ClassificationConceptCard key={item.id} item={item} returnToHref={returnToHref} />
-              ))}
-            </ClassificationColumn>
-
-            <div className="hidden items-center justify-center text-muted-foreground xl:flex">
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </div>
-
-            <ClassificationColumn
-              title="Routing rules"
-              detail="Rows from commodity_code_to_category_rule that resolve into this category."
-              count={routingRules.length}
-              loading={routingRulesQuery.isLoading}
-              error={routingRulesQuery.isError}
-              empty="No incoming commodity routing rules point to this category yet."
-              action={(
-                <Link
-                  href={explorerActionHref("commodity_code_to_category_rule", null, routingCreateQuery(row, returnToHref))}
-                  className="inline-flex h-6 items-center gap-1 rounded-md border bg-card px-1.5 text-doc-support font-semibold text-foreground hover:bg-muted/60"
-                >
-                  <Plus className="size-3" aria-hidden="true" />
-                  Add
-                </Link>
-              )}
+              Open concepts
+            </ProjectionOpenLink>
+            <ProjectionOpenLink
+              href={entityListHref("commodity_code_to_category_rule", routingCreateQuery(row, returnToHref))}
+              icon={<Route className="size-3.5" aria-hidden="true" />}
             >
-              {routingRules.map((item) => (
-                <RoutingRuleCard key={item.id} item={item} returnToHref={returnToHref} />
-              ))}
-            </ClassificationColumn>
+              Open routing rules
+            </ProjectionOpenLink>
           </div>
-        </section>
+        )}
+      />
+
+      <div className="mt-2.5 grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)]">
+        <ClassificationColumn
+          title="Commodity concepts"
+          detail="Commodity, UNSPSC, HS, or compliance concepts attached to this category."
+          count={classifications.length}
+          loading={classificationsQuery.isLoading}
+          error={classificationsQuery.isError}
+          empty="No commodity concepts are attached to this category yet."
+        >
+          {classifications.map((item) => (
+            <ClassificationConceptCard key={item.id} item={item} returnToHref={returnToHref} />
+          ))}
+        </ClassificationColumn>
+
+        <div className="hidden items-center justify-center text-muted-foreground xl:flex">
+          <ArrowRight className="size-4" aria-hidden="true" />
+        </div>
+
+        <ClassificationColumn
+          title="Routing rules"
+          detail="Incoming commodity code rules that resolve into this category."
+          count={routingRules.length}
+          loading={routingRulesQuery.isLoading}
+          error={routingRulesQuery.isError}
+          empty="No incoming commodity routing rules point to this category yet."
+        >
+          {routingRules.map((item) => (
+            <RoutingRuleCard key={item.id} item={item} returnToHref={returnToHref} />
+          ))}
+        </ClassificationColumn>
       </div>
     </section>
   );
@@ -1958,14 +2587,14 @@ function SpendCategorySimulator({
   return (
     <section className="grid min-h-0 flex-1 gap-3 overflow-hidden lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className="flex min-h-0 flex-col overflow-auto rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
           <SlidersHorizontal className="size-4 text-muted-foreground" aria-hidden="true" />
           Scenario inputs
         </div>
 
-        <div className="grid gap-3 text-sm">
+        <div className="grid gap-3">
           <label className="grid gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Category</span>
+            <span className="text-doc-support font-medium text-muted-foreground">Category</span>
             <WorkbenchSpendCategoryField
               selected={selected}
               onSelectId={(id) => {
@@ -1976,7 +2605,7 @@ function SpendCategorySimulator({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Company Code</span>
+            <span className="text-doc-support font-medium text-muted-foreground">Company Code</span>
             <WorkbenchCompanyCodeField
               selected={selectedCompany}
               companies={companies}
@@ -1985,7 +2614,7 @@ function SpendCategorySimulator({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Supplier</span>
+            <span className="text-doc-support font-medium text-muted-foreground">Supplier</span>
             <SupplierPicker
               value={inputs.supplierId}
               displayLabel={inputs.supplierName}
@@ -2005,7 +2634,7 @@ function SpendCategorySimulator({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Amount</span>
+            <span className="text-doc-support font-medium text-muted-foreground">Amount</span>
             <div className="grid grid-cols-[5.5rem_minmax(0,1fr)]">
               <WorkbenchCurrencyField
                 value={inputs.currency}
@@ -2023,11 +2652,11 @@ function SpendCategorySimulator({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Document type</span>
+            <span className="text-doc-support font-medium text-muted-foreground">Document type</span>
             <select
               value={inputs.documentType}
               onChange={(event) => updateInput("documentType", event.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="h-9 rounded-md border border-input bg-background px-3 text-doc-subtitle outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               {["Vendor invoice", "Purchase order", "Expense claim"].map((docType) => (
                 <option key={docType} value={docType}>{docType}</option>
@@ -2035,7 +2664,7 @@ function SpendCategorySimulator({
             </select>
           </label>
 
-          <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-foreground">
+          <div className="flex flex-wrap items-center gap-3 pt-1 text-doc-support text-foreground">
             <label className="inline-flex items-center gap-2">
               <input
                 type="checkbox"
@@ -2067,7 +2696,7 @@ function SpendCategorySimulator({
         )}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className="mb-1 flex items-center gap-2 text-doc-label font-semibold uppercase text-muted-foreground">
                 {simulation.steps.some((step) => step.status === "review") ? (
                   <CircleAlert className="size-4 text-warning" aria-hidden="true" />
                 ) : (
@@ -2075,11 +2704,11 @@ function SpendCategorySimulator({
                 )}
                 Resolution preview
               </div>
-              <p className="text-base font-semibold text-foreground">{simulation.sentence}</p>
+              <p className="text-doc-subtitle font-semibold text-foreground">{simulation.sentence}</p>
               {simulation.inputsLine && (
-                <p className="mt-1 text-xs font-medium text-muted-foreground">Inputs used: {simulation.inputsLine}</p>
+                <p className="mt-1 text-doc-support font-medium text-muted-foreground">Inputs used: {simulation.inputsLine}</p>
               )}
-              <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{simulation.caption}</p>
+              <p className="mt-1 max-w-3xl text-doc-support text-muted-foreground">{simulation.caption}</p>
             </div>
             <Button type="button" variant="outline" size="sm" className="h-8" onClick={pinScenario} disabled={!selected}>
               <Pin className="size-3.5" aria-hidden="true" />
@@ -2089,18 +2718,15 @@ function SpendCategorySimulator({
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-3 pb-3">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="mb-2 text-doc-label font-semibold uppercase text-muted-foreground">
             Resolution chain
           </div>
           <div className="grid gap-2 xl:grid-cols-4">
             {simulation.steps.map((step, index) => (
               <div key={step.key} className={cn("rounded-lg border p-3", stepTone(step.status))}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="text-xs font-semibold text-muted-foreground">{step.label}</div>
-                  <Badge variant="outline" className="capitalize">{statusLabel(step.status)}</Badge>
-                </div>
-                <div className="mt-2 text-sm font-semibold text-foreground">{step.value}</div>
-                <div className="mt-1 text-xs leading-5 text-muted-foreground">{step.detail}</div>
+                <div className="text-doc-support font-semibold text-muted-foreground">{step.label}</div>
+                <div className="mt-2 text-doc-subtitle font-semibold text-foreground">{step.value}</div>
+                <div className="mt-1 text-doc-support text-muted-foreground">{step.detail}</div>
                 {index < simulation.steps.length - 1 && (
                   <ChevronRight className="mt-3 hidden size-4 text-muted-foreground xl:block" aria-hidden="true" />
                 )}
@@ -2109,14 +2735,14 @@ function SpendCategorySimulator({
           </div>
 
           <div className="mt-5">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="mb-2 text-doc-label font-semibold uppercase text-muted-foreground">
               Pinned scenarios
             </div>
             <div className="grid gap-2 lg:grid-cols-2">
               {pins.length === 0 ? (
                 <button
                   type="button"
-                  className="flex h-10 items-center justify-center rounded-md border border-dashed bg-muted/20 px-3 text-sm text-muted-foreground hover:bg-muted/40"
+                  className="flex h-10 items-center justify-center rounded-md border border-dashed bg-muted/20 px-3 text-doc-support text-muted-foreground hover:bg-muted/40"
                   onClick={pinScenario}
                   disabled={!selected}
                 >
@@ -2124,9 +2750,9 @@ function SpendCategorySimulator({
                 </button>
               ) : pins.map((pin) => (
                 <div key={pin.id} className="rounded-lg border bg-background p-3">
-                  <div className="text-sm font-semibold text-foreground">{pin.title}</div>
-                  <div className="mt-1 text-xs leading-5 text-muted-foreground">{pin.result}</div>
-                  <div className="mt-2 text-xs text-muted-foreground">{pin.detail}</div>
+                  <div className="text-doc-subtitle font-semibold text-foreground">{pin.title}</div>
+                  <div className="mt-1 text-doc-support text-muted-foreground">{pin.result}</div>
+                  <div className="mt-2 text-doc-support text-muted-foreground">{pin.detail}</div>
                 </div>
               ))}
             </div>
@@ -2151,42 +2777,39 @@ function EditorSnapshot({ row }: { row: CommodityCategoryRow }) {
     <div className="rounded-lg border bg-card p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-mono text-xs text-muted-foreground">{row.code}</div>
-          <h2 className="mt-1 truncate text-base font-semibold text-foreground">{row.name}</h2>
-          <p className="mt-1 line-clamp-2 text-sm leading-5 text-muted-foreground">
+          <div className={CATEGORY_CODE_TEXT_CLASS}>{row.code}</div>
+          <h2 className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{row.name}</h2>
+          <p className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">
             {row.description ?? "No description"}
           </p>
         </div>
-        <Badge variant={row.status === "active" ? "success" : "muted"} className="capitalize">
-          {row.status}
-        </Badge>
       </div>
 
       {resolvesFromBase ? (
-        <div className="mt-3 rounded-md border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+        <div className="mt-3 rounded-md border border-dashed bg-muted/20 px-3 py-2 text-doc-support text-muted-foreground">
           No overlays yet. This category resolves from the base seed and default intent.
         </div>
       ) : (
       <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-md border bg-muted/20 p-3">
-          <div className="text-xs font-medium text-muted-foreground">Default intent</div>
-          <div className="mt-1 truncate text-sm font-semibold text-foreground">{row.defaultIntentCode ?? "Not linked"}</div>
-          <div className="mt-1 truncate text-xs text-muted-foreground">{row.defaultIntentDomain ?? row.defaultIntentName ?? "Classification required"}</div>
+          <div className="text-doc-support font-medium text-muted-foreground">Default intent</div>
+          <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{row.defaultIntentCode ?? "Not linked"}</div>
+          <div className="mt-1 truncate text-doc-support text-muted-foreground">{row.defaultIntentDomain ?? row.defaultIntentName ?? "Classification required"}</div>
         </div>
         <div className="rounded-md border bg-muted/20 p-3">
-          <div className="text-xs font-medium text-muted-foreground">Policy overlays</div>
-          <div className="mt-1 text-sm font-semibold text-foreground">{policyCount}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{row.companyPolicyCount} company / {row.supplierPolicyCount} supplier</div>
+          <div className="text-doc-support font-medium text-muted-foreground">Policy overlays</div>
+          <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{policyCount}</div>
+          <div className="mt-1 text-doc-support text-muted-foreground">{row.companyPolicyCount} company / {row.supplierPolicyCount} supplier</div>
         </div>
         <div className={cn("rounded-md border p-3", reviewTone(blockerCount))}>
-          <div className="text-xs font-medium">Deny or block rows</div>
-          <div className="mt-1 text-sm font-semibold">{blockerCount}</div>
-          <div className="mt-1 text-xs opacity-80">{row.companyDenyCount} company / {row.supplierBlockCount} supplier</div>
+          <div className="text-doc-support font-medium">Deny or block policies</div>
+          <div className="mt-1 text-doc-subtitle font-semibold">{blockerCount}</div>
+          <div className="mt-1 text-doc-support opacity-80">{row.companyDenyCount} company / {row.supplierBlockCount} supplier</div>
         </div>
         <div className="rounded-md border bg-muted/20 p-3">
-          <div className="text-xs font-medium text-muted-foreground">Guardrails</div>
-          <div className="mt-1 text-sm font-semibold text-foreground">{guardrailCount}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{row.glDefaultCount} GL defaults</div>
+          <div className="text-doc-support font-medium text-muted-foreground">Guardrails</div>
+          <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{guardrailCount}</div>
+          <div className="mt-1 text-doc-support text-muted-foreground">{row.glDefaultCount} GL defaults</div>
         </div>
       </div>
       )}
@@ -2198,14 +2821,12 @@ function GovernanceLayer({
   step,
   title,
   detail,
-  badge,
   tone = "default",
   children,
 }: {
   step: string;
   title: string;
   detail: string;
-  badge: string;
   tone?: "default" | "success" | "warning";
   children: React.ReactNode;
 }) {
@@ -2217,13 +2838,10 @@ function GovernanceLayer({
 
   return (
     <div className={cn("rounded-lg border p-3", toneClass)}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{step}</div>
-          <div className="mt-1 text-sm font-semibold text-foreground">{title}</div>
-          <div className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</div>
-        </div>
-        <Badge variant="outline" className="shrink-0">{badge}</Badge>
+      <div className="min-w-0">
+        <div className="text-doc-label font-semibold uppercase text-muted-foreground">{step}</div>
+        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{title}</div>
+        <div className="mt-1 text-doc-support text-muted-foreground">{detail}</div>
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {children}
@@ -2235,8 +2853,8 @@ function GovernanceLayer({
 function GovernanceFact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-md border bg-background px-3 py-2">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 truncate text-sm font-semibold text-foreground">{value}</div>
+      <div className="text-doc-support text-muted-foreground">{label}</div>
+      <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{value}</div>
     </div>
   );
 }
@@ -2247,21 +2865,20 @@ function GovernanceCascade({ row }: { row: CommodityCategoryRow }) {
 
   return (
     <div className="grid gap-3">
-      <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs font-medium text-muted-foreground">
+      <div className="rounded-md border bg-muted/20 px-3 py-2 text-doc-support font-medium text-muted-foreground">
         L4 wins first. L1 is the fallback when no more-specific rule exists.
       </div>
       <GovernanceLayer
         step="Layer 4"
         title="Supplier x company override - wins first"
         detail="Most specific policy layer for vendor-sensitive controls."
-        badge={supplierReviews ? "Specific" : "Inherits"}
         tone={row.supplierBlockCount ? "warning" : supplierReviews ? "success" : "default"}
       >
         {supplierReviews === 0 ? (
           <GovernanceFact label="Supplier-level rules" value="None yet" />
         ) : (
           <>
-            <GovernanceFact label="Supplier overlays" value={countText(row.supplierPolicyCount, "row")} />
+            <GovernanceFact label="Supplier overlays" value={countText(row.supplierPolicyCount, "policy")} />
             <GovernanceFact label="Supplier blocks" value={countText(row.supplierBlockCount, "block")} />
           </>
         )}
@@ -2271,11 +2888,10 @@ function GovernanceCascade({ row }: { row: CommodityCategoryRow }) {
         step="Layer 3"
         title="Company policy"
         detail="Company-code controls, deny rules, and accounting defaults."
-        badge={companyReviews ? "Applied" : "Inherited"}
         tone={row.companyDenyCount ? "warning" : companyReviews ? "success" : "default"}
       >
-        <GovernanceFact label="Company policies" value={countText(row.companyPolicyCount, "row")} />
-        <GovernanceFact label="Company deny rows" value={countText(row.companyDenyCount, "deny row")} />
+        <GovernanceFact label="Company policies" value={countText(row.companyPolicyCount, "policy")} />
+        <GovernanceFact label="Company denies" value={countText(row.companyDenyCount, "deny")} />
         <GovernanceFact label="GL defaults" value={countText(row.glDefaultCount, "default")} />
         <GovernanceFact label="Procurement type" value={row.procurementType} />
       </GovernanceLayer>
@@ -2284,7 +2900,6 @@ function GovernanceCascade({ row }: { row: CommodityCategoryRow }) {
         step="Layer 2"
         title="Tenant taxonomy defaults"
         detail="Default intent and accounting profile for the selected commodity category."
-        badge={row.defaultIntentCode ? "Resolved" : "Needs link"}
         tone={row.defaultIntentCode ? "success" : "warning"}
       >
         <GovernanceFact label="Intent" value={row.defaultIntentCode ?? "Not linked"} />
@@ -2297,7 +2912,6 @@ function GovernanceCascade({ row }: { row: CommodityCategoryRow }) {
         step="Layer 1"
         title="Base category definition - fallback"
         detail="Seeded category identity, hierarchy placement, and control flags."
-        badge={row.parentId ? "Leaf" : "Root"}
       >
         <GovernanceFact label="Root" value={row.rootName ?? row.name} />
         <GovernanceFact label="Children" value={row.childCount} />
@@ -2312,19 +2926,18 @@ function ConfigurePanel({ row }: { row: CommodityCategoryRow }) {
   return (
     <div className="grid gap-3 lg:grid-cols-2">
       <div className="rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
           <Settings2 className="size-4 text-muted-foreground" aria-hidden="true" />
           Category definition
         </div>
         <div className="grid gap-2">
-          <GovernanceFact label="Code" value={row.code} />
+          <GovernanceFact label="Code" value={<span className={CATEGORY_CODE_TEXT_CLASS}>{row.code}</span>} />
           <GovernanceFact label="Name" value={row.name} />
-          <GovernanceFact label="Status" value={row.status} />
           <GovernanceFact label="Sort order" value={row.sortOrder} />
         </div>
       </div>
       <div className="rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
           <ShieldCheck className="size-4 text-muted-foreground" aria-hidden="true" />
           Control flags
         </div>
@@ -2343,7 +2956,7 @@ function RoutePanel({ row }: { row: CommodityCategoryRow }) {
   return (
     <div className="grid gap-3">
       <div className="rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
           <Route className="size-4 text-muted-foreground" aria-hidden="true" />
           Routing preview
         </div>
@@ -2353,7 +2966,7 @@ function RoutePanel({ row }: { row: CommodityCategoryRow }) {
           <GovernanceFact label="GL defaults" value={countText(row.glDefaultCount, "default")} />
         </div>
       </div>
-      <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm leading-6 text-muted-foreground">
+      <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-doc-support text-muted-foreground">
         Edits are made in intent defaults, company policies, supplier overrides, and classification rules.
       </div>
     </div>
@@ -2370,7 +2983,7 @@ function LinkPanel({
   return (
     <div className="grid gap-3">
       <div className="rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
           <Link2 className="size-4 text-muted-foreground" aria-hidden="true" />
           App links
         </div>
@@ -2383,8 +2996,10 @@ function LinkPanel({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-foreground">{app.label}</div>
-                  <div className="mt-1 truncate font-mono text-xs text-muted-foreground">{app.entityCode}</div>
+                  <div className="truncate text-doc-subtitle font-semibold text-foreground">{app.label}</div>
+                  {app.description && (
+                    <div className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">{app.description}</div>
+                  )}
                 </div>
                 <ExternalLink className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" aria-hidden="true" />
               </div>
@@ -2400,19 +3015,19 @@ function AuditPanel({ row }: { row: CommodityCategoryRow }) {
   return (
     <div className="grid gap-3 lg:grid-cols-3">
       <div className="rounded-lg border bg-card p-3">
-        <div className="text-xs font-medium text-muted-foreground">Source table</div>
-        <div className="mt-1 font-mono text-sm font-semibold text-foreground">master.commodity_category</div>
-        <div className="mt-2 text-xs leading-5 text-muted-foreground">Primary category definition for {row.code}.</div>
+        <div className="text-doc-support font-medium text-muted-foreground">Category source</div>
+        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">Primary category setup</div>
+        <div className="mt-2 text-doc-support text-muted-foreground">Primary category definition for {row.code}.</div>
       </div>
       <div className="rounded-lg border bg-card p-3">
-        <div className="text-xs font-medium text-muted-foreground">Overlay tables</div>
-        <div className="mt-1 text-sm font-semibold text-foreground">{row.companyPolicyCount + row.supplierPolicyCount}</div>
-        <div className="mt-2 text-xs leading-5 text-muted-foreground">Company and supplier policy rows in the current read model.</div>
+        <div className="text-doc-support font-medium text-muted-foreground">Policy coverage</div>
+        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{row.companyPolicyCount + row.supplierPolicyCount}</div>
+        <div className="mt-2 text-doc-support text-muted-foreground">Company and supplier policies in the current view.</div>
       </div>
       <div className="rounded-lg border bg-card p-3">
-        <div className="text-xs font-medium text-muted-foreground">Read model</div>
-        <div className="mt-1 text-sm font-semibold text-foreground">Spend taxonomy API</div>
-        <div className="mt-2 text-xs leading-5 text-muted-foreground">Editor reads the same service payload as Explorer and Simulator.</div>
+        <div className="text-doc-support font-medium text-muted-foreground">View consistency</div>
+        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">Shared workbench data</div>
+        <div className="mt-2 text-doc-support text-muted-foreground">Overlay reads the same service payload as Explorer and Simulator.</div>
       </div>
     </div>
   );
@@ -2436,8 +3051,8 @@ function SpendCategoryOverview({
           <ReportMetricCard label="Categories" value={summary.total.toLocaleString()} detail={`${summary.roots} roots / ${summary.leaves} leaves`} />
           <ReportMetricCard label="Intent Coverage" value={linkedPct} detail={`${summary.linkedIntent} selectable nodes`} tone="success" />
           <ReportMetricCard label="Procurement Nature" value={`Goods ${summary.goods}`} detail={`Services ${summary.services}`} />
-          <ReportMetricCard label="Policy Overlay" value={policyPct} detail={`${summary.companyPolicies + summary.supplierPolicies} policy rows`} tone="warning" />
-          <ReportMetricCard label="Regulated" value={summary.regulated.toLocaleString()} detail={`${summary.deniedPolicies} deny or block rows`} tone={summary.deniedPolicies ? "danger" : "neutral"} />
+          <ReportMetricCard label="Policy Overlay" value={policyPct} detail={countText(summary.companyPolicies + summary.supplierPolicies, "policy")} tone="warning" />
+          <ReportMetricCard label="Regulated" value={summary.regulated.toLocaleString()} detail={`${summary.deniedPolicies} deny/block policies`} tone={summary.deniedPolicies ? "danger" : "neutral"} />
         </ReportMetricGrid>
       </section>
 
@@ -2452,38 +3067,43 @@ function WorkbenchContractFooter({ mode }: { mode: TaxonomyWorkbenchMode }) {
   const notes: Record<TaxonomyWorkbenchMode, string[]> = {
     overview: [
       "Summary counts use current tenant data",
-      "Policy overlay counts come from governed tables",
-      "RLS filters by current tenant",
+      "Policy overlay counts use governed setup",
+      "Access respects current tenant",
+    ],
+    profile: [
+      "Profile flags come from commodity category base attributes",
+      "Governance posture uses current category controls",
+      "Access respects current tenant",
     ],
     explorer: [
-      "020_base seeds roots and leaves",
-      "022_base sets default_intent_id",
-      "RLS filters by current tenant",
+      "Rules are evaluated by priority",
+      "First matching rule resolves the intent",
+      "Access respects current tenant",
     ],
     classification: [
-      "Commodity links come from master.commodity_classification",
-      "Routing rules come from control.commodity_code_to_category_rule",
-      "RLS filters by current tenant",
+      "Commodity concepts enrich this category",
+      "Routing rules map incoming commodity codes",
+      "Access respects current tenant",
     ],
     simulator: [
       "Preview uses live taxonomy and overlays",
       "No transaction is created",
-      "RLS filters by current tenant",
+      "Access respects current tenant",
     ],
     editor: [
       "Base seeds stay protected",
-      "Changes write to overlay tables",
-      "RLS filters by current tenant",
+      "Changes update governed setup",
+      "Access respects current tenant",
     ],
     matrix: [
       "Empty cells inherit from L1 base",
-      "Coverage counts selected rows",
-      "RLS filters by current tenant",
+      "Coverage counts selected categories",
+      "Access respects current tenant",
     ],
   };
 
   return (
-    <section className="shrink-0 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground">
+    <section className="shrink-0 rounded-lg border bg-card px-3 py-2 text-doc-support text-muted-foreground">
       <div className="flex flex-wrap items-center gap-3">
         {notes[mode].map((note, index) => (
           <span key={note} className="inline-flex items-center gap-1.5">
@@ -2501,16 +3121,27 @@ function RelatedAppsUniverseSection({
 }: {
   apps: TaxonomyRelatedApp[];
 }) {
+  const overviewApps = OVERVIEW_APP_ENTITY_CODES.map((entityCode) => {
+    const manifestApp = apps.find((app) => app.entityCode === entityCode && !app.href.includes("SUPPLIER_PROFILE"))
+      ?? apps.find((app) => app.entityCode === entityCode);
+    return manifestApp ?? {
+      entityCode,
+      label: titleize(entityCode),
+      description: titleize(entityCode),
+      href: appEntityListHref(entityCode),
+    };
+  });
+
   return (
     <section className="rounded-lg border bg-card p-3 shadow-sm">
       <div className="mb-3">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="flex items-center gap-2 text-doc-label font-semibold uppercase text-muted-foreground">
           <AppWindow className="size-3.5" aria-hidden="true" />
-          Apps in this universe
+          Apps in the universe
         </div>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        {apps.map((app) => {
+        {overviewApps.map((app) => {
           return (
             <Link
               key={relatedAppKey(app)}
@@ -2518,9 +3149,9 @@ function RelatedAppsUniverseSection({
               className="group block rounded-md border bg-background px-3 py-2.5 transition-colors hover:bg-muted/40"
             >
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-foreground">{app.label}</div>
-                <div className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                  {app.description ?? app.entityCode}
+                <div className="truncate text-doc-subtitle font-semibold text-foreground">{app.label}</div>
+                <div className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">
+                  {app.description ?? titleize(app.entityCode)}
                 </div>
               </div>
             </Link>
@@ -2600,7 +3231,7 @@ function EditorActionLink({
   return (
     <Link
       href={relatedAppHref(app, row, { returnTo: returnToHref })}
-      className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted/60"
+      className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-doc-action font-semibold text-foreground transition-colors hover:bg-muted/60"
     >
       {children}
     </Link>
@@ -2630,9 +3261,9 @@ function EditorPolicyCard({
     <div className={cn("rounded-lg border p-3", toneClass)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs font-medium text-muted-foreground">{title}</div>
-          <div className="mt-1 truncate text-sm font-semibold text-foreground">{value}</div>
-          <div className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</div>
+          <div className="text-doc-support font-medium text-muted-foreground">{title}</div>
+          <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{value}</div>
+          <div className="mt-1 text-doc-support text-muted-foreground">{detail}</div>
         </div>
         {action}
       </div>
@@ -2676,13 +3307,10 @@ function ScopeFirstEditorBody({
       <section className="rounded-lg border bg-card p-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Apply to</div>
-            <h3 className="mt-1 text-base font-semibold text-foreground">{scopeTitle}</h3>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{scopeDetail}</p>
+            <div className="text-doc-label font-semibold uppercase text-muted-foreground">Apply to</div>
+            <h3 className="mt-1 text-doc-subtitle font-semibold text-foreground">{scopeTitle}</h3>
+            <p className="mt-1 text-doc-support text-muted-foreground">{scopeDetail}</p>
           </div>
-          <Badge variant={scope === "tenant" ? "success" : "outline"}>
-            {scope === "tenant" ? "Default" : "Exception"}
-          </Badge>
         </div>
       </section>
 
@@ -2707,7 +3335,7 @@ function ScopeFirstEditorBody({
         <section className="grid gap-3 lg:grid-cols-2">
           <EditorPolicyCard
             title={isSingleCompanyTenant ? "Company default" : "Company exceptions"}
-            value={companyPolicies > 0 ? countText(companyPolicies, "row") : "None yet"}
+            value={companyPolicies > 0 ? countText(companyPolicies, "policy") : "None yet"}
             detail={isSingleCompanyTenant
               ? "Company setup is part of the default for this tenant."
               : "Only add company exceptions when one company must behave differently."}
@@ -2716,7 +3344,7 @@ function ScopeFirstEditorBody({
           />
           <EditorPolicyCard
             title="Supplier exceptions"
-            value={supplierExceptions > 0 ? countText(supplierExceptions, "row") : "None yet"}
+            value={supplierExceptions > 0 ? countText(supplierExceptions, "policy") : "None yet"}
             detail="Vendor-specific routing stays empty until a supplier needs different treatment."
             tone={row.supplierBlockCount ? "warning" : supplierExceptions ? "success" : "default"}
             action={<EditorActionLink app={supplierPolicyApp} row={row} returnToHref={returnToHref}>{supplierExceptions ? "Review" : "Add"}</EditorActionLink>}
@@ -2728,7 +3356,7 @@ function ScopeFirstEditorBody({
         <section className="grid gap-3 lg:grid-cols-2">
           <EditorPolicyCard
             title="Company exception"
-            value={companyPolicies > 0 ? countText(companyPolicies, "row") : "No company exception yet"}
+            value={companyPolicies > 0 ? countText(companyPolicies, "policy") : "No company exception yet"}
             detail="Use this when the selected company needs different GL defaults, thresholds, or deny rules."
             tone={row.companyDenyCount ? "warning" : companyPolicies ? "success" : "default"}
             action={<EditorActionLink app={companyPolicyApp} row={row} returnToHref={returnToHref}>{companyPolicies ? "Open" : "Add"}</EditorActionLink>}
@@ -2745,7 +3373,7 @@ function ScopeFirstEditorBody({
         <section className="grid gap-3 lg:grid-cols-2">
           <EditorPolicyCard
             title="Supplier exception"
-            value={supplierExceptions > 0 ? countText(supplierExceptions, "row") : "No supplier exception yet"}
+            value={supplierExceptions > 0 ? countText(supplierExceptions, "policy") : "No supplier exception yet"}
             detail="Use this only for vendor-specific routing, blocks, or invoice treatment."
             tone={row.supplierBlockCount ? "warning" : supplierExceptions ? "success" : "default"}
             action={<EditorActionLink app={supplierPolicyApp} row={row} returnToHref={returnToHref}>{supplierExceptions ? "Open" : "Add"}</EditorActionLink>}
@@ -2811,13 +3439,13 @@ function SpendCategoryEditor({
   return (
     <section className="grid min-h-0 flex-1 gap-3 overflow-hidden xl:grid-cols-[300px_minmax(0,1fr)]">
       <aside className="flex min-h-0 flex-col overflow-auto rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
           <Settings2 className="size-4 text-muted-foreground" aria-hidden="true" />
-          Editor
+          Overlay
         </div>
 
-        <label className="grid gap-1.5 text-sm">
-          <span className="text-xs font-medium text-muted-foreground">Category</span>
+        <label className="grid gap-1.5">
+          <span className="text-doc-support font-medium text-muted-foreground">Category</span>
           <WorkbenchSpendCategoryField
             selected={selected}
             onSelectId={(id) => {
@@ -2828,7 +3456,7 @@ function SpendCategoryEditor({
         </label>
 
         <div className="mt-4">
-          <div className="text-xs font-medium text-muted-foreground">Apply to</div>
+          <div className="text-doc-support font-medium text-muted-foreground">Apply to</div>
           <div className="mt-2 grid gap-2">
           {visibleScopes.map((item) => {
             const Icon = item.icon;
@@ -2844,11 +3472,11 @@ function SpendCategoryEditor({
                 aria-pressed={active}
                 onClick={() => setScope(item.key)}
               >
-                <span className="flex items-center gap-2 text-sm font-semibold">
+                <span className="flex items-center gap-2 text-doc-subtitle font-semibold">
                   <Icon className="size-4" aria-hidden="true" />
                   {isSingleCompanyTenant ? item.singleCompanyLabel : item.multiCompanyLabel}
                 </span>
-                <span className={cn("mt-1 block text-xs leading-5", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                <span className={cn("mt-1 block text-doc-support", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
                   {isSingleCompanyTenant ? item.singleCompanyDetail : item.multiCompanyDetail}
                 </span>
               </button>
@@ -2858,8 +3486,8 @@ function SpendCategoryEditor({
         </div>
 
         {(scope === "company" || scope === "supplier") && !isSingleCompanyTenant && (
-          <label className="mt-4 grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-muted-foreground">Company</span>
+          <label className="mt-4 grid gap-1.5">
+            <span className="text-doc-support font-medium text-muted-foreground">Company</span>
             <WorkbenchCompanyCodeField
               selected={selectedCompany}
               companies={companies}
@@ -2869,8 +3497,8 @@ function SpendCategoryEditor({
         )}
 
         {scope === "supplier" && (
-          <label className="mt-4 grid gap-1.5 text-sm">
-            <span className="text-xs font-medium text-muted-foreground">Supplier</span>
+          <label className="mt-4 grid gap-1.5">
+            <span className="text-doc-support font-medium text-muted-foreground">Supplier</span>
             <SupplierPicker
               value={selectedSupplierId}
               displayLabel={selectedSupplierName}
@@ -2887,7 +3515,7 @@ function SpendCategoryEditor({
           </label>
         )}
 
-        <div className="mt-4 rounded-md border border-dashed bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
+        <div className="mt-4 rounded-md border border-dashed bg-muted/20 p-3 text-doc-support text-muted-foreground">
           {isSingleCompanyTenant
             ? "Single-company tenant: company-specific setup is folded into the default. Add supplier exceptions only when vendor routing differs."
             : "Multi-company tenant: start with all companies, then add company or supplier exceptions only where behavior differs."}
@@ -2896,7 +3524,7 @@ function SpendCategoryEditor({
 
       <section className="flex min-h-0 flex-col gap-3 overflow-auto">
         {!selected ? (
-          <div className="flex min-h-[320px] items-center justify-center rounded-lg border bg-card text-sm text-muted-foreground">
+          <div className="flex min-h-[320px] items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground">
             Select a commodity category.
           </div>
         ) : (
@@ -2930,12 +3558,12 @@ function MatrixSelect({
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex min-w-0 items-center gap-2 text-sm">
-      <span className="shrink-0 text-xs font-semibold text-muted-foreground">{label}</span>
+    <label className="flex min-w-0 items-center gap-2">
+      <span className="shrink-0 text-doc-support font-semibold text-muted-foreground">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="h-9 w-56 min-w-0 rounded-md border border-input bg-background px-3 text-doc-subtitle font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
         {children}
       </select>
@@ -2971,6 +3599,16 @@ function spendMatrixSourceHref(definitionApps: TaxonomyRelatedApp[], source: Spe
   return nextQuery ? `${path}?${nextQuery}` : path;
 }
 
+function spendMatrixExportColumnHref(definitionApps: TaxonomyRelatedApp[], source: SpendMatrixCellSource, column?: SpendMatrixCompany): string {
+  const href = spendMatrixSourceHref(definitionApps, source, column);
+  const [path = href, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.set("view", "excel");
+  params.set("size", "500");
+  const nextQuery = params.toString();
+  return nextQuery ? `${path}?${nextQuery}` : path;
+}
+
 function SpendCategoryMatrix({
   rows,
   roots,
@@ -2986,12 +3624,29 @@ function SpendCategoryMatrix({
 }) {
   const [rowScope, setRowScope] = useState("all");
   const [cellSourceKey, setCellSourceKey] = useState<SpendMatrixSourceKey>("company");
-  const [selectedColumnKey, setSelectedColumnKey] = useState(SPEND_MATRIX_COMPANIES[1]?.key ?? SPEND_MATRIX_COMPANIES[0]?.key ?? null);
+  const [selectedColumnKey, setSelectedColumnKey] = useState<string | null>(null);
   const [selectedCellKey, setSelectedCellKey] = useState<string | null>(null);
   const [hideEmptyRows, setHideEmptyRows] = useState(false);
+  const scopeOptions = useScopeOptions();
   const definition = getTaxonomyWorkbenchDefinition("spend");
   const source = getSpendMatrixSource(cellSourceKey);
-  const selectedColumn = SPEND_MATRIX_COMPANIES.find((company) => company.key === selectedColumnKey);
+  const matrixCompanies = useMemo(
+    () => (scopeOptions.data?.companies ?? []).map(companyToSpendMatrixColumn),
+    [scopeOptions.data?.companies],
+  );
+  const selectedColumn = matrixCompanies.find((company) => company.key === selectedColumnKey);
+
+  useEffect(() => {
+    if (matrixCompanies.length === 0) {
+      setSelectedColumnKey(null);
+      return;
+    }
+
+    setSelectedColumnKey((current) => {
+      if (current && matrixCompanies.some((company) => company.key === current)) return current;
+      return matrixCompanies[0]!.key;
+    });
+  }, [matrixCompanies]);
 
   const rowScopeOptions = useMemo(() => [
     { key: "all", label: "All leaf categories" },
@@ -3015,19 +3670,14 @@ function SpendCategoryMatrix({
   );
 
   const matrixCells = useMemo(
-    () => buildSpendMatrixCells(matrixRows, SPEND_MATRIX_COMPANIES, source),
-    [matrixRows, source],
+    () => buildSpendMatrixCells(matrixRows, matrixCompanies, source),
+    [matrixCompanies, matrixRows, source],
   );
 
   const matrixAxisRows = useMemo<WorkbenchMatrixAxisItem[]>(() => matrixRows.map((row) => ({
     key: row.id,
     label: row.name,
     subLabel: row.code,
-    badge: row.isRegulated ? (
-      <Badge variant="outline" size="sm" className="border-warning/30 bg-warning/10 text-warning">
-        regulated
-      </Badge>
-    ) : undefined,
   })), [matrixRows]);
 
   const selectedScope = rowScopeOptions.find((option) => option.key === rowScope);
@@ -3038,14 +3688,24 @@ function SpendCategoryMatrix({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-2">
-      {matrixCells.length === 0 && (
-        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+      {scopeOptions.isLoading && (
+        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-doc-support text-muted-foreground">
+          Loading company columns...
+        </div>
+      )}
+      {!scopeOptions.isLoading && matrixCompanies.length === 0 && (
+        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-doc-support text-muted-foreground">
+          No company codes are available for the spend matrix.
+        </div>
+      )}
+      {matrixRows.length > 0 && matrixCompanies.length > 0 && matrixCells.length === 0 && (
+        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-doc-support text-muted-foreground">
           This view has no explicit rules yet. Empty cells inherit from the base category setup.
         </div>
       )}
     <WorkbenchMatrix
       rows={matrixAxisRows}
-      columns={SPEND_MATRIX_COMPANIES}
+      columns={matrixCompanies}
       cells={matrixCells}
       rowHeaderLabel="Category"
       coverageHeaderLabel="Cov"
@@ -3077,12 +3737,19 @@ function SpendCategoryMatrix({
           <MatrixSelect label="Cols" value="company-codes" onChange={() => undefined}>
             <option value="company-codes">Company codes</option>
           </MatrixSelect>
-          <MatrixSelect label="Cells" value={cellSourceKey} onChange={(value) => setCellSourceKey(value as SpendMatrixSourceKey)}>
+          <MatrixSelect
+            label="Cells"
+            value={cellSourceKey}
+            onChange={(value) => {
+              setCellSourceKey(value as SpendMatrixSourceKey);
+              setSelectedCellKey(null);
+            }}
+          >
             {SPEND_MATRIX_CELL_SOURCES.map((option) => (
               <option key={option.key} value={option.key}>{option.label}</option>
             ))}
           </MatrixSelect>
-          <label className="inline-flex h-9 items-center gap-2 rounded-md border bg-background px-3 text-sm font-medium text-foreground">
+          <label className="inline-flex h-9 items-center gap-2 rounded-md border bg-background px-3 text-doc-subtitle font-medium text-foreground">
             <input
               type="checkbox"
               checked={hideEmptyRows}
@@ -3093,10 +3760,10 @@ function SpendCategoryMatrix({
           </label>
         </>
       }
-      summary={`${matrixRows.length} of ${summary.leaves} rows / ${SPEND_MATRIX_COMPANIES.length} companies`}
+      summary={matrixSummaryText(matrixRows.length, summary.leaves, matrixCompanies.length)}
       legend={source.legend}
       selection={selectedColumn ? {
-        title: `Column ${selectedColumn.key} selected - ${columnCoverage} explicit rules, ${gapCount} inherited cells`,
+        title: `Column ${selectedColumn.key} selected - ${countText(columnCoverage, "explicit rule")}, ${countText(gapCount, "inherited cell")}`,
         detail: `${source.label} / ${selectedScope?.label ?? "Selected rows"}`,
         actions: [
           {
@@ -3117,7 +3784,7 @@ function SpendCategoryMatrix({
           {
             key: "export-column",
             label: "Export column",
-            disabled: true,
+            href: spendMatrixExportColumnHref(definition.relatedApps, source, selectedColumn),
           },
         ],
       } : undefined}
@@ -3137,7 +3804,7 @@ export function CommodityCategoryWorkbench() {
   const [hierarchySearch, setHierarchySearch] = useState("");
   const lastSearchKeyRef = useRef(searchParams.toString());
   const didInitialHistoryRestoreRef = useRef(false);
-  const hierarchyModeEnabled = activeMode === "explorer" || activeMode === "classification";
+  const hierarchyModeEnabled = activeMode === "profile" || activeMode === "explorer" || activeMode === "classification";
   const fullModeEnabled = activeMode === "simulator" || activeMode === "editor" || activeMode === "matrix";
   const hierarchyTreeBatchSizeQuery = useCommodityCategoryTreeBatchSize({ enabled: hierarchyModeEnabled });
   const hierarchyTreeBatchSize = hierarchyTreeBatchSizeQuery.data ?? DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE;
@@ -3220,7 +3887,7 @@ export function CommodityCategoryWorkbench() {
   const policyPct = displayPct(summary.policyCategories, summary.leaves);
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-y-auto sm:gap-3 sm:overflow-hidden">
+    <div className={cn("flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-y-auto sm:gap-3 sm:overflow-hidden", WORKBENCH_TYPOGRAPHY_SCOPE)}>
       <TaxonomyWorkbenchHeader
         active="spend"
         activeMode={activeMode}
@@ -3253,11 +3920,11 @@ export function CommodityCategoryWorkbench() {
         </>
       ) : activeMode === "simulator" ? (
         fullQuery.isLoading ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-sm text-muted-foreground animate-pulse">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground animate-pulse">
             Loading simulator inputs...
           </section>
         ) : fullQuery.isError ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-sm text-destructive">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-destructive">
             Spend taxonomy service is unavailable.
           </section>
         ) : (
@@ -3272,11 +3939,11 @@ export function CommodityCategoryWorkbench() {
         )
       ) : activeMode === "editor" ? (
         fullQuery.isLoading ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-sm text-muted-foreground animate-pulse">
-            Loading editor context...
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground animate-pulse">
+            Loading overlay context...
           </section>
         ) : fullQuery.isError ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-sm text-destructive">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-destructive">
             Spend taxonomy service is unavailable.
           </section>
         ) : (
@@ -3292,11 +3959,11 @@ export function CommodityCategoryWorkbench() {
         )
       ) : activeMode === "matrix" ? (
         fullQuery.isLoading ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-sm text-muted-foreground animate-pulse">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground animate-pulse">
             Loading spend matrix...
           </section>
         ) : fullQuery.isError ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-sm text-destructive">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-destructive">
             Spend matrix service is unavailable.
           </section>
         ) : (
@@ -3328,28 +3995,23 @@ export function CommodityCategoryWorkbench() {
           <section className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
             <section className="min-h-0 flex-1 overflow-hidden">
               {hierarchy.isLoading ? (
-                <section className="flex h-full min-h-[360px] items-center justify-center rounded-lg border bg-card text-sm text-muted-foreground animate-pulse">
+                <section className="flex h-full min-h-[360px] items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground animate-pulse">
                   Loading spend taxonomy...
                 </section>
               ) : hierarchy.isError ? (
-                <section className="flex h-full min-h-[360px] items-center justify-center rounded-lg border bg-card text-sm text-destructive">
+                <section className="flex h-full min-h-[360px] items-center justify-center rounded-lg border bg-card text-doc-support text-destructive">
                   Spend taxonomy service is unavailable.
                 </section>
               ) : (
-                activeMode === "classification" ? (
-                  <SpendCategoryClassificationData
-                    row={selected}
-                    returnToHref={returnToHref}
-                  />
-                ) : (
-                  <SpendCategoryExplorerData
-                    row={selected}
-                    rules={detailQuery.data?.rules ?? []}
-                    rulesLoading={detailQuery.isLoading}
-                    rulesError={detailQuery.isError}
-                    returnToHref={returnToHref}
-                  />
-                )
+                <SpendCategorySelectedData
+                  row={selected}
+                  activeMode={activeMode}
+                  rules={detailQuery.data?.rules ?? []}
+                  rulesLoading={detailQuery.isLoading}
+                  rulesError={detailQuery.isError}
+                  returnToHref={returnToHref}
+                  onModeChange={handleModeChange}
+                />
               )}
             </section>
           </section>

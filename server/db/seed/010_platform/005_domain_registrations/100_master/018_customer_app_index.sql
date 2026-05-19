@@ -12,7 +12,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'CRM'),
@@ -21,17 +21,17 @@ SELECT
     'standard', 'business', 'locked',
     'master', 'customer_app_index',
     'Customer Index', 'Customer Index', 'users', 'teal',
-    false,
-    '{}'::jsonb,
     '{}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'master' AND e.table_name = 'customer_app_index'
   AND  e.tenant_id IS NULL
@@ -94,6 +94,7 @@ WHERE table_schema = 'master' AND table_name = 'customer_app_index'
 
 -- ── 5. natural_key_fields ─────────────────────────────────────────────────────
 UPDATE control.entity
-SET natural_key_fields = ARRAY['customer_code']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['customer_code']::text[]), true)
 WHERE table_schema = 'master' AND table_name = 'customer_app_index'
-  AND tenant_id IS NULL AND natural_key_fields = '{}';
+  AND tenant_id IS NULL
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;

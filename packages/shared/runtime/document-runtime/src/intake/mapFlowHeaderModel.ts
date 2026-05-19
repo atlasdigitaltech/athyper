@@ -1,5 +1,6 @@
 import type { FlowBundle } from "@athyper/api-contracts/documents";
 import type { EntityHeaderModel } from "@athyper/entity-runtime/header";
+import { appEntityListHref } from "@athyper/runtime-shared/core";
 
 export interface MapFlowHeaderOptions {
   onCancel?: () => void;
@@ -16,6 +17,8 @@ export interface MapFlowHeaderOptions {
    * a link to the entity list page at /app/\{entityCode\}.
    */
   entityCode?: string;
+  /** Active steps after client-side skip_when evaluation. */
+  steps?: FlowBundle["steps"];
 }
 
 const ACTION_VERB_RE = /^(create|new|add|edit|update)\s+/i;
@@ -33,7 +36,7 @@ export function mapFlowHeaderModel(
   stepIndex: number,
   options?: MapFlowHeaderOptions,
 ): EntityHeaderModel {
-  const sortedSteps = [...bundle.steps].sort((a, b) => a.sort_order - b.sort_order);
+  const sortedSteps = [...(options?.steps ?? bundle.steps)].sort((a, b) => a.sort_order - b.sort_order);
 
   const rawLabel = options?.entityTypeLabel ?? bundle.label.replace(ACTION_VERB_RE, "");
   const typeLabel = rawLabel.toUpperCase();
@@ -41,7 +44,7 @@ export function mapFlowHeaderModel(
   return {
     identity: {
       typeLabel,
-      typeHref: options?.entityCode ? `/app/${options.entityCode}` : undefined,
+      typeHref: options?.entityCode ? appEntityListHref(options.entityCode) : undefined,
       number: "New",
       identifierAction: "none",
       status: { label: "Draft", intent: "neutral" },

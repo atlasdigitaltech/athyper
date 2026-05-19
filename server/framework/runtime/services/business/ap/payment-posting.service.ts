@@ -135,9 +135,16 @@ async function resolveDiscountAccount(
 async function nextJeCode(db: AnyDb, tenantId: string, companyId: string): Promise<string> {
   const year = new Date().getFullYear();
   try {
-    const num = await sql<{ n: number }>`
-      SELECT master.fn_next_document_number(
-        ${tenantId}::uuid, ${companyId}::uuid, 'journal_entry', ${year}::smallint
+    const num = await sql<{ n: string }>`
+      SELECT control.next_entity_number(
+        ${tenantId}::uuid,
+        'journal_entry',
+        'document_no',
+        ${companyId}::uuid,
+        NULL,
+        NULL,
+        NULL,
+        CURRENT_DATE
       ) AS n
     `.execute(db);
     return String(num.rows[0]?.n ?? `JE-PMT-${year}-${Date.now()}`);

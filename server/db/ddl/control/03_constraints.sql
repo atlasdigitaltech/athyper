@@ -259,6 +259,10 @@ DO $$ BEGIN ALTER TABLE document.workflow_request ADD CONSTRAINT wreq_template_f
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- entity_class_profile has no FK (platform constants, no tenant_id)
+DO $$ BEGIN
+    ALTER TABLE control.entity_class_profile ADD CONSTRAINT ecp_field_flag_rules_schema_chk
+        CHECK (control.is_valid_entity_field_flag_rules(field_flag_rules));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- control.entity
 DO $$ BEGIN ALTER TABLE control.entity ADD CONSTRAINT entity_tenant_fk
@@ -862,20 +866,34 @@ DO $$ BEGIN ALTER TABLE control.dimension_policy_allowed_value ADD CONSTRAINT dp
     FOREIGN KEY (dimension_value_id) REFERENCES master.dimension_value (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- ── §DS1  control.document_sequence_config ────────────────────────────────────
-DO $$ BEGIN ALTER TABLE control.document_sequence_config ADD CONSTRAINT dsc_tenant_fk
+
+-- Entity numbering: canonical config and hot counter state
+DO $$ BEGIN ALTER TABLE control.entity_numbering_config ADD CONSTRAINT encfg_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN ALTER TABLE control.document_sequence_config ADD CONSTRAINT dsc_company_fk
+DO $$ BEGIN ALTER TABLE control.entity_numbering_config ADD CONSTRAINT encfg_entity_fk
+    FOREIGN KEY (entity_id) REFERENCES control.entity (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.entity_numbering_config ADD CONSTRAINT encfg_company_fk
     FOREIGN KEY (company_code_id) REFERENCES master.company_code (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- ── §DS2  control.document_sequence_counter ───────────────────────────────────
--- Composite FK — counter belongs to a config within the same tenant
-DO $$ BEGIN ALTER TABLE control.document_sequence_counter ADD CONSTRAINT dscc_config_fk
-    FOREIGN KEY (tenant_id, config_id)
-    REFERENCES control.document_sequence_config (tenant_id, id) ON DELETE CASCADE;
+DO $$ BEGIN ALTER TABLE control.entity_numbering_config ADD CONSTRAINT encfg_segments_schema_chk
+    CHECK (control.is_valid_entity_number_segments(segments));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.entity_numbering_counter ADD CONSTRAINT enctr_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.entity_numbering_counter ADD CONSTRAINT enctr_config_fk
+    FOREIGN KEY (config_id) REFERENCES control.entity_numbering_config (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.entity_numbering_counter ADD CONSTRAINT enctr_company_fk
+    FOREIGN KEY (company_code_id) REFERENCES master.company_code (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
@@ -1603,9 +1621,51 @@ DO $mcal4$ BEGIN
         FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $mcal4$;
 
+
+-- Flow engine extension integrity
+DO $$ BEGIN
+    ALTER TABLE control.entity_flow_section ADD CONSTRAINT efsec_step_fk
+        FOREIGN KEY (flow_step_id) REFERENCES control.entity_flow_step (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE control.entity_flow_step DROP CONSTRAINT IF EXISTS efs_flow_order_uq;
+ALTER TABLE control.entity_flow_step ADD CONSTRAINT efs_flow_order_uq
+    UNIQUE (flow_id, sort_order) DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE control.entity_flow_section DROP CONSTRAINT IF EXISTS efsec_step_order_uq;
+ALTER TABLE control.entity_flow_section ADD CONSTRAINT efsec_step_order_uq
+    UNIQUE (flow_step_id, sort_order) DEFERRABLE INITIALLY DEFERRED;
+
 -- Extend eff_summary_role_chk to explicitly allow NULL
 -- (original constraint omitted IS NULL OR; re-applied idempotently)
 ALTER TABLE control.entity_flow_field DROP CONSTRAINT IF EXISTS eff_summary_role_chk;
 ALTER TABLE control.entity_flow_field ADD CONSTRAINT eff_summary_role_chk
     CHECK (summary_role IS NULL OR summary_role IN (
         'total','subtotal','addition','deduction','line_badge','warning','meta'));
+
+
+-- ============================================================================
+-- §EV-FK  entity_publish_state version pointers + entity_version lineage FKs
+-- ============================================================================
+
+-- entity_publish_state.published_version_id → entity_version
+DO $$ BEGIN ALTER TABLE control.entity_publish_state ADD CONSTRAINT eps_published_version_fk
+    FOREIGN KEY (published_version_id) REFERENCES control.entity_version(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- entity_publish_state.current_draft_version_id → entity_version
+DO $$ BEGIN ALTER TABLE control.entity_publish_state ADD CONSTRAINT eps_draft_version_fk
+    FOREIGN KEY (current_draft_version_id) REFERENCES control.entity_version(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- entity_version self-referential lineage
+DO $$ BEGIN ALTER TABLE control.entity_version ADD CONSTRAINT ev_derived_from_fk
+    FOREIGN KEY (derived_from_version_id) REFERENCES control.entity_version(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.entity_version ADD CONSTRAINT ev_supersedes_fk
+    FOREIGN KEY (supersedes_version_id) REFERENCES control.entity_version(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Drop dead publish_state_id column from entity (never written, no FK, redundant with 1:1 join)
+ALTER TABLE control.entity DROP COLUMN IF EXISTS publish_state_id;

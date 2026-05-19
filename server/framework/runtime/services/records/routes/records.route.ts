@@ -67,6 +67,17 @@ const TEXT_SEARCH_DATA_TYPES = new Set([
   "text",
   "url",
 ]);
+type EntitySearchOperator = "contains";
+
+interface EntitySearchConfig {
+  enabled: boolean;
+  fields: string[];
+  rank: Record<string, number>;
+  minQueryLength: number;
+  operator: EntitySearchOperator;
+  hasConfiguredFields: boolean;
+}
+
 const LINE_CLASSIFICATION_INPUT_FIELDS = [
   "commodity_category_id",
   "business_intent_id",
@@ -94,6 +105,35 @@ const LINE_CLASSIFICATION_INPUT_FIELDS = [
   "asset_category_id",
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function nextConfiguredEntityNumber(db: Kysely<any>, params: {
+  tenantId: string;
+  entityCode: string;
+  numberField: string;
+  companyCodeId?: string | null;
+  fiscalYear?: number | null;
+  periodNumber?: number | null;
+  effectiveDate?: string | Date | null;
+}): Promise<string | null> {
+  try {
+    const result = await sql<{ value: string }>`
+      SELECT control.next_entity_number(
+        ${params.tenantId}::uuid,
+        ${params.entityCode},
+        ${params.numberField},
+        ${params.companyCodeId ?? null}::uuid,
+        ${params.fiscalYear ?? null}::smallint,
+        ${params.periodNumber ?? null}::smallint,
+        NULL,
+        ${params.effectiveDate ?? null}::date
+      ) AS value
+    `.execute(db);
+    return result.rows[0]?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export interface RecordsRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: Kysely<any>;
@@ -114,6 +154,7 @@ interface EntityTableInfo {
   table_name:          string;
   natural_key_fields:  string[];
   entity_class:        string;
+  identity_config:     Record<string, unknown>;
   feature_flags:       Record<string, unknown>;
   concurrency_policy:  Record<string, unknown>;
 }
@@ -124,12 +165,13 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
   const name = entityCode.replace(/-/g, "_");
   const row = await db
     .selectFrom("control.entity as e")
-    .select(["e.table_schema", "e.table_name", "e.natural_key_fields", "e.entity_class", "e.feature_flags", "e.concurrency_policy"] as never[])
+    .select(["e.table_schema", "e.table_name", "e.entity_class", "e.identity_config", "e.feature_flags", "e.concurrency_policy"] as never[])
     .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
     .executeTakeFirst() as Record<string, unknown> | undefined;
   if (!row) return null;
 
+  const identityConfig = asPlainObject(row["identity_config"]);
   const featureFlags = (row["feature_flags"] && typeof row["feature_flags"] === "object")
     ? (row["feature_flags"] as Record<string, unknown>)
     : {};
@@ -137,11 +179,18 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
     return null;
   }
 
+  const businessKeyFields = stringArray(identityConfig["business_key_fields"]);
+  const identityNaturalKeyFields = stringArray(identityConfig["natural_key_fields"])
+    .filter((fieldName) => fieldName !== "tenant_id" && fieldName !== "id");
+
   return {
     table_schema:        String(row["table_schema"]),
     table_name:          String(row["table_name"]),
-    natural_key_fields:  Array.isArray(row["natural_key_fields"]) ? (row["natural_key_fields"] as string[]) : [],
+    natural_key_fields:  businessKeyFields.length > 0
+      ? businessKeyFields
+      : identityNaturalKeyFields,
     entity_class:        String(row["entity_class"] ?? ""),
+    identity_config:     identityConfig,
     feature_flags:       featureFlags,
     concurrency_policy:  (row["concurrency_policy"] && typeof row["concurrency_policy"] === "object") ? (row["concurrency_policy"] as Record<string, unknown>) : {},
   };
@@ -180,6 +229,79 @@ function asPlainObject(value: unknown): Record<string, unknown> {
     } catch { /* keep empty object */ }
   }
   return {};
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim())
+    : [];
+}
+
+function numberRecord(value: unknown): Record<string, number> {
+  const record = asPlainObject(value);
+  const out: Record<string, number> = {};
+  for (const [key, raw] of Object.entries(record)) {
+    const parsed = typeof raw === "number" ? raw : Number(raw);
+    if (key && Number.isFinite(parsed)) out[key] = parsed;
+  }
+  return out;
+}
+
+function normalizeEntitySearchConfig(
+  searchConfigRaw: unknown,
+): EntitySearchConfig {
+  const searchConfig = asPlainObject(searchConfigRaw);
+  const hasConfiguredFields = Array.isArray(searchConfig["fields"]);
+  const configuredFields = stringArray(searchConfig["fields"]);
+
+  const minQueryLengthRaw = Number(searchConfig["min_query_length"] ?? 1);
+  const minQueryLength = Number.isFinite(minQueryLengthRaw)
+    ? Math.max(1, Math.floor(minQueryLengthRaw))
+    : 1;
+
+  return {
+    enabled: searchConfig["enabled"] !== false,
+    fields: hasConfiguredFields ? configuredFields : [],
+    rank: numberRecord(searchConfig["rank"]),
+    minQueryLength,
+    operator: "contains",
+    hasConfiguredFields,
+  };
+}
+
+function searchPattern(term: string, operator: EntitySearchOperator): string {
+  switch (operator) {
+    case "contains":
+    default:
+      return `%${term}%`;
+  }
+}
+
+function searchRankForField(config: EntitySearchConfig, fieldName: string, fallbackIndex: number): number {
+  const configured = config.rank[fieldName];
+  if (typeof configured === "number" && Number.isFinite(configured) && configured > 0) return configured;
+  const configuredIndex = config.fields.indexOf(fieldName);
+  if (configuredIndex >= 0) return Math.max(1, config.fields.length - configuredIndex);
+  if (config.fields.length > 0) return Math.max(1, config.fields.length - fallbackIndex);
+  return 1;
+}
+
+function buildSearchScoreExpression(
+  fields: Array<{ columnName: string; rank: number }>,
+  term: string,
+) {
+  const exactPattern = term;
+  const prefixPattern = `${term}%`;
+  const containsPattern = `%${term}%`;
+  const parts = fields.map(({ columnName, rank }) => sql<number>`
+    CASE
+      WHEN COALESCE(${sql.ref(columnName)}::text, '') ILIKE ${exactPattern} THEN ${rank * 100}
+      WHEN COALESCE(${sql.ref(columnName)}::text, '') ILIKE ${prefixPattern} THEN ${rank * 10}
+      WHEN COALESCE(${sql.ref(columnName)}::text, '') ILIKE ${containsPattern} THEN ${rank}
+      ELSE 0
+    END
+  `);
+  return sql<number>`(${sql.join(parts, sql` + `)})`;
 }
 
 function setJsonPath(target: Record<string, unknown>, path: string[], value: unknown): void {
@@ -252,6 +374,52 @@ function includeMappedJsonObjects(
   if (mappedData["metadata"] !== undefined) jsonColumns.set("metadata", "jsonb");
 }
 
+function parseBooleanLike(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1 ? true : value === 0 ? false : null;
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (["true", "t", "yes", "y", "1", "on"].includes(normalized)) return true;
+  if (["false", "f", "no", "n", "0", "off"].includes(normalized)) return false;
+  return null;
+}
+
+function jsonStringArray(value: unknown): string[] {
+  const raw = typeof value === "string" && value.trim().startsWith("[")
+    ? (() => {
+      try {
+        return JSON.parse(value) as unknown;
+      } catch {
+        return value;
+      }
+    })()
+    : value;
+
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    .map((item) => item.trim().toLowerCase());
+}
+
+function normalizeCommodityCategoryDomainGuards(
+  entityCode: string,
+  mappedData: Record<string, unknown>,
+  existingRow?: Record<string, unknown>,
+): void {
+  if (entityCode.replace(/-/g, "_") !== "commodity_category") return;
+
+  const isHsRequired = parseBooleanLike(
+    mappedData["is_hs_required"] ?? existingRow?.["is_hs_required"],
+  );
+  if (isHsRequired !== true) return;
+
+  const domains = new Set(jsonStringArray(
+    mappedData["allowed_classification_domains"] ?? existingRow?.["allowed_classification_domains"],
+  ));
+  domains.add("hs");
+  mappedData["allowed_classification_domains"] = [...domains];
+}
+
 function parseFeatureScope(scope: unknown): { column: string; value: string } | null {
   if (typeof scope !== "string") return null;
   const eqIdx = scope.indexOf("=");
@@ -267,6 +435,48 @@ function parseFeatureScope(scope: unknown): { column: string; value: string } | 
 }
 
 // ── Business-key / UUID dual resolver ────────────────────────────────────────
+
+function stringConfigValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function identityParentRecord(identityConfig: Record<string, unknown>): Record<string, unknown> {
+  return asPlainObject(identityConfig["parent"]);
+}
+
+function parentFkFromConfigs(
+  identityConfig: Record<string, unknown>,
+  featureFlags: Record<string, unknown>,
+): string | null {
+  return stringConfigValue(identityParentRecord(identityConfig)["field"])
+    ?? stringConfigValue(featureFlags["parent_fk"]);
+}
+
+function parentScopeFromConfigs(
+  identityConfig: Record<string, unknown>,
+  featureFlags: Record<string, unknown>,
+): string | null {
+  return stringConfigValue(identityParentRecord(identityConfig)["scope"])
+    ?? stringConfigValue(featureFlags["parent_scope"]);
+}
+
+function configuredListEntityCode(table: EntityTableInfo): string | null {
+  return stringConfigValue(table.identity_config["list_entity_code"])
+    ?? stringConfigValue(table.feature_flags["list_entity_code"]);
+}
+
+function configuredIdentityVia(table: EntityTableInfo): string | null {
+  return stringConfigValue(table.identity_config["identity_via"])
+    ?? stringConfigValue(table.feature_flags["identity_via"]);
+}
+
+function configuredParentFk(table: EntityTableInfo): string | null {
+  return parentFkFromConfigs(table.identity_config, table.feature_flags);
+}
+
+function configuredParentScope(table: EntityTableInfo): string | null {
+  return parentScopeFromConfigs(table.identity_config, table.feature_flags);
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -462,8 +672,20 @@ type ServerFilterOp =
   | { type: "range";    from: string; to: string };
 
 function coerce(s: string): unknown {
+  const normalized = s.trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
   const n = Number(s);
   return Number.isFinite(n) && s.trim() !== "" ? n : s;
+}
+
+function coerceList(raw: string): unknown[] {
+  return raw.split(",").filter(Boolean).map((value) => {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+    return value;
+  });
 }
 
 function parseServerFilterSigil(raw: string): ServerFilterOp {
@@ -486,14 +708,14 @@ function parseServerFilterSigil(raw: string): ServerFilterOp {
     if (comma > 0) return { type: "between", lo: coerce(rest.slice(0, comma)), hi: coerce(rest.slice(comma + 1)) };
   }
   if (raw.startsWith("not_in:")) {
-    return { type: "not_in", values: raw.slice("not_in:".length).split(",").filter(Boolean) };
+    return { type: "not_in", values: coerceList(raw.slice("not_in:".length)) };
   }
   if (raw.startsWith("in:")) {
-    return { type: "in", values: raw.slice("in:".length).split(",").filter(Boolean) };
+    return { type: "in", values: coerceList(raw.slice("in:".length)) };
   }
 
   // Default: comma-separated → IN
-  return { type: "in", values: raw.split(",").filter(Boolean) };
+  return { type: "in", values: coerceList(raw) };
 }
 
 function singleStringQueryParam(value: unknown): string | null {
@@ -715,11 +937,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         : null;
 
       // ── Index table redirect ─────────────────────────────────────────────────
-      // If feature_flags.list_entity_code is set, list queries run against the
+      // If identity_config.list_entity_code is set, list queries run against the
       // denormalized index table (e.g. supplier_app_index) instead of the thin
       // role table.  Identity + role fields are co-located in the index for fast
       // list/search.  The canonical table is still used for detail GET and writes.
-      const listEntityCode = table.feature_flags["list_entity_code"] as string | undefined;
+      const listEntityCode = configuredListEntityCode(table) ?? undefined;
       const listTable      = listEntityCode ? (await resolveEntityTable(db, listEntityCode) ?? table) : table;
       let   fullTable      = `${listTable.table_schema}.${listTable.table_name}` as `${string}.${string}`;
       const listCode       = listTable !== table ? listEntityCode! : entityCode;
@@ -768,11 +990,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         db
           .selectFrom("control.entity_version as ev")
           .innerJoin("control.entity as e", "e.id", "ev.entity_id")
-          .select(["e.display_config"])
+          .select(["e.display_config", "e.search_config"])
           .where("e.name",      "=", listCode)
           .where("e.tenant_id", "is", null)
           .where("ev.status",   "=", "EFFECTIVE")
-          .executeTakeFirst() as Promise<{ display_config: Record<string, unknown> | null } | undefined>,
+          .executeTakeFirst() as Promise<{ display_config: Record<string, unknown> | null; search_config: Record<string, unknown> | null } | undefined>,
         db
           .selectFrom("information_schema.columns as c")
           .select(["c.column_name"])
@@ -824,8 +1046,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       // ── Parent FK filter for child entities ───────────────────────────────────
       // ?parent_id=<uuid> narrows results to records belonging to that parent.
-      // Uses feature_flags.parent_fk to resolve the physical FK column.
-      // feature_flags.parent_scope ("col=val") adds any extra discriminator.
+      // Uses identity_config.parent.field to resolve the physical FK column.
+      // identity_config.parent.scope ("col=val") adds any extra discriminator.
       // Virtual quick filters are configured in entity.display_config.filter_bar.
       // Handle generic __ keys here, then remove them before normal field filters.
       const virtualFilterKeys = Object.keys(sigilFilters).filter((field) => field.startsWith("__"));
@@ -871,9 +1093,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       }
 
       const parentIdParam     = typeof req.query["parent_id"]     === "string" ? req.query["parent_id"]     : null;
-      const parentFkCol       = typeof table.feature_flags["parent_fk"] === "string" ? table.feature_flags["parent_fk"] : null;
+      const parentFkCol       = configuredParentFk(table);
       const throughEntityCode = typeof req.query["through_entity"] === "string" ? req.query["through_entity"] : null;
-      const parentScope       = parseFeatureScope(table.feature_flags["parent_scope"]);
+      const parentScope       = parseFeatureScope(configuredParentScope(table));
 
       if (parentIdParam && parentFkCol) {
         if (throughEntityCode) {
@@ -882,14 +1104,16 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           // control.entity at runtime — nothing entity-specific is hardcoded here.
           const throughMeta = await db
             .selectFrom("control.entity as e")
-            .select(["e.table_schema", "e.table_name", "e.feature_flags"])
+            .select(["e.table_schema", "e.table_name", "e.identity_config", "e.feature_flags"])
             .where("e.entity_code", "=", throughEntityCode)
             .where("e.tenant_id",   "is", null)
-            .executeTakeFirst() as { table_schema: string; table_name: string; feature_flags: Record<string, unknown> } | undefined;
+            .executeTakeFirst() as { table_schema: string; table_name: string; identity_config: unknown; feature_flags: unknown } | undefined;
 
           if (throughMeta) {
-            const throughParentFk = typeof throughMeta.feature_flags["parent_fk"] === "string"
-              ? throughMeta.feature_flags["parent_fk"] : null;
+            const throughParentFk = parentFkFromConfigs(
+              asPlainObject(throughMeta.identity_config),
+              asPlainObject(throughMeta.feature_flags),
+            );
             if (throughParentFk) {
               const throughTable = `${throughMeta.table_schema}.${throughMeta.table_name}`;
               const inPredicate = tenantId
@@ -1097,19 +1321,41 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // return empty results with a reasons flag rather than silently returning all rows.
       const reasons: Record<string, boolean> = {};
       if (searchTerm) {
-        const configuredSearchFields = new Set(
-          Array.isArray(entityVersionRow?.display_config?.["search_fields"])
-            ? entityVersionRow.display_config["search_fields"].filter((fieldName): fieldName is string => typeof fieldName === "string")
-            : [],
-        );
-        const searchableCols = fieldMeta
+        const searchConfig = normalizeEntitySearchConfig(entityVersionRow?.search_config);
+
+        if (!searchConfig.enabled) {
+          reasons["search_disabled"] = true;
+          res.json({
+            data: [],
+            pagination: { total: 0, page, page_size: pageSize, total_pages: 0 },
+            reasons,
+          });
+          return;
+        }
+
+        if (searchTerm.length < searchConfig.minQueryLength) {
+          reasons["search_min_query_length"] = true;
+        } else {
+        const configuredSearchFields = new Set(searchConfig.fields);
+        const usesConfiguredFields = searchConfig.hasConfiguredFields || searchConfig.fields.length > 0;
+        const searchableFields = fieldMeta
           .filter((f) =>
-            (f.is_searchable || configuredSearchFields.has(f.name)) &&
+            (usesConfiguredFields ? configuredSearchFields.has(f.name) : f.is_searchable) &&
             isTextSearchDataType(f.data_type) &&
             queryableColumnNames.has(f.column_name))
-          .map((f) => f.column_name);
+          .map((f, index) => ({
+            columnName: f.column_name,
+            rank: searchRankForField(searchConfig, f.name, index),
+          }));
+        const searchableCols = [...new Set(searchableFields.map((f) => f.columnName))];
         if (searchableCols.length > 0) {
-          const pattern = `%${searchTerm}%` as never;
+          const pattern = searchPattern(searchTerm, searchConfig.operator) as never;
+          const rankingFields = [...new Map(
+            searchableFields.map((f) => [
+              f.columnName,
+              { columnName: f.columnName, rank: f.rank },
+            ]),
+          ).values()];
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const applySearch = (q: any) => q.where((eb: any) =>
             eb.or(searchableCols.map((col: string) => eb(col as never, "ilike", pattern))),
@@ -1117,6 +1363,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           listQuery  = applySearch(listQuery);
           countQuery = applySearch(countQuery);
           if (groupCountQuery) groupCountQuery = applySearch(groupCountQuery);
+          listQuery = listQuery.orderBy(buildSearchScoreExpression(rankingFields, searchTerm), "desc");
         } else {
           logger?.warn("records_search_no_searchable_fields", { entityCode, searchTerm });
           reasons["search_unsupported"] = true;
@@ -1127,6 +1374,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             reasons,
           });
           return;
+        }
         }
       }
 
@@ -1154,9 +1402,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         const metaSortField = typeof displayConfig?.default_sort_field === "string"
           ? displayConfig.default_sort_field
           : null;
-        const metaSortDir   = typeof displayConfig?.default_sort_dir === "string"
-          ? displayConfig.default_sort_dir
-          : "desc";
+        const metaSortDir   = displayConfig?.default_sort_order === "asc" ? "asc" : "desc";
 
         // Resolve: metadata field → created_at → natural key (code/name) → skip (id covers it)
         const resolveDefaultSortCol = (): { col: string; dir: string } | null => {
@@ -1347,13 +1593,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const data = remapRecordRow(row, fieldMap);
 
       // ── BP identity merge ────────────────────────────────────────────────────
-      // When identity_via = 'business_partner', the role table (supplier/customer)
+      // When identity_config.identity_via = 'business_partner', the role table (supplier/customer)
       // holds only commercial fields.  Fetch the linked BP record and merge
       // identity fields (name, legal_name, country, etc.) into data so the detail
       // header can display them without a second client-side request.
       // Role fields (supplier_code, status, etc.) take precedence — BP fields only
       // fill keys that are absent from the role row.
-      if (table.feature_flags["identity_via"] === "business_partner") {
+      if (configuredIdentityVia(table) === "business_partner") {
         const bpId = row["business_partner_id"] as string | undefined;
         if (bpId) {
           const bpRow = await db
@@ -1461,16 +1707,17 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
       const jsonColumns = await resolveJsonColumns(db, entityCode);
       includeMappedJsonObjects(mappedData, jsonColumns);
+      normalizeCommodityCategoryDomainGuards(entityCode, mappedData);
       serializeJsonFields(mappedData, jsonColumns);
 
-      // Inject parent FK when entity is a child (feature_flags.parent_fk + parent_scope).
+      // Inject parent FK when entity is a child (identity_config.parent.field + scope).
       // The caller passes parent_id in body.data; we resolve the physical FK column from
-      // feature_flags so the form never needs to know the internal column name.
-      const createParentFk  = typeof table.feature_flags["parent_fk"] === "string" ? table.feature_flags["parent_fk"] : null;
+      // metadata so the form never needs to know the internal column name.
+      const createParentFk  = configuredParentFk(table);
       const createParentId  = typeof inputData["parent_id"] === "string" ? inputData["parent_id"] : null;
       if (createParentFk && createParentId) {
         mappedData[createParentFk] = createParentId;
-        const scopeStr = typeof table.feature_flags["parent_scope"] === "string" ? table.feature_flags["parent_scope"] : null;
+        const scopeStr = configuredParentScope(table);
         if (scopeStr) {
           const eqIdx = scopeStr.indexOf("=");
           if (eqIdx > 0) {
@@ -1629,16 +1876,18 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             : {};
           mappedData["metadata"] = { ...existingMeta, instrument_mode: instrumentMode };
 
-          // supplier_name: denormalized NOT NULL — resolve from master.supplier
+          // supplier_name: denormalized NOT NULL; resolve through the supplier app index.
           if (!mappedData["supplier_name"] && mappedData["supplier_id"]) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const supplierRow = await (db as any)
-              .selectFrom("master.supplier as s")
-              .select(["s.name"])
-              .where("s.id",        "=", mappedData["supplier_id"])
-              .where("s.tenant_id", "=", tenantId)
-              .executeTakeFirst() as { name: string } | undefined;
-            mappedData["supplier_name"] = supplierRow?.name ?? "Unknown Supplier";
+              .selectFrom("master.supplier_app_index as s")
+              .select([
+                sql<string>`COALESCE(s.display_name, s.name, s.supplier_code)`.as("supplier_name"),
+              ])
+              .where("s.supplier_id", "=", mappedData["supplier_id"])
+              .where("s.tenant_id",   "=", tenantId)
+              .executeTakeFirst() as { supplier_name: string } | undefined;
+            mappedData["supplier_name"] = supplierRow?.supplier_name ?? "Unknown Supplier";
           }
           if (!mappedData["supplier_name"]) mappedData["supplier_name"] = "Unknown Supplier";
 
@@ -1716,7 +1965,20 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           const now    = new Date();
           const yyyymm = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
           const rand   = Math.random().toString(36).substring(2, 8).toUpperCase();
-          mappedData[docNum.col] = `${docNum.prefix}-${yyyymm}-${rand}`;
+          const configured = await nextConfiguredEntityNumber(db, {
+            tenantId,
+            entityCode,
+            numberField: "document_no",
+            companyCodeId: typeof mappedData["company_code_id"] === "string" ? mappedData["company_code_id"] : null,
+            fiscalYear: typeof mappedData["fiscal_year"] === "number" ? mappedData["fiscal_year"] : Number(mappedData["fiscal_year"] ?? "") || null,
+            periodNumber: typeof mappedData["period_number"] === "number" ? mappedData["period_number"] : Number(mappedData["period_number"] ?? "") || null,
+            effectiveDate: typeof mappedData["posting_date"] === "string"
+              ? mappedData["posting_date"]
+              : typeof mappedData["document_date"] === "string"
+              ? mappedData["document_date"]
+              : now,
+          });
+          mappedData[docNum.col] = configured ?? `${docNum.prefix}-${yyyymm}-${rand}`;
         }
       }
 
@@ -1922,6 +2184,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         .executeTakeFirst()) as Record<string, unknown> | undefined;
 
       mergeJsonColumnUpdates(mappedData, oldRow, jsonColumns);
+      normalizeCommodityCategoryDomainGuards(entityCode, mappedData, oldRow);
       serializeJsonFields(mappedData, jsonColumns);
 
       mappedData.updated_by = principalId ?? undefined;
@@ -2085,6 +2348,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         .executeTakeFirst()) as Record<string, unknown> | undefined;
 
       mergeJsonColumnUpdates(mappedData, oldRow, jsonColumns);
+      normalizeCommodityCategoryDomainGuards(entityCode, mappedData, oldRow);
       serializeJsonFields(mappedData, jsonColumns);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

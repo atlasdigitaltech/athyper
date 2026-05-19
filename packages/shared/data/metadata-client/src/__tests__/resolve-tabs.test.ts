@@ -31,6 +31,7 @@ function makeEntity(
   return {
     entity_id:       ENTITY_ID,
     entity_code:     "test_entity",
+    slug:            "test-entity",
     entity_name:     "Test Entity",
     entity_class:    "MASTER",
     table_schema:    "master",

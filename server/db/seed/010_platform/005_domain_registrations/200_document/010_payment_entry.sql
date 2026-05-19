@@ -12,7 +12,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -21,9 +21,7 @@ SELECT
     'full', 'tenant_critical', 'controlled',
     'document', 'payment_entry',
     'Payment Entry', 'Payment Entries', 'banknote', 'emerald',
-    true,
-    '{"prefix":"PAY","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
-    '{"is_approvable":true,"document_category":"payments","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
+    '{"is_approvable":true,"has_workflow":true,"document_category":"payments","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
@@ -48,9 +46,7 @@ UPDATE control.entity
        label_plural = 'Payment Entries',
        icon_key = 'banknote',
        color_token = 'emerald',
-       numbering_active = true,
-       naming_policy = '{"prefix":"PAY","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
-       feature_flags = '{"is_approvable":true,"document_category":"payments","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
+       feature_flags = '{"is_approvable":true,"has_workflow":true,"document_category":"payments","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
        display_config = CASE
            WHEN feature_flags ->> 'metadata_coverage_source' = 'governed_schema_coverage' THEN '{}'::jsonb
            ELSE COALESCE(display_config, '{}'::jsonb)
@@ -64,9 +60,11 @@ UPDATE control.entity
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'document' AND e.table_name = 'payment_entry'
   AND  e.tenant_id IS NULL
@@ -116,6 +114,7 @@ SET display_config = jsonb_build_object(
     'list_columns',       '["document_no","status","payment_type","payment_direction","document_date","payment_amount","currency_code"]'::jsonb,
     'default_sort_field', 'document_date',
     'default_sort_order', 'desc',
+    'status_field_names', '["status"]'::jsonb,
     'allocation_primary_label', 'Invoice',
     'allocation_primary_field', 'invoice_number',
     'allocation_primary_source', 'data',
@@ -146,6 +145,60 @@ WHERE table_schema = 'document' AND table_name = 'payment_entry'
   AND tenant_id IS NULL
   AND display_config = '{}'::jsonb;
 
+-- Backfill the document renderer contract on already-seeded databases.
+UPDATE control.entity
+SET entity_class = 'DOCUMENT',
+    feature_flags = CASE
+            WHEN jsonb_typeof(feature_flags) = 'object' THEN feature_flags
+            ELSE '{}'::jsonb
+        END
+        || jsonb_build_object(
+            'is_approvable', true,
+            'has_workflow', true,
+            'has_lines', true
+        ),
+    display_config =
+        (COALESCE(display_config, '{}'::jsonb) - 'document_header')
+        || jsonb_build_object(
+            'detail_renderer', 'document',
+            'lines_renderer', 'payment',
+            'title_field', 'document_no',
+            'subtitle_field', 'supplier_id',
+            'list_columns', '["document_no","status","payment_type","payment_direction","document_date","payment_amount","currency_code"]'::jsonb,
+            'default_sort_field', 'document_date',
+            'default_sort_order', 'desc',
+            'status_field_names', '["status"]'::jsonb,
+            'document_header',
+                CASE
+                    WHEN jsonb_typeof(display_config -> 'document_header') = 'object'
+                    THEN display_config -> 'document_header'
+                    ELSE '{}'::jsonb
+                END
+                || jsonb_build_object(
+                    'number_field', 'document_no',
+                    'status_field', 'status',
+                    'type_label', 'PAYMENT ENTRY',
+                    'total_label', 'PAYMENT AMOUNT',
+                    'date_label', 'PAYMENT DATE',
+                    'party_id_field', 'supplier_id',
+                    'amount_field', 'payment_amount',
+                    'currency_field', 'currency_code',
+                    'date_field', 'document_date'
+                )
+        ),
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000'
+WHERE table_schema = 'document'
+  AND table_name = 'payment_entry'
+  AND tenant_id IS NULL
+  AND (
+      entity_class IS DISTINCT FROM 'DOCUMENT'
+      OR COALESCE(feature_flags ->> 'is_approvable', '') <> 'true'
+      OR COALESCE(feature_flags ->> 'has_workflow', '') <> 'true'
+      OR COALESCE(display_config ->> 'detail_renderer', '') <> 'document'
+      OR COALESCE(display_config #>> '{document_header,status_field}', '') <> 'status'
+  );
+
 -- Ensure existing payment_entry metadata has the payment allocation renderer contract.
 UPDATE control.entity
 SET display_config = jsonb_build_object(
@@ -174,11 +227,10 @@ WHERE table_schema = 'document' AND table_name = 'payment_entry'
 
 -- ── 5. Natural key ────────────────────────────────────────────────────────────
 UPDATE control.entity
-SET natural_key_fields = ARRAY['document_no']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['document_no']::text[]), true)
 WHERE table_schema = 'document' AND table_name = 'payment_entry'
   AND tenant_id IS NULL
-  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
-
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;
 -- ── 6. Backfill: rename deprecated feature_flag key to canonical name ─────────
 UPDATE control.entity
 SET feature_flags = (feature_flags - 'has_line_items') || '{"has_lines":true}'::jsonb

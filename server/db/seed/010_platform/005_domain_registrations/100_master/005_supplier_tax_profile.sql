@@ -15,7 +15,7 @@ SET name = 'business_partner_tax_profile',
         || '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner","pii_bearing":true}'::jsonb
 WHERE table_schema = 'master'
   AND table_name IN ('supplier_tax_profile','business_partner_tax_profile','party_tax_profile')
-  AND entity_code IN ('vendor_tax_profile', 'supplier_tax_profile')
+  AND entity_code IN ('vendor_tax_profile', 'supplier_tax_profile', 'party_tax_profile', 'master_party_tax_profile')
   AND tenant_id IS NULL
   AND NOT EXISTS (
       SELECT 1 FROM control.entity existing
@@ -35,7 +35,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
@@ -44,8 +44,6 @@ SELECT
     'standard', 'restricted', 'controlled',
     'master', 'party_tax_profile',
     'Business Partner Tax Profile', 'Business Partner Tax Profiles', 'receipt-tax', 'orange',
-    false,
-    '{}'::jsonb,
     '{"parent_entity":"business_partner","parent_fk":"owner_id","parent_scope":"owner_type=business_partner","pii_bearing":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 ON CONFLICT (table_schema, table_name) DO NOTHING;
@@ -58,9 +56,11 @@ WHERE entity_code = 'business_partner_tax_profile'
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.entity_code = 'business_partner_tax_profile' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
@@ -122,5 +122,5 @@ SET display_config        = COALESCE(display_config, '{}'::jsonb) || jsonb_build
         'default_sort_field', 'country_code',
         'default_sort_order', 'asc'
     ),
-    natural_key_fields    = ARRAY['country_code']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['country_code']::text[]), true)
 WHERE entity_code = 'business_partner_tax_profile' AND tenant_id IS NULL;

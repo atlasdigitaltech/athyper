@@ -10,7 +10,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'IAM'),
@@ -19,8 +19,6 @@ SELECT
     'full', 'tenant_critical', 'controlled',
     'document', 'user_profile_update_request',
     'Profile Update Request', 'Profile Update Requests', 'user-pen', 'blue',
-    true,
-    '{"prefix":"UPUPR","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":5}]}'::jsonb,
     '{"is_approvable":true,"document_category":"hr_request","allow_on_behalf_of":false,"requires_supervisor_approval":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
@@ -31,9 +29,11 @@ WHERE NOT EXISTS (
 
 -- ── 2. control.entity_version ───────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'document' AND e.table_name = 'user_profile_update_request'
   AND  e.tenant_id IS NULL

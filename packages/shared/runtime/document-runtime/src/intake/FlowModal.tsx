@@ -71,6 +71,7 @@ export function FlowModal({
   const engine = useFlowEngine(bundle, userPermissions, userCtx);
   const {
     state,
+    steps,
     currentStep,
     visibleFields,
     canAdvance,
@@ -85,8 +86,8 @@ export function FlowModal({
   } = engine;
 
   const sortedSteps = useMemo(
-    () => [...bundle.steps].sort((a, b) => a.sort_order - b.sort_order),
-    [bundle.steps],
+    () => [...steps].sort((a, b) => a.sort_order - b.sort_order),
+    [steps],
   );
 
   const isSingleStep = sortedSteps.length === 1;

@@ -65,21 +65,7 @@ BEGIN
     ('SC-ICT-CONTENT', 'Content & Media Production',   'Video, audio, graphic design, CMS, and digital content creation',       'SC-ICT', 'services', 424),
     ('SC-ICT-CYBER',   'Managed Security Services',    'SOC-as-a-service, SIEM, pen testing, and threat intelligence',          'SC-ICT', 'services', 425);
 
-    -- Business intents
-    CREATE TEMP TABLE tmp_bi (
-        seed_id     uuid DEFAULT shared.uuidv7(),
-        code        text NOT NULL,
-        name        text NOT NULL,
-        description text,
-        domain      text NOT NULL,
-        subtype     text,
-        parent_code text,
-        sort_order  smallint NOT NULL DEFAULT 0
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_bi (code, name, description, domain, subtype, parent_code, sort_order) VALUES
-    ('BI-COGS',  'ICT Cost of Sales',           'Direct costs of ICT service delivery and platform operations', 'COST_OF_SALES', 'ICT',         'BI-COGS',  39),
-    ('BI-CAPEX',  'Data Centre Capital Expense',  'Capital investment in data centre build-out and equipment',    'CAPEX',         'DATA_CENTRE', 'BI-CAPEX', 30);
+    -- Business intent rows are domain-level only; this pack links categories to canonical BI-* records.
 
     -- Commodity bridge
     CREATE TEMP TABLE tmp_bridge (
@@ -228,34 +214,7 @@ BEGIN
       );
 
     -- ── STAGE D: UPSERT intent leaves ───────────────────────────────────
-    INSERT INTO master.business_intent (
-        id, tenant_id, code, name, description, domain, subtype,
-        parent_id, depth, sort_order, metadata, status, created_by
-    )
-    SELECT
-        s.seed_id, v_tid, s.code, s.name, s.description,
-        s.domain, s.subtype,
-        p.id, 1, s.sort_order,
-        jsonb_build_object('_seed', jsonb_build_object(
-            'pack', v_pack, 'version', v_version, 'seeded_at', now()::text
-        )),
-        'active', v_su
-    FROM tmp_bi s
-    JOIN master.business_intent p ON p.tenant_id = v_tid AND p.code = s.parent_code
-    ON CONFLICT (tenant_id, code) DO UPDATE SET
-        name        = EXCLUDED.name,
-        description = EXCLUDED.description,
-        domain      = EXCLUDED.domain,
-        subtype     = EXCLUDED.subtype,
-        parent_id   = EXCLUDED.parent_id,
-        depth       = EXCLUDED.depth,
-        sort_order  = EXCLUDED.sort_order,
-        metadata    = master.business_intent.metadata
-                      || jsonb_build_object('_seed', jsonb_build_object(
-                             'pack', v_pack, 'version', v_version,
-                             'seeded_at', now()::text
-                         )),
-        updated_at = now(), updated_by = v_su;
+    -- Business intent rows are domain-level only; this pack links categories to the canonical BI-* records.
 
     -- ── STAGE E: UPSERT commodity bridge ────────────────────────────────
     DROP TABLE IF EXISTS tmp_sc_map;

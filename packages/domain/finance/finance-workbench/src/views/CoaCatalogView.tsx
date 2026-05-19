@@ -8,10 +8,14 @@ import { useCharts } from "../hooks/useCharts";
 
 interface CoaCatalogViewProps {
   onOpenChart: (chart: ChartOfAccount) => void;
+  charts?: ChartOfAccount[];
+  isLoading?: boolean;
 }
 
-export function CoaCatalogView({ onOpenChart }: CoaCatalogViewProps) {
-  const { data: charts, isLoading } = useCharts();
+export function CoaCatalogView({ onOpenChart, charts: providedCharts, isLoading: providedLoading }: CoaCatalogViewProps) {
+  const chartsQuery = useCharts();
+  const charts = providedCharts ?? chartsQuery.data;
+  const isLoading = providedLoading ?? chartsQuery.isLoading;
 
   return (
     <div className="space-y-3">

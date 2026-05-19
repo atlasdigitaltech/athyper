@@ -13,7 +13,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -22,9 +22,7 @@ SELECT
     'full', 'tenant_critical', 'controlled',
     'document', 'purchase_invoice',
     'Purchase Invoice', 'Purchase Invoices', 'file-text', 'violet',
-    true,
-    '{"prefix":"INV","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
-    '{"is_approvable":true,"document_category":"payables","allow_on_behalf_of":false,"has_lines":true,"catalog_feature_enabled":false,"auto_number":true}'::jsonb,
+    '{"is_approvable":true,"has_workflow":true,"document_category":"payables","allow_on_behalf_of":false,"has_lines":true,"catalog_feature_enabled":false,"auto_number":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
@@ -49,7 +47,6 @@ UPDATE control.entity
        label_plural = 'Purchase Invoices',
        icon_key = 'file-text',
        color_token = 'violet',
-       numbering_active = true,
        status = 'ACTIVE',
        updated_at = now(),
        updated_by = '00000000-0000-0000-0000-000000000000'
@@ -59,9 +56,11 @@ UPDATE control.entity
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'document' AND e.table_name = 'purchase_invoice'
   AND  e.tenant_id IS NULL
@@ -257,6 +256,7 @@ SET display_config = jsonb_build_object(
     'list_columns',    '["document_no","status","supplier_id","invoice_date","due_date","total_amount","currency_code"]'::jsonb,
     'default_sort_field', 'invoice_date',
     'default_sort_order', 'desc',
+    'status_field_names', '["status"]'::jsonb,
     'action_groups', jsonb_build_object(
         'draft',          jsonb_build_object('primary', '["edit","submit"]'::jsonb,          'working', '["cancel_document"]'::jsonb),
         'submitted',      jsonb_build_object('primary', '["approve","reject"]'::jsonb,       'working', '["cancel_document"]'::jsonb),
@@ -289,6 +289,66 @@ SET display_config = jsonb_build_object(
 WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
   AND tenant_id IS NULL
   AND display_config = '{}'::jsonb;
+
+-- 4a. Backfill the document renderer contract on already-seeded databases.
+-- Older coverage seeds may have left a non-empty generic display_config, which
+-- prevented the full document_header block above from applying.
+UPDATE control.entity
+SET entity_class = 'DOCUMENT',
+    feature_flags = CASE
+            WHEN jsonb_typeof(feature_flags) = 'object' THEN feature_flags
+            ELSE '{}'::jsonb
+        END
+        || jsonb_build_object(
+            'is_approvable', true,
+            'has_workflow', true,
+            'has_lines', true
+        ),
+    display_config =
+        (COALESCE(display_config, '{}'::jsonb) - 'document_header')
+        || jsonb_build_object(
+            'detail_renderer', 'document',
+            'line_entity_code', 'purchase_invoice_line',
+            'title_field', 'document_no',
+            'subtitle_field', 'supplier_id',
+            'list_columns', '["document_no","status","supplier_id","invoice_date","due_date","total_amount","currency_code"]'::jsonb,
+            'default_sort_field', 'invoice_date',
+            'default_sort_order', 'desc',
+            'status_field_names', '["status"]'::jsonb,
+            'document_header',
+                CASE
+                    WHEN jsonb_typeof(display_config -> 'document_header') = 'object'
+                    THEN display_config -> 'document_header'
+                    ELSE '{}'::jsonb
+                END
+                || jsonb_build_object(
+                    'number_field', 'document_no',
+                    'status_field', 'status',
+                    'type_label', 'PURCHASE INVOICE',
+                    'total_label', 'INVOICE TOTAL',
+                    'date_label', 'INVOICE DATE',
+                    'party_id_field', 'supplier_id',
+                    'amount_field', 'total_amount',
+                    'subtotal_field', 'net_amount',
+                    'tax_field', 'tax_amount',
+                    'currency_field', 'currency_code',
+                    'date_field', 'invoice_date',
+                    'due_date_field', 'due_date',
+                    'title_field', 'description'
+                )
+        ),
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000'
+WHERE table_schema = 'document'
+  AND table_name = 'purchase_invoice'
+  AND tenant_id IS NULL
+  AND (
+      entity_class IS DISTINCT FROM 'DOCUMENT'
+      OR COALESCE(feature_flags ->> 'is_approvable', '') <> 'true'
+      OR COALESCE(feature_flags ->> 'has_workflow', '') <> 'true'
+      OR COALESCE(display_config ->> 'detail_renderer', '') <> 'document'
+      OR COALESCE(display_config #>> '{document_header,status_field}', '') <> 'status'
+  );
 
 UPDATE control.entity
 SET display_config = jsonb_set(
@@ -417,6 +477,7 @@ UPDATE control.entity
 SET feature_flags = jsonb_build_object(
     -- Core document flags
     'is_approvable',               true,
+    'has_workflow',                true,
     'document_category',           'payables',
     'allow_on_behalf_of',          false,
     'auto_number',                 true,
@@ -444,34 +505,14 @@ SET feature_flags = jsonb_build_object(
 WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
   AND tenant_id IS NULL;
 
--- 5c. Naming policy → PINV-{tenant_code}-{YYYY}-{seq:5}
---     Produces keys like PINV-ACME-2026-00001.
---     The tenant_code segment is resolved at generation time from the session
---     context; the sequence resets yearly per tenant.
-UPDATE control.entity
-SET naming_policy = jsonb_build_object(
-    'prefix',              'PINV',
-    'prefix_configurable', true,
-    'separator',           '-',
-    'segments', jsonb_build_array(
-        jsonb_build_object('type', 'tenant_code'),
-        jsonb_build_object('type', 'year', 'format', 'YYYY'),
-        jsonb_build_object('type', 'sequence', 'padding', 5)
-    ),
-    'reset_strategy', 'yearly'
-)
-WHERE table_schema = 'document' AND table_name = 'purchase_invoice'
-  AND tenant_id IS NULL;
-
--- 5d. Natural key field — document_no is the canonical business key used in URLs.
+-- 5c. Natural key field — document_no is the canonical business key used in URLs.
 --     Only set when not already configured so tenant overrides are preserved.
 UPDATE control.entity
-SET natural_key_fields = ARRAY['document_no']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['document_no']::text[]), true)
 WHERE table_schema    = 'document'
   AND table_name      = 'purchase_invoice'
   AND tenant_id       IS NULL
-  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
-
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;
 -- Folded in from retired runtime repair: mark canonical field metadata ownership.
 UPDATE control.entity
    SET display_config = COALESCE(display_config, '{}'::jsonb)

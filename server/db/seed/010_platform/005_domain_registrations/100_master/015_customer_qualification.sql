@@ -9,7 +9,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'CRM'),
@@ -18,17 +18,17 @@ SELECT
     'standard', 'restricted', 'controlled',
     'master', 'customer_qualification',
     'Credit & Qualification', 'Credit & Qualification', 'shield-check', 'red',
-    false,
-    '{}'::jsonb,
     '{"parent_entity":"customer","parent_fk":"customer_id","singleton":true,"pii_bearing":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.entity_code = 'customer_qualification' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
@@ -73,6 +73,6 @@ SET display_config        = jsonb_build_object(
         'default_sort_field', 'credit_status',
         'default_sort_order', 'asc'
     ),
-    natural_key_fields    = ARRAY['id']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['id']::text[]), true)
 WHERE entity_code = 'customer_qualification' AND tenant_id IS NULL
   AND display_config = '{}'::jsonb;

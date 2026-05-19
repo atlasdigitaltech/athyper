@@ -19,6 +19,7 @@
 DO $seed_min_intake$
 DECLARE
     v_tenant     record;
+    v_tid        uuid;
     v_sys        uuid  := '00000000-0000-0000-0000-000000000000';
 
     -- spend_category UUIDs (resolved per tenant loop)
@@ -48,55 +49,42 @@ DECLARE
     v_sc_cur           uuid;
 
 BEGIN
+    v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    IF v_tid IS NULL THEN
+        RAISE EXCEPTION '[seed] app.seed_tenant_id not set - run: SET app.seed_tenant_id = ''<uuid>''';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM master.tenant WHERE id = v_tid AND status = 'active') THEN
+        RAISE EXCEPTION '[seed] active tenant % not found', v_tid;
+    END IF;
+
     FOR v_tenant IN
-        SELECT id AS tenant_id FROM master.tenant WHERE status = 'active'
+        SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
 
         -- ──────────────────────────────────────────────────────────────────────
         -- STEP 1: Ensure all required business_intents exist
         -- ──────────────────────────────────────────────────────────────────────
-        INSERT INTO master.business_intent
-            (tenant_id, code, name, domain, subtype, status, created_by, sort_order)
-        VALUES
-            (v_tenant.tenant_id, 'OPEX-IT',         'IT Operating Expense',           'OPEX',          'it',         'active', v_sys, 201),
-            (v_tenant.tenant_id, 'OPEX-IT-SUB',      'IT Subscription / SaaS',         'OPEX',          'it',         'active', v_sys, 202),
-            (v_tenant.tenant_id, 'CAPEX-IT',         'IT Capital Expenditure',          'CAPEX',         'it',         'active', v_sys, 203),
-            (v_tenant.tenant_id, 'CAPEX-IT-LIC',     'IT Capital License',              'CAPEX',         'it',         'active', v_sys, 204),
-            (v_tenant.tenant_id, 'OPEX-CONSULT',     'Consulting / Advisory Services',  'OPEX',          'consulting', 'active', v_sys, 210),
-            (v_tenant.tenant_id, 'OPEX-CONSULT-XB',  'Cross-border Consulting (WHT)',   'OPEX',          'consulting', 'active', v_sys, 211),
-            (v_tenant.tenant_id, 'OPEX-LEGAL',       'Legal Services',                  'OPEX',          'legal',      'active', v_sys, 215),
-            (v_tenant.tenant_id, 'REG-AUDIT',        'Audit & Regulatory Compliance',   'REGULATORY',    'audit',      'active', v_sys, 220),
-            (v_tenant.tenant_id, 'OPEX-FAC-RENT',    'Rent & Occupancy',                'OPEX',          'facilities', 'active', v_sys, 230),
-            (v_tenant.tenant_id, 'OPEX-FAC-MAINT',   'Facility Maintenance',            'OPEX',          'facilities', 'active', v_sys, 231),
-            (v_tenant.tenant_id, 'OPEX-OFFICE',      'Office Supplies & Stationery',    'OPEX',          'admin',      'active', v_sys, 240),
-            (v_tenant.tenant_id, 'OPEX-MKTG',        'Marketing & Advertising',         'OPEX',          'marketing',  'active', v_sys, 250),
-            (v_tenant.tenant_id, 'OPEX-TRAVEL',      'Travel & Accommodation',          'OPEX',          'travel',     'active', v_sys, 255),
-            (v_tenant.tenant_id, 'COGS-FREIGHT-IN',  'Inbound Freight (COGS)',          'COST_OF_SALES', 'freight',    'active', v_sys, 260),
-            (v_tenant.tenant_id, 'CAPEX-EQUIP',      'Capital Equipment / Machinery',   'CAPEX',         'equipment',  'active', v_sys, 270),
-            (v_tenant.tenant_id, 'COGS-RAW',         'Raw Materials (COGS)',            'COST_OF_SALES', 'production', 'active', v_sys, 280),
-            (v_tenant.tenant_id, 'OPEX-SUBS',        'Subscriptions & Memberships',     'OPEX',          'admin',      'active', v_sys, 285)
-        ON CONFLICT (tenant_id, code) DO NOTHING;
-
-        -- Resolve business_intent IDs
-        SELECT id INTO v_bi_opex_it          FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-IT';
-        SELECT id INTO v_bi_opex_it_sub      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-IT-SUB';
-        SELECT id INTO v_bi_capex_it         FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'CAPEX-IT';
-        SELECT id INTO v_bi_capex_it_lic     FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'CAPEX-IT-LIC';
-        SELECT id INTO v_bi_opex_consult     FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-CONSULT';
-        SELECT id INTO v_bi_opex_consult_xb  FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-CONSULT-XB';
-        SELECT id INTO v_bi_opex_legal       FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-LEGAL';
-        SELECT id INTO v_bi_reg_audit        FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'REG-AUDIT';
-        SELECT id INTO v_bi_opex_fac_rent    FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-FAC-RENT';
-        SELECT id INTO v_bi_opex_fac_maint   FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-FAC-MAINT';
-        SELECT id INTO v_bi_opex_office      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-OFFICE';
-        SELECT id INTO v_bi_opex_mktg        FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-MKTG';
-        SELECT id INTO v_bi_opex_travel      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-TRAVEL';
-        SELECT id INTO v_bi_cogs_freight     FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'COGS-FREIGHT-IN';
-        SELECT id INTO v_bi_capex_equip      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'CAPEX-EQUIP';
-        SELECT id INTO v_bi_cogs_raw         FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'COGS-RAW';
-        SELECT id INTO v_bi_opex_subs        FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX-SUBS';
-        SELECT id INTO v_bi_reg_tax          FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code IN ('REG-TAX','BI-REG') LIMIT 1;
-        SELECT id INTO v_bi_transfer_ic      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code IN ('TRANSFER-IC','BI-TRANSFER') LIMIT 1;
+        -- Resolve domain-level business_intent IDs. Specific intent rows were retired.
+        SELECT id INTO v_bi_opex_it          FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_opex_it_sub      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_capex_it         FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-CAPEX';
+        SELECT id INTO v_bi_capex_it_lic     FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-CAPEX';
+        SELECT id INTO v_bi_opex_consult     FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_opex_consult_xb  FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_opex_legal       FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_reg_audit        FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-REG';
+        SELECT id INTO v_bi_opex_fac_rent    FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_opex_fac_maint   FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_opex_office      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_opex_mktg        FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_opex_travel      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_cogs_freight     FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-COGS';
+        SELECT id INTO v_bi_capex_equip      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-CAPEX';
+        SELECT id INTO v_bi_cogs_raw         FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-COGS';
+        SELECT id INTO v_bi_opex_subs        FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
+        SELECT id INTO v_bi_reg_tax          FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-REG';
+        SELECT id INTO v_bi_transfer_ic      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-TRANSFER';
 
         -- ──────────────────────────────────────────────────────────────────────
         -- STEP 2: Resolve commodity_category IDs
@@ -133,7 +121,7 @@ BEGIN
         -- Helper macro — insert rule if not already present
         -- (inlined as INSERT ... WHERE NOT EXISTS for each rule)
 
-        -- ── SC-IT-HW: Hardware — AMOUNT_ABOVE 5000 → CAPEX-IT, FALLBACK → OPEX-IT ──
+        -- SC-IT-HW: Hardware - amount above threshold -> BI-CAPEX, otherwise BI-OPEX
         IF v_sc_it_hw IS NOT NULL AND v_bi_capex_it IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -168,7 +156,7 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_opex_it);
         END IF;
 
-        -- ── SC-IT-SW: Software — IS_RECURRING → OPEX-IT-SUB, AMOUNT_ABOVE 25000 → CAPEX-IT-LIC, FALLBACK → OPEX-IT ──
+        -- SC-IT-SW: Software - recurring -> BI-OPEX, amount above threshold -> BI-CAPEX
         IF v_sc_it_sw IS NOT NULL AND v_bi_opex_it_sub IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -220,7 +208,7 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_opex_it);
         END IF;
 
-        -- ── SC-IT-SVC / SC-IT-CLOUD / SC-IT-SEC: simple FALLBACK → OPEX-IT ──
+        -- SC-IT-SVC / SC-IT-CLOUD / SC-IT-SEC: simple fallback -> BI-OPEX
         FOREACH v_sc_cur IN ARRAY ARRAY[v_sc_it_svc, v_sc_it_cloud, v_sc_it_sec] LOOP
             CONTINUE WHEN v_sc_cur IS NULL OR v_bi_opex_it IS NULL;
             INSERT INTO control.commodity_classification_to_intent_rule
@@ -239,7 +227,7 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_opex_it);
         END LOOP;
 
-        -- ── SC-PROF-CONSULT: CROSS_BORDER → OPEX-CONSULT-XB, FALLBACK → OPEX-CONSULT ──
+        -- SC-PROF-CONSULT: cross-border and fallback -> BI-OPEX
         IF v_sc_prof_consult IS NOT NULL AND v_bi_opex_consult_xb IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -274,7 +262,7 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_opex_consult);
         END IF;
 
-        -- ── SC-PROF-LEGAL → OPEX-LEGAL; SC-PROF-AUDIT → REG-AUDIT ──
+        -- SC-PROF-LEGAL -> BI-OPEX; SC-PROF-AUDIT -> BI-REG
         IF v_sc_prof_legal IS NOT NULL AND v_bi_opex_legal IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -309,7 +297,7 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_reg_audit);
         END IF;
 
-        -- ── SC-PROF-ENG → OPEX-CONSULT (engineering advisory treated as consulting OPEX) ──
+        -- SC-PROF-ENG -> BI-OPEX (engineering advisory treated as consulting OPEX)
         IF v_sc_prof_eng IS NOT NULL AND v_bi_opex_consult IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -368,7 +356,7 @@ BEGIN
             WHERE NOT EXISTS(SELECT 1 FROM control.commodity_classification_to_intent_rule WHERE tenant_id=v_tenant.tenant_id AND classification_source='COMMODITY_CATEGORY' AND classification_id=v_sc_travel_air AND condition_type='FALLBACK' AND resolved_intent_id=v_bi_opex_travel);
         END IF;
 
-        -- ── SC-FREIGHT → COGS-FREIGHT-IN; SC-CAPEQUIP → CAPEX-EQUIP ──
+        -- SC-FREIGHT -> BI-COGS; SC-CAPEQUIP -> BI-CAPEX
         IF v_sc_freight  IS NOT NULL AND v_bi_cogs_freight IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id,classification_source,classification_id,direction,condition_type,condition_config,applies_to_flows,resolved_intent_id,resolved_domain,explanation_template,confidence,priority,effective_from,status,created_by)
@@ -383,7 +371,7 @@ BEGIN
             WHERE NOT EXISTS(SELECT 1 FROM control.commodity_classification_to_intent_rule WHERE tenant_id=v_tenant.tenant_id AND classification_source='COMMODITY_CATEGORY' AND classification_id=v_sc_capequip AND condition_type='FALLBACK' AND resolved_intent_id=v_bi_capex_equip);
         END IF;
 
-        -- ── SC-RAW → COGS-RAW; SC-TAX → REG-TAX; SC-OUTSRC → TRANSFER-IC; SC-SUBS → OPEX-SUBS ──
+        -- SC-RAW -> BI-COGS; SC-TAX -> BI-REG; SC-OUTSRC -> BI-TRANSFER; SC-SUBS -> BI-OPEX
         IF v_sc_raw    IS NOT NULL AND v_bi_cogs_raw     IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id,classification_source,classification_id,direction,condition_type,condition_config,applies_to_flows,resolved_intent_id,resolved_domain,explanation_template,confidence,priority,effective_from,status,created_by)
@@ -414,7 +402,7 @@ BEGIN
 
     END LOOP; -- end tenant loop
 
-    RAISE NOTICE '061_min_intake_rules: Phase 1b seed complete — classification→intent rules for top-20 categories seeded across all active tenants.';
+    RAISE NOTICE '061_min_intake_rules: Phase 1b seed complete for tenant %.', v_tid;
 END $seed_min_intake$;
 
 

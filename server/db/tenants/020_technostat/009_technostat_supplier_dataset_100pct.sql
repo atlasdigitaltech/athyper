@@ -227,29 +227,7 @@ BEGIN
 
     ('SUP-MOTRM3B8', 'TKSA', 'PT-NET30', 'onboarding_demo', 'Restricted demo onboarding profile for Test Tech');
 
-  CREATE TEMP TABLE tmp_technostat_business_intent (
-    code text NOT NULL,
-    name text NOT NULL,
-    domain text NOT NULL,
-    intent_family text NOT NULL,
-    sort_order integer NOT NULL
-  ) ON COMMIT DROP;
-
-  INSERT INTO tmp_technostat_business_intent VALUES
-    ('OPEX-IT',          'IT Operating Expense',           'OPEX',          'information_technology', 201),
-    ('OPEX-IT-SUB',      'IT Subscriptions',               'OPEX',          'information_technology', 202),
-    ('CAPEX-IT',         'IT Capital Purchase',            'CAPEX',         'information_technology', 203),
-    ('CAPEX-IT-LIC',     'Capitalized IT License',         'CAPEX',         'information_technology', 204),
-    ('OPEX-CONSULT',     'Consulting Services',            'OPEX',          'professional_services',  211),
-    ('OPEX-LEGAL',       'Legal Services',                 'OPEX',          'professional_services',  212),
-    ('REG-AUDIT',        'Audit And Assurance',            'REGULATORY',    'professional_services',  213),
-    ('OPEX-FAC-RENT',    'Facility Rent',                  'OPEX',          'facilities',             221),
-    ('OPEX-FAC-MAINT',   'Facility Maintenance',           'OPEX',          'facilities',             222),
-    ('OPEX-OFFICE',      'Office Operating Supplies',      'OPEX',          'facilities',             223),
-    ('CAPEX-EQUIP',      'Equipment Capital Purchase',     'CAPEX',         'capital_projects',       231),
-    ('COGS-RAW',         'Raw Materials And Trade Goods',  'COST_OF_SALES', 'trade',                  241),
-    ('COGS-FREIGHT-IN',  'Inbound Freight',                'COST_OF_SALES', 'trade',                  242),
-    ('TRANSFER-IC',      'Intercompany Transfer',          'TRANSFER',      'intercompany',           251);
+  -- Business intent rows are domain-level only; this dataset links categories to canonical BI-* records.
 
   CREATE TEMP TABLE tmp_technostat_category_intent_map (
     spend_category_code text NOT NULL,
@@ -258,22 +236,21 @@ BEGIN
   ) ON COMMIT DROP;
 
   INSERT INTO tmp_technostat_category_intent_map VALUES
-    ('SC-IT-HW',       'OPEX-IT',         true),
-    ('SC-IT-HW',       'CAPEX-IT',        false),
-    ('SC-IT-SVC',      'OPEX-IT',         true),
-    ('SC-IT-SW',       'OPEX-IT-SUB',     true),
-    ('SC-IT-SW',       'CAPEX-IT-LIC',    false),
-    ('SC-PROF-MGMT',   'OPEX-CONSULT',    true),
-    ('SC-PROF-AUDIT',  'REG-AUDIT',       true),
-    ('SC-PROF-LEGAL',  'OPEX-LEGAL',      true),
-    ('SC-FACIL-MAINT', 'OPEX-FAC-MAINT',  true),
-    ('SC-FACIL-RENT',  'OPEX-FAC-RENT',   true),
-    ('SC-FACIL-UTIL',  'OPEX-OFFICE',     true),
-    ('SC-CONST-EQUIP', 'CAPEX-EQUIP',     true),
-    ('SC-CONST-MAT',   'COGS-RAW',        true),
-    ('SC-TRADE-IMP',   'COGS-FREIGHT-IN', true),
-    ('SC-TRADE-IMP',   'COGS-RAW',        false),
-    ('SC-TRADE-LOC',   'COGS-RAW',        true);
+    ('SC-IT-HW',       'BI-OPEX',     true),
+    ('SC-IT-HW',       'BI-CAPEX',    false),
+    ('SC-IT-SVC',      'BI-OPEX',     true),
+    ('SC-IT-SW',       'BI-OPEX',     true),
+    ('SC-IT-SW',       'BI-CAPEX',    false),
+    ('SC-PROF-MGMT',   'BI-OPEX',     true),
+    ('SC-PROF-AUDIT',  'BI-REG',      true),
+    ('SC-PROF-LEGAL',  'BI-OPEX',     true),
+    ('SC-FACIL-MAINT', 'BI-OPEX',     true),
+    ('SC-FACIL-RENT',  'BI-OPEX',     true),
+    ('SC-FACIL-UTIL',  'BI-OPEX',     true),
+    ('SC-CONST-EQUIP', 'BI-CAPEX',    true),
+    ('SC-CONST-MAT',   'BI-COGS',     true),
+    ('SC-TRADE-IMP',   'BI-COGS',     true),
+    ('SC-TRADE-LOC',   'BI-COGS',     true);
 
   -- Prerequisite checks: NOTICE (not EXCEPTION) so partial re-migrations
   -- (where 006/007 checksums are unchanged and skipped) don't hard-fail.
@@ -299,45 +276,6 @@ BEGIN
   ) THEN
     RAISE NOTICE 'Some Technostat spend category codes not yet seeded — related rows will be skipped. Run universal/industry seeds first for full coverage.';
   END IF;
-
-  INSERT INTO master.business_intent (
-    tenant_id,
-    code,
-    name,
-    description,
-    domain,
-    status,
-    subtype,
-    sort_order,
-    metadata,
-    created_by,
-    updated_by
-  )
-  SELECT v_tenant_id,
-         d.code,
-         d.name,
-         d.name || ' for Technostat supplier policy routing',
-         d.domain,
-         'active',
-         d.intent_family,
-         d.sort_order,
-         jsonb_build_object(
-           'seed_pack', 'technostat_supplier_100pct',
-           'business_intent_source', 'supplier_policy'
-         ),
-         v_system_user_id,
-         v_system_user_id
-    FROM tmp_technostat_business_intent d
-  ON CONFLICT (tenant_id, code) DO UPDATE
-     SET name = EXCLUDED.name,
-         description = EXCLUDED.description,
-         domain = EXCLUDED.domain,
-         status = 'active',
-         subtype = EXCLUDED.subtype,
-         sort_order = EXCLUDED.sort_order,
-         metadata = COALESCE(master.business_intent.metadata, '{}'::jsonb) || EXCLUDED.metadata,
-         updated_by = v_system_user_id,
-         updated_at = now();
 
   UPDATE master.spend_category sc
      SET default_intent_id = bi.id,
@@ -879,7 +817,7 @@ BEGIN
      AND ssc.status = 'active'
     JOIN master.business_intent bi
       ON bi.tenant_id = s.tenant_id
-     AND bi.code = 'TRANSFER-IC'
+     AND bi.code = 'BI-TRANSFER'
    WHERE p.tenant_id = v_tenant_id
      AND p.status = 'active'
      AND s.supplier_type = 'intercompany'
@@ -944,7 +882,7 @@ BEGIN
        AND ssc.status = 'active'
       JOIN master.business_intent bi
         ON bi.tenant_id = s.tenant_id
-       AND bi.code = 'TRANSFER-IC'
+       AND bi.code = 'BI-TRANSFER'
      WHERE p.tenant_id = v_tenant_id
        AND p.status = 'active'
        AND s.supplier_type = 'intercompany'

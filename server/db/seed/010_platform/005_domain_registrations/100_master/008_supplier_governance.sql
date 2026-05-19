@@ -7,7 +7,7 @@
 UPDATE control.entity
 SET name = 'business_partner_governance', entity_code = 'business_partner_governance', entity_short = 'BPG'
 WHERE table_schema = 'master' AND table_name = 'party_governance_relation'
-  AND entity_code IN ('vendor_governance', 'supplier_governance')
+  AND entity_code IN ('vendor_governance', 'supplier_governance', 'party_governance_relation', 'master_party_governance_relation')
   AND tenant_id IS NULL
   AND NOT EXISTS (
       SELECT 1 FROM control.entity existing
@@ -22,7 +22,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
@@ -31,8 +31,6 @@ SELECT
     'standard', 'restricted', 'controlled',
     'master', 'party_governance_relation',
     'Governance Record', 'Governance Records', 'users', 'violet',
-    false,
-    '{}'::jsonb,
     '{"parent_entity":"business_partner","parent_fk":"party_id","parent_scope":"party_type=business_partner",'
     '"pii_bearing":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
@@ -48,9 +46,11 @@ WHERE entity_code = 'business_partner_governance'
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.entity_code = 'business_partner_governance' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
@@ -187,5 +187,5 @@ SET display_config        = COALESCE(display_config, '{}'::jsonb) || jsonb_build
         'default_sort_field', 'member_name',
         'default_sort_order', 'asc'
     ),
-    natural_key_fields    = ARRAY['id']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['id']::text[]), true)
 WHERE entity_code = 'business_partner_governance' AND tenant_id IS NULL;

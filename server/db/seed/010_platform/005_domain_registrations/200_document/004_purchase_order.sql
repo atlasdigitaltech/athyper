@@ -13,7 +13,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
@@ -22,9 +22,7 @@ SELECT
     'full', 'tenant_critical', 'controlled',
     'document', 'purchase_order',
     'Purchase Order', 'Purchase Orders', 'shopping-cart', 'orange',
-    true,
-    '{"prefix":"PO","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}]}'::jsonb,
-    '{"is_approvable":true,"document_category":"purchasing","allow_on_behalf_of":false,"has_lines":true,"auto_number":true,"write_facade":"PurchaseOrderFacade","backing_source":"commitment+commitment_procurement"}'::jsonb,
+    '{"is_approvable":true,"has_workflow":true,"document_category":"purchasing","allow_on_behalf_of":false,"has_lines":true,"auto_number":true,"write_facade":"PurchaseOrderFacade","backing_source":"commitment+commitment_procurement"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
@@ -34,9 +32,11 @@ WHERE NOT EXISTS (
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'document' AND e.table_name = 'purchase_order'
   AND  e.tenant_id IS NULL
@@ -118,6 +118,7 @@ SET display_config = jsonb_build_object(
     'list_columns',       '["document_no","status","supplier_id","order_date","delivery_date","total_amount","currency_code"]'::jsonb,
     'default_sort_field', 'order_date',
     'default_sort_order', 'desc',
+    'status_field_names', '["status"]'::jsonb,
     'document_header', jsonb_build_object(
         'number_field',   'document_no',
         'status_field',   'status',
@@ -135,13 +136,68 @@ WHERE table_schema = 'document' AND table_name = 'purchase_order'
   AND tenant_id IS NULL
   AND display_config = '{}'::jsonb;
 
+-- Backfill the document renderer contract on already-seeded databases.
+UPDATE control.entity
+SET entity_class = 'DOCUMENT',
+    feature_flags = CASE
+            WHEN jsonb_typeof(feature_flags) = 'object' THEN feature_flags
+            ELSE '{}'::jsonb
+        END
+        || jsonb_build_object(
+            'is_approvable', true,
+            'has_workflow', true,
+            'has_lines', true,
+            'write_facade', 'PurchaseOrderFacade',
+            'backing_source', 'commitment+commitment_procurement'
+        ),
+    display_config =
+        (COALESCE(display_config, '{}'::jsonb) - 'document_header')
+        || jsonb_build_object(
+            'detail_renderer', 'document',
+            'title_field', 'document_no',
+            'subtitle_field', 'supplier_id',
+            'list_columns', '["document_no","status","supplier_id","order_date","delivery_date","total_amount","currency_code"]'::jsonb,
+            'default_sort_field', 'order_date',
+            'default_sort_order', 'desc',
+            'status_field_names', '["status"]'::jsonb,
+            'document_header',
+                CASE
+                    WHEN jsonb_typeof(display_config -> 'document_header') = 'object'
+                    THEN display_config -> 'document_header'
+                    ELSE '{}'::jsonb
+                END
+                || jsonb_build_object(
+                    'number_field', 'document_no',
+                    'status_field', 'status',
+                    'type_label', 'PURCHASE ORDER',
+                    'total_label', 'ORDER TOTAL',
+                    'date_label', 'ORDER DATE',
+                    'party_id_field', 'supplier_id',
+                    'amount_field', 'total_amount',
+                    'currency_field', 'currency_code',
+                    'date_field', 'order_date',
+                    'due_date_field', 'delivery_date'
+                )
+        ),
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000'
+WHERE table_schema = 'document'
+  AND table_name = 'purchase_order'
+  AND tenant_id IS NULL
+  AND (
+      entity_class IS DISTINCT FROM 'DOCUMENT'
+      OR COALESCE(feature_flags ->> 'is_approvable', '') <> 'true'
+      OR COALESCE(feature_flags ->> 'has_workflow', '') <> 'true'
+      OR COALESCE(display_config ->> 'detail_renderer', '') <> 'document'
+      OR COALESCE(display_config #>> '{document_header,status_field}', '') <> 'status'
+  );
+
 -- ── 5. Natural key ────────────────────────────────────────────────────────────
 UPDATE control.entity
-SET natural_key_fields = ARRAY['document_no']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['document_no']::text[]), true)
 WHERE table_schema = 'document' AND table_name = 'purchase_order'
   AND tenant_id IS NULL
-  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
-
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;
 -- ── 6. Backfill: rename deprecated feature_flag key to canonical name ─────────
 UPDATE control.entity
 SET feature_flags = (feature_flags - 'has_line_items') || '{"has_lines":true}'::jsonb

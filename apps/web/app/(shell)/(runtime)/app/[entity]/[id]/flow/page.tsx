@@ -26,6 +26,7 @@ import { useState } from "react";
 import { bffFetch } from "@/lib/bff-fetch";
 import { formatTitle } from "@/lib/format";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
+import { canonicalEntityCode } from "../../../_lib/entity-aliases";
 
 function fmtDate(d: string | null | undefined): string {
   if (!d) return "—";
@@ -279,16 +280,17 @@ export default function AppEntityFlowPage() {
   const router = useRouter();
 
   const entity = params["entity"] as string;
+  const entityCode = canonicalEntityCode(entity);
   const id     = params["id"]     as string;
 
-  const { data: request, isLoading: requestLoading } = useEntityWorkflowRequest(entity, id);
+  const { data: request, isLoading: requestLoading } = useEntityWorkflowRequest(entityCode, id);
   const { data: context, isLoading: contextLoading } = useApprovalContext(request?.id ?? null);
   const isLoading = requestLoading || (!!request && contextLoading);
 
   // Guard — all hooks above; safe to return early from here
-  const { guardLoading, denied } = useSubrouteGuard(entity, "hasFlow");
+  const { guardLoading, denied } = useSubrouteGuard(entityCode, "hasFlow");
   if (guardLoading) return <GuardSkeleton />;
-  if (denied) return <FeatureUnavailablePage entityCode={entity} entityId={id} />;
+  if (denied) return <FeatureUnavailablePage entityCode={entityCode} entityId={id} />;
 
   return (
     <PageFrame
@@ -309,7 +311,7 @@ export default function AppEntityFlowPage() {
             <Skeleton className="h-28 w-full" />
           </div>
         ) : !request ? (
-          <SubmitPanel entityCode={entity} entityId={id} />
+          <SubmitPanel entityCode={entityCode} entityId={id} />
         ) : (
           <>
             <div className="rounded-lg border bg-card p-4">

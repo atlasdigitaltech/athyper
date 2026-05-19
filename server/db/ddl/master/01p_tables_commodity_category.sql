@@ -9,8 +9,8 @@
 --   shared.trg_set_status_changed()
 --   shared.current_tenant_id_soft()
 --   shared.current_tenant_id()
---   master.trg_ccat_maintain_root_category()   (function in 05_functions.sql)
---   control.trg_validate_lookup_columns()      (function in control DDL)
+--   Triggers are registered later in master/06_triggers.sql after master/control
+--   trigger functions exist.
 --   athyperadmin role
 
 -- =============================================================================
@@ -174,24 +174,3 @@ CREATE POLICY admin_write   ON master.commodity_category FOR ALL    TO athyperad
 -- =============================================================================
 -- § Triggers
 -- =============================================================================
-DROP TRIGGER IF EXISTS trg_ccat_updated_at ON master.commodity_category;
-CREATE TRIGGER trg_ccat_updated_at
-    BEFORE UPDATE ON master.commodity_category
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_ccat_status_changed ON master.commodity_category;
-CREATE TRIGGER trg_ccat_status_changed
-    BEFORE UPDATE ON master.commodity_category
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_ccat_maintain_root_category ON master.commodity_category;
-CREATE TRIGGER trg_ccat_maintain_root_category
-    BEFORE INSERT OR UPDATE OF parent_id ON master.commodity_category
-    FOR EACH ROW EXECUTE FUNCTION master.trg_ccat_maintain_root_category();
-
-DROP TRIGGER IF EXISTS trg_ccat_valuation_lookup ON master.commodity_category;
-CREATE TRIGGER trg_ccat_valuation_lookup
-    BEFORE INSERT OR UPDATE OF default_valuation_method ON master.commodity_category
-    FOR EACH ROW
-    WHEN (NEW.default_valuation_method IS NOT NULL)
-    EXECUTE FUNCTION control.trg_validate_lookup_columns('master.valuation_method', 'default_valuation_method');

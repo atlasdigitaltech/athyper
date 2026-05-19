@@ -28,7 +28,7 @@ import type { PlatformPanelIcon } from "../header/atoms/EntityTabBar";
 import { AttachmentsPanel, AuditMetaCard, CommentsPanel, EntityContextDrawer, EventsPanel } from "../panels";
 import type { HeaderTab } from "../header/types";
 import { buildMasterHeaderModel, formatValue } from "../header/builders/buildMasterHeaderModel";
-import { titleCase } from "@athyper/runtime-shared/core";
+import { appEntityDetailHref, appEntityListHref, entitySlugFromCode, normalizeAppEntityHref, titleCase } from "@athyper/runtime-shared/core";
 import {
   resolveDetailConfig,
   resolveMasterConfig,
@@ -210,7 +210,7 @@ function dispatchRecentRecordSnapshot({
   const displayName = name && name.toLowerCase() !== code.toLowerCase() ? name : undefined;
 
   const detail = {
-    href: `/app/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(recordId)}`,
+    href: appEntityDetailHref(entity.entity_code, recordId),
     label: displayName ?? code,
     refCode: code,
     entityCode: entity.entity_code,
@@ -1464,8 +1464,7 @@ export function MasterDetailPage({
     const params = new URLSearchParams();
     if (mode === "edit") params.set("mode", "edit");
     if (returnToHref) params.set("returnTo", returnToHref);
-    const qs = params.toString();
-    return `/app/${entity.entity_code}/${recordId}${qs ? `?${qs}` : ""}`;
+    return appEntityDetailHref(entity.entity_code, recordId, undefined, params);
   };
 
   function handleAction(actionId: string) {
@@ -1520,7 +1519,10 @@ export function MasterDetailPage({
       return;
     }
     if (op.handler_type === "NAVIGATE" && op.handler_target) {
-      router.push(op.handler_target.replace("{id}", encodeURIComponent(recordId)));
+      router.push(normalizeAppEntityHref(op.handler_target
+        .replace("{id}", encodeURIComponent(recordId))
+        .replace("{entityCode}", entity.entity_code)
+        .replace("{entity}", entitySlugFromCode(entity.entity_code))));
       return;
     }
     void opDispatch.dispatch(actionId, operations ?? []);
@@ -1909,8 +1911,7 @@ export function SimpleDetailPage({
     const params = new URLSearchParams();
     if (mode === "edit") params.set("mode", "edit");
     if (returnToHref) params.set("returnTo", returnToHref);
-    const qs = params.toString();
-    return `/app/${entityCode}/${recordId}${qs ? `?${qs}` : ""}`;
+    return appEntityDetailHref(entityCode, recordId, undefined, params);
   };
 
   // Platform panel gating — identical to MasterDetailPage: driven by masterConfig.platform_panels
@@ -2035,7 +2036,7 @@ export function SimpleDetailPage({
         if (!res.ok) return;
         const created = await res.json() as Record<string, unknown>;
         const newId = String(created["id"] ?? "");
-        router.push(newId ? `/app/${entityCode}/${encodeURIComponent(newId)}` : `/app/${entityCode}`);
+        router.push(newId ? appEntityDetailHref(entityCode, newId) : appEntityListHref(entityCode));
       })();
       return;
     }
@@ -2048,7 +2049,7 @@ export function SimpleDetailPage({
           { method: "DELETE" },
         );
         if (!res.ok) return;
-        router.push(`/app/${entityCode}`);
+        router.push(appEntityListHref(entityCode));
       })();
       return;
     }
@@ -2060,7 +2061,10 @@ export function SimpleDetailPage({
       return;
     }
     if (op.handler_type === "NAVIGATE" && op.handler_target) {
-      router.push(op.handler_target.replace("{id}", encodeURIComponent(recordId)));
+      router.push(normalizeAppEntityHref(op.handler_target
+        .replace("{id}", encodeURIComponent(recordId))
+        .replace("{entityCode}", entityCode)
+        .replace("{entity}", entitySlugFromCode(entityCode))));
       return;
     }
     void opDispatch.dispatch(id, operations ?? []);

@@ -20,14 +20,14 @@ BEGIN
         governance_level, security_tier, mutability,
         table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES
         (v_acc, 'commodity_category_buy_policy', 'CCBPOL', 'commodity_category_buy_policy',
          'CONTROL', 'system', 'ent', 'table',
          'full', 'operational', 'controlled',
          'control', 'commodity_category_buy_policy',
          'Commodity Buy Policy', 'Commodity Buy Policies', 'shopping-cart', 'rose',
-         false, '{
+         '{
              "parent_entity":"commodity_category",
              "parent_fk":"commodity_category_id",
              "generic_runtime_disabled":false,
@@ -41,7 +41,7 @@ BEGIN
          'full', 'operational', 'controlled',
          'control', 'commodity_category_sell_policy',
          'Commodity Sell Policy', 'Commodity Sell Policies', 'receipt', 'rose',
-         false, '{
+         '{
              "parent_entity":"commodity_category",
              "parent_fk":"commodity_category_id",
              "generic_runtime_disabled":false,
@@ -55,7 +55,7 @@ BEGIN
          'full', 'operational', 'controlled',
          'control', 'commodity_category_inventory_policy',
          'Commodity Inventory Policy', 'Commodity Inventory Policies', 'warehouse', 'rose',
-         false, '{
+         '{
              "parent_entity":"commodity_category",
              "parent_fk":"commodity_category_id",
              "generic_runtime_disabled":false,
@@ -187,7 +187,7 @@ BEGIN
                'default_sort_field', 'sort_order',
                'default_sort_order', 'asc'
            ),
-           natural_key_fields = ARRAY['commodity_category_id','business_intent_id','scope_type','scope_id','effective_from'],
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['commodity_category_id','business_intent_id','scope_type','scope_id','effective_from']::text[]), true),
            updated_at = now(),
            updated_by = v_su
      WHERE entity_code = 'commodity_category_buy_policy'
@@ -201,7 +201,7 @@ BEGIN
                'default_sort_field', 'sort_order',
                'default_sort_order', 'asc'
            ),
-           natural_key_fields = ARRAY['commodity_category_id','business_intent_id','scope_type','scope_id','effective_from'],
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['commodity_category_id','business_intent_id','scope_type','scope_id','effective_from']::text[]), true),
            updated_at = now(),
            updated_by = v_su
      WHERE entity_code = 'commodity_category_sell_policy'
@@ -215,7 +215,7 @@ BEGIN
                'default_sort_field', 'sort_order',
                'default_sort_order', 'asc'
            ),
-           natural_key_fields = ARRAY['commodity_category_id','scope_type','scope_id','effective_from'],
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['commodity_category_id','scope_type','scope_id','effective_from']::text[]), true),
            updated_at = now(),
            updated_by = v_su
      WHERE entity_code = 'commodity_category_inventory_policy'

@@ -26,7 +26,7 @@ BEGIN
             label, change_type, effective_from, created_by
         ) VALUES (
             r.id, r.tenant_id, 1, 'EFFECTIVE',
-            'Initial version', 'structural',
+            'Initial Version', 'structural',
             now(),
             v_su
         );

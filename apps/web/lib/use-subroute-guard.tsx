@@ -17,6 +17,7 @@ import { ArrowLeft, ShieldOff } from "lucide-react";
 import { Button, Skeleton } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
 import { useCompiledEntity } from "@athyper/query";
+import { appEntityDetailHref, appEntityListHref } from "@athyper/runtime-shared/core";
 import { resolveCapabilities, type EntityCapabilities } from "./entity-capabilities";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -77,8 +78,8 @@ export function FeatureUnavailablePage({
 }) {
   const router = useRouter();
   const dest = entityId
-    ? `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(entityId)}`
-    : `/app/${encodeURIComponent(entityCode)}`;
+    ? appEntityDetailHref(entityCode, entityId)
+    : appEntityListHref(entityCode);
 
   return (
     <PageFrame title="Not available" width="narrow">

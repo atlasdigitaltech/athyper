@@ -430,11 +430,11 @@ BEGIN
     FROM master.commodity_category cc
     CROSS JOIN LATERAL (
         SELECT CASE
-            WHEN cc.code LIKE 'SC-CAPEQUIP%' THEN ARRAY['BI-CAPEX','CAPEX_GENERAL','BI-OPEX','OPEX_GENERAL']::text[]
+            WHEN cc.code LIKE 'SC-CAPEQUIP%' THEN ARRAY['BI-CAPEX','BI-OPEX']::text[]
             WHEN cc.inventory_allowed
               OR cc.code ~ '^(SC-RAW|SC-COMP|SC-PKG|SC-CONSUM|SC-MRO|SC-PRODSVC|SC-CONTRACT|SC-FREIGHT|SC-WHSE|SC-QC|SC-TRADE|SC-CONST)'
-                THEN ARRAY['BI-COGS','OPEX_GENERAL','BI-OPEX']::text[]
-            ELSE ARRAY['BI-OPEX','OPEX_GENERAL']::text[]
+                THEN ARRAY['BI-COGS','BI-OPEX']::text[]
+            ELSE ARRAY['BI-OPEX']::text[]
         END AS codes
     ) pref
     JOIN LATERAL (
@@ -972,6 +972,27 @@ BEGIN
 
     IF EXISTS (
         SELECT 1
+        FROM control.commodity_category_buy_policy p
+        JOIN master.business_intent bi
+          ON bi.tenant_id = p.tenant_id
+         AND bi.id = p.business_intent_id
+        WHERE p.tenant_id = v_tid
+          AND p.is_active = true
+          AND bi.code NOT IN ('BI-OPEX','BI-CAPEX','BI-COGS','BI-ADMIN','BI-REG','BI-TRANSFER','BI-REV','BI-DEFREV')
+    ) THEN
+        RAISE EXCEPTION '[900_commodity_refresh] buy policies reference non-domain business intents: %',
+            (SELECT string_agg(DISTINCT bi.code, ', ' ORDER BY bi.code)
+             FROM control.commodity_category_buy_policy p
+             JOIN master.business_intent bi
+               ON bi.tenant_id = p.tenant_id
+              AND bi.id = p.business_intent_id
+             WHERE p.tenant_id = v_tid
+               AND p.is_active = true
+               AND bi.code NOT IN ('BI-OPEX','BI-CAPEX','BI-COGS','BI-ADMIN','BI-REG','BI-TRANSFER','BI-REV','BI-DEFREV'));
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
         FROM master.commodity_category cc
         WHERE cc.tenant_id = v_tid
           AND cc.inventory_allowed = true
@@ -1007,6 +1028,27 @@ BEGIN
           )
     ) THEN
         RAISE EXCEPTION '[900_commodity_refresh] sell-enabled commodity categories missing default sell policy';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM control.commodity_category_sell_policy p
+        JOIN master.business_intent bi
+          ON bi.tenant_id = p.tenant_id
+         AND bi.id = p.business_intent_id
+        WHERE p.tenant_id = v_tid
+          AND p.is_active = true
+          AND bi.code NOT IN ('BI-OPEX','BI-CAPEX','BI-COGS','BI-ADMIN','BI-REG','BI-TRANSFER','BI-REV','BI-DEFREV')
+    ) THEN
+        RAISE EXCEPTION '[900_commodity_refresh] sell policies reference non-domain business intents: %',
+            (SELECT string_agg(DISTINCT bi.code, ', ' ORDER BY bi.code)
+             FROM control.commodity_category_sell_policy p
+             JOIN master.business_intent bi
+               ON bi.tenant_id = p.tenant_id
+              AND bi.id = p.business_intent_id
+             WHERE p.tenant_id = v_tid
+               AND p.is_active = true
+               AND bi.code NOT IN ('BI-OPEX','BI-CAPEX','BI-COGS','BI-ADMIN','BI-REG','BI-TRANSFER','BI-REV','BI-DEFREV'));
     END IF;
 
     RAISE NOTICE '[900_commodity_refresh] tenant %, categories %, rules %, spend policies %, sales policies %, inventory policies %',

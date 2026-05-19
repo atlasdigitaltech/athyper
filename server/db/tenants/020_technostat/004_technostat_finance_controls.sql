@@ -10,7 +10,7 @@
 --   P01   Tax registration numbers on legal entities
 --   P02   Rounding rules (SAR · EGP)
 --   P03   Tax groups — composite VAT+WHT presets per jurisdiction
---   P04   Document sequence config — 7 doc types × 4 company codes
+--   P04   Entity numbering config is provided by platform defaults
 --   P05   Accounting profiles — AP (4) · AR (2) standard profiles
 --   P06   Spend categories — hierarchical procurement taxonomy (17 nodes)
 --   P07   Bank accounts + bank_account_link to company codes (4 per CC)
@@ -22,14 +22,6 @@
 -- Depends on: 003_technostat_production_seed.sql (legal entities, CCs, etc.)
 -- ============================================================================
 
-
--- ── Schema fixup: align dsc_reset_chk with lookup domain codes (lowercase) ──
--- The DDL originally used uppercase ('NONE','YEARLY','MONTHLY') but the
--- lookup domain control.document_sequence_reset_strategy seeds lowercase codes.
--- Drop+add is idempotent; safe to re-run.
-ALTER TABLE control.document_sequence_config DROP CONSTRAINT IF EXISTS dsc_reset_chk;
-ALTER TABLE control.document_sequence_config ADD CONSTRAINT dsc_reset_chk
-    CHECK (reset_strategy IN ('none','yearly','monthly'));
 
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -226,64 +218,6 @@ END $p03$;
 
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
--- ║  P04: DOCUMENT SEQUENCE CONFIG                                           ║
--- ║                                                                          ║
--- ║  7 document types × 4 company codes = 28 sequence configs               ║
--- ║                                                                          ║
--- ║  Format: {CC_PREFIX}-{DOC}-{year}-{seq:05}                              ║
--- ║    e.g.  TKSA-PI-2025-00001  · SSK-JE-2025-00001                        ║
--- ║                                                                          ║
--- ║  Types: purchase_invoice · sales_invoice · credit_note                   ║
--- ║         payment_entry · journal_entry · goods_receipt · purchase_order   ║
--- ╚═══════════════════════════════════════════════════════════════════════════╝
-
-DO $p04$
-DECLARE
-    v_su    uuid := '00000000-0000-0000-0000-000000000000';
-    v_tid   uuid;
-    v_meta  jsonb;
-    -- Company code IDs
-    v_cc    record;
-    -- Doc type config rows
-    r       record;
-BEGIN
-    SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
-    v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '004_finance_controls', 'version', '1.0.0'));
-
-    -- Iterate over CCs and insert one sequence config per doc type
-    FOR v_cc IN
-        SELECT id, code FROM master.company_code WHERE tenant_id = v_tid
-          AND code IN ('TKSA','SSK','TEGY','SDTX')
-    LOOP
-        FOR r IN
-            SELECT
-                doc_type,
-                v_cc.code || '-' || prefix_code AS prefix
-            FROM (VALUES
-                ('purchase_invoice', 'PI'),
-                ('sales_invoice',    'SI'),
-                ('credit_note',      'CN'),
-                ('payment_entry',    'PAY'),
-                ('journal_entry',    'JE'),
-                ('goods_receipt',    'GR'),
-                ('purchase_order',   'PO')
-            ) AS t(doc_type, prefix_code)
-        LOOP
-            INSERT INTO control.document_sequence_config (
-                tenant_id, company_code_id, doc_type,
-                prefix, separator, pad_width,
-                reset_strategy, metadata, created_by)
-            VALUES (
-                v_tid, v_cc.id, r.doc_type,
-                r.prefix, '-', 5,
-                'yearly', v_meta, v_su)
-            ON CONFLICT (tenant_id, company_code_id, doc_type) DO NOTHING;
-        END LOOP;
-    END LOOP;
-
-    RAISE NOTICE '[P04] Document sequence config seeded: 7 types × 4 CCs = 28 rows';
-END $p04$;
-
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
 -- ║  P05: ACCOUNTING PROFILES                                                ║
@@ -895,7 +829,6 @@ DECLARE
     v_tax_reg     int;
     v_rounding    int;
     v_tax_groups  int;
-    v_doc_seq     int;
     v_acct_prof   int;
     v_spend_cat   int;
     v_bank_accts  int;
@@ -917,9 +850,6 @@ BEGIN
     SELECT count(*) INTO v_tax_groups
         FROM control.tax_group WHERE tenant_id = v_tid;
 
-    SELECT count(*) INTO v_doc_seq
-        FROM control.document_sequence_config WHERE tenant_id = v_tid;
-
     SELECT count(*) INTO v_acct_prof
         FROM master.accounting_profile WHERE tenant_id = v_tid;
 
@@ -939,7 +869,6 @@ BEGIN
     IF v_tax_reg    < 4  THEN RAISE EXCEPTION '[P10] Expected 4 LEs with tax reg, got %', v_tax_reg; END IF;
     IF v_rounding   < 2  THEN RAISE EXCEPTION '[P10] Expected ≥2 rounding rules, got %',  v_rounding; END IF;
     IF v_tax_groups < 4  THEN RAISE EXCEPTION '[P10] Expected ≥4 tax groups, got %',      v_tax_groups; END IF;
-    IF v_doc_seq    < 28 THEN RAISE EXCEPTION '[P10] Expected 28 doc sequence configs (7×4), got %', v_doc_seq; END IF;
     IF v_acct_prof  < 6  THEN RAISE EXCEPTION '[P10] Expected ≥6 accounting profiles, got %', v_acct_prof; END IF;
     IF v_spend_cat  < 17 THEN RAISE EXCEPTION '[P10] Expected ≥17 spend categories, got %', v_spend_cat; END IF;
     IF v_bank_accts < 4  THEN RAISE EXCEPTION '[P10] Expected ≥4 bank accounts, got %',   v_bank_accts; END IF;
@@ -950,7 +879,6 @@ BEGIN
     RAISE NOTICE '  Legal entities w/tax reg:     %', v_tax_reg;
     RAISE NOTICE '  Rounding rules:               %', v_rounding;
     RAISE NOTICE '  Tax groups:                   %', v_tax_groups;
-    RAISE NOTICE '  Document sequence configs:    %', v_doc_seq;
     RAISE NOTICE '  Accounting profiles:          %', v_acct_prof;
     RAISE NOTICE '  Spend categories:             %', v_spend_cat;
     RAISE NOTICE '  Bank accounts:                %', v_bank_accts;

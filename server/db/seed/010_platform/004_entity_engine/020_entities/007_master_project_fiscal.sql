@@ -14,11 +14,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'project', 'PROJ', 'project', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'extensible', 'master', 'project',
         'Project', 'Projects', 'folder-kanban', 'teal',
-        false, '{"is_approvable":false}'::jsonb, 'ACTIVE', v_su)
+        '{"is_approvable":false}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 62. project_item ─────────────────────────────────────────────────────
@@ -26,11 +26,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'project_item', 'PRJIT', 'project_item', 'DOCUMENT_RELATION', 'system', 'ent', 'table',
         'full', 'operational', 'extensible', 'master', 'project_item',
         'Project Item', 'Project Items', 'list-checks', 'teal',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 63. dimension_set ────────────────────────────────────────────────────
@@ -38,11 +38,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'dimension_set', 'DMSET', 'dimension_set', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'dimension_set',
         'Dimension Set', 'Dimension Sets', 'layers-3', 'teal',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 64. fiscal_period ────────────────────────────────────────────────────
@@ -50,11 +50,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'fiscal_period', 'FPER', 'fiscal_period', 'MASTER', 'system', 'ent', 'table',
         'full', 'tenant_critical', 'locked', 'master', 'fiscal_period',
         'Fiscal Period', 'Fiscal Periods', 'calendar', 'green',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 END $$;

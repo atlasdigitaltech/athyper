@@ -70,22 +70,7 @@ BEGIN
     ('SC-CONST-FIT',    'Fit-out & Finishing',         'Interior fit-out, joinery, flooring, and decorative finishes',        'SC-CONST', 'services', 414, false),
     ('SC-CONST-HEAVY',  'Heavy Equipment Rental',      'Cranes, excavators, bulldozers, and heavy plant hire',               'SC-CONST', 'services', 415, false);
 
-    -- B2: Business intents
-    CREATE TEMP TABLE tmp_bi (
-        seed_id     uuid DEFAULT shared.uuidv7(),
-        code        text NOT NULL,
-        name        text NOT NULL,
-        description text,
-        domain      text NOT NULL,
-        subtype     text,
-        parent_code text,
-        sort_order  smallint NOT NULL DEFAULT 0
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_bi (code, name, description, domain, subtype, parent_code, sort_order) VALUES
-    ('BI-COGS', 'Construction Cost of Sales',    'Direct costs of building and civil construction projects',  'COST_OF_SALES', 'CONSTRUCTION',      'BI-COGS',  37),
-    ('BI-CAPEX', 'Building Capital Expenditure',  'Capital spend on new buildings and major renovations',      'CAPEX',         'BUILDING',          'BI-CAPEX', 31),
-    ('BI-REG',   'Building Regulatory Compliance','Building permits, safety inspections, and code compliance', 'REGULATORY',    'BUILDING_COMPLIANCE','BI-REG',   55);
+    -- B2: Business intent rows are domain-level only; this pack links categories to canonical BI-* records.
 
     -- B3: Commodity bridge
     CREATE TEMP TABLE tmp_bridge (

@@ -22,14 +22,14 @@ BEGIN
         governance_level, security_tier, mutability,
         table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES
         (v_acc, 'commodity_classification_to_intent_rule', 'CIR', 'commodity_classification_to_intent_rule',
          'CONTROL', 'system', 'ent', 'table',
          'full', 'operational', 'controlled',
          'control', 'commodity_classification_to_intent_rule',
          'Classification Rule', 'Classification Rules', 'route', 'rose',
-         false, '{
+         '{
              "parent_entity":"commodity_category",
              "parent_fk":"classification_id",
              "generic_runtime_disabled":false,
@@ -43,7 +43,7 @@ BEGIN
          'full', 'operational', 'controlled',
          'control', 'commodity_code_to_category_rule',
          'Commodity Routing Rule', 'Commodity Routing Rules', 'route', 'rose',
-         false, '{
+         '{
              "parent_entity":"commodity_category",
              "parent_fk":"commodity_category_id",
              "generic_runtime_disabled":false,
@@ -153,7 +153,7 @@ BEGIN
                'default_sort_field', 'priority',
                'default_sort_order', 'asc'
            ),
-           natural_key_fields = ARRAY['classification_source','classification_id','condition_type','resolved_intent_id','priority']
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['classification_source','classification_id','condition_type','resolved_intent_id','priority']::text[]), true)
      WHERE entity_code = 'commodity_classification_to_intent_rule'
        AND tenant_id IS NULL;
 
@@ -165,7 +165,7 @@ BEGIN
                'default_sort_field', 'priority',
                'default_sort_order', 'desc'
            ),
-           natural_key_fields = ARRAY['commodity_domain_code','code_from','priority']
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['commodity_domain_code','code_from','priority']::text[]), true)
      WHERE entity_code = 'commodity_code_to_category_rule'
        AND tenant_id IS NULL;
 
@@ -212,7 +212,7 @@ BEGIN
                'owner_type_column', 'owner_type',
                'default_owner_type_scope', 'commodity_category'
            ),
-           natural_key_fields = ARRAY['owner_type','owner_id','classification_type','domain_code','code_id']
+           identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['owner_type','owner_id','classification_type','domain_code','code_id']::text[]), true)
      WHERE entity_code = 'commodity_classification'
        AND tenant_id IS NULL;
 
@@ -317,36 +317,6 @@ BEGIN
        AND ev.version_no = 1
        AND ef.name = ANY(editable.field_names)
        AND ef.is_read_only = true;
-
-    UPDATE control.entity_version ev
-       SET version_hash = encode(sha256(convert_to(
-               ev.id::text || ':' || COALESCE((
-                   SELECT jsonb_agg(jsonb_build_object(
-                              'name', ef.name,
-                              'data_type', ef.data_type,
-                              'ui_type', ef.ui_type,
-                              'enum_domain_code', ef.enum_domain_code,
-                              'lookup_config', ef.lookup_config,
-                              'is_read_only', ef.is_read_only,
-                              'validation', ef.validation,
-                              'reference_config', ef.reference_config
-                          ) ORDER BY ef.sort_order, ef.name)::text
-                     FROM control.entity_field ef
-                    WHERE ef.entity_version_id = ev.id
-               ), '[]'),
-               'UTF8'
-           )), 'hex'),
-           updated_at   = now(),
-           updated_by   = v_su
-      FROM control.entity e
-     WHERE ev.entity_id = e.id
-       AND e.tenant_id IS NULL
-       AND ev.version_no = 1
-       AND e.entity_code IN (
-           'commodity_classification_to_intent_rule',
-           'commodity_classification',
-           'commodity_code_to_category_rule'
-       );
 
     INSERT INTO control.entity_operation
         (tenant_id, entity_name, permission_code, surface, placement,

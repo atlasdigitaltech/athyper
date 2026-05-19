@@ -66,13 +66,13 @@ These are the highest-value candidates — every accounting policy differs betwe
 | `finance.ar.credit_days` | AR workbench | credit window | T1 | Standard credit days policy differs per tenant |
 | `finance.ar.late_payment_grace_days` | AR aging report | grace period | T1 | Legal/policy requirement |
 | `finance.gl.period_close_lock_days` | period gate trigger | lock buffer | T1 | Some tenants close on day 3, others day 10 |
-| `finance.numbering.je_prefix` | numbering_series seed | `"JE"` | T1 | Tenant-branded document number prefixes |
-| `finance.numbering.ap_invoice_prefix` | numbering_series seed | `"API"` | T1 | Same — AP prefix |
-| `finance.numbering.ar_invoice_prefix` | numbering_series seed | `"ARI"` | T1 | Same — AR prefix |
+| `finance.numbering.je_prefix` | entity_numbering_config seed | `"JE"` | T1 | Tenant-branded document number prefixes |
+| `finance.numbering.ap_invoice_prefix` | entity_numbering_config seed | `"API"` | T1 | Same — AP prefix |
+| `finance.numbering.ar_invoice_prefix` | entity_numbering_config seed | `"ARI"` | T1 | Same — AR prefix |
 | `finance.reporting.default_report` | `reportRegistry.ts:107` | `"profit-loss"` | T1 | Default landing report on Finance module open |
 | `finance.reporting.fiscal_year_start_month` | master.tenant_profile | 1 (January) | T1 | Already in tenant profile — mirror here for runtime access |
 
-> **Note on numbering prefixes**: These are currently stored in `master.numbering_series` rows
+> **Note on numbering prefixes**: These are currently stored in `control.entity_numbering_config` rows
 > but their *default* values are hardcoded in the seed.  Moving the prefix pattern into
 > `control.parameter_definition` lets tenants change the format *before* the first document is
 > issued, without a DDL migration.
@@ -442,7 +442,7 @@ FROM (VALUES
      'tenant_configurable', 'configurable', 'string', NULL,
      '"JE"', '"JE"', NULL, NULL, NULL,
      'next_request', 300, false, true, 10,
-     '{"source":"server/db/sql/master/numbering_series seed"}'),
+     '{"source":"server/db/sql/master/entity_numbering_config seed"}'),
 
     ('finance.numbering.ap_invoice_prefix', 'finance.numbering',
      'AP invoice number prefix',
@@ -450,7 +450,7 @@ FROM (VALUES
      'tenant_configurable', 'configurable', 'string', NULL,
      '"API"', '"API"', NULL, NULL, NULL,
      'next_request', 300, false, true, 20,
-     '{"source":"server/db/sql/master/numbering_series seed"}'),
+     '{"source":"server/db/sql/master/entity_numbering_config seed"}'),
 
     ('finance.numbering.ar_invoice_prefix', 'finance.numbering',
      'AR invoice number prefix',
@@ -458,7 +458,7 @@ FROM (VALUES
      'tenant_configurable', 'configurable', 'string', NULL,
      '"ARI"', '"ARI"', NULL, NULL, NULL,
      'next_request', 300, false, true, 30,
-     '{"source":"server/db/sql/master/numbering_series seed"}'),
+     '{"source":"server/db/sql/master/entity_numbering_config seed"}'),
 
     -- ── Collaboration: Attachments ────────────────────────────────────────
     ('collab.attachments.max_file_bytes', 'collab.attachments',

@@ -933,7 +933,7 @@ SELECT
     COALESCE(pui.locale_code,   tp.locale_code,   'en')       AS locale_code,
     COALESCE(pui.language_code, tp.language_code,  'en')       AS language_code,
     COALESCE(pui.timezone_code, tp.timezone_code,  'UTC')      AS timezone_code,
-    COALESCE(pui.date_format,   tp.date_format,   '%Y-%m-%d') AS date_format,
+    COALESCE(pui.date_format,   tp.date_format,   '%d %b %Y') AS date_format,
     COALESCE(pui.number_format, tp.number_format)              AS number_format,
     COALESCE(pui.week_start,    tp.week_start,    1)           AS week_start,
 

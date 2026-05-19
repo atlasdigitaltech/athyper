@@ -8,6 +8,7 @@ export { BalanceSheetView } from "./BalanceSheetView";
 export { ProfitLossView } from "./ProfitLossView";
 export { GlDetailView } from "./GlDetailView";
 export { GlWorkbench } from "./GlWorkbench";
+export { CoaWorkbench } from "./CoaWorkbench";
 export { ApWorkbenchView } from "./ApWorkbenchView";
 export { BankReconciliationView } from "./BankReconciliationView";
 export { PeriodCloseDashboardView } from "./PeriodCloseDashboardView";
@@ -17,6 +18,7 @@ export { CloseCycleWorkbench, type CloseCycleWorkbenchProps } from "./CloseCycle
 export { FinancialReportsWorkbench, type FinancialReportsWorkbenchProps } from "./FinancialReportsWorkbench";
 export { CommodityCategoryWorkbench } from "./CommodityCategoryWorkbench";
 export { BusinessIntentWorkbench } from "./BusinessIntentWorkbench";
+export { AccountingProfileWorkbench } from "./AccountingProfileWorkbench";
 export { CashFlowView } from "./CashFlowView";
 export { ApAgingView } from "./ApAgingView";
 export { ArAgingView } from "./ArAgingView";

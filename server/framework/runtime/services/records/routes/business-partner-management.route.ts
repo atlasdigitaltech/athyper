@@ -75,7 +75,7 @@ export interface DuplicateCheckResult {
   matches: DuplicateMatch[];
   blocking: boolean;
   duplicate_policy: {
-    source: "control.entity.feature_flags.duplicate_check";
+    source: "control.entity.identity_config.duplicate_check" | "control.entity.feature_flags.duplicate_check";
     exact_fields: string[];
     strong_name_threshold: number;
     weak_name_threshold: number;
@@ -98,6 +98,7 @@ interface BpCandidateRow {
 }
 
 interface DuplicatePolicy {
+  source: "control.entity.identity_config.duplicate_check" | "control.entity.feature_flags.duplicate_check";
   exact_fields: string[];
   strong_name_threshold: number;
   weak_name_threshold: number;
@@ -371,6 +372,7 @@ function normalizeBusinessPartnerExtensionBody(raw: Record<string, unknown>): Bu
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function loadDuplicatePolicy(db: Kysely<any>): Promise<DuplicatePolicy> {
   const defaults: DuplicatePolicy = {
+    source: "control.entity.identity_config.duplicate_check",
     exact_fields: ["registration_no", "identifier", "tax_number"],
     strong_name_threshold: 0.85,
     weak_name_threshold: 0.55,
@@ -379,18 +381,24 @@ async function loadDuplicatePolicy(db: Kysely<any>): Promise<DuplicatePolicy> {
 
   const row = await db
     .selectFrom("control.entity as e")
-    .select("e.feature_flags")
+    .select(["e.identity_config", "e.feature_flags"])
     .where("e.entity_code", "=", "business_partner")
     .where("e.tenant_id", "is", null)
-    .executeTakeFirst() as { feature_flags?: unknown } | undefined;
+    .executeTakeFirst() as { identity_config?: unknown; feature_flags?: unknown } | undefined;
 
+  const identityConfig = asRecord(row?.identity_config);
   const flags = asRecord(row?.feature_flags);
-  const cfg = asRecord(flags["duplicate_check"]);
-  const exactFields = Array.isArray(cfg["exact_fields"])
-    ? cfg["exact_fields"].filter((v): v is string => typeof v === "string")
+  const identityCfg = asRecord(identityConfig["duplicate_check"]);
+  const legacyCfg = asRecord(flags["duplicate_check"]);
+  const hasIdentityCfg = Object.keys(identityCfg).length > 0;
+  const cfg = hasIdentityCfg ? identityCfg : legacyCfg;
+  const exactFieldsRaw = cfg["exact_fields"] ?? cfg["fields"];
+  const exactFields = Array.isArray(exactFieldsRaw)
+    ? exactFieldsRaw.filter((v): v is string => typeof v === "string")
     : defaults.exact_fields;
 
   return {
+    source: hasIdentityCfg ? "control.entity.identity_config.duplicate_check" : "control.entity.feature_flags.duplicate_check",
     exact_fields: exactFields.length > 0 ? exactFields : defaults.exact_fields,
     strong_name_threshold: typeof cfg["strong_name_threshold"] === "number"
       ? cfg["strong_name_threshold"]
@@ -405,55 +413,32 @@ async function loadDuplicatePolicy(db: Kysely<any>): Promise<DuplicatePolicy> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolveNumberingCompanyId(db: Kysely<any>, tenantId: string, principalId?: string): Promise<string> {
-  if (principalId) {
-    const preferred = await db
-      .selectFrom("master.principal_profile as pp")
-      .innerJoin("master.company_code as c", (join) =>
-        join
-          .onRef("c.tenant_id", "=", "pp.tenant_id")
-          .onRef("c.id", "=", "pp.default_company_code_id"))
-      .select("c.id")
-      .where("pp.tenant_id", "=", tenantId)
-      .where("pp.principal_id", "=", principalId)
-      .where("c.is_active", "=", true)
-      .executeTakeFirst() as { id?: string } | undefined;
-
-    if (preferred?.id) return String(preferred.id);
-  }
-
-  const firstActive = await db
-    .selectFrom("master.company_code as c")
-    .select("c.id")
-    .where("c.tenant_id", "=", tenantId)
-    .where("c.is_active", "=", true)
-    .orderBy("c.code", "asc")
-    .executeTakeFirst() as { id?: string } | undefined;
-
-  return firstActive?.id ? String(firstActive.id) : "00000000-0000-0000-0000-000000000000";
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function generateBusinessCode(
   db: Kysely<any>,
   tenantId: string,
   sequence: "business_partner" | "supplier" | "customer",
   principalId?: string,
 ): Promise<string> {
-  const companyId = await resolveNumberingCompanyId(db, tenantId, principalId);
-
-  try {
-    const result = await sql<{ code: string }>`
-      SELECT master.fn_next_document_number(
-        ${tenantId}::uuid,
-        ${companyId}::uuid,
-        ${sequence}
-      ) AS code
-    `.execute(db);
-    const code = result.rows[0]?.code;
-    if (code) return code;
-  } catch {
-    // Numbering series may not be seeded in early environments.
+  void principalId;
+  if (sequence === "business_partner") {
+    try {
+      const result = await sql<{ code: string }>`
+        SELECT control.next_entity_number(
+          ${tenantId}::uuid,
+          'business_partner',
+          'code',
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          CURRENT_DATE
+        ) AS code
+      `.execute(db);
+      const code = result.rows[0]?.code;
+      if (code) return code;
+    } catch {
+      // Canonical entity numbering may not be seeded in early environments.
+    }
   }
 
   const prefix = sequence === "supplier" ? "SUP" : sequence === "customer" ? "CUS" : "BP";
@@ -823,7 +808,7 @@ export async function checkBusinessPartnerDuplicates(
     matches,
     blocking,
     duplicate_policy: {
-      source: "control.entity.feature_flags.duplicate_check",
+      source: policy.source,
       exact_fields: policy.exact_fields,
       strong_name_threshold: policy.strong_name_threshold,
       weak_name_threshold: policy.weak_name_threshold,

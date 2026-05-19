@@ -362,9 +362,10 @@ BEGIN
                 'default_sort_order', 'asc',
                 'list_columns', to_jsonb(cfg.list_columns)
             ),
-        natural_key_fields = CASE
-            WHEN cfg.natural_field IS NOT NULL THEN ARRAY[cfg.natural_field]::text[]
-            ELSE e.natural_key_fields
+        identity_config = CASE
+            WHEN cfg.natural_field IS NOT NULL
+            THEN jsonb_set(COALESCE(e.identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY[cfg.natural_field]::text[]), true)
+            ELSE e.identity_config
         END,
         updated_at = now(),
         updated_by = v_system_user
@@ -375,7 +376,13 @@ BEGIN
         SELECT
             (
                 SELECT ef.name
-                FROM unnest(COALESCE(e_cfg.natural_key_fields, ARRAY[]::text[])) WITH ORDINALITY nk(field_name, ord)
+                FROM jsonb_array_elements_text(
+                    CASE
+                        WHEN jsonb_typeof(COALESCE(e_cfg.identity_config, '{}'::jsonb)->'natural_key_fields') = 'array'
+                        THEN COALESCE(e_cfg.identity_config, '{}'::jsonb)->'natural_key_fields'
+                        ELSE '[]'::jsonb
+                    END
+                ) WITH ORDINALITY nk(field_name, ord)
                 JOIN control.entity_field ef
                   ON ef.entity_version_id = ev.id
                  AND (ef.name = nk.field_name OR ef.column_name = nk.field_name)

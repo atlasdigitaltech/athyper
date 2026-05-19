@@ -20,11 +20,21 @@ DO $seed_ap_configs$
 DECLARE
     v_tenant   record;
     v_prof     record;
+    v_tid      uuid;
     v_sys uuid := '00000000-0000-0000-0000-000000000000';
     v_today    date := CURRENT_DATE;
 BEGIN
+    v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    IF v_tid IS NULL THEN
+        RAISE EXCEPTION '[seed] app.seed_tenant_id not set - run: SET app.seed_tenant_id = ''<uuid>''';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM master.tenant WHERE id = v_tid AND status = 'active') THEN
+        RAISE EXCEPTION '[seed] active tenant % not found', v_tid;
+    END IF;
+
     FOR v_tenant IN
-        SELECT id AS tenant_id FROM master.tenant WHERE status = 'active'
+        SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
         -- ── AP_NON_PO_STANDARD ────────────────────────────────────────────────
         SELECT id, tenant_id INTO v_prof
@@ -146,6 +156,5 @@ BEGIN
 
     END LOOP;
 
-    RAISE NOTICE 'blueprint/030_acct_profile_configs: seeded for % tenants',
-        (SELECT count(*) FROM master.tenant WHERE status = 'active');
+    RAISE NOTICE 'blueprint/030_acct_profile_configs: seeded for tenant %', v_tid;
 END $seed_ap_configs$;

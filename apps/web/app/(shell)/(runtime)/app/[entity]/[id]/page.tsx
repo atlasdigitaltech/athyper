@@ -1,5 +1,7 @@
 import { EntityDetailPage } from "@athyper/entity-runtime/detail";
 import { DocumentDetailPage } from "@athyper/document-runtime";
+import { redirect } from "next/navigation";
+import { canonicalEntityCode, canonicalEntitySlug } from "../../_lib/entity-aliases";
 
 /**
  * Runtime entity detail — /app/[entity]/[id]
@@ -29,17 +31,38 @@ export default async function AppEntityDetailRoute({
   searchParams,
 }: {
   params: Promise<{ entity: string; id: string }>;
-  searchParams: Promise<{ mode?: string; returnTo?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { entity, id } = await params;
-  const { mode, returnTo } = await searchParams;
+  const currentSearchParams = await searchParams;
+  const entityCode = canonicalEntityCode(entity);
+  const entitySlug = canonicalEntitySlug(entity);
+  if (entitySlug !== entity) {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(currentSearchParams)) {
+      if (Array.isArray(value)) {
+        value.forEach((item) => query.append(key, item));
+      } else if (value != null) {
+        query.set(key, value);
+      }
+    }
+    const queryText = query.toString();
+    redirect(`/app/${entitySlug}/${encodeURIComponent(id)}${queryText ? `?${queryText}` : ""}`);
+  }
+
+  const mode = firstParam(currentSearchParams["mode"]);
+  const returnTo = firstParam(currentSearchParams["returnTo"]);
   return (
     <EntityDetailPage
-      entityCode={entity}
+      entityCode={entityCode}
       recordId={id}
       editMode={mode === "edit"}
       returnTo={returnTo}
       documentRenderer={DocumentDetailPage}
     />
   );
+}
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }

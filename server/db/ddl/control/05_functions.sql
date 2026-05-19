@@ -1262,6 +1262,24 @@ COMMENT ON FUNCTION control.trg_ensure_entity_publish_state() IS
     'ON CONFLICT DO NOTHING prevents duplicates on re-runs.';
 
 
+-- ─── A2. Bump latest_version_no in entity_publish_state on entity_version INSERT ─
+
+CREATE OR REPLACE FUNCTION control.trg_ev_bump_latest_version_no()
+RETURNS trigger LANGUAGE plpgsql SET search_path = control AS $$
+BEGIN
+    UPDATE control.entity_publish_state
+       SET latest_version_no = GREATEST(latest_version_no, NEW.version_no),
+           updated_at         = now()
+     WHERE entity_id = NEW.entity_id;
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION control.trg_ev_bump_latest_version_no() IS
+    'AFTER INSERT on control.entity_version. Keeps entity_publish_state.latest_version_no '
+    'at the highest version_no seen for each entity.';
+
+
 -- ─── B. Field flag defaults from entity_class_profile ────────────────────────
 
 CREATE OR REPLACE FUNCTION control.trg_field_flag_defaults()
@@ -2466,109 +2484,275 @@ COMMENT ON FUNCTION control.promote_obligation_tier IS
 -- DOCUMENT SEQUENCE — atomic number generator
 -- =============================================================================
 
--- ── control.next_document_number ─────────────────────────────────────────────
--- Atomic document number generation.
--- UPDATE-first for the hot path; INSERT with ON CONFLICT for new year/period rows.
--- Reads config from document_sequence_config; increments document_sequence_counter.
--- Supports YEARLY, MONTHLY, and NONE (continuous) reset strategies.
--- Custom format_template supports {prefix}, {sep}, {year}, {period}, {seq}.
-CREATE OR REPLACE FUNCTION control.next_document_number(
-    p_tenant_id         uuid,
-    p_company_code_id   uuid,
-    p_doc_type          text,
-    p_fiscal_year       smallint,
-    p_period_number     smallint    DEFAULT 0
+-- ── control.next_entity_number ──────────────────────────────────────────────
+-- Canonical entity-number generator. Reads control.entity_numbering_config,
+-- increments control.entity_numbering_counter, and renders configured segments.
+CREATE OR REPLACE FUNCTION control.next_entity_number(
+    p_tenant_id          uuid,
+    p_entity_code        text,
+    p_number_field       text      DEFAULT NULL,
+    p_company_code_id    uuid      DEFAULT NULL,
+    p_fiscal_year        smallint  DEFAULT NULL,
+    p_period_number      smallint  DEFAULT NULL,
+    p_branch_code        text      DEFAULT NULL,
+    p_effective_date     date      DEFAULT CURRENT_DATE
 ) RETURNS text
 LANGUAGE plpgsql
-SET search_path = control
+SET search_path = control, master, shared, pg_catalog
 AS $$
 DECLARE
-    v_config    record;
-    v_next_val  integer;
-    v_period    smallint;
-    v_doc_no    text;
-    v_sep       text;
-    v_pad       smallint;
+    v_config             record;
+    v_counter_tenant_id  uuid;
+    v_scope_key          text;
+    v_year               smallint;
+    v_period             smallint;
+    v_quarter            smallint;
+    v_bucket_year        smallint := 0;
+    v_bucket_period      smallint := 0;
+    v_bucket_quarter     smallint := 0;
+    v_next_val           bigint;
+    v_effective_date     date := COALESCE(p_effective_date, CURRENT_DATE);
+    v_fp_year            smallint;
+    v_fp_period          smallint;
+    v_tenant_code        text;
+    v_company_code       text;
+    v_sep                text;
+    v_parts              text[] := ARRAY[]::text[];
+    v_segment            jsonb;
+    v_type               text;
+    v_format             text;
+    v_part               text;
+    v_padding            integer;
+    v_optional           boolean;
+    v_doc_no             text;
 BEGIN
-    -- Load configuration (plan reuse gives effective per-session caching)
-    SELECT id, prefix, separator, pad_width, format_template, reset_strategy
-    INTO v_config
-    FROM control.document_sequence_config
-    WHERE tenant_id       = p_tenant_id
-      AND company_code_id = p_company_code_id
-      AND doc_type        = p_doc_type
-      AND is_active       = true;
+    IF p_tenant_id IS NULL THEN
+        RAISE EXCEPTION 'tenant_id is required for entity numbering'
+            USING ERRCODE = 'not_null_violation';
+    END IF;
+    IF p_entity_code IS NULL OR btrim(p_entity_code) = '' THEN
+        RAISE EXCEPTION 'entity_code is required for entity numbering'
+            USING ERRCODE = 'not_null_violation';
+    END IF;
+
+    SELECT c.*
+      INTO v_config
+      FROM control.entity_numbering_config c
+      JOIN control.entity e ON e.id = c.entity_id
+     WHERE e.entity_code = p_entity_code
+       AND c.is_active = true
+       AND (c.tenant_id IS NULL OR c.tenant_id = p_tenant_id)
+       AND (p_number_field IS NULL OR c.number_field = p_number_field)
+       AND (c.company_code_id IS NULL OR c.company_code_id = p_company_code_id)
+     ORDER BY
+       CASE WHEN c.tenant_id = p_tenant_id THEN 2 ELSE 1 END DESC,
+       CASE WHEN c.company_code_id = p_company_code_id THEN 2
+            WHEN c.company_code_id IS NULL THEN 1 ELSE 0 END DESC,
+       c.created_at DESC
+     LIMIT 1;
 
     IF NOT FOUND THEN
         RAISE EXCEPTION
-            'No active document_sequence_config for tenant=%, company=%, doc_type=%.',
-            p_tenant_id, p_company_code_id, p_doc_type
+            'No active entity_numbering_config for tenant=%, entity=%, number_field=%.',
+            p_tenant_id, p_entity_code, COALESCE(p_number_field, '<default>')
             USING ERRCODE = 'no_data_found';
     END IF;
 
-    -- Determine period scope from reset strategy
-    v_period := CASE v_config.reset_strategy
-        WHEN 'monthly' THEN p_period_number
-        ELSE 0  -- 'yearly' and 'none' both use period = 0
+    SELECT regexp_replace(upper(t.code), '[^A-Z0-9]+', '-', 'g')
+      INTO v_tenant_code
+      FROM master.tenant t
+     WHERE t.id = p_tenant_id;
+
+    IF p_company_code_id IS NOT NULL THEN
+        SELECT regexp_replace(upper(c.code), '[^A-Z0-9]+', '-', 'g')
+          INTO v_company_code
+          FROM master.company_code c
+         WHERE c.id = p_company_code_id
+           AND c.tenant_id = p_tenant_id;
+    END IF;
+
+    v_year := COALESCE(p_fiscal_year, EXTRACT(YEAR FROM v_effective_date)::smallint);
+    v_period := COALESCE(p_period_number, EXTRACT(MONTH FROM v_effective_date)::smallint);
+
+    IF (p_fiscal_year IS NULL OR p_period_number IS NULL)
+       AND p_company_code_id IS NOT NULL
+       AND (
+           v_config.reset_strategy IN ('fiscal_yearly','monthly','quarterly')
+           OR v_config.segments @> '[{"type":"fiscal_year"}]'::jsonb
+           OR v_config.segments @> '[{"type":"period"}]'::jsonb
+           OR v_config.segments @> '[{"type":"quarter"}]'::jsonb
+       ) THEN
+        SELECT fp.fiscal_year, fp.period_number
+          INTO v_fp_year, v_fp_period
+          FROM master.fiscal_period fp
+         WHERE fp.tenant_id = p_tenant_id
+           AND fp.company_code_id = p_company_code_id
+           AND fp.period_number BETWEEN 1 AND 16
+           AND fp.start_date <= v_effective_date
+           AND fp.end_date >= v_effective_date
+         ORDER BY fp.period_number ASC
+         LIMIT 1;
+
+        IF FOUND THEN
+            v_year := COALESCE(p_fiscal_year, v_fp_year);
+            v_period := COALESCE(p_period_number, v_fp_period);
+        END IF;
+    END IF;
+
+    IF v_config.reset_strategy = 'fiscal_yearly'
+       AND p_fiscal_year IS NULL
+       AND v_fp_year IS NULL THEN
+        RAISE EXCEPTION
+            'p_fiscal_year is required for fiscal_yearly numbering when no fiscal_period covers tenant=%, company=%, date=%.',
+            p_tenant_id, COALESCE(p_company_code_id::text, '<none>'), v_effective_date
+            USING ERRCODE = 'no_data_found';
+    END IF;
+
+    v_quarter := CASE
+        WHEN v_period BETWEEN 1 AND 12 THEN (((v_period - 1) / 3) + 1)::smallint
+        WHEN v_period = 0 THEN 0
+        ELSE 4
     END;
 
-    -- Hot path: atomic increment on existing counter row
-    UPDATE control.document_sequence_counter
-    SET last_value = last_value + 1,
-        updated_at = now(),
-        updated_by = COALESCE(
-            nullif(current_setting('app.current_principal_id', true), '')::uuid,
-            '00000000-0000-0000-0000-000000000000'::uuid)
-    WHERE tenant_id     = p_tenant_id
-      AND config_id     = v_config.id
-      AND fiscal_year   = p_fiscal_year
-      AND period_number = v_period
-    RETURNING last_value INTO v_next_val;
+    CASE v_config.reset_strategy
+        WHEN 'never' THEN
+            v_bucket_year := 0;
+            v_bucket_period := 0;
+            v_bucket_quarter := 0;
+        WHEN 'monthly' THEN
+            v_bucket_year := v_year;
+            v_bucket_period := v_period;
+            v_bucket_quarter := 0;
+        WHEN 'quarterly' THEN
+            v_bucket_year := v_year;
+            v_bucket_period := 0;
+            v_bucket_quarter := v_quarter;
+        ELSE
+            v_bucket_year := v_year;
+            v_bucket_period := 0;
+            v_bucket_quarter := 0;
+    END CASE;
 
-    -- Cold path: auto-create counter row for new year/period combination
+    v_counter_tenant_id := CASE
+        WHEN v_config.uniqueness_scope = 'global' THEN NULL
+        ELSE p_tenant_id
+    END;
+
+    v_scope_key := CASE v_config.uniqueness_scope
+        WHEN 'global' THEN 'global'
+        WHEN 'company' THEN 'company:' || COALESCE(p_company_code_id::text, 'none')
+        ELSE 'tenant:' || p_tenant_id::text
+    END;
+
+    UPDATE control.entity_numbering_counter
+       SET last_value = last_value + 1,
+           updated_at = now(),
+           updated_by = COALESCE(
+               nullif(current_setting('app.current_principal_id', true), '')::uuid,
+               '00000000-0000-0000-0000-000000000000'::uuid)
+     WHERE tenant_id IS NOT DISTINCT FROM v_counter_tenant_id
+       AND config_id = v_config.id
+       AND scope_key = v_scope_key
+       AND fiscal_year = v_bucket_year
+       AND period_number = v_bucket_period
+       AND quarter_number = v_bucket_quarter
+     RETURNING last_value INTO v_next_val;
+
     IF v_next_val IS NULL THEN
-        INSERT INTO control.document_sequence_counter
-            (tenant_id, config_id, fiscal_year, period_number, last_value)
-        VALUES
-            (p_tenant_id, v_config.id, p_fiscal_year, v_period, 1)
-        ON CONFLICT (tenant_id, config_id, fiscal_year, period_number)
+        INSERT INTO control.entity_numbering_counter (
+            tenant_id, config_id, company_code_id, scope_key,
+            fiscal_year, period_number, quarter_number, last_value, updated_by)
+        VALUES (
+            v_counter_tenant_id, v_config.id,
+            CASE WHEN v_config.uniqueness_scope = 'company' THEN p_company_code_id ELSE NULL END,
+            v_scope_key, v_bucket_year, v_bucket_period, v_bucket_quarter, 1,
+            COALESCE(
+                nullif(current_setting('app.current_principal_id', true), '')::uuid,
+                '00000000-0000-0000-0000-000000000000'::uuid))
+        ON CONFLICT ON CONSTRAINT enctr_bucket_uq
         DO UPDATE SET
-            last_value = control.document_sequence_counter.last_value + 1,
-            updated_at = now()
+            last_value = control.entity_numbering_counter.last_value + 1,
+            updated_at = now(),
+            updated_by = EXCLUDED.updated_by
         RETURNING last_value INTO v_next_val;
     END IF;
 
-    -- Format the document number
     v_sep := COALESCE(v_config.separator, '-');
-    v_pad := COALESCE(v_config.pad_width, 5);
+    IF COALESCE(v_config.prefix, '') <> '' THEN
+        v_parts := array_append(v_parts, upper(v_config.prefix));
+    END IF;
 
-    IF v_config.format_template IS NOT NULL THEN
-        -- Custom format: replace placeholders in order
-        v_doc_no := v_config.format_template;
-        v_doc_no := replace(v_doc_no, '{prefix}', v_config.prefix);
-        v_doc_no := replace(v_doc_no, '{sep}',    v_sep);
-        v_doc_no := replace(v_doc_no, '{year}',   p_fiscal_year::text);
-        v_doc_no := replace(v_doc_no, '{period}', lpad(v_period::text, 2, '0'));
-        v_doc_no := replace(v_doc_no, '{seq}',    lpad(v_next_val::text, v_pad, '0'));
-    ELSE
-        -- Default format: PREFIX-YEAR-SEQUENCE (e.g. INV-2026-00042)
-        v_doc_no := v_config.prefix
-                 || v_sep || p_fiscal_year::text
-                 || v_sep || lpad(v_next_val::text, v_pad, '0');
+    FOR v_segment IN SELECT value FROM jsonb_array_elements(v_config.segments)
+    LOOP
+        v_type := v_segment ->> 'type';
+        v_format := COALESCE(v_segment ->> 'format', '');
+        v_optional := COALESCE((v_segment ->> 'optional')::boolean, false);
+        v_part := NULL;
+
+        IF v_type = 'tenant_code' THEN
+            v_part := v_tenant_code;
+        ELSIF v_type = 'company_code' THEN
+            v_part := v_company_code;
+        ELSIF v_type = 'branch_code' THEN
+            v_part := upper(NULLIF(p_branch_code, ''));
+        ELSIF v_type IN ('year', 'fiscal_year') THEN
+            v_part := CASE WHEN v_format = 'YY' THEN right(v_year::text, 2) ELSE v_year::text END;
+        ELSIF v_type = 'period' THEN
+            v_part := CASE WHEN v_format = 'MM' THEN lpad(v_period::text, 2, '0') ELSE v_period::text END;
+        ELSIF v_type = 'quarter' THEN
+            v_part := CASE WHEN v_format = 'Q' THEN 'Q' || v_quarter::text ELSE v_quarter::text END;
+        ELSIF v_type = 'sequence' THEN
+            v_padding := COALESCE(NULLIF((v_segment ->> 'padding')::integer, 0), 5);
+            v_part := lpad(v_next_val::text, GREATEST(v_padding, 1), '0');
+        ELSIF v_type IN ('static', 'literal') THEN
+            v_part := v_segment ->> 'value';
+        END IF;
+
+        IF v_part IS NULL OR btrim(v_part) = '' THEN
+            IF NOT v_optional THEN
+                RAISE EXCEPTION 'Required numbering segment % resolved empty for entity %.', v_type, p_entity_code
+                    USING ERRCODE = 'check_violation';
+            END IF;
+        ELSE
+            v_parts := array_append(v_parts, v_part);
+        END IF;
+    END LOOP;
+
+    SELECT string_agg(part, v_sep)
+      INTO v_doc_no
+      FROM unnest(v_parts) AS p(part)
+     WHERE part IS NOT NULL AND btrim(part) <> '';
+
+    IF v_doc_no IS NULL OR btrim(v_doc_no) = '' THEN
+        RAISE EXCEPTION 'Entity numbering produced an empty value for %.', p_entity_code
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF v_config.max_length IS NOT NULL AND length(v_doc_no) > v_config.max_length THEN
+        RAISE EXCEPTION 'Generated number % exceeds max_length % for entity %.',
+            v_doc_no, v_config.max_length, p_entity_code
+            USING ERRCODE = 'string_data_right_truncation';
+    END IF;
+
+    IF v_config.allowed_chars = 'upper_alnum_dash' AND v_doc_no !~ '^[A-Z0-9-]+$' THEN
+        RAISE EXCEPTION 'Generated number % violates allowed_chars upper_alnum_dash.', v_doc_no
+            USING ERRCODE = 'check_violation';
+    ELSIF v_config.allowed_chars = 'alnum_dash' AND v_doc_no !~ '^[A-Za-z0-9-]+$' THEN
+        RAISE EXCEPTION 'Generated number % violates allowed_chars alnum_dash.', v_doc_no
+            USING ERRCODE = 'check_violation';
+    ELSIF v_config.allowed_chars NOT IN ('upper_alnum_dash','alnum_dash','any')
+       AND v_doc_no !~ v_config.allowed_chars THEN
+        RAISE EXCEPTION 'Generated number % violates allowed_chars regex %.', v_doc_no, v_config.allowed_chars
+            USING ERRCODE = 'check_violation';
     END IF;
 
     RETURN v_doc_no;
 END;
 $$;
 
-COMMENT ON FUNCTION control.next_document_number IS
-    'Atomic document number generator. '
-    'Reads config from control.document_sequence_config; '
-    'increments counter in control.document_sequence_counter. '
-    'UPDATE-first for hot path, INSERT ON CONFLICT for new year/period combinations. '
-    'Supports YEARLY, MONTHLY, NONE (continuous) reset strategies. '
-    'Custom format_template supports {prefix}, {sep}, {year}, {period}, {seq} placeholders. '
-    'Default format: PREFIX-YEAR-SEQUENCE (e.g. INV-2026-00042).';
+COMMENT ON FUNCTION control.next_entity_number(uuid, text, text, uuid, smallint, smallint, text, date) IS
+    'Canonical entity-number generator. Reads control.entity_numbering_config, increments '
+    'control.entity_numbering_counter, and renders configured segments.';
 
 
 -- ============================================================================

@@ -9,7 +9,7 @@
 -- Idempotent: Yes — UPSERT + delete-reinsert for routing
 -- ============================================================================
 -- PACK OWNS: SC-TRADE, SC-TRADE-MERCH, SC-TRADE-POS, SC-TRADE-DIST,
---            SC-TRADE-ECOMM, BI-COGS, BI-REV-TRADE,
+--            SC-TRADE-ECOMM, BI-COGS,
 -- ============================================================================
 
 DO $seed$
@@ -64,21 +64,7 @@ BEGIN
     ('SC-TRADE-DIST',  'Distribution & Channel Mgmt',   'Distribution logistics, channel partner management, and fulfilment',        'SC-TRADE', 'services', 403),
     ('SC-TRADE-ECOMM', 'E-commerce Operations',         'Online storefront platforms, payment gateways, and digital fulfilment',      'SC-TRADE', 'services', 404);
 
-    -- Business intents
-    CREATE TEMP TABLE tmp_bi (
-        seed_id     uuid DEFAULT shared.uuidv7(),
-        code        text NOT NULL,
-        name        text NOT NULL,
-        description text,
-        domain      text NOT NULL,
-        subtype     text,
-        parent_code text,
-        sort_order  smallint NOT NULL DEFAULT 0
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_bi (code, name, description, domain, subtype, parent_code, sort_order) VALUES
-    ('BI-COGS', 'Merchandise Cost of Sales',  'Cost of goods purchased for resale',                'COST_OF_SALES', 'MERCHANDISE',   'BI-COGS', 36),
-    ('BI-REV-TRADE',  'Trade Revenue Cost',          'Revenue-linked costs for wholesale and retail trade','COST_OF_SALES', 'TRADE_REVENUE', 'BI-COGS', 37);
+    -- Business intent rows are domain-level only; this pack links categories to canonical BI-* records.
 
     -- Commodity bridge
     CREATE TEMP TABLE tmp_bridge (
@@ -220,34 +206,7 @@ BEGIN
       );
 
     -- ── STAGE D: UPSERT intent leaves ───────────────────────────────────
-    INSERT INTO master.business_intent (
-        id, tenant_id, code, name, description, domain, subtype,
-        parent_id, depth, sort_order, metadata, status, created_by
-    )
-    SELECT
-        s.seed_id, v_tid, s.code, s.name, s.description,
-        s.domain, s.subtype,
-        p.id, 1, s.sort_order,
-        jsonb_build_object('_seed', jsonb_build_object(
-            'pack', v_pack, 'version', v_version, 'seeded_at', now()::text
-        )),
-        'active', v_su
-    FROM tmp_bi s
-    JOIN master.business_intent p ON p.tenant_id = v_tid AND p.code = s.parent_code
-    ON CONFLICT (tenant_id, code) DO UPDATE SET
-        name        = EXCLUDED.name,
-        description = EXCLUDED.description,
-        domain      = EXCLUDED.domain,
-        subtype     = EXCLUDED.subtype,
-        parent_id   = EXCLUDED.parent_id,
-        depth       = EXCLUDED.depth,
-        sort_order  = EXCLUDED.sort_order,
-        metadata    = master.business_intent.metadata
-                      || jsonb_build_object('_seed', jsonb_build_object(
-                             'pack', v_pack, 'version', v_version,
-                             'seeded_at', now()::text
-                         )),
-        updated_at = now(), updated_by = v_su;
+    -- Business intent rows are domain-level only; this pack links categories to the canonical BI-* records.
 
     -- ── STAGE E: UPSERT commodity bridge ────────────────────────────────
     DROP TABLE IF EXISTS tmp_sc_map;

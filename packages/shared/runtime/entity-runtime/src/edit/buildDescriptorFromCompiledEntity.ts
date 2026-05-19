@@ -6,7 +6,7 @@
  * No static descriptor files are needed — the metadata API drives everything.
  *
  *   edit.fields    ← resolveFormConfig() → editable non-system fields
- *   identity       ← display_config (title_field, document_header, status_field_names)
+ *   identity       ← identity_config + display_config (business key, title, status)
  *   audit          ← display_config.document_header audit fields
  *   hasLifecycle   ← feature_flags.has_lifecycle
  */

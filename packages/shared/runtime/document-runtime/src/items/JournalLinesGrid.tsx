@@ -1193,10 +1193,43 @@ const LINE_HEADER_CELL = "px-3 py-2.5 text-xs font-medium text-muted-foreground"
 const LINE_BODY_CELL = "min-w-0 px-3 py-1.5";
 const LINE_ROWS_SCROLL_AREA = "max-h-[28rem] overflow-y-auto";
 
+type JournalIntakeLineColumnVisibility = {
+  glAccount: boolean;
+  description: boolean;
+  subledger: boolean;
+  debit: boolean;
+  credit: boolean;
+};
+
+function normalizeIntakeFieldSet(fields?: readonly string[] | null): ReadonlySet<string> | null {
+  if (!fields) return null;
+  const normalized = fields
+    .map((field) => field.trim().toLowerCase())
+    .filter(Boolean);
+  return normalized.length > 0 ? new Set(normalized) : null;
+}
+
+function intakeFieldVisible(fieldSet: ReadonlySet<string> | null, ...fieldNames: Array<string | undefined | null>): boolean {
+  if (!fieldSet) return true;
+  return fieldNames.some((fieldName) => typeof fieldName === "string" && fieldSet.has(fieldName.trim().toLowerCase()));
+}
+
+function buildJournalIntakeLineColumns(visibility: JournalIntakeLineColumnVisibility): string {
+  const columns = ["2rem"];
+  if (visibility.glAccount) columns.push("minmax(0,1.25fr)");
+  if (visibility.description) columns.push("minmax(0,1.65fr)");
+  if (visibility.subledger) columns.push("minmax(5.5rem,0.4fr)");
+  if (visibility.debit) columns.push("minmax(9rem,.8fr)");
+  if (visibility.credit) columns.push("minmax(9rem,.8fr)");
+  columns.push("2.25rem");
+  return columns.join(" ");
+}
+
 export interface JournalIntakeLinesGridProps {
   value?: unknown;
   onChange: (lines: JournalLineGridPayload[]) => void;
   headerContext?: Record<string, unknown> | null;
+  intakeFields?: readonly string[] | null;
   currencyCode?: string;
   baseCurrencyCode?: string;
   transactionCurrencyCode?: string;
@@ -1215,6 +1248,7 @@ export function JournalIntakeLinesGrid({
   value,
   onChange,
   headerContext,
+  intakeFields,
   currencyCode = "USD",
   baseCurrencyCode,
   transactionCurrencyCode,
@@ -1249,6 +1283,44 @@ export function JournalIntakeLinesGrid({
   ), [journalLineEntity, journalLineFieldNames.accountField]);
   const debitField = useMemo(() => fieldByName(journalLineEntity, journalLineFieldNames.debitField), [journalLineEntity, journalLineFieldNames.debitField]);
   const creditField = useMemo(() => fieldByName(journalLineEntity, journalLineFieldNames.creditField), [journalLineEntity, journalLineFieldNames.creditField]);
+  const intakeFieldSet = useMemo(() => normalizeIntakeFieldSet(intakeFields), [intakeFields]);
+  const intakeColumnVisibility = useMemo<JournalIntakeLineColumnVisibility>(() => ({
+    glAccount: intakeFieldVisible(
+      intakeFieldSet,
+      journalLineFieldNames.accountField,
+      journalLineFieldNames.accountCodePayloadField,
+      "gl_account_id",
+      "gl_account_code",
+      "account_id",
+      "account_code",
+    ),
+    description: intakeFieldVisible(
+      intakeFieldSet,
+      journalLineFieldNames.descriptionPayloadField,
+      "description",
+      "line_description",
+      "item_description",
+    ),
+    subledger: intakeFieldVisible(intakeFieldSet, "subledger_type"),
+    debit: intakeFieldVisible(
+      intakeFieldSet,
+      journalLineFieldNames.debitField,
+      journalLineFieldNames.debitPayloadField,
+      "transaction_debit",
+      "debit",
+    ),
+    credit: intakeFieldVisible(
+      intakeFieldSet,
+      journalLineFieldNames.creditField,
+      journalLineFieldNames.creditPayloadField,
+      "transaction_credit",
+      "credit",
+    ),
+  }), [intakeFieldSet, journalLineFieldNames]);
+  const intakeEditorColumns = useMemo(
+    () => buildJournalIntakeLineColumns(intakeColumnVisibility),
+    [intakeColumnVisibility],
+  );
   const debitMoneyFormat = useMemo(
     () => resolveMoneyFieldFormat(debitField?.money_config, {
       header: headerContext,
@@ -1388,14 +1460,24 @@ export function JournalIntakeLinesGrid({
       <div className="overflow-hidden">
         <div
           className="grid items-center border-b bg-muted/50 text-sm"
-          style={{ gridTemplateColumns: LINE_EDITOR_COLUMNS }}
+          style={{ gridTemplateColumns: intakeEditorColumns }}
         >
           <div className={cn(LINE_HEADER_CELL, "text-center")}>#</div>
-          <div className={cn(LINE_HEADER_CELL, "text-left")}>GL Account</div>
-          <div className={cn(LINE_HEADER_CELL, "text-left")}>Description</div>
-          <div className={cn(LINE_HEADER_CELL, "text-center")}>Subledger</div>
-          <div className={cn(LINE_HEADER_CELL, "text-right")}>Debit</div>
-          <div className={cn(LINE_HEADER_CELL, "text-right")}>Credit</div>
+          {intakeColumnVisibility.glAccount && (
+            <div className={cn(LINE_HEADER_CELL, "text-left")}>GL Account</div>
+          )}
+          {intakeColumnVisibility.description && (
+            <div className={cn(LINE_HEADER_CELL, "text-left")}>Description</div>
+          )}
+          {intakeColumnVisibility.subledger && (
+            <div className={cn(LINE_HEADER_CELL, "text-center")}>Subledger</div>
+          )}
+          {intakeColumnVisibility.debit && (
+            <div className={cn(LINE_HEADER_CELL, "text-right")}>Debit</div>
+          )}
+          {intakeColumnVisibility.credit && (
+            <div className={cn(LINE_HEADER_CELL, "text-right")}>Credit</div>
+          )}
           <div className="px-2 py-2" />
         </div>
 
@@ -1422,58 +1504,68 @@ export function JournalIntakeLinesGrid({
             <div
               key={line.key}
               className="grid items-center bg-card text-sm"
-              style={{ gridTemplateColumns: LINE_EDITOR_COLUMNS }}
+              style={{ gridTemplateColumns: intakeEditorColumns }}
             >
               <div className="px-3 py-2 text-center text-sm text-muted-foreground tabular-nums">{index + 1}</div>
-              <div className={LINE_BODY_CELL}>
-                <GlAccountPicker
-                  value={line.gl_account_code || null}
-                  displayLabel={line.gl_account_label || line.gl_account_code || null}
-                  field={glAccountField}
-                  formData={headerContext}
-                  onChange={(code, label) => updateDraftLine(line.key, {
-                    gl_account_code:  code ?? "",
-                    gl_account_label: code ? (label ?? code) : "",
-                  })}
-                  className="w-full min-w-0"
-                />
-              </div>
-              <div className={LINE_BODY_CELL}>
-                <Input
-                  className="h-8 w-full min-w-0 text-sm"
-                  value={line.description}
-                  onChange={(e) => updateDraftLine(line.key, { description: e.target.value })}
-                />
-              </div>
-              <div className="px-3 py-1.5 flex items-center justify-center">
-                <SubledgerBadge type={line.subledger_type} />
-              </div>
-              <div className={LINE_BODY_CELL}>
-                <CurrencyAmountInput
-                  ariaLabel={`Debit amount for line ${index + 1}`}
-                  currencyCode={debitCurrencyCode}
-                  currencyOptions={currencyOptions}
-                  currencyEditable={amountCurrencyEditable}
-                  value={line.debit}
-                  placeholder={amountPlaceholder}
-                  onCurrencyChange={(next) => changeLineCurrency(line.key, next)}
-                  onChange={(nextValue) => updateDraftLine(line.key, { debit: nextValue, credit: nextValue.trim() ? "" : line.credit })}
-                  onBlur={(nextValue) => updateDraftLine(line.key, { debit: fmtInputAmount(nextValue, amountScale) })}
-                />
-              </div>
-              <div className={LINE_BODY_CELL}>
-                <CurrencyAmountInput
-                  ariaLabel={`Credit amount for line ${index + 1}`}
-                  currencyCode={creditCurrencyCode}
-                  currencyOptions={currencyOptions}
-                  currencyEditable={amountCurrencyEditable}
-                  value={line.credit}
-                  placeholder={amountPlaceholder}
-                  onCurrencyChange={(next) => changeLineCurrency(line.key, next)}
-                  onChange={(nextValue) => updateDraftLine(line.key, { credit: nextValue, debit: nextValue.trim() ? "" : line.debit })}
-                  onBlur={(nextValue) => updateDraftLine(line.key, { credit: fmtInputAmount(nextValue, amountScale) })}
-                />
-              </div>
+              {intakeColumnVisibility.glAccount && (
+                <div className={LINE_BODY_CELL}>
+                  <GlAccountPicker
+                    value={line.gl_account_code || null}
+                    displayLabel={line.gl_account_label || line.gl_account_code || null}
+                    field={glAccountField}
+                    formData={headerContext}
+                    onChange={(code, label) => updateDraftLine(line.key, {
+                      gl_account_code:  code ?? "",
+                      gl_account_label: code ? (label ?? code) : "",
+                    })}
+                    className="w-full min-w-0"
+                  />
+                </div>
+              )}
+              {intakeColumnVisibility.description && (
+                <div className={LINE_BODY_CELL}>
+                  <Input
+                    className="h-8 w-full min-w-0 text-sm"
+                    value={line.description}
+                    onChange={(e) => updateDraftLine(line.key, { description: e.target.value })}
+                  />
+                </div>
+              )}
+              {intakeColumnVisibility.subledger && (
+                <div className="px-3 py-1.5 flex items-center justify-center">
+                  <SubledgerBadge type={line.subledger_type} />
+                </div>
+              )}
+              {intakeColumnVisibility.debit && (
+                <div className={LINE_BODY_CELL}>
+                  <CurrencyAmountInput
+                    ariaLabel={`Debit amount for line ${index + 1}`}
+                    currencyCode={debitCurrencyCode}
+                    currencyOptions={currencyOptions}
+                    currencyEditable={amountCurrencyEditable}
+                    value={line.debit}
+                    placeholder={amountPlaceholder}
+                    onCurrencyChange={(next) => changeLineCurrency(line.key, next)}
+                    onChange={(nextValue) => updateDraftLine(line.key, { debit: nextValue, credit: nextValue.trim() ? "" : line.credit })}
+                    onBlur={(nextValue) => updateDraftLine(line.key, { debit: fmtInputAmount(nextValue, amountScale) })}
+                  />
+                </div>
+              )}
+              {intakeColumnVisibility.credit && (
+                <div className={LINE_BODY_CELL}>
+                  <CurrencyAmountInput
+                    ariaLabel={`Credit amount for line ${index + 1}`}
+                    currencyCode={creditCurrencyCode}
+                    currencyOptions={currencyOptions}
+                    currencyEditable={amountCurrencyEditable}
+                    value={line.credit}
+                    placeholder={amountPlaceholder}
+                    onCurrencyChange={(next) => changeLineCurrency(line.key, next)}
+                    onChange={(nextValue) => updateDraftLine(line.key, { credit: nextValue, debit: nextValue.trim() ? "" : line.debit })}
+                    onBlur={(nextValue) => updateDraftLine(line.key, { credit: fmtInputAmount(nextValue, amountScale) })}
+                  />
+                </div>
+              )}
               <div className="px-1 py-1.5 text-center">
                 <Button
                   variant="ghost"
@@ -1607,10 +1699,11 @@ export function JournalLinesGrid({
       ? lines.map((line) => lineToDraft(line, referenceTargets, amountScale, journalLineFieldNames, glAccountField))
       : [newDraftLine(activeCurrencyCode), newDraftLine(activeCurrencyCode)]);
     setSaveError(null);
-  // Keep unsaved amount edits intact when only the selected currency scale changes.
+  // Rehydrate when persisted lines or async line metadata changes, while keeping
+  // unsaved amount edits intact when only the selected currency scale changes.
   // Server/refreshed lines still reset the draft from persisted data.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lines, referenceTargets]);
+  }, [lines, referenceTargets, journalLineFieldNames, glAccountField]);
 
   useEffect(() => {
     setDraftCurrencyCode(recordCurrencyCode);

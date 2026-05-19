@@ -43,6 +43,10 @@ export function displayConfigRecord(entity: CompiledEntity): PlainRecord {
   return asRecord(entity.display_config) ?? {};
 }
 
+export function identityConfigRecord(entity: CompiledEntity): PlainRecord {
+  return asRecord(entity.identity_config) ?? {};
+}
+
 export function documentHeaderRecord(entity: CompiledEntity): PlainRecord {
   return asRecord(displayConfigRecord(entity).document_header) ?? {};
 }
@@ -68,7 +72,13 @@ export function fieldValueByName(
 export function configuredCodeFieldName(entity: CompiledEntity): string | undefined {
   const displayConfig = displayConfigRecord(entity);
   const documentHeader = documentHeaderRecord(entity);
+  const identityConfig = identityConfigRecord(entity);
+  const businessKeyFields = asStringArray(identityConfig.business_key_fields);
+  const naturalKeyFields = asStringArray(identityConfig.natural_key_fields)
+    .filter((fieldName) => fieldName !== "tenant_id" && fieldName !== "id");
   return asString(documentHeader.number_field)
+    ?? businessKeyFields[0]
+    ?? naturalKeyFields[0]
     ?? asString(displayConfig.code_field);
 }
 
@@ -84,13 +94,27 @@ export function configuredSubtitleFieldName(entity: CompiledEntity): string | un
   return asString(displayConfigRecord(entity).subtitle_field);
 }
 
+export function configuredPrimaryKeyFieldName(entity: CompiledEntity): string {
+  return asString(identityConfigRecord(entity).primary_key_field) ?? "id";
+}
+
+export function configuredBusinessKeyFieldNames(entity: CompiledEntity): string[] {
+  return uniqueFieldNames(asStringArray(identityConfigRecord(entity).business_key_fields));
+}
+
+export function configuredNaturalKeyFieldNames(entity: CompiledEntity): string[] {
+  return uniqueFieldNames(asStringArray(identityConfigRecord(entity).natural_key_fields));
+}
+
 export function configuredStatusFieldNames(entity: CompiledEntity): string[] {
   const displayConfig = displayConfigRecord(entity);
   const documentHeader = documentHeaderRecord(entity);
-  return uniqueFieldNames([
+  const configured = uniqueFieldNames([
     documentHeader.status_field,
     ...asStringArray(displayConfig.status_field_names),
   ]);
+  if (configured.length > 0) return configured;
+  return entity.fields.some((field) => field.name === "status") ? ["status"] : [];
 }
 
 export function configuredAuditFieldNames(entity: CompiledEntity): EntityAuditFieldNames {
@@ -107,9 +131,12 @@ export function configuredAuditFieldNames(entity: CompiledEntity): EntityAuditFi
 
 export function configuredIdentityFieldNames(entity: CompiledEntity): string[] {
   return uniqueFieldNames([
+    configuredPrimaryKeyFieldName(entity),
     configuredCodeFieldName(entity),
     configuredTitleFieldName(entity),
     configuredSubtitleFieldName(entity),
+    ...configuredBusinessKeyFieldNames(entity),
+    ...configuredNaturalKeyFieldNames(entity),
     ...configuredStatusFieldNames(entity),
   ]);
 }
@@ -131,13 +158,17 @@ export function fieldHiddenInSurface(field: EntityField, surface: string): boole
 export function fieldExcludedFromCopy(field: EntityField): boolean {
   const copy = fieldSettingRecord(field, "copy");
   const behavior = asString(copy?.behavior) ?? asString(asRecord(field.ui_hint)?.copy_behavior);
+  const editability = asRecord(field.editability);
+  const editableIn = Array.isArray(editability?.editable_in) ? editability.editable_in : undefined;
   return field.origin === "system"
     || field.is_readonly
     || field.is_computed === true
+    || field.is_write_once === true
+    || editability?.editable === false
+    || (editableIn !== undefined && editableIn.length === 0)
     || behavior === "exclude";
 }
 
 export function editableEntityField(field: EntityField): boolean {
   return !fieldExcludedFromCopy(field) && field.data_type !== "lifecycle_state";
 }
-

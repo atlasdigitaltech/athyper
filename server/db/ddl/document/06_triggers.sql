@@ -418,6 +418,11 @@ COMMENT ON TRIGGER trg_pil_sync_header ON document.purchase_invoice_line IS
 -- §PE  document.payment_entry
 -- =============================================================================
 
+DROP TRIGGER IF EXISTS trg_pe_before_insert ON document.payment_entry;
+CREATE TRIGGER trg_pe_before_insert
+    BEFORE INSERT ON document.payment_entry
+    FOR EACH ROW EXECUTE FUNCTION document.trg_pe_before_insert();
+
 DROP TRIGGER IF EXISTS trg_pe_updated_at ON document.payment_entry;
 CREATE TRIGGER trg_pe_updated_at BEFORE UPDATE ON document.payment_entry
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

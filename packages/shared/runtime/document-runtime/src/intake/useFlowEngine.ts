@@ -77,6 +77,7 @@ export interface SummaryBalance {
 
 export interface UseFlowEngineReturn {
   state: FlowEngineState;
+  steps: FlowStep[];
   currentStep: FlowStep;
   visibleFields: FlowFieldBinding[];
   canAdvance: boolean;
@@ -135,6 +136,15 @@ type ExtendedAdvanceRule = FlowStep["advance_rule"] & {
 function stepSections(step: FlowStep): FlowSectionForValidation[] {
   const sections = (step as FlowStep & { sections?: unknown }).sections;
   return Array.isArray(sections) ? sections as FlowSectionForValidation[] : [];
+}
+
+function isStepVisible(
+  step: FlowStep,
+  draft: Record<string, unknown>,
+  userCtx?: Record<string, unknown>,
+): boolean {
+  if (step.skip_when == null) return true;
+  return !isTruthy(step.skip_when, makeCtx(draft, userCtx));
 }
 
 function sectionPayloadKey(section: FlowSectionForValidation): string {
@@ -656,22 +666,36 @@ export function useFlowEngine(
   userCtx?: Record<string, unknown>,
   initialValues?: Record<string, unknown>,
 ): UseFlowEngineReturn {
-  const sortedSteps = useMemo(
+  const allSteps = useMemo(
     () => [...bundle.steps].sort((a, b) => a.sort_order - b.sort_order),
     [bundle.steps],
   );
   const allFields = useMemo(
-    () => sortedSteps.flatMap((step) => step.fields),
-    [sortedSteps],
+    () => allSteps.flatMap((step) => step.fields),
+    [allSteps],
   );
 
   const [state, setState] = useState<FlowEngineState>(() => ({
     currentStepIndex: 0,
-    draft: buildInitialDraft(sortedSteps, userCtx, initialValues),
+    draft: buildInitialDraft(allSteps, userCtx, initialValues),
     errors: {},
     overrides: new Set(),
     displayLabels: {},
   }));
+
+  const visibleSteps = useMemo(() => {
+    const steps = allSteps.filter((step) => isStepVisible(step, state.draft, userCtx));
+    return steps.length > 0 ? steps : allSteps.slice(0, 1);
+  }, [allSteps, state.draft, userCtx]);
+
+  useEffect(() => {
+    if (state.currentStepIndex < visibleSteps.length) return;
+    setState((prev) => ({
+      ...prev,
+      currentStepIndex: Math.max(visibleSteps.length - 1, 0),
+      errors: {},
+    }));
+  }, [state.currentStepIndex, visibleSteps.length]);
 
   // When userCtx arrives asynchronously, patch ctx.user.* fields that haven't been overridden
   useEffect(() => {
@@ -679,7 +703,7 @@ export function useFlowEngine(
     setState((prev) => {
       const newDraft = { ...prev.draft };
       let changed = false;
-      for (const step of sortedSteps) {
+      for (const step of allSteps) {
         for (const f of step.fields) {
           if (prev.overrides.has(f.field_name)) continue;
           const resolved = resolveCtxUserExpr(f.derive_expression, userCtx);
@@ -694,7 +718,7 @@ export function useFlowEngine(
       return changed ? { ...prev, draft: newDraft } : prev;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(userCtx), sortedSteps]);
+  }, [JSON.stringify(userCtx), allSteps]);
 
   // ── Sync reactive derivations ─────────────────────────────────────────────
   // Re-runs only when the specific trigger fields change to avoid loops.
@@ -706,7 +730,7 @@ export function useFlowEngine(
     setState((prev) => {
       const newDraft = { ...prev.draft };
       let changed = false;
-      for (const step of sortedSteps) {
+      for (const step of allSteps) {
         for (const f of step.fields) {
           if (prev.overrides.has(f.field_name)) continue;
           const val = evalSyncDerivation(f.derive_expression, prev.draft);
@@ -720,7 +744,7 @@ export function useFlowEngine(
     });
   // Only re-run when the trigger fields actually change
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceSource, invoiceType, postingDate, sortedSteps]);
+  }, [invoiceSource, invoiceType, postingDate, allSteps]);
 
   // ── Async derivation: supplier lookup ────────────────────────────────────
   // Watches supplier_id; fetches company_code_supplier_profile to derive
@@ -840,7 +864,7 @@ export function useFlowEngine(
   const companyCodeId = String(state.draft["company_code_id"] ?? "");
 
   useEffect(() => {
-    const derived = companyDerivedFields(sortedSteps);
+    const derived = companyDerivedFields(allSteps);
     if (derived.all.length === 0) return;
 
     if (!companyCodeId) {
@@ -938,9 +962,9 @@ export function useFlowEngine(
       cancelled = true;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyCodeId, sortedSteps]);
+  }, [companyCodeId, allSteps]);
 
-  const currentStep = sortedSteps[state.currentStepIndex]!;
+  const currentStep = visibleSteps[state.currentStepIndex] ?? visibleSteps[0] ?? allSteps[0]!;
   const ruleCtx = useMemo(() => makeCtx(state.draft, userCtx), [state.draft, userCtx]);
 
   // Fields visible in the current step
@@ -988,7 +1012,7 @@ export function useFlowEngine(
     const lines: SummaryLine[] = [];
     const configuredNames = configuredSummaryFieldNames(bundle);
     const flowFieldNames = new Set(allFields.map((field) => field.field_name));
-    for (const step of sortedSteps) {
+    for (const step of visibleSteps) {
       for (const f of step.fields) {
         if (!f.summary_role || seen.has(f.field_name)) continue;
         seen.add(f.field_name);
@@ -1008,7 +1032,7 @@ export function useFlowEngine(
       }
     }
 
-    for (const field of configuredChildSummaryFields(sortedSteps, configuredNames, flowFieldNames)) {
+    for (const field of configuredChildSummaryFields(visibleSteps, configuredNames, flowFieldNames)) {
       if (seen.has(field.field_name)) continue;
       if (field.visible_when && !isTruthy(field.visible_when, ruleCtx)) continue;
 
@@ -1032,12 +1056,12 @@ export function useFlowEngine(
     }
 
     return lines;
-  }, [bundle, sortedSteps, allFields, state.draft, state.overrides, state.displayLabels, ruleCtx]);
+  }, [bundle, visibleSteps, allFields, state.draft, state.overrides, state.displayLabels, ruleCtx]);
 
   const summaryBalance = useMemo<SummaryBalance | null>(() => {
     const configured = flowSummaryConfig(bundle);
     const configuredRule = typeof configured.balance_rule === "string" ? configured.balance_rule : null;
-    const ruleStep = sortedSteps.find((step) => {
+    const ruleStep = visibleSteps.find((step) => {
       const rule = step.advance_rule as ExtendedAdvanceRule;
       return rule.balance_rule === "debit_equals_credit";
     });
@@ -1047,7 +1071,7 @@ export function useFlowEngine(
     const configuredCollection = typeof configured.line_collection === "string"
       ? configured.line_collection.trim()
       : "";
-    const allSections = sortedSteps.flatMap(stepSections);
+    const allSections = visibleSteps.flatMap(stepSections);
     const configuredSection = allSections.find((section) =>
       configuredCollection &&
       (
@@ -1084,7 +1108,7 @@ export function useFlowEngine(
       difference,
       lineCount: rows.length,
     };
-  }, [bundle, sortedSteps, state.draft]);
+  }, [bundle, visibleSteps, state.draft]);
 
   const setField = useCallback((name: string, value: unknown) => {
     setState((prev) => ({
@@ -1160,10 +1184,10 @@ export function useFlowEngine(
     if (!validateStep()) return;
     setState((prev) => ({
       ...prev,
-      currentStepIndex: Math.min(prev.currentStepIndex + 1, sortedSteps.length - 1),
+      currentStepIndex: Math.min(prev.currentStepIndex + 1, visibleSteps.length - 1),
       errors: {},
     }));
-  }, [validateStep, sortedSteps.length]);
+  }, [validateStep, visibleSteps.length]);
 
   const goBack = useCallback(() => {
     setState((prev) => ({
@@ -1174,19 +1198,20 @@ export function useFlowEngine(
   }, []);
 
   const goToStep = useCallback((index: number) => {
-    if (index < 0 || index >= sortedSteps.length) return;
+    if (index < 0 || index >= visibleSteps.length) return;
     setState((prev) => {
       if (index > prev.currentStepIndex + 1) return prev;
       return { ...prev, currentStepIndex: index, errors: {} };
     });
-  }, [sortedSteps.length]);
+  }, [visibleSteps.length]);
 
   return {
     state,
+    steps: visibleSteps,
     currentStep,
     visibleFields,
     canAdvance,
-    isLastStep: state.currentStepIndex === sortedSteps.length - 1,
+    isLastStep: state.currentStepIndex === visibleSteps.length - 1,
     summaryLines,
     summaryBalance,
     setField,

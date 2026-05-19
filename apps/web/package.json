@@ -26,6 +26,7 @@
     "@athyper/metadata-client": "workspace:*",
     "@athyper/navigation": "workspace:*",
     "@athyper/query": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*",
     "@athyper/shell": "workspace:*",
     "@athyper/theme": "workspace:*",
     "@athyper/ui": "workspace:*",

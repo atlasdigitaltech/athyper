@@ -74,6 +74,9 @@ importers:
       '@athyper/query':
         specifier: workspace:*
         version: link:../../packages/shared/data/query
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../../packages/shared/runtime/runtime-shared
       '@athyper/shell':
         specifier: workspace:*
         version: link:../../packages/shared/shell/shell

@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { appEntityDetailHref } from "../core/entity-route";
 import { EntityPicker, resolveEntityPickerOptionConfig } from "./EntityPicker";
 import { searchLookupOptions } from "./lookupConfig";
 import type { EntityPickerSearchContext } from "./EntityPicker";
@@ -113,7 +114,7 @@ export function SupplierPicker({
       optionConfig={optionConfig}
       getOptionHref={(opt) => {
         const id = opt.recordId ?? opt.value;
-        return `/app/${encodeURIComponent(targetEntity)}/${encodeURIComponent(id)}`;
+        return appEntityDetailHref(targetEntity, id);
       }}
       optionActionLabel={optionConfig?.optionActionLabel ?? "Open supplier"}
       loadOnOpen

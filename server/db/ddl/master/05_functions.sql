@@ -4673,7 +4673,7 @@ BEGIN
             'locale_code',             COALESCE(pui.locale_code,   tp.locale_code,   'en'),
             'language_code',           COALESCE(pui.language_code, tp.language_code,  'en'),
             'timezone_code',           COALESCE(pui.timezone_code, tp.timezone_code,  'UTC'),
-            'date_format',             COALESCE(pui.date_format,   tp.date_format,   '%Y-%m-%d'),
+            'date_format',             COALESCE(pui.date_format,   tp.date_format,   '%d %b %Y'),
             'number_format',           COALESCE(pui.number_format, tp.number_format),
             'week_start',              COALESCE(pui.week_start,    tp.week_start,    1),
 

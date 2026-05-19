@@ -29,7 +29,7 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
     { key: "pr",        label: "Requisitions",      href: "/document/purchase-requisition" },
     { key: "po",        label: "Purchase orders",   href: "/document/purchase-order" },
     { key: "receipts",  label: "Receipts",          href: "/document/receipt" },
-    { key: "bp",        label: "Business Partners", href: "/app/business_partner" },
+    { key: "bp",        label: "Business Partners", href: "/app/business-partner" },
     { key: "views",     label: "Saved views",       href: "/saved-views", withModuleParam: true },
   ],
   SOURCE: [
@@ -44,7 +44,7 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
     { key: "views",     label: "Saved views",       href: "/saved-views", withModuleParam: true },
   ],
   SRM: [
-    { key: "partners",  label: "Business Partners", href: "/app/business_partner" },
+    { key: "partners",  label: "Business Partners", href: "/app/business-partner" },
     { key: "suppliers", label: "Suppliers",         href: "/app/supplier" },
     { key: "evaluate",  label: "Evaluations",       href: "/master/supplier-evaluation" },
     { key: "views",     label: "Saved views",       href: "/saved-views", withModuleParam: true },
@@ -82,7 +82,7 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
 
   // ── Finance ───────────────────────────────────────────────────────────────
   ACC: [
-    { key: "bp",        label: "Business Partners", href: "/app/business_partner" },
+    { key: "profiles",  label: "Accounting profiles", href: "/finance/accounting-profiles" },
     { key: "ap",        label: "AP workbench",      href: "/finance/ap" },
     { key: "ar",        label: "AR workbench",      href: "/finance/ar" },
     { key: "journals",  label: "Journal entries",   href: "/finance/gl?tab=journals" },

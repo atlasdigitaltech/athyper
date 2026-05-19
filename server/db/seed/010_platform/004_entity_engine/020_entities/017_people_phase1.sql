@@ -237,7 +237,7 @@ BEGIN
             ownership_model, kind, backing_type, governance_level,
             security_tier, mutability, table_schema, table_name,
             label_singular, label_plural, icon_key, color_token,
-            numbering_active, feature_flags, display_config, natural_key_fields,
+            feature_flags, display_config, identity_config,
             status, created_by
         )
         VALUES (
@@ -245,7 +245,7 @@ BEGIN
             'system', 'ent', 'table', 'full',
             r.security_tier, r.mutability, r.table_schema, r.table_name,
             r.label_singular, r.label_plural, r.icon_key, r.color_token,
-            true, jsonb_build_object('workspace', 'PPL', 'phase', 'phase1'),
+            jsonb_build_object('workspace', 'PPL', 'phase', 'phase1'),
             jsonb_build_object(
                 'detail_renderer', v_detail_renderer,
                 'list_columns', to_jsonb(v_list_columns),
@@ -257,7 +257,7 @@ BEGIN
                 END,
                 'default_sort_field', v_natural_key_fields[1]
             ),
-            v_natural_key_fields,
+            jsonb_build_object('natural_key_fields', to_jsonb(v_natural_key_fields::text[])),
             'ACTIVE', v_su
         )
         ON CONFLICT ON CONSTRAINT entity_physical_uq DO UPDATE
@@ -268,7 +268,7 @@ BEGIN
             icon_key = EXCLUDED.icon_key,
             color_token = EXCLUDED.color_token,
             display_config = EXCLUDED.display_config,
-            natural_key_fields = EXCLUDED.natural_key_fields,
+            identity_config = COALESCE(control.entity.identity_config, '{}'::jsonb) || EXCLUDED.identity_config,
             feature_flags = control.entity.feature_flags || EXCLUDED.feature_flags,
             status = 'ACTIVE',
             updated_at = now(),

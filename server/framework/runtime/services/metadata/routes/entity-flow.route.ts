@@ -36,30 +36,167 @@ export interface EntityFlowRoutesDeps {
   checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string, personaId: string) => Promise<Record<string, { decision: string } | undefined>>;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function textConfig(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function referenceTargetEntity(row: {
+  reference_config?: unknown;
+  validation?: unknown;
+}): string | null {
+  const rawConfig = asRecord(row.reference_config);
+  const validation = asRecord(row.validation);
+  return textConfig(rawConfig?.["target_entity"])
+    ?? textConfig(rawConfig?.["ref_entity"])
+    ?? textConfig(validation?.["ref_entity"])
+    ?? textConfig(validation?.["ref_hint"]);
+}
+
+const VALIDATION_REFERENCE_KEYS = new Set([
+  "ref_entity",
+  "ref_hint",
+  "target_field",
+  "display_field",
+  "picker",
+  "label_field",
+  "code_field",
+  "description_field",
+  "navigation_field",
+  "record_id_field",
+  "show_code",
+  "show_description",
+  "show_view_action",
+]);
+
+function normalizeValidationRules(value: unknown): Record<string, unknown> | null {
+  const validation = asRecord(value);
+  if (!validation) return null;
+  const entries = Object.entries(validation)
+    .filter(([key, item]) => !VALIDATION_REFERENCE_KEYS.has(key) && item !== undefined && item !== null);
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+function mergeReferencePickerProfile(
+  referenceConfig: Record<string, unknown>,
+  referencePickerProfile?: Record<string, unknown> | null,
+): Record<string, unknown> {
+  const pickerOverride = asRecord(referenceConfig["picker"]);
+  const displayField = textConfig(referenceConfig["display_field"]);
+  const topLevelPickerOverrides = Object.fromEntries(Object.entries({
+    label_field: referenceConfig["label_field"] ?? displayField ?? undefined,
+    code_field: referenceConfig["code_field"],
+    description_field: referenceConfig["description_field"],
+    navigation_field: referenceConfig["navigation_field"] ?? referenceConfig["record_id_field"],
+    show_code: referenceConfig["show_code"],
+    show_description: referenceConfig["show_description"],
+    show_view_action: referenceConfig["show_view_action"],
+  }).filter(([, value]) => value !== undefined));
+  const mergedPicker = Object.fromEntries(
+    Object.entries({
+      ...(referencePickerProfile ?? {}),
+      ...topLevelPickerOverrides,
+      ...(pickerOverride ?? {}),
+    }).filter(([, value]) => value !== undefined),
+  );
+  const picker = Object.keys(mergedPicker).length > 0 ? mergedPicker : undefined;
+
+  return Object.fromEntries(Object.entries({
+    ...referenceConfig,
+    target_field: referenceConfig["target_field"] ?? "id",
+    display_field: referenceConfig["display_field"]
+      ?? referenceConfig["label_field"]
+      ?? picker?.["label_field"],
+    picker,
+  }).filter(([, value]) => value !== undefined));
+}
+
 function normalizeReferenceConfig(row: {
   reference_config?: unknown;
   validation?: unknown;
-}): Record<string, unknown> | null {
+}, referencePickerProfiles?: Map<string, Record<string, unknown>>): Record<string, unknown> | null {
+  const targetEntity = referenceTargetEntity(row);
+  const referencePickerProfile = targetEntity ? referencePickerProfiles?.get(targetEntity) : undefined;
+
   if (row.reference_config && typeof row.reference_config === "object" && !Array.isArray(row.reference_config)) {
     const rawConfig = row.reference_config as Record<string, unknown>;
-    return {
+    const normalized = Object.fromEntries(Object.entries({
       ...rawConfig,
-      target_entity: rawConfig["target_entity"] ?? rawConfig["ref_entity"] ?? "",
+      target_entity: targetEntity ?? "",
       target_field: rawConfig["target_field"],
       display_field: rawConfig["display_field"],
-    };
+    }).filter(([, value]) => value !== undefined));
+    return mergeReferencePickerProfile(normalized, referencePickerProfile);
   }
-  if (row.validation && typeof row.validation === "object" && !Array.isArray(row.validation)) {
-    const validation = row.validation as Record<string, unknown>;
-    if (validation["ref_entity"]) {
-      return {
-        target_entity: validation["ref_entity"],
-        target_field: validation["target_field"],
-        display_field: validation["display_field"],
-      };
+
+  if (targetEntity) {
+    const validation = asRecord(row.validation);
+    const normalized = Object.fromEntries(Object.entries({
+      target_entity: targetEntity,
+      target_field: validation?.["target_field"],
+      display_field: validation?.["display_field"],
+    }).filter(([, value]) => value !== undefined));
+    return mergeReferencePickerProfile(normalized, referencePickerProfile);
+  }
+
+  return null;
+}
+
+async function loadReferencePickerProfiles(
+  db: Kysely<any>,
+  fieldRows: Array<{ reference_config?: unknown; validation?: unknown }>,
+  tenantId: string | null,
+): Promise<Map<string, Record<string, unknown>>> {
+  const targetEntities = [
+    ...new Set(fieldRows.map(referenceTargetEntity).filter((value): value is string => Boolean(value))),
+  ];
+  const profiles = new Map<string, Record<string, unknown>>();
+  if (targetEntities.length === 0) return profiles;
+
+  let query = db
+    .selectFrom("control.entity as e")
+    .select(["e.name", "e.entity_code", "e.display_config"])
+    .where((eb: any) => eb.or([
+      eb("e.name", "in", targetEntities),
+      eb("e.entity_code", "in", targetEntities),
+    ]))
+    .where("e.is_active", "=", true);
+
+  if (tenantId) {
+    query = query
+      .where((eb: any) => eb.or([eb("e.tenant_id", "=", tenantId), eb("e.tenant_id", "is", null)]))
+      .orderBy(sql`e.tenant_id NULLS LAST`);
+  } else {
+    query = query.where("e.tenant_id", "is", null);
+  }
+
+  const rows = await query.execute();
+  for (const row of rows) {
+    const displayConfig = asRecord(row.display_config);
+    const referencePicker = asRecord(displayConfig?.["reference_picker"]);
+    if (!referencePicker) continue;
+
+    const names = [row.name, row.entity_code].filter((value): value is string => Boolean(value));
+    for (const name of names) {
+      if (!profiles.has(name)) profiles.set(name, referencePicker);
     }
   }
-  return null;
+
+  return profiles;
+}
+
+function mergeProfileMaps(
+  target: Map<string, Record<string, unknown>>,
+  source: Map<string, Record<string, unknown>>,
+): void {
+  for (const [key, value] of source) {
+    if (!target.has(key)) target.set(key, value);
+  }
 }
 
 export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps): Router {
@@ -185,7 +322,9 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           "eff.override_permission",
           "eff.summary_role",
           "eff.ui_variant",
+          "eff.format",
           "eff.span",
+          "eff.display_size",
           "eff.help_text",
           "eff.placeholder",
           "eff.sort_order",
@@ -203,6 +342,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
         .where("eff.flow_step_id", "in", stepIds)
         .orderBy("eff.sort_order", "asc")
         .execute();
+      const referencePickerProfiles = await loadReferencePickerProfiles(db, fieldRows, tenantId);
 
       // ── Section descriptors (composite intake) ────────────────────────────
       // Fetched for all steps; empty for standard flows.
@@ -276,6 +416,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             .where("ef.is_active", "=", true)
             .orderBy("ef.sort_order", "asc")
             .execute();
+          mergeProfileMaps(referencePickerProfiles, await loadReferencePickerProfiles(db, rows, tenantId));
           childFieldsByEntity.set(code, rows);
         }
       }
@@ -336,13 +477,11 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             field_label: f.field_label as string,
             data_type: f.data_type as string,
             enum_domain_code: (f.enum_domain_code ?? null) as string | null,
-            reference_config: normalizeReferenceConfig(f),
+            reference_config: normalizeReferenceConfig(f, referencePickerProfiles),
             money_config: f.money_config && typeof f.money_config === "object"
               ? f.money_config as Record<string, unknown>
               : null,
-            validation_rules: (f.validation && typeof f.validation === "object" && !f.validation.ref_entity
-              ? f.validation as Record<string, unknown>
-              : null),
+            validation_rules: normalizeValidationRules(f.validation),
             lookup_config: (f.lookup_config && typeof f.lookup_config === "object"
               ? f.lookup_config as Record<string, unknown>
               : null),
@@ -355,7 +494,9 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             override_permission: (f.override_permission ?? null) as string | null,
             summary_role: (f.summary_role ?? null) as string | null,
             ui_variant: ((f.ui_type === "country" ? "country" : f.ui_variant) ?? null) as string | null,
+            format: (f.format ?? null) as string | null,
             span: (Number(f.span) || 1) as 1 | 2 | 3,
+            display_size: (f.display_size ?? null) as string | null,
             help_text: (f.help_text ?? null) as string | null,
             placeholder: (f.placeholder ?? null) as string | null,
             sort_order: Number(f.sort_order ?? 0),
@@ -397,14 +538,12 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
                 : allChildFields;
               childFields = selectedChildFields.map((cf) => ({
                 ...cf,
-                reference_config: normalizeReferenceConfig(cf),
+                reference_config: normalizeReferenceConfig(cf, referencePickerProfiles),
                 money_config: cf.money_config && typeof cf.money_config === "object"
                   ? cf.money_config as Record<string, unknown>
                   : null,
                 visible_when: cf.visibility ?? null,
-                validation_rules: cf.validation && typeof cf.validation === "object" && !cf.validation.ref_entity
-                  ? cf.validation as Record<string, unknown>
-                  : null,
+                validation_rules: normalizeValidationRules(cf.validation),
                 lookup_config: cf.lookup_config && typeof cf.lookup_config === "object"
                   ? cf.lookup_config as Record<string, unknown>
                   : null,

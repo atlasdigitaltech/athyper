@@ -10,7 +10,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, feature_flags, status, created_by)
+    feature_flags, status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
     'company_code_supplier_intent_policy', 'CCSI', 'company_code_supplier_intent_policy',
@@ -18,16 +18,17 @@ SELECT
     'standard', 'business', 'controlled',
     'master', 'company_code_supplier_intent_policy',
     'Supplier Intent Policy', 'Supplier Intent Policies', 'target', 'violet',
-    false,
     '{"parent_entity":"company_code_supplier_profile","parent_fk":"supplier_profile_id"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.entity_code = 'company_code_supplier_intent_policy' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
@@ -73,7 +74,7 @@ SET display_config     = jsonb_build_object(
                 jsonb_build_array('status'))
         )
     ),
-    natural_key_fields = ARRAY['supplier_profile_id', 'business_intent_id']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['supplier_profile_id', 'business_intent_id']::text[]), true)
 WHERE table_schema = 'master' AND table_name = 'company_code_supplier_intent_policy'
   AND tenant_id IS NULL;
 

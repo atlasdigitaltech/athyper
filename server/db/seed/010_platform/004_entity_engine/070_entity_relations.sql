@@ -172,12 +172,154 @@ BEGIN
 
         -- ── UI: dashboard ─────────────────────────────────────────────────────
         ('dashboard', 'tenant',              'belongs_to', 'tenant',                'tenant_id',    'restrict'),
-        ('dashboard', 'widgets',             'has_many',   'dashboard_widget',      'dashboard_id', 'cascade')
+        ('dashboard', 'widgets',             'has_many',   'dashboard_widget',      'dashboard_id', 'cascade'),
+
+        -- ── Finance Org: site (no relations existed) ─────────────────────────────
+        ('site',         'tenant',           'belongs_to', 'tenant',             'tenant_id',       'restrict'),
+        ('site',         'company_code',     'belongs_to', 'company_code',       'company_code_id', 'restrict'),
+        ('site',         'cost_centers',     'has_many',   'cost_center',        'site_id',         'set_null'),
+        ('site',         'warehouses',       'has_many',   'warehouse',          'site_id',         'restrict'),
+
+        -- ── Finance Org: warehouse ────────────────────────────────────────────────
+        ('warehouse',    'tenant',           'belongs_to', 'tenant',             'tenant_id',       'restrict'),
+        ('warehouse',    'site',             'belongs_to', 'site',               'site_id',         'restrict'),
+
+        -- ── Finance Org: business_unit (no relations existed) ────────────────────
+        ('business_unit','tenant',           'belongs_to', 'tenant',             'tenant_id',       'restrict'),
+        ('business_unit','company_code',     'belongs_to', 'company_code',       'company_code_id', 'restrict'),
+        ('business_unit','parent',           'belongs_to', 'business_unit',      'parent_id',       'set_null'),
+        ('business_unit','head',             'belongs_to', 'principal',          'bu_head_id',      'set_null'),
+
+        -- ── Finance Org: company_code inverse for business_unit ──────────────────
+        ('company_code', 'business_units',   'has_many',   'business_unit',      'company_code_id', 'restrict'),
+
+        -- ── Finance Org: cost_center self-ref + dimension links ───────────────────
+        ('cost_center',  'parent',           'belongs_to', 'cost_center',        'parent_id',       'set_null'),
+        ('cost_center',  'profit_center',    'belongs_to', 'profit_center',      'profit_center_id','set_null'),
+        ('cost_center',  'site',             'belongs_to', 'site',               'site_id',         'set_null'),
+
+        -- ── Finance Org: profit_center self-ref ──────────────────────────────────
+        ('profit_center','parent',           'belongs_to', 'profit_center',      'parent_id',       'set_null'),
+
+        -- ── Business Partners: business_partner (no relations existed) ───────────
+        ('business_partner','tenant',        'belongs_to', 'tenant',             'tenant_id',           'restrict'),
+        ('business_partner','customers',     'has_many',   'customer',           'business_partner_id', 'restrict'),
+        ('business_partner','suppliers',     'has_many',   'supplier',           'business_partner_id', 'restrict'),
+
+        -- ── Business Partners: BP link on customer / supplier ─────────────────────
+        ('customer',     'business_partner', 'belongs_to', 'business_partner',   'business_partner_id', 'restrict'),
+        ('supplier',     'business_partner', 'belongs_to', 'business_partner',   'business_partner_id', 'restrict'),
+
+        -- ── Business Partners: company_code_customer_profile (no relations existed)
+        ('company_code_customer_profile','customer',     'belongs_to','customer',     'customer_id',     'restrict'),
+        ('company_code_customer_profile','company_code', 'belongs_to','company_code', 'company_code_id', 'restrict'),
+
+        -- ── Assets: asset_class (no relations existed) ────────────────────────────
+        ('asset_class',  'tenant',           'belongs_to', 'tenant',             'tenant_id',       'restrict'),
+        ('asset_class',  'company_code',     'belongs_to', 'company_code',       'company_code_id', 'restrict'),
+        ('asset_class',  'parent',           'belongs_to', 'asset_class',        'parent_id',       'set_null'),
+        ('asset_class',  'assets',           'has_many',   'asset',              'asset_class_id',  'restrict'),
+
+        -- ── Assets: asset children ────────────────────────────────────────────────
+        ('asset_book',              'asset',          'belongs_to','asset','asset_id',           'cascade'),
+        ('asset_component',         'parent_asset',   'belongs_to','asset','parent_asset_id',    'cascade'),
+        ('asset_component',         'component_asset','belongs_to','asset','component_asset_id', 'restrict'),
+        ('asset_component',         'company_code',   'belongs_to','company_code','company_code_id','restrict'),
+        ('asset_assignment_history','asset',          'belongs_to','asset','asset_id',           'cascade'),
+
+        -- ── Dimensions: dimension_type inverse ────────────────────────────────────
+        ('dimension_type','tenant',  'belongs_to','tenant',          'tenant_id',         'restrict'),
+        ('dimension_type','values',  'has_many',  'dimension_value', 'dimension_type_id', 'restrict'),
+
+        -- ── Dimensions: dimension_set (no relations existed) ──────────────────────
+        ('dimension_set', 'tenant',  'belongs_to','tenant',             'tenant_id',        'restrict'),
+        ('dimension_set', 'items',   'has_many',  'dimension_set_item', 'dimension_set_id', 'cascade'),
+
+        -- ── Dimensions: dimension_set_item (no relations existed) ─────────────────
+        ('dimension_set_item','dimension_set',   'belongs_to','dimension_set',   'dimension_set_id',   'cascade'),
+        ('dimension_set_item','dimension_type',  'belongs_to','dimension_type',  'dimension_type_id',  'restrict'),
+        ('dimension_set_item','dimension_value', 'belongs_to','dimension_value', 'dimension_value_id', 'restrict'),
+
+        -- ── Dimensions: company_code_intent_policy (no relations existed) ─────────
+        ('company_code_intent_policy','company_code','belongs_to','company_code',    'company_code_id','restrict'),
+        ('company_code_intent_policy','intent',      'belongs_to','business_intent', 'intent_id',      'restrict'),
+
+        -- ── Dimensions: company_code_dimension_default (no relations existed) ──────
+        ('company_code_dimension_default','company_code',    'belongs_to','company_code',    'company_code_id',    'restrict'),
+        ('company_code_dimension_default','dimension_type',  'belongs_to','dimension_type',  'dimension_type_id',  'restrict'),
+        ('company_code_dimension_default','dimension_value', 'belongs_to','dimension_value', 'dimension_value_id', 'restrict'),
+
+        -- ── IAM: principal_persona ────────────────────────────────────────────────
+        ('principal_persona','principal','belongs_to','principal','principal_id','cascade'),
+
+        -- ── IAM: auth_group_member ────────────────────────────────────────────────
+        ('auth_group_member','auth_group','belongs_to','auth_group','auth_group_id','cascade'),
+        ('auth_group_member','principal', 'belongs_to','principal', 'principal_id', 'cascade'),
+
+        -- ── IAM: auth_group_role ──────────────────────────────────────────────────
+        ('auth_group_role',  'auth_group','belongs_to','auth_group','auth_group_id','cascade'),
+
+        -- ── IAM: team_member ──────────────────────────────────────────────────────
+        ('team_member',      'team',      'belongs_to','team',      'team_id',      'cascade'),
+        ('team_member',      'principal', 'belongs_to','principal', 'principal_id', 'cascade'),
+
+        -- ── IAM: principal_feature_grant ──────────────────────────────────────────
+        ('principal_feature_grant','principal','belongs_to','principal','principal_id','cascade'),
+
+        -- ── Banking: bank_account_link (no relations existed) ────────────────────
+        ('bank_account_link','bank_account','belongs_to','bank_account','bank_account_id','cascade'),
+        ('bank_account_link','company_code','belongs_to','company_code','company_code_id','set_null'),
+
+        -- ── Banking: bank_account_house_config (no relations existed) ────────────
+        ('bank_account_house_config','bank_account_link','belongs_to','bank_account_link','bank_account_link_id','cascade'),
+        ('bank_account_house_config','gl_account',       'belongs_to','gl_account',       'gl_account_id',       'restrict'),
+
+        -- ── Payment Terms: holiday_calendar (no relations existed) ────────────────
+        ('holiday_calendar',    'tenant',          'belongs_to','tenant',             'tenant_id',           'restrict'),
+        ('holiday_calendar',    'company_code',    'belongs_to','company_code',       'company_code_id',     'set_null'),
+        ('holiday_calendar',    'days',            'has_many',  'holiday_calendar_day','holiday_calendar_id','cascade'),
+
+        -- ── Payment Terms: holiday_calendar_day (no relations existed) ───────────
+        ('holiday_calendar_day','holiday_calendar','belongs_to','holiday_calendar','holiday_calendar_id','cascade'),
+
+        -- ── Payment Terms: payment_term_clause (no relations existed) ─────────────
+        ('payment_term_clause','payment_term','belongs_to','payment_term','payment_term_id','cascade'),
+
+        -- ── Payment Terms: payment_term_discount_tier (no relations existed) ──────
+        ('payment_term_discount_tier','payment_term','belongs_to','payment_term','payment_term_id','cascade'),
+
+        -- ── Products: commodity_category (no relations existed) ───────────────────
+        ('commodity_category','tenant', 'belongs_to','tenant',             'tenant_id',            'restrict'),
+        ('commodity_category','parent', 'belongs_to','commodity_category', 'parent_id',            'set_null'),
+        ('commodity_category','items',  'has_many',  'item',               'commodity_category_id','restrict'),
+
+        -- ── CMS: content_item child entities ──────────────────────────────────────
+        ('content_item_link',        'content_item','belongs_to','content_item','content_item_id','cascade'),
+        ('content_item_access_grant','content_item','belongs_to','content_item','content_item_id','cascade'),
+
+        -- ── UI: dashboard_widget ──────────────────────────────────────────────────
+        ('dashboard_widget','dashboard','belongs_to','dashboard','dashboard_id','cascade'),
+
+        -- ── DOC: template_binding ─────────────────────────────────────────────────
+        ('template_binding','template','belongs_to','template','template_id','cascade')
 
     ) AS r(entity, rel_name, kind, target_entity, fk_field, on_del)
     JOIN control.entity         e  ON e.entity_code = r.entity AND e.tenant_id IS NULL
     JOIN control.entity_version ev ON ev.entity_id  = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
     ON CONFLICT (entity_version_id, name) DO NOTHING;
+
+    -- Fix: asset.components had fk_field='asset_id'; asset_component table uses parent_asset_id.
+    UPDATE control.entity_relation er
+       SET fk_field   = 'parent_asset_id',
+           updated_at = now(),
+           updated_by = v_su
+      FROM control.entity_version ev
+      JOIN control.entity e ON e.id = ev.entity_id
+     WHERE er.entity_version_id = ev.id
+       AND e.entity_code = 'asset'
+       AND ev.tenant_id IS NULL
+       AND er.name = 'components'
+       AND er.fk_field = 'asset_id';
 
     GET DIAGNOSTICS cnt = ROW_COUNT;
     RAISE NOTICE 'control.entity_relation: % rows inserted (% total)',

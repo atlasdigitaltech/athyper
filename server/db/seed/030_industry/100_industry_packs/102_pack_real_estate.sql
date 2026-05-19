@@ -11,7 +11,7 @@
 -- ============================================================================
 -- PACK OWNS:
 --   Spend categories : SC-RE, SC-RE-DEV, SC-RE-MGMT, SC-RE-LEASE, SC-RE-VAL
---   Business intents : BI-COGS, BI-REV-RENT, BI-REG
+--   Business intents : BI-COGS, BI-REG
 --   Commodity bridge : all rows with pack = '102_pack_real_estate'
 --   Routing rules    : all rows with pack = '102_pack_real_estate'
 -- ============================================================================
@@ -68,22 +68,7 @@ BEGIN
     ('SC-RE-LEASE', 'Leasing & Tenancy',        'Commercial and residential lease administration and brokerage',     'SC-RE', 'services', 423, true),
     ('SC-RE-VAL',   'Valuation & Appraisal',    'Property valuation, market appraisal, and feasibility studies',     'SC-RE', 'services', 424, false);
 
-    -- B2: Business intents
-    CREATE TEMP TABLE tmp_bi (
-        seed_id     uuid DEFAULT shared.uuidv7(),
-        code        text NOT NULL,
-        name        text NOT NULL,
-        description text,
-        domain      text NOT NULL,
-        subtype     text,
-        parent_code text,
-        sort_order  smallint NOT NULL DEFAULT 0
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_bi (code, name, description, domain, subtype, parent_code, sort_order) VALUES
-    ('BI-COGS', 'Property Cost of Sales',          'Direct costs of property management and operations',           'COST_OF_SALES', 'PROPERTY',           'BI-COGS', 38),
-    ('BI-REV-RENT',  'Rental Revenue Cost',             'Costs directly tied to rental income generation',              'COST_OF_SALES', 'RENTAL',             'BI-COGS', 39),
-    ('BI-REG',  'Property Regulatory Compliance',  'Zoning permits, title registration, and building compliance',  'REGULATORY',    'PROPERTY_COMPLIANCE','BI-REG',  56);
+    -- B2: Business intent rows are domain-level only; this pack links categories to canonical BI-* records.
 
     -- B3: Commodity bridge
     CREATE TEMP TABLE tmp_bridge (

@@ -18,6 +18,7 @@ import {
   type EntityPickerSearchContext,
   type EntityPickerSearchResponse,
 } from "@athyper/runtime-shared/entity-search";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
 
 export type LineRecord = Record<string, unknown> & {
   id?: string;
@@ -57,6 +58,20 @@ function scalarTextValue(value: unknown): string | undefined {
   if (typeof value === "string") return value.trim() || undefined;
   if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") return String(value);
   return undefined;
+}
+
+function columnValueForField(
+  source: Record<string, unknown>,
+  name: string,
+  columnName?: string | null,
+): unknown {
+  if (!columnName || !Object.prototype.hasOwnProperty.call(source, columnName)) return undefined;
+  const value = source[columnName];
+  const nested = asRecord(value);
+  if (nested && columnName !== name) {
+    return Object.prototype.hasOwnProperty.call(nested, name) ? nested[name] : undefined;
+  }
+  return value;
 }
 
 function numberValue(value: unknown, fallback = 0): number {
@@ -131,10 +146,12 @@ export function recordValue(record: LineRecord | null | undefined, fieldOrName: 
   const columnName = typeof fieldOrName === "string" ? undefined : fieldOrName.column_name;
   const direct = record[name];
   if (direct !== undefined) return direct;
-  if (columnName && record[columnName] !== undefined) return record[columnName];
+  const columnValue = columnValueForField(record, name, columnName);
+  if (columnValue !== undefined) return columnValue;
   const data = recordData(record);
   if (data[name] !== undefined) return data[name];
-  if (columnName && data[columnName] !== undefined) return data[columnName];
+  const dataColumnValue = columnValueForField(data, name, columnName);
+  if (dataColumnValue !== undefined) return dataColumnValue;
   return undefined;
 }
 
@@ -231,7 +248,10 @@ export function resolveLineColumns(entity: CompiledEntity | null | undefined): M
 
 export function resolveSearchFields(entity: CompiledEntity | null | undefined, columns: MetaLineColumn[]): EntityField[] {
   if (!entity) return [];
-  const names = entity.display_config.search_fields;
+  if (entity.search_config?.enabled === false) return [];
+  const names = entity.search_config?.fields?.length
+    ? entity.search_config.fields
+    : undefined;
   if (names?.length) {
     const fieldsByName = new Map(entity.fields.map((field) => [field.name, field]));
     return names.flatMap((name) => {
@@ -869,7 +889,11 @@ function useResolvedCommodityCodeLabel(domain: "unspsc" | "hs", code: string | n
       `/api/relay/api/platform/taxonomy/commodity/domains/${encodeURIComponent(domain)}/nodes/${encodeURIComponent(code)}`,
       { signal: controller.signal },
     )
-      .then((response) => response.ok ? response.json() as Promise<Record<string, unknown>> : null)
+      .then((response) => {
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error(`Commodity code lookup failed (${response.status})`);
+        return response.json() as Promise<Record<string, unknown>>;
+      })
       .then((row) => {
         if (!controller.signal.aborted && row) {
           setLabel(commodityOption(row).label);
@@ -880,6 +904,27 @@ function useResolvedCommodityCodeLabel(domain: "unspsc" | "hs", code: string | n
   }, [code, domain]);
 
   return label;
+}
+
+function commodityInputValue(value: unknown, domain: "unspsc" | "hs"): string | null {
+  if (value == null) return null;
+  const record = asRecord(value);
+  if (record) {
+    const domainSpecific = domain === "unspsc"
+      ? record["unspsc_code"]
+      : record["hs_code"] ?? record["trade_code"];
+    const domainSpecificText = scalarTextValue(domainSpecific);
+    if (domainSpecificText) return domainSpecificText;
+
+    const valueDomain = scalarTextValue(
+      record["domain_code"] ?? record["domain"] ?? record["commodity_domain"],
+    )?.toLowerCase();
+    if (valueDomain && valueDomain !== domain) return null;
+
+    return scalarTextValue(record["value"] ?? record["code"] ?? record["id"]) ?? null;
+  }
+  const text = String(value).trim();
+  return text ? text : null;
 }
 
 function CommodityCodeInput({
@@ -895,7 +940,7 @@ function CommodityCodeInput({
   disabled?: boolean;
   domain: "unspsc" | "hs";
 }) {
-  const currentValue = referenceInputValue(value);
+  const currentValue = commodityInputValue(value, domain);
   const resolvedLabel = useResolvedCommodityCodeLabel(domain, currentValue);
   const [selected, setSelected] = useState<EntityPickerOption | null>(null);
   const optionConfig = useMemo(() => commodityPickerConfig(domain), [domain]);
@@ -1059,7 +1104,7 @@ function GenericReferencePicker({
       optionConfig={optionConfig}
       getOptionHref={(option) => {
         const recordIdValue = option.recordId ?? option.value;
-        return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordIdValue)}`;
+        return appEntityDetailHref(entityCode, recordIdValue);
       }}
       optionActionLabel={optionConfig?.optionActionLabel ?? `Open ${entityCode.replace(/_/g, " ")}`}
       placeholder={`Search ${fieldLabel(field).toLowerCase()}...`}

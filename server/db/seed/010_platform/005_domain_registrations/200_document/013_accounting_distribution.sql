@@ -14,7 +14,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -23,7 +23,6 @@ SELECT
     'full', 'tenant_critical', 'locked',
     'document', 'accounting_distribution',
     'Account Assignment Split', 'Account Assignment Splits', 'split', 'slate',
-    false,
     '{
         "polymorphic_parent":        true,
         "parent_source_type_field":  "source_doc_type",
@@ -55,7 +54,6 @@ UPDATE control.entity
        label_plural = 'Account Assignment Splits',
        icon_key = 'split',
        color_token = 'slate',
-       numbering_active = false,
        feature_flags = jsonb_build_object(
            'polymorphic_parent', true,
            'parent_source_type_field', 'source_doc_type',
@@ -63,7 +61,7 @@ UPDATE control.entity
            'parent_source_line_field', 'source_line_id',
            'auto_generated', true
        ),
-       natural_key_fields = ARRAY['distribution_no']::text[],
+       identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['distribution_no']::text[]), true),
        status = 'ACTIVE',
        updated_at = now(),
        updated_by = '00000000-0000-0000-0000-000000000000'
@@ -73,9 +71,11 @@ UPDATE control.entity
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'document' AND e.table_name = 'accounting_distribution'
   AND  e.tenant_id IS NULL
@@ -167,6 +167,7 @@ WITH distribution_fields(
     ('budget_check_result', 'budget_check_result', 'Budget Check', 'text', 'zero_or_one', NULL::text, NULL::jsonb, NULL::jsonb, false, true, true, 100, 'matching'),
     ('description', 'description', 'Split Text', 'text', 'zero_or_one', NULL::text, NULL::jsonb, '{"max_length":500}'::jsonb, false, false, false, 110, 'identity')
 )
+-- Update canonical accounting distribution field metadata.
 UPDATE control.entity_field ef
    SET column_name = df.column_name,
        label = df.label,
@@ -202,14 +203,68 @@ UPDATE control.entity_field ef
    AND ef.tenant_id IS NULL
    AND ef.name = df.name;
 
--- ── 4. Natural key — distribution_no is the business key within a source line ─
+-- GL account picker lookup_config: company code -> primary operating COA -> postable GL accounts.
+UPDATE control.entity_field ef
+   SET lookup_config = '{
+         "search_fields": ["code", "name"],
+         "filters": {
+           "status": "active",
+           "posting_allowed": true
+         },
+         "dependent_filter": {
+           "source_field": "company_code_id",
+           "target_field": "chart_of_account_id",
+           "through_entity": "company_code_chart_assignment",
+           "through_source_field": "company_code_id",
+           "through_target_field": "chart_of_account_id",
+           "through_filters": {
+             "status": "active",
+             "assignment_type": "operating",
+             "is_primary": true
+           },
+           "empty_behavior": "empty"
+         }
+       }'::jsonb,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+  FROM control.entity e
+  JOIN control.entity_version ev
+    ON ev.entity_id = e.id
+ WHERE e.entity_code = 'accounting_distribution'
+   AND e.tenant_id IS NULL
+   AND ev.version_no = 1
+   AND ev.tenant_id IS NULL
+   AND ef.entity_version_id = ev.id
+   AND ef.tenant_id IS NULL
+   AND ef.name = 'gl_account_id'
+   AND COALESCE(ef.lookup_config, '{}'::jsonb) IS DISTINCT FROM '{
+         "search_fields": ["code", "name"],
+         "filters": {
+           "status": "active",
+           "posting_allowed": true
+         },
+         "dependent_filter": {
+           "source_field": "company_code_id",
+           "target_field": "chart_of_account_id",
+           "through_entity": "company_code_chart_assignment",
+           "through_source_field": "company_code_id",
+           "through_target_field": "chart_of_account_id",
+           "through_filters": {
+             "status": "active",
+             "assignment_type": "operating",
+             "is_primary": true
+           },
+           "empty_behavior": "empty"
+         }
+       }'::jsonb;
+
+-- Natural key: distribution_no is the business key within a source line.
 UPDATE control.entity
-SET natural_key_fields = ARRAY['distribution_no']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['distribution_no']::text[]), true)
 WHERE table_schema    = 'document'
   AND table_name      = 'accounting_distribution'
   AND tenant_id       IS NULL
-  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
-
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;
 -- ── 5. display_config ────────────────────────────────────────────────────────
 UPDATE control.entity
 SET display_config = jsonb_build_object(

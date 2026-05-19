@@ -37,6 +37,7 @@ import {
   type EntityPickerSearchContext,
   type EntityPickerSearchResponse,
 } from "@athyper/runtime-shared/entity-search";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
 import { DerivedChip } from "./DerivedChip";
 import { canOverride } from "./useFlowEngine";
 
@@ -48,6 +49,7 @@ export interface FlowFieldBindingProps {
   error?: string;
   userPermissions: string[];
   isOverridden: boolean;
+  disabled?: boolean;
   onChange: (value: unknown) => void;
   onOverride: (value: unknown) => void;
   onReset: () => void;
@@ -295,7 +297,7 @@ function FlowInlineRefPicker({
           ? undefined
           : (option) => {
               const recordId = option.recordId ?? option.value;
-              return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`;
+              return appEntityDetailHref(entityCode, recordId);
             }
       }
       optionConfig={optionConfig}
@@ -1188,6 +1190,7 @@ export function FlowFieldBinding({
   error,
   userPermissions,
   isOverridden,
+  disabled,
   onChange,
   onOverride,
   onReset,
@@ -1198,7 +1201,7 @@ export function FlowFieldBinding({
 
   // chip mode → DerivedChip
   if (mode === "chip") {
-    const canOvr = canOverride(binding.override_permission, userPermissions);
+    const canOvr = !disabled && canOverride(binding.override_permission, userPermissions);
     return (
       <div className={colSpanClass(binding.span)}>
         <DerivedChip
@@ -1210,7 +1213,7 @@ export function FlowFieldBinding({
           canOverride={canOvr}
           isOverridden={isOverridden}
           onOverride={canOvr ? onOverride : undefined}
-          onReset={isOverridden ? onReset : undefined}
+          onReset={isOverridden && !disabled ? onReset : undefined}
         />
       </div>
     );
@@ -1238,7 +1241,7 @@ export function FlowFieldBinding({
   if (mode === "hidden" || mode === "summary_only") return null;
 
   // editable / required
-  const isDisabled = false;
+  const isDisabled = Boolean(disabled);
   const options = PROVISIONAL_OPTIONS[field_name];
   const enumDomainCode = binding.enum_domain_code ?? ENUM_DOMAIN_BY_FIELD[field_name] ?? null;
   const enumExcludeCodes = field_name === "contact_role" ? ["primary"] : [];

@@ -14,11 +14,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'asset_class', 'ASCLS', 'asset_class', 'MASTER', 'system', 'ent', 'table',
         'full', 'config', 'controlled', 'master', 'asset_class',
         'Asset Class', 'Asset Classes', 'layers', 'yellow',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 71. asset ────────────────────────────────────────────────────────────
@@ -26,11 +26,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'asset', 'ASSET', 'asset', 'MASTER', 'system', 'ent', 'table',
         'full', 'operational', 'extensible', 'master', 'asset',
         'Asset', 'Assets', 'hard-drive', 'yellow',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 72. asset_book ───────────────────────────────────────────────────────
@@ -38,11 +38,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'asset_book', 'ASTBK', 'asset_book', 'DOCUMENT_RELATION', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'asset_book',
         'Asset Book', 'Asset Books', 'book-marked', 'yellow',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 73. asset_component ──────────────────────────────────────────────────
@@ -50,11 +50,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'asset_component', 'ASTCMP', 'asset_component', 'DOCUMENT_RELATION', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'asset_component',
         'Asset Component', 'Asset Components', 'cpu', 'yellow',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 74. asset_assignment_history ─────────────────────────────────────────
@@ -62,11 +62,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'asset_assignment_history', 'ASTASGN', 'asset_assignment_history', 'LOG', 'system', 'ent', 'table',
         'lite', 'operational', 'locked', 'master', 'asset_assignment_history',
         'Asset Assignment History', 'Asset Assignment History', 'history', 'yellow',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 END $$;

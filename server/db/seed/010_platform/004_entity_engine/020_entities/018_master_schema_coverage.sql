@@ -33,10 +33,6 @@ BEGIN
             ('FND', 'tenant_parameter_value', 'TPVAL', 'CONTROL', 'table', 'full', 'config', 'controlled',
                 'Tenant Parameter Value', 'Tenant Parameter Values', 'sliders-horizontal', 'cyan', false,
                 ARRAY['parameter_code']::text[], '{}'::jsonb, '{}'::jsonb),
-            ('DOC', 'numbering_series', 'NBRSEQ', 'CONTROL', 'table', 'full', 'config', 'controlled',
-                'Numbering Series', 'Numbering Series', 'hash', 'violet', false,
-                ARRAY['series_code']::text[], '{}'::jsonb, '{}'::jsonb),
-
             -- Business partner, network, and legal-entity relationships
             ('ACC', 'network_provider', 'NETPRV', 'REFERENCE', 'table', 'light', 'operational', 'controlled',
                 'Network Provider', 'Network Providers', 'network', 'indigo', false,
@@ -196,7 +192,7 @@ BEGIN
         color_token,
         feature_flags,
         display_config,
-        natural_key_fields,
+        identity_config,
         status,
         created_by,
         updated_by
@@ -230,7 +226,7 @@ BEGIN
             'list_renderer', 'table',
             'detail_renderer', CASE WHEN r.is_readonly THEN 'readOnly' ELSE 'standard' END
         ) || r.display_config,
-        r.natural_key_fields,
+        jsonb_build_object('natural_key_fields', to_jsonb(r.natural_key_fields::text[])),
         'ACTIVE',
         v_system_user,
         v_system_user
@@ -250,7 +246,7 @@ BEGIN
         color_token = EXCLUDED.color_token,
         feature_flags = control.entity.feature_flags || EXCLUDED.feature_flags,
         display_config = control.entity.display_config || EXCLUDED.display_config,
-        natural_key_fields = EXCLUDED.natural_key_fields,
+        identity_config = COALESCE(control.entity.identity_config, '{}'::jsonb) || EXCLUDED.identity_config,
         updated_at = now(),
         updated_by = v_system_user
     WHERE control.entity.feature_flags ->> 'metadata_coverage_source' = 'master_schema_coverage';
@@ -299,4 +295,14 @@ BEGIN
 
     GET DIAGNOSTICS v_version_rows = ROW_COUNT;
     RAISE NOTICE 'Master schema coverage entity seed upserted % version row(s)', v_version_rows;
+
+    UPDATE control.entity
+       SET status = 'ARCHIVED',
+           feature_flags = COALESCE(feature_flags, '{}'::jsonb)
+                           || jsonb_build_object('decommissioned_reason', 'legacy_numbering_replaced_by_entity_numbering_config'),
+           updated_at = now(),
+           updated_by = v_system_user
+     WHERE table_schema = 'master'
+       AND table_name = 'numbering_series'
+       AND tenant_id IS NULL;
 END $$;

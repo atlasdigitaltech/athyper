@@ -32,8 +32,7 @@ interface EntityDescriptor {
   tableSchema: string;
   tableName: string;
   displayConfig: unknown;
-  namingPolicy: unknown;
-  numberingActive: boolean;
+  identityConfig: unknown;
 }
 
 interface EntityFieldRow {
@@ -120,6 +119,16 @@ function asObject(value: unknown): JsonObject {
 
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (["true", "t", "yes", "y", "1", "enabled", "on"].includes(normalized)) return true;
+  if (["false", "f", "no", "n", "0", "disabled", "off"].includes(normalized)) return false;
+  return undefined;
 }
 
 function copyPolicyForField(field: EntityFieldRow): CopyPolicy | null {
@@ -255,8 +264,7 @@ async function loadEntityDescriptor(db: AnyDb, entityCode: string, tenantId: str
       "e.table_schema as tableSchema",
       "e.table_name as tableName",
       "e.display_config as displayConfig",
-      "e.naming_policy as namingPolicy",
-      "e.numbering_active as numberingActive",
+      "e.identity_config as identityConfig",
     ] as never[])
     .where("e.entity_code" as never, "=", entityCode as never)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -325,6 +333,12 @@ function getCopyConfig(entity: EntityDescriptor): JsonObject {
   return asObject(asObject(entity.displayConfig)["copy"]);
 }
 
+function numberingEnabled(entity: EntityDescriptor): boolean {
+  const identityConfig = asObject(entity.identityConfig);
+  const numbering = asObject(identityConfig["numbering"]);
+  return asBoolean(numbering["enabled"]) ?? true;
+}
+
 function targetStatusForCopy(entity: EntityDescriptor): string | null {
   const value = getCopyConfig(entity)["target_status"];
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -364,23 +378,39 @@ async function generateDocumentNumber(
   sourceRecord: Record<string, unknown>,
   tenantId: string,
 ): Promise<{ column: string; value: string } | null> {
-  if (!entity.numberingActive) return null;
+  if (!numberingEnabled(entity)) return null;
 
   const displayConfig = asObject(entity.displayConfig);
   const numberFieldName = asObject(displayConfig["document_header"])["number_field"];
   if (typeof numberFieldName !== "string" || !numberFieldName) return null;
 
   const numberColumn = resolveColumn(fields, numberFieldName);
-  const namingPolicy = asObject(entity.namingPolicy);
   const copyConfig = getCopyConfig(entity);
   const prefix = typeof copyConfig["number_prefix"] === "string"
     ? copyConfig["number_prefix"]
-    : typeof namingPolicy["prefix"] === "string"
-    ? namingPolicy["prefix"]
     : entity.entityCode.toUpperCase();
-  const separator = typeof namingPolicy["separator"] === "string" ? namingPolicy["separator"] : "-";
-  const segments = Array.isArray(namingPolicy["segments"]) ? namingPolicy["segments"] : [];
+  const separator = typeof copyConfig["separator"] === "string" ? copyConfig["separator"] : "-";
   const fiscalYear = fiscalYearFromRecord(sourceRecord);
+  const periodNumber = Number.parseInt(String(sourceRecord["period_number"] ?? ""), 10);
+
+  try {
+    const result = await sql<{ value: string }>`
+      SELECT control.next_entity_number(
+        ${tenantId}::uuid,
+        ${entity.entityCode},
+        ${numberFieldName},
+        ${typeof sourceRecord["company_code_id"] === "string" ? sourceRecord["company_code_id"] : null}::uuid,
+        ${fiscalYear}::smallint,
+        ${Number.isFinite(periodNumber) ? periodNumber : null}::smallint,
+        NULL,
+        ${sourceRecord["posting_date"] ?? sourceRecord["document_date"] ?? null}::date
+      ) AS value
+    `.execute(db);
+    const value = result.rows[0]?.value;
+    if (value) return { column: numberColumn, value };
+  } catch {
+    // Fall through to the copy-local numbering behavior.
+  }
 
   const fullTable = qualifiedTable(entity);
   let countQuery = (db.selectFrom(fullTable) as any)
@@ -396,28 +426,11 @@ async function generateDocumentNumber(
 
   const countRow = await countQuery.executeTakeFirst() as { cnt?: string | number | bigint } | undefined;
   const sequence = Number.parseInt(String(countRow?.cnt ?? "0"), 10) + 1;
-  const parts = [prefix];
-
-  if (segments.length === 0) {
-    parts.push(formatYear(fiscalYear, "YYYY"));
-    parts.push(String(sequence).padStart(5, "0"));
-  } else {
-    for (const segment of segments) {
-      const obj = asObject(segment);
-      const type = obj["type"];
-      if (type === "year") {
-        parts.push(formatYear(fiscalYear, typeof obj["format"] === "string" ? obj["format"] : "YYYY"));
-      } else if (type === "sequence") {
-        const configuredPadding = typeof copyConfig["sequence_padding"] === "number"
-          ? copyConfig["sequence_padding"]
-          : Number(obj["padding"] ?? 5);
-        const padding = Number.isFinite(configuredPadding) && configuredPadding > 0 ? configuredPadding : 5;
-        parts.push(String(sequence).padStart(padding, "0"));
-      } else if (type === "literal" && typeof obj["value"] === "string") {
-        parts.push(obj["value"]);
-      }
-    }
-  }
+  const configuredPadding = typeof copyConfig["sequence_padding"] === "number"
+    ? copyConfig["sequence_padding"]
+    : 5;
+  const padding = Number.isFinite(configuredPadding) && configuredPadding > 0 ? configuredPadding : 5;
+  const parts = [prefix, formatYear(fiscalYear, "YYYY"), String(sequence).padStart(padding, "0")];
 
   return { column: numberColumn, value: parts.filter(Boolean).join(separator) };
 }

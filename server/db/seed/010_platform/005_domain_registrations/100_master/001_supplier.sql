@@ -23,7 +23,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
@@ -32,17 +32,17 @@ SELECT
     'standard', 'business', 'controlled',
     'master', 'supplier',
     'Supplier', 'Suppliers', 'building-2', 'blue',
-    true,
-    '{"prefix":"SUP","prefix_configurable":true,"separator":"-","segments":[{"type":"sequence","padding":5}]}'::jsonb,
     '{"is_approvable":false,"party_category":"supplier","allow_address":true,"allow_contact":true,"identity_via":"business_partner","list_entity_code":"supplier_app_index"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'master' AND e.table_name = 'supplier'
   AND  e.tenant_id IS NULL
@@ -644,7 +644,7 @@ WHERE ef.entity_version_id = ev.id
 
 -- ── 8. Correct natural_key_fields + feature_flags (BP-first + index redirect) ─
 UPDATE control.entity
-SET natural_key_fields = ARRAY['supplier_code'],
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['supplier_code']::text[]), true),
     display_config     = display_config || '{"default_sort_field":"supplier_code"}'::jsonb,
     feature_flags      = feature_flags || '{"identity_via":"business_partner","list_entity_code":"supplier_app_index","parent_entity":"business_partner","parent_fk":"business_partner_id"}'::jsonb
 WHERE table_schema = 'master' AND table_name = 'supplier'

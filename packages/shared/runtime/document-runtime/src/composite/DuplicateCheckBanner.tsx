@@ -9,6 +9,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { getCsrfToken } from "@athyper/runtime-shared/client";
+import { appEntityDetailHref, normalizeAppEntityHref } from "@athyper/runtime-shared/core";
 import { cn } from "@athyper/theme/utils";
 import { ValidationBanner } from "../validation/ValidationBanner";
 import type { DuplicateCheckResult, DuplicateMatch } from "./types";
@@ -176,11 +177,11 @@ export function DuplicateCheckBanner({
 }
 
 function matchHref(m: DuplicateMatch): string {
-  if (m.href) return m.href;
-  if (m.business_partner_code) return `/app/business_partner/${encodeURIComponent(m.business_partner_code)}`;
-  if (m.business_partner_id) return `/app/business_partner/${encodeURIComponent(m.business_partner_id)}`;
-  if (m.supplier_id) return `/app/supplier/${encodeURIComponent(m.supplier_id)}`;
-  if (m.customer_id) return `/app/customer/${encodeURIComponent(m.customer_id)}`;
+  if (m.href) return normalizeAppEntityHref(m.href);
+  if (m.business_partner_code) return appEntityDetailHref("business_partner", m.business_partner_code);
+  if (m.business_partner_id) return appEntityDetailHref("business_partner", m.business_partner_id);
+  if (m.supplier_id) return appEntityDetailHref("supplier", m.supplier_id);
+  if (m.customer_id) return appEntityDetailHref("customer", m.customer_id);
   return "#";
 }
 

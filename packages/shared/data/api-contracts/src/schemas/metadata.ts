@@ -141,6 +141,7 @@ export const EntityFieldSchema = z.object({
   is_required: z.boolean(),
   is_readonly: z.boolean(),
   is_unique: z.boolean(),
+  unique_scope: z.enum(["global", "tenant", "entity_instance"]).nullable().optional(),
   is_searchable: z.boolean(),
   is_filterable: z.boolean(),
   is_sortable: z.boolean(),
@@ -148,6 +149,7 @@ export const EntityFieldSchema = z.object({
   is_aggregatable: z.boolean(),
   is_pii: z.boolean(),
   is_computed: z.boolean().optional(),
+  is_write_once: z.boolean().optional(),
 
   default_value: z.unknown().nullable(),
   validation_rules: z.record(z.string(), z.unknown()).nullable(),
@@ -168,10 +170,13 @@ export const EntityFieldSchema = z.object({
     picker: ReferencePickerConfigSchema.optional(),
   }).nullable(),
   money_config: z.record(z.string(), z.unknown()).nullable().optional(),
+  json_config: z.record(z.string(), z.unknown()).nullable().optional(),
 
   sort_order: z.number().int(),
   group_key: z.string().nullable(),
   ui_hint: z.record(z.string(), z.unknown()).nullable().optional(),
+  visibility: z.record(z.string(), z.unknown()).nullable().optional(),
+  editability: z.record(z.string(), z.unknown()).nullable().optional(),
   lookup_config: z.record(z.string(), z.unknown()).nullable().optional(),
   filter_config: z.object({
     section_key: z.string().optional(),
@@ -289,10 +294,10 @@ const MasterTabSectionSchema = z.object({
   /**
    * When set, the records API performs a single-query two-hop:
    *   WHERE parentFkCol IN (SELECT id FROM throughTable WHERE throughParentFk = recordUuid)
-   * The intermediary table and its parent_fk are resolved at runtime from control.entity,
+   * The intermediary table and its parent field are resolved at runtime from control.entity,
    * so no entity-specific logic lives in TypeScript — only the entity_code lives here.
    * Example: business_partner page showing supplier-owned certifications passes
-   *   through_entity="supplier"; backend reads supplier.feature_flags.parent_fk=
+   *   through_entity="supplier"; backend reads supplier.identity_config.parent.field=
    *   "business_partner_id" and builds the subquery automatically.
    */
   through_entity:       z.string().optional(),
@@ -388,10 +393,10 @@ const MasterTabSchema = z.object({
   /**
    * When set, the records API performs a single-query two-hop:
    *   WHERE parentFkCol IN (SELECT id FROM throughTable WHERE throughParentFk = recordUuid)
-   * The intermediary table and its parent_fk are resolved at runtime from control.entity,
+   * The intermediary table and its parent field are resolved at runtime from control.entity,
    * so no entity-specific logic lives in TypeScript — only the entity_code lives here.
    * Example: business_partner page showing supplier-owned certifications passes
-   *   through_entity="supplier"; backend reads supplier.feature_flags.parent_fk=
+   *   through_entity="supplier"; backend reads supplier.identity_config.parent.field=
    *   "business_partner_id" and builds the subquery automatically.
    */
   through_entity:      z.string().optional(),
@@ -480,6 +485,119 @@ export const EntityCreateRedirectSchema = z.object({
 }).passthrough();
 export type EntityCreateRedirect = z.infer<typeof EntityCreateRedirectSchema>;
 
+export const EntitySearchConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  fields: z.array(z.string()).optional(),
+  rank: z.record(z.string(), z.number()).optional(),
+  min_query_length: z.number().int().min(1).optional(),
+  operator: z.enum(["contains"]).optional(),
+}).passthrough();
+export type EntitySearchConfig = z.infer<typeof EntitySearchConfigSchema>;
+
+export const EntityIdentityConfigSchema = z.object({
+  /** Surrogate row identifier used for UUID detail routes and write targets. */
+  primary_key_field: z.string().optional(),
+  /** Human/business identifiers accepted for navigation and shown as record numbers. */
+  business_key_fields: z.array(z.string()).optional(),
+  /** Uniqueness-defining fields, often tenant-scoped and sometimes composite. */
+  natural_key_fields: z.array(z.string()).optional(),
+  /** Number generation policy for document/business identifiers. */
+  numbering: z.object({
+    enabled: z.boolean().optional(),
+  }).passthrough().optional(),
+  /** Canonical identity provider for thin role tables, e.g. supplier via business_partner. */
+  identity_via: z.string().optional(),
+  /** Optional denormalized list/index entity used for list/search surfaces. */
+  list_entity_code: z.string().optional(),
+  /** Parent binding used by generic child-list queries and create parent injection. */
+  parent: z.object({
+    entity: z.string().optional(),
+    field: z.string().optional(),
+    scope: z.string().optional(),
+  }).passthrough().optional(),
+  /** Duplicate-detection policy owned by the business identity contract. */
+  duplicate_check: z.object({
+    fields: z.array(z.string()).optional(),
+    exact_fields: z.array(z.string()).optional(),
+    strong_name_threshold: z.number().optional(),
+    weak_name_threshold: z.number().optional(),
+    block_on_exact: z.boolean().optional(),
+  }).passthrough().optional(),
+  /** Replacement target when this entity is superseded by a canonical entity. */
+  replacement: z.object({
+    replacement_entity: z.string().optional(),
+  }).passthrough().optional(),
+}).passthrough();
+export type EntityIdentityConfig = z.infer<typeof EntityIdentityConfigSchema>;
+
+export const EntityFeatureFlagsSchema = z.object({
+  // Core entity capabilities.
+  has_attachments: z.boolean().optional(),
+  has_workflow: z.boolean().optional(),
+  has_lifecycle: z.boolean().optional(),
+  is_importable: z.boolean().optional(),
+  is_exportable: z.boolean().optional(),
+  is_bulk_editable: z.boolean().optional(),
+  is_approvable: z.boolean().optional(),
+  is_readonly: z.boolean().optional(),
+
+  // Runtime exposure/guard rails. These are operational switches, not identity.
+  records_api_disabled: z.boolean().optional(),
+  generic_runtime_disabled: z.boolean().optional(),
+  is_hidden: z.boolean().optional(),
+
+  // Detail tab and subroute capabilities.
+  comments_enabled: z.boolean().optional(),
+  event_history: z.boolean().optional(),
+  version_control: z.boolean().optional(),
+  has_lines: z.boolean().optional(),
+  has_accounting_distribution: z.boolean().optional(),
+  has_tasks: z.boolean().optional(),
+  has_watchers: z.boolean().optional(),
+  has_rules: z.boolean().optional(),
+  has_integrations: z.boolean().optional(),
+  quality_checks: z.boolean().optional(),
+  record_reports: z.boolean().optional(),
+  sla_target_hours: z.number().optional(),
+
+  // Document/workbench capabilities.
+  has_payment_schedule: z.boolean().optional(),
+  has_budget_impact: z.boolean().optional(),
+  has_related_documents: z.boolean().optional(),
+  has_ai_classification: z.boolean().optional(),
+  has_line_composer: z.boolean().optional(),
+  line_references: z.boolean().optional(),
+  catalog_feature_enabled: z.boolean().optional(),
+  catalog_enabled: z.boolean().optional(),
+  catalog_items_enabled: z.boolean().optional(),
+  has_catalog_items: z.boolean().optional(),
+  has_catalog: z.boolean().optional(),
+  document_category: z.string().optional(),
+
+  // Runtime scoping capabilities for polymorphic/shared backing tables.
+  requires_owner_type_scope: z.boolean().optional(),
+  owner_type_column: z.string().optional(),
+  default_owner_type_scope: z.string().optional(),
+  default_owner_type: z.string().optional(),
+  is_company_scoped: z.boolean().optional(),
+
+  // Domain capabilities still owned by the feature contract in V1.
+  singleton: z.boolean().optional(),
+  pii_bearing: z.boolean().optional(),
+  allow_address: z.boolean().optional(),
+  allow_contact: z.boolean().optional(),
+  has_roles: z.boolean().optional(),
+  role_entity: z.string().optional(),
+  party_category: z.string().optional(),
+  append_only_after_submission: z.boolean().optional(),
+  reference_picker: z.boolean().optional(),
+  line_editor: z.boolean().optional(),
+  posting_controlled: z.boolean().optional(),
+  dimension_controlled: z.boolean().optional(),
+  replacement_for: z.string().optional(),
+});
+export type EntityFeatureFlags = z.infer<typeof EntityFeatureFlagsSchema>;
+
 // ═══════════════════════════════════════════════════════════════
 // COMPILED ENTITY — from snapshot.entity_compiled.compiled_json
 // Primary source for all three rendering runtimes.
@@ -488,6 +606,7 @@ export type EntityCreateRedirect = z.infer<typeof EntityCreateRedirectSchema>;
 export const CompiledEntitySchema = z.object({
   entity_id: UuidSchema,
   entity_code: z.string(),
+  slug: z.string(),
   entity_name: z.string(),
   entity_class: EntityClassSchema,
 
@@ -501,11 +620,6 @@ export const CompiledEntitySchema = z.object({
   field_groups: z.array(FieldGroupSchema),
 
   display_config: z.object({
-    /**
-     * Field name holding the business code / primary identifier shown in P1.
-     * Defaults to "code" when absent. Drives identity.number in EntityIdentityBar.
-     */
-    code_field: z.string().optional(),
     title_field: z.string().optional(),
     subtitle_field: z.string().optional(),
     icon: z.string().optional(),
@@ -516,7 +630,8 @@ export const CompiledEntitySchema = z.object({
     compact_card: z.object({
       bottom_fields: z.array(z.string()).optional(),
     }).optional(),
-    search_fields: z.array(z.string()).optional(),
+    /** Target-level defaults merged into field.reference_config for references to this entity. */
+    reference_picker: ReferencePickerConfigSchema.optional(),
     filter_bar: z.object({
       quick_filters: z.array(z.object({
         key: z.string(),
@@ -801,6 +916,8 @@ export const CompiledEntitySchema = z.object({
      */
     procure_line: z.record(z.string(), z.unknown()).optional(),
   }),
+  identity_config: EntityIdentityConfigSchema.optional(),
+  search_config: EntitySearchConfigSchema.optional(),
 
   feature_flags: z.object({
     // ── Core capabilities ────────────────────────────────────────
@@ -875,6 +992,32 @@ export const CompiledEntitySchema = z.object({
      * Set true for master data entities that are managed through dedicated intake flows.
      */
     is_readonly: z.boolean().optional(),
+    records_api_disabled: z.boolean().optional(),
+    generic_runtime_disabled: z.boolean().optional(),
+    is_hidden: z.boolean().optional(),
+    line_references: z.boolean().optional(),
+    catalog_feature_enabled: z.boolean().optional(),
+    catalog_enabled: z.boolean().optional(),
+    catalog_items_enabled: z.boolean().optional(),
+    has_catalog_items: z.boolean().optional(),
+    has_catalog: z.boolean().optional(),
+    requires_owner_type_scope: z.boolean().optional(),
+    owner_type_column: z.string().optional(),
+    default_owner_type_scope: z.string().optional(),
+    default_owner_type: z.string().optional(),
+    singleton: z.boolean().optional(),
+    pii_bearing: z.boolean().optional(),
+    allow_address: z.boolean().optional(),
+    allow_contact: z.boolean().optional(),
+    has_roles: z.boolean().optional(),
+    role_entity: z.string().optional(),
+    party_category: z.string().optional(),
+    append_only_after_submission: z.boolean().optional(),
+    reference_picker: z.boolean().optional(),
+    line_editor: z.boolean().optional(),
+    posting_controlled: z.boolean().optional(),
+    dimension_controlled: z.boolean().optional(),
+    replacement_for: z.string().optional(),
   }),
 
   governance_level: z.string(),

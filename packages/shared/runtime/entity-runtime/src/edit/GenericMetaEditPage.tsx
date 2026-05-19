@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@athyper/ui/primitives";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
+import { appEntityListHref } from "@athyper/runtime-shared/core";
 import {
   validateMetaFieldRules,
   validationSummaryMessage,
@@ -106,7 +107,7 @@ function GenericMetaEditInner({
       return;
     }
     if (action === "cancel") {
-      guardNavigate(() => router.push(`/app/${entityCode}`));
+      guardNavigate(() => router.push(appEntityListHref(entityCode)));
       return;
     }
     if (action === "save") {
@@ -122,7 +123,7 @@ function GenericMetaEditInner({
       <EntityHeader
         model={headerModel}
         onBack={() => guardNavigate(() => router.back())}
-        onTypeClick={() => guardNavigate(() => router.push(`/app/${entityCode}`))}
+        onTypeClick={() => guardNavigate(() => router.push(appEntityListHref(entityCode)))}
         onAction={handleAction}
       />
       {CustomForm ? (

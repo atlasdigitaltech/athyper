@@ -875,54 +875,6 @@ model dimension_policy_allowed_value {
   @@index([dimension_value_id], map: "dpav_value_idx")
   @@schema("control")
 }
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model document_sequence_config {
-  id                        String                      @id(map: "dsc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                 String                      @db.Uuid
-  company_code_id           String                      @db.Uuid
-  doc_type                  String
-  prefix                    String
-  separator                 String                      @default("-")
-  pad_width                 Int                         @default(5) @db.SmallInt
-  format_template           String?
-  reset_strategy            String                      @default("yearly")
-  metadata                  Json                        @default("{}")
-  status                    String                      @default("active")
-  is_active                 Boolean?                    @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at         DateTime?                   @db.Timestamptz(6)
-  status_changed_by         String?                     @db.Uuid
-  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
-  created_by                String                      @db.Uuid
-  updated_at                DateTime?                   @db.Timestamptz(6)
-  updated_by                String?                     @db.Uuid
-  company_code              company_code                @relation(fields: [company_code_id], references: [id], onUpdate: NoAction, map: "dsc_company_fk")
-  tenant                    tenant                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "dsc_tenant_fk")
-  document_sequence_counter document_sequence_counter[]
-
-  @@unique([tenant_id, company_code_id, doc_type], map: "dsc_natural_uq")
-  @@unique([tenant_id, id], map: "dsc_tenant_id_uq")
-  @@index([tenant_id, company_code_id], map: "dsc_company_active_pidx", where: raw("(is_active = true)"))
-  @@schema("control")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model document_sequence_counter {
-  tenant_id                String                   @db.Uuid
-  config_id                String                   @db.Uuid
-  fiscal_year              Int                      @db.SmallInt
-  period_number            Int                      @default(0) @db.SmallInt
-  last_value               Int                      @default(0)
-  updated_at               DateTime                 @default(now()) @db.Timestamptz(6)
-  updated_by               String?                  @db.Uuid
-  document_sequence_config document_sequence_config @relation(fields: [tenant_id, config_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "dscc_config_fk")
-
-  @@id([tenant_id, config_id, fiscal_year, period_number], map: "dscc_pkey")
-  @@schema("control")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -953,14 +905,11 @@ model entity {
   display_config         Json                    @default("{}")
   feature_flags          Json                    @default("{}")
   data_policy            Json                    @default("{}")
-  naming_policy          Json                    @default("{}")
   identity_config        Json                    @default("{}")
   search_config          Json                    @default("{}")
-  numbering_active       Boolean                 @default(true)
   composite_indexes      Json                    @default("[]")
   discriminator_column   String?
   discriminator_value    String?
-  natural_key_fields     String[]                @default([])
   is_partition_child     Boolean                 @default(false)
   partition_parent_id    String?                 @db.Uuid
   partition_key          String?
@@ -968,7 +917,6 @@ model entity {
   external_source_config Json                    @default("{}")
   provisioned_at         DateTime?               @db.Timestamptz(6)
   provisioned_by         String?                 @db.Uuid
-  publish_state_id       String?                 @db.Uuid
   status                 String                  @default("DRAFT")
   is_active              Boolean?                @default(dbgenerated("(status = ANY (ARRAY['ACTIVE'::text, 'DEPRECATED'::text]))"))
   status_changed_at      DateTime?               @db.Timestamptz(6)
@@ -1056,13 +1004,15 @@ model entity_field {
   enum_kind             String?
   reference_config      Json?
   fk_target_entity_id   String?              @db.Uuid
-  fk_target_field       String?              @default("id")
-  fk_on_delete          String?              @default("restrict")
-  fk_on_update          String?              @default("no_action")
+  fk_target_field       String?
+  fk_on_delete          String?
+  fk_on_update          String?
   fk_relationship_class String?
   json_config           Json?
   money_config          Json?
   datetime_config       Json?
+  group_key             String?
+  filter_config         Json?
   ui_hint               Json?
   visibility            Json?
   editability           Json?
@@ -10433,7 +10383,6 @@ model company_code {
   commodity_category_inventory_policy                                                                      commodity_category_inventory_policy[]
   commodity_category_sell_policy                                                                           commodity_category_sell_policy[]
   dimension_policy                                                                                         dimension_policy[]
-  document_sequence_config                                                                                 document_sequence_config[]
   forecast_line                                                                                            forecast_line[]
   intent_profile_override                                                                                  intent_profile_override[]
   intent_to_accounting_profile_rule                                                                        intent_to_accounting_profile_rule[]
@@ -10529,7 +10478,6 @@ model company_code {
   item                                                                                                     item[]
   leave_plan                                                                                               leave_plan[]
   letterhead                                                                                               letterhead[]
-  numbering_series                                                                                         numbering_series[]
   pay_group                                                                                                pay_group[]
   position                                                                                                 position[]
   principal_profile_principal_profile_tenant_id_default_company_code_idTocompany_code                      principal_profile[]                   @relation("principal_profile_tenant_id_default_company_code_idTocompany_code")
@@ -12506,31 +12454,6 @@ model notification {
   @@index([tenant_id, recipient_id, created_at(sort: Desc)], map: "notif_recipient_unread_pidx", where: raw("((is_read = false) AND (is_dismissed = false))"))
   @@schema("master")
 }
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model numbering_series {
-  id              String       @id(map: "ns_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id       String       @db.Uuid
-  company_code_id String       @db.Uuid
-  document_type   String
-  prefix          String       @default("")
-  fiscal_year     Int?         @db.SmallInt
-  last_number     Int          @default(0)
-  padding         Int          @default(5) @db.SmallInt
-  is_active       Boolean      @default(true)
-  created_at      DateTime     @default(now()) @db.Timestamptz(6)
-  created_by      String       @default(dbgenerated("'00000000-0000-0000-0000-000000000000'::uuid")) @db.Uuid
-  updated_at      DateTime?    @db.Timestamptz(6)
-  updated_by      String?      @db.Uuid
-  company_code    company_code @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "ns_company_fk")
-  tenant          tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ns_tenant_fk")
-
-  @@unique([tenant_id, company_code_id, document_type, fiscal_year], map: "ns_scope_uq")
-  @@index([tenant_id, company_code_id, document_type, fiscal_year], map: "ix_ns_lookup", where: raw("(is_active = true)"))
-  @@schema("master")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -14789,7 +14712,6 @@ model tenant {
   commodity_code_to_category_rule         commodity_code_to_category_rule[]
   content_quota                           content_quota[]
   dimension_policy                        dimension_policy[]
-  document_sequence_config                document_sequence_config[]
   entity                                  entity[]
   entity_field                            entity_field[]
   entity_policy                           entity_policy[]
@@ -15023,7 +14945,6 @@ model tenant {
   lifecycle_instance                      lifecycle_instance[]
   multipart_upload                        multipart_upload[]
   notification                            notification[]
-  numbering_series                        numbering_series[]
   owner_type                              owner_type[]
   party_governance_relation               party_governance_relation[]
   party_risk_assessment                   party_risk_assessment[]

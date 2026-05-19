@@ -143,7 +143,7 @@ FROM (VALUES
      'tenant_configurable', 'configurable', 'string', NULL,
      '"JE"', '"JE"', NULL, NULL, NULL,
      'next_request', 300, false, true, 10,
-     '{"source":"server/db/sql/master/numbering_series seed"}'),
+     '{"source":"server/db/seed/entity_numbering_config seed"}'),
 
     ('finance.numbering.ap_invoice_prefix', 'finance.numbering',
      'AP invoice number prefix',
@@ -151,7 +151,7 @@ FROM (VALUES
      'tenant_configurable', 'configurable', 'string', NULL,
      '"API"', '"API"', NULL, NULL, NULL,
      'next_request', 300, false, true, 20,
-     '{"source":"server/db/sql/master/numbering_series seed"}'),
+     '{"source":"server/db/seed/entity_numbering_config seed"}'),
 
     ('finance.numbering.ar_invoice_prefix', 'finance.numbering',
      'AR invoice number prefix',
@@ -159,7 +159,7 @@ FROM (VALUES
      'tenant_configurable', 'configurable', 'string', NULL,
      '"ARI"', '"ARI"', NULL, NULL, NULL,
      'next_request', 300, false, true, 30,
-     '{"source":"server/db/sql/master/numbering_series seed"}'),
+     '{"source":"server/db/seed/entity_numbering_config seed"}'),
 
     -- ── Collaboration: Attachments ────────────────────────────────────────────
     ('collab.attachments.max_file_bytes', 'collab.attachments',

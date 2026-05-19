@@ -76,19 +76,19 @@ BEGIN
     -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_rule (sc_code, condition_type, condition_config, resolved_intent_code, resolved_domain, explanation_template, confidence, priority) VALUES
 
-    -- IT hardware above threshold → CAPEX-IT
+    -- IT hardware above threshold -> BI-CAPEX
     ('SC-IT-HW',    'AMOUNT_ABOVE', '{"threshold": 5000, "currency": "AED"}'::jsonb,
      'BI-CAPEX', 'CAPEX', 'IT hardware purchase ≥5,000 AED classified as capital expenditure', 0.95, 90),
 
-    -- IT software above threshold → CAPEX-IT (perpetual licence vs SaaS)
+    -- IT software above threshold -> BI-CAPEX (perpetual licence vs SaaS)
     ('SC-IT-SW',    'AMOUNT_ABOVE', '{"threshold": 25000, "currency": "AED"}'::jsonb,
      'BI-CAPEX', 'CAPEX', 'Software purchase ≥25,000 AED classified as capital expenditure', 0.95, 90),
 
-    -- Office furniture above threshold → CAPEX-PROP
+    -- Office furniture above threshold -> BI-CAPEX
     ('SC-OFFICE-FURN', 'AMOUNT_ABOVE', '{"threshold": 10000, "currency": "AED"}'::jsonb,
      'BI-CAPEX', 'CAPEX', 'Furniture purchase ≥10,000 AED classified as capital expenditure', 0.95, 90),
 
-    -- Fleet vehicle purchase → CAPEX-FLEET (always capex, no threshold)
+    -- Fleet vehicle purchase -> BI-CAPEX (always capex, no threshold)
     ('SC-FLEET-VEH', 'AMOUNT_ABOVE', '{"threshold": 0, "currency": "AED"}'::jsonb,
      'BI-CAPEX', 'CAPEX', 'Vehicle acquisition classified as capital expenditure', 0.98, 95),
 
@@ -102,7 +102,7 @@ BEGIN
     ('SC-CAPEQUIP-LINE', 'AMOUNT_ABOVE', '{"threshold": 0, "currency": "AED"}'::jsonb,
      'BI-CAPEX', 'CAPEX', 'Production line classified as capital expenditure', 0.98, 95),
 
-    -- Facility rent above threshold → CAPEX-LEASE (IFRS 16 right-of-use)
+    -- Facility rent above threshold -> BI-CAPEX (IFRS 16 right-of-use)
     ('SC-FAC-RENT', 'AMOUNT_ABOVE', '{"threshold": 50000, "currency": "AED"}'::jsonb,
      'BI-CAPEX', 'CAPEX', 'Lease ≥50,000 AED may qualify for IFRS 16 capitalisation', 0.85, 70);
 
@@ -114,23 +114,23 @@ BEGIN
     -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_rule (sc_code, condition_type, condition_config, resolved_intent_code, resolved_domain, explanation_template, confidence, priority) VALUES
 
-    -- Recurring IT services → OPEX-IT (not capex)
+    -- Recurring IT services -> BI-OPEX (not capex)
     ('SC-IT-SVC',   'IS_RECURRING', '{}'::jsonb,
      'BI-OPEX', 'OPEX', 'Recurring IT service contract classified as operating expenditure', 0.85, 60),
 
-    -- Recurring maintenance → OPEX-MAINT
+    -- Recurring maintenance -> BI-OPEX
     ('SC-FAC-MAINT', 'IS_RECURRING', '{}'::jsonb,
      'BI-OPEX', 'OPEX', 'Recurring facility maintenance classified as operating expenditure', 0.85, 60),
 
-    -- One-time large facility maintenance → CAPEX-PROP (major renovation)
+    -- One-time large facility maintenance -> BI-CAPEX (major renovation)
     ('SC-FAC-MAINT', 'AMOUNT_ABOVE', '{"threshold": 100000, "currency": "AED"}'::jsonb,
      'BI-CAPEX', 'CAPEX', 'Major facility works ≥100,000 AED classified as capital expenditure', 0.90, 80),
 
-    -- Recurring outsourcing → OPEX-OUTSRC
+    -- Recurring outsourcing -> BI-OPEX
     ('SC-OUTSRC-BPO', 'IS_RECURRING', '{}'::jsonb,
      'BI-OPEX', 'OPEX', 'Recurring BPO contract classified as operating expenditure', 0.85, 60),
 
-    -- Recurring cleaning → OPEX-FAC
+    -- Recurring cleaning -> BI-OPEX
     ('SC-FAC-CLEAN', 'IS_RECURRING', '{}'::jsonb,
      'BI-OPEX', 'OPEX', 'Recurring cleaning contract classified as operating expenditure', 0.85, 60);
 
@@ -143,14 +143,14 @@ BEGIN
     -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_rule (sc_code, condition_type, condition_config, resolved_intent_code, resolved_domain, explanation_template, confidence, priority) VALUES
 
-    -- Cross-border raw materials → still COGS-MAT but flagged
+    -- Cross-border raw materials -> BI-COGS with customs context
     ('SC-RAW-METAL', 'CROSS_BORDER', '{}'::jsonb,
      'BI-COGS', 'COST_OF_SALES', 'Cross-border raw material import — customs duty may apply', 0.80, 50),
 
     ('SC-RAW-CHEM',  'CROSS_BORDER', '{}'::jsonb,
      'BI-COGS', 'COST_OF_SALES', 'Cross-border chemical import — hazmat compliance may apply', 0.80, 50),
 
-    -- Cross-border freight → COGS-FREIGHT with duty awareness
+    -- Cross-border freight -> BI-COGS with duty awareness
     ('SC-FREIGHT-CUST', 'CROSS_BORDER', '{}'::jsonb,
      'BI-COGS', 'COST_OF_SALES', 'Cross-border customs brokerage — duty and tariff handling', 0.85, 55);
 
@@ -162,11 +162,11 @@ BEGIN
     -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_rule (sc_code, condition_type, condition_config, resolved_intent_code, resolved_domain, explanation_template, confidence, priority) VALUES
 
-    -- Contract manufacturing via formal tender → COGS-SUB
+    -- Contract manufacturing via formal tender -> BI-COGS
     ('SC-CONTRACT-MFG', 'PROCUREMENT_METHOD', '{"method": "FORMAL_TENDER"}'::jsonb,
      'BI-COGS', 'COST_OF_SALES', 'Formal tender subcontracting classified as cost of sales', 0.90, 70),
 
-    -- Professional services via sole-source → OPEX-PROF (advisory, no tender)
+    -- Professional services via sole-source -> BI-OPEX (advisory, no tender)
     ('SC-PROF-CONSULT', 'PROCUREMENT_METHOD', '{"method": "SOLE_SOURCE"}'::jsonb,
      'BI-OPEX', 'OPEX', 'Sole-source consulting classified as professional services opex', 0.80, 55);
 

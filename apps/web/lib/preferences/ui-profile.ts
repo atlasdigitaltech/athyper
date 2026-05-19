@@ -1,4 +1,9 @@
 import { isValidLocale, type Locale } from "@athyper/i18n/config";
+import {
+  DEFAULT_USER_DATE_FORMAT,
+  DEFAULT_USER_TIME_ZONE,
+  normalizeUserDateFormat,
+} from "@athyper/runtime-shared/preferences";
 import { DEFAULT_PRESET, getPresetMeta, type ThemePresetMeta } from "@athyper/theme/presets";
 
 export const THEME_PRESET_COOKIE = "theme_preset";
@@ -14,6 +19,8 @@ export interface PreferenceBootstrapProfile {
   densityCode?: DensityCodeValue;
   themePreset?: ThemePresetValue;
   languageCode?: LanguageCodeValue;
+  timezoneCode?: string;
+  dateFormat?: string;
 }
 
 const APPEARANCE_MODES = new Set<AppearanceModeValue>(["light", "dark", "system"]);
@@ -41,6 +48,12 @@ export function normalizeLanguageCode(value: unknown): LanguageCodeValue | undef
   if (typeof value !== "string") return undefined;
   const normalized = value.trim().toLowerCase();
   return isValidLocale(normalized) ? (normalized as LanguageCodeValue) : undefined;
+}
+
+export function normalizeTimezoneCode(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
 }
 
 export function readPreferenceMetadata(profile: Record<string, unknown>): Record<string, unknown> {
@@ -85,6 +98,12 @@ export function normalizePreferencesForBootstrap(
     languageCode:
       normalizeLanguageCode(profile["languageCode"]) ??
       normalizeLanguageCode(profile["language_code"]),
+    timezoneCode:
+      normalizeTimezoneCode(profile["timezoneCode"]) ??
+      normalizeTimezoneCode(profile["timezone_code"]) ??
+      DEFAULT_USER_TIME_ZONE,
+    dateFormat:
+      normalizeUserDateFormat(profile["dateFormat"] ?? profile["date_format"] ?? DEFAULT_USER_DATE_FORMAT),
   };
 }
 

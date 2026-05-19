@@ -30,7 +30,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'CRM'),
@@ -39,17 +39,17 @@ SELECT
     'standard', 'business', 'controlled',
     'master', 'customer',
     'Customer', 'Customers', 'users', 'teal',
-    true,
-    '{"prefix":"CUS","prefix_configurable":true,"separator":"-","segments":[{"type":"sequence","padding":5}]}'::jsonb,
     '{"is_approvable":false,"party_category":"customer","allow_address":false,"allow_contact":false,"identity_via":"business_partner","list_entity_code":"customer_app_index"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'master' AND e.table_name = 'customer'
   AND  e.tenant_id IS NULL
@@ -186,7 +186,7 @@ END $dc$;
 
 -- ── Correct natural_key_fields + feature_flags (BP-first + index redirect) ────
 UPDATE control.entity
-SET natural_key_fields = ARRAY['customer_code'],
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['customer_code']::text[]), true),
     display_config     = display_config || '{"default_sort_field":"customer_code"}'::jsonb,
     feature_flags      = feature_flags || '{"identity_via":"business_partner","list_entity_code":"customer_app_index","parent_entity":"business_partner","parent_fk":"business_partner_id"}'::jsonb
 WHERE table_schema = 'master' AND table_name = 'customer'

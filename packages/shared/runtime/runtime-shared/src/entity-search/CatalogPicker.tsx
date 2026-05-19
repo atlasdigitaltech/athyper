@@ -20,6 +20,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { appEntityDetailHref } from "../core/entity-route";
 import {
   EntityPicker,
   resolveEntityPickerOptionConfig,
@@ -301,7 +302,7 @@ export function CatalogPicker({
       optionConfig={optionConfig}
       getOptionHref={(opt) => {
         const id = opt.recordId ?? opt.value;
-        return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(id)}`;
+        return appEntityDetailHref(entityCode, id);
       }}
       optionActionLabel={optionConfig?.optionActionLabel ?? `Open ${humanEntityCode}`}
       loadOnOpen

@@ -19,10 +19,13 @@
  * access to the session context and re-initializes after context switches.
  */
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import * as Sentry from "@sentry/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import { registerDefaults } from "@athyper/entity-runtime/field-renderers";
 import { registerDocumentRenderers } from "@athyper/document-runtime/register";
+import { RuntimeUserPreferencesProvider } from "@athyper/runtime-shared/preferences";
+import { queryKeys } from "@athyper/api-contracts/query-keys";
 import {
   createMetadataClient,
   createRecordsClient,
@@ -32,6 +35,7 @@ import {
 } from "@athyper/api-client";
 import { setClients } from "@athyper/query";
 import { useShellSession } from "@/components/providers/SessionProvider";
+import { usePreferencesStore } from "@/stores/preferences/usePreferencesStore";
 
 // ── Register all built-in field renderers once at module load ─────────────────
 // This must happen before any EntityListPage / EntityDetailPage renders.
@@ -120,6 +124,11 @@ interface RuntimeProviderProps {
 
 export function RuntimeProvider({ children }: RuntimeProviderProps) {
   const { bff } = useShellSession();
+  const queryClient = useQueryClient();
+  const lastActiveOrgRef = useRef<string | null | undefined>(undefined);
+  const locale = usePreferencesStore((s) => s.languageCode);
+  const dateFormat = usePreferencesStore((s) => s.dateFormat);
+  const timeZone = usePreferencesStore((s) => s.timezoneCode);
 
   useEffect(() => {
     // Re-initialize all clients whenever the active org changes.
@@ -132,7 +141,25 @@ export function RuntimeProvider({ children }: RuntimeProviderProps) {
     const platform = createPlatformClient(relayFetch);
 
     setClients(metadata, records, workflow, platform, documents);
-  }, [bff.activeOrg]);
 
-  return <>{children}</>;
+    const activeOrg = bff.activeOrg ?? null;
+    const previousActiveOrg = lastActiveOrgRef.current;
+    lastActiveOrgRef.current = activeOrg;
+    if (previousActiveOrg === undefined || previousActiveOrg === activeOrg) return;
+
+    void queryClient.invalidateQueries({ queryKey: ["meta"] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.compiledEntity.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.entityOperations.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.lookupDomain.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.statusRoute.all });
+    void queryClient.invalidateQueries({ queryKey: ["capabilities"] });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.entityList.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.documentList.all });
+  }, [bff.activeOrg, queryClient]);
+
+  return (
+    <RuntimeUserPreferencesProvider value={{ locale, dateFormat, timeZone }}>
+      {children}
+    </RuntimeUserPreferencesProvider>
+  );
 }

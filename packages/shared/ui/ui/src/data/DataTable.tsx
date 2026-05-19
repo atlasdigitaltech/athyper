@@ -299,7 +299,7 @@ export function DataTable<TData>({
   return (
     <div className={cn("space-y-3", className)}>
       <div ref={tableContainerRef} className={cn("rounded-md border", tableContainerClassName)}>
-        <table className="w-full caption-bottom text-sm text-foreground">
+        <table className="w-full caption-bottom text-[13px] leading-5 text-foreground">
           <thead className="sticky top-0 z-10 border-b bg-muted">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -313,7 +313,7 @@ export function DataTable<TData>({
                     key={header.id}
                     className={cn(
                       headerH,
-                      "px-3 text-left align-middle text-xs font-semibold text-muted-foreground",
+                      "px-3 text-left align-middle text-[13px] font-semibold leading-5 text-muted-foreground",
                       pinStyle && "border-r shadow-[1px_0_0_0_var(--border)]",
                       (header.column.columnDef.meta as { filtered?: boolean } | undefined)?.filtered && "bg-primary/5",
                     )}
@@ -409,7 +409,7 @@ export function DataTable<TData>({
                   return (
                     <td
                       key={col.id ?? key}
-                      className={cn(cellPad, "align-middle text-right tabular-nums text-sm", fPin && "border-r")}
+                      className={cn(cellPad, "align-middle text-right text-[13px] leading-5 tabular-nums", fPin && "border-r")}
                       style={fPin}
                     >
                       {val != null
@@ -428,24 +428,24 @@ export function DataTable<TData>({
       {isServerPage && totalCount! > 0 && (
         <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-[13px] leading-5 text-muted-foreground">
               {selectable && Object.keys(rowSelection).length > 0
                 ? `${Object.keys(rowSelection).length} of ${totalCount} selected`
                 : `${totalCount} records`}
             </p>
             {showPageSizeControl && (
               <div className="flex items-center gap-1.5">
-                <span className="text-sm text-muted-foreground">Rows</span>
+                <span className="text-[13px] leading-5 text-muted-foreground">Rows</span>
                 <Select
                   value={String(pageSize)}
                   onValueChange={(value) => onPageSizeChange?.(Number(value))}
                 >
-                  <SelectTrigger className="h-8 w-[5.25rem] px-2 text-xs">
+                  <SelectTrigger className="h-8 w-[5.25rem] px-2 text-[13px] leading-5">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {normalizedPageSizeOptions.map((option) => (
-                      <SelectItem key={option} value={String(option)} className="text-xs">
+                      <SelectItem key={option} value={String(option)} className="text-[13px] leading-5">
                         {option}
                       </SelectItem>
                     ))}
@@ -457,6 +457,7 @@ export function DataTable<TData>({
               <Button
                 variant="outline"
                 size="sm"
+                className="text-[13px] leading-none"
                 onClick={onLoadMore}
                 disabled={!canLoadMore}
                 title={loadMoreTitle}
@@ -470,18 +471,20 @@ export function DataTable<TData>({
             <Button
               variant="outline"
               size="sm"
+              className="text-[13px] leading-none"
               onClick={() => onPageChange!(currentPage! - 1)}
               disabled={currentPage! <= 1}
             >
               <ChevronLeft className="size-4" />
               Previous
             </Button>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-[13px] leading-5 text-muted-foreground">
               Page {currentPage} of {totalPages}
             </span>
             <Button
               variant="outline"
               size="sm"
+              className="text-[13px] leading-none"
               onClick={() => onPageChange!(currentPage! + 1)}
               disabled={currentPage! >= totalPages!}
             >
@@ -495,7 +498,7 @@ export function DataTable<TData>({
       {/* Client-side pagination controls (fallback when server props not provided) */}
       {!isServerPage && pageSize > 0 && data.length > pageSize && (
         <div className="flex items-center justify-between px-1">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[13px] leading-5 text-muted-foreground">
             {selectable && Object.keys(rowSelection).length > 0
               ? `${Object.keys(rowSelection).length} of ${data.length} selected`
               : `${data.length} records`}
@@ -504,18 +507,20 @@ export function DataTable<TData>({
             <Button
               variant="outline"
               size="sm"
+              className="text-[13px] leading-none"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
               <ChevronLeft className="size-4" />
               Previous
             </Button>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-[13px] leading-5 text-muted-foreground">
               Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
             </span>
             <Button
               variant="outline"
               size="sm"
+              className="text-[13px] leading-none"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >

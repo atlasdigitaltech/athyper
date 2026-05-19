@@ -13,24 +13,24 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES
         (v_rel, 'product', 'PROD', 'product', 'MASTER', 'system', 'ent', 'table',
          'full', 'operational', 'extensible', 'master', 'product',
          'Product', 'Products', 'package', 'rose',
-         false, '{}'::jsonb, 'ACTIVE', v_su),
+         '{}'::jsonb, 'ACTIVE', v_su),
         (v_rel, 'item', 'ITEM', 'item', 'MASTER', 'system', 'ent', 'table',
          'full', 'operational', 'extensible', 'master', 'item',
          'Item', 'Items', 'box', 'rose',
-         false, '{}'::jsonb, 'ACTIVE', v_su),
+         '{}'::jsonb, 'ACTIVE', v_su),
         (v_rel, 'commodity_category', 'COMCAT', 'commodity_category', 'MASTER', 'system', 'ent', 'table',
          'full', 'operational', 'extensible', 'master', 'commodity_category',
          'Commodity Category', 'Commodity Categories', 'layers', 'rose',
-         false, '{}'::jsonb, 'ACTIVE', v_su),
+         '{}'::jsonb, 'ACTIVE', v_su),
         (v_rel, 'commodity_classification', 'COMCL', 'commodity_classification', 'RELATION', 'system', 'ent', 'table',
          'full', 'operational', 'controlled', 'master', 'commodity_classification',
          'Commodity Classification', 'Commodity Classifications', 'tags', 'rose',
-         false, '{"requires_owner_type_scope":true,"owner_type_column":"owner_type","default_owner_type_scope":"commodity_category"}'::jsonb, 'ACTIVE', v_su)
+         '{"requires_owner_type_scope":true,"owner_type_column":"owner_type","default_owner_type_scope":"commodity_category"}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO UPDATE
        SET module_id        = EXCLUDED.module_id,
            name             = EXCLUDED.name,

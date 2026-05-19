@@ -46,7 +46,7 @@ BEGIN
         'Asia/Dubai',
         'en',
         1,              -- Fiscal year starts January
-        '%d/%m/%Y',     -- DD/MM/YYYY
+        '%d %b %Y',     -- DD Mon YYYY
         '#,##0.00',
         6,              -- Week starts Saturday (0=Sun…6=Sat)
         ARRAY[5, 6]::smallint[],  -- Fri + Sat weekend (GCC standard)

@@ -57,7 +57,7 @@ function warnIfMisconfiguredInDev(entityCode: string, entity: CompiledEntity): v
   if (!entity.display_config.list_columns?.length) {
     warnings.push("display_config.list_columns is empty — list page will show no columns");
   }
-  if (!entity.display_config.detail_renderer && !entity.feature_flags?.is_approvable) {
+  if (!entity.display_config.detail_renderer && !entity.feature_flags?.has_workflow && !entity.feature_flags?.is_approvable) {
     warnings.push("display_config.detail_renderer not set — detail renderer falls back to structural heuristics");
   }
   if (!entity.display_config.title_field) {

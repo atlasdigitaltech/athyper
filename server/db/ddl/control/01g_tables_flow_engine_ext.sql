@@ -2,12 +2,11 @@
 -- control/01g_tables_flow_engine_ext.sql
 -- Purpose : Flow engine schema extensions — new entity_flow_section table,
 --           additional columns on entity_flow_field (section_key, display_size),
---           associated inline constraints, and the ef_default_per_ctx_uq index.
+--           associated inline constraints.
 -- Tables  : control.entity_flow_section  (CREATE)
 --           control.entity_flow_field    (ALTER — columns + constraints)
--- Indexes : control.ef_default_per_ctx_uq (CREATE UNIQUE INDEX)
 -- Idempotent: yes — uses CREATE TABLE IF NOT EXISTS, ADD COLUMN IF NOT EXISTS,
---             DO $$ pg_constraint checks, and CREATE UNIQUE INDEX IF NOT EXISTS.
+--             and DO $$ pg_constraint checks.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -37,7 +36,7 @@ CREATE TABLE IF NOT EXISTS control.entity_flow_section (
   CONSTRAINT efsec_pkey          PRIMARY KEY (id),
   CONSTRAINT efsec_tenant_id_uq  UNIQUE NULLS NOT DISTINCT (tenant_id, id),
   CONSTRAINT efsec_step_key_uq   UNIQUE (flow_step_id, section_key),
-  CONSTRAINT efsec_step_order_uq UNIQUE (flow_step_id, sort_order),
+  CONSTRAINT efsec_step_order_uq UNIQUE (flow_step_id, sort_order) DEFERRABLE INITIALLY DEFERRED,
   CONSTRAINT efsec_section_key_fmt
     CHECK (section_key ~ '^[a-z][a-z0-9_]*$'),
   CONSTRAINT efsec_label_nonempty
@@ -90,20 +89,3 @@ DO $$ BEGIN
         CHECK (display_size IS NULL OR display_size IN ('prominent', 'standard', 'compact'));
   END IF;
 END $$;
-
--- ---------------------------------------------------------------------------
--- 4. Partial unique index: exactly one active default flow per
---    (tenant, entity_version, trigger_context)
--- ---------------------------------------------------------------------------
-
-CREATE UNIQUE INDEX IF NOT EXISTS ef_default_per_ctx_uq
-  ON control.entity_flow (
-    COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid),
-    entity_version_id,
-    trigger_context
-  )
-  WHERE is_default = true
-    AND status = 'active';
-
-COMMENT ON INDEX control.ef_default_per_ctx_uq IS
-  'Exactly one active default flow per (tenant, entity_version, trigger_context).';

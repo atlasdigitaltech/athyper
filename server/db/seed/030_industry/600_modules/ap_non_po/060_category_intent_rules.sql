@@ -1,6 +1,6 @@
 -- ============================================================================
 -- FILE: blueprint/060_category_intent_rules.sql
--- Purpose: Seed three generic fallback business_intents + root-container
+-- Purpose: Seed root-container classification to domain intent rules for each
 --          classification → intent rules for each of the 30 base spend roots
 -- Depends on: master.commodity_category (from universal 028), master.business_intent
 -- Idempotent: business_intents via ON CONFLICT DO NOTHING;
@@ -12,42 +12,47 @@
 --
 -- Root → intent domain mapping
 --   OPEX roots (SC-IT,TELCO,OFFICE,HR,TRAVEL,PROF,MKTG,FAC,UTIL,FLEET,INS,
---               BANK,SAFETY,ENV,OUTSRC,SUBS) → OPEX_GENERAL
---   CAPEX roots (SC-CAPEQUIP)                → CAPEX_GENERAL
+--               BANK,SAFETY,ENV,OUTSRC,SUBS) -> BI-OPEX
+--   CAPEX roots (SC-CAPEQUIP)                -> BI-CAPEX
 --   Direct-ops roots with COGS nature
 --     (SC-RAW,COMP,PKG,CONSUM,MRO,PRODSVC,CONTRACT,FREIGHT,WHSE,QC,TEMPWK,
---      PROCNRG)                              → OPEX_GENERAL (AP still posts as AP)
---   Admin/regulatory roots (SC-TAX)          → ADMIN_GENERAL
+--      PROCNRG)                              -> BI-COGS
+--   Regulatory roots (SC-TAX)                -> BI-REG
 -- ============================================================================
 
 DO $seed_cat_intent_rules$
 DECLARE
     v_tenant  record;
     v_map     record;
+    v_tid     uuid;
     v_sys     uuid := '00000000-0000-0000-0000-000000000000';
     v_sc_id   uuid;
     v_bi_id   uuid;
 BEGIN
+    v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    IF v_tid IS NULL THEN
+        RAISE EXCEPTION '[seed] app.seed_tenant_id not set - run: SET app.seed_tenant_id = ''<uuid>''';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM master.tenant WHERE id = v_tid AND status = 'active') THEN
+        RAISE EXCEPTION '[seed] active tenant % not found', v_tid;
+    END IF;
+
     -- ── Step A: Ensure 3 generic intents exist ────────────────────────────────
     FOR v_tenant IN
-        SELECT id AS tenant_id FROM master.tenant WHERE status = 'active'
+        SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
-        INSERT INTO master.business_intent
-            (tenant_id, code, name, description, domain, status, created_by, sort_order)
-        VALUES
-            (v_tenant.tenant_id, 'OPEX_GENERAL',
-             'General OPEX',
-             'Fallback intent for operating expenses without a more specific classification.',
-             'OPEX', 'active', v_sys, 100),
-            (v_tenant.tenant_id, 'CAPEX_GENERAL',
-             'General CAPEX',
-             'Fallback intent for capital expenditure without a more specific classification.',
-             'CAPEX', 'active', v_sys, 110),
-            (v_tenant.tenant_id, 'ADMIN_GENERAL',
-             'General Admin',
-             'Fallback intent for administrative and regulatory expenses.',
-             'ADMIN', 'active', v_sys, 120)
-        ON CONFLICT (tenant_id, code) DO NOTHING;
+        IF NOT EXISTS (
+            SELECT 1
+            FROM master.business_intent
+            WHERE tenant_id = v_tenant.tenant_id
+              AND code IN ('BI-OPEX','BI-CAPEX','BI-COGS','BI-REG')
+            GROUP BY tenant_id
+            HAVING count(*) = 4
+        ) THEN
+            RAISE EXCEPTION '060_category_intent_rules: domain business intents missing for tenant %; run 021 first',
+                v_tenant.tenant_id;
+        END IF;
     END LOOP;
 
     -- ── Step B: Root container → intent mapping table ─────────────────────────
@@ -62,43 +67,43 @@ BEGIN
 
     INSERT INTO tmp_root_intent_map (sc_code, bi_code, bi_domain, explanation) VALUES
     -- ── Universal / OPEX roots ──────────────────────────────────────────────
-    ('SC-IT',      'OPEX_GENERAL', 'OPEX',  'IT root container — OPEX fallback'),
-    ('SC-TELCO',   'OPEX_GENERAL', 'OPEX',  'Telecom root container — OPEX fallback'),
-    ('SC-OFFICE',  'OPEX_GENERAL', 'OPEX',  'Office root container — OPEX fallback'),
-    ('SC-HR',      'OPEX_GENERAL', 'OPEX',  'HR root container — OPEX fallback'),
-    ('SC-TRAVEL',  'OPEX_GENERAL', 'OPEX',  'Travel root container — OPEX fallback'),
-    ('SC-PROF',    'OPEX_GENERAL', 'OPEX',  'Professional services root — OPEX fallback'),
-    ('SC-MKTG',    'OPEX_GENERAL', 'OPEX',  'Marketing root container — OPEX fallback'),
-    ('SC-FAC',     'OPEX_GENERAL', 'OPEX',  'Facilities root container — OPEX fallback'),
-    ('SC-UTIL',    'OPEX_GENERAL', 'OPEX',  'Utilities root container — OPEX fallback'),
-    ('SC-FLEET',   'OPEX_GENERAL', 'OPEX',  'Fleet root container — OPEX fallback'),
-    ('SC-INS',     'OPEX_GENERAL', 'OPEX',  'Insurance root container — OPEX fallback'),
-    ('SC-BANK',    'OPEX_GENERAL', 'OPEX',  'Banking root container — OPEX fallback'),
-    ('SC-SAFETY',  'OPEX_GENERAL', 'OPEX',  'Safety/HSE root container — OPEX fallback'),
-    ('SC-ENV',     'OPEX_GENERAL', 'OPEX',  'ESG/Environmental root — OPEX fallback'),
-    ('SC-OUTSRC',  'OPEX_GENERAL', 'OPEX',  'Outsourcing root container — OPEX fallback'),
-    ('SC-SUBS',    'OPEX_GENERAL', 'OPEX',  'Subscriptions root container — OPEX fallback'),
+    ('SC-IT',      'BI-OPEX', 'OPEX',  'IT root container — OPEX fallback'),
+    ('SC-TELCO',   'BI-OPEX', 'OPEX',  'Telecom root container — OPEX fallback'),
+    ('SC-OFFICE',  'BI-OPEX', 'OPEX',  'Office root container — OPEX fallback'),
+    ('SC-HR',      'BI-OPEX', 'OPEX',  'HR root container — OPEX fallback'),
+    ('SC-TRAVEL',  'BI-OPEX', 'OPEX',  'Travel root container — OPEX fallback'),
+    ('SC-PROF',    'BI-OPEX', 'OPEX',  'Professional services root — OPEX fallback'),
+    ('SC-MKTG',    'BI-OPEX', 'OPEX',  'Marketing root container — OPEX fallback'),
+    ('SC-FAC',     'BI-OPEX', 'OPEX',  'Facilities root container — OPEX fallback'),
+    ('SC-UTIL',    'BI-OPEX', 'OPEX',  'Utilities root container — OPEX fallback'),
+    ('SC-FLEET',   'BI-OPEX', 'OPEX',  'Fleet root container — OPEX fallback'),
+    ('SC-INS',     'BI-OPEX', 'OPEX',  'Insurance root container — OPEX fallback'),
+    ('SC-BANK',    'BI-OPEX', 'OPEX',  'Banking root container — OPEX fallback'),
+    ('SC-SAFETY',  'BI-OPEX', 'OPEX',  'Safety/HSE root container — OPEX fallback'),
+    ('SC-ENV',     'BI-OPEX', 'OPEX',  'ESG/Environmental root — OPEX fallback'),
+    ('SC-OUTSRC',  'BI-OPEX', 'OPEX',  'Outsourcing root container — OPEX fallback'),
+    ('SC-SUBS',    'BI-OPEX', 'OPEX',  'Subscriptions root container — OPEX fallback'),
     -- ── Regulatory root ─────────────────────────────────────────────────────
-    ('SC-TAX',     'ADMIN_GENERAL','ADMIN', 'Tax/duties root — Admin fallback'),
+    ('SC-TAX',     'BI-REG','REGULATORY', 'Tax/duties root — regulatory fallback'),
     -- ── CAPEX root ──────────────────────────────────────────────────────────
-    ('SC-CAPEQUIP','CAPEX_GENERAL','CAPEX', 'Capital equipment root — CAPEX fallback'),
+    ('SC-CAPEQUIP','BI-CAPEX','CAPEX', 'Capital equipment root — CAPEX fallback'),
     -- ── Direct-operations roots (COGS nature; AP still posts as AP) ─────────
-    ('SC-RAW',     'OPEX_GENERAL', 'OPEX',  'Raw materials root — OPEX fallback (AP post)'),
-    ('SC-COMP',    'OPEX_GENERAL', 'OPEX',  'Components root — OPEX fallback'),
-    ('SC-PKG',     'OPEX_GENERAL', 'OPEX',  'Packaging root — OPEX fallback'),
-    ('SC-CONSUM',  'OPEX_GENERAL', 'OPEX',  'Consumables root — OPEX fallback'),
-    ('SC-MRO',     'OPEX_GENERAL', 'OPEX',  'MRO root — OPEX fallback'),
-    ('SC-PRODSVC', 'OPEX_GENERAL', 'OPEX',  'Production services root — OPEX fallback'),
-    ('SC-CONTRACT','OPEX_GENERAL', 'OPEX',  'Contract manufacturing root — OPEX fallback'),
-    ('SC-FREIGHT', 'OPEX_GENERAL', 'OPEX',  'Freight/logistics root — OPEX fallback'),
-    ('SC-WHSE',    'OPEX_GENERAL', 'OPEX',  'Warehousing root — OPEX fallback'),
-    ('SC-QC',      'OPEX_GENERAL', 'OPEX',  'Quality/testing root — OPEX fallback'),
-    ('SC-TEMPWK',  'OPEX_GENERAL', 'OPEX',  'Temporary works root — OPEX fallback'),
-    ('SC-PROCNRG', 'OPEX_GENERAL', 'OPEX',  'Process energy root — OPEX fallback');
+    ('SC-RAW',     'BI-COGS', 'COST_OF_SALES',  'Raw materials root — cost of sales fallback'),
+    ('SC-COMP',    'BI-COGS', 'COST_OF_SALES',  'Components root — cost of sales fallback'),
+    ('SC-PKG',     'BI-COGS', 'COST_OF_SALES',  'Packaging root — cost of sales fallback'),
+    ('SC-CONSUM',  'BI-COGS', 'COST_OF_SALES',  'Consumables root — cost of sales fallback'),
+    ('SC-MRO',     'BI-COGS', 'COST_OF_SALES',  'MRO root — cost of sales fallback'),
+    ('SC-PRODSVC', 'BI-COGS', 'COST_OF_SALES',  'Production services root — cost of sales fallback'),
+    ('SC-CONTRACT','BI-COGS', 'COST_OF_SALES',  'Contract manufacturing root — cost of sales fallback'),
+    ('SC-FREIGHT', 'BI-COGS', 'COST_OF_SALES',  'Freight/logistics root — cost of sales fallback'),
+    ('SC-WHSE',    'BI-COGS', 'COST_OF_SALES',  'Warehousing root — cost of sales fallback'),
+    ('SC-QC',      'BI-COGS', 'COST_OF_SALES',  'Quality/testing root — cost of sales fallback'),
+    ('SC-TEMPWK',  'BI-COGS', 'COST_OF_SALES',  'Temporary works root — cost of sales fallback'),
+    ('SC-PROCNRG', 'BI-COGS', 'COST_OF_SALES',  'Process energy root — cost of sales fallback');
 
     -- ── Step C: Insert rules per tenant ──────────────────────────────────────
     FOR v_tenant IN
-        SELECT id AS tenant_id FROM master.tenant WHERE status = 'active'
+        SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
         FOR v_map IN SELECT * FROM tmp_root_intent_map LOOP
 
@@ -136,5 +141,5 @@ BEGIN
         END LOOP;
     END LOOP;
 
-    RAISE NOTICE 'blueprint/060_category_intent_rules: 3 generic intents + root container fallback rules seeded across all active tenants';
+    RAISE NOTICE 'blueprint/060_category_intent_rules: root container fallback rules seeded for tenant %', v_tid;
 END $seed_cat_intent_rules$;

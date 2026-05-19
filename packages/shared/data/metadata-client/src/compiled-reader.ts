@@ -61,8 +61,13 @@ export function resolveListConfig(entity: CompiledEntity): ResolvedListConfig {
     ? fields.filter((f) => listColumnNames.includes(f.name))
     : fields.filter((f) => f.is_filterable || f.is_sortable).slice(0, 8);
 
-  const searchFields = display_config.search_fields
-    ? fields.filter((f) => display_config.search_fields!.includes(f.name))
+  const searchFieldNames = entity.search_config?.enabled === false
+    ? []
+    : entity.search_config?.fields?.length
+      ? entity.search_config.fields
+      : undefined;
+  const searchFields = searchFieldNames
+    ? fields.filter((f) => searchFieldNames.includes(f.name))
     : fields.filter((f) => f.is_searchable);
 
   return {
@@ -111,10 +116,26 @@ export function resolveDetailConfig(entity: CompiledEntity): ResolvedDetailConfi
 /**
  * Resolve form configuration — editable sections + validation.
  */
+function isEditableByContract(field: CompiledEntity["fields"][number]): boolean {
+  const editability = field.editability;
+  if (editability && typeof editability === "object" && !Array.isArray(editability)) {
+    if (editability["editable"] === false) return false;
+    const editableIn = editability["editable_in"];
+    if (Array.isArray(editableIn) && editableIn.length === 0) return false;
+  }
+  return true;
+}
+
 export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
   const { fields, field_groups } = entity;
 
-  const editableFields = fields.filter((f) => !f.is_readonly && f.origin !== "system");
+  const editableFields = fields.filter((f) => (
+    !f.is_readonly &&
+    f.origin !== "system" &&
+    f.is_computed !== true &&
+    f.is_write_once !== true &&
+    isEditableByContract(f)
+  ));
 
   let sections = field_groups
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -178,16 +199,40 @@ export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
  *
  * Resolution order:
  *   1. display_config.detail_renderer — explicit DB value ("master" | "document" | "ledger")
- *   2. feature_flags.is_approvable = true → "document"
- *   3. fallback → "master"
+ *   2. feature_flags.has_workflow/is_approvable = true → "document"
+ *   3. entity_class/document_header/table_schema document signals → "document"
+ *   4. fallback → "master"
  */
 export type RendererFamily = "master" | "document" | "ledger";
 
-export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
-  const explicit = entity.display_config.detail_renderer;
-  if (explicit) return explicit as RendererFamily;
+const RENDERER_FAMILIES = new Set<RendererFamily>(["master", "document", "ledger"]);
 
-  if (entity.feature_flags?.is_approvable) return "document";
+function normalizeRendererFamily(value: unknown): RendererFamily | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const aliased = normalized === "document_detail" ? "document" : normalized;
+  return RENDERER_FAMILIES.has(aliased as RendererFamily)
+    ? aliased as RendererFamily
+    : undefined;
+}
+
+export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
+  const explicit = normalizeRendererFamily(entity.display_config.detail_renderer);
+  if (explicit) return explicit;
+
+  if (entity.feature_flags?.has_workflow || entity.feature_flags?.is_approvable) return "document";
+
+  const entityClass = typeof entity.entity_class === "string"
+    ? entity.entity_class.trim().toUpperCase()
+    : "";
+  if (entityClass === "DOCUMENT" || entityClass === "DOCUMENT_RELATION") return "document";
+
+  if (entity.display_config.document_header) return "document";
+
+  const tableSchema = typeof entity.table_schema === "string"
+    ? entity.table_schema.trim().toLowerCase()
+    : "";
+  if (tableSchema === "document") return "document";
 
   return "master";
 }
@@ -345,6 +390,7 @@ export function resolveTabs(
 ): DetailTab[] {
   const tabs: DetailTab[] = ["overview"];
   const flags = meta.feature_flags ?? {};
+  const hasWorkflow = Boolean(flags.has_workflow ?? flags.is_approvable);
 
   // ── Layer 1: class-driven structural defaults ─────────────────────────────
   if (classProfile?.default_tabs?.includes("lines"))         pushIfMissing(tabs, "lines");
@@ -352,7 +398,7 @@ export function resolveTabs(
 
   // ── Layer 2: feature-flag overrides ──────────────────────────────────────
   // Approval workflow inline tab (compact summary)
-  if (flags.is_approvable)
+  if (hasWorkflow)
     tabs.push("workflow");
 
   // Attachments — on by default unless explicitly disabled

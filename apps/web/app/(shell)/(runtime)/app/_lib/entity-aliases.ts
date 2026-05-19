@@ -1,8 +1,11 @@
+import { entityCodeFromRouteSegment, entitySlugFromCode } from "@athyper/runtime-shared/core";
+
 export const ENTITY_ROUTE_ALIASES: Record<string, string> = {
   classification_config: "commodity_classification_config",
   classification_to_intent_rule: "commodity_classification_to_intent_rule",
   commodity_category_spend_policy: "commodity_category_buy_policy",
   commodity_category_sales_policy: "commodity_category_sell_policy",
+  intent_accounting_profile_rule: "intent_to_accounting_profile_rule",
   cc_supplier_spend_policy: "commodity_category_buy_policy",
   company_code_spend_policy: "commodity_category_buy_policy",
   company_code_intent_policy: "commodity_category_buy_policy",
@@ -12,6 +15,11 @@ export const ENTITY_ROUTE_ALIASES: Record<string, string> = {
   supplier_spend_category: "supplier_commodity_category",
 };
 
-export function canonicalEntityCode(entityCode: string): string {
+export function canonicalEntityCode(entityRouteSegment: string): string {
+  const entityCode = entityCodeFromRouteSegment(entityRouteSegment);
   return ENTITY_ROUTE_ALIASES[entityCode] ?? entityCode;
+}
+
+export function canonicalEntitySlug(entityRouteSegment: string): string {
+  return entitySlugFromCode(canonicalEntityCode(entityRouteSegment));
 }

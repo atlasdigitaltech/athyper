@@ -55,15 +55,7 @@ BEGIN
     ('SC-EDU-STAFF',     'Instructors & Trainers',        'Faculty, guest lecturers, training facilitators, and tutors',        'SC-EDU', 'services', 564, true),
     ('SC-EDU-CERT',      'Certifications & Accreditation','Professional certifications, awarding body fees, and accreditation',  'SC-EDU', 'services', 565, true);
 
-    CREATE TEMP TABLE tmp_bi (
-        seed_id uuid DEFAULT shared.uuidv7(), code text NOT NULL, name text NOT NULL,
-        description text, domain text NOT NULL, subtype text, parent_code text,
-        sort_order smallint NOT NULL DEFAULT 0
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_bi (code, name, description, domain, subtype, parent_code, sort_order) VALUES
-    ('BI-COGS', 'Education Cost of Sales',     'Direct content, platform, and instructor delivery costs',           'COST_OF_SALES', 'EDUCATION', 'BI-COGS',  47),
-    ('BI-REG',  'Education Regulatory Expense','Accreditation fees, regulatory filings, and compliance training',   'REGULATORY',    'EDU_CERT',  'BI-REG',   17);
+    -- Business intent rows are domain-level only; this pack links categories to the canonical BI-* records.
 
     CREATE TEMP TABLE tmp_bridge (
         sc_code text NOT NULL, domain text NOT NULL DEFAULT 'unspsc', cc_code text NOT NULL,
@@ -138,22 +130,7 @@ BEGIN
         updated_at = now(), updated_by = v_su;
 
     -- ── STAGE D: UPSERT business intents ─────────────────────────────────
-    INSERT INTO master.business_intent (
-        id, tenant_id, code, name, description, domain, subtype,
-        parent_id, depth, sort_order, metadata, status, created_by
-    )
-    SELECT s.seed_id, v_tid, s.code, s.name, s.description, s.domain, s.subtype,
-        p.id, 1, s.sort_order,
-        jsonb_build_object('_seed', jsonb_build_object('pack', v_pack, 'version', v_version, 'seeded_at', now()::text)),
-        'active', v_su
-    FROM tmp_bi s
-    JOIN master.business_intent p ON p.tenant_id = v_tid AND p.code = s.parent_code
-    ON CONFLICT (tenant_id, code) DO UPDATE SET
-        name = EXCLUDED.name, description = EXCLUDED.description,
-        domain = EXCLUDED.domain, subtype = EXCLUDED.subtype,
-        parent_id = EXCLUDED.parent_id, depth = EXCLUDED.depth, sort_order = EXCLUDED.sort_order,
-        metadata = master.business_intent.metadata || jsonb_build_object('_seed', jsonb_build_object('pack', v_pack, 'version', v_version, 'seeded_at', now()::text)),
-        updated_at = now(), updated_by = v_su;
+    -- Business intent rows are domain-level only; this pack links categories to the canonical BI-* records.
 
     UPDATE master.spend_category sc SET default_intent_id = bi.id, updated_at = now(), updated_by = v_su
     FROM master.business_intent bi

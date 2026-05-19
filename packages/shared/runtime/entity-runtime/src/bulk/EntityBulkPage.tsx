@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useCompiledEntity, useEntityList, useEntityOperations, useSavedViews, useLookupDomain } from "@athyper/query";
 import { resolveListConfig } from "@athyper/metadata-client/compiled-reader";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
 import { DataTable, type ColumnDef, type RowSelectionState } from "@athyper/ui/data";
 import { PageFrame } from "@athyper/ui/layout";
 import {
@@ -177,30 +178,50 @@ function applyLookupValueCase(value: string, valueCase: LookupValueCase): string
   return value;
 }
 
+function readLookupValueMap(lookupConfig: Record<string, unknown> | null | undefined): Record<string, string> {
+  const raw = lookupConfig?.["value_map"];
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>)
+      .filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
+function lookupCodeForStoredValue(value: string, valueMap: Record<string, string>): string {
+  const direct = Object.entries(valueMap).find(([, stored]) => stored === value)?.[0];
+  return direct ?? value.toLowerCase();
+}
+
+function storedValueForLookupCode(code: string, valueCase: LookupValueCase, valueMap: Record<string, string>): string {
+  return valueMap[code] ?? applyLookupValueCase(code, valueCase);
+}
+
 // Lookup-aware select rendered when the chosen field has enum_domain_code
 function EnumValueSelect({
   domainCode,
   value,
   valueCase = "preserve",
+  valueMap = {},
   onChange,
 }: {
   domainCode: string;
   value:      string;
   valueCase?: LookupValueCase;
+  valueMap?:  Record<string, string>;
   onChange:   (v: string) => void;
 }) {
   const { data, isLoading } = useLookupDomain(domainCode);
   const options = (data?.values ?? []).filter((v) => v.status === "active");
-  const normalizedValue = value ? value.toLowerCase() : value;
+  const normalizedValue = value ? lookupCodeForStoredValue(value, valueMap ?? {}) : value;
 
   return (
     <Select
       value={normalizedValue}
-      onValueChange={(next) => onChange(applyLookupValueCase(next, valueCase))}
+      onValueChange={(next) => onChange(storedValueForLookupCode(next, valueCase, valueMap ?? {}))}
       disabled={isLoading}
     >
       <SelectTrigger className="h-8 text-xs">
-        <SelectValue placeholder={isLoading ? "Loading…" : "Select a value…"} />
+        <SelectValue placeholder={isLoading ? "Loading..." : "Select a value..."} />
       </SelectTrigger>
       <SelectContent>
         {options.map((opt) => (
@@ -237,6 +258,7 @@ function BulkUpdateModal({
   const selectedField = fields.find((f) => f.name === field);
   const isEnum = selectedField?.data_type === "enum" && !!selectedField.enum_domain_code;
   const enumValueCase = readLookupValueCase(selectedField?.lookup_config);
+  const enumValueMap = readLookupValueMap(selectedField?.lookup_config);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -267,13 +289,14 @@ function BulkUpdateModal({
                 domainCode={selectedField!.enum_domain_code!}
                 value={value}
                 valueCase={enumValueCase}
+                valueMap={enumValueMap}
                 onChange={setValue}
               />
             ) : (
               <Input
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder="Enter new value…"
+                placeholder="Enter new value..."
                 className="h-8 text-xs"
               />
             )}
@@ -421,7 +444,7 @@ export function EntityBulkPage({ entityCode }: EntityBulkPageProps) {
 
   const handleRowClick = (row: Record<string, unknown>) => {
     const id = row.id as string;
-    if (id) router.push(`/app/${entityCode}/${id}`);
+    if (id) router.push(appEntityDetailHref(entityCode, id));
   };
 
   const handleExport = useCallback(async (format: "csv" | "xlsx") => {

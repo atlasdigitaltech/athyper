@@ -10,7 +10,7 @@
 --
 -- All UPDATEs are idempotent: only applied when the field still holds the
 -- empty-object/empty-array default so that any explicit override is preserved.
--- Idempotent: WHERE display_config = '{}'::jsonb / natural_key_fields IS NULL OR = '{}'
+-- Idempotent: WHERE display_config = '{}'::jsonb / identity_config.natural_key_fields is empty
 --
 -- Depends on: 020_entities/*, 025_entity_versions.sql (entities must exist)
 -- Run AFTER: 035_version_fields/*.sql
@@ -108,33 +108,30 @@ WHERE tenant_id IS NULL
 -- =============================================================================
 
 UPDATE control.entity
-SET natural_key_fields = ARRAY['code']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['code']::text[]), true)
 WHERE tenant_id IS NULL
   AND status       = 'ACTIVE'
   AND entity_class IN ('MASTER', 'CONTROL', 'REFERENCE', 'DIMENSION')
-  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
-
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;
 -- =============================================================================
 -- §F  natural_key_fields — DOCUMENT → 'document_no'
 -- =============================================================================
 
 UPDATE control.entity
-SET natural_key_fields = ARRAY['document_no']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['document_no']::text[]), true)
 WHERE tenant_id IS NULL
   AND status       = 'ACTIVE'
   AND entity_class = 'DOCUMENT'
-  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
-
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;
 -- =============================================================================
 -- §G  natural_key_fields — all remaining (DOCUMENT_RELATION, LOG, etc.) → 'id'
 -- =============================================================================
 
 UPDATE control.entity
-SET natural_key_fields = ARRAY['id']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['id']::text[]), true)
 WHERE tenant_id IS NULL
   AND status = 'ACTIVE'
-  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
-
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;
 -- =============================================================================
 -- §H  Entity-specific overrides — per-entity display_config refinements
 --     Applied after the bulk defaults above; only when display_config already
@@ -442,7 +439,7 @@ SET display_config     = jsonb_build_object(
         'default_sort_field', 'created_at',
         'default_sort_order', 'desc'
     ),
-    natural_key_fields = ARRAY['principal_id', 'provider_code']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['principal_id', 'provider_code']::text[]), true)
 WHERE entity_code = 'principal_identity_binding' AND tenant_id IS NULL
   AND (display_config = '{}'::jsonb
        OR display_config->>'list_columns' = '["code","name","status"]');
@@ -455,7 +452,7 @@ SET display_config     = jsonb_build_object(
         'default_sort_field', 'subscribed_at',
         'default_sort_order', 'desc'
     ),
-    natural_key_fields = ARRAY['tenant_id', 'module_id']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['tenant_id', 'module_id']::text[]), true)
 WHERE entity_code = 'tenant_module_subscription' AND tenant_id IS NULL
   AND (display_config = '{}'::jsonb
        OR display_config->>'list_columns' = '["code","name","status"]');
@@ -468,7 +465,7 @@ SET display_config     = jsonb_build_object(
         'default_sort_field', 'activated_at',
         'default_sort_order', 'desc'
     ),
-    natural_key_fields = ARRAY['tenant_id', 'feature_id']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['tenant_id', 'feature_id']::text[]), true)
 WHERE entity_code = 'tenant_feature_entitlement' AND tenant_id IS NULL
   AND (display_config = '{}'::jsonb
        OR display_config->>'list_columns' = '["code","name","status"]');
@@ -481,7 +478,7 @@ SET display_config     = jsonb_build_object(
         'default_sort_field', 'created_at',
         'default_sort_order', 'desc'
     ),
-    natural_key_fields = ARRAY['tenant_id', 'permission_id']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['tenant_id', 'permission_id']::text[]), true)
 WHERE entity_code = 'tenant_permission_override' AND tenant_id IS NULL
   AND (display_config = '{}'::jsonb
        OR display_config->>'list_columns' = '["code","name","status"]');

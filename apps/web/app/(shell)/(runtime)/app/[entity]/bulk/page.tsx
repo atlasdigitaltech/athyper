@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { EntityBulkPage } from "@athyper/entity-runtime/bulk";
 import { getCompiledEntity } from "@/lib/entity-meta";
 import { resolveCapabilities } from "@/lib/entity-capabilities";
+import { canonicalEntityCode } from "../../_lib/entity-aliases";
 
 /**
  * Runtime entity bulk operations — /app/[entity]/bulk
@@ -19,7 +20,8 @@ export default async function AppEntityBulkRoute({
   params: Promise<{ entity: string }>;
 }) {
   const { entity } = await params;
-  const meta = await getCompiledEntity(entity);
+  const entityCode = canonicalEntityCode(entity);
+  const meta = await getCompiledEntity(entityCode);
   if (!meta || !resolveCapabilities(meta).hasBulk) notFound();
-  return <EntityBulkPage entityCode={entity} />;
+  return <EntityBulkPage entityCode={entityCode} />;
 }

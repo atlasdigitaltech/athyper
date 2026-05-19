@@ -67,6 +67,9 @@ async function relay(req: NextRequest, { params }: Params): Promise<NextResponse
     if (value) forwarded.set(headerName, value);
   }
 
+  const accountingProfileResponse = await accountingProfileRecordsResponse(req, upstreamPath, forwarded);
+  if (accountingProfileResponse) return accountingProfileResponse;
+
   const init: RequestInit = {
     method: req.method,
     headers: forwarded,
@@ -142,3 +145,173 @@ export const POST = relay;
 export const PUT = relay;
 export const PATCH = relay;
 export const DELETE = relay;
+
+const ACCOUNTING_PROFILE_RECORD_ENTITIES = new Set([
+  "accounting_profile",
+  "intent_to_accounting_profile_rule",
+  "acct_profile_book_rule",
+  "acct_profile_commitment_config",
+  "acct_profile_config",
+  "acct_profile_dimension_rule",
+  "acct_profile_entry_template",
+  "acct_profile_event",
+  "acct_profile_revenue_config",
+  "acct_profile_settlement_config",
+]);
+
+async function accountingProfileRecordsResponse(
+  req: NextRequest,
+  upstreamPath: string,
+  headers: Headers,
+): Promise<NextResponse | null> {
+  if (req.method !== "GET") return null;
+  const match = /^\/api\/records\/([^/]+)(?:\/([^/]+))?$/.exec(upstreamPath);
+  if (!match?.[1]) return null;
+
+  const entityCode = safeDecode(match[1]).replace(/-/g, "_");
+  if (!ACCOUNTING_PROFILE_RECORD_ENTITIES.has(entityCode)) return null;
+
+  const recordId = match[2] ? safeDecode(match[2]) : null;
+  let payload: AccountingProfileWorkbenchPayload;
+  try {
+    const payloadRes = await fetch(buildServiceUrl(RUNTIME_API_URL, "/api/finance/accounting-profiles", ""), {
+      headers,
+      cache: "no-store",
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
+    if (!payloadRes.ok) return null;
+    payload = await payloadRes.json() as AccountingProfileWorkbenchPayload;
+  } catch {
+    return null;
+  }
+
+  const allRows = rowsForAccountingProfileEntity(payload, entityCode);
+  if (recordId) {
+    const row = allRows.find((item) => String(item.id ?? "") === recordId || String(item.code ?? "") === recordId);
+    return row
+      ? NextResponse.json(toMasterRecordEnvelope(row, entityCode))
+      : NextResponse.json(
+          {
+            error: "RECORD_NOT_FOUND",
+            message: `Record ${recordId} not found in ${entityCode}.`,
+            workbench_href: accountingProfileWorkbenchHref(entityCode, recordId),
+          },
+          { status: 404 },
+        );
+  }
+
+  const filteredRows = filterAccountingProfileRows(allRows, req.nextUrl.searchParams);
+  const requestedPageSize = positiveInt(req.nextUrl.searchParams.get("page_size"));
+  const pageSize = requestedPageSize ?? (filteredRows.length > 0 ? filteredRows.length : 25);
+  const page = positiveInt(req.nextUrl.searchParams.get("page")) ?? 1;
+  const start = (page - 1) * pageSize;
+  const data = filteredRows.slice(start, start + pageSize);
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / Math.max(1, pageSize)));
+
+  return NextResponse.json({
+    data,
+    pagination: {
+      page,
+      page_size: pageSize,
+      total: filteredRows.length,
+      total_pages: totalPages,
+    },
+    facets: {},
+    reasons: {
+      workbench_backed: true,
+      workbench_href: accountingProfileWorkbenchHref(entityCode),
+    },
+  });
+}
+
+interface AccountingProfileWorkbenchPayload {
+  items?: Record<string, unknown>[];
+  configs?: Record<string, unknown>[];
+  rules?: Record<string, unknown>[];
+  events?: Record<string, unknown>[];
+  templates?: Record<string, unknown>[];
+}
+
+function rowsForAccountingProfileEntity(
+  payload: AccountingProfileWorkbenchPayload,
+  entityCode: string,
+): Record<string, unknown>[] {
+  const rows =
+    entityCode === "accounting_profile" ? payload.items
+      : entityCode === "intent_to_accounting_profile_rule" ? payload.rules
+        : entityCode === "acct_profile_config" ? payload.configs
+          : entityCode === "acct_profile_event" ? payload.events
+            : entityCode === "acct_profile_entry_template" ? payload.templates
+              : [];
+  return (rows ?? []).map(toSnakeRecord);
+}
+
+function toMasterRecordEnvelope(row: Record<string, unknown>, entityCode: string): Record<string, unknown> {
+  const id = typeof row.id === "string" && row.id ? row.id : String(row.code ?? "");
+  const tenantId = typeof row.tenant_id === "string" && row.tenant_id ? row.tenant_id : null;
+  return {
+    id,
+    tenant_id: tenantId,
+    entity_code: entityCode,
+    status: row.status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    data: row,
+  };
+}
+
+function filterAccountingProfileRows(rows: Record<string, unknown>[], searchParams: URLSearchParams): Record<string, unknown>[] {
+  const query = (searchParams.get("q") ?? "").trim().toLowerCase();
+  const sort = searchParams.get("sort");
+  const filtered = query
+    ? rows.filter((row) => Object.values(row).some((value) => typeof value === "string" && value.toLowerCase().includes(query)))
+    : [...rows];
+
+  if (sort) {
+    const [field, direction = "asc"] = sort.split(":");
+    if (field) {
+      filtered.sort((left, right) => {
+        const leftValue = comparableValue(left[field]);
+        const rightValue = comparableValue(right[field]);
+        const result = leftValue.localeCompare(rightValue, undefined, { numeric: true, sensitivity: "base" });
+        return direction === "desc" ? -result : result;
+      });
+    }
+  }
+
+  return filtered;
+}
+
+function toSnakeRecord(row: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`), value]),
+  );
+}
+
+function comparableValue(value: unknown): string {
+  if (value == null) return "";
+  if (value instanceof Date) return value.toISOString();
+  return String(value);
+}
+
+function positiveInt(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function accountingProfileWorkbenchHref(entityCode: string, recordId?: string): string {
+  const params = new URLSearchParams();
+  params.set("mode", "profile");
+  params.set("sourceEntity", entityCode);
+  if (recordId) params.set("sourceId", recordId);
+  return `/finance/accounting-profiles?${params.toString()}`;
+}
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}

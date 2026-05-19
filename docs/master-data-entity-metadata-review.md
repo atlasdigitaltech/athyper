@@ -144,7 +144,6 @@ DDL/Prisma drift:
 | Drift | Impact | Recommendation |
 | --- | --- | --- |
 | `master.accounting_profile` exists in Prisma but no reviewed DDL creates it. | FKs and metadata references point to a table that may not exist in clean DDL. | Add/restore DDL or correct Prisma/schema source before metadata work. |
-| `master.numbering_series` is created under `server/db/ddl/document/01l_tables_invoice_infra.sql`, not under `ddl/master`. | Static audits scoped only to `ddl/master` miss it. | Keep cross-folder DDL scans in metadata audit scripts. |
 | Views and partition child `notification_default` are physical but mostly not Prisma models. | Expected for views/partition children, but should be explicitly classified. | Add read-only entity rows for user-facing views, or add an exclusion registry. |
 
 ## Missing Entity Registration Candidates
@@ -161,8 +160,7 @@ The following physical `master` relations do not have an obvious
 | `legal_entity_identity_binding` | Legal entity identity binding | P1 | Add `CONTROL`; likely admin-only; expose provider/subject/binding status read-only. |
 | `intercompany_trading_pair` | Intercompany setup | P1 | Add `MASTER` or `CONTROL`; company code references, relationship type, posting controls. |
 | `tenant_parameter_definition` | Parameter catalog | P1 | Add `CONTROL`; admin-only, searchable by code/name/module/scope. |
-| `tenant_parameter_value` | Parameter values | P1 | Add `CONTROL`; child of parameter definition; strict read/write and audit controls. |
-| `numbering_series` | Numbering configuration | P1 | Add `CONTROL`; tenant/company scoped, admin setup surface; route create/edit through setup flow. |
+| `tenant_parameter_value` | Parameter values | P1 | Add `CONTROL`; child of parameter definition; strict read/write and audit controls. | Add `CONTROL`; tenant/company scoped, admin setup surface; route create/edit through setup flow. |
 | `risk_dimension` | Risk reference | P1 | Add `REFERENCE`; code/name/domain/status. |
 | `risk_source` | Risk source reference | P1 | Add `REFERENCE`; source code/name/source type/status. |
 | `risk_driver_registry` | Risk driver reference | P1 | Add `REFERENCE`; risk driver code/name/category/status. |

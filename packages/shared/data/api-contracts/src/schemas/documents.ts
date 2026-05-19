@@ -344,10 +344,13 @@ export const FlowFieldBindingSchema = z.object({
   override_permission: z.string().nullable().optional(),
   summary_role: FlowSummaryRoleSchema.nullable().optional(),
   ui_variant: z.string().nullable().optional(),
+  format: z.string().nullable().optional(),
   span: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
+  display_size: z.enum(["prominent", "standard", "compact"]).nullable().optional(),
   help_text: z.string().nullable().optional(),
   placeholder: z.string().nullable().optional(),
   sort_order: z.number().int(),
+  section_key: z.string().nullable().optional(),
   /** Current derived value (populated by derive endpoint response). */
   derived_value: z.unknown().optional(),
   /** Whether the user has manually overridden this derived field. */
@@ -356,6 +359,45 @@ export const FlowFieldBindingSchema = z.object({
 export type FlowFieldBinding = z.infer<typeof FlowFieldBindingSchema>;
 
 /** One step in the wizard — entity_flow_step + its field bindings. */
+export const FlowChildFieldSchema = z.object({
+  entity_field_id: z.string().optional(),
+  field_name: z.string(),
+  field_label: z.string().optional(),
+  data_type: z.string().nullable().optional(),
+  enum_domain_code: z.string().nullable().optional(),
+  cardinality: z.string().nullable().optional(),
+  ui_variant: z.string().nullable().optional(),
+  reference_config: z.record(z.string(), z.unknown()).nullable().optional(),
+  money_config: z.record(z.string(), z.unknown()).nullable().optional(),
+  validation_rules: z.record(z.string(), z.unknown()).nullable().optional(),
+  lookup_config: z.record(z.string(), z.unknown()).nullable().optional(),
+  visible_when: z.unknown().nullable().optional(),
+  sort_order: z.number().nullable().optional(),
+  is_required: z.boolean().nullable().optional(),
+}).catchall(z.unknown());
+
+export const FlowSectionSchema = z.object({
+  section_key: z.string(),
+  label: z.string(),
+  section_type: z.string().default("fields"),
+  entity_code: z.string().nullable().optional(),
+  payload_key: z.string().nullable().optional(),
+  sort_order: z.number().int().default(0),
+  collapse_default: z.boolean().default(false),
+  visible_when: z.unknown().nullable().optional(),
+  permission_code: z.string().nullable().optional(),
+  restricted_view_only: z.boolean().default(false),
+  min_rows: z.number().nullable().optional(),
+  max_rows: z.number().nullable().optional(),
+  default_row: z.unknown().nullable().optional(),
+  icon_key: z.string().nullable().optional(),
+  help_text: z.string().nullable().optional(),
+  fields: z.array(FlowFieldBindingSchema).default([]),
+  child_fields: z.array(FlowChildFieldSchema).default([]),
+  intake_fields: z.array(z.string()).nullable().optional(),
+}).catchall(z.unknown());
+export type FlowSection = z.infer<typeof FlowSectionSchema>;
+
 export const FlowStepSchema = z.object({
   id: z.string(),
   step_key: z.string(),
@@ -366,9 +408,10 @@ export const FlowStepSchema = z.object({
   advance_rule: z.object({
     required_fields: z.array(z.string()).default([]),
     predicate: z.unknown().nullable().optional(),
-  }),
+  }).catchall(z.unknown()),
   layout_hint: z.string(),
   fields: z.array(FlowFieldBindingSchema),
+  sections: z.array(FlowSectionSchema).optional(),
 });
 export type FlowStep = z.infer<typeof FlowStepSchema>;
 

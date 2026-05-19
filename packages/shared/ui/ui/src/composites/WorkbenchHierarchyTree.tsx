@@ -200,10 +200,10 @@ function TreeNode<TRecord>({
           onClick={() => selectable && onSelect?.(node.record, node)}
           disabled={!selectable}
         >
-          <span className={cn("truncate text-sm font-semibold", node.depth === 0 ? "text-foreground" : "text-foreground/90")}>
+          <span className={cn("truncate text-[13px] font-semibold leading-5", node.depth === 0 ? "text-foreground" : "text-foreground/90")}>
             {meta.getLabel(node.record)}
           </span>
-          <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-[12px] leading-4 text-muted-foreground">
             {meta.getCode && <span className="truncate font-mono">{meta.getCode(node.record)}</span>}
             {meta.getDescription && <span className="truncate">{meta.getDescription(node.record, node)}</span>}
           </span>
@@ -216,7 +216,7 @@ function TreeNode<TRecord>({
         <div role="group">
           {isLoading ? (
             <div
-              className="px-2 py-1.5 text-xs text-muted-foreground"
+              className="px-2 py-1.5 text-[12px] leading-4 text-muted-foreground"
               style={{ paddingLeft: `${(node.depth + 1) * 14 + 28}px` }}
             >
               Loading children...
@@ -341,7 +341,7 @@ export function WorkbenchHierarchyTree<TRecord>({
   return (
     <aside className={cn("flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card", className)}>
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
+        <div className="text-[12px] font-semibold uppercase leading-none text-muted-foreground">{title}</div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -375,14 +375,14 @@ export function WorkbenchHierarchyTree<TRecord>({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={searchPlaceholder}
-              className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-2 text-[13px] leading-5 outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
             />
           </div>
         </div>
       )}
       <div role="tree" className="min-h-0 flex-1 overflow-auto p-2">
         {tree.length === 0 ? (
-          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">{emptyMessage}</div>
+          <div className="flex h-32 items-center justify-center text-[13px] leading-5 text-muted-foreground">{emptyMessage}</div>
         ) : (
           tree.map((node) => (
             <TreeNode
@@ -400,7 +400,7 @@ export function WorkbenchHierarchyTree<TRecord>({
         )}
       </div>
       {resultSummary && (
-        <div className="shrink-0 border-t px-3 py-2 text-xs text-muted-foreground">
+        <div className="shrink-0 border-t px-3 py-2 text-[12px] leading-4 text-muted-foreground">
           {resultSummary}
         </div>
       )}

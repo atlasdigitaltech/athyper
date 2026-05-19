@@ -1,6 +1,8 @@
 import {
+  Building2,
   Compass,
   FlaskConical,
+  Landmark,
   LayoutDashboard,
   Layers3,
   Pencil,
@@ -10,8 +12,8 @@ import {
 } from "lucide-react";
 import type { WorkbenchModeItem } from "@athyper/ui/composites";
 
-export type TaxonomyWorkbenchId = "spend" | "intent";
-export type TaxonomyWorkbenchMode = "overview" | "explorer" | "classification" | "simulator" | "editor" | "matrix";
+export type TaxonomyWorkbenchId = "spend" | "intent" | "accountingProfile";
+export type TaxonomyWorkbenchMode = "overview" | "profile" | "explorer" | "classification" | "simulator" | "editor" | "matrix";
 
 export interface TaxonomyRelatedApp {
   entityCode: string;
@@ -68,60 +70,75 @@ export const TAXONOMY_WORKBENCHES: Record<TaxonomyWorkbenchId, TaxonomyWorkbench
     activeMode: "overview",
     modes: [
       mode("overview", "Overview", LayoutDashboard),
+      mode("profile", "Profile", Building2),
       mode("explorer", "Intent", Compass),
       mode("classification", "Classification", Tags),
       mode("editor", "Overlays", Layers3),
       mode("simulator", "Simulator", FlaskConical),
-      mode("matrix", "Matrix", TableProperties, { visible: false }),
+      mode("matrix", "Matrix", TableProperties),
     ],
     relatedApps: [
       {
         entityCode: "commodity_category",
         label: "Commodity Category",
         description: "Tenant category hierarchy with buy, sell, inventory, classification, and governance behavior.",
-        href: "/app/commodity_category",
+        href: "/app/commodity-category",
         context: { param: "q", source: "code" },
       },
       {
         entityCode: "commodity_classification_to_intent_rule",
         label: "Classification to Intent Rule",
         description: "Conditional rules that choose the business intent when category defaults need an override.",
-        href: "/app/commodity_classification_to_intent_rule?filter.classification_source=COMMODITY_CATEGORY",
+        href: "/app/commodity-classification-to-intent-rule?filter.classification_source=COMMODITY_CATEGORY",
         context: { param: "filter.classification_id", source: "id" },
       },
       {
         entityCode: "commodity_classification",
         label: "Commodity Classification",
         description: "Commodity, UNSPSC, HS, and compliance concepts used to enrich spend decisions.",
-        href: "/app/commodity_classification?filter.owner_type=commodity_category",
+        href: "/app/commodity-classification?filter.owner_type=commodity_category",
         context: { param: "filter.owner_id", source: "id" },
       },
       {
         entityCode: "commodity_code_to_category_rule",
         label: "Commodity Code to Category Rule",
         description: "Mappings that assign commodity code concepts to tenant commodity categories before intent resolution.",
-        href: "/app/commodity_code_to_category_rule",
+        href: "/app/commodity-code-to-category-rule",
         context: { param: "filter.commodity_category_id", source: "id" },
       },
       {
         entityCode: "commodity_category_buy_policy",
-        label: "Commodity Category Spend Policy",
+        label: "Commodity Category Buy Policy",
         description: "Allowed/default business intents and accounting defaults for buy-side category behavior.",
-        href: "/app/commodity_category_buy_policy",
+        href: "/app/commodity-category-buy-policy",
+        context: { param: "filter.commodity_category_id", source: "id" },
+      },
+      {
+        entityCode: "commodity_category_sell_policy",
+        label: "Commodity Category Sell Policy",
+        description: "Sell-side intent, revenue recognition, tax, and accounting defaults for the category.",
+        href: "/app/commodity-category-sell-policy",
+        context: { param: "filter.commodity_category_id", source: "id" },
+      },
+      {
+        entityCode: "commodity_category_inventory_policy",
+        label: "Commodity Category Inventory Policy",
+        description: "Stockability, valuation, tracking, and inventory posting policy for the category.",
+        href: "/app/commodity-category-inventory-policy",
         context: { param: "filter.commodity_category_id", source: "id" },
       },
       {
         entityCode: "supplier_commodity_category",
         label: "Supplier Category Links",
         description: "Supplier eligibility and category links used during buying and invoice intake.",
-        href: "/app/supplier_commodity_category",
+        href: "/app/supplier-commodity-category",
         context: { param: "filter.commodity_category_id", source: "id" },
       },
       {
         entityCode: "commodity_category_buy_policy",
         label: "Supplier-scoped Spend Policy",
         description: "Supplier-scoped allowed/default business intents and buy-side defaults.",
-        href: "/app/commodity_category_buy_policy?filter.scope_type=SUPPLIER_PROFILE",
+        href: "/app/commodity-category-buy-policy?filter.scope_type=SUPPLIER_PROFILE",
         context: { param: "filter.commodity_category_id", source: "id" },
       },
     ],
@@ -141,10 +158,95 @@ export const TAXONOMY_WORKBENCHES: Record<TaxonomyWorkbenchId, TaxonomyWorkbench
       mode("editor", "Editor", Pencil, { visible: false }),
     ],
     relatedApps: [
-      { entityCode: "business_intent", label: "Business intents", href: "/app/business_intent" },
-      { entityCode: "commodity_category_buy_policy", label: "Buy intent policies", href: "/app/commodity_category_buy_policy" },
-      { entityCode: "commodity_category_sell_policy", label: "Sell intent policies", href: "/app/commodity_category_sell_policy" },
-      { entityCode: "intent_accounting_profile_rule", label: "Accounting profile rules", href: "/app/intent_accounting_profile_rule" },
+      { entityCode: "business_intent", label: "Business intents", href: "/app/business-intent" },
+      { entityCode: "commodity_category_buy_policy", label: "Buy intent policies", href: "/app/commodity-category-buy-policy" },
+      { entityCode: "commodity_category_sell_policy", label: "Sell intent policies", href: "/app/commodity-category-sell-policy" },
+      { entityCode: "intent_to_accounting_profile_rule", label: "Accounting profile rules", href: "/app/intent-to-accounting-profile-rule" },
+    ],
+  },
+  accountingProfile: {
+    id: "accountingProfile",
+    label: "Accounting Profile",
+    title: "Accounting Profile Workbench",
+    workspace: "finance",
+    homeHref: "/finance",
+    href: "/finance/accounting-profiles",
+    entityCode: "accounting_profile",
+    activeMode: "overview",
+    modes: [
+      mode("overview", "Overview", LayoutDashboard),
+      mode("profile", "Profile", Landmark),
+      mode("simulator", "Simulator", FlaskConical),
+    ],
+    relatedApps: [
+      {
+        entityCode: "business_intent",
+        label: "Business Intents",
+        description: "Purpose and domain ontology used as the first accounting routing input.",
+        href: "/app/business-intent",
+      },
+      {
+        entityCode: "intent_to_accounting_profile_rule",
+        label: "Intent to Profile Rules",
+        description: "Priority and wildcard predicates that resolve an intent context to a profile config.",
+        href: "/app/intent-to-accounting-profile-rule",
+      },
+      {
+        entityCode: "accounting_profile",
+        label: "Accounting Profiles",
+        description: "Business-facing profile identity for AP, AR, asset, inventory, and other posting families.",
+        href: "/app/accounting-profile",
+        context: { param: "q", source: "code" },
+      },
+      {
+        entityCode: "acct_profile_config",
+        label: "Profile Configs",
+        description: "Versioned runtime configuration behind each accounting profile.",
+        href: "/app/acct-profile-config",
+        context: { param: "filter.accounting_profile_id", source: "id" },
+      },
+      {
+        entityCode: "acct_profile_event",
+        label: "Profile Events",
+        description: "Lifecycle events that decide when a profile creates journal entries.",
+        href: "/app/acct-profile-event",
+      },
+      {
+        entityCode: "acct_profile_entry_template",
+        label: "Entry Templates",
+        description: "Debit and credit line templates resolved for a profile event.",
+        href: "/app/acct-profile-entry-template",
+      },
+      {
+        entityCode: "acct_profile_book_rule",
+        label: "Book Rules",
+        description: "Per-book posting behavior: mirror, exclude, or remap.",
+        href: "/app/acct-profile-book-rule",
+      },
+      {
+        entityCode: "acct_profile_dimension_rule",
+        label: "Dimension Rules",
+        description: "Dimension derivation and fallback rules per profile config.",
+        href: "/app/acct-profile-dimension-rule",
+      },
+      {
+        entityCode: "acct_profile_commitment_config",
+        label: "Commitment Config",
+        description: "Optional commitment, encumbrance, advance, and retention behavior.",
+        href: "/app/acct-profile-commitment-config",
+      },
+      {
+        entityCode: "acct_profile_revenue_config",
+        label: "Revenue Config",
+        description: "Optional revenue recognition and paired COGS profile behavior.",
+        href: "/app/acct-profile-revenue-config",
+      },
+      {
+        entityCode: "acct_profile_settlement_config",
+        label: "Settlement Config",
+        description: "Optional settlement, discounting, and supply-chain-finance behavior.",
+        href: "/app/acct-profile-settlement-config",
+      },
     ],
   },
 };

@@ -25,6 +25,7 @@ import { DragDropUploadZone } from "@athyper/content-ui";
 import { bffFetch, getCsrfToken } from "@/lib/bff-fetch";
 import { formatBytes, formatTitle } from "@/lib/format";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
+import { canonicalEntityCode } from "../../../_lib/entity-aliases";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -142,10 +143,11 @@ export default function AppEntityAttachmentsPage() {
   const queryClient = useQueryClient();
 
   const entity = params["entity"] as string;
+  const entityCode = canonicalEntityCode(entity);
   const id     = params["id"]     as string;
 
-  const { data: attachments, isLoading } = useAttachments(entity, id);
-  const deleteMutation = useDeleteAttachment(entity, id);
+  const { data: attachments, isLoading } = useAttachments(entityCode, id);
+  const deleteMutation = useDeleteAttachment(entityCode, id);
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -154,7 +156,7 @@ export default function AppEntityAttachmentsPage() {
     async (files: File[]) => {
       setIsUploading(true);
       setUploadError(null);
-      const url  = `/api/relay/documents/${encodeURIComponent(entity)}/${encodeURIComponent(id)}/attachments`;
+      const url  = `/api/relay/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(id)}/attachments`;
       const csrf = getCsrfToken();
       try {
         await Promise.all(
@@ -172,25 +174,25 @@ export default function AppEntityAttachmentsPage() {
             }
           }),
         );
-        queryClient.invalidateQueries({ queryKey: ["attachments", entity, id] });
+        queryClient.invalidateQueries({ queryKey: ["attachments", entityCode, id] });
       } catch (e) {
         setUploadError(e instanceof Error ? e.message : "Upload failed");
       } finally {
         setIsUploading(false);
       }
     },
-    [entity, id, queryClient],
+    [entityCode, id, queryClient],
   );
 
   // Guard — all hooks above; safe to return early from here
-  const { guardLoading, denied } = useSubrouteGuard(entity, "hasAttachments");
+  const { guardLoading, denied } = useSubrouteGuard(entityCode, "hasAttachments");
   if (guardLoading) return <GuardSkeleton />;
-  if (denied) return <FeatureUnavailablePage entityCode={entity} entityId={id} />;
+  if (denied) return <FeatureUnavailablePage entityCode={entityCode} entityId={id} />;
 
   return (
     <PageFrame
       title="Attachments"
-      description={`${formatTitle(entity)} — file attachments`}
+      description={`${formatTitle(entityCode)} — file attachments`}
       width="narrow"
       actions={
         <Button variant="ghost" size="sm" onClick={() => router.back()}>

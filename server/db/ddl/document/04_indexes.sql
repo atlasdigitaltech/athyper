@@ -642,7 +642,6 @@ CREATE INDEX IF NOT EXISTS pil_gr_line_idx
 
 -- ============================================================================
 -- §CL-IDX  document.command_log — lookup index (already in table DDL)
--- §NS-IDX  master.numbering_series — lookup index (already in table DDL)
 -- §MTC-IDX control.match_tolerance_config — resolution index
 -- ============================================================================
 

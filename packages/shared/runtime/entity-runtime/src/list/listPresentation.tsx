@@ -18,14 +18,14 @@ const SEMANTIC_RESOLVERS: Record<string, (value: string) => SemanticIntent> = {
 
 export const listTypography = {
   statusBadge: "inline-flex h-5 items-center rounded-full border px-1.5 text-doc-badge font-medium leading-none capitalize",
-  statusText: "inline-flex items-center gap-2 text-xs font-medium leading-normal text-foreground capitalize",
+  statusText: "inline-flex items-center gap-2 text-[13px] font-medium leading-5 text-foreground capitalize",
   entityBadge: "font-medium",
   recordId: "text-doc-support text-muted-foreground",
-  emptyState: "py-16 text-center text-sm text-muted-foreground",
+  emptyState: "py-16 text-center text-[13px] leading-5 text-muted-foreground",
   sectionHeading: "text-xs font-medium uppercase tracking-wide text-muted-foreground",
   table: {
-    header: "text-xs font-semibold text-muted-foreground",
-    cell: "text-sm text-foreground",
+    header: "text-[13px] font-semibold leading-5 text-muted-foreground",
+    cell: "text-[13px] leading-5 text-foreground",
     cellCompact: "text-xs text-foreground",
     meta: "text-xs text-muted-foreground",
   },

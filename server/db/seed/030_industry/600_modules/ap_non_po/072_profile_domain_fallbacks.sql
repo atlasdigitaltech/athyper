@@ -1,11 +1,11 @@
 -- ============================================================================
 -- FILE: blueprint/072_profile_domain_fallbacks.sql
 -- Purpose: Wildcard domain-level fallback rules so classification-derived
---          intents (which may differ from OPEX_GENERAL/CAPEX_GENERAL base IDs)
+--          intents (all resolved through canonical BI-* domain IDs)
 --          still resolve to an accounting profile.
 --
 -- Problem solved: intent_to_accounting_profile_rule only carries specific
---   intent_id rows (OPEX_GENERAL, CAPEX_GENERAL, ADMIN_GENERAL).  Classification
+--   intent_id rows. Classification
 --   rules may resolve intents like SC-IT-HW → CAPEX which have their own
 --   business_intent IDs.  These wildcards (intent_id IS NULL) catch any intent
 --   whose domain matches, regardless of the specific intent UUID.
@@ -28,13 +28,23 @@
 DO $seed_profile_domain_fallbacks$
 DECLARE
     v_tenant     record;
+    v_tid        uuid;
     v_sys        uuid := '00000000-0000-0000-0000-000000000000';
 
     v_apc_std    uuid;
     v_apc_capex  uuid;
 BEGIN
+    v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    IF v_tid IS NULL THEN
+        RAISE EXCEPTION '[seed] app.seed_tenant_id not set - run: SET app.seed_tenant_id = ''<uuid>''';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM master.tenant WHERE id = v_tid AND status = 'active') THEN
+        RAISE EXCEPTION '[seed] active tenant % not found', v_tid;
+    END IF;
+
     FOR v_tenant IN
-        SELECT id AS tenant_id FROM master.tenant WHERE status = 'active'
+        SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
         SELECT apc.id INTO v_apc_std
           FROM control.acct_profile_config apc
@@ -198,5 +208,5 @@ BEGIN
 
     END LOOP;
 
-    RAISE NOTICE 'blueprint/072_profile_domain_fallbacks: up to 6 domain wildcard rules seeded per active tenant (OPEX/CAPEX/ADMIN/COST_OF_SALES/REGULATORY/TRANSFER)';
+    RAISE NOTICE 'blueprint/072_profile_domain_fallbacks: up to 6 domain wildcard rules seeded for tenant %', v_tid;
 END $seed_profile_domain_fallbacks$;

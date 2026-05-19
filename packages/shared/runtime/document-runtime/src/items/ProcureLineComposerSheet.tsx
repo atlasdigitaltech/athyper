@@ -210,16 +210,32 @@ function draftValue(draft: Record<string, unknown>, fieldOrName: EntityField | s
   const columnName = typeof fieldOrName === "string" ? undefined : fieldOrName.column_name;
 
   if (Object.prototype.hasOwnProperty.call(draft, name)) return draft[name];
-  if (columnName && Object.prototype.hasOwnProperty.call(draft, columnName)) return draft[columnName];
+  const columnValue = columnValueForDraftField(draft, name, columnName);
+  if (columnValue !== undefined) return columnValue;
 
   const data = draft.data;
   if (data && typeof data === "object" && !Array.isArray(data)) {
     const dataRecord = data as Record<string, unknown>;
     if (Object.prototype.hasOwnProperty.call(dataRecord, name)) return dataRecord[name];
-    if (columnName && Object.prototype.hasOwnProperty.call(dataRecord, columnName)) return dataRecord[columnName];
+    const dataColumnValue = columnValueForDraftField(dataRecord, name, columnName);
+    if (dataColumnValue !== undefined) return dataColumnValue;
   }
 
   return undefined;
+}
+
+function columnValueForDraftField(
+  source: Record<string, unknown>,
+  name: string,
+  columnName?: string | null,
+): unknown {
+  if (!columnName || !Object.prototype.hasOwnProperty.call(source, columnName)) return undefined;
+  const value = source[columnName];
+  if (value && typeof value === "object" && !Array.isArray(value) && columnName !== name) {
+    const nested = value as Record<string, unknown>;
+    return Object.prototype.hasOwnProperty.call(nested, name) ? nested[name] : undefined;
+  }
+  return value;
 }
 
 function draftOrLineValue(

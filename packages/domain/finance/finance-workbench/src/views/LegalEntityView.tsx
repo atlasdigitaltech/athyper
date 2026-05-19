@@ -14,6 +14,21 @@ import { ConsolBadge } from "../components/ChartBadge";
 
 /* -- Entity tree row ------------------------------------------------------ */
 
+function entityCountryCode(entity: LegalEntity) {
+  const code = entity.countryCode ?? (entity.country.length <= 3 ? entity.country : "");
+  if (code) return code.toUpperCase();
+  const parts = entity.country
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.trim());
+  if (parts.length === 1) return (parts[0] ?? "").slice(0, 2).toUpperCase();
+  return parts.slice(0, 2).map((part) => part.charAt(0)).join("").toUpperCase();
+}
+
+function entityCountryLabel(entity: LegalEntity) {
+  return entity.countryName ?? entity.country;
+}
+
 function EntityRow({
   entity,
   entities,
@@ -29,13 +44,15 @@ function EntityRow({
 }) {
   const children = entities.filter((e) => e.parentId === entity.id);
   const hasChildren = children.length > 0;
+  const countryCode = entityCountryCode(entity);
+  const countryLabel = entityCountryLabel(entity);
 
   return (
     <>
       <div
         onClick={() => onSelect(entity.id)}
         className={cn(
-          "flex items-center gap-1.5 py-[3px] px-2 cursor-pointer rounded-md transition-colors",
+          "flex min-w-0 items-center gap-1.5 px-2 py-[3px] cursor-pointer rounded-md transition-colors",
           selectedId === entity.id
             ? "bg-accent"
             : "hover:bg-muted/50",
@@ -43,24 +60,25 @@ function EntityRow({
         style={{ paddingLeft: `${depth * 20 + 8}px` }}
       >
         <div
+          title={countryLabel}
           className={cn(
-            "flex h-5 w-5 items-center justify-center rounded text-doc-label font-bold shrink-0",
+            "flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded text-[10px] font-bold uppercase leading-none",
             entity.entityType === "holding"
               ? "bg-accent/10 text-accent-foreground"
               : "bg-info/10 text-info",
           )}
         >
-          {entity.country}
+          {countryCode}
         </div>
 
         <span className="font-mono text-doc-support text-muted-foreground w-14 shrink-0">{entity.code}</span>
-        <span className={cn("text-xs flex-1 truncate", entity.entityType === "holding" ? "font-medium" : "")}>{entity.name}</span>
+        <span className={cn("min-w-0 flex-1 truncate text-xs", entity.entityType === "holding" ? "font-medium" : "")}>{entity.name}</span>
 
         {entity.consolidationMethod && (
-          <ConsolBadge method={entity.consolidationMethod} />
+          <ConsolBadge method={entity.consolidationMethod} className="shrink-0" />
         )}
         {!entity.consolidationMethod && (
-          <Badge variant="outline" className="text-doc-support py-0 bg-accent/10 text-accent-foreground border-accent/30">
+          <Badge variant="outline" className="shrink-0 text-doc-support py-0 bg-accent/10 text-accent-foreground border-accent/30">
             root
           </Badge>
         )}
@@ -68,7 +86,7 @@ function EntityRow({
         {entity.ownershipPct !== null && (
           <span
             className={cn(
-              "text-doc-support font-mono w-10 text-right",
+              "w-16 shrink-0 text-right font-mono text-doc-support",
               entity.ownershipPct < 100 ? "text-warning font-medium" : "text-muted-foreground",
             )}
           >
@@ -105,7 +123,7 @@ export function LegalEntityView() {
   const [filterType, setFilterType] = useState("all");
 
   const countries = useMemo(
-    () => [...new Set(entities.map((e) => e.country))].sort(),
+    () => [...new Set(entities.map((e) => entityCountryLabel(e)))].sort(),
     [entities],
   );
   const roots = entities.filter((e) => !e.parentId);
@@ -204,7 +222,7 @@ export function LegalEntityView() {
             <Separator orientation="vertical" className="h-4" />
             <div>
               <span className="text-doc-label text-muted-foreground uppercase mr-1">Country</span>
-              <span className="font-semibold">{selected.country}</span>
+              <span className="font-semibold">{entityCountryLabel(selected)}</span>
             </div>
             <Separator orientation="vertical" className="h-4" />
             <div>

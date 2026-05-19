@@ -70,22 +70,7 @@ BEGIN
     ('SC-UTY-METER', 'Metering & Smart Grid',      'Smart meters, AMI systems, SCADA, and demand-response platforms',      'SC-UTY', 'services', 404, false),
     ('SC-UTY-TREAT', 'Water Treatment',            'Water purification plants, desalination, and wastewater treatment',    'SC-UTY', 'services', 405, true);
 
-    -- B2: Business intents
-    CREATE TEMP TABLE tmp_bi (
-        seed_id     uuid DEFAULT shared.uuidv7(),
-        code        text NOT NULL,
-        name        text NOT NULL,
-        description text,
-        domain      text NOT NULL,
-        subtype     text,
-        parent_code text,
-        sort_order  smallint NOT NULL DEFAULT 0
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_bi (code, name, description, domain, subtype, parent_code, sort_order) VALUES
-    ('BI-COGS', 'Energy Cost of Sales',             'Direct energy procurement and utility input costs',       'COST_OF_SALES', 'ENERGY',         'BI-COGS',  36),
-    ('BI-CAPEX',  'Grid Infrastructure Capital',      'Capital spend on grid, transmission, and distribution',   'CAPEX',         'GRID',           'BI-CAPEX', 30),
-    ('BI-REG',  'Energy Regulatory Compliance',     'Regulatory permits, tariff filings, and energy audits',   'REGULATORY',    'ENERGY_COMPLIANCE','BI-REG',  54);
+    -- B2: Business intent rows are domain-level only; this pack links categories to canonical BI-* records.
 
     -- B3: Commodity bridge
     CREATE TEMP TABLE tmp_bridge (

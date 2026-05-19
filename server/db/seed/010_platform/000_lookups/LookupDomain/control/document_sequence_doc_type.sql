@@ -1,5 +1,5 @@
 -- LookupDomain/control/document_sequence_doc_type.sql
--- Lookup domain + values for control.document_sequence_config.doc_type
+-- Legacy lookup values retained for historical migration compatibility.
 -- is_extensible = true — tenants may register custom document types.
 -- Idempotent: WHERE NOT EXISTS guard on both domain and value inserts.
 

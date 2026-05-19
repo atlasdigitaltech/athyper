@@ -1,6 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
 
 export interface RecordContextCopyItem {
   label: string;
@@ -18,7 +19,7 @@ export interface RecordContextMenuDetail {
 export const RECORD_CONTEXT_MENU_EVENT = "finance-workbench:record-context-menu";
 
 export function appRecordHref(entityCode: string, recordId: string): string {
-  return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`;
+  return appEntityDetailHref(entityCode, recordId);
 }
 
 export function openAppRecordInNewTab(entityCode: string, recordId: string): void {

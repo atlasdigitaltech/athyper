@@ -29,10 +29,12 @@ import {
   Badge, Button, Skeleton,
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@athyper/ui/primitives";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
 import type { RecordVersionSummary } from "@athyper/api-contracts/records";
 import { bffFetch } from "@/lib/bff-fetch";
 import { formatTitle } from "@/lib/format";
 import { useSubrouteGuard, GuardSkeleton, FeatureUnavailablePage } from "@/lib/use-subroute-guard";
+import { canonicalEntityCode } from "../../../_lib/entity-aliases";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -270,18 +272,19 @@ export default function AppEntityVersionsPage() {
   const router = useRouter();
 
   const entity = params["entity"] as string;
+  const entityCode = canonicalEntityCode(entity);
   const id     = params["id"]     as string;
 
-  const { data, isLoading, isError } = useVersionList(entity, id);
-  const amendMutation = useAmendRecord(entity, id);
+  const { data, isLoading, isError } = useVersionList(entityCode, id);
+  const amendMutation = useAmendRecord(entityCode, id);
 
   // Which version number is pinned as the "from" side for comparison
   const [pinnedVersion, setPinnedVersion] = useState<number | null>(null);
 
   // Guard — all hooks above; safe to return early from here
-  const { guardLoading, denied } = useSubrouteGuard(entity, "hasVersions");
+  const { guardLoading, denied } = useSubrouteGuard(entityCode, "hasVersions");
   if (guardLoading) return <GuardSkeleton />;
-  if (denied) return <FeatureUnavailablePage entityCode={entity} entityId={id} />;
+  if (denied) return <FeatureUnavailablePage entityCode={entityCode} entityId={id} />;
 
   const versions = data?.data ?? [];
   const sorted   = [...versions].sort((a, b) => a.version_no - b.version_no);
@@ -291,9 +294,7 @@ export default function AppEntityVersionsPage() {
   }
 
   function handleNavigateCompare(from: number, to: number) {
-    router.push(
-      `/app/${encodeURIComponent(entity)}/${encodeURIComponent(id)}/compare?from=${from}&to=${to}`,
-    );
+    router.push(appEntityDetailHref(entityCode, id, "compare", `from=${from}&to=${to}`));
   }
 
   return (

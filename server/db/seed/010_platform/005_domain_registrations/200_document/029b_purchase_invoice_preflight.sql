@@ -241,7 +241,7 @@ BEGIN
          'continue_label', 'Continue to Identify',
          'cancel_label', 'Exit',
          'upload', jsonb_build_object(
-           'enabled', false,
+           'enabled', true,
            'parameter_code', 'document.intake.preflight.ocr_enabled',
            'parameter_namespace', 'document.intake.preflight',
            'label', 'Drop a PDF to auto-detect',

@@ -10,7 +10,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, feature_flags, status, created_by)
+    feature_flags, status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
     'supplier_posting_override', 'CSPO', 'supplier_posting_override',
@@ -18,16 +18,17 @@ SELECT
     'standard', 'sensitive', 'controlled',
     'control', 'supplier_posting_override',
     'Supplier Posting Override', 'Supplier Posting Overrides', 'book-open', 'rose',
-    false,
     '{"parent_entity":"company_code_supplier_profile","parent_fk":"supplier_profile_id"}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.entity_code = 'supplier_posting_override' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
@@ -75,7 +76,7 @@ SET display_config     = jsonb_build_object(
                 jsonb_build_array('reason','status'))
         )
     ),
-    natural_key_fields = ARRAY['supplier_profile_id', 'posting_role_code', 'book_code', 'effective_from']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['supplier_profile_id', 'posting_role_code', 'book_code', 'effective_from']::text[]), true)
 WHERE table_schema = 'control' AND table_name = 'supplier_posting_override'
   AND tenant_id IS NULL;
 

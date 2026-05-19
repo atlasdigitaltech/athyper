@@ -9,7 +9,7 @@ import { adminStatusIntent } from "@athyper/theme/domain-intents";
 import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 import type { CompiledEntity, EntityField, EntityOperation, StatusDimensionConfig } from "@athyper/api-contracts/metadata";
 import type { EntityHeaderModel, HeaderAction, HeaderFact, HeaderStatusDimension, HeaderTab } from "../types";
-import { titleCase, fmtDateTime } from "@athyper/runtime-shared/core";
+import { appEntityListHref, titleCase, fmtDateTime } from "@athyper/runtime-shared/core";
 import {
   configuredCodeFieldName,
   configuredStatusFieldNames,
@@ -236,7 +236,7 @@ export function buildMasterHeaderModel(
   return {
     identity: {
       typeLabel,
-      typeHref:         `/app/${entity.entity_code}`,
+      typeHref:         appEntityListHref(entity.entity_code),
       number:           codeNumber,
       name:             entityName,
       classification,

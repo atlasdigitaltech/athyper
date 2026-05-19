@@ -4078,7 +4078,6 @@ export type entity = {
     external_source_config: Generated<unknown>;
     provisioned_at: Timestamp | null;
     provisioned_by: string | null;
-    publish_state_id: string | null;
     status: Generated<string>;
     is_active: Generated<boolean | null>;
     status_changed_at: Timestamp | null;

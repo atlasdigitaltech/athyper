@@ -13,7 +13,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'BUY'),
@@ -22,8 +22,6 @@ SELECT
     'standard', 'business', 'controlled',
     'master', 'supplier_spend_category',
     'Supplier Commodity Category', 'Supplier Commodity Categories', 'tags', 'amber',
-    false,
-    '{}'::jsonb,
     '{
         "parent_entity":"supplier",
         "parent_fk":"supplier_id",
@@ -50,8 +48,6 @@ ON CONFLICT (table_schema, table_name) DO UPDATE
        label_plural     = EXCLUDED.label_plural,
        icon_key         = EXCLUDED.icon_key,
        color_token      = EXCLUDED.color_token,
-       numbering_active = EXCLUDED.numbering_active,
-       naming_policy    = EXCLUDED.naming_policy,
        feature_flags    = COALESCE(control.entity.feature_flags, '{}'::jsonb)
                            || EXCLUDED.feature_flags,
        status           = 'ACTIVE',
@@ -60,9 +56,11 @@ ON CONFLICT (table_schema, table_name) DO UPDATE
 
 -- 2. control.entity_version
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.entity_code = 'supplier_commodity_category' AND e.tenant_id IS NULL
 ON CONFLICT (entity_id, version_no) DO NOTHING;
@@ -117,7 +115,7 @@ SET display_config        = COALESCE(display_config, '{}'::jsonb) || jsonb_build
         'is_readonly',              false,
         'is_exportable',            true
     ),
-    natural_key_fields    = ARRAY['supplier_id','commodity_category_id']
+    identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['supplier_id','commodity_category_id']::text[]), true)
 WHERE entity_code = 'supplier_commodity_category' AND tenant_id IS NULL;
 
 UPDATE control.entity_field ef
@@ -171,27 +169,3 @@ FROM control.lifecycle lc
 WHERE lc.code = 'lc_active_inactive'
   AND lc.tenant_id IS NULL
 ON CONFLICT ON CONSTRAINT el_binding_uq DO NOTHING;
-
-UPDATE control.entity_version ev
-SET version_hash = encode(sha256(convert_to(
-        ev.id::text || ':' || COALESCE((
-            SELECT jsonb_agg(jsonb_build_object(
-                       'name', ef.name,
-                       'data_type', ef.data_type,
-                       'ui_type', ef.ui_type,
-                       'is_read_only', ef.is_read_only,
-                       'validation', ef.validation,
-                       'reference_config', ef.reference_config
-                   ) ORDER BY ef.sort_order, ef.name)::text
-            FROM control.entity_field ef
-            WHERE ef.entity_version_id = ev.id
-        ), '[]'),
-        'UTF8'
-    )), 'hex'),
-    updated_at   = now(),
-    updated_by   = '00000000-0000-0000-0000-000000000000'
-FROM control.entity e
-WHERE ev.entity_id = e.id
-  AND e.tenant_id IS NULL
-  AND ev.version_no = 1
-  AND e.entity_code = 'supplier_commodity_category';

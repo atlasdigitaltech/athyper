@@ -54,6 +54,8 @@ export interface LegalEntity {
   consolidationMethod: ConsolidationMethod | null;
   ownershipPct: number | null;
   country: string;
+  countryCode?: string | null;
+  countryName?: string | null;
   functionalCurrency: string;
   reportingCurrency: string;
   companyCodes: string[];

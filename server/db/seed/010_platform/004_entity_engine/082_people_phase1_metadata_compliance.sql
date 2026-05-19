@@ -10,7 +10,7 @@ WITH ppl_entities AS (
         e.table_schema,
         e.table_name,
         e.display_config,
-        e.natural_key_fields,
+        e.identity_config,
         ev.id AS entity_version_id
     FROM control.entity e
     JOIN control.entity_version ev
@@ -196,9 +196,16 @@ SET display_config = CASE
             )
         ELSE e.display_config
     END,
-    natural_key_fields = CASE
-        WHEN e.natural_key_fields IS NULL OR cardinality(e.natural_key_fields) = 0 THEN n.natural_key_fields
-        ELSE e.natural_key_fields
+    identity_config = CASE
+        WHEN COALESCE(jsonb_array_length(
+            CASE
+                WHEN jsonb_typeof(COALESCE(e.identity_config, '{}'::jsonb)->'natural_key_fields') = 'array'
+                THEN COALESCE(e.identity_config, '{}'::jsonb)->'natural_key_fields'
+                ELSE '[]'::jsonb
+            END
+        ), 0) = 0
+        THEN jsonb_set(COALESCE(e.identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(n.natural_key_fields::text[]), true)
+        ELSE e.identity_config
     END,
     updated_at = now(),
     updated_by = '00000000-0000-0000-0000-000000000000'::uuid
@@ -211,6 +218,11 @@ WHERE e.id = p.entity_id
   AND (
       e.display_config IS NULL
       OR e.display_config = '{}'::jsonb
-      OR e.natural_key_fields IS NULL
-      OR cardinality(e.natural_key_fields) = 0
+      OR COALESCE(jsonb_array_length(
+          CASE
+              WHEN jsonb_typeof(COALESCE(e.identity_config, '{}'::jsonb)->'natural_key_fields') = 'array'
+              THEN COALESCE(e.identity_config, '{}'::jsonb)->'natural_key_fields'
+              ELSE '[]'::jsonb
+          END
+      ), 0) = 0
   );

@@ -70,21 +70,7 @@ BEGIN
     ('SC-TRANS-AIR',    'Air Cargo Operations',   'Air freight, charter cargo, and airport handling services',       'SC-TRANS', 'services', 434, true),
     ('SC-TRANS-3PL',    '3PL & Fulfilment',       'Third-party logistics, order fulfilment, and value-added services','SC-TRANS','services', 435, false);
 
-    -- B2: Business intents
-    CREATE TEMP TABLE tmp_bi (
-        seed_id     uuid DEFAULT shared.uuidv7(),
-        code        text NOT NULL,
-        name        text NOT NULL,
-        description text,
-        domain      text NOT NULL,
-        subtype     text,
-        parent_code text,
-        sort_order  smallint NOT NULL DEFAULT 0
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_bi (code, name, description, domain, subtype, parent_code, sort_order) VALUES
-    ('BI-COGS',   'Transport Cost of Sales',       'Direct transport and haulage costs tied to revenue',   'COST_OF_SALES', 'TRANSPORT', 'BI-COGS',  40),
-    ('BI-CAPEX', 'Vessel & Fleet Capital',        'Capital spend on vessels, rolling stock, and aircraft', 'CAPEX',         'VESSEL',    'BI-CAPEX', 32);
+    -- B2: Business intent rows are domain-level only; this pack links categories to canonical BI-* records.
 
     -- B3: Commodity bridge
     CREATE TEMP TABLE tmp_bridge (

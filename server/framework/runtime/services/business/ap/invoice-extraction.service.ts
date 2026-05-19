@@ -103,13 +103,13 @@ async function extractInvoiceDraftInner(
 ): Promise<ExtractInvoiceResult> {
   // Fetch raw bytes from object storage via attachment record
   const attachment = await db
-    .selectFrom("document.attachment as a")
-    .select(["a.file_name", "a.mime_type", "a.storage_key", "a.file_size"])
+    .selectFrom("master.attachment as a")
+    .select(["a.file_name", "a.content_type", "a.storage_key", "a.size_bytes"])
     .where("a.id",        "=", input.attachmentId)
     .where("a.tenant_id", "=", input.tenantId)
     .executeTakeFirst() as {
-      file_name: string; mime_type: string;
-      storage_key: string; file_size: number;
+      file_name: string; content_type: string;
+      storage_key: string; size_bytes: number;
     } | undefined;
 
   if (!attachment) {
@@ -121,17 +121,22 @@ async function extractInvoiceDraftInner(
   // POST /api/ai/actions/run with action_code=extract_document; this service
   // consumes the persisted output from the inference log.
   const inferenceRow = await db
-    .selectFrom("log.inference_log as il")
-    .select(["il.output_payload", "il.confidence_score", "il.warnings"])
+    .selectFrom("log.ai_inference_log as il")
+    .select([
+      "il.output as output_payload",
+      "il.confidence as confidence_score",
+    ])
     .where("il.tenant_id",    "=", input.tenantId)
-    .where("il.action_code",  "=", "extract_document")
-    .where(sql<boolean>`il.request_payload->>'attachment_id' = ${input.attachmentId}`)
+    .where((eb) => eb.or([
+      eb("il.action_type", "=", "extract_document"),
+      eb("il.prediction_type", "=", "extract_document"),
+    ]))
+    .where(sql<boolean>`il.input->'subject'->>'attachment_id' = ${input.attachmentId}`)
     .orderBy("il.created_at", "desc")
     .limit(1)
     .executeTakeFirst() as {
       output_payload: ExtractedDocumentOutput | null;
       confidence_score: number | null;
-      warnings: Array<{ code: string; message: string }> | null;
     } | undefined;
 
   const extracted: ExtractedDocumentOutput = (inferenceRow?.output_payload ?? {
@@ -148,7 +153,6 @@ async function extractInvoiceDraftInner(
   }) as ExtractedDocumentOutput;
 
   const warnings: Array<{ code: string; message: string }> = [
-    ...(inferenceRow?.warnings ?? []),
   ];
 
   if (extracted.arithmetic_drift_pct > 1) {

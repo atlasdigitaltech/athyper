@@ -14,6 +14,7 @@ import { Bell, BellOff, CheckCheck, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { PageFrame } from "@athyper/ui/layout";
 import { Badge, Button, Skeleton } from "@athyper/ui/primitives";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
 import { bffFetch } from "@/lib/bff-fetch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -99,7 +100,7 @@ function eventLabel(code: string): string {
  */
 function entityHref(type: string | null, id: string | null): string | null {
   if (!type || !id) return null;
-  return `/app/${type}/${id}`;
+  return appEntityDetailHref(type, id);
 }
 
 // ── Components ────────────────────────────────────────────────────────────────

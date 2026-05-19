@@ -148,7 +148,7 @@ BEGIN
         color_token,
         feature_flags,
         display_config,
-        natural_key_fields,
+        identity_config,
         status,
         created_by,
         updated_by
@@ -191,7 +191,7 @@ BEGIN
             'readOnly', true,
             'hidden', true
         ),
-        c.natural_key_fields,
+        jsonb_build_object('natural_key_fields', to_jsonb(c.natural_key_fields::text[])),
         'ACTIVE',
         v_system_user,
         v_system_user
@@ -212,7 +212,7 @@ BEGIN
         color_token = EXCLUDED.color_token,
         feature_flags = control.entity.feature_flags || EXCLUDED.feature_flags,
         display_config = control.entity.display_config || EXCLUDED.display_config,
-        natural_key_fields = EXCLUDED.natural_key_fields,
+        identity_config = COALESCE(control.entity.identity_config, '{}'::jsonb) || EXCLUDED.identity_config,
         updated_at = now(),
         updated_by = v_system_user
     WHERE control.entity.feature_flags ->> 'metadata_coverage_source' = 'governed_schema_coverage';

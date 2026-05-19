@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { AlertTriangle, ArrowRight, Plus } from "lucide-react";
 import {
   Badge, Button,
@@ -8,6 +8,7 @@ import {
 } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
 import { CHARTS, MAPPINGS } from "../data/demo-data";
+import type { ChartOfAccount } from "../data/types";
 
 const TYPE_STYLE = {
   direct: "bg-success/10 text-success border-success/30",
@@ -21,10 +22,27 @@ const STATUS_STYLE = {
   draft:   "bg-warning/10 text-warning border-warning/30",
 } as const;
 
-export function MappingWorkbenchView() {
+interface MappingWorkbenchViewProps {
+  charts?: ChartOfAccount[];
+  isLoadingCharts?: boolean;
+}
+
+export function MappingWorkbenchView({ charts, isLoadingCharts = false }: MappingWorkbenchViewProps) {
   const [source, setSource] = useState("COA-SOCPA");
   const [typeFilter, setTypeFilter] = useState("all");
   const [showExpired, setShowExpired] = useState(false);
+  const effectiveCharts = charts && charts.length > 0 ? charts : CHARTS;
+  const sourceCharts = useMemo(
+    () => effectiveCharts.filter((c) => c.tier !== "group"),
+    [effectiveCharts],
+  );
+
+  useEffect(() => {
+    if (sourceCharts.length === 0) return;
+    if (!sourceCharts.some((chart) => chart.code === source)) {
+      setSource(sourceCharts[0]!.code);
+    }
+  }, [source, sourceCharts]);
 
   const filtered = useMemo(() => {
     return MAPPINGS.filter((m) =>
@@ -42,12 +60,12 @@ export function MappingWorkbenchView() {
       splitGroups[m.sourceAccount] = (splitGroups[m.sourceAccount] ?? 0) + (m.allocationPct ?? 0);
     });
 
-  const sourceCharts = CHARTS.filter((c) => c.tier !== "group");
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-doc-support text-muted-foreground">Source: master.coa_account_mapping · Effective-dated, versioned</span>
+        <span className="text-doc-support text-muted-foreground">
+          {isLoadingCharts ? "Loading charts..." : "Source: master.coa_account_mapping · Effective-dated, versioned"}
+        </span>
         <Button size="sm" className="h-7 gap-1 text-xs">
           <Plus size={12} />
           New mapping

@@ -394,54 +394,11 @@ async function hasPermission(
   return result.decision === "allow";
 }
 
-const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolveNumberingCompanyId(db: Kysely<any>, tenantId: string, principalId: string): Promise<string> {
-  const preferred = await db
-    .selectFrom("master.principal_profile as pp")
-    .innerJoin("master.company_code as c", (join) =>
-      join
-        .onRef("c.tenant_id", "=", "pp.tenant_id")
-        .onRef("c.id", "=", "pp.default_company_code_id"))
-    .select("c.id")
-    .where("pp.tenant_id", "=", tenantId)
-    .where("pp.principal_id", "=", principalId)
-    .where("c.is_active", "=", true)
-    .executeTakeFirst();
-
-  if (preferred?.id) return String(preferred.id);
-
-  const firstActive = await db
-    .selectFrom("master.company_code as c")
-    .select("c.id")
-    .where("c.tenant_id", "=", tenantId)
-    .where("c.is_active", "=", true)
-    .orderBy("c.code", "asc")
-    .executeTakeFirst();
-
-  return firstActive?.id ? String(firstActive.id) : ZERO_UUID;
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function generateSupplierCode(db: Kysely<any>, tenantId: string, principalId: string): Promise<string> {
-  const companyId = await resolveNumberingCompanyId(db, tenantId, principalId);
-
-  try {
-    const result = await sql<{ code: string }>`
-      SELECT master.fn_next_document_number(
-        ${tenantId}::uuid,
-        ${companyId}::uuid,
-        'supplier'
-      ) AS code
-    `.execute(db);
-
-    const code = result.rows[0]?.code;
-    if (code) return code;
-  } catch {
-    // Numbering series may not be seeded in early developer environments.
-  }
-
+  void db;
+  void tenantId;
+  void principalId;
   return `SUP-${Date.now().toString(36).toUpperCase()}`;
 }
 

@@ -56,7 +56,8 @@ export function resolveFieldRenderer(field: EntityField): ComponentType<FieldRen
   // config. Treat those as references so view/edit modes resolve labels.
   if (
     field.reference_config?.target_entity ||
-    (typeof field.validation_rules?.["ref_entity"] === "string" && field.validation_rules["ref_entity"])
+    (typeof field.validation_rules?.["ref_entity"] === "string" && field.validation_rules["ref_entity"]) ||
+    (typeof field.validation_rules?.["ref_hint"] === "string" && field.validation_rules["ref_hint"])
   ) {
     const byReference = registry.get("reference");
     if (byReference) return byReference;

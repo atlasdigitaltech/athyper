@@ -1,4 +1,5 @@
 import { GenericMetaEditPage } from "@athyper/entity-runtime/edit";
+import { canonicalEntityCode } from "../../../_lib/entity-aliases";
 
 /**
  * /app/[entity]/[id]/edit — generic Tier 1 edit surface.
@@ -15,5 +16,5 @@ export default async function AppEntityEditPage({
   params: Promise<{ entity: string; id: string }>;
 }) {
   const { entity, id } = await params;
-  return <GenericMetaEditPage entityCode={entity} recordId={id} />;
+  return <GenericMetaEditPage entityCode={canonicalEntityCode(entity)} recordId={id} />;
 }

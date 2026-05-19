@@ -20,6 +20,7 @@
 DO $seed_intent_profile_rules$
 DECLARE
     v_tenant     record;
+    v_tid        uuid;
     v_sys        uuid := '00000000-0000-0000-0000-000000000000';
 
     v_bi_opex    uuid;
@@ -31,16 +32,25 @@ DECLARE
     v_apc_adv    uuid;  -- AP_ADVANCE_SUPPLIER config id
     v_apc_ret    uuid;  -- AP_RETENTION_RELEASE config id
 BEGIN
+    v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    IF v_tid IS NULL THEN
+        RAISE EXCEPTION '[seed] app.seed_tenant_id not set - run: SET app.seed_tenant_id = ''<uuid>''';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM master.tenant WHERE id = v_tid AND status = 'active') THEN
+        RAISE EXCEPTION '[seed] active tenant % not found', v_tid;
+    END IF;
+
     FOR v_tenant IN
-        SELECT id AS tenant_id FROM master.tenant WHERE status = 'active'
+        SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
         -- Resolve intent ids
         SELECT id INTO v_bi_opex  FROM master.business_intent
-         WHERE tenant_id = v_tenant.tenant_id AND code = 'OPEX_GENERAL';
+         WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
         SELECT id INTO v_bi_capex FROM master.business_intent
-         WHERE tenant_id = v_tenant.tenant_id AND code = 'CAPEX_GENERAL';
+         WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-CAPEX';
         SELECT id INTO v_bi_admin FROM master.business_intent
-         WHERE tenant_id = v_tenant.tenant_id AND code = 'ADMIN_GENERAL';
+         WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-ADMIN';
 
         -- Resolve config ids (active version)
         SELECT apc.id INTO v_apc_std
@@ -210,5 +220,5 @@ BEGIN
 
     END LOOP;
 
-    RAISE NOTICE 'blueprint/070_intent_profile_rules: 6 rules seeded per active tenant';
+    RAISE NOTICE 'blueprint/070_intent_profile_rules: 6 rules seeded for tenant %', v_tid;
 END $seed_intent_profile_rules$;

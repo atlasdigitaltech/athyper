@@ -16,7 +16,8 @@
 
 import { useEffect, useRef } from "react";
 import { useShellSession } from "@/components/providers/SessionProvider";
-import { normalizeLanguageCode } from "@/lib/preferences/ui-profile";
+import { normalizeLanguageCode, normalizeTimezoneCode } from "@/lib/preferences/ui-profile";
+import { normalizeUserDateFormat } from "@athyper/runtime-shared/preferences";
 import {
   usePreferencesStore,
   type AppearanceMode,
@@ -52,6 +53,11 @@ export function PreferencesHydrator() {
         if (nextLocale) {
           store.setLanguageCode(nextLocale);
         }
+        const nextTimezone = normalizeTimezoneCode(d["timezone_code"]);
+        if (nextTimezone) {
+          store.setTimezoneCode(nextTimezone);
+        }
+        store.setDateFormat(normalizeUserDateFormat(d["date_format"]));
       })
       .catch(() => { /* aborted, offline, or 401 — defaults stay */ });
 

@@ -28,8 +28,11 @@ import {
   searchParamsForLookupFilters,
   type EntityPickerSearchContext,
   type EntityPickerSearchResponse,
+  type EntityPickerOption,
   type EntityPickerOptionConfig,
 } from "@athyper/runtime-shared/entity-search";
+import { appEntityDetailHref } from "@athyper/runtime-shared/core";
+import { formatUserDateValue, useRuntimeUserPreferences } from "@athyper/runtime-shared/preferences";
 import { MoneySummary, QuantityUnit } from "@athyper/domain-widgets";
 import { useLookupDomain } from "@athyper/query";
 import { cn } from "@athyper/theme/utils";
@@ -44,7 +47,8 @@ function humanizeToken(value: string): string {
 }
 
 function viewTextClass(density?: FieldRendererProps["density"]): string {
-  return density === "compact" || density === "table" || density === "sheet" ? "text-xs" : "text-sm";
+  if (density === "table") return "text-[13px] leading-5";
+  return density === "compact" || density === "sheet" ? "text-xs" : "text-sm";
 }
 
 function viewEmptyClass(density?: FieldRendererProps["density"]): string {
@@ -186,18 +190,23 @@ function BooleanChipRenderer({ value, field, mode, density, onChange }: FieldRen
 // ── Date / DateTime ─────────────────────────────────────────────
 
 function DateRenderer({ value, field, mode, density, onChange, error }: FieldRendererProps) {
+  const datePrefs = useRuntimeUserPreferences();
+  const includeTime = field.data_type !== "date";
+  const formatDisplay = (nextValue: unknown) =>
+    formatUserDateValue(nextValue, {
+      ...datePrefs,
+      includeTime,
+    });
+
   if (mode === "view") {
     if (!value) return <span className={viewEmptyClass(density)}>—</span>;
-    const date = new Date(String(value));
-    const formatted = field.data_type === "date"
-      ? date.toLocaleDateString()
-      : date.toLocaleString();
-    return <span className={viewTextClass(density)}>{formatted}</span>;
+    return <span className={viewTextClass(density)}>{formatDisplay(value)}</span>;
   }
   return (
     <DatePicker
       value={value != null ? String(value) : null}
-      mode={field.data_type === "date" ? "date" : "datetime"}
+      mode={includeTime ? "datetime" : "date"}
+      formatDisplay={(nextValue) => formatDisplay(nextValue)}
       onChange={(v) => onChange?.(v)}
       error={error}
     />
@@ -228,6 +237,7 @@ function MoneyRenderer({ value, mode, density, onChange, error }: FieldRendererP
 function EnumRenderer({ value, field, mode, density, onChange, error }: FieldRendererProps) {
   const domainCode = field.enum_domain_code ?? "";
   const valueCase = readLookupValueCase(field.lookup_config);
+  const valueMap = readLookupValueMap(field.lookup_config);
   const { data } = useLookupDomain(domainCode, { enabled: mode === "view" && !!domainCode });
 
   if (mode === "view") {
@@ -244,6 +254,7 @@ function EnumRenderer({ value, field, mode, density, onChange, error }: FieldRen
       domainCode={domainCode}
       value={String(value ?? "")}
       valueCase={valueCase}
+      valueMap={valueMap}
       onChange={(v) => onChange?.(v)}
       error={error}
     />
@@ -267,15 +278,34 @@ function applyLookupValueCase(value: string, valueCase: LookupValueCase): string
   return value;
 }
 
+function readLookupValueMap(lookupConfig: Record<string, unknown> | null | undefined): Record<string, string> {
+  const raw = lookupConfig?.["value_map"];
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>)
+      .filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  );
+}
+
+function lookupCodeForStoredValue(value: string, valueMap: Record<string, string>): string {
+  const direct = Object.entries(valueMap).find(([, stored]) => stored === value)?.[0];
+  return direct ?? value.toLowerCase();
+}
+
+function storedValueForLookupCode(code: string, valueCase: LookupValueCase, valueMap: Record<string, string>): string {
+  return valueMap[code] ?? applyLookupValueCase(code, valueCase);
+}
+
 interface LookupSelectProps {
   domainCode: string;
   value: string;
   valueCase?: LookupValueCase;
+  valueMap?: Record<string, string>;
   onChange: (value: string) => void;
   error?: string;
 }
 
-function LookupSelect({ domainCode, value, valueCase = "preserve", onChange, error }: LookupSelectProps) {
+function LookupSelect({ domainCode, value, valueCase = "preserve", valueMap = {}, onChange, error }: LookupSelectProps) {
   const { data, isLoading } = useLookupDomain(domainCode);
   const activeValues = (data?.values ?? [])
     .filter((v) => v.status === "active")
@@ -283,13 +313,13 @@ function LookupSelect({ domainCode, value, valueCase = "preserve", onChange, err
 
   // Normalize to lowercase so stored uppercase values (e.g. entity_class='MASTER')
   // match the lowercase lookup codes required by the DB constraint.
-  const normalizedValue = value ? value.toLowerCase() : value;
+  const normalizedValue = value ? lookupCodeForStoredValue(value, valueMap) : value;
 
   return (
     <div className="space-y-1">
       <Select
         value={normalizedValue}
-        onValueChange={(next) => onChange(applyLookupValueCase(next, valueCase))}
+        onValueChange={(next) => onChange(storedValueForLookupCode(next, valueCase, valueMap))}
         disabled={isLoading || !domainCode}
       >
         <SelectTrigger className={error ? "border-destructive" : undefined}>
@@ -324,6 +354,7 @@ function getReferenceEntityCode(field: FieldRendererProps["field"]): string | nu
   if (field.reference_config?.target_entity) return field.reference_config.target_entity;
   const v = field.validation_rules as Record<string, unknown> | null;
   if (v?.ref_entity) return String(v.ref_entity);
+  if (v?.ref_hint) return String(v.ref_hint);
   return null;
 }
 
@@ -390,7 +421,7 @@ function ReferencePickerField({
         entityCode
           ? (option) => {
               const recordId = option.recordId ?? option.value;
-              return `/app/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}`;
+              return appEntityDetailHref(entityCode, recordId);
             }
           : undefined
       }
@@ -404,6 +435,21 @@ function ReferencePickerField({
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function labelAlreadyContainsCode(label: string, code: string): boolean {
+  return (
+    label === code ||
+    label.startsWith(`${code} - `) ||
+    label.endsWith(` - ${code}`)
+  );
+}
+
+function referenceOptionDisplayLabel(option: EntityPickerOption, entityCode: string | null): string | null {
+  if (!option.label) return null;
+  if (!option.code || labelAlreadyContainsCode(option.label, option.code)) return option.label;
+  if (entityCode === "company_code") return `${option.label} - ${option.code}`;
+  return `${option.code} - ${option.label}`;
+}
 
 function ReferenceRenderer({ value, field, mode, density, formData, onChange, error, disabled }: FieldRendererProps) {
   const entityCode    = getReferenceEntityCode(field);
@@ -427,7 +473,8 @@ function ReferenceRenderer({ value, field, mode, density, formData, onChange, er
   const displayLabel = (() => {
     const refData = refRecord?.data;
     if (!refData) return null;
-    return entityRowToPickerOption(refData, entityCode, optionConfig).label || null;
+    const option = entityRowToPickerOption(refData, entityCode, optionConfig);
+    return referenceOptionDisplayLabel(option, entityCode);
   })();
   const pickerDisplayLabel = displayLabel ?? (uuid && refRecordLoading ? "Loading..." : null);
 
@@ -572,6 +619,66 @@ function ReferenceRenderer({ value, field, mode, density, formData, onChange, er
 }
 
 // ── Country Picker ──────────────────────────────────────────────
+
+function sameReferenceText(left: unknown, right: string): boolean {
+  return typeof left === "string" && left.trim().toLowerCase() === right.trim().toLowerCase();
+}
+
+function optionCodeValue(option: EntityPickerOption, optionConfig?: EntityPickerOptionConfig): string {
+  const configuredCode = optionConfig?.codeField ? option.raw?.[optionConfig.codeField] : undefined;
+  const rawCode = configuredCode ?? option.raw?.["code"] ?? option.raw?.["value"] ?? option.code;
+  return typeof rawCode === "string" && rawCode.trim() ? rawCode.trim() : option.value;
+}
+
+function CodeReferenceRenderer({ value, field, mode, density, onChange, error, disabled }: FieldRendererProps) {
+  const entityCode = getReferenceEntityCode(field);
+  const optionConfig = resolveEntityPickerOptionConfig(field.reference_config);
+  const code = typeof value === "string" ? value.trim() : "";
+
+  const { data: options = [], isLoading } = useQuery<EntityPickerOption[]>({
+    queryKey: ["code-ref", entityCode ?? "", code, field.reference_config],
+    queryFn: async ({ signal }) => {
+      if (!entityCode || !code) return [];
+      const params = new URLSearchParams({ q: code, limit: "10", page_size: "10" });
+      const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}?${params.toString()}`, { signal });
+      if (!res.ok) return [];
+      const body = await res.json() as { data?: Record<string, unknown>[] };
+      return (body.data ?? []).map((row) => entityRowToPickerOption(row, entityCode, optionConfig));
+    },
+    enabled: !!entityCode && !!code,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const selected = options.find((option) =>
+    sameReferenceText(option.code, code)
+    || sameReferenceText(option.raw?.[optionConfig?.codeField ?? "code"], code)
+    || sameReferenceText(option.value, code),
+  );
+  const displayLabel = selected
+    ? selected.code && selected.label && selected.code !== selected.label
+      ? `${selected.code} - ${selected.label}`
+      : selected.label || selected.code || code
+    : code;
+
+  if (mode === "view") {
+    if (!code) return <span className={viewEmptyClass(density)}>-</span>;
+    return <span className={viewTextClass(density)}>{isLoading && !selected ? code : displayLabel}</span>;
+  }
+
+  return (
+    <EntityPicker
+      entityCode={entityCode}
+      value={code || null}
+      displayLabel={displayLabel}
+      optionConfig={optionConfig}
+      onOptionSelect={(option) => onChange?.(option ? optionCodeValue(option, optionConfig) : "")}
+      disabled={disabled || !entityCode}
+      error={error}
+      loadOnOpen
+      placeholder={`Select ${field.label ?? field.name}`}
+    />
+  );
+}
 
 interface CountryRow { code: string; name: string }
 interface CurrencyRow {
@@ -801,6 +908,9 @@ export function registerDefaults(): void {
   // Country picker (ui_type="country" — backed by shared.country lookup domain)
   registerFieldRenderer("country", CountryRenderer);
   registerFieldRenderer("currency", CurrencyRenderer);
+  registerFieldRenderer("language", CodeReferenceRenderer);
+  registerFieldRenderer("timezone", CodeReferenceRenderer);
+  registerFieldRenderer("uom", CodeReferenceRenderer);
 
   // UUID
   registerFieldRenderer("uuid", UuidRenderer);

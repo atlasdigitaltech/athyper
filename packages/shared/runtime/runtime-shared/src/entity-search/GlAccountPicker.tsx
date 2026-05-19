@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { appEntityDetailHref } from "../core/entity-route";
 import { EntityPicker, resolveEntityPickerOptionConfig } from "./EntityPicker";
 import { entityRowToPickerOption } from "./useEntitySearch";
 import { readLookupFilters, searchLookupOptions } from "./lookupConfig";
@@ -220,7 +221,7 @@ export function GlAccountPicker({
       optionConfig={optionConfig}
       getOptionHref={(opt) => {
         const id = opt.recordId ?? opt.value;
-        return `/app/${encodeURIComponent(targetEntity)}/${encodeURIComponent(id)}`;
+        return appEntityDetailHref(targetEntity, id);
       }}
       optionActionLabel={optionConfig?.optionActionLabel ?? "Open GL account"}
       loadOnOpen

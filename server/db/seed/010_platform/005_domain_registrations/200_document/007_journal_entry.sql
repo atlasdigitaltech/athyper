@@ -7,13 +7,58 @@
 -- Idempotent: WHERE NOT EXISTS / ON CONFLICT DO NOTHING
 
 -- ── 1. control.entity ────────────────────────────────────────────────────────
+-- Compatibility repair:
+-- Earlier broad document-schema registration could create this physical table as
+-- document_journal_entry. Runtime URLs and downstream bindings use the canonical
+-- journal_entry code, so normalize the existing physical row before the insert
+-- guard below decides the entity already exists.
+UPDATE control.entity e
+SET    name        = 'journal_entry',
+       entity_code = 'journal_entry',
+       updated_at  = now(),
+       updated_by  = '00000000-0000-0000-0000-000000000000'
+WHERE  e.table_schema = 'document'
+  AND  e.table_name   = 'journal_entry'
+  AND  e.tenant_id IS NULL
+  AND  (
+        e.name = 'document_journal_entry'
+        OR e.entity_code = 'document_journal_entry'
+      )
+  AND  NOT EXISTS (
+        SELECT 1
+        FROM control.entity existing
+        WHERE existing.tenant_id IS NULL
+          AND existing.entity_code = 'journal_entry'
+          AND existing.id <> e.id
+      );
+
+UPDATE control.entity e
+SET    name        = e.table_name,
+       entity_code = e.table_name,
+       updated_at  = now(),
+       updated_by  = '00000000-0000-0000-0000-000000000000'
+WHERE  e.table_schema = 'document'
+  AND  e.table_name IN ('journal_line', 'journal_line_reference')
+  AND  e.tenant_id IS NULL
+  AND  (
+        e.name IN ('document_journal_line', 'document_journal_line_reference')
+        OR e.entity_code IN ('document_journal_line', 'document_journal_line_reference')
+      )
+  AND  NOT EXISTS (
+        SELECT 1
+        FROM control.entity existing
+        WHERE existing.tenant_id IS NULL
+          AND existing.entity_code = e.table_name
+          AND existing.id <> e.id
+      );
+
 INSERT INTO control.entity (
     module_id, name, entity_short, entity_code,
     entity_class, ownership_model, kind, backing_type,
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, naming_policy, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -22,9 +67,7 @@ SELECT
     'full', 'tenant_critical', 'controlled',
     'document', 'journal_entry',
     'Journal Entry', 'Journal Entries', 'book-open', 'slate',
-    true,
-    '{"prefix":"JE","prefix_configurable":true,"separator":"-","segments":[{"type":"year","format":"YYYY"},{"type":"sequence","padding":6}],"auto_name_rule":{"strategy":"description_or_fallback","fallback_template":"{prefix} – {date}","date_format":"DD Mon YYYY"}}'::jsonb,
-    '{"is_approvable":true,"document_category":"general_ledger","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
+    '{"is_approvable":true,"has_workflow":true,"document_category":"general_ledger","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb,
     'ACTIVE', '00000000-0000-0000-0000-000000000000'
 WHERE NOT EXISTS (
     SELECT 1 FROM control.entity
@@ -34,9 +77,11 @@ WHERE NOT EXISTS (
 
 -- ── 2. control.entity_version ────────────────────────────────────────────────
 INSERT INTO control.entity_version (
-    entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(),
-       '00000000-0000-0000-0000-000000000000'
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(),
+    '00000000-0000-0000-0000-000000000000'
 FROM   control.entity e
 WHERE  e.table_schema = 'document' AND e.table_name = 'journal_entry'
   AND  e.tenant_id IS NULL
@@ -103,6 +148,7 @@ SET display_config = jsonb_build_object(
     'list_columns',       '["document_no","status","entry_date","fiscal_period","currency_code","total_debit","total_credit"]'::jsonb,
     'default_sort_field', 'entry_date',
     'default_sort_order', 'desc',
+    'status_field_names', '["status"]'::jsonb,
     'document_header', jsonb_build_object(
         'number_field',   'document_no',
         'status_field',   'status',
@@ -126,11 +172,10 @@ WHERE table_schema = 'document' AND table_name = 'journal_entry'
 
 -- ── 5. Natural key ────────────────────────────────────────────────────────────
 UPDATE control.entity
-SET natural_key_fields = ARRAY['document_no']
+SET identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['document_no']::text[]), true)
 WHERE table_schema = 'document' AND table_name = 'journal_entry'
   AND tenant_id IS NULL
-  AND (natural_key_fields IS NULL OR natural_key_fields = '{}');
-
+  AND COALESCE(jsonb_array_length(CASE WHEN jsonb_typeof(identity_config->'natural_key_fields') = 'array' THEN identity_config->'natural_key_fields' ELSE '[]'::jsonb END), 0) = 0;
 -- ── 6. Backfill: rename deprecated feature_flag key to canonical name ─────────
 UPDATE control.entity
 SET feature_flags = (feature_flags - 'has_line_items') || '{"has_lines":true}'::jsonb
@@ -174,8 +219,10 @@ DECLARE
 BEGIN
 
 UPDATE control.entity
-   SET feature_flags = jsonb_build_object(
+   SET entity_class = 'DOCUMENT',
+       feature_flags = jsonb_build_object(
        'is_approvable', true,
+       'has_workflow', true,
        'document_category', 'general_ledger',
        'allow_on_behalf_of', false,
        'has_lines', true,
@@ -195,6 +242,7 @@ UPDATE control.entity
        'list_columns', '["document_no","status","posting_date","period_number","transaction_currency","total_debit","total_credit"]'::jsonb,
        'default_sort_field', 'posting_date',
        'default_sort_order', 'desc',
+       'status_field_names', '["status"]'::jsonb,
        'action_groups', jsonb_build_object(
            'draft',            jsonb_build_object('primary','["edit","submit"]'::jsonb),
            'created',          jsonb_build_object('primary','["edit","submit"]'::jsonb),
@@ -238,24 +286,11 @@ UPDATE control.entity
            'submit_requires_balance', true
        )
    ),
-   natural_key_fields = ARRAY['document_no']
+   identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['document_no']::text[]), true)
  WHERE table_schema = 'document'
    AND table_name = 'journal_entry'
    AND tenant_id IS NULL;
 
--- Patch naming_policy to add auto_name_rule (idempotent — merges into existing JSON)
-UPDATE control.entity
-   SET naming_policy = naming_policy || jsonb_build_object(
-       'auto_name_rule', jsonb_build_object(
-           'strategy',          'description_or_fallback',
-           'fallback_template', '{prefix} – {date}',
-           'date_format',       'DD Mon YYYY'
-       )
-   )
- WHERE table_schema = 'document'
-   AND table_name = 'journal_entry'
-   AND tenant_id IS NULL
-   AND NOT (naming_policy ? 'auto_name_rule');
 
 INSERT INTO control.entity (
     module_id, name, entity_short, entity_code,
@@ -263,7 +298,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -272,7 +307,6 @@ SELECT
     'full', 'tenant_critical', 'controlled',
     'document', 'journal_line',
     'Journal Line', 'Journal Lines', 'list', 'slate',
-    false,
     '{"parent_entity":"journal_entry","parent_fk":"journal_entry_id","line_editor":true,"posting_controlled":true,"dimension_controlled":true}'::jsonb,
     'ACTIVE', v_su
 WHERE NOT EXISTS (
@@ -281,8 +315,11 @@ WHERE NOT EXISTS (
        AND tenant_id IS NULL
 );
 
-INSERT INTO control.entity_version (entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(), v_su
+INSERT INTO control.entity_version (
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(), v_su
 FROM control.entity e
 WHERE e.table_schema = 'document' AND e.table_name = 'journal_line'
   AND e.tenant_id IS NULL
@@ -488,7 +525,7 @@ WITH defs AS (
     SELECT * FROM (VALUES
       ('journal_entry_id','journal_entry_id','Journal Entry','Parent journal entry.','reference','hidden','one',NULL::text,'{"target_entity":"journal_entry","target_field":"id","display_field":"je_number"}'::jsonb,true,false,false,true,false,false,true,false,false,'{"ref_entity":"journal_entry"}'::jsonb,NULL::jsonb,'{"group_key":"identity"}'::jsonb,NULL::jsonb,'{"editable_in":[]}'::jsonb,NULL::jsonb,5),
       ('line_no','line_no','Line No.','Sequential line number within the JE.','integer','number','one',NULL::text,NULL::jsonb,true,false,false,true,false,false,false,false,false,'{"min":1}'::jsonb,NULL::jsonb,'{"group_key":"identity","width":"xs"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,10),
-      ('gl_account_id','gl_account_id','GL Account','Account to debit or credit.','reference','entity_chooser','one',NULL::text,'{"target_entity":"gl_account","target_field":"id","display_field":"name","picker":{"label_field":"name","code_field":"code","show_code":true}}'::jsonb,true,true,true,true,true,false,false,false,false,'{"ref_entity":"gl_account"}'::jsonb,NULL::jsonb,'{"group_key":"account","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","posting_allowed":true},"dependent_filter":{"source_field":"chart_of_account_id","target_field":"chart_of_account_id","empty_behavior":"all"}}'::jsonb,20),
+      ('gl_account_id','gl_account_id','GL Account','Account to debit or credit.','reference','entity_chooser','one',NULL::text,'{"target_entity":"gl_account","target_field":"id","display_field":"name","picker":{"label_field":"name","code_field":"code","show_code":true}}'::jsonb,true,true,true,true,true,false,false,false,false,'{"ref_entity":"gl_account"}'::jsonb,NULL::jsonb,'{"group_key":"account","chooser":"inline_search"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,'{"search_fields":["code","name"],"filters":{"status":"active","posting_allowed":true},"dependent_filter":{"source_field":"company_code_id","target_field":"chart_of_account_id","through_entity":"company_code_chart_assignment","through_source_field":"company_code_id","through_target_field":"chart_of_account_id","through_filters":{"status":"active","assignment_type":"operating","is_primary":true},"empty_behavior":"empty"}}'::jsonb,20),
       ('transaction_currency','transaction_currency','Currency','Line transaction currency.','text','currency','one',NULL::text,NULL::jsonb,true,true,false,true,true,false,false,false,false,'{"max_length":3}'::jsonb,NULL::jsonb,'{"group_key":"amounts","chooser":"currency"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"],"default":"header.transaction_currency"}'::jsonb,NULL::jsonb,30),
       ('transaction_debit','transaction_debit','Debit','Debit amount in transaction currency.','decimal','money','one',NULL::text,NULL::jsonb,false,false,false,true,false,true,false,false,false,'{"min":0,"exclusive_with":"transaction_credit"}'::jsonb,'0'::jsonb,'{"group_key":"amounts","summary_role":"addition"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,40),
       ('transaction_credit','transaction_credit','Credit','Credit amount in transaction currency.','decimal','money','one',NULL::text,NULL::jsonb,false,false,false,true,false,true,false,false,false,'{"min":0,"exclusive_with":"transaction_debit"}'::jsonb,'0'::jsonb,'{"group_key":"amounts","summary_role":"deduction"}'::jsonb,NULL::jsonb,'{"editable_in":["draft","created"]}'::jsonb,NULL::jsonb,50),
@@ -549,7 +586,7 @@ UPDATE control.entity
            'description_payload_field',      'item_text'
        )
    ),
-   natural_key_fields = ARRAY['line_no']
+   identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['line_no']::text[]), true)
  WHERE table_schema = 'document'
    AND table_name = 'journal_line'
    AND tenant_id IS NULL;
@@ -560,7 +597,7 @@ INSERT INTO control.entity (
     governance_level, security_tier, mutability,
     table_schema, table_name,
     label_singular, label_plural, icon_key, color_token,
-    numbering_active, feature_flags,
+    feature_flags,
     status, created_by)
 SELECT
     (SELECT id FROM shared.module WHERE code = 'ACC'),
@@ -569,7 +606,6 @@ SELECT
     'full', 'tenant_critical', 'controlled',
     'document', 'journal_line_reference',
     'Journal Line Reference', 'Journal Line References', 'link', 'slate',
-    false,
     '{"parent_entity":"journal_line","parent_fk":"journal_line_id","append_only_after_submission":true,"reference_picker":true}'::jsonb,
     'ACTIVE', v_su
 WHERE NOT EXISTS (
@@ -578,8 +614,11 @@ WHERE NOT EXISTS (
        AND tenant_id IS NULL
 );
 
-INSERT INTO control.entity_version (entity_id, tenant_id, version_no, status, effective_from, created_by)
-SELECT e.id, NULL, 1, 'EFFECTIVE', now(), v_su
+INSERT INTO control.entity_version (
+    entity_id, tenant_id, version_no, status,
+    label, change_type, effective_from, created_by)
+SELECT e.id, NULL, 1, 'EFFECTIVE',
+    'Initial Version', 'structural', now(), v_su
 FROM control.entity e
 WHERE e.table_schema = 'document' AND e.table_name = 'journal_line_reference'
   AND e.tenant_id IS NULL
@@ -717,7 +756,7 @@ UPDATE control.entity
        'default_sort_field', 'created_at',
        'default_sort_order', 'asc'
    ),
-   natural_key_fields = ARRAY['journal_line_id','ref_doc_type','ref_doc_id']
+   identity_config = jsonb_set(COALESCE(identity_config, '{}'::jsonb), '{natural_key_fields}', to_jsonb(ARRAY['journal_line_id','ref_doc_type','ref_doc_id']::text[]), true)
  WHERE table_schema = 'document'
    AND table_name = 'journal_line_reference'
    AND tenant_id IS NULL;
@@ -760,7 +799,7 @@ BEGIN
                     'enabled', true,
                     'target_status', 'created',
                     'child_relations', jsonb_build_array('lines'),
-                    'numbering_source', 'entity_naming_policy',
+                    'numbering_source', 'entity_numbering_config',
                     'sequence_padding', 5
                 )
               ),

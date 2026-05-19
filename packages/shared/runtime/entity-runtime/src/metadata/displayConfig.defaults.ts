@@ -26,7 +26,6 @@ export interface ResolvedDisplayConfig {
   };
   default_sort_field: string;
   default_sort_order: "asc" | "desc";
-  search_fields?:     string[];
 
   // ── Lines (document entities only) ───────────────────────────────────────
   /** null = no lines section; string = registered renderer key */

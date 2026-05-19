@@ -14,11 +14,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'dimension_type', 'DMTP', 'dimension_type', 'DIMENSION', 'system', 'ent', 'table',
         'full', 'operational', 'extensible', 'master', 'dimension_type',
         'Dimension Type', 'Dimension Types', 'layout-grid', 'teal',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 76. dimension_value ──────────────────────────────────────────────────
@@ -26,11 +26,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'dimension_value', 'DMVAL', 'dimension_value', 'DIMENSION', 'system', 'ent', 'table',
         'full', 'operational', 'extensible', 'master', 'dimension_value',
         'Dimension Value', 'Dimension Values', 'tag', 'teal',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 77. dimension_set_item ───────────────────────────────────────────────
@@ -38,11 +38,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'dimension_set_item', 'DMSIT', 'dimension_set_item', 'RELATION', 'system', 'ent', 'table',
         'standard', 'operational', 'controlled', 'master', 'dimension_set_item',
         'Dimension Set Item', 'Dimension Set Items', 'list-plus', 'teal',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 78. business_intent ──────────────────────────────────────────────────
@@ -50,11 +50,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'business_intent', 'BINT', 'business_intent', 'CONTROL', 'system', 'ent', 'table',
         'full', 'tenant_critical', 'controlled', 'master', 'business_intent',
         'Business Intent', 'Business Intents', 'lightbulb', 'teal',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 79. company_code_intent_policy ───────────────────────────────────────
@@ -62,11 +62,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'company_code_intent_policy', 'CCIP', 'company_code_intent_policy', 'CONTROL', 'system', 'ent', 'table',
         'full', 'tenant_critical', 'controlled', 'master', 'company_code_intent_policy',
         'Company Intent Policy', 'Company Intent Policies', 'shield-check', 'teal',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
     -- ── 80. company_code_dimension_default ───────────────────────────────────
@@ -74,11 +74,11 @@ BEGIN
         module_id, name, entity_short, entity_code, entity_class, ownership_model, kind, backing_type,
         governance_level, security_tier, mutability, table_schema, table_name,
         label_singular, label_plural, icon_key, color_token,
-        numbering_active, feature_flags, status, created_by)
+        feature_flags, status, created_by)
     VALUES (v_acc, 'company_code_dimension_default', 'CCDD', 'company_code_dimension_default', 'CONTROL', 'system', 'ent', 'table',
         'full', 'operational', 'controlled', 'master', 'company_code_dimension_default',
         'Dimension Default', 'Dimension Defaults', 'settings', 'teal',
-        false, '{}'::jsonb, 'ACTIVE', v_su)
+        '{}'::jsonb, 'ACTIVE', v_su)
     ON CONFLICT (table_schema, table_name) DO NOTHING;
 
 END $$;

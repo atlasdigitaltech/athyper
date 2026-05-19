@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { appEntityDetailHref, entityCodeFromRouteSegment } from "@athyper/runtime-shared/core";
 
 export type FavoritesPanelTab = "bookmarks" | "recent";
 type RecentScope = "records" | "other";
@@ -81,7 +82,7 @@ function safeDecode(value: string): string {
 
 function defaultBookmarkHref(item: FavoriteBookmarkItem): string {
   const navId = item.recordCode?.trim() || item.recordId;
-  return `/app/${encodeURIComponent(item.entityCode)}/${encodeURIComponent(navId)}`;
+  return appEntityDetailHref(item.entityCode, navId);
 }
 
 function matchesBookmark(item: FavoriteBookmarkItem, entityLabel: string, filter: string): boolean {
@@ -146,7 +147,7 @@ function recentRecordMeta(item: FavoriteRecentItem): RecentRecordMeta | null {
   const match = item.href.match(/^\/app\/([^/]+)\/([^/]+)$/);
   if (!match) return null;
 
-  const entityCode = safeDecode(match[1]!);
+  const entityCode = entityCodeFromRouteSegment(safeDecode(match[1]!));
   const recordCode = safeDecode(match[2]!);
   if (!entityCode || !recordCode || recordCode === "new") return null;
 

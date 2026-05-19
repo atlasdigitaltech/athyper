@@ -3,8 +3,8 @@
 -- Concept: Platform Governance — lookups, MFA, notifications, lifecycle, workflow, accounting rules
 -- Depends on: 01_schemas, 03_bootstrap_functions/001_shared.sql
 -- Scope: Control schema — lookup domains, MFA, notifications, lifecycle engine,
---        workflow definitions, accounting profiles, dimension policies, document
---        sequences, tax configuration, planning engine, bank format rules,
+--        workflow definitions, accounting profiles, dimension policies, entity
+--        numbering, tax configuration, planning engine, bank format rules,
 --        and automation cron schedules.
 --
 -- Groups (formerly 002a / 002b / 002c):
@@ -19,7 +19,6 @@
 --                  acct_profile_dimension_rule, commodity_classification_to_intent_rule,
 --                  intent_to_accounting_profile_rule, intent_profile_override,
 --                  dimension_policy, dimension_policy_allowed_value,
---                  document_sequence_config, document_sequence_counter,
 --                  commodity_classification_config, commodity_code_to_category_rule,
 --                  rounding_rule, tax_rate_schedule, tax_group, tax_group_component
 --   ── Planning:   forecast_line, planning_driver, planning_driver_formula,
@@ -1626,7 +1625,7 @@ CREATE TABLE IF NOT EXISTS control.entity_class_profile (
 
     -- —— Absorbed from entity_field_flag_standard ————————————————————————
     -- Pattern-matching rules for auto-setting field flags on INSERT.
-    -- Evaluated by trg_fn_field_flag_defaults BEFORE INSERT on entity_field.
+    -- Evaluated by trg_field_flag_defaults BEFORE INSERT on entity_field.
     -- Structure: [{match_mode, pattern, priority, is_searchable, is_filterable,
     --              is_sortable, is_groupable, is_aggregatable, cardinality}]
     -- match_mode values: name (exact or LIKE), data_type, origin, format
@@ -1678,7 +1677,7 @@ COMMENT ON TABLE  control.entity_class_profile IS
     'No tenant_id — these are platform constants.';
 COMMENT ON COLUMN control.entity_class_profile.field_flag_rules IS
     'Pattern rules for auto-setting field behaviour flags on INSERT into entity_field. '
-    'Evaluated by trg_fn_field_flag_defaults. '
+    'Evaluated by trg_field_flag_defaults. '
     'Each rule: {match_mode: name|data_type|origin|format, '
     'pattern: text (exact or LIKE with % wildcard), '
     'priority: smallint (lower fires first), '
@@ -1757,10 +1756,8 @@ CREATE TABLE IF NOT EXISTS control.entity (
 
     -- Policy config
     data_policy                 jsonb       NOT NULL DEFAULT '{}',
-    naming_policy               jsonb       NOT NULL DEFAULT '{}',
     identity_config             jsonb       NOT NULL DEFAULT '{}',
     search_config               jsonb       NOT NULL DEFAULT '{}',
-    numbering_active            boolean     NOT NULL DEFAULT true,
 
     -- —— Absorbed from index_def ———————————————————————————————————
     -- Custom composite index declarations. Single-field indexes are auto-derived
@@ -1772,9 +1769,6 @@ CREATE TABLE IF NOT EXISTS control.entity (
     -- Discriminator (for shared backing tables)
     discriminator_column        text,
     discriminator_value         text,
-
-    -- Natural key
-    natural_key_fields          text[]      DEFAULT '{}',
 
     -- Partition
     is_partition_child          boolean     NOT NULL DEFAULT false,
@@ -1789,9 +1783,6 @@ CREATE TABLE IF NOT EXISTS control.entity (
     -- Populated only for ownership_model='tenant' after provision_tenant_extensions() runs.
     provisioned_at              timestamptz,
     provisioned_by              uuid,
-
-    -- Publish pointer (fast join to entity_publish_state)
-    publish_state_id            uuid,
 
     -- Status
     status                      text        NOT NULL DEFAULT 'DRAFT',
@@ -1814,7 +1805,7 @@ CREATE TABLE IF NOT EXISTS control.entity (
     -- Logical code uniqueness: one entity_code per tenant (NULL = platform-global)
     CONSTRAINT entity_code_uq           UNIQUE NULLS NOT DISTINCT (tenant_id, entity_code),
     CONSTRAINT entity_slug_fmt_chk      CHECK (
-        slug IS NULL OR slug ~ '^[a-z][a-z0-9]+(-[a-z0-9]+)*$'
+        slug IS NULL OR slug ~ '^[a-z][a-z0-9]*(-[a-z0-9]+)*$'
     ),
     CONSTRAINT entity_short_fmt_chk     CHECK (
         entity_short IS NULL OR entity_short ~ '^[A-Z][A-Z0-9_]{1,11}$'
@@ -2080,7 +2071,7 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     cardinality                 text        NOT NULL DEFAULT 'one',
     origin                      text        NOT NULL DEFAULT 'business',
 
-    -- Behaviour flags (auto-set by trg_fn_field_flag_defaults from entity_class_profile)
+    -- Behaviour flags (auto-set by trg_field_flag_defaults from entity_class_profile)
     is_required                 boolean     NOT NULL DEFAULT false,
     is_unique                   boolean     NOT NULL DEFAULT false,
     unique_scope                text,
@@ -2106,15 +2097,17 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     enum_kind                   text,
     reference_config            jsonb,
     fk_target_entity_id         uuid,
-    fk_target_field             text        DEFAULT 'id',
-    fk_on_delete                text        DEFAULT 'restrict',
-    fk_on_update                text        DEFAULT 'no_action',
+    fk_target_field             text,
+    fk_on_delete                text,
+    fk_on_update                text,
     fk_relationship_class       text,
     json_config                 jsonb,
     money_config                jsonb,
     datetime_config             jsonb,
 
     -- UI
+    group_key                   text,
+    filter_config               jsonb,
     ui_hint                     jsonb,
     visibility                  jsonb,
     editability                 jsonb,
@@ -2218,6 +2211,12 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
         unique_scope IS NULL OR unique_scope = ANY (ARRAY[
             'global','tenant','entity_instance'
         ])
+    ),
+    CONSTRAINT ef_group_key_fmt_chk     CHECK (
+        group_key IS NULL OR group_key ~ '^[a-z][a-z0-9_]*$'
+    ),
+    CONSTRAINT ef_filter_config_obj_chk CHECK (
+        filter_config IS NULL OR jsonb_typeof(filter_config) = 'object'
     )
 );
 
@@ -3735,15 +3734,14 @@ COMMENT ON TABLE control.intent_profile_override IS
 
 
 -- =============================================================================
--- DIMENSION POLICY + DOCUMENT SEQUENCE
+-- DIMENSION POLICY + ENTITY NUMBERING
 -- Tables: dimension_policy, dimension_policy_allowed_value,
---         document_sequence_config, document_sequence_counter
+--         entity_numbering_config, entity_numbering_counter
 -- Indexes  → 07_indexes/002_control.sql
 -- FK refs  → 06_constraints/002_control.sql
--- Functions→ 08_functions/002_control.sql  (next_document_number)
+-- Functions -> 08_functions/002_control.sql  (next_entity_number)
 -- Triggers → 09_triggers/002_control.sql
 -- Seeds    → 900_seed_data/002_control/LookupDomain/control/dimension_*.sql
---            900_seed_data/002_control/LookupDomain/control/document_sequence_*.sql
 -- =============================================================================
 
 -- ── §DP1  control.dimension_policy — validation / governance rules ────────────
@@ -3857,103 +3855,104 @@ COMMENT ON TABLE control.dimension_policy_allowed_value IS
     'Indexable and FK-validated. Cascade deletes when parent policy is removed.';
 
 
--- ── §DS1  control.document_sequence_config — numbering configuration (cold) ───
--- Split design: config (cold, rarely changes) + counter (hot, increments per txn).
--- Avoids contention and noisy audit trails on config rows.
-CREATE TABLE IF NOT EXISTS control.document_sequence_config (
+-- ── §ENS1  control.entity_numbering_config — canonical entity numbering config ──
+-- Stores the stable policy; runtime counter state lives in entity_numbering_counter.
+CREATE TABLE IF NOT EXISTS control.entity_numbering_config (
     -- Identity
-    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id           uuid        NOT NULL,
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid,                              -- NULL = platform default
 
     -- Scope
-    company_code_id     uuid        NOT NULL,
-    doc_type            text        NOT NULL,
-    -- Controlled via lookup: 'control.document_sequence_doc_type'
+    entity_id             uuid        NOT NULL,
+    number_field          text        NOT NULL,              -- logical field name, e.g. document_no/code
+    company_code_id       uuid,                              -- NULL = all companies
 
     -- Format
-    prefix              text        NOT NULL,
-    -- e.g. 'INV', 'PI', 'JE', 'CN', 'SO'
-    separator           text        NOT NULL DEFAULT '-',
-    -- e.g. '-' → 'INV-2026-00001', '/' → 'INV/2026/00001'
-    pad_width           smallint    NOT NULL DEFAULT 5,
-    -- Zero-pad digits: 5 → 00001, 6 → 000001
-    format_template     text,
-    -- Optional override: '{prefix}{sep}{year}{sep}{seq}'
-    -- NULL = default pattern: prefix + sep + year + sep + padded_seq
+    prefix                text        NOT NULL DEFAULT '',
+    prefix_configurable   boolean     NOT NULL DEFAULT true,
+    separator             text        NOT NULL DEFAULT '-',
+    segments              jsonb       NOT NULL DEFAULT '[]'::jsonb,
 
-    -- Reset strategy
-    reset_strategy      text        NOT NULL DEFAULT 'yearly',
-    -- NONE = continuous; YEARLY = reset per fiscal year; MONTHLY = per period
+    -- Reset and uniqueness
+    reset_strategy        text        NOT NULL DEFAULT 'yearly',
+    uniqueness_scope      text        NOT NULL DEFAULT 'tenant',
+    max_length            smallint,
+    allowed_chars         text        NOT NULL DEFAULT 'upper_alnum_dash',
 
     -- Metadata
-    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    metadata              jsonb       NOT NULL DEFAULT '{}'::jsonb,
 
     -- Lifecycle
-    status              shared.active_inactive_d        NOT NULL DEFAULT 'active',
-    is_active           boolean     GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at   timestamptz,
-    status_changed_by   uuid,
+    status                shared.active_inactive_d NOT NULL DEFAULT 'active',
+    is_active             boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at     timestamptz,
+    status_changed_by     uuid,
 
     -- Audit
-    created_at          timestamptz NOT NULL DEFAULT now(),
-    created_by          uuid        NOT NULL,
-    updated_at          timestamptz,
-    updated_by          uuid,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+    updated_at            timestamptz,
+    updated_by            uuid,
 
-    CONSTRAINT dsc_pkey             PRIMARY KEY (id),
-    CONSTRAINT dsc_tenant_id_uq     UNIQUE (tenant_id, id),
-    CONSTRAINT dsc_natural_uq       UNIQUE (tenant_id, company_code_id, doc_type),
-    CONSTRAINT dsc_prefix_chk       CHECK (btrim(prefix) <> ''),
-    CONSTRAINT dsc_doc_type_chk     CHECK (btrim(doc_type) <> ''),
-    CONSTRAINT dsc_pad_width_chk    CHECK (pad_width BETWEEN 3 AND 10),
-    CONSTRAINT dsc_reset_chk        CHECK (reset_strategy IN ('none','yearly','monthly'))
+    CONSTRAINT encfg_pkey             PRIMARY KEY (id),
+    CONSTRAINT encfg_tenant_id_uq     UNIQUE NULLS NOT DISTINCT (tenant_id, id),
+    CONSTRAINT encfg_natural_uq       UNIQUE NULLS NOT DISTINCT (tenant_id, company_code_id, entity_id, number_field),
+    CONSTRAINT encfg_number_field_chk CHECK (btrim(number_field) <> ''),
+    CONSTRAINT encfg_segments_chk     CHECK (jsonb_typeof(segments) = 'array'),
+    CONSTRAINT encfg_reset_chk        CHECK (reset_strategy IN ('never','yearly','fiscal_yearly','monthly','quarterly')),
+    CONSTRAINT encfg_scope_chk        CHECK (uniqueness_scope IN ('tenant','company','global')),
+    CONSTRAINT encfg_max_length_chk   CHECK (max_length IS NULL OR max_length BETWEEN 1 AND 128),
+    CONSTRAINT encfg_allowed_chk      CHECK (btrim(allowed_chars) <> '')
 );
--- Reconcile CHECK constraint with lookup domain codes (lowercase). Drop+add is idempotent.
-ALTER TABLE control.document_sequence_config DROP CONSTRAINT IF EXISTS dsc_reset_chk;
-ALTER TABLE control.document_sequence_config ADD CONSTRAINT dsc_reset_chk
-    CHECK (reset_strategy IN ('none','yearly','monthly'));
 
-COMMENT ON TABLE control.document_sequence_config IS
-    'ARCHETYPE=B;SCOPE=T. Document numbering configuration. Cold table — rarely modified. '
-    'One config per (company, doc_type). Format: prefix + separator + year + padded_seq. '
-    'Actual counter state lives in document_sequence_counter (hot table).';
+COMMENT ON TABLE control.entity_numbering_config IS
+    'ARCHETYPE=B;SCOPE=G/T. Canonical entity numbering policy. tenant_id=NULL is the platform default; tenant rows override. '
+    'Segments define the rendered number while entity_numbering_counter stores mutable sequence state.';
+COMMENT ON COLUMN control.entity_numbering_config.number_field IS
+    'Logical control.entity_field.name that receives the generated number, e.g. document_no or code.';
+COMMENT ON COLUMN control.entity_numbering_config.segments IS
+    'JSONB array of segment descriptors: tenant_code, company_code, branch_code, year, fiscal_year, period, quarter, sequence, static.';
+COMMENT ON COLUMN control.entity_numbering_config.allowed_chars IS
+    'Named set such as upper_alnum_dash, alnum_dash, any, or a PostgreSQL regular expression.';
 
 
--- ── §DS2  control.document_sequence_counter — mutable counter state (hot) ────
--- Separated from config to avoid lock contention on config rows.
--- One row per (config, fiscal_year) or (config, fiscal_year, period)
--- depending on reset_strategy. Atomic increment via next_document_number().
-CREATE TABLE IF NOT EXISTS control.document_sequence_counter (
-    -- Natural composite PK — no surrogate uuid needed for hot counters
-    tenant_id           uuid        NOT NULL,
+-- ── §ENS2  control.entity_numbering_counter — canonical entity numbering state ──
+-- One row per resolved tenant/company/entity/reset bucket.
+CREATE TABLE IF NOT EXISTS control.entity_numbering_counter (
+    -- Identity
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+
+    -- Scope
+    tenant_id           uuid,                              -- NULL only for global uniqueness_scope
     config_id           uuid        NOT NULL,
+    company_code_id     uuid,
+    scope_key           text        NOT NULL DEFAULT '',
 
-    -- Period scope
-    fiscal_year         smallint    NOT NULL,
+    -- Reset bucket
+    fiscal_year         smallint    NOT NULL DEFAULT 0,
     period_number       smallint    NOT NULL DEFAULT 0,
-    -- 0  = YEARLY or NONE strategy (single counter per year)
-    -- 1-12 = MONTHLY strategy (counter per period)
+    quarter_number      smallint    NOT NULL DEFAULT 0,
 
     -- Counter
-    last_value          integer     NOT NULL DEFAULT 0,
+    last_value          bigint      NOT NULL DEFAULT 0,
 
-    -- Audit (minimal — updated on every document creation)
+    -- Audit (minimal — updated on every number generation)
     updated_at          timestamptz NOT NULL DEFAULT now(),
     updated_by          uuid,
 
-    CONSTRAINT dscc_pkey        PRIMARY KEY (tenant_id, config_id, fiscal_year, period_number),
-    CONSTRAINT dscc_value_chk   CHECK (last_value >= 0),
-    CONSTRAINT dscc_year_chk    CHECK (fiscal_year BETWEEN 2000 AND 2099),
-    CONSTRAINT dscc_period_chk  CHECK (period_number BETWEEN 0 AND 16)
+    CONSTRAINT enctr_pkey        PRIMARY KEY (id),
+    CONSTRAINT enctr_bucket_uq   UNIQUE NULLS NOT DISTINCT
+        (tenant_id, config_id, scope_key, fiscal_year, period_number, quarter_number),
+    CONSTRAINT enctr_scope_chk   CHECK (btrim(scope_key) <> ''),
+    CONSTRAINT enctr_value_chk   CHECK (last_value >= 0),
+    CONSTRAINT enctr_year_chk    CHECK (fiscal_year = 0 OR fiscal_year BETWEEN 2000 AND 2099),
+    CONSTRAINT enctr_period_chk  CHECK (period_number BETWEEN 0 AND 16),
+    CONSTRAINT enctr_quarter_chk CHECK (quarter_number BETWEEN 0 AND 4)
 );
 
-COMMENT ON TABLE control.document_sequence_counter IS
-    'ARCHETYPE=C;SCOPE=T;DEVIATION. Hot counter table: no created_at/created_by; natural composite PK. Mutable counter state for document numbering. Hot table — updated every txn. '
-    'Runtime state in control schema for locality (co-located with document_sequence_config). '
-    'Not an audit table — no created_by/created_at; updated_by nullable (batch increments). '
-    'Natural composite PK (tenant, config, year, period) for efficient upsert. '
-    'period_number = 0 for YEARLY/NONE strategies. '
-    'Atomic increment via control.next_document_number().';
+COMMENT ON TABLE control.entity_numbering_counter IS
+    'ARCHETYPE=C;SCOPE=T/G;DEVIATION. Hot counter state for control.entity_numbering_config. '
+    'One row per resolved scope and reset bucket. Updated atomically by control.next_entity_number().';
 
 
 -- =============================================================================
@@ -6438,18 +6437,6 @@ CREATE TABLE IF NOT EXISTS control.entity_flow (
     CONSTRAINT eflow_config_chk        CHECK (jsonb_typeof(config) = 'object')
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS eflow_default_per_ctx_uq
-    ON control.entity_flow (
-        COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid),
-        entity_version_id,
-        trigger_context
-    )
-    WHERE is_default = true AND status = 'active';
-
-CREATE INDEX IF NOT EXISTS eflow_entity_version_idx
-    ON control.entity_flow (entity_version_id, status)
-    WHERE status = 'active';
-
 DO $$ BEGIN
     ALTER TABLE control.entity_flow
         ADD CONSTRAINT eflow_entity_version_fk
@@ -6495,7 +6482,7 @@ CREATE TABLE IF NOT EXISTS control.entity_flow_step (
     CONSTRAINT efs_pkey              PRIMARY KEY (id),
     CONSTRAINT efs_tenant_id_uq      UNIQUE NULLS NOT DISTINCT (tenant_id, id),
     CONSTRAINT efs_flow_step_uq      UNIQUE (flow_id, step_key),
-    CONSTRAINT efs_flow_order_uq     UNIQUE (flow_id, sort_order),
+    CONSTRAINT efs_flow_order_uq     UNIQUE (flow_id, sort_order) DEFERRABLE INITIALLY DEFERRED,
     CONSTRAINT efs_step_key_fmt      CHECK (step_key ~ '^[a-z][a-z0-9_]*$'),
     CONSTRAINT efs_layout_chk        CHECK (layout_hint IN (
         'two_column','single_column','summary_side','line_editor','grid','card')),
@@ -6628,11 +6615,15 @@ CREATE OR REPLACE FUNCTION control.trg_fn_flow_field_one_writer()
 RETURNS trigger LANGUAGE plpgsql SET search_path = control AS $$
 DECLARE
     v_flow_id uuid;
-    v_writers integer;
+    v_writers bigint;
 BEGIN
     IF NEW.mode NOT IN ('required','editable') THEN RETURN NEW; END IF;
     SELECT flow_id INTO v_flow_id
       FROM control.entity_flow_step WHERE id = NEW.flow_step_id;
+    PERFORM 1
+      FROM control.entity_flow
+     WHERE id = v_flow_id
+     FOR UPDATE;
     SELECT count(*) INTO v_writers
       FROM control.entity_flow_field eff
       JOIN control.entity_flow_step efs ON efs.id = eff.flow_step_id
@@ -6653,7 +6644,7 @@ END $$;
 
 DROP TRIGGER IF EXISTS trg_flow_field_one_writer ON control.entity_flow_field;
 CREATE TRIGGER trg_flow_field_one_writer
-BEFORE INSERT OR UPDATE OF mode, entity_field_id, flow_step_id
+BEFORE INSERT OR UPDATE OF mode, entity_field_id, flow_step_id, tenant_id
 ON control.entity_flow_field
 FOR EACH ROW EXECUTE FUNCTION control.trg_fn_flow_field_one_writer();
 

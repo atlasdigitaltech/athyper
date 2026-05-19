@@ -4,7 +4,9 @@
     "baseUrl": ".",
     "ignoreDeprecations": "6.0",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@athyper/runtime-shared": ["../../packages/shared/runtime/runtime-shared/src/index.ts"],
+      "@athyper/runtime-shared/*": ["../../packages/shared/runtime/runtime-shared/src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
