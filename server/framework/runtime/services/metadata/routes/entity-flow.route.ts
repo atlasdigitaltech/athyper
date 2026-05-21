@@ -125,11 +125,15 @@ function normalizeReferenceConfig(row: {
 
   if (row.reference_config && typeof row.reference_config === "object" && !Array.isArray(row.reference_config)) {
     const rawConfig = row.reference_config as Record<string, unknown>;
+    const strippedConfig = { ...rawConfig };
+    for (const key of ["ref_entity", "ref_hint", "entity", "entity_code", "targetEntity", "refEntity"]) {
+      delete strippedConfig[key];
+    }
     const normalized = Object.fromEntries(Object.entries({
-      ...rawConfig,
+      ...strippedConfig,
       target_entity: targetEntity ?? "",
-      target_field: rawConfig["target_field"],
-      display_field: rawConfig["display_field"],
+      target_field: strippedConfig["target_field"],
+      display_field: strippedConfig["display_field"],
     }).filter(([, value]) => value !== undefined));
     return mergeReferencePickerProfile(normalized, referencePickerProfile);
   }
@@ -145,6 +149,33 @@ function normalizeReferenceConfig(row: {
   }
 
   return null;
+}
+
+function compactRecord(record: Record<string, unknown>): Record<string, unknown> | null {
+  const entries = Object.entries(record).filter(([, value]) => value !== undefined && value !== null);
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+function normalizeMoneyConfig(value: unknown): Record<string, unknown> | null {
+  const raw = asRecord(value);
+  if (!raw) return null;
+  const out: Record<string, unknown> = { ...raw };
+  if (!out["currency_code"]) out["currency_code"] = out["constant_currency"];
+  if (!out["currency_code_position"]) out["currency_code_position"] = out["code_position"] ?? out["currency_position"];
+  delete out["constant_currency"];
+  delete out["code_position"];
+  delete out["currency_position"];
+  return compactRecord(out);
+}
+
+function normalizeLookupConfig(value: unknown): Record<string, unknown> | null {
+  const raw = asRecord(value);
+  if (!raw) return null;
+  const out: Record<string, unknown> = { ...raw };
+  if (!out["dependent_filter"]) out["dependent_filter"] = out["depends_on"] ?? out["dependency"];
+  delete out["depends_on"];
+  delete out["dependency"];
+  return compactRecord(out);
 }
 
 async function loadReferencePickerProfiles(
@@ -539,14 +570,10 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
               childFields = selectedChildFields.map((cf) => ({
                 ...cf,
                 reference_config: normalizeReferenceConfig(cf, referencePickerProfiles),
-                money_config: cf.money_config && typeof cf.money_config === "object"
-                  ? cf.money_config as Record<string, unknown>
-                  : null,
+                money_config: normalizeMoneyConfig(cf.money_config),
                 visible_when: cf.visibility ?? null,
                 validation_rules: normalizeValidationRules(cf.validation),
-                lookup_config: cf.lookup_config && typeof cf.lookup_config === "object"
-                  ? cf.lookup_config as Record<string, unknown>
-                  : null,
+                lookup_config: normalizeLookupConfig(cf.lookup_config),
               }));
             }
 

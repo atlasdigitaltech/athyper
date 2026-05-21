@@ -1233,6 +1233,9 @@ importers:
 
   server/framework/runtime/services/metadata:
     dependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../../../../packages/shared/data/api-contracts
       '@athyper/svc-shared':
         specifier: workspace:*
         version: link:../shared
@@ -1267,10 +1270,16 @@ importers:
       '@athyper/svc-shared':
         specifier: workspace:*
         version: link:../shared
+      busboy:
+        specifier: ^1.6.0
+        version: 1.6.0
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
         version: link:../../../../../tooling/tsconfig
+      '@types/busboy':
+        specifier: ^1.5.4
+        version: 1.5.4
       '@types/express':
         specifier: ^5.0.1
         version: 5.0.6

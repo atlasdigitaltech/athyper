@@ -1865,16 +1865,29 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           // Read it from the raw inputData body instead.
           peSourceInvoiceId = inputData["source_invoice_id"] as string | undefined;
 
-          // The wizard payment_type field captures instrument modality (bank_transfer/cheque/cash).
-          // The DB payment_type column is a settlement classification (standard/advance/etc.) with
-          // a CHECK constraint that rejects the wizard values. Extract the modality, store it in
-          // metadata for display, then let the DB default handle payment_type = 'standard'.
-          const instrumentMode = String(mappedData["payment_type"] ?? "bank_transfer");
-          delete mappedData["payment_type"];
+          // payment_type is the settlement classification. Older drafts used this field for
+          // instrument mode; keep that compatibility by moving non-contract values to metadata.
+          const paymentEntryTypes = new Set([
+            "standard", "advance", "retention_release", "partial",
+            "final", "down_payment", "urgent", "netting",
+          ]);
+          const rawPaymentType = String(mappedData["payment_type"] ?? "").trim().toLowerCase();
+          const instrumentMode = String(
+            inputData["payment_instrument_mode"] ??
+            (rawPaymentType && !paymentEntryTypes.has(rawPaymentType) ? rawPaymentType : "") ??
+            "",
+          ).trim();
+          if (!rawPaymentType) {
+            mappedData["payment_type"] = "standard";
+          } else if (!paymentEntryTypes.has(rawPaymentType)) {
+            mappedData["payment_type"] = "standard";
+          }
           const existingMeta = (typeof mappedData["metadata"] === "object" && mappedData["metadata"] !== null)
             ? (mappedData["metadata"] as Record<string, unknown>)
             : {};
-          mappedData["metadata"] = { ...existingMeta, instrument_mode: instrumentMode };
+          mappedData["metadata"] = instrumentMode
+            ? { ...existingMeta, instrument_mode: instrumentMode }
+            : existingMeta;
 
           // supplier_name: denormalized NOT NULL; resolve through the supplier app index.
           if (!mappedData["supplier_name"] && mappedData["supplier_id"]) {
@@ -1920,17 +1933,20 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             }
           }
 
-          // payment_method_id: NOT NULL — look up by instrument_mode, fallback to any active
+          // payment_method_id: NOT NULL — look up by legacy instrument_mode only when absent.
           if (!mappedData["payment_method_id"]) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let pm = await (db as any)
-              .selectFrom("master.payment_method as pm")
-              .select(["pm.id"])
-              .where("pm.tenant_id",       "=", tenantId)
-              .where("pm.instrument_mode", "=", instrumentMode)
-              .where("pm.is_active",       "=", true)
-              .orderBy("pm.sort_order",    "asc")
-              .executeTakeFirst() as { id: string } | undefined;
+            let pm: { id: string } | undefined;
+            if (instrumentMode) {
+              pm = await (db as any)
+                .selectFrom("master.payment_method as pm")
+                .select(["pm.id"])
+                .where("pm.tenant_id",       "=", tenantId)
+                .where("pm.instrument_mode", "=", instrumentMode)
+                .where("pm.is_active",       "=", true)
+                .orderBy("pm.sort_order",    "asc")
+                .executeTakeFirst() as { id: string } | undefined;
+            }
             // Fallback: any active method for this tenant
             if (!pm) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any

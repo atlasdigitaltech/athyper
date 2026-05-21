@@ -123,6 +123,154 @@ export const ReferencePickerConfigSchema = z.object({
 // ENTITY FIELD — from control.entity_field DDL
 // ═══════════════════════════════════════════════════════════════
 
+export const RuleExpressionSchema = z.record(z.string(), z.unknown());
+
+export const FieldReferenceConfigSchema = z.object({
+  target_entity: z.string(),
+  target_field: z.string().optional(),
+  display_field: z.string().optional(),
+  label_field: z.string().nullable().optional(),
+  code_field: z.string().nullable().optional(),
+  description_field: z.string().nullable().optional(),
+  navigation_field: z.string().nullable().optional(),
+  record_id_field: z.string().nullable().optional(),
+  show_code: z.boolean().optional(),
+  show_description: z.boolean().optional(),
+  show_view_action: z.boolean().optional(),
+  picker: ReferencePickerConfigSchema.optional(),
+}).passthrough();
+export type FieldReferenceConfig = z.infer<typeof FieldReferenceConfigSchema>;
+
+export const FieldMoneyConfigSchema = z.object({
+  currency_source: z.enum(["field", "header", "constant", "tenant", "system"]).optional(),
+  currency_field: z.string().optional(),
+  currency_code: z.string().optional(),
+  currency_code_position: z.enum(["prefix", "suffix", "hidden"]).optional(),
+  minor_units: z.number().int().min(0).max(6).optional(),
+  fallback_minor_units: z.number().int().min(0).max(6).optional(),
+  constant_currency: z.string().optional(),
+  code_position: z.enum(["prefix", "suffix", "hidden"]).optional(),
+  currency_position: z.enum(["prefix", "suffix", "hidden"]).optional(),
+}).passthrough();
+export type FieldMoneyConfig = z.infer<typeof FieldMoneyConfigSchema>;
+
+export const FieldFilterConfigSchema = z.object({
+  section_key: z.string().optional(),
+  section_label: z.string().optional(),
+  section_order: z.number().int().optional(),
+  control_type: z.string().optional(),
+  quick_filter: z.boolean().optional(),
+  quick_label: z.string().optional(),
+  quick_order: z.number().int().optional(),
+  value_label_map: z.record(z.string(), z.string()).optional(),
+}).passthrough();
+export type FieldFilterConfig = z.infer<typeof FieldFilterConfigSchema>;
+
+export const FieldUiHintSchema = z.object({
+  display: z.object({
+    hide_in: z.array(z.string()).optional(),
+    visible_when: RuleExpressionSchema.nullable().optional(),
+  }).passthrough().optional(),
+  copy: z.object({
+    behavior: z.string().optional(),
+  }).passthrough().optional(),
+  copy_behavior: z.string().optional(),
+  filter: z.record(z.string(), z.unknown()).optional(),
+  group_key: z.string().optional(),
+  visible_when: RuleExpressionSchema.nullable().optional(),
+  placeholder: z.string().optional(),
+  tooltip: z.string().optional(),
+  rows: z.number().int().positive().optional(),
+  variant: z.string().optional(),
+  input_mode: z.string().optional(),
+  pattern: z.string().optional(),
+  icon: z.string().optional(),
+  prefix: z.string().optional(),
+  suffix: z.string().optional(),
+  hide_label: z.boolean().optional(),
+  autocomplete: z.string().optional(),
+}).passthrough();
+export type FieldUiHint = z.infer<typeof FieldUiHintSchema>;
+
+export const FieldVisibilitySchema = z.record(z.string(), z.unknown());
+export type FieldVisibility = z.infer<typeof FieldVisibilitySchema>;
+
+export const FieldEditabilitySchema = z.object({
+  editable: z.boolean().optional(),
+  editable_in: z.array(z.string()).optional(),
+  editable_when: z.object({
+    status_in: z.array(z.string()).optional(),
+  }).passthrough().optional(),
+}).passthrough();
+export type FieldEditability = z.infer<typeof FieldEditabilitySchema>;
+
+export const FieldLookupConfigSchema = z.object({
+  filters: z.record(z.string(), z.unknown()).optional(),
+  dependent_filter: z.object({
+    source_field: z.string().optional(),
+    target_field: z.string().optional(),
+    empty_behavior: z.enum(["none", "all"]).optional(),
+    through_entity: z.string().optional(),
+    through_source_field: z.string().optional(),
+    through_target_field: z.string().optional(),
+    through_filters: z.record(z.string(), z.unknown()).optional(),
+    sort_field: z.string().optional(),
+    sort_direction: z.enum(["asc", "desc"]).optional(),
+  }).passthrough().optional(),
+  depends_on: z.unknown().optional(),
+  dependency: z.unknown().optional(),
+  value_case: z.enum(["preserve", "upper", "lower"]).optional(),
+  value_label_map: z.record(z.string(), z.string()).optional(),
+}).passthrough();
+export type FieldLookupConfig = z.infer<typeof FieldLookupConfigSchema>;
+
+export const FieldValidationRulesSchema = z.object({
+  max_length: z.number().int().positive().optional(),
+  min_length: z.number().int().nonnegative().optional(),
+  min_value: z.number().optional(),
+  max_value: z.number().optional(),
+  pattern: z.string().optional(),
+  allowed_values: z.array(z.unknown()).optional(),
+  cross_field: z.array(z.record(z.string(), z.unknown())).optional(),
+  ref_entity: z.string().optional(),
+}).passthrough();
+export type FieldValidationRules = z.infer<typeof FieldValidationRulesSchema>;
+
+export const FieldEnumConfigSchema = z.object({
+  values: z.array(z.unknown()).optional(),
+  options: z.array(z.unknown()).optional(),
+}).passthrough();
+export type FieldEnumConfig = z.infer<typeof FieldEnumConfigSchema>;
+
+export const FieldJsonConfigSchema = z.record(z.string(), z.unknown());
+export type FieldJsonConfig = z.infer<typeof FieldJsonConfigSchema>;
+
+export const FieldDatetimeConfigSchema = z.record(z.string(), z.unknown());
+export type FieldDatetimeConfig = z.infer<typeof FieldDatetimeConfigSchema>;
+
+export const FieldLookupProfileSchema = z.object({
+  variant: z.string().optional(),
+  density: z.string().optional(),
+  max_items: z.number().int().positive().optional(),
+}).passthrough();
+export type FieldLookupProfile = z.infer<typeof FieldLookupProfileSchema>;
+
+export const FieldCollectionBehaviorSchema = z.record(z.string(), z.unknown());
+export type FieldCollectionBehavior = z.infer<typeof FieldCollectionBehaviorSchema>;
+
+export const FieldConstraintsSchema = z.object({
+  max_length: z.number().int().positive().optional(),
+  min_length: z.number().int().nonnegative().optional(),
+  min_value: z.number().optional(),
+  max_value: z.number().optional(),
+  pattern: z.string().optional(),
+  allowed_values: z.array(z.unknown()).optional(),
+  unique: z.boolean().optional(),
+  not_null: z.boolean().optional(),
+  check: z.string().optional(),
+}).passthrough();
+export type FieldConstraints = z.infer<typeof FieldConstraintsSchema>;
+
 export const EntityFieldSchema = z.object({
   id: UuidSchema,
   name: z.string(),
@@ -152,42 +300,26 @@ export const EntityFieldSchema = z.object({
   is_write_once: z.boolean().optional(),
 
   default_value: z.unknown().nullable(),
-  validation_rules: z.record(z.string(), z.unknown()).nullable(),
+  compute_expr: z.unknown().nullable().optional(),
+  validation_rules: FieldValidationRulesSchema.nullable(),
+  enum_config: FieldEnumConfigSchema.nullable().optional(),
   enum_domain_code: z.string().nullable(),
 
-  reference_config: z.object({
-    target_entity: z.string(),
-    target_field: z.string().optional(),
-    display_field: z.string().optional(),
-    label_field: z.string().nullable().optional(),
-    code_field: z.string().nullable().optional(),
-    description_field: z.string().nullable().optional(),
-    navigation_field: z.string().nullable().optional(),
-    record_id_field: z.string().nullable().optional(),
-    show_code: z.boolean().optional(),
-    show_description: z.boolean().optional(),
-    show_view_action: z.boolean().optional(),
-    picker: ReferencePickerConfigSchema.optional(),
-  }).nullable(),
-  money_config: z.record(z.string(), z.unknown()).nullable().optional(),
-  json_config: z.record(z.string(), z.unknown()).nullable().optional(),
+  reference_config: FieldReferenceConfigSchema.nullable(),
+  money_config: FieldMoneyConfigSchema.nullable().optional(),
+  json_config: FieldJsonConfigSchema.nullable().optional(),
+  datetime_config: FieldDatetimeConfigSchema.nullable().optional(),
 
   sort_order: z.number().int(),
   group_key: z.string().nullable(),
-  ui_hint: z.record(z.string(), z.unknown()).nullable().optional(),
-  visibility: z.record(z.string(), z.unknown()).nullable().optional(),
-  editability: z.record(z.string(), z.unknown()).nullable().optional(),
-  lookup_config: z.record(z.string(), z.unknown()).nullable().optional(),
-  filter_config: z.object({
-    section_key: z.string().optional(),
-    section_label: z.string().optional(),
-    section_order: z.number().int().optional(),
-    control_type: z.string().optional(),
-    quick_filter: z.boolean().optional(),
-    quick_label: z.string().optional(),
-    quick_order: z.number().int().optional(),
-    value_label_map: z.record(z.string(), z.string()).optional(),
-  }).nullable().optional(),
+  ui_hint: FieldUiHintSchema.nullable().optional(),
+  visibility: FieldVisibilitySchema.nullable().optional(),
+  editability: FieldEditabilitySchema.nullable().optional(),
+  lookup_config: FieldLookupConfigSchema.nullable().optional(),
+  lookup_profile: FieldLookupProfileSchema.nullable().optional(),
+  filter_config: FieldFilterConfigSchema.nullable().optional(),
+  collection_behavior: FieldCollectionBehaviorSchema.nullable().optional(),
+  constraints: FieldConstraintsSchema.nullable().optional(),
   i18n_key: z.string().nullable(),
 });
 export type EntityField = z.infer<typeof EntityFieldSchema>;
@@ -485,6 +617,9 @@ export const EntityCreateRedirectSchema = z.object({
 }).passthrough();
 export type EntityCreateRedirect = z.infer<typeof EntityCreateRedirectSchema>;
 
+export const EntityDisplayConfigSchema = z.record(z.string(), z.unknown());
+export type EntityDisplayConfig = z.infer<typeof EntityDisplayConfigSchema>;
+
 export const EntitySearchConfigSchema = z.object({
   enabled: z.boolean().optional(),
   fields: z.array(z.string()).optional(),
@@ -493,6 +628,15 @@ export const EntitySearchConfigSchema = z.object({
   operator: z.enum(["contains"]).optional(),
 }).passthrough();
 export type EntitySearchConfig = z.infer<typeof EntitySearchConfigSchema>;
+
+export const EntityDataPolicySchema = z.object({
+  classification: z.enum(["public", "internal", "confidential", "restricted"]).optional(),
+  pii_fields: z.array(z.string()).optional(),
+  retention_days: z.number().int().positive().optional(),
+  legal_hold_eligible: z.boolean().optional(),
+  anonymize_on_delete: z.boolean().optional(),
+}).passthrough();
+export type EntityDataPolicy = z.infer<typeof EntityDataPolicySchema>;
 
 export const EntityIdentityConfigSchema = z.object({
   /** Surrogate row identifier used for UUID detail routes and write targets. */
@@ -918,6 +1062,7 @@ export const CompiledEntitySchema = z.object({
   }),
   identity_config: EntityIdentityConfigSchema.optional(),
   search_config: EntitySearchConfigSchema.optional(),
+  data_policy: EntityDataPolicySchema.optional(),
 
   feature_flags: z.object({
     // ── Core capabilities ────────────────────────────────────────

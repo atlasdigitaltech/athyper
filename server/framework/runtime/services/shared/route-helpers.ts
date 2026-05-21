@@ -74,12 +74,13 @@ export async function resolveTenantId(db: Kysely<any>, xOrg: string, xRealm: str
  * Returns null if no binding exists (no JIT provisioning).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function resolvePrincipalIdOrNull(db: Kysely<any>, sub: string, tenantId: string): Promise<string | null> {
+export async function resolvePrincipalIdOrNull(db: Kysely<any>, sub: string, tenantId: string, realmKey = "athyper"): Promise<string | null> {
   if (!sub) return null;
   const row = await db
     .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
+    .where("pab.realm_key", "=", realmKey)
     .where("pab.tenant_id", "=", tenantId)
     .executeTakeFirst();
   return row ? (row.principal_id as string) : null;
@@ -96,11 +97,13 @@ export async function resolvePrincipalIdWithJit(
   sub: string,
   tenantId: string,
   claims?: Record<string, unknown>,
+  realmKey = "athyper",
 ): Promise<string> {
   const existing = await db
     .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
+    .where("pab.realm_key", "=", realmKey)
     .where("pab.tenant_id", "=", tenantId)
     .executeTakeFirst();
   if (existing) return existing.principal_id as string;
@@ -119,7 +122,7 @@ export async function resolvePrincipalIdWithJit(
         .returning("id" as never).executeTakeFirstOrThrow();
       const newId = (p as Record<string, unknown>).id as string;
       await trx.insertInto("master.principal_identity_binding" as never)
-        .values({ tenant_id: tenantId, principal_id: newId, provider_code: "keycloak", subject_id: sub, username, sync_status: "synced", idp_enabled: true, idp_email_verified: true, synced_at: new Date(), created_by: SYSTEM_PRINCIPAL_UUID } as never)
+        .values({ tenant_id: tenantId, principal_id: newId, realm_key: realmKey, provider_code: "keycloak", subject_id: sub, username, sync_status: "synced", idp_enabled: true, idp_email_verified: true, synced_at: new Date(), created_by: SYSTEM_PRINCIPAL_UUID } as never)
         .execute();
       return newId;
     });

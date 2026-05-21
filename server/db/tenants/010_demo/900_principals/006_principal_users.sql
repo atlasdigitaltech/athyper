@@ -231,13 +231,14 @@ BEGIN
 
     INSERT INTO master.principal_identity_binding (
         tenant_id, principal_id,
-        provider_code, subject_id, username,
+        realm_key, provider_code, subject_id, username,
         sync_status, idp_enabled, idp_email_verified,
         synced_at, created_by
     )
     SELECT
         p.tenant_id,
         p.id,
+        'athyper',
         'keycloak',
         p.id::text,
         p.code,
@@ -282,7 +283,7 @@ BEGIN
         'bb002000-0000-0000-0000-000000000022'::uuid
     )
     AND p.principal_source = 'internal'
-    ON CONFLICT (tenant_id, principal_id, provider_code) DO NOTHING;
+    ON CONFLICT (tenant_id, principal_id, realm_key, provider_code) DO NOTHING;
 
     RAISE NOTICE '[003_principal_users] 36 principal users seeded (2 tenant-level + 34 CC-level)';
 

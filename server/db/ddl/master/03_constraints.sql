@@ -110,6 +110,27 @@ ALTER TABLE master.tenant DROP CONSTRAINT IF EXISTS tenant_status_chk;
 
 -- tenant.subscription — CHECK removed, trigger-based validation in 09_triggers.
 ALTER TABLE master.tenant DROP CONSTRAINT IF EXISTS tenant_subscription_chk;
+ALTER TABLE master.tenant DROP CONSTRAINT IF EXISTS tenant_type_chk;
+
+-- tenant natural key is realm-scoped. Drop the legacy global-code constraint
+-- so neon/mesh/admin/platform-control can reuse tenant codes independently.
+ALTER TABLE master.tenant DROP CONSTRAINT IF EXISTS tenant_code_uq;
+ALTER TABLE master.tenant DROP CONSTRAINT IF EXISTS tenant_code_key;
+DROP INDEX IF EXISTS master.tenant_code_uq;
+DROP INDEX IF EXISTS master.tenant_code_key;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'master.tenant'::regclass
+          AND conname = 'tenant_realm_code_uq'
+    ) THEN
+        DROP INDEX IF EXISTS master.tenant_realm_code_uq;
+        ALTER TABLE master.tenant
+            ADD CONSTRAINT tenant_realm_code_uq UNIQUE (realm_key, code);
+    END IF;
+END $$;
 
 -- tenant audit pair: updated_at and updated_by must both be set or both be NULL.
 -- NULL = never modified (initial insert). Prevents partial audit state.
@@ -205,6 +226,103 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- contact_link.status — fixed two-state lifecycle, not tenant-extensible.
+-- pab realm-aware uniqueness. The older provider-only uniqueness cannot support
+-- the same human having separate neon, mesh, admin, and platform-control identities.
+ALTER TABLE master.principal_identity_binding DROP CONSTRAINT IF EXISTS pib_principal_provider_uq;
+ALTER TABLE master.principal_identity_binding DROP CONSTRAINT IF EXISTS pib_subject_provider_uq;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'master.principal_identity_binding'::regclass
+          AND conname = 'pib_principal_realm_provider_uq'
+    ) THEN
+        DROP INDEX IF EXISTS master.pib_principal_realm_provider_uq;
+        ALTER TABLE master.principal_identity_binding
+            ADD CONSTRAINT pib_principal_realm_provider_uq
+            UNIQUE (tenant_id, principal_id, realm_key, provider_code);
+    END IF;
+END $$;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'master.principal_identity_binding'::regclass
+          AND conname = 'pib_subject_realm_provider_uq'
+    ) THEN
+        DROP INDEX IF EXISTS master.pib_subject_realm_provider_uq;
+        ALTER TABLE master.principal_identity_binding
+            ADD CONSTRAINT pib_subject_realm_provider_uq
+            UNIQUE (tenant_id, realm_key, provider_code, subject_id);
+    END IF;
+END $$;
+DO $$ BEGIN
+    ALTER TABLE master.principal_identity_binding
+        ADD CONSTRAINT pib_realm_key_fmt
+        CHECK (realm_key ~ '^[a-z][a-z0-9_-]{1,62}$');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+    ALTER TABLE master.principal_identity_binding
+        ADD CONSTRAINT pib_issuer_nonempty
+        CHECK (issuer IS NULL OR btrim(issuer) <> '');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+    ALTER TABLE master.principal_identity_binding
+        ADD CONSTRAINT pib_audience_nonempty
+        CHECK (audience IS NULL OR btrim(audience) <> '');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+    ALTER TABLE master.principal_identity_binding
+        ADD CONSTRAINT pib_client_id_nonempty
+        CHECK (client_id IS NULL OR btrim(client_id) <> '');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.tenant_relationship DROP CONSTRAINT IF EXISTS tenant_relationship_from_tenant_fk;
+DO $$ BEGIN
+    ALTER TABLE master.tenant_relationship
+        ADD CONSTRAINT tenant_relationship_from_tenant_fk
+        FOREIGN KEY (from_tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.tenant_relationship DROP CONSTRAINT IF EXISTS tenant_relationship_to_tenant_fk;
+DO $$ BEGIN
+    ALTER TABLE master.tenant_relationship
+        ADD CONSTRAINT tenant_relationship_to_tenant_fk
+        FOREIGN KEY (to_tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE master.tenant_relationship
+        ADD CONSTRAINT tenant_relationship_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.principal_relationship DROP CONSTRAINT IF EXISTS principal_relationship_from_principal_fk;
+DO $$ BEGIN
+    ALTER TABLE master.principal_relationship
+        ADD CONSTRAINT principal_relationship_from_principal_fk
+        FOREIGN KEY (from_tenant_id, from_principal_id)
+        REFERENCES master.principal (tenant_id, id)
+        ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.principal_relationship DROP CONSTRAINT IF EXISTS principal_relationship_to_principal_fk;
+DO $$ BEGIN
+    ALTER TABLE master.principal_relationship
+        ADD CONSTRAINT principal_relationship_to_principal_fk
+        FOREIGN KEY (to_tenant_id, to_principal_id)
+        REFERENCES master.principal (tenant_id, id)
+        ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE master.principal_relationship
+        ADD CONSTRAINT principal_relationship_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 DO $$ BEGIN
     ALTER TABLE master.contact_link
         ADD CONSTRAINT contact_link_status_chk
@@ -1618,26 +1736,9 @@ DO $$ BEGIN ALTER TABLE master.item ADD CONSTRAINT im_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- ── master.spend_category ──────────────────────────────────────────────────
-ALTER TABLE master.spend_category DROP CONSTRAINT IF EXISTS sc_tenant_fk;
-DO $$ BEGIN ALTER TABLE master.spend_category ADD CONSTRAINT sc_tenant_fk
-    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.spend_category ADD CONSTRAINT sc_parent_fk
-    FOREIGN KEY (tenant_id, parent_id) REFERENCES master.spend_category (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.spend_category ADD CONSTRAINT sc_root_category_fk
-    FOREIGN KEY (tenant_id, root_category_id) REFERENCES master.spend_category (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.spend_category ADD CONSTRAINT sc_created_by_fk
-    FOREIGN KEY (created_by) REFERENCES master.principal (id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.spend_category ADD CONSTRAINT sc_default_intent_fk
-    FOREIGN KEY (default_intent_id) REFERENCES master.business_intent (id)
-    ON DELETE SET NULL;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
--- ── master.company_code_spend_policy ────────────────────────────────────
+-- ── legacy spend-category tables retired ───────────────────────────────────
+DROP TABLE IF EXISTS master.company_code_spend_policy CASCADE;
+DROP TABLE IF EXISTS master.spend_category CASCADE;
 -- ── master.commodity_classification ────────────────────────────────────────
 ALTER TABLE master.commodity_classification DROP CONSTRAINT IF EXISTS cc_tenant_fk;
 DO $$ BEGIN ALTER TABLE master.commodity_classification ADD CONSTRAINT cc_tenant_fk

@@ -150,12 +150,13 @@ export class MfaSyncService {
    * Resolve the KC user ID (subject_id) for a given principal.
    * Looks up master.principal_identity_binding where provider_code = 'keycloak'.
    */
-  private async resolveKcUserId(principalId: string, tenantId: string): Promise<string | null> {
+  private async resolveKcUserId(principalId: string, tenantId: string, realm: string): Promise<string | null> {
     const binding = await this.db
       .selectFrom("master.principal_identity_binding as pib")
       .select("pib.subject_id")
       .where("pib.principal_id", "=", principalId)
       .where("pib.tenant_id",   "=", tenantId)
+      .where("pib.realm_key",   "=", realm)
       .where("pib.provider_code", "=", "keycloak")
       .executeTakeFirst() as { subject_id: string } | undefined;
 
@@ -235,7 +236,7 @@ export class MfaSyncService {
     principalId: string,
     realm: string,
   ): Promise<SyncResult> {
-    const kcUserId = await this.resolveKcUserId(principalId, tenantId);
+    const kcUserId = await this.resolveKcUserId(principalId, tenantId, realm);
     if (!kcUserId) {
       this.logger?.warn("mfa_sync_no_binding", { principal_id: principalId, tenant_id: tenantId });
       return { synced: 0, removed: 0, drifted: 0 };
@@ -421,7 +422,7 @@ export class MfaSyncService {
 
     // Delete from KC if we have a KC credential ID
     if (row.keycloak_credential_id) {
-      const kcUserId = await this.resolveKcUserId(principalId, tenantId);
+      const kcUserId = await this.resolveKcUserId(principalId, tenantId, realm);
       if (kcUserId) {
         await this.deleteKcCredential(realm, kcUserId, row.keycloak_credential_id);
       }
@@ -458,7 +459,7 @@ export class MfaSyncService {
     principalId: string,
     realm: string,
   ): Promise<DriftReport> {
-    const kcUserId = await this.resolveKcUserId(principalId, tenantId);
+    const kcUserId = await this.resolveKcUserId(principalId, tenantId, realm);
     const kcCreds  = kcUserId ? await this.fetchKcCredentials(realm, kcUserId) : [];
 
     const appRows = await this.db
@@ -500,7 +501,7 @@ export class MfaSyncService {
     principalId: string,
     realm: string,
   ): Promise<{ synced: number; failed: number }> {
-    const kcUserId = await this.resolveKcUserId(principalId, tenantId);
+    const kcUserId = await this.resolveKcUserId(principalId, tenantId, realm);
     if (!kcUserId) {
       this.logger?.warn("mfa_totp_sync_no_binding", { principal_id: principalId });
       return { synced: 0, failed: 0 };

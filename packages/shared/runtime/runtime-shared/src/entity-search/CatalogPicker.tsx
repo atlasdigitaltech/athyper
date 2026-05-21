@@ -12,7 +12,7 @@
  * Catalog entities are mostly not company_code-scoped. Item is the exception:
  * when a caller supplies company_code_id in formData, item search is scoped to it.
  *
- * SpendCategoryPicker, BusinessIntentPicker, and ItemPicker are thin named
+ * CommodityCategoryPicker, BusinessIntentPicker, and ItemPicker are thin named
  * wrappers exported from this file — they share all logic and just pin the
  * entityCode.
  *
@@ -250,12 +250,12 @@ export function CatalogPicker({
   const effectiveLookupConfig = useMemo<Record<string, unknown> | null>(() => {
     const existing = (field?.lookup_config ?? {}) as Record<string, unknown>;
     if (entityCode !== "item") return existing;
-    if (existing["depends_on"] || existing["dependent_filter"] || existing["dependency"]) {
+    if (existing["dependent_filter"]) {
       return existing;
     }
     return {
       ...existing,
-      depends_on: {
+      dependent_filter: {
         source_field: "company_code_id",
         target_field: "company_code_id",
         empty_behavior: "all",
@@ -317,15 +317,10 @@ export function CatalogPicker({
 
 // ── Named thin wrappers ───────────────────────────────────────────────────────
 
-export type SpendCategoryPickerProps   = Omit<CatalogPickerProps, "entityCode">;
 export type CommodityCategoryPickerProps = Omit<CatalogPickerProps, "entityCode">;
 export type BusinessIntentPickerProps  = Omit<CatalogPickerProps, "entityCode">;
 export type ItemPickerProps            = Omit<CatalogPickerProps, "entityCode">;
 export type ProductPickerProps         = Omit<CatalogPickerProps, "entityCode">;
-
-export function SpendCategoryPicker(props: SpendCategoryPickerProps) {
-  return <CatalogPicker entityCode="commodity_category" {...props} />;
-}
 
 export function CommodityCategoryPicker(props: CommodityCategoryPickerProps) {
   return <CatalogPicker entityCode="commodity_category" {...props} />;

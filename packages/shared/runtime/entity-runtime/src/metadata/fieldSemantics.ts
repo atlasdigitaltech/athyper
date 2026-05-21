@@ -157,7 +157,7 @@ export function fieldHiddenInSurface(field: EntityField, surface: string): boole
 
 export function fieldExcludedFromCopy(field: EntityField): boolean {
   const copy = fieldSettingRecord(field, "copy");
-  const behavior = asString(copy?.behavior) ?? asString(asRecord(field.ui_hint)?.copy_behavior);
+  const behavior = asString(copy?.behavior);
   const editability = asRecord(field.editability);
   const editableIn = Array.isArray(editability?.editable_in) ? editability.editable_in : undefined;
   return field.origin === "system"

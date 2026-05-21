@@ -1457,9 +1457,9 @@ export function JournalIntakeLinesGrid({
         </div>
       )}
 
-      <div className="overflow-hidden">
+      <div className="overflow-x-auto overflow-y-hidden">
         <div
-          className="grid items-center border-b bg-muted/50 text-sm"
+          className="grid min-w-[900px] items-center border-b bg-muted/50 text-sm"
           style={{ gridTemplateColumns: intakeEditorColumns }}
         >
           <div className={cn(LINE_HEADER_CELL, "text-center")}>#</div>
@@ -1481,7 +1481,7 @@ export function JournalIntakeLinesGrid({
           <div className="px-2 py-2" />
         </div>
 
-        <div className={cn(LINE_ROWS_SCROLL_AREA, "divide-y divide-border/40")} style={{ scrollbarGutter: "stable" }}>
+        <div className={cn(LINE_ROWS_SCROLL_AREA, "min-w-[900px] divide-y divide-border/40")} style={{ scrollbarGutter: "stable" }}>
           {draftLines.map((line, index) => {
             const lineContext = {
               ...line,
@@ -1902,9 +1902,9 @@ export function JournalLinesGrid({
           </div>
         )}
 
-        <div className="overflow-hidden">
+        <div className="overflow-x-auto overflow-y-hidden">
           <div
-            className="grid items-center border-b bg-muted/50 text-sm"
+            className="grid min-w-[980px] items-center border-b bg-muted/50 text-sm"
             style={{ gridTemplateColumns: editorColumns }}
           >
             <div className={cn(LINE_HEADER_CELL, "text-center")}>#</div>
@@ -1919,7 +1919,7 @@ export function JournalLinesGrid({
             <div className="px-2 py-2" />
           </div>
 
-          <div className={cn(LINE_ROWS_SCROLL_AREA, "divide-y divide-border/40")} style={{ scrollbarGutter: "stable" }}>
+          <div className={cn(LINE_ROWS_SCROLL_AREA, "min-w-[980px] divide-y divide-border/40")} style={{ scrollbarGutter: "stable" }}>
             {draftLines.map((line, index) => {
               const lineContext = {
                 ...line,

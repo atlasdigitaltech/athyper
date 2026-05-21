@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { bffFetch } from "@/lib/bff-fetch";
 import {
   ArrowLeft, CheckCircle2, Circle, AlertCircle, Plus, RefreshCw, ShieldCheck,
 } from "lucide-react";
@@ -120,11 +121,10 @@ function TasksTab({ runId, phases }: { runId: string; phases: RunPhase[] }) {
   const mutate = useMutation({
     mutationFn: async () => {
       if (!activeTask) return;
-      const res = await fetch(`/api/governance/cycle-runs/${runId}/tasks/${activeTask.id}/${taskAction}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: note.trim() || undefined }),
+      await bffFetch(`/api/governance/cycle-runs/${runId}/tasks/${activeTask.id}/${taskAction}`, {
+        method: "POST",
+        body: { note: note.trim() || undefined },
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["governance-run-tasks", runId] });
@@ -235,11 +235,7 @@ function DeviationsTab({ runId }: { runId: string }) {
 
   const create = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
-      const res = await fetch(`/api/governance/cycle-runs/${runId}/deviations`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
+      return bffFetch(`/api/governance/cycle-runs/${runId}/deviations`, { method: "POST", body });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["governance-run-deviations", runId] });
@@ -329,10 +325,10 @@ function CertificationsTab({ runId }: { runId: string }) {
 
   const certify = useMutation({
     mutationFn: async ({ certId, action }: { certId: string; action: "certify" | "reject" }) => {
-      const res = await fetch(`/api/governance/cycle-runs/${runId}/certifications/${certId}/${action}`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
+      await bffFetch(`/api/governance/cycle-runs/${runId}/certifications/${certId}/${action}`, {
+        method: "POST",
+        body: {},
       });
-      if (!res.ok) throw new Error("Failed");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["governance-run-certs", runId] }),
   });
@@ -383,10 +379,10 @@ function RunActions({ run, onRefresh }: { run: CycleRun; onRefresh: () => void }
 
   const action = useMutation({
     mutationFn: async (act: string) => {
-      const res = await fetch(`/api/governance/cycle-runs/${run.id}/${act}`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
+      await bffFetch(`/api/governance/cycle-runs/${run.id}/${act}`, {
+        method: "POST",
+        body: {},
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["governance-run", run.id] });

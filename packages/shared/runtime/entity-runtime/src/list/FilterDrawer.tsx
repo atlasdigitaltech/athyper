@@ -91,9 +91,7 @@ type MetadataFilterSection = {
 type QuickPrimitive = string | number | boolean;
 
 function fieldFilterMeta(field: EntityField): FieldFilterMeta | null {
-  if (field.filter_config) return field.filter_config;
-  const filter = field.ui_hint?.["filter"];
-  return filter && typeof filter === "object" ? filter as FieldFilterMeta : null;
+  return field.filter_config ?? null;
 }
 
 function fieldSectionKey(field: EntityField): string | null {

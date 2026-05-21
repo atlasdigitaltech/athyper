@@ -378,7 +378,7 @@ BEGIN
 
     -- Audit category ID
     SELECT id INTO v_sc_audit
-    FROM master.spend_category
+    FROM master.commodity_category
     WHERE tenant_id=v_tid AND code='SC-PROF-AUDIT';
 
     -- NTP@TEGY: expire all buy policy rows (tax cert lapsed → invoice block active)

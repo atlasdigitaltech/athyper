@@ -10,9 +10,14 @@
  * Data: /api/relay/platform/entities and /api/relay/platform/entities/:name/fields
  */
 
-import { useState } from "react";
-import { ChevronRight, Database, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle2, ChevronRight, ClipboardList, Database, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  contractsForScope,
+  getUnknownTopLevelKeys,
+  type PropertyContractEntry,
+} from "@athyper/api-contracts";
 import { PageFrame } from "@athyper/ui/layout";
 import { EmptyState } from "@athyper/ui/composites";
 import {
@@ -33,6 +38,11 @@ interface EntityItem {
   table_name: string;
   ownership_model: string | null;
   module_id: string | null;
+  display_config?: Record<string, unknown> | null;
+  feature_flags?: Record<string, unknown> | null;
+  data_policy?: Record<string, unknown> | null;
+  identity_config?: Record<string, unknown> | null;
+  search_config?: Record<string, unknown> | null;
 }
 
 interface EntityField {
@@ -53,6 +63,25 @@ interface EntityField {
   sort_order: number;
   origin: string;
   cardinality: string;
+  default_value?: unknown;
+  compute_expr?: unknown;
+  enum_config?: Record<string, unknown> | null;
+  enum_domain_code?: string | null;
+  reference_config?: Record<string, unknown> | null;
+  money_config?: Record<string, unknown> | null;
+  json_config?: Record<string, unknown> | null;
+  datetime_config?: Record<string, unknown> | null;
+  ui_hint?: Record<string, unknown> | null;
+  visibility?: Record<string, unknown> | null;
+  editability?: Record<string, unknown> | null;
+  lookup_config?: Record<string, unknown> | null;
+  lookup_profile?: Record<string, unknown> | null;
+  filter_config?: Record<string, unknown> | null;
+  collection_behavior?: Record<string, unknown> | null;
+  validation?: Record<string, unknown> | null;
+  validation_rules?: Record<string, unknown> | null;
+  constraints?: Record<string, unknown> | null;
+  group_key?: string | null;
 }
 
 const CLASS_OPTIONS = ["REFERENCE", "MASTER", "DOCUMENT", "CONTROL", "JOURNAL"];
@@ -68,7 +97,8 @@ function useEntities(search: string, entityClass: string) {
       if (entityClass) params.set("class",  entityClass);
       const res = await fetch(`/api/relay/platform/entities?${params}`);
       if (!res.ok) throw new Error("Failed to load entities");
-      return res.json() as Promise<EntityItem[]>;
+      const body = await res.json() as EntityItem[] | { data?: EntityItem[] };
+      return Array.isArray(body) ? body : body.data ?? [];
     },
     staleTime: 60 * 1000,
   });
@@ -128,12 +158,27 @@ function EntityRow({
 
 // ── Field table ───────────────────────────────────────────────────────────────
 
-function FieldRow({ field }: { field: EntityField }) {
+function FieldRow({
+  field,
+  selected,
+  onSelect,
+}: {
+  field: EntityField;
+  selected?: boolean;
+  onSelect?: () => void;
+}) {
   const typeBadge = resolveSemanticColors(dataTypeIntent(field.data_type)).subtleBadge;
   const flagCls = (key: string) =>
     cn("text-doc-field-label px-1 py-0 h-4", resolveSemanticColors(FIELD_FLAG_INTENT[key] ?? "neutral").subtleBadge);
   return (
-    <tr className="border-b last:border-0 hover:bg-muted/20 text-xs">
+    <tr
+      onClick={onSelect}
+      className={cn(
+        "border-b last:border-0 text-xs",
+        onSelect && "cursor-pointer hover:bg-muted/20",
+        selected && "bg-primary/5",
+      )}
+    >
       <td className="py-2 px-3 font-medium">{field.label ?? field.name}</td>
       <td className="py-2 px-3 font-mono text-muted-foreground text-doc-support">{field.name}</td>
       <td className="py-2 px-3">
@@ -156,6 +201,135 @@ function FieldRow({ field }: { field: EntityField }) {
   );
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function contractValue(entry: PropertyContractEntry, entity: EntityItem | null, field: EntityField | null): unknown {
+  if (entry.scope === "entity") return entity?.[entry.property as keyof EntityItem] ?? null;
+  if (!field) return null;
+  return field[entry.property as keyof EntityField] ?? null;
+}
+
+function valueSummary(value: unknown): string {
+  if (value == null) return "Not set";
+  if (Array.isArray(value)) return `${value.length} item${value.length === 1 ? "" : "s"}`;
+  if (typeof value === "object") {
+    const keys = Object.keys(value as Record<string, unknown>);
+    return keys.length ? keys.slice(0, 4).join(", ") + (keys.length > 4 ? ` +${keys.length - 4}` : "") : "Empty object";
+  }
+  return String(value);
+}
+
+function ContractRow({
+  entry,
+  value,
+}: {
+  entry: PropertyContractEntry;
+  value: unknown;
+}) {
+  const unknownKeys = getUnknownTopLevelKeys(entry, value);
+  const record = asRecord(value);
+  const deprecatedHits = entry.deprecatedKeys.filter((item) => record && item.key in record);
+  const hasWarning = unknownKeys.length > 0 || deprecatedHits.length > 0;
+
+  return (
+    <tr className="border-b last:border-0 align-top text-xs hover:bg-muted/20">
+      <td className="px-3 py-2">
+        <div className="font-medium">{entry.uiLabel}</div>
+        <div className="mt-0.5 font-mono text-doc-support text-muted-foreground">{entry.property}</div>
+      </td>
+      <td className="px-3 py-2">
+        <span className="rounded border bg-muted/40 px-1.5 py-0.5 text-doc-field-label font-medium">
+          {entry.phase}
+        </span>
+      </td>
+      <td className="px-3 py-2">
+        <span className="rounded border bg-muted/40 px-1.5 py-0.5 text-doc-field-label font-medium">
+          {entry.compileTarget}
+        </span>
+      </td>
+      <td className="px-3 py-2 text-muted-foreground">{entry.uiTab}</td>
+      <td className="px-3 py-2 text-muted-foreground">{entry.uiControl.replace(/_/g, " ")}</td>
+      <td className="px-3 py-2">
+        <div className="flex items-start gap-1.5">
+          {hasWarning ? (
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+          ) : (
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
+          )}
+          <div className="min-w-0">
+            <div className="truncate text-muted-foreground">{valueSummary(value)}</div>
+            {unknownKeys.length > 0 && (
+              <div className="mt-1 text-doc-support text-warning">
+                Unknown: {unknownKeys.join(", ")}
+              </div>
+            )}
+            {deprecatedHits.length > 0 && (
+              <div className="mt-1 text-doc-support text-warning">
+                Deprecated: {deprecatedHits.map((item) => item.key).join(", ")}
+              </div>
+            )}
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function ContractInspector({
+  entity,
+  selectedField,
+}: {
+  entity: EntityItem | null;
+  selectedField: EntityField | null;
+}) {
+  const entityContracts = contractsForScope("entity");
+  const fieldContracts = contractsForScope("entity_field");
+  const rows = selectedField ? fieldContracts : entityContracts;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="border-b bg-muted/20 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">
+            {selectedField ? `Field contract: ${selectedField.name}` : "Entity contracts"}
+          </h3>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Registry-backed contract definitions, compile targets, and current metadata values.
+        </p>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <table className="w-full text-xs">
+          <thead className="sticky top-0 z-10 border-b bg-muted/50">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Property</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Phase</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Compile</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Tab</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Control</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">Current value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((entry) => (
+              <ContractRow
+                key={`${entry.scope}:${entry.property}`}
+                entry={entry}
+                value={contractValue(entry, entity, selectedField)}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MetadataStudioPage() {
@@ -163,9 +337,15 @@ export default function MetadataStudioPage() {
   const [activeSearch, setActiveSearch] = useState("");
   const [classFilter, setClassFilter]   = useState("");
   const [selected, setSelected]         = useState<EntityItem | null>(null);
+  const [activeTab, setActiveTab]       = useState<"fields" | "contracts">("fields");
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
 
   const { data: entities, isLoading: entitiesLoading } = useEntities(activeSearch, classFilter);
   const { data: fields,   isLoading: fieldsLoading }   = useEntityFields(selected?.name ?? null);
+  const selectedField = useMemo(
+    () => fields?.find((field) => field.id === selectedFieldId) ?? null,
+    [fields, selectedFieldId],
+  );
 
   function handleSearch() {
     setActiveSearch(search.trim());
@@ -239,7 +419,11 @@ export default function MetadataStudioPage() {
                   key={entity.id}
                   entity={entity}
                   selected={selected?.id === entity.id}
-                  onSelect={() => setSelected(entity)}
+                  onSelect={() => {
+                    setSelected(entity);
+                    setSelectedFieldId(null);
+                    setActiveTab("fields");
+                  }}
                 />
               ))
             )}
@@ -272,14 +456,36 @@ export default function MetadataStudioPage() {
                     {selected.module_id && ` · module: ${selected.module_id}`}
                   </p>
                 </div>
-                {fields && (
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {fields.length} fields
-                  </span>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  {fields && (
+                    <span className="text-xs text-muted-foreground">
+                      {fields.length} fields
+                    </span>
+                  )}
+                  <div className="flex rounded-md border bg-background p-0.5">
+                    {(["fields", "contracts"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setActiveTab(tab)}
+                        className={cn(
+                          "rounded px-2 py-1 text-doc-support font-medium capitalize transition-colors",
+                          activeTab === tab
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              {/* Fields table */}
+              {/* Fields / contract inspector */}
+              {activeTab === "contracts" ? (
+                <ContractInspector entity={selected} selectedField={selectedField} />
+              ) : (
               <div className="flex-1 overflow-auto">
                 {fieldsLoading ? (
                   <div className="space-y-2 p-4">
@@ -303,12 +509,21 @@ export default function MetadataStudioPage() {
                     </thead>
                     <tbody>
                       {fields.map((field) => (
-                        <FieldRow key={field.id} field={field} />
+                        <FieldRow
+                          key={field.id}
+                          field={field}
+                          selected={selectedFieldId === field.id}
+                          onSelect={() => {
+                            setSelectedFieldId(field.id);
+                            setActiveTab("contracts");
+                          }}
+                        />
                       ))}
                     </tbody>
                   </table>
                 )}
               </div>
+              )}
             </>
           )}
         </div>

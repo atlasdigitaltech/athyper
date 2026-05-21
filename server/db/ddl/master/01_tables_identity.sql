@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS master.tenant (
     -- Table-specific
     display_name    text              NOT NULL,
     realm_key       text              NOT NULL DEFAULT 'athyper',
+    tenant_type     text              NOT NULL DEFAULT 'customer',
     region          text,
     subscription    text              NOT NULL DEFAULT 'base',
 
@@ -42,10 +43,16 @@ CREATE TABLE IF NOT EXISTS master.tenant (
     CONSTRAINT tenant_realm_key_fmt     CHECK (realm_key ~ '^[a-z][a-z0-9_-]{1,62}$')
 );
 
+ALTER TABLE master.tenant
+    ADD COLUMN IF NOT EXISTS tenant_type text NOT NULL DEFAULT 'customer';
+
 COMMENT ON TABLE master.tenant IS
   'ARCHETYPE=B;SCOPE=N. Multi-tenant root entity. PK: uuidv7 id. '
   'Natural key: (realm_key, code) — code is unique per realm only. '
   'Different realms may share the same code.';
+
+COMMENT ON COLUMN master.tenant.tenant_type IS
+  'Plane-aware tenant classification. Examples: platform_internal, platform_owner, customer, partner, partner_prospect, supplier_prospect.';
 
 -- §2 principal — universal actor: users, service accounts, bots
 CREATE TABLE IF NOT EXISTS master.principal (
@@ -101,11 +108,19 @@ CREATE TABLE IF NOT EXISTS master.principal (
     CONSTRAINT principal_login_email_norm_chk CHECK (login_email IS NULL OR login_email = lower(trim(login_email))),
     -- Sealed platform vocabulary — inline CHECK only, no lookup domain
     CONSTRAINT principal_source_chk          CHECK (principal_source IS NULL
-        OR principal_source IN ('internal', 'scim', 'saml_jit', 'oidc_jit', 'import', 'api'))
+        OR principal_source IN ('internal', 'scim', 'saml_jit', 'oidc_jit', 'support_jit', 'invite_jit', 'import', 'api'))
 );
 
 -- Backfill: auth_epoch added after initial deploy — idempotent ALTER
 ALTER TABLE master.principal ADD COLUMN IF NOT EXISTS auth_epoch integer NOT NULL DEFAULT 0;
+
+ALTER TABLE master.principal DROP CONSTRAINT IF EXISTS principal_source_chk;
+DO $$ BEGIN
+    ALTER TABLE master.principal
+        ADD CONSTRAINT principal_source_chk
+        CHECK (principal_source IS NULL
+            OR principal_source IN ('internal', 'scim', 'saml_jit', 'oidc_jit', 'support_jit', 'invite_jit', 'import', 'api'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 COMMENT ON TABLE  master.principal IS
   'ARCHETYPE=B;SCOPE=T. Universal actor: users, service accounts, bots. Core identity only — see principal_profile for display data, contact_link for addresses.';
@@ -120,7 +135,7 @@ COMMENT ON COLUMN master.principal.external_ref IS
     'Unique per tenant when populated. Used for identity reconciliation.';
 COMMENT ON COLUMN master.principal.principal_source IS
     'How this principal was created. Sealed platform enum (inline CHECK). '
-    'Values: internal, scim, saml_jit, oidc_jit, import, api.';
+    'Values: internal, scim, saml_jit, oidc_jit, support_jit, invite_jit, import, api.';
 
 -- §3 principal_profile — 1:1 with principal (display, Keycloak binding, IdP snapshot)
 CREATE TABLE IF NOT EXISTS master.principal_profile (
@@ -226,6 +241,7 @@ CREATE TABLE IF NOT EXISTS master.principal_identity_binding (
     principal_id            uuid            NOT NULL,
 
     -- Provider identity (sealed platform/protocol vocabulary — inline CHECK only)
+    realm_key               text            NOT NULL DEFAULT 'athyper',
     provider_code           text            NOT NULL,
 
     -- Subject / external identity
@@ -233,6 +249,9 @@ CREATE TABLE IF NOT EXISTS master.principal_identity_binding (
     username                text,
 
     -- Federation details
+    issuer                  text,
+    audience                text,
+    client_id               text,
     federation_link         text,
     created_at_millis       bigint,
     not_before              bigint,
@@ -267,8 +286,8 @@ CREATE TABLE IF NOT EXISTS master.principal_identity_binding (
     updated_by              uuid,
 
     CONSTRAINT pib_pkey                 PRIMARY KEY (id),
-    CONSTRAINT pib_principal_provider_uq UNIQUE (tenant_id, principal_id, provider_code),
-    CONSTRAINT pib_subject_provider_uq  UNIQUE (tenant_id, provider_code, subject_id),
+    CONSTRAINT pib_principal_realm_provider_uq UNIQUE (tenant_id, principal_id, realm_key, provider_code),
+    CONSTRAINT pib_subject_realm_provider_uq  UNIQUE (tenant_id, realm_key, provider_code, subject_id),
     CONSTRAINT pib_provider_code_chk    CHECK (provider_code IN (
         'keycloak', 'azure_ad', 'okta', 'google',
         'saml_generic', 'oidc_generic'
@@ -276,9 +295,19 @@ CREATE TABLE IF NOT EXISTS master.principal_identity_binding (
     CONSTRAINT pib_sync_status_chk      CHECK (sync_status IN (
         'pending', 'synced', 'drift', 'error', 'disabled'
     )),
+    CONSTRAINT pib_realm_key_fmt        CHECK (realm_key ~ '^[a-z][a-z0-9_-]{1,62}$'),
     CONSTRAINT pib_subject_nonempty     CHECK (btrim(subject_id) <> ''),
+    CONSTRAINT pib_issuer_nonempty      CHECK (issuer IS NULL OR btrim(issuer) <> ''),
+    CONSTRAINT pib_audience_nonempty    CHECK (audience IS NULL OR btrim(audience) <> ''),
+    CONSTRAINT pib_client_id_nonempty   CHECK (client_id IS NULL OR btrim(client_id) <> ''),
     CONSTRAINT pib_sync_retry_chk       CHECK (sync_retry_count >= 0)
 );
+
+ALTER TABLE master.principal_identity_binding
+    ADD COLUMN IF NOT EXISTS realm_key text NOT NULL DEFAULT 'athyper',
+    ADD COLUMN IF NOT EXISTS issuer text,
+    ADD COLUMN IF NOT EXISTS audience text,
+    ADD COLUMN IF NOT EXISTS client_id text;
 
 COMMENT ON TABLE master.principal_identity_binding IS
     'ARCHETYPE=C;SCOPE=T. IdP/Keycloak shadow table. One row per (principal, provider). '
@@ -288,13 +317,141 @@ COMMENT ON TABLE master.principal_identity_binding IS
 COMMENT ON COLUMN master.principal_identity_binding.provider_code IS
     'Identity provider code. Sealed enum (inline CHECK). Adding a new IdP '
     'requires code changes in the sync adapter — not business-extensible.';
+COMMENT ON COLUMN master.principal_identity_binding.realm_key IS
+    'Realm that issued this identity subject. Distinguishes neon, mesh, admin, and platform-control principals.';
 COMMENT ON COLUMN master.principal_identity_binding.subject_id IS
     'IdP-specific principal identifier (Keycloak UUID, Azure OID, etc.).';
+COMMENT ON COLUMN master.principal_identity_binding.issuer IS
+    'Issuer URL observed for this IdP subject, when captured from token or sync API.';
+COMMENT ON COLUMN master.principal_identity_binding.audience IS
+    'Expected JWT audience/client audience for this binding, when relevant.';
+COMMENT ON COLUMN master.principal_identity_binding.client_id IS
+    'IdP client id associated with this binding, when relevant.';
 COMMENT ON COLUMN master.principal_identity_binding.idp_snapshot IS
     'Full user representation JSON from provider API. Non-canonical — audit only.';
 COMMENT ON COLUMN master.principal_identity_binding.sync_status IS
     'Sync health. Sealed protocol enum (inline CHECK): '
     'pending, synced, drift, error, disabled.';
+
+
+-- Section 3c tenant_relationship - explicit org-to-org relationship/grant anchor
+CREATE TABLE IF NOT EXISTS master.tenant_relationship (
+    -- Identity
+    id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
+
+    -- Relationship endpoints
+    from_tenant_id          uuid            NOT NULL,
+    to_tenant_id            uuid            NOT NULL,
+
+    -- Relationship classification
+    relationship_type       text            NOT NULL,
+    relationship_direction  text            NOT NULL DEFAULT 'outbound',
+
+    -- Delegation / collaboration scope
+    scopes                  jsonb           NOT NULL DEFAULT '{}'::jsonb,
+    external_ref            text,
+
+    -- Invite and activation state
+    invited_email           text,
+    invited_at              timestamptz,
+    accepted_at             timestamptz,
+    effective_from          timestamptz     NOT NULL DEFAULT now(),
+    effective_until         timestamptz,
+
+    -- Metadata
+    metadata                jsonb           NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Lifecycle
+    status                  text            NOT NULL DEFAULT 'pending',
+    is_active               boolean         GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at       timestamptz,
+    status_changed_by       uuid,
+
+    -- Audit
+    created_at              timestamptz     NOT NULL DEFAULT now(),
+    created_by              uuid            NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT tenant_relationship_pkey PRIMARY KEY (id),
+    CONSTRAINT tenant_relationship_pair_type_uq UNIQUE (from_tenant_id, to_tenant_id, relationship_type),
+    CONSTRAINT tenant_relationship_distinct_chk CHECK (from_tenant_id <> to_tenant_id),
+    CONSTRAINT tenant_relationship_scopes_obj_chk CHECK (jsonb_typeof(scopes) = 'object'),
+    CONSTRAINT tenant_relationship_invited_email_norm_chk CHECK (invited_email IS NULL OR invited_email = lower(trim(invited_email))),
+    CONSTRAINT tenant_relationship_effective_range_chk CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT tenant_relationship_external_ref_chk CHECK (external_ref IS NULL OR btrim(external_ref) <> '')
+);
+
+COMMENT ON TABLE master.tenant_relationship IS
+    'ARCHETYPE=B;SCOPE=N. Explicit tenant-to-tenant relationship anchor for customer-partner, customer-supplier, implementation, and platform support relationships. Access is granted through access_grant/delegation_grant, not this table alone.';
+COMMENT ON COLUMN master.tenant_relationship.from_tenant_id IS
+    'Initiating/source tenant for the relationship.';
+COMMENT ON COLUMN master.tenant_relationship.to_tenant_id IS
+    'Target tenant for the relationship.';
+COMMENT ON COLUMN master.tenant_relationship.scopes IS
+    'Relationship-level scopes such as modules, document families, support levels, or onboarding privileges.';
+
+
+-- Section 3d principal_relationship - same-human / duplicate / support-shadow correlation
+CREATE TABLE IF NOT EXISTS master.principal_relationship (
+    -- Identity
+    id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
+
+    -- Relationship endpoints
+    from_tenant_id          uuid            NOT NULL,
+    from_principal_id       uuid            NOT NULL,
+    to_tenant_id            uuid            NOT NULL,
+    to_principal_id         uuid            NOT NULL,
+
+    -- Relationship classification
+    relationship_type       text            NOT NULL,
+    verification_status     text            NOT NULL DEFAULT 'unverified',
+    verified_method         text,
+    verified_at             timestamptz,
+    verified_by             uuid,
+
+    -- Transfer / merge workflow state
+    requested_at            timestamptz,
+    requested_by            uuid,
+    approved_at             timestamptz,
+    approved_by             uuid,
+    effective_from          timestamptz     NOT NULL DEFAULT now(),
+    effective_until         timestamptz,
+
+    -- Metadata
+    metadata                jsonb           NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Lifecycle
+    status                  text            NOT NULL DEFAULT 'active',
+    is_active               boolean         GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at       timestamptz,
+    status_changed_by       uuid,
+
+    -- Audit
+    created_at              timestamptz     NOT NULL DEFAULT now(),
+    created_by              uuid            NOT NULL,
+    updated_at              timestamptz,
+    updated_by              uuid,
+
+    CONSTRAINT principal_relationship_pkey PRIMARY KEY (id),
+    CONSTRAINT principal_relationship_pair_type_uq UNIQUE (
+        from_tenant_id, from_principal_id, to_tenant_id, to_principal_id, relationship_type
+    ),
+    CONSTRAINT principal_relationship_distinct_chk CHECK (
+        from_tenant_id <> to_tenant_id OR from_principal_id <> to_principal_id
+    ),
+    CONSTRAINT principal_relationship_status_chk CHECK (status IN ('active', 'archived')),
+    CONSTRAINT principal_relationship_effective_range_chk CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT principal_relationship_verified_chk CHECK (
+        verification_status <> 'verified'
+        OR (verified_at IS NOT NULL AND verified_method IS NOT NULL)
+    )
+);
+
+COMMENT ON TABLE master.principal_relationship IS
+    'ARCHETYPE=B;SCOPE=N. Principal correlation table for same-human, duplicate, merge, transfer, and support-shadow relationships. Correlation only; it never grants access by itself.';
+COMMENT ON COLUMN master.principal_relationship.relationship_type IS
+    'Correlation intent such as same_human, duplicate_candidate, merged_into, transfer_requested, or support_shadow_for.';
 
 
 -- §4 contact_link — polymorphic canonical address store

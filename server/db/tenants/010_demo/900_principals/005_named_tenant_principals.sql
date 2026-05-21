@@ -99,12 +99,13 @@ BEGIN
 
     INSERT INTO master.principal_identity_binding (
         tenant_id, principal_id,
-        provider_code, subject_id, username,
+        realm_key, provider_code, subject_id, username,
         sync_status, idp_enabled, idp_email_verified,
         synced_at, created_by
     )
     SELECT
         p.tenant_id, p.id,
+        'athyper',
         'keycloak',
         p.id::text,
         p.code,
@@ -116,7 +117,7 @@ BEGIN
         'aa000001-0000-0000-0000-000000000003'::uuid,
         'aa000001-0000-0000-0000-000000000004'::uuid
     )
-    ON CONFLICT (tenant_id, principal_id, provider_code) DO NOTHING;
+    ON CONFLICT (tenant_id, principal_id, realm_key, provider_code) DO NOTHING;
 
     RAISE NOTICE '[005_named_tenant_principals] Stage C: 4 auth bindings seeded';
     RAISE NOTICE '[005_named_tenant_principals] Complete — 4 athyper/ATHQ extra persona users ready';

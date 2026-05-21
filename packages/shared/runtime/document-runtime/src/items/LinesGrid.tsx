@@ -225,7 +225,7 @@ function catalogFeatureEnabled(entity: CompiledEntity | undefined): boolean {
 function supportsCatalogItemMode(entity: CompiledEntity | null): boolean {
   return Boolean(entity?.fields.some((field) => {
     const ref = field.reference_config as Record<string, unknown> | null | undefined;
-    const refEntity = ref?.["ref_entity"] ?? ref?.["target_entity"] ?? ref?.["entity"];
+    const refEntity = ref?.["target_entity"];
     return field.name === "item_id" || refEntity === "item";
   }));
 }

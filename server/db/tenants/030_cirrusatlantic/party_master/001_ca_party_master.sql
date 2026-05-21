@@ -27,7 +27,7 @@
 --   supplier / customer (all writable columns)
 --   company_code_supplier_profile / company_code_customer_profile
 --   supplier_qualification / customer_qualification
---   supplier_spend_category (both suppliers)
+--   supplier_commodity_category (both suppliers)
 --   customer_block (APX-001: historical credit hold, lifted)
 --   business_partner_network_capability (Peppol for all 4 BPs)
 --   business_partner_network_link (Peppol GB + Ariba for BRT-001)
@@ -521,11 +521,11 @@ BEGIN
 
     -- BRT-001: Spend categories
     IF v_sup_brt IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id,supplier_id,commodity_category_id,is_primary,metadata,created_by)
         SELECT v_tid,v_sup_brt,sc.id,is_pri,v_seed,v_sys
         FROM (VALUES ('SC-IT',true),('SC-SUBS',false)) AS v(code,is_pri)
-        JOIN master.spend_category sc ON sc.tenant_id=v_tid AND sc.code=v.code
+        JOIN master.commodity_category sc ON sc.tenant_id=v_tid AND sc.code=v.code
         ON CONFLICT (tenant_id,supplier_id,commodity_category_id) DO NOTHING;
     END IF;
 
@@ -848,11 +848,11 @@ BEGIN
 
     -- CSM-001: Spend categories
     IF v_sup_csm IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id,supplier_id,commodity_category_id,is_primary,metadata,created_by)
         SELECT v_tid,v_sup_csm,sc.id,is_pri,v_seed,v_sys
         FROM (VALUES ('SC-IT',true),('SC-OUTSRC',false)) AS v(code,is_pri)
-        JOIN master.spend_category sc ON sc.tenant_id=v_tid AND sc.code=v.code
+        JOIN master.commodity_category sc ON sc.tenant_id=v_tid AND sc.code=v.code
         ON CONFLICT (tenant_id,supplier_id,commodity_category_id) DO NOTHING;
     END IF;
 

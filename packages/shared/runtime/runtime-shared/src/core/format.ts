@@ -192,16 +192,16 @@ export function resolveMoneyFieldConfig(raw: unknown): MoneyFieldConfig {
   const display = stringProp(obj, "currency_display", "currencyDisplay");
   const position = display === "none"
     ? "none"
-    : normalizeCurrencyCodePosition(recordProp(obj, "currency_code_position", "currencyCodePosition", "code_position", "codePosition", "currency_position", "currencyPosition"));
-  const fallbackMinorUnits = numberProp(obj, "fallback_minor_units", "fallbackMinorUnits");
+    : normalizeCurrencyCodePosition(recordProp(obj, "currency_code_position"));
+  const fallbackMinorUnits = numberProp(obj, "fallback_minor_units");
 
   return {
-    currencyField:        stringProp(obj, "currency_field", "currencyField"),
-    currencySource:       normalizeMoneyCurrencySource(recordProp(obj, "currency_source", "currencySource", "currency_scope", "currencyScope")),
-    currencyCode:         normaliseCurrencyCode(recordProp(obj, "currency_code", "currencyCode", "constant_currency", "constantCurrency")),
+    currencyField:        stringProp(obj, "currency_field"),
+    currencySource:       normalizeMoneyCurrencySource(recordProp(obj, "currency_source")),
+    currencyCode:         normaliseCurrencyCode(recordProp(obj, "currency_code")),
     currencyCodePosition: position,
-    currencyEditable:     boolProp(obj, "currency_editable", "currencyEditable", "editable_currency", "editableCurrency"),
-    minorUnits:           numberProp(obj, "minor_units", "minorUnits"),
+    currencyEditable:     boolProp(obj, "currency_editable"),
+    minorUnits:           numberProp(obj, "minor_units"),
     fallbackMinorUnits:   typeof fallbackMinorUnits === "number" ? fallbackMinorUnits : undefined,
   };
 }

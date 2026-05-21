@@ -309,6 +309,7 @@ export function useApPaymentMethods() {
 export interface CreateApPaymentPayload {
   invoice_id:        string;
   payment_method_id: string;
+  bank_account_id:   string;
   value_date?:       string;
   notes?:            string;
 }

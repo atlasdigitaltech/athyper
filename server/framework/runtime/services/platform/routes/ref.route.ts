@@ -40,9 +40,11 @@
  *   shared.persona_permission — grant matrix, not a picker
  */
 
-import type { RequestHandler, Router } from "express";
+import { createHash } from "node:crypto";
+import type { Request, RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import busboy from "busboy";
 import {
   verifyBearer,
   extractOrgHeaders,
@@ -51,6 +53,10 @@ import {
   resolveTenantId,
   setCachePrivate,
 } from "@athyper/svc-shared";
+import {
+  requirePlatformPermission,
+  requireCatalogWritable,
+} from "../platform-guard.js";
 
 // ─── Deps ──────────────────────────────────────────────────────────────────────
 
@@ -869,57 +875,9 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
   };
   router.get("/platform/ref/commodity-codes/search", searchCommodityCodesHandler);
 
-  // ── GET /platform/ref/commodity-codes/crosswalk ─────────────────────────────
-  // Maps a code from one domain to equivalent codes in another domain.
-  // ?from_domain= &from_code= &to_domain= are all required.
-
-  const commodityCrosswalkHandler: RequestHandler = async (req, res, next) => {
-    try {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
-
-      const q          = req.query as Record<string, unknown>;
-      const fromDomain = typeof q["from_domain"] === "string" ? q["from_domain"].trim().toLowerCase() : "";
-      const fromCode   = typeof q["from_code"]   === "string" ? q["from_code"].trim()                 : "";
-      const toDomain   = typeof q["to_domain"]   === "string" ? q["to_domain"].trim().toLowerCase()   : "";
-      const { page, limit, offset } = parsePagination(q);
-
-      if (!fromDomain || !fromCode || !toDomain) {
-        setCachePrivate(res);
-        res.json({ data: [], meta: { total: 0, page: 1, limit, pages: 0 } });
-        return;
-      }
-
-      const base = db
-        .selectFrom("shared.commodity_crosswalk as cw")
-        .innerJoin("shared.commodity_code as tc",
-          (jb) => jb
-            .onRef("tc.domain_code" as never, "=", "cw.to_domain_code"   as never)
-            .onRef("tc.code"        as never, "=", "cw.to_code"          as never),
-        )
-        .where("cw.from_domain_code" as never, "=", fromDomain as never)
-        .where("cw.from_code"        as never, "=", fromCode as never)
-        .where("cw.to_domain_code"   as never, "=", toDomain as never);
-
-      const [countRow, rows] = await Promise.all([
-        base.select((eb) => eb.fn.countAll<string>().as("n")).executeTakeFirst(),
-        base
-          .select([
-            "cw.from_domain_code", "cw.from_code",
-            "cw.to_domain_code",   "cw.to_code",
-            "tc.name as to_name",  "tc.level_no", "tc.is_leaf",
-          ] as never[])
-          .orderBy("tc.code" as never, "asc")
-          .limit(limit).offset(offset).execute(),
-      ]);
-
-      refResponse(res, rows, Number(countRow?.n ?? 0), page, limit);
-    } catch (err) {
-      logger?.error("ref_commodity_crosswalk_error", { err: String(err) });
-      next(err);
-    }
-  };
-  router.get("/platform/ref/commodity-codes/crosswalk", commodityCrosswalkHandler);
+  // Commodity crosswalk reads moved to /api/platform/taxonomy/:family/crosswalks/*
+  // (taxonomy.route.ts) which uses the correct DDL column names:
+  // source_domain_code / source_code / target_domain_code / target_code.
 
   // ═══════════════════════════════════════════════════════════════════════════
   // INDUSTRY CODES — shared.industry_code (hierarchical, domain-scoped)
@@ -1054,55 +1012,9 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
   };
   router.get("/platform/ref/industry-codes/search", searchIndustryCodesHandler);
 
-  // ── GET /platform/ref/industry-codes/crosswalk ──────────────────────────────
-
-  const industryCrosswalkHandler: RequestHandler = async (req, res, next) => {
-    try {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
-
-      const q          = req.query as Record<string, unknown>;
-      const fromDomain = typeof q["from_domain"] === "string" ? q["from_domain"].trim().toLowerCase() : "";
-      const fromCode   = typeof q["from_code"]   === "string" ? q["from_code"].trim()                 : "";
-      const toDomain   = typeof q["to_domain"]   === "string" ? q["to_domain"].trim().toLowerCase()   : "";
-      const { page, limit, offset } = parsePagination(q);
-
-      if (!fromDomain || !fromCode || !toDomain) {
-        setCachePrivate(res);
-        res.json({ data: [], meta: { total: 0, page: 1, limit, pages: 0 } });
-        return;
-      }
-
-      const base = db
-        .selectFrom("shared.industry_crosswalk as iw")
-        .innerJoin("shared.industry_code as ti",
-          (jb) => jb
-            .onRef("ti.domain_code" as never, "=", "iw.to_domain_code" as never)
-            .onRef("ti.code"        as never, "=", "iw.to_code"        as never),
-        )
-        .where("iw.from_domain_code" as never, "=", fromDomain as never)
-        .where("iw.from_code"        as never, "=", fromCode as never)
-        .where("iw.to_domain_code"   as never, "=", toDomain as never);
-
-      const [countRow, rows] = await Promise.all([
-        base.select((eb) => eb.fn.countAll<string>().as("n")).executeTakeFirst(),
-        base
-          .select([
-            "iw.from_domain_code", "iw.from_code",
-            "iw.to_domain_code",   "iw.to_code",
-            "ti.name as to_name",  "ti.level_no", "ti.is_leaf",
-          ] as never[])
-          .orderBy("ti.code" as never, "asc")
-          .limit(limit).offset(offset).execute(),
-      ]);
-
-      refResponse(res, rows, Number(countRow?.n ?? 0), page, limit);
-    } catch (err) {
-      logger?.error("ref_industry_crosswalk_error", { err: String(err) });
-      next(err);
-    }
-  };
-  router.get("/platform/ref/industry-codes/crosswalk", industryCrosswalkHandler);
+  // Industry crosswalk reads moved to /api/platform/taxonomy/:family/crosswalks/*
+  // (taxonomy.route.ts) which uses the correct DDL column names:
+  // source_domain_code / source_code / target_domain_code / target_code.
 
   // ═══════════════════════════════════════════════════════════════════════════
   // FX RATES — master.fx_rate (tenant-scoped; read via general bearer)
@@ -1328,6 +1240,228 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
     }
   };
   router.get("/platform/ref/fx-rates/history", fxRateHistoryHandler);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REFERENCE IMPORT — POST /platform/ref/:family/import
+  // Idempotent upsert for Tier 1 shared reference tables.
+  // Requires PLATFORM.REFERENCE.IMPORT permission + PLATFORM_CATALOG_WRITABLE env.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const ALLOWED_REF_FAMILIES = new Set([
+    "country", "currency", "language", "locale", "timezone", "uom", "state_region",
+  ]);
+
+  // Columns allowed per family (verified against shared/01_tables.sql DDL).
+  const REF_ALLOWED_COLUMNS: Record<string, Set<string>> = {
+    country:      new Set(["code", "name", "code3", "numeric3", "official_name", "region", "subregion", "calling_code", "has_postal_codes", "region_label"]),
+    currency:     new Set(["code", "name", "symbol", "minor_units", "numeric3"]),
+    language:     new Set(["code", "name", "native_name", "iso639_2", "direction"]),
+    locale:       new Set(["code", "name", "language_code", "country_code", "script", "direction"]),
+    timezone:     new Set(["code", "name", "utc_offset_minutes", "is_alias", "canonical_code"]),
+    uom:          new Set(["code", "name", "symbol", "quantity_type"]),
+    state_region: new Set(["code", "name", "country_code", "category", "parent_code"]),
+  };
+  const REF_REQUIRED_COLUMNS: Record<string, string[]> = {
+    country:      ["code", "name"],
+    currency:     ["code", "name"],
+    language:     ["code", "name"],
+    locale:       ["code", "name", "language_code"],
+    timezone:     ["code"],
+    uom:          ["code", "name"],
+    state_region: ["code", "name", "country_code"],
+  };
+
+  const MAX_UPLOAD_BYTES = 20 * 1024 * 1024; // 20 MB
+
+  function sha256hex(buf: Buffer): string {
+    return createHash("sha256").update(buf).digest("hex");
+  }
+
+  function parseCsvBuffer(buf: Buffer): Record<string, string>[] {
+    const text   = buf.toString("utf-8");
+    const lines  = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0]!.split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+    return lines.slice(1).map((line) => {
+      const vals = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+      return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
+    });
+  }
+
+  function validateRefRows(
+    family: string,
+    rows: Record<string, string>[],
+  ): { row: number; field: string; message: string }[] {
+    const allowed  = REF_ALLOWED_COLUMNS[family] ?? new Set<string>();
+    const required = REF_REQUIRED_COLUMNS[family] ?? [];
+    const errors: { row: number; field: string; message: string }[] = [];
+
+    // Check column allowlist from header (row 0 keys)
+    if (rows.length > 0) {
+      for (const col of Object.keys(rows[0]!)) {
+        if (!allowed.has(col)) {
+          errors.push({ row: 0, field: col, message: `Unknown column '${col}' for family '${family}'` });
+        }
+      }
+    }
+    if (errors.length > 0) return errors; // short-circuit on unknown columns
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]!;
+      for (const req of required) {
+        if (!row[req]?.trim()) {
+          errors.push({ row: i + 1, field: req, message: `Required field '${req}' is empty` });
+        }
+      }
+    }
+    return errors;
+  }
+
+  function readRefUpload(req: Request): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const bb = busboy({ headers: req.headers, limits: { files: 1, fileSize: MAX_UPLOAD_BYTES } });
+      let fileSeen = false;
+      let limitExceeded = false;
+      let sizeBytes = 0;
+      const chunks: Buffer[] = [];
+      let settled = false;
+      const rejectOnce = (err: unknown) => {
+        if (settled) return;
+        settled = true;
+        reject(err instanceof Error ? err : new Error(String(err)));
+      };
+      bb.on("file", (_field, stream, _info) => {
+        if (fileSeen) { stream.resume(); return; }
+        fileSeen = true;
+        stream.on("data", (chunk: Buffer) => {
+          if (limitExceeded) return;
+          sizeBytes += chunk.length;
+          if (sizeBytes > MAX_UPLOAD_BYTES) { limitExceeded = true; chunks.length = 0; stream.resume(); return; }
+          chunks.push(Buffer.from(chunk));
+        });
+        stream.on("limit", () => { limitExceeded = true; chunks.length = 0; });
+        stream.on("error", rejectOnce);
+      });
+      bb.on("finish", () => {
+        if (settled) return;
+        if (limitExceeded) { rejectOnce(Object.assign(new Error("FILE_TOO_LARGE"), { statusCode: 413 })); return; }
+        if (!fileSeen)     { rejectOnce(Object.assign(new Error("MISSING_FILE"),    { statusCode: 400 })); return; }
+        const buffer = Buffer.concat(chunks, sizeBytes);
+        if (buffer.byteLength === 0) { rejectOnce(Object.assign(new Error("EMPTY_FILE"), { statusCode: 400 })); return; }
+        settled = true;
+        resolve(buffer);
+      });
+      bb.on("error", rejectOnce);
+      req.pipe(bb);
+    });
+  }
+
+  const refImportHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const family = (req.params["family"] as string ?? "").trim();
+      if (!ALLOWED_REF_FAMILIES.has(family)) {
+        res.status(400).json({ error: "UNSUPPORTED_REF_FAMILY", supported: [...ALLOWED_REF_FAMILIES] });
+        return;
+      }
+      if (!requireCatalogWritable(res)) return;
+
+      const g = await requirePlatformPermission(req, res, auth, db, "PLATFORM.REFERENCE.IMPORT");
+      if (!g) return;
+
+      let fileBuffer: Buffer;
+      try {
+        fileBuffer = await readRefUpload(req);
+      } catch (uploadErr: unknown) {
+        const err = uploadErr as { statusCode?: number; message?: string };
+        res.status(err.statusCode ?? 400).json({ error: err.message ?? "UPLOAD_ERROR" });
+        return;
+      }
+
+      const checksum = sha256hex(fileBuffer);
+      const rows     = parseCsvBuffer(fileBuffer);
+
+      // Full-file validation — all rows, not just preview
+      const errors = validateRefRows(family, rows);
+      if (errors.length > 0) {
+        res.status(422).json({ error: "VALIDATION_FAILED", errors });
+        return;
+      }
+
+      // Dry-run: return summary without writing
+      if (req.query["preview"] === "true") {
+        res.json({ checksum, row_count: rows.length, preview: rows.slice(0, 5), errors: [] });
+        return;
+      }
+
+      // Idempotency check: same checksum already imported?
+      const existing = await (db as Kysely<any>)
+        .selectFrom("log.platform_audit_log as pal")
+        .select(["pal.id", "pal.created_at"])
+        .where("pal.entity_type" as never, "=", `shared.${family}` as never)
+        .where("pal.operation"   as never, "=", "bulk_import" as never)
+        .where("pal.checksum"    as never, "=", checksum as never)
+        .executeTakeFirst();
+
+      if (existing) {
+        res.json({ replayed: true, checksum, logged_at: existing.created_at });
+        return;
+      }
+
+      // Upsert via COPY-safe pattern: batch INSERT … ON CONFLICT DO UPDATE
+      const table = `shared.${family}`;
+      const now   = new Date().toISOString();
+      let inserted = 0;
+      let updated  = 0;
+
+      await (db as Kysely<any>).transaction().execute(async (trx) => {
+        for (const row of rows) {
+          const existing = await trx
+            .selectFrom(table as never)
+            .select("id" as never)
+            .where("code" as never, "=", row["code"] as never)
+            .executeTakeFirst() as { id: string } | undefined;
+
+          if (existing) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const updatePayload: Record<string, any> = { updated_at: now, updated_by: g.principalId };
+            for (const [k, v] of Object.entries(row)) {
+              if (k !== "code") updatePayload[k] = v || null;
+            }
+            await trx.updateTable(table as never).set(updatePayload as never).where("id" as never, "=", existing.id as never).execute();
+            updated++;
+          } else {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const insertPayload: Record<string, any> = { ...row, created_at: now, created_by: g.principalId };
+            await trx.insertInto(table as never).values(insertPayload as never).execute();
+            inserted++;
+          }
+        }
+      });
+
+      // Audit
+      await (db as Kysely<any>)
+        .insertInto("log.platform_audit_log")
+        .values({
+          entity_type: `shared.${family}`,
+          operation:   "bulk_import",
+          actor_id:    g.principalId,
+          payload:     JSON.stringify({ inserted, updated }),
+          checksum,
+          row_count:   inserted + updated,
+        } as never)
+        .execute();
+
+      // Cache invalidation happens in the caller (BFF relay layer) via ref-cache.ts
+      // after this route responds. The versioned key pattern ensures stale reads
+      // expire naturally if invalidation is skipped.
+
+      res.json({ checksum, inserted, updated, row_count: inserted + updated });
+    } catch (err) {
+      logger?.error("ref_import_error", { err: String(err) });
+      next(err);
+    }
+  };
+  router.post("/platform/ref/:family/import", refImportHandler);
 
   return router;
 }

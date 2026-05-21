@@ -29,7 +29,7 @@ export interface ExtractedLineItem {
   currency_code:     string | null;
   uom_code:          string | null;
   tax_rate_pct:      number | null;
-  spend_category_suggestion: string | null;
+  commodity_category_suggestion: string | null;
   hs_code:           string | null;
   confidence:        number;
 }
@@ -103,7 +103,12 @@ export class InvoiceExtractionCapability implements ICapabilityHandler {
       logger.warn("ai_invoice_extraction_parse_failed", { pipelineId, err: String(e) });
     }
 
-    const lines: ExtractedLineItem[] = Array.isArray(parsed.lines) ? parsed.lines : [];
+    const lines: ExtractedLineItem[] = Array.isArray(parsed.lines)
+      ? parsed.lines.map((line) => ({
+          ...line,
+          commodity_category_suggestion: line.commodity_category_suggestion ?? null,
+        }))
+      : [];
     const overallConfidence = lines.length > 0
       ? lines.reduce((sum, l) => sum + (l.confidence ?? 0), 0) / lines.length
       : 0;
@@ -164,7 +169,7 @@ Return a JSON object with this exact schema:
       "currency_code": string | null,
       "uom_code": string | null,
       "tax_rate_pct": number | null,
-      "spend_category_suggestion": string | null,
+      "commodity_category_suggestion": string | null,
       "hs_code": string | null,
       "confidence": 0.0-1.0
     }
@@ -193,7 +198,7 @@ export function normaliseExtractedLines(
   unit_price:       number | null;
   amount:           number | null;
   currency_code:    string | null;
-  spend_category_suggestion: string | null;
+  commodity_category_suggestion: string | null;
 }> {
   return output.lines.map((l) => ({
     line_no:          l.line_no,
@@ -202,7 +207,7 @@ export function normaliseExtractedLines(
     unit_price:       l.unit_price,
     amount:           l.amount,
     currency_code:    l.currency_code,
-    spend_category_suggestion: l.spend_category_suggestion,
+    commodity_category_suggestion: l.commodity_category_suggestion,
   }));
 }
 

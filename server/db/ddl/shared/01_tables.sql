@@ -624,6 +624,71 @@ COMMENT ON TABLE shared.subscription_plan IS
 
 
 -- ============================================================================
+-- §14b  subscription_plan_version — versioned plan configuration
+-- Each plan has exactly one active version (valid_to IS NULL AND status=active).
+-- A new version INSERT fires fn_close_prior_plan_version() to close the current.
+-- Access rows (plan_*_access) are keyed to plan_version_id, not plan_id.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS shared.subscription_plan_version (
+    -- Identity
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    plan_id         uuid        NOT NULL,
+
+    -- Versioning
+    version_number  integer     GENERATED ALWAYS AS IDENTITY,
+    valid_from      date        NOT NULL DEFAULT CURRENT_DATE,
+    valid_to        date,
+
+    -- Configuration (mirrors or overrides plan-level defaults)
+    max_users       integer,
+
+    -- Metadata
+    metadata        jsonb       NOT NULL DEFAULT '{}',
+
+    -- Lifecycle
+    status          text        NOT NULL DEFAULT 'active',
+
+    -- Audit
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+
+    CONSTRAINT spv_pkey           PRIMARY KEY (id),
+    CONSTRAINT spv_plan_fk        FOREIGN KEY (plan_id) REFERENCES shared.subscription_plan(id),
+    CONSTRAINT spv_version_uq     UNIQUE (plan_id, version_number),
+    CONSTRAINT spv_status_chk     CHECK (status IN ('active', 'archived')),
+    CONSTRAINT spv_max_users_chk  CHECK (max_users IS NULL OR max_users > 0),
+    CONSTRAINT spv_date_order_chk CHECK (valid_to IS NULL OR valid_to > valid_from)
+);
+
+-- Partial unique index: only one active version per plan at any time
+CREATE UNIQUE INDEX IF NOT EXISTS spv_active_uq
+  ON shared.subscription_plan_version (plan_id)
+  WHERE valid_to IS NULL AND status = 'active';
+
+-- Idempotent: if the table already existed without GENERATED ALWAYS AS IDENTITY
+-- (e.g. created on a prior failed migration run), promote the column now.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'shared'
+      AND table_name   = 'subscription_plan_version'
+      AND column_name  = 'version_number'
+      AND is_identity  = 'NO'
+  ) THEN
+    ALTER TABLE shared.subscription_plan_version
+      ALTER COLUMN version_number ADD GENERATED ALWAYS AS IDENTITY;
+  END IF;
+END $$;
+
+COMMENT ON TABLE shared.subscription_plan_version IS
+  'ARCHETYPE=A;SCOPE=N. Versioned configuration snapshot for a subscription plan. '
+  'Exactly one active version per plan_id at any time (enforced by spv_active_uq partial index). '
+  'access rows reference plan_version_id FK. fn_close_prior_plan_version trigger closes prior active row on INSERT.';
+
+
+-- ============================================================================
 -- §15  permission_category — grouping for 40 atomic permissions (36 operational + 4 special)
 -- ============================================================================
 
@@ -743,29 +808,29 @@ COMMENT ON TABLE shared.persona_permission IS
 
 CREATE TABLE IF NOT EXISTS shared.plan_module_access (
     -- Identity
-    id              uuid              NOT NULL DEFAULT shared.uuidv7(),
+    id                  uuid              NOT NULL DEFAULT shared.uuidv7(),
 
     -- Table-specific
-    plan_id         uuid              NOT NULL,
-    module_id       uuid              NOT NULL,
-    is_included     boolean           NOT NULL DEFAULT false,
-    is_addon        boolean           NOT NULL DEFAULT false,
+    plan_version_id     uuid              NOT NULL,
+    module_id           uuid              NOT NULL,
+    is_included         boolean           NOT NULL DEFAULT false,
+    is_addon            boolean           NOT NULL DEFAULT false,
     addon_price_monthly numeric(10,2),
-    user_limit      integer,
+    user_limit          integer,
 
     -- Audit
-    created_at      timestamptz       NOT NULL DEFAULT now(),
-    created_by      uuid              NOT NULL,
+    created_at          timestamptz       NOT NULL DEFAULT now(),
+    created_by          uuid              NOT NULL,
 
     CONSTRAINT plan_module_access_pkey  PRIMARY KEY (id),
-    CONSTRAINT plan_module_access_uq    UNIQUE (plan_id, module_id),
+    CONSTRAINT plan_module_access_uq    UNIQUE (plan_version_id, module_id),
     CONSTRAINT pma_mutex                CHECK (NOT (is_included AND is_addon)),
     CONSTRAINT pma_user_limit_chk       CHECK (user_limit IS NULL OR user_limit > 0)
 );
 
 COMMENT ON TABLE shared.plan_module_access IS
-  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Module availability per subscription plan. is_included XOR is_addon (pma_mutex). '
-  'FK plan_id → subscription_plan, module_id → module deferred to 06_constraints.';
+  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Module availability per subscription plan version. is_included XOR is_addon (pma_mutex). '
+  'FK plan_version_id → subscription_plan_version, module_id → module deferred to 06_constraints.';
 
 
 -- ============================================================================
@@ -774,28 +839,28 @@ COMMENT ON TABLE shared.plan_module_access IS
 
 CREATE TABLE IF NOT EXISTS shared.plan_permission_access (
     -- Identity
-    id              uuid              NOT NULL DEFAULT shared.uuidv7(),
+    id                  uuid              NOT NULL DEFAULT shared.uuidv7(),
 
     -- Table-specific
-    plan_id         uuid              NOT NULL,
-    permission_id   uuid              NOT NULL,
-    is_included     boolean           NOT NULL DEFAULT false,
-    is_addon        boolean           NOT NULL DEFAULT false,
+    plan_version_id     uuid              NOT NULL,
+    permission_id       uuid              NOT NULL,
+    is_included         boolean           NOT NULL DEFAULT false,
+    is_addon            boolean           NOT NULL DEFAULT false,
     addon_price_monthly numeric(10,2),
-    usage_limit     integer,
+    usage_limit         integer,
 
     -- Audit
-    created_at      timestamptz       NOT NULL DEFAULT now(),
-    created_by      uuid              NOT NULL,
+    created_at          timestamptz       NOT NULL DEFAULT now(),
+    created_by          uuid              NOT NULL,
 
     CONSTRAINT plan_permission_access_pkey  PRIMARY KEY (id),
-    CONSTRAINT plan_permission_access_uq    UNIQUE (plan_id, permission_id),
+    CONSTRAINT plan_permission_access_uq    UNIQUE (plan_version_id, permission_id),
     CONSTRAINT ppa_mutex                    CHECK (NOT (is_included AND is_addon)),
     CONSTRAINT ppa_usage_limit_chk          CHECK (usage_limit IS NULL OR usage_limit > 0)
 );
 
 COMMENT ON TABLE shared.plan_permission_access IS
-  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Plan-gated permission overrides. Checked by check_permission() for is_plan_restricted permissions.';
+  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Plan-version-gated permission overrides. Checked by check_permission() for is_plan_restricted permissions.';
 
 
 -- ============================================================================
@@ -804,30 +869,83 @@ COMMENT ON TABLE shared.plan_permission_access IS
 
 CREATE TABLE IF NOT EXISTS shared.plan_feature_access (
     -- Identity
-    id              uuid              NOT NULL DEFAULT shared.uuidv7(),
+    id                  uuid              NOT NULL DEFAULT shared.uuidv7(),
 
     -- Table-specific
-    plan_id         uuid              NOT NULL,
-    feature_id      uuid              NOT NULL,
-    is_included     boolean           NOT NULL DEFAULT false,
-    is_addon        boolean           NOT NULL DEFAULT false,
+    plan_version_id     uuid              NOT NULL,
+    feature_id          uuid              NOT NULL,
+    is_included         boolean           NOT NULL DEFAULT false,
+    is_addon            boolean           NOT NULL DEFAULT false,
     addon_price_monthly numeric(10,2),
-    max_users       integer,
+    max_users           integer,
 
     -- Audit
-    created_at      timestamptz       NOT NULL DEFAULT now(),
-    created_by      uuid              NOT NULL,
+    created_at          timestamptz       NOT NULL DEFAULT now(),
+    created_by          uuid              NOT NULL,
 
     CONSTRAINT plan_feature_access_pkey  PRIMARY KEY (id),
-    CONSTRAINT plan_feature_access_uq    UNIQUE (plan_id, feature_id),
+    CONSTRAINT plan_feature_access_uq    UNIQUE (plan_version_id, feature_id),
     CONSTRAINT pfa_mutex                 CHECK (NOT (is_included AND is_addon)),
     CONSTRAINT pfa_max_users_chk         CHECK (max_users IS NULL OR max_users > 0)
 );
 
 COMMENT ON TABLE shared.plan_feature_access IS
-  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Feature availability per subscription plan. FK plan_id → subscription_plan, '
+  'ARCHETYPE=C;SCOPE=N;SUBTYPE=APPEND_ONLY. Feature availability per subscription plan version. FK plan_version_id → subscription_plan_version, '
   'feature_id → enterprise_feature deferred to 06_constraints.';
 
+
+-- =============================================================================
+-- Schema migration: plan_*_access — rename plan_id → plan_version_id
+--
+-- On an existing database the CREATE TABLE IF NOT EXISTS blocks above are
+-- skipped, so the new column doesn't exist yet. These DO blocks are idempotent:
+-- they only run when the OLD column is still present.  All rows are deleted
+-- before the column is replaced; the seed file re-inserts them via the new FK.
+-- On a fresh database the CREATE TABLE IF NOT EXISTS already used plan_version_id
+-- so these blocks are no-ops.
+-- =============================================================================
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'shared' AND table_name = 'plan_module_access' AND column_name = 'plan_id'
+  ) THEN
+    ALTER TABLE shared.plan_module_access DROP CONSTRAINT IF EXISTS plan_module_access_uq;
+    ALTER TABLE shared.plan_module_access DROP CONSTRAINT IF EXISTS pma_plan_fk;
+    DELETE FROM shared.plan_module_access;
+    ALTER TABLE shared.plan_module_access DROP COLUMN plan_id;
+    ALTER TABLE shared.plan_module_access ADD COLUMN plan_version_id uuid;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'shared' AND table_name = 'plan_permission_access' AND column_name = 'plan_id'
+  ) THEN
+    ALTER TABLE shared.plan_permission_access DROP CONSTRAINT IF EXISTS plan_permission_access_uq;
+    ALTER TABLE shared.plan_permission_access DROP CONSTRAINT IF EXISTS ppa_plan_fk;
+    DELETE FROM shared.plan_permission_access;
+    ALTER TABLE shared.plan_permission_access DROP COLUMN plan_id;
+    ALTER TABLE shared.plan_permission_access ADD COLUMN plan_version_id uuid;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'shared' AND table_name = 'plan_feature_access' AND column_name = 'plan_id'
+  ) THEN
+    ALTER TABLE shared.plan_feature_access DROP CONSTRAINT IF EXISTS plan_feature_access_uq;
+    ALTER TABLE shared.plan_feature_access DROP CONSTRAINT IF EXISTS pfa_plan_fk;
+    DELETE FROM shared.plan_feature_access;
+    ALTER TABLE shared.plan_feature_access DROP COLUMN plan_id;
+    ALTER TABLE shared.plan_feature_access ADD COLUMN plan_version_id uuid;
+  END IF;
+END $$;
 
 -- =============================================================================
 -- §22  shared.commodity_crosswalk — cross-domain commodity code mapping

@@ -75,8 +75,8 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
       <div className="text-doc-support text-muted-foreground">
         As at {data?.asAt ? fmtDate(data.asAt) : "—"} · {data?.items.length ?? 0} entries
       </div>
-      <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
+        <table className="w-full min-w-[920px] text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Date</th>
@@ -96,7 +96,7 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
             )}
             {(data?.items ?? []).map((item) => {
               const isInbound = item.paymentDirection === "INBOUND";
-              const isCleared = item.status === "cleared";
+              const isCleared = Boolean(item.clearedDate) || item.status === "cleared";
               return (
                 <tr key={item.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(item.valueDate)}</td>
@@ -196,8 +196,8 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
         )}
       </div>
 
-      <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
+        <table className="w-full min-w-[960px] text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-2 w-8">

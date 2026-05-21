@@ -401,11 +401,15 @@ function normalizeReferenceConfig(
   const targetEntity = referenceTargetEntity(row);
 
   if (rawConfig) {
+    const strippedConfig = { ...rawConfig };
+    for (const key of ["ref_entity", "ref_hint", "entity", "entity_code", "targetEntity", "refEntity"]) {
+      delete strippedConfig[key];
+    }
     const normalized = Object.fromEntries(Object.entries({
-      ...rawConfig,
+      ...strippedConfig,
       target_entity: targetEntity ?? "",
-      target_field: rawConfig["target_field"],
-      display_field: rawConfig["display_field"],
+      target_field: strippedConfig["target_field"],
+      display_field: strippedConfig["display_field"],
     }).filter(([, value]) => value !== undefined));
     return mergeReferencePickerProfile(normalized, referencePickerProfile);
   }
@@ -425,16 +429,101 @@ function normalizeReferenceConfig(
 
 /** Map entity_field row → EntityField contract shape */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RULE_EXPRESSION_KEYS = new Set([
+  "field",
+  "operator",
+  "value",
+  "values",
+  "and",
+  "or",
+  "not",
+  "var",
+  "==",
+  "!=",
+  ">",
+  ">=",
+  "<",
+  "<=",
+]);
+
+function isRuleExpression(value: unknown): boolean {
+  const record = asRecord(value);
+  return Boolean(record && Object.keys(record).some((key) => RULE_EXPRESSION_KEYS.has(key)));
+}
+
+function compactRecord(record: Record<string, unknown>): Record<string, unknown> | null {
+  const entries = Object.entries(record).filter(([, value]) => value !== undefined && value !== null);
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+function normalizeUiHint(value: unknown, visibility: unknown): Record<string, unknown> | null {
+  const raw = asRecord(value);
+  if (!raw) return null;
+
+  const out: Record<string, unknown> = { ...raw };
+  const display = { ...(asRecord(out["display"]) ?? {}) };
+  const topLevelRule = out["visible_when"];
+  const legacyVisibility = asRecord(visibility);
+
+  if (!display["visible_when"] && isRuleExpression(topLevelRule)) {
+    display["visible_when"] = topLevelRule;
+  }
+  if (!display["visible_when"] && isRuleExpression(legacyVisibility)) {
+    display["visible_when"] = legacyVisibility;
+  }
+  if (Object.keys(display).length > 0) out["display"] = display;
+
+  const copyBehavior = out["copy_behavior"];
+  if (copyBehavior !== undefined) {
+    const copy = { ...(asRecord(out["copy"]) ?? {}) };
+    if (copy["behavior"] === undefined) copy["behavior"] = copyBehavior;
+    out["copy"] = copy;
+  }
+
+  delete out["filter"];
+  delete out["copy_behavior"];
+  delete out["group_key"];
+  delete out["visible_when"];
+
+  return compactRecord(out);
+}
+
+function normalizeMoneyConfig(value: unknown): Record<string, unknown> | null {
+  const raw = asRecord(value);
+  if (!raw) return null;
+  const out: Record<string, unknown> = { ...raw };
+
+  if (!out["currency_code"]) out["currency_code"] = out["constant_currency"];
+  if (!out["currency_code_position"]) out["currency_code_position"] = out["code_position"] ?? out["currency_position"];
+
+  delete out["constant_currency"];
+  delete out["code_position"];
+  delete out["currency_position"];
+
+  return compactRecord(out);
+}
+
+function normalizeLookupConfig(value: unknown): Record<string, unknown> | null {
+  const raw = asRecord(value);
+  if (!raw) return null;
+  const out: Record<string, unknown> = { ...raw };
+
+  if (!out["dependent_filter"]) out["dependent_filter"] = out["depends_on"] ?? out["dependency"];
+  delete out["depends_on"];
+  delete out["dependency"];
+
+  return compactRecord(out);
+}
+
 function mapField(row: Record<string, any>, referencePickerProfiles?: Map<string, Record<string, unknown>>) {
   const targetEntity = referenceTargetEntity(row);
   const referencePickerProfile = targetEntity ? referencePickerProfiles?.get(targetEntity) : undefined;
 
-  const uiHint = row.ui_hint && typeof row.ui_hint === "object"
-    ? row.ui_hint as Record<string, unknown>
-    : null;
+  const rawUiHint = asRecord(row.ui_hint);
+  const uiHint = normalizeUiHint(row.ui_hint, row.visibility);
   const fieldFilterConfig = asRecord(row.filter_config);
-  const filterConfig = fieldFilterConfig ?? (uiHint?.["filter"] && typeof uiHint["filter"] === "object"
-    ? uiHint["filter"] as Record<string, unknown>
+  const filterConfig = fieldFilterConfig ?? (rawUiHint?.["filter"] && typeof rawUiHint["filter"] === "object"
+    ? rawUiHint["filter"] as Record<string, unknown>
     : null
   );
 
@@ -466,14 +555,12 @@ function mapField(row: Record<string, any>, referencePickerProfiles?: Map<string
     validation_rules: normalizeValidationRules(row.validation),
     enum_domain_code: (row.enum_domain_code ?? null) as string | null,
     reference_config: normalizeReferenceConfig(row, referencePickerProfile),
-    money_config: (row.money_config && typeof row.money_config === "object")
-      ? row.money_config as Record<string, unknown>
-      : null,
+    money_config: normalizeMoneyConfig(row.money_config),
     json_config: (row.json_config && typeof row.json_config === "object")
       ? row.json_config as Record<string, unknown>
       : null,
     sort_order: Number(row.sort_order ?? 0),
-    group_key: (row.group_key ?? row.ui_hint?.group_key ?? null) as string | null,
+    group_key: (row.group_key ?? rawUiHint?.["group_key"] ?? null) as string | null,
     ui_hint: uiHint,
     visibility: (row.visibility && typeof row.visibility === "object")
       ? row.visibility as Record<string, unknown>
@@ -481,11 +568,9 @@ function mapField(row: Record<string, any>, referencePickerProfiles?: Map<string
     editability: (row.editability && typeof row.editability === "object")
       ? row.editability as Record<string, unknown>
       : null,
-    lookup_config: (row.lookup_config && typeof row.lookup_config === "object")
-      ? row.lookup_config as Record<string, unknown>
-      : null,
+    lookup_config: normalizeLookupConfig(row.lookup_config),
     filter_config: filterConfig,
-    i18n_key: (row.ui_hint?.i18n_key ?? null) as string | null,
+    i18n_key: (rawUiHint?.["i18n_key"] ?? null) as string | null,
   };
 }
 
@@ -584,6 +669,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
               displayConfigHash: string;
               identityConfigHash?: string;
               searchConfigHash?: string;
+              dataPolicyHash?: string;
             } | null = null;
             try { fingerprint = JSON.parse(ptrRaw); } catch { /* old format — fall through */ }
 
@@ -596,6 +682,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
                   "e.display_config",
                   "e.identity_config",
                   "e.search_config",
+                  "e.data_policy",
                   sql<number>`ev.version_no`.as("version_no"),
                   sql<string | null>`ev.version_hash`.as("version_hash"),
                   sql<string>`e.id::text`.as("entity_id"),
@@ -618,14 +705,17 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
                 const currentDC = (fpRow.display_config ?? {}) as Record<string, unknown>;
                 const currentIC = (fpRow.identity_config ?? {}) as Record<string, unknown>;
                 const currentSC = (fpRow.search_config ?? {}) as Record<string, unknown>;
+                const currentDP = (fpRow.data_policy ?? {}) as Record<string, unknown>;
                 const currentVH = fpRow.version_hash ?? simpleHash(`${fpRow.entity_id}-v${fpRow.version_no}`);
                 const currentDCH = simpleHash(JSON.stringify(currentDC));
                 const currentICH = simpleHash(JSON.stringify(currentIC));
                 const currentSCH = simpleHash(JSON.stringify(currentSC));
+                const currentDPH = simpleHash(JSON.stringify(currentDP));
                 const fpValid = currentVH === fingerprint.versionHash
                   && currentDCH === fingerprint.displayConfigHash
                   && currentICH === fingerprint.identityConfigHash
-                  && currentSCH === fingerprint.searchConfigHash;
+                  && currentSCH === fingerprint.searchConfigHash
+                  && currentDPH === fingerprint.dataPolicyHash;
 
                 if (fpValid) {
                   const cached = await cache.get(descriptorCacheKey(tenantId, entityCode, fingerprint.compiledHash));
@@ -672,6 +762,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
           "e.display_config",
           "e.identity_config",
           "e.search_config",
+          "e.data_policy",
           "e.feature_flags",
           "e.governance_level",
           "e.security_tier",
@@ -744,6 +835,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       const dbDisplayConfig = (entityRow.display_config ?? {}) as Record<string, unknown>;
       const dbIdentityConfig = (entityRow.identity_config ?? {}) as Record<string, unknown>;
       const dbSearchConfig = (entityRow.search_config ?? {}) as Record<string, unknown>;
+      const dbDataPolicy = (entityRow.data_policy ?? {}) as Record<string, unknown>;
       const displayConfig = normalizeDisplayConfig(dbDisplayConfig, entityRow.icon_key, entityRow.color_token);
 
       // ── Build feature_flags ───────────────────────────────────────────────
@@ -758,8 +850,9 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       const displayConfigHash = simpleHash(JSON.stringify(dbDisplayConfig));
       const identityConfigHash = simpleHash(JSON.stringify(dbIdentityConfig));
       const searchConfigHash = simpleHash(JSON.stringify(dbSearchConfig));
+      const dataPolicyHash = simpleHash(JSON.stringify(dbDataPolicy));
       const fieldsHash = simpleHash(JSON.stringify(fields));
-      const compiledHash = simpleHash(`${versionHash}-${fieldsHash}-${displayConfigHash}-${identityConfigHash}-${searchConfigHash}`);
+      const compiledHash = simpleHash(`${versionHash}-${fieldsHash}-${displayConfigHash}-${identityConfigHash}-${searchConfigHash}-${dataPolicyHash}`);
 
       const payload = {
         entity_id: entityRow.id as string,
@@ -776,6 +869,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         display_config: displayConfig,
         identity_config: dbIdentityConfig,
         search_config: dbSearchConfig,
+        data_policy: dbDataPolicy,
         feature_flags: featureFlags,
         governance_level: entityRow.governance_level as string,
         security_tier: entityRow.security_tier as string,
@@ -798,7 +892,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // Pointer stores a JSON fingerprint {compiledHash, versionHash, displayConfigHash}
       // so the read path can validate against current DB state with one lightweight query.
       if (cache && tenantId) {
-        const pointerFingerprint = JSON.stringify({ compiledHash, versionHash, displayConfigHash, identityConfigHash, searchConfigHash });
+        const pointerFingerprint = JSON.stringify({ compiledHash, versionHash, displayConfigHash, identityConfigHash, searchConfigHash, dataPolicyHash });
         Promise.all([
           cache.set(descriptorCacheKey(tenantId, entityCode, compiledHash), JSON.stringify(payload), DESCRIPTOR_CACHE_TTL_S),
           cache.set(descriptorCachePointerKey(tenantId, entityCode), pointerFingerprint, DESCRIPTOR_CACHE_TTL_S),

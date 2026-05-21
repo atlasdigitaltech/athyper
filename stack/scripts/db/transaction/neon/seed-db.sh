@@ -9,7 +9,7 @@
 #   ./seed-db.sh                 # Run all phases (DDL + platform seed + blueprints + tenants)
 #   ./seed-db.sh --all           # Same as default
 #   ./seed-db.sh --ddl-only      # Phase 1 only — DDL (schemas/tables/indexes/triggers)
-#   ./seed-db.sh --system-only   # Phase 2 only — 010_platform/ (platform seed; DDL must exist)
+#   ./seed-db.sh --system-only   # Phases 1+2 — DDL + 010_platform platform seed
 #   ./seed-db.sh --no-demo       # Phase 1+2    — DDL + platform seed only
 #                                #   blueprints (020_universal/ 030_industry/) and
 #                                #   tenant data (040_tenants/) are skipped
@@ -22,6 +22,9 @@
 #   ./seed-db.sh --force         # Re-run all phases even if checksum unchanged
 #   ./seed-db.sh --phase=N       # Low-level: run explicit phase(s) — N is 1, 2, or 3
 #                                #   e.g. --phase=1 --phase=2 for DDL + platform seed only
+#   ./seed-db.sh --industry-pack=pack_transport
+#                                # Opt in a 030_industry/100_industry_packs file.
+#                                # Numeric prefix is optional; typos fail fast.
 #   ./seed-db.sh --tenant-id=UUID  # Set app.seed_tenant_id for the entire Phase 3 session
 #   ./seed-db.sh --docker        # Run the provisioner inside a Docker container on the
 #                                #   internal Docker network (athyper-internal by default).
@@ -245,6 +248,7 @@ fi
 #   (no args) / --all / --ddl-only / --system-only / --no-demo / --demo-only
 #   --reset [--ddl-only | --no-demo] / --drop-only / --status / --force
 #   --phase=N  (repeatable, N = 1 | 2 | 3)
+#   --industry-pack=pack_transport  (repeatable; numeric prefix optional)
 #   --tenant-id=UUID  (sets app.seed_tenant_id for Phase 3; overrides SEED_TENANT_ID)
 # ---------------------------------------------------------------------------
 MIGRATE_ARGS="${*:---all}"

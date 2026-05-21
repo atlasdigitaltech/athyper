@@ -724,20 +724,6 @@ export function resolveTaxTabSections(
     if (sections.length > 0) return sections;
   }
 
-  // Layer 2 — ui_hint.tax_section on individual fields
-  const withHint = allFields.filter((f) => Boolean(textValue(asRecord(f.ui_hint)?.["tax_section"])));
-  if (withHint.length > 0) {
-    const sectionMap = new Map<string, EntityField[]>();
-    for (const f of allFields) {
-      const key = textValue(asRecord(f.ui_hint)?.["tax_section"]) ?? "_ungrouped";
-      if (!sectionMap.has(key)) sectionMap.set(key, []);
-      sectionMap.get(key)!.push(f);
-    }
-    return [...sectionMap.entries()]
-      .filter(([k]) => k !== "_ungrouped")
-      .map(([k, fields]) => ({ label: k.toUpperCase().replace(/_/g, " "), fields }));
-  }
-
   // No sections configured — caller shows a flat grid
   return [];
 }

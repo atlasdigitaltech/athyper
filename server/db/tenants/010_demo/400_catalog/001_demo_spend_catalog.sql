@@ -1,15 +1,15 @@
 -- ============================================================================
--- DEMO TENANT — SPEND CATALOG: Products + Items per Spend Category
+-- DEMO TENANT — COMMODITY CATALOG: Products + Items per Commodity Category
 -- ============================================================================
 -- File:     400_catalog/001_demo_spend_catalog.sql
 -- Schemas:  master.product, master.item
--- Purpose:  For every active spend_category in the demo tenant:
+-- Purpose:  For every active commodity_category in the demo tenant:
 --             • 1 product  (tenant-scoped,       code = PRD-{SC-CODE})
 --             • 1 item per company_code            code = ITM-{SC-CODE})
---           Covers all 77 base spend categories × 17 company codes = 1,309 items.
+--           Covers all 77 base commodity categories × 17 company codes = 1,309 items.
 --           Re-running after industry-pack categories are applied picks up any
---           new spend categories automatically.
--- Depends:  020_universal/010_spend_taxonomy/020_spend_categories.sql
+--           new commodity categories automatically.
+-- Depends:  020_universal/010_spend_taxonomy/020_commodity_categories.sql
 --           100_org_structure/199_gl_preseed.sql  (company codes)
 -- Idempotent: Yes — ON CONFLICT ... DO UPDATE throughout
 -- ============================================================================
@@ -40,20 +40,20 @@ BEGIN
     ));
 
     SELECT count(*) INTO v_sc_count
-    FROM master.spend_category WHERE tenant_id = v_tid AND status = 'active';
+    FROM master.commodity_category WHERE tenant_id = v_tid AND status = 'active';
 
     SELECT count(*) INTO v_cc_count
     FROM master.company_code WHERE tenant_id = v_tid AND status = 'active';
 
     IF v_sc_count = 0 THEN
-        RAISE EXCEPTION '[demo_spend_catalog] No active spend_categories found — run spend taxonomy seed first';
+        RAISE EXCEPTION '[demo_spend_catalog] No active commodity_categories found — run commodity taxonomy seed first';
     END IF;
 
     IF v_cc_count = 0 THEN
         RAISE EXCEPTION '[demo_spend_catalog] No active company_codes found — run 199_gl_preseed.sql first';
     END IF;
 
-    -- ── STAGE B: Products (one per spend category, tenant-scoped) ─────────
+    -- ── STAGE B: Products (one per commodity category, tenant-scoped) ─────────
     --   • product_type  = physical (goods) | service (services)
     --   • unit_of_measure = EA for all (demo catalog — cost defaulted to NULL)
     --   • commodity_category_id links product back to its category
@@ -76,8 +76,9 @@ BEGIN
         'PRD-' || sc.code,
         sc.name,
         'Demo product — ' || sc.name,
-        ccg.id,
-        CASE sc.procurement_type
+        sc.id,
+        CASE COALESCE(NULLIF(sc.metadata->>'procurement_type', ''),
+                      CASE WHEN sc.inventory_allowed OR sc.buy_allowed THEN 'goods' ELSE 'services' END)
             WHEN 'goods'    THEN 'physical'
             WHEN 'services' THEN 'service'
             ELSE                 'physical'
@@ -87,10 +88,7 @@ BEGIN
         v_seed_meta,
         'active',
         v_su
-    FROM master.spend_category sc
-    JOIN master.commodity_category ccg
-      ON ccg.tenant_id = sc.tenant_id
-     AND ccg.code = sc.code
+    FROM master.commodity_category sc
     WHERE sc.tenant_id = v_tid
       AND sc.status = 'active'
     ON CONFLICT (tenant_id, code) DO UPDATE SET
@@ -108,7 +106,7 @@ BEGIN
         updated_at        = now(),
         updated_by        = v_su;
 
-    -- ── STAGE C: Items (one per spend category × company code) ────────────
+    -- ── STAGE C: Items (one per commodity category × company code) ────────────
     --   • product_id links to the product created in Stage B (Path A)
     --   • valuation_method = weighted_avg (safe default for demo)
     --   • uom_code = EA (shared.uom FK — EA seeded in 007_uom.sql)
@@ -143,7 +141,7 @@ BEGIN
         v_seed_meta,
         'active',
         v_su
-    FROM master.spend_category sc
+    FROM master.commodity_category sc
     CROSS JOIN master.company_code cc
     JOIN master.product p
       ON p.tenant_id = v_tid
@@ -175,7 +173,7 @@ BEGIN
     WHERE tenant_id = v_tid
       AND metadata->'_seed'->>'pack' = v_pack;
 
-    RAISE NOTICE '[demo_spend_catalog] seeded: % products, % items (% spend categories × % company codes)',
+    RAISE NOTICE '[demo_spend_catalog] seeded: % products, % items (% commodity categories × % company codes)',
         v_prod_count, v_item_count, v_sc_count, v_cc_count;
 
 END $demo_catalog$;

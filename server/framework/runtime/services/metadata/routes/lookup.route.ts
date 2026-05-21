@@ -364,6 +364,98 @@ export function createLookupRoute(router: Router, deps: LookupRoutesDeps): Route
     }
   };
 
+  // ── GET /metadata/lookups/hot-set — batch fetch for bootstrapHotSet() ────────
+  // Returns all lookup domains flagged with metadata->>'is_hot_set' = 'true',
+  // merged with tenant overrides. Called once at session start by lookup-provider.ts.
+  const hotSetHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const tenantId = resolveTenantId(claims);
+
+      const domains = await db
+        .selectFrom("control.lookup_domain as ld")
+        .select(["ld.id", "ld.code", "ld.name", "ld.description", "ld.source_schema", "ld.is_extensible", "ld.status"])
+        .where("ld.status", "=", "active")
+        .where((eb) =>
+          // Domains opted in to hot-set via metadata flag
+          eb("ld.metadata", "@>", JSON.stringify({ is_hot_set: true }) as never)
+        )
+        .orderBy("ld.code", "asc")
+        .execute();
+
+      // For each domain fetch values (same merge logic as getHandler)
+      const bundles = await Promise.all(
+        domains.map(async (domainRow) => {
+          const rawRows = await db
+            .selectFrom("control.lookup_value as lv")
+            .select([
+              "lv.id", "lv.code", "lv.name", "lv.domain_code",
+              "lv.description", "lv.sort_order", "lv.is_system",
+              "lv.metadata", "lv.status", "lv.tenant_id",
+            ])
+            .where("lv.domain_code", "=", domainRow.code as string)
+            .where((eb) =>
+              eb.or([
+                eb("lv.tenant_id", "is", null),
+                ...(tenantId ? [eb("lv.tenant_id", "=", tenantId)] : []),
+              ])
+            )
+            .where("lv.status", "=", "active")
+            .orderBy("lv.sort_order", "asc")
+            .orderBy("lv.code", "asc")
+            .execute();
+
+          const byCode = new Map<string, LookupValue>();
+          for (const row of rawRows) {
+            const isOwnedByTenant = row.tenant_id !== null;
+            const existing = byCode.get(row.code as string);
+            if (!existing || isOwnedByTenant) {
+              byCode.set(row.code as string, {
+                id: row.id as string,
+                code: row.code as string,
+                name: row.name as string,
+                domain_code: row.domain_code as string,
+                description: (row.description ?? null) as string | null,
+                sort_order: Number(row.sort_order ?? 0),
+                is_system: Boolean(row.is_system),
+                is_default: false,
+                parent_code: null,
+                metadata: (row.metadata && typeof row.metadata === "object" && Object.keys(row.metadata as object).length > 0)
+                  ? row.metadata as Record<string, unknown>
+                  : null,
+                status: row.status as "active" | "deprecated",
+                tenant_owned: isOwnedByTenant,
+              });
+            }
+          }
+
+          return {
+            domain: {
+              id: domainRow.id as string,
+              code: domainRow.code as string,
+              name: domainRow.name as string,
+              description: (domainRow.description ?? null) as string | null,
+              source_schema: domainRow.source_schema as string,
+              is_extensible: Boolean(domainRow.is_extensible),
+              status: domainRow.status as string,
+            },
+            values: Array.from(byCode.values()),
+          };
+        })
+      );
+
+      res.setHeader("Cache-Control", "no-cache");
+      res.json(bundles);
+    } catch (err) {
+      logger?.error("lookup_hot_set_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // hot-set must be registered before /:domain to avoid being swallowed as a domain param
+  router.get("/metadata/lookups/hot-set", hotSetHandler);
   router.get("/metadata/lookups/:domain", getHandler);
   router.post("/metadata/lookups/:domain/values", createHandler);
   router.patch("/metadata/lookups/:domain/values/:code", updateHandler);

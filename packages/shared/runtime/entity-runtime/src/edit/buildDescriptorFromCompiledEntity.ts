@@ -43,7 +43,7 @@ function dataTypeToInputType(field: EntityField): EntityEditFieldDescriptor["inp
 
 function extractMaxLength(field: EntityField): number | undefined {
   if (!field.validation_rules) return undefined;
-  const ml = field.validation_rules["max_length"] ?? field.validation_rules["maxLength"];
+  const ml = field.validation_rules["max_length"];
   return typeof ml === "number" ? ml : undefined;
 }
 

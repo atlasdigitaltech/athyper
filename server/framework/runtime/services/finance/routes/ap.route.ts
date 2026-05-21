@@ -9,7 +9,7 @@
  * PATCH  /api/finance/ap/invoices/:id/lines/:lid    — update a line item (auto-classifies when commodity_category_id changes)
  * DELETE /api/finance/ap/invoices/:id/lines/:lid    — remove a line item
  * POST   /api/finance/ap/invoices/:id/lines/:lid/classify — explicit classify trigger (?mode=preview|save)
- * GET    /api/finance/ap/invoices/:id/lines/suggest — spend-category text suggestions (?q=)
+ * GET    /api/finance/ap/invoices/:id/lines/suggest — commodity-category text suggestions (?q=)
  * GET    /api/finance/ap/payments               — payment_entry WHERE direction = OUTBOUND
  * POST   /api/finance/ap/payments               — create draft payment entry for an AP invoice
  * GET    /api/finance/ap/payment-methods        — list active payment methods (OUTBOUND/BOTH)
@@ -335,6 +335,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const body = req.body as Record<string, unknown>;
       const invoiceId       = String(body["invoice_id"]        ?? "").trim();
       const paymentMethodId = String(body["payment_method_id"] ?? "").trim();
+      const bankAccountId   = String(body["bank_account_id"]   ?? "").trim();
 
       if (!invoiceId || !isUuid(invoiceId)) {
         res.status(400).json({ error: "INVALID_INVOICE_ID" });
@@ -342,6 +343,10 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       }
       if (!paymentMethodId || !isUuid(paymentMethodId)) {
         res.status(400).json({ error: "INVALID_PAYMENT_METHOD_ID" });
+        return;
+      }
+      if (!bankAccountId || !isUuid(bankAccountId)) {
+        res.status(400).json({ error: "INVALID_BANK_ACCOUNT_ID" });
         return;
       }
 
@@ -397,6 +402,24 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         return;
       }
 
+      const bankAccount = await db
+        .selectFrom("master.bank_account_link as bal")
+        .innerJoin("master.bank_account as ba", (jb) =>
+          jb.onRef("ba.id", "=", "bal.bank_account_id").on("ba.tenant_id", "=", tenantId),
+        )
+        .select(["ba.id"])
+        .where("bal.tenant_id", "=", tenantId)
+        .where("bal.owner_type", "=", "company_code")
+        .where("bal.owner_id", "=", String(invoice["companyCodeId"]))
+        .where("bal.bank_account_id", "=", bankAccountId)
+        .where("ba.status", "=", "active")
+        .executeTakeFirst() as { id: string } | undefined;
+
+      if (!bankAccount) {
+        res.status(400).json({ error: "BANK_ACCOUNT_NOT_FOUND", message: "Bank account is not active for the invoice company code" });
+        return;
+      }
+
       // Auto-generate payment number: PAY-{YYYY}-{seq}
       const fiscalYear = Number(invoice["fiscalYear"]);
       const countRow = await db
@@ -425,6 +448,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
             supplier_id:        invoice["supplierId"] ?? null,
             supplier_name:      invoice["supplierName"] ?? "Unknown Supplier",
             payment_method_id:  paymentMethodId,
+            bank_account_id:    bankAccountId,
             value_date:         valueDate,
             document_date:      today,
             posting_date:       today,
@@ -903,7 +927,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
           tenant_id:          tenantId,
           company_code_id:    companyCodeId,
           payment_number:     paymentNumber,
-          payment_type:       "STANDARD",
+          payment_type:       "standard",
           payment_direction:  "INBOUND",
           supplier_name:      counterpartyName,          // stores customer name
           payment_method_id:  paymentMethodId,
@@ -1342,7 +1366,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
 
 
   // ── GET /api/finance/ap/invoices/:id/lines/suggest ────────────────────────
-  // Returns up to 5 spend-category suggestions based on a text query.
+  // Returns up to 5 commodity-category suggestions based on a text query.
   // Query params: q (required), companyCodeId (optional, unused in Phase 1)
   router.get("/finance/ap/invoices/:id/lines/suggest", (async (req, res, next) => {
     try {

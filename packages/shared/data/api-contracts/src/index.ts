@@ -21,6 +21,8 @@
 
 export * from "./schemas/common";
 export * from "./schemas/metadata";
+export * from "./schemas/field-contract-registry-core";
+export * from "./schemas/field-contract-registry";
 export * from "./schemas/records";
 export * from "./schemas/documents";
 export * from "./schemas/workflow";

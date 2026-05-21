@@ -81,12 +81,12 @@ export function DimensionPicker({
   // This ensures dimension pickers always scope to the transaction's company code.
   const effectiveLookupConfig = useMemo<Record<string, unknown> | null>(() => {
     const existing = (field?.lookup_config ?? {}) as Record<string, unknown>;
-    if (existing["depends_on"] || existing["dependent_filter"] || existing["dependency"]) {
+    if (existing["dependent_filter"]) {
       return existing;
     }
     return {
       ...existing,
-      depends_on: {
+      dependent_filter: {
         source_field: "company_code_id",
         target_field: "company_code_id",
         empty_behavior: "all",

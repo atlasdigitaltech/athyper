@@ -1988,10 +1988,12 @@ BEGIN
               AND is_granted = true
               AND (expires_at IS NULL OR expires_at > now())
         ) THEN
-            -- Check plan access
+            -- Check plan access via active version
             IF NOT EXISTS (
                 SELECT 1 FROM shared.plan_permission_access ppa
-                JOIN shared.subscription_plan sp ON sp.id = ppa.plan_id
+                JOIN shared.subscription_plan_version spv ON spv.id = ppa.plan_version_id
+                  AND spv.valid_to IS NULL AND spv.status = 'active'
+                JOIN shared.subscription_plan sp ON sp.id = spv.plan_id
                 WHERE sp.code = v_plan_code
                   AND ppa.permission_id = p_permission_id
                   AND ppa.is_included = true
@@ -2842,8 +2844,6 @@ BEGIN
     CASE NEW.owner_type
         WHEN 'product' THEN
             SELECT EXISTS(SELECT 1 FROM master.product WHERE id = NEW.owner_id AND tenant_id = NEW.tenant_id) INTO v_exists;
-        WHEN 'spend_category' THEN
-            SELECT EXISTS(SELECT 1 FROM master.spend_category WHERE id = NEW.owner_id AND tenant_id = NEW.tenant_id) INTO v_exists;
         WHEN 'commodity_category' THEN
             SELECT EXISTS(SELECT 1 FROM master.commodity_category WHERE id = NEW.owner_id AND tenant_id = NEW.tenant_id) INTO v_exists;
         WHEN 'item' THEN
@@ -2869,7 +2869,7 @@ $$;
 
 COMMENT ON FUNCTION master.trg_cc_validate_owner IS
     'Polymorphic owner FK validation for commodity_classification. '
-    'Dispatches to product, spend_category, commodity_category, item, customer, supplier.';
+    'Dispatches to product, commodity_category, item, customer, supplier.';
 
 
 -- fn_trg_cc_validate_code — polymorphic code FK + domain_code match validation
@@ -3593,96 +3593,7 @@ COMMENT ON FUNCTION master.get_fx_rate IS
 -- root_category_id on the current row.  On re-parenting, cascades to all
 -- descendants via a single recursive UPDATE.
 
-CREATE OR REPLACE FUNCTION master.trg_sc_maintain_root_category()
-RETURNS trigger LANGUAGE plpgsql
-SET search_path = master AS $$
-DECLARE
-    v_root_id   uuid;
-    v_cursor    uuid;
-    v_depth     int := 0;
-    v_max_depth CONSTANT int := 50;  -- cycle guard
-BEGIN
-    -- Root category: no parent ⇒ root is itself
-    IF NEW.parent_id IS NULL THEN
-        NEW.root_category_id := NEW.id;
-
-        -- Re-parented to become a root: cascade to all descendants
-        IF TG_OP = 'UPDATE'
-           AND OLD.parent_id IS DISTINCT FROM NEW.parent_id
-        THEN
-            WITH RECURSIVE descendants AS (
-                SELECT id FROM master.spend_category
-                WHERE parent_id = NEW.id AND tenant_id = NEW.tenant_id
-                UNION ALL
-                SELECT sc.id FROM master.spend_category sc
-                INNER JOIN descendants d ON sc.parent_id = d.id
-                    AND sc.tenant_id = NEW.tenant_id
-            )
-            UPDATE master.spend_category
-            SET root_category_id = NEW.root_category_id
-            WHERE id IN (SELECT id FROM descendants)
-              AND tenant_id = NEW.tenant_id;
-        END IF;
-
-        RETURN NEW;
-    END IF;
-
-    -- Non-root: walk up to find root
-    v_cursor := NEW.parent_id;
-    LOOP
-        SELECT sc.parent_id, sc.id INTO v_cursor, v_root_id
-        FROM master.spend_category sc
-        WHERE sc.id = v_cursor AND sc.tenant_id = NEW.tenant_id;
-
-        IF NOT FOUND THEN
-            RAISE EXCEPTION 'Broken parent chain: could not find category % for tenant %',
-                v_cursor, NEW.tenant_id
-                USING ERRCODE = 'foreign_key_violation';
-        END IF;
-
-        -- This node has no parent ⇒ it is the root
-        IF v_cursor IS NULL THEN
-            EXIT;  -- v_root_id holds the root's id
-        END IF;
-
-        v_depth := v_depth + 1;
-        IF v_depth > v_max_depth THEN
-            RAISE EXCEPTION 'Cycle or excessive depth (>%) in spend_category hierarchy for tenant %',
-                v_max_depth, NEW.tenant_id
-                USING ERRCODE = 'program_limit_exceeded';
-        END IF;
-    END LOOP;
-
-    NEW.root_category_id := v_root_id;
-
-    -- Re-parented under a different branch: cascade to all descendants
-    IF TG_OP = 'UPDATE'
-       AND OLD.parent_id IS DISTINCT FROM NEW.parent_id
-    THEN
-        WITH RECURSIVE descendants AS (
-            SELECT id FROM master.spend_category
-            WHERE parent_id = NEW.id AND tenant_id = NEW.tenant_id
-            UNION ALL
-            SELECT sc.id FROM master.spend_category sc
-            INNER JOIN descendants d ON sc.parent_id = d.id
-                AND sc.tenant_id = NEW.tenant_id
-        )
-        UPDATE master.spend_category
-        SET root_category_id = NEW.root_category_id
-        WHERE id IN (SELECT id FROM descendants)
-          AND tenant_id = NEW.tenant_id;
-    END IF;
-
-    RETURN NEW;
-END;
-$$;
-
-COMMENT ON FUNCTION master.trg_sc_maintain_root_category IS
-    'BEFORE INSERT/UPDATE trigger — computes root_category_id by walking '
-    'the parent chain to the root ancestor. On re-parenting (parent_id change), '
-    'cascades the new root to all descendants via recursive CTE. '
-    'Trigger is registered as UPDATE OF parent_id to prevent re-firing '
-    'during the descendant cascade (which only sets root_category_id).';
+DROP FUNCTION IF EXISTS master.trg_sc_maintain_root_category();
 
 
 -- =============================================================================
@@ -3884,19 +3795,20 @@ COMMENT ON FUNCTION master.fn_resolve_intent_default_gl_account(uuid, uuid, uuid
 
 
 -- =============================================================================
--- §P7b-FN  fn_resolve_spend_category_defaults
+-- §P7b-FN  fn_resolve_commodity_category_defaults
 -- =============================================================================
 -- Resolves effective defaults for a commodity category within a company code.
 -- Looks up the default ALLOW commodity_category_buy_policy row for company scope,
--- falling back to tenant scope and then spend_category base governance.
+-- falling back to tenant scope and then commodity_category base governance.
 -- Returns a single composite row with all resolved values.
 
 -- Drop old OU-hierarchy version if it exists from a prior schema revision.
 DROP FUNCTION IF EXISTS master.fn_resolve_spend_category_ou_defaults(uuid, uuid, uuid);
+DROP FUNCTION IF EXISTS master.fn_resolve_spend_category_defaults(uuid, uuid, uuid);
 
-CREATE OR REPLACE FUNCTION master.fn_resolve_spend_category_defaults(
+CREATE OR REPLACE FUNCTION master.fn_resolve_commodity_category_defaults(
     p_tenant_id          uuid,
-    p_spend_category_id  uuid,
+    p_commodity_category_id uuid,
     p_company_code_id    uuid
 )
 RETURNS TABLE (
@@ -3929,7 +3841,7 @@ BEGIN
     SELECT * INTO v_row
     FROM control.commodity_category_buy_policy m
     WHERE m.tenant_id = p_tenant_id
-      AND m.commodity_category_id = p_spend_category_id
+      AND m.commodity_category_id = p_commodity_category_id
       AND m.mapping_mode = 'ALLOW'
       AND m.is_default = true
       AND m.is_active = true
@@ -3958,7 +3870,7 @@ BEGIN
             cc.*,
             v_row.business_intent_id AS resolved_intent_id
         FROM master.commodity_category cc
-        WHERE cc.id = p_spend_category_id
+        WHERE cc.id = p_commodity_category_id
           AND cc.tenant_id = p_tenant_id
     ),
     policy_gl AS (
@@ -4004,7 +3916,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION master.fn_resolve_spend_category_defaults IS
+COMMENT ON FUNCTION master.fn_resolve_commodity_category_defaults IS
     'Resolves effective operational defaults for a commodity category within a company code. '
     'Looks up control.commodity_category_buy_policy default ALLOW rows for company or tenant scope. '
     'Governance columns (visibility, classification_required, hs_required, is_regulated) '
@@ -4533,8 +4445,10 @@ BEGIN
         WHERE pp.keycloak_id IS NOT NULL
           AND NOT EXISTS (
               SELECT 1 FROM master.principal_identity_binding pab
+              JOIN master.tenant t ON t.id = pab.tenant_id
               WHERE pab.tenant_id = pp.tenant_id
                 AND pab.principal_id = pp.principal_id
+                AND pab.realm_key = t.realm_key
                 AND pab.provider_code = 'keycloak'
           );
 
@@ -4543,8 +4457,10 @@ BEGIN
         WHERE pp.keycloak_id IS NOT NULL
           AND EXISTS (
               SELECT 1 FROM master.principal_identity_binding pab
+              JOIN master.tenant t ON t.id = pab.tenant_id
               WHERE pab.tenant_id = pp.tenant_id
                 AND pab.principal_id = pp.principal_id
+                AND pab.realm_key = t.realm_key
                 AND pab.provider_code = 'keycloak'
           );
 
@@ -4554,7 +4470,7 @@ BEGIN
 
     WITH inserted AS (
         INSERT INTO master.principal_identity_binding (
-            tenant_id, principal_id, provider_code, subject_id,
+            tenant_id, principal_id, realm_key, provider_code, subject_id,
             username, federation_link, created_at_millis, not_before,
             service_client_id, required_actions,
             synced_at, sync_status,
@@ -4564,6 +4480,7 @@ BEGIN
         SELECT
             pp.tenant_id,
             pp.principal_id,
+            t.realm_key,
             'keycloak',
             pp.keycloak_id,
             pp.keycloak_username,
@@ -4578,8 +4495,9 @@ BEGIN
             pp.attributes,
             pp.created_by
         FROM master.principal_profile pp
+        JOIN master.tenant t ON t.id = pp.tenant_id
         WHERE pp.keycloak_id IS NOT NULL
-        ON CONFLICT (tenant_id, principal_id, provider_code) DO NOTHING
+        ON CONFLICT (tenant_id, principal_id, realm_key, provider_code) DO NOTHING
         RETURNING 1
     )
     SELECT count(*) INTO v_migrated FROM inserted;

@@ -35,15 +35,21 @@
  *   - Crosswalk responses include hydrated source/target node summaries.
  */
 
-import type { RequestHandler, Router } from "express";
+import { createHash } from "node:crypto";
+import type { Request, RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import busboy from "busboy";
 import {
   verifyBearer,
   parsePagination,
   parseSearch,
   setCachePrivate,
 } from "@athyper/svc-shared";
+import {
+  requirePlatformPermission,
+  requireCatalogWritable,
+} from "../platform-guard.js";
 
 // ─── Deps ──────────────────────────────────────────────────────────────────────
 
@@ -644,6 +650,183 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
     }
   };
   router.get("/platform/taxonomy/:family/crosswalks/browse", browseCrosswalksHandler);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CROSSWALK IMPORT — POST /platform/taxonomy/:family/crosswalks/import
+  // Idempotent upsert for shared.commodity_crosswalk / shared.industry_crosswalk.
+  // DDL column names: source_domain_code, source_code, target_domain_code, target_code.
+  // Requires PLATFORM.TAXONOMY.IMPORT + PLATFORM_CATALOG_WRITABLE env.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const CROSSWALK_REQUIRED_COLUMNS = ["source_domain_code", "source_code", "target_domain_code", "target_code"];
+  const CROSSWALK_ALLOWED_COLUMNS  = new Set([
+    ...CROSSWALK_REQUIRED_COLUMNS, "confidence", "notes",
+  ]);
+  const MAX_CW_UPLOAD_BYTES = 20 * 1024 * 1024;
+
+  function sha256hex(buf: Buffer): string {
+    return createHash("sha256").update(buf).digest("hex");
+  }
+
+  function parseCwCsvBuffer(buf: Buffer): Record<string, string>[] {
+    const text  = buf.toString("utf-8");
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0]!.split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+    return lines.slice(1).map((line) => {
+      const vals = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+      return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
+    });
+  }
+
+  function validateCwRows(rows: Record<string, string>[]): { row: number; field: string; message: string }[] {
+    const errors: { row: number; field: string; message: string }[] = [];
+    if (rows.length > 0) {
+      for (const col of Object.keys(rows[0]!)) {
+        if (!CROSSWALK_ALLOWED_COLUMNS.has(col)) {
+          errors.push({ row: 0, field: col, message: `Unknown crosswalk column '${col}'. Accepted: ${[...CROSSWALK_ALLOWED_COLUMNS].join(", ")}` });
+        }
+      }
+    }
+    if (errors.length > 0) return errors;
+    for (let i = 0; i < rows.length; i++) {
+      for (const req of CROSSWALK_REQUIRED_COLUMNS) {
+        if (!rows[i]![req]?.trim()) {
+          errors.push({ row: i + 1, field: req, message: `Required field '${req}' is empty` });
+        }
+      }
+    }
+    return errors;
+  }
+
+  function readCwUpload(req: Request): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const bb = busboy({ headers: req.headers, limits: { files: 1, fileSize: MAX_CW_UPLOAD_BYTES } });
+      let fileSeen = false; let limitExceeded = false; let sizeBytes = 0;
+      const chunks: Buffer[] = []; let settled = false;
+      const rejectOnce = (err: unknown) => {
+        if (settled) return; settled = true;
+        reject(err instanceof Error ? err : new Error(String(err)));
+      };
+      bb.on("file", (_f, stream, _i) => {
+        if (fileSeen) { stream.resume(); return; }
+        fileSeen = true;
+        stream.on("data", (chunk: Buffer) => {
+          if (limitExceeded) return;
+          sizeBytes += chunk.length;
+          if (sizeBytes > MAX_CW_UPLOAD_BYTES) { limitExceeded = true; chunks.length = 0; stream.resume(); return; }
+          chunks.push(Buffer.from(chunk));
+        });
+        stream.on("limit", () => { limitExceeded = true; chunks.length = 0; });
+        stream.on("error", rejectOnce);
+      });
+      bb.on("finish", () => {
+        if (settled) return;
+        if (limitExceeded) { rejectOnce(Object.assign(new Error("FILE_TOO_LARGE"),    { statusCode: 413 })); return; }
+        if (!fileSeen)     { rejectOnce(Object.assign(new Error("MISSING_FILE"),      { statusCode: 400 })); return; }
+        const buf = Buffer.concat(chunks, sizeBytes);
+        if (buf.byteLength === 0) { rejectOnce(Object.assign(new Error("EMPTY_FILE"), { statusCode: 400 })); return; }
+        settled = true; resolve(buf);
+      });
+      bb.on("error", rejectOnce);
+      req.pipe(bb);
+    });
+  }
+
+  const crosswalkImportHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const fam = resolveFamily((req.params["family"] as string ?? "").trim(), res);
+      if (!fam) return;
+      if (!requireCatalogWritable(res)) return;
+
+      const g = await requirePlatformPermission(req, res, auth, db, "PLATFORM.TAXONOMY.IMPORT");
+      if (!g) return;
+
+      let fileBuffer: Buffer;
+      try { fileBuffer = await readCwUpload(req); }
+      catch (uploadErr: unknown) {
+        const e = uploadErr as { statusCode?: number; message?: string };
+        res.status(e.statusCode ?? 400).json({ error: e.message ?? "UPLOAD_ERROR" });
+        return;
+      }
+
+      const checksum = sha256hex(fileBuffer);
+      const rows     = parseCwCsvBuffer(fileBuffer);
+      const errors   = validateCwRows(rows);
+      if (errors.length > 0) { res.status(422).json({ error: "VALIDATION_FAILED", errors }); return; }
+
+      if (req.query["preview"] === "true") {
+        res.json({ checksum, row_count: rows.length, preview: rows.slice(0, 5), errors: [] });
+        return;
+      }
+
+      // Idempotency check
+      const cwTable = fam === "commodity" ? "shared.commodity_crosswalk" : "shared.industry_crosswalk";
+      const existing = await (db as Kysely<any>)
+        .selectFrom("log.platform_audit_log as pal")
+        .select(["pal.id", "pal.created_at"])
+        .where("pal.entity_type" as never, "=", cwTable as never)
+        .where("pal.operation"   as never, "=", "bulk_import" as never)
+        .where("pal.checksum"    as never, "=", checksum as never)
+        .executeTakeFirst();
+      if (existing) { res.json({ replayed: true, checksum, logged_at: existing.created_at }); return; }
+
+      let inserted = 0; let updated = 0;
+      await (db as Kysely<any>).transaction().execute(async (trx) => {
+        for (const row of rows) {
+          const prior = await trx
+            .selectFrom(cwTable as never)
+            .select("id" as never)
+            .where("source_domain_code" as never, "=", row["source_domain_code"] as never)
+            .where("source_code"        as never, "=", row["source_code"]        as never)
+            .where("target_domain_code" as never, "=", row["target_domain_code"] as never)
+            .where("target_code"        as never, "=", row["target_code"]        as never)
+            .executeTakeFirst() as { id: string } | undefined;
+
+          if (prior) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const upd: Record<string, any> = { updated_at: new Date().toISOString(), updated_by: g.principalId };
+            if (row["confidence"]) upd["confidence"] = Number(row["confidence"]);
+            if (row["notes"])      upd["notes"]      = row["notes"];
+            await trx.updateTable(cwTable as never).set(upd as never).where("id" as never, "=", prior.id as never).execute();
+            updated++;
+          } else {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const ins: Record<string, any> = {
+              source_domain_code: row["source_domain_code"],
+              source_code:        row["source_code"],
+              target_domain_code: row["target_domain_code"],
+              target_code:        row["target_code"],
+              created_at: new Date().toISOString(),
+              created_by: g.principalId,
+            };
+            if (row["confidence"]) ins["confidence"] = Number(row["confidence"]);
+            if (row["notes"])      ins["notes"]      = row["notes"];
+            await trx.insertInto(cwTable as never).values(ins as never).execute();
+            inserted++;
+          }
+        }
+      });
+
+      await (db as Kysely<any>)
+        .insertInto("log.platform_audit_log")
+        .values({
+          entity_type: cwTable,
+          operation:   "bulk_import",
+          actor_id:    g.principalId,
+          payload:     JSON.stringify({ inserted, updated }),
+          checksum,
+          row_count:   inserted + updated,
+        } as never)
+        .execute();
+
+      res.json({ checksum, inserted, updated, row_count: inserted + updated });
+    } catch (err) {
+      logger?.error("taxonomy_crosswalk_import_error", { err: String(err) });
+      next(err);
+    }
+  };
+  router.post("/platform/taxonomy/:family/crosswalks/import", crosswalkImportHandler);
 
   return router;
 }

@@ -212,7 +212,7 @@ function configuredChildSummaryFields(
 }
 
 function ruleFromValidation(field: SummaryFieldCandidate): unknown {
-  return field.required_when ?? field.validation_rules?.["required_when"] ?? null;
+  return field.required_when ?? null;
 }
 
 function isMissingValue(value: unknown): boolean {

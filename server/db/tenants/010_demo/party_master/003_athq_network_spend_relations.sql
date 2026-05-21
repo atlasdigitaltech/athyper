@@ -8,7 +8,7 @@
 -- §B   business_partner_network_capability — Peppol + Ariba + EDI per supplier
 -- §C   business_partner_network_link       — one linked account per provider
 -- §D   business_partner_relation           — parent, affiliate, distributor links
--- §E   supplier_spend_category             — primary + secondary spend tags
+-- §E   supplier_commodity_category             — primary + secondary spend tags
 -- §F   customer_block                      — 1 historical (EPG, lifted) + 1 active (QNP)
 -- §G   supplier_app_index refresh          — all 5 external suppliers
 -- §H   customer_app_index refresh          — all 3 external customers
@@ -299,7 +299,7 @@ DECLARE
 
     v_gcm_id uuid; v_psm_id uuid; v_gfl_id uuid; v_nic_id uuid;
 
-    -- Spend category IDs resolved from universal taxonomy
+    -- Commodity category IDs resolved from universal taxonomy
     v_sc_outsrc  uuid;
     v_sc_safety  uuid;
     v_sc_fac     uuid;
@@ -317,34 +317,34 @@ BEGIN
     SELECT id INTO v_gfl_id FROM master.supplier WHERE tenant_id = v_tid AND supplier_code = 'SUP-ATHQ-GFL-001';
     SELECT id INTO v_nic_id FROM master.supplier WHERE tenant_id = v_tid AND supplier_code = 'SUP-ATHQ-NIC-001';
 
-    -- Resolve spend category IDs from universal taxonomy
-    SELECT id INTO v_sc_outsrc FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-OUTSRC';
-    SELECT id INTO v_sc_safety FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-SAFETY';
-    SELECT id INTO v_sc_fac    FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-FAC';
-    SELECT id INTO v_sc_util   FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-UTIL';
-    SELECT id INTO v_sc_fleet  FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-FLEET';
-    SELECT id INTO v_sc_travel FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-TRAVEL';
-    SELECT id INTO v_sc_it     FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-IT';
-    SELECT id INTO v_sc_subs   FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-SUBS';
+    -- Resolve commodity category IDs from universal taxonomy
+    SELECT id INTO v_sc_outsrc FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-OUTSRC';
+    SELECT id INTO v_sc_safety FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-SAFETY';
+    SELECT id INTO v_sc_fac    FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-FAC';
+    SELECT id INTO v_sc_util   FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-UTIL';
+    SELECT id INTO v_sc_fleet  FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-FLEET';
+    SELECT id INTO v_sc_travel FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-TRAVEL';
+    SELECT id INTO v_sc_it     FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-IT';
+    SELECT id INTO v_sc_subs   FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-SUBS';
 
     -- GCM-001: SC-OUTSRC (primary — construction outsourcing), SC-SAFETY (secondary)
     IF v_gcm_id IS NOT NULL AND v_sc_outsrc IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_gcm_id, v_sc_outsrc, true,
                '2024-01-01'::date,
-               'Primary spend category: construction materials and outsourced subcontracting.',
+               'Primary commodity category: construction materials and outsourced subcontracting.',
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_spend_category
+            SELECT 1 FROM master.supplier_commodity_category
              WHERE tenant_id = v_tid AND supplier_id = v_gcm_id AND commodity_category_id = v_sc_outsrc
         );
     END IF;
 
     IF v_gcm_id IS NOT NULL AND v_sc_safety IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
@@ -353,29 +353,29 @@ BEGIN
                'Secondary: safety equipment and HSE supplies bundled in construction orders.',
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_spend_category
+            SELECT 1 FROM master.supplier_commodity_category
              WHERE tenant_id = v_tid AND supplier_id = v_gcm_id AND commodity_category_id = v_sc_safety
         );
     END IF;
 
     -- PSM-001: SC-FAC (primary), SC-UTIL (secondary)
     IF v_psm_id IS NOT NULL AND v_sc_fac IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_psm_id, v_sc_fac, true,
                '2023-01-01'::date,
-               'Primary spend category: integrated facilities management.',
+               'Primary commodity category: integrated facilities management.',
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_spend_category
+            SELECT 1 FROM master.supplier_commodity_category
              WHERE tenant_id = v_tid AND supplier_id = v_psm_id AND commodity_category_id = v_sc_fac
         );
     END IF;
 
     IF v_psm_id IS NOT NULL AND v_sc_util IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
@@ -384,29 +384,29 @@ BEGIN
                'Secondary: utility management services (water, electricity).',
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_spend_category
+            SELECT 1 FROM master.supplier_commodity_category
              WHERE tenant_id = v_tid AND supplier_id = v_psm_id AND commodity_category_id = v_sc_util
         );
     END IF;
 
     -- GFL-001: SC-FLEET (primary), SC-TRAVEL (secondary)
     IF v_gfl_id IS NOT NULL AND v_sc_fleet IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_gfl_id, v_sc_fleet, true,
                '2022-07-01'::date,
-               'Primary spend category: freight, fleet, and last-mile delivery services.',
+               'Primary commodity category: freight, fleet, and last-mile delivery services.',
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_spend_category
+            SELECT 1 FROM master.supplier_commodity_category
              WHERE tenant_id = v_tid AND supplier_id = v_gfl_id AND commodity_category_id = v_sc_fleet
         );
     END IF;
 
     IF v_gfl_id IS NOT NULL AND v_sc_travel IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
@@ -415,29 +415,29 @@ BEGIN
                'Secondary: business travel logistics bundled with freight bookings.',
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_spend_category
+            SELECT 1 FROM master.supplier_commodity_category
              WHERE tenant_id = v_tid AND supplier_id = v_gfl_id AND commodity_category_id = v_sc_travel
         );
     END IF;
 
     -- NIC-001: SC-IT (primary), SC-SUBS (secondary — software subscriptions)
     IF v_nic_id IS NOT NULL AND v_sc_it IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
         SELECT v_tid, v_nic_id, v_sc_it, true,
                '2024-01-01'::date,
-               'Primary spend category: IT consulting, managed cloud, and SOC services.',
+               'Primary commodity category: IT consulting, managed cloud, and SOC services.',
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_spend_category
+            SELECT 1 FROM master.supplier_commodity_category
              WHERE tenant_id = v_tid AND supplier_id = v_nic_id AND commodity_category_id = v_sc_it
         );
     END IF;
 
     IF v_nic_id IS NOT NULL AND v_sc_subs IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category (
+        INSERT INTO master.supplier_commodity_category (
             tenant_id, supplier_id, commodity_category_id, is_primary,
             effective_from, notes, metadata, status, created_by
         )
@@ -446,12 +446,12 @@ BEGIN
                'Secondary: cloud platform subscription licenses (AWS, Azure) resold via NIC.',
                '{"_seed":{"pack":"003_athq_network","version":"1.0.0"}}'::jsonb, 'active', v_sys
         WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_spend_category
+            SELECT 1 FROM master.supplier_commodity_category
              WHERE tenant_id = v_tid AND supplier_id = v_nic_id AND commodity_category_id = v_sc_subs
         );
     END IF;
 
-    RAISE NOTICE '[003_athq_network §E] Supplier spend categories seeded (GCM/PSM/GFL/NIC)';
+    RAISE NOTICE '[003_athq_network §E] Supplier commodity categories seeded (GCM/PSM/GFL/NIC)';
 END $sup_spend$;
 
 

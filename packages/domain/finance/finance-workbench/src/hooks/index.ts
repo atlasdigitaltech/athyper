@@ -42,16 +42,3 @@ export {
   type BusinessIntentSummary,
   type BusinessIntentPayload,
 } from "./useTaxonomyWorkbenches";
-export {
-  useSpendCategories,
-  useSpendCategoryTreeBatchSize,
-  useSpendCategorySummary,
-  useSpendCategoryChildren,
-  useSpendCategoryDetail,
-  useSpendCategorySearch,
-  useLazySpendCategoryHierarchy,
-  type SpendCategoryRow,
-  type SpendCategoryRuleRow,
-  type SpendCategorySummary,
-  type SpendCategoryPayload,
-} from "./useTaxonomyWorkbenches";

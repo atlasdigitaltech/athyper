@@ -59,7 +59,7 @@ const ResolvedSchema = z.object({
   confidence:             z.number().min(0).max(1),
   tax_group_resolved_via: z.enum([
     "override", "supplier_profile", "product",
-    "commodity_category", "spend_category", "fallback", "none",
+    "commodity_category", "fallback", "none",
   ]),
   wht_group_resolved_via: z.enum(["override", "supplier_profile", "none", "n/a"]),
 });

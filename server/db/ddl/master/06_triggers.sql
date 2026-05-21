@@ -35,6 +35,20 @@ CREATE TRIGGER trg_principal_profile_service_client BEFORE INSERT OR UPDATE OF k
 -- contact_link
 -- Value normalization — 'trg_a_' prefix ensures alphabetical firing BEFORE all
 -- other contact_link BEFORE triggers (channel_type_lookup, owner_type_guard, etc.)
+-- tenant_relationship
+DROP TRIGGER IF EXISTS trg_tenant_relationship_updated_at ON master.tenant_relationship;
+CREATE TRIGGER trg_tenant_relationship_updated_at BEFORE UPDATE ON master.tenant_relationship FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_tenant_relationship_status_changed ON master.tenant_relationship;
+CREATE TRIGGER trg_tenant_relationship_status_changed BEFORE UPDATE OF status ON master.tenant_relationship FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+-- principal_relationship
+DROP TRIGGER IF EXISTS trg_principal_relationship_updated_at ON master.principal_relationship;
+CREATE TRIGGER trg_principal_relationship_updated_at BEFORE UPDATE ON master.principal_relationship FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_principal_relationship_status_changed ON master.principal_relationship;
+CREATE TRIGGER trg_principal_relationship_status_changed BEFORE UPDATE OF status ON master.principal_relationship FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
 DROP TRIGGER IF EXISTS trg_contact_link_a_normalize_value ON master.contact_link;
 DROP TRIGGER IF EXISTS trg_a_contact_link_normalize ON master.contact_link;
 CREATE TRIGGER trg_a_contact_link_normalize
@@ -136,11 +150,49 @@ CREATE TRIGGER trg_tenant_subscription_lookup
     BEFORE INSERT OR UPDATE OF subscription ON master.tenant
     FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.tenant_subscription', 'subscription');
 
+-- tenant.tenant_type
+DROP TRIGGER IF EXISTS trg_tenant_type_lookup ON master.tenant;
+CREATE TRIGGER trg_tenant_type_lookup
+    BEFORE INSERT OR UPDATE OF tenant_type ON master.tenant
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.tenant_type', 'tenant_type');
+
 -- principal.principal_type
 DROP TRIGGER IF EXISTS trg_principal_type_lookup ON master.principal;
 CREATE TRIGGER trg_principal_type_lookup
     BEFORE INSERT OR UPDATE OF principal_type ON master.principal
     FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.principal_type', 'principal_type');
+
+-- tenant_relationship
+DROP TRIGGER IF EXISTS trg_tenant_relationship_type_lookup ON master.tenant_relationship;
+CREATE TRIGGER trg_tenant_relationship_type_lookup
+    BEFORE INSERT OR UPDATE OF relationship_type ON master.tenant_relationship
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.tenant_relationship_type', 'relationship_type');
+
+DROP TRIGGER IF EXISTS trg_tenant_relationship_direction_lookup ON master.tenant_relationship;
+CREATE TRIGGER trg_tenant_relationship_direction_lookup
+    BEFORE INSERT OR UPDATE OF relationship_direction ON master.tenant_relationship
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.tenant_relationship_direction', 'relationship_direction');
+
+DROP TRIGGER IF EXISTS trg_tenant_relationship_status_lookup ON master.tenant_relationship;
+CREATE TRIGGER trg_tenant_relationship_status_lookup
+    BEFORE INSERT OR UPDATE OF status ON master.tenant_relationship
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.tenant_relationship_status', 'status');
+
+-- principal_relationship
+DROP TRIGGER IF EXISTS trg_principal_relationship_type_lookup ON master.principal_relationship;
+CREATE TRIGGER trg_principal_relationship_type_lookup
+    BEFORE INSERT OR UPDATE OF relationship_type ON master.principal_relationship
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.principal_relationship_type', 'relationship_type');
+
+DROP TRIGGER IF EXISTS trg_principal_relationship_verification_status_lookup ON master.principal_relationship;
+CREATE TRIGGER trg_principal_relationship_verification_status_lookup
+    BEFORE INSERT OR UPDATE OF verification_status ON master.principal_relationship
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.principal_relationship_verification_status', 'verification_status');
+
+DROP TRIGGER IF EXISTS trg_principal_relationship_verified_method_lookup ON master.principal_relationship;
+CREATE TRIGGER trg_principal_relationship_verified_method_lookup
+    BEFORE INSERT OR UPDATE OF verified_method ON master.principal_relationship
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.principal_relationship_verified_method', 'verified_method');
 
 -- contact_link.channel_type
 DROP TRIGGER IF EXISTS trg_contact_link_channel_type_lookup ON master.contact_link;
@@ -1341,38 +1393,10 @@ CREATE TRIGGER trg_im_valuation_lookup
 
 
 -- =============================================================================
--- §P7  master.spend_category
+-- §P7 legacy spend-category triggers retired
 -- =============================================================================
 
-DROP TRIGGER IF EXISTS trg_sc_updated_at ON master.spend_category;
-CREATE TRIGGER trg_sc_updated_at BEFORE UPDATE ON master.spend_category
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_sc_status_changed ON master.spend_category;
-CREATE TRIGGER trg_sc_status_changed BEFORE UPDATE ON master.spend_category
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_sc_procurement_type_lookup ON master.spend_category;
-CREATE TRIGGER trg_sc_procurement_type_lookup
-    BEFORE INSERT OR UPDATE OF procurement_type ON master.spend_category
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.procurement_type', 'procurement_type');
-
-DROP TRIGGER IF EXISTS trg_sc_visibility_lookup ON master.spend_category;
-CREATE TRIGGER trg_sc_visibility_lookup
-    BEFORE INSERT OR UPDATE OF visibility ON master.spend_category
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.spend_visibility', 'visibility');
-
-DROP TRIGGER IF EXISTS trg_sc_depreciation_lookup ON master.spend_category;
-DROP TRIGGER IF EXISTS trg_sc_domain_lookup ON master.spend_category;
-DROP TRIGGER IF EXISTS trg_sc_maintain_root_category ON master.spend_category;
-CREATE TRIGGER trg_sc_maintain_root_category
-    BEFORE INSERT OR UPDATE OF parent_id ON master.spend_category
-    FOR EACH ROW EXECUTE FUNCTION master.trg_sc_maintain_root_category();
-
-
--- =============================================================================
--- §P7b  master.company_code_spend_policy
--- =============================================================================
+DROP FUNCTION IF EXISTS master.trg_sc_maintain_root_category();
 
 -- =============================================================================
 -- §P8  master.commodity_classification

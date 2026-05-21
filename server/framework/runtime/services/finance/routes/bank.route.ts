@@ -18,16 +18,28 @@
  */
 
 import type { RequestHandler, Router } from "express";
-import { sql, type Kysely } from "kysely";
+import { sql } from "kysely";
 import type { IncomingMessage } from "node:http";
 import { type FinanceRouteDeps, parseScopeParams, resolveCompanyIds } from "./finance.route.js";
-import { verifyBearer, resolveTenantId, isUuid } from "@athyper/svc-shared";
+import {
+  verifyBearer,
+  resolveTenantId,
+  isUuid,
+  resolvePrincipalIdOrNull,
+  SYSTEM_PRINCIPAL_UUID,
+} from "@athyper/svc-shared";
 import { importBankStatement }   from "./bank-statement-import.service.js";
 import { runAutoMatch }          from "./bank-auto-match.service.js";
 import { postReconAdjustment }   from "./bank-recon-posting.service.js";
 
 export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger } = deps;
+
+  async function resolveActorId(tenantId: string, claims: Record<string, unknown>): Promise<string> {
+    const sub = String(claims["sub"] ?? "");
+    if (!sub) return SYSTEM_PRINCIPAL_UUID;
+    return (await resolvePrincipalIdOrNull(db, sub, tenantId)) ?? SYSTEM_PRINCIPAL_UUID;
+  }
 
   // ── GET /api/finance/bank/accounts ────────────────────────────────────────
   // Returns house bank accounts linked to company_codes in the scope.
@@ -187,6 +199,8 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
         .where("pe.tenant_id", "=", tenantId)
         .where("pe.bank_account_id", "=", bankAccountId)
         .where("pe.is_posted", "=", true)
+        .where("pe.cleared_date", "is", null)
+        .where("pe.bank_statement_line_id", "is", null)
         .where("pe.status", "not in", ["cleared", "reversed", "voided", "cancelled"]);
 
       if (companyIds.length > 0) q = q.where("pe.company_code_id", "in", companyIds) as typeof q;
@@ -208,7 +222,8 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
   }) as RequestHandler);
 
   // ── POST /api/finance/bank/reconcile  [DEPRECATED] ──────────────────────
-  // Legacy: directly sets status='cleared' on payment_entry rows.
+  // Legacy compatibility endpoint. Reconciliation state is recorded on
+  // cleared_date/bank_statement_line_id; payment_entry.status remains lifecycle-owned.
   // Kept for backward compatibility with the bank recon UI until Phase 5 UI lands.
   // New code should use the Phase 5 statement-import + sign-off flow instead.
   router.post("/finance/bank/reconcile", (async (req, res, next) => {
@@ -243,16 +258,16 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
       const clearedDate = body.cleared_date ? new Date(body.cleared_date) : new Date();
       const clearedDateStr = clearedDate.toISOString().split("T")[0]!;
 
-      // DEPRECATED: still sets status='cleared' for UI backward-compat.
-      // Phase 5 sign-off keeps status='posted' and uses cleared_date instead.
       const result = await db
         .updateTable("document.payment_entry")
-        .set({ status: "cleared", cleared_date: clearedDateStr, updated_at: sql`now()` })
+        .set({ cleared_date: clearedDateStr, updated_at: sql`now()` })
         .where("tenant_id", "=", tenantId)
         .where("bank_account_id", "=", body.bank_account_id)
         .where("id", "in", paymentIds)
         .where("is_posted", "=", true)
-        .where("status", "not in", ["cleared", "reversed", "voided", "cancelled"])
+        .where("cleared_date", "is", null)
+        .where("bank_statement_line_id", "is", null)
+        .where("status", "not in", ["reversed", "voided", "cancelled"])
         .executeTakeFirst();
 
       const cleared = Number(result?.numUpdatedRows ?? 0);
@@ -309,11 +324,13 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
       const fileName = String((req as any)?.files?.file?.name ?? bodyAny?.file_name ?? "upload.csv");
       const format   = (bodyAny?.format as "csv" | "ofx" | "auto" | undefined) ?? "auto";
 
+      const actorId = await resolveActorId(tenantId, claims as Record<string, unknown>);
+
       const result = await importBankStatement(db, {
         tenantId,
         companyCodeId,
         bankAccountId,
-        createdBy:    claims["sub"] as string ?? "system",
+        createdBy:    actorId,
         fileName,
         rawBytes,
         format,
@@ -436,14 +453,16 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
         .updateTable("document.bank_statement")
         .set({ status: "matching", updated_at: sql`now()` })
         .where("id", "=", statementId)
+        .where("tenant_id", "=", tenantId)
         .execute();
 
+      const actorId = await resolveActorId(tenantId, claims as Record<string, unknown>);
       const result = await runAutoMatch(db, {
         tenantId,
         bankAccountId: stmt.bank_account_id,
         companyCodeId: stmt.company_code_id,
         statementId,
-        createdBy: claims["sub"] as string ?? "system",
+        createdBy: actorId,
       });
 
       res.json({ statementId, ...result });
@@ -474,7 +493,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
 
       const payId  = body.payment_entry_id!;
       const lineId = body.bank_statement_line_id!;
-      const userId = claims["sub"] as string ?? "system";
+      const userId = await resolveActorId(tenantId, claims as Record<string, unknown>);
 
       // Load both rows
       const pay = await db
@@ -486,9 +505,9 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
 
       const line = await db
         .selectFrom("document.bank_statement_line as bsl")
-        .select(["bsl.amount", "bsl.transaction_date", "bsl.bank_statement_id"])
+        .select(["bsl.amount", "bsl.transaction_date", "bsl.bank_statement_id", "bsl.currency_code"])
         .where("bsl.id", "=", lineId).where("bsl.tenant_id", "=", tenantId)
-        .executeTakeFirst() as { amount: string; transaction_date: string; bank_statement_id: string } | undefined;
+        .executeTakeFirst() as { amount: string; transaction_date: string; bank_statement_id: string; currency_code: string } | undefined;
       if (!line) { res.status(404).json({ error: "NOT_FOUND", message: "Statement line not found" }); return; }
 
       const payAmt  = parseFloat(pay.payment_amount) * (pay.payment_direction === "OUTBOUND" ? -1 : 1);
@@ -506,7 +525,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
            matched_at, created_at, created_by)
         VALUES (
           ${tenantId}::uuid, ${pay.company_code_id}::uuid, ${pay.bank_account_id}::uuid, ${caseNumber},
-          'manual', 1.0, 'matched', ${diff}, 'USD',
+          'manual', 1.0, 'matched', ${diff}, ${line.currency_code},
           now(), now(), ${userId}::uuid
         )
         RETURNING id
@@ -517,27 +536,26 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
 
       await sql`
         INSERT INTO document.bank_recon_case_line
-          (tenant_id, bank_recon_case_id, side, payment_entry_id, amount, notes, created_at, created_by)
+          (tenant_id, bank_recon_case_id, side, payment_entry_id, bank_statement_line_id,
+           amount, notes, created_at, created_by)
         VALUES
-          (${tenantId}::uuid, ${caseId}::uuid, 'payment', ${payId}::uuid,
+          (${tenantId}::uuid, ${caseId}::uuid, 'payment', ${payId}::uuid, NULL,
            ${Math.abs(parseFloat(pay.payment_amount))}, ${body.notes ?? null}, now(), ${userId}::uuid),
-          (${tenantId}::uuid, ${caseId}::uuid, 'statement', NULL, ${Math.abs(lineAmt)}, NULL, now(), ${userId}::uuid)
-      `.execute(db);
-
-      // Fix: insert statement line correctly
-      await sql`
-        UPDATE document.bank_recon_case_line
-           SET bank_statement_line_id = ${lineId}::uuid
-         WHERE bank_recon_case_id = ${caseId}::uuid AND side = 'statement'
+          (${tenantId}::uuid, ${caseId}::uuid, 'statement', NULL, ${lineId}::uuid,
+           ${Math.abs(lineAmt)}, NULL, now(), ${userId}::uuid)
       `.execute(db);
 
       await db.updateTable("document.bank_statement_line")
         .set({ recon_status: "matched", recon_case_id: caseId, updated_at: sql`now()` })
-        .where("id", "=", lineId).execute();
+        .where("id", "=", lineId)
+        .where("tenant_id", "=", tenantId)
+        .execute();
 
       await db.updateTable("document.payment_entry")
         .set({ cleared_date: line.transaction_date, bank_statement_line_id: lineId, updated_at: sql`now()` })
-        .where("id", "=", payId).execute();
+        .where("id", "=", payId)
+        .where("tenant_id", "=", tenantId)
+        .execute();
 
       res.status(201).json({ caseId, caseNumber, differenceAmount: diff });
     } catch (err) { logger?.error("finance_bank_manual_match_error", { err: String(err) }); next(err); }
@@ -566,13 +584,13 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
       if (!Array.isArray(body.splits) || body.splits.length < 2) { res.status(400).json({ error: "INVALID_VALUE", message: "splits must have at least 2 entries" }); return; }
 
       const lineId = body.bank_statement_line_id!;
-      const userId = claims["sub"] as string ?? "system";
+      const userId = await resolveActorId(tenantId, claims as Record<string, unknown>);
 
       const line = await db
         .selectFrom("document.bank_statement_line as bsl")
-        .select(["bsl.amount", "bsl.transaction_date", "bsl.bank_statement_id"])
+        .select(["bsl.amount", "bsl.transaction_date", "bsl.bank_statement_id", "bsl.currency_code"])
         .where("bsl.id", "=", lineId).where("bsl.tenant_id", "=", tenantId)
-        .executeTakeFirst() as { amount: string; transaction_date: string; bank_statement_id: string } | undefined;
+        .executeTakeFirst() as { amount: string; transaction_date: string; bank_statement_id: string; currency_code: string } | undefined;
       if (!line) { res.status(404).json({ error: "NOT_FOUND" }); return; }
 
       // Resolve company + bank account from first payment
@@ -597,7 +615,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
            matched_at, created_at, created_by)
         VALUES (
           ${tenantId}::uuid, ${firstPay.company_code_id}::uuid, ${firstPay.bank_account_id}::uuid, ${caseNumber},
-          'manual', 1.0, 'matched', ${diff}, 'USD',
+          'manual', 1.0, 'matched', ${diff}, ${line.currency_code},
           now(), now(), ${userId}::uuid
         )
         RETURNING id
@@ -627,12 +645,16 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
 
         await db.updateTable("document.payment_entry")
           .set({ cleared_date: line.transaction_date, bank_statement_line_id: lineId, updated_at: sql`now()` })
-          .where("id", "=", sp.payment_entry_id).execute();
+          .where("id", "=", sp.payment_entry_id)
+          .where("tenant_id", "=", tenantId)
+          .execute();
       }
 
       await db.updateTable("document.bank_statement_line")
         .set({ recon_status: "split", recon_case_id: caseId, updated_at: sql`now()` })
-        .where("id", "=", lineId).execute();
+        .where("id", "=", lineId)
+        .where("tenant_id", "=", tenantId)
+        .execute();
 
       res.status(201).json({ caseId, caseNumber, differenceAmount: diff });
     } catch (err) { logger?.error("finance_bank_split_error", { err: String(err) }); next(err); }
@@ -725,19 +747,27 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
       }
 
       // Post adjustment JEs for bank_charge / fx_difference cases
-      const cases = await db
-        .selectFrom("document.bank_recon_case as brc")
-        .select(["brc.id", "brc.case_type"])
-        .where("brc.tenant_id",      "=", tenantId)
-        .where("brc.bank_account_id","=", stmt.bank_account_id)
-        .where("brc.status",         "in", ["open", "matched"])
-        .where("brc.case_type",      "in", ["bank_charge", "fx_difference", "near_match"])
-        .execute() as Array<{ id: string; case_type: string }>;
+      const cases = await sql<{ id: string; case_type: string }>`
+        SELECT DISTINCT brc.id, brc.case_type
+          FROM document.bank_recon_case brc
+          JOIN document.bank_recon_case_line brcl
+            ON brcl.tenant_id = brc.tenant_id
+           AND brcl.bank_recon_case_id = brc.id
+           AND brcl.side = 'statement'
+          JOIN document.bank_statement_line bsl
+            ON bsl.tenant_id = brcl.tenant_id
+           AND bsl.id = brcl.bank_statement_line_id
+         WHERE brc.tenant_id = ${tenantId}::uuid
+           AND brc.bank_account_id = ${stmt.bank_account_id}::uuid
+           AND brc.status IN ('open', 'matched')
+           AND brc.case_type IN ('bank_charge', 'fx_difference', 'near_match')
+           AND bsl.bank_statement_id = ${body.statement_id!}::uuid
+      `.execute(db);
 
-      const userId = claims["sub"] as string ?? "system";
+      const userId = await resolveActorId(tenantId, claims as Record<string, unknown>);
       const jeIds: string[] = [];
 
-      for (const c of cases) {
+      for (const c of cases.rows) {
         const postResult = await postReconAdjustment(db, {
           tenantId,
           companyCodeId: stmt.company_code_id,

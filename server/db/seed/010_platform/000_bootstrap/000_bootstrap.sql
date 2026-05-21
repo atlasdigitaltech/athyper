@@ -9,7 +9,7 @@ SET LOCAL session_replication_role = replica;
 
 -- §1  System Tenant — well-known UUID, required by principal FK
 INSERT INTO master.tenant (
-    id, code, name, display_name, realm_key, region, subscription,
+    id, code, name, display_name, realm_key, tenant_type, region, subscription,
     status, created_by
 )
 VALUES (
@@ -18,12 +18,16 @@ VALUES (
     'System Tenant',
     'System',
     'athyper',
+    'platform_internal',
     NULL,
     'base',
     'active',
     '00000000-0000-0000-0000-000000000000'::uuid   -- self-ref bootstrap
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+    tenant_type = EXCLUDED.tenant_type,
+    updated_at = now(),
+    updated_by = EXCLUDED.created_by;
 
 -- §2  System Principal — self-referential created_by
 INSERT INTO master.principal (

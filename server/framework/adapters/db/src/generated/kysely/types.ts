@@ -2261,15 +2261,6 @@ export type commodity_category = {
     root_category_id: string;
     level_no: number | null;
     sort_order: Generated<number>;
-    metadata: Generated<unknown>;
-    status: Generated<string>;
-    is_active: Generated<boolean | null>;
-    status_changed_at: Timestamp | null;
-    status_changed_by: string | null;
-    created_at: Generated<Timestamp>;
-    created_by: string;
-    updated_at: Timestamp | null;
-    updated_by: string | null;
     buy_allowed: Generated<boolean>;
     sell_allowed: Generated<boolean>;
     inventory_allowed: Generated<boolean>;
@@ -2288,6 +2279,15 @@ export type commodity_category = {
     is_lot_tracking_required: Generated<boolean>;
     is_serial_tracking_allowed: Generated<boolean>;
     is_serial_tracking_required: Generated<boolean>;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    status_changed_at: Timestamp | null;
+    status_changed_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
 };
 export type commodity_category_buy_policy = {
     id: Generated<string>;
@@ -3848,35 +3848,6 @@ export type document = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
-export type document_sequence_config = {
-    id: Generated<string>;
-    tenant_id: string;
-    company_code_id: string;
-    doc_type: string;
-    prefix: string;
-    separator: Generated<string>;
-    pad_width: Generated<number>;
-    format_template: string | null;
-    reset_strategy: Generated<string>;
-    metadata: Generated<unknown>;
-    status: Generated<string>;
-    is_active: Generated<boolean | null>;
-    status_changed_at: Timestamp | null;
-    status_changed_by: string | null;
-    created_at: Generated<Timestamp>;
-    created_by: string;
-    updated_at: Timestamp | null;
-    updated_by: string | null;
-};
-export type document_sequence_counter = {
-    tenant_id: string;
-    config_id: string;
-    fiscal_year: number;
-    period_number: Generated<number>;
-    last_value: Generated<number>;
-    updated_at: Generated<Timestamp>;
-    updated_by: string | null;
-};
 export type employee = {
     id: Generated<string>;
     tenant_id: string;
@@ -4063,14 +4034,11 @@ export type entity = {
     display_config: Generated<unknown>;
     feature_flags: Generated<unknown>;
     data_policy: Generated<unknown>;
-    naming_policy: Generated<unknown>;
     identity_config: Generated<unknown>;
     search_config: Generated<unknown>;
-    numbering_active: Generated<boolean>;
     composite_indexes: Generated<unknown>;
     discriminator_column: string | null;
     discriminator_value: string | null;
-    natural_key_fields: Generated<string[]>;
     is_partition_child: Generated<boolean>;
     partition_parent_id: string | null;
     partition_key: string | null;
@@ -4171,13 +4139,15 @@ export type entity_field = {
     enum_kind: string | null;
     reference_config: unknown | null;
     fk_target_entity_id: string | null;
-    fk_target_field: Generated<string | null>;
-    fk_on_delete: Generated<string | null>;
-    fk_on_update: Generated<string | null>;
+    fk_target_field: string | null;
+    fk_on_delete: string | null;
+    fk_on_update: string | null;
     fk_relationship_class: string | null;
     json_config: unknown | null;
     money_config: unknown | null;
     datetime_config: unknown | null;
+    group_key: string | null;
+    filter_config: unknown | null;
     ui_hint: unknown | null;
     visibility: unknown | null;
     editability: unknown | null;
@@ -4325,6 +4295,43 @@ export type entity_lifecycle_log = {
     correlation_id: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
+};
+export type entity_numbering_config = {
+    id: Generated<string>;
+    tenant_id: string | null;
+    entity_id: string;
+    number_field: string;
+    company_code_id: string | null;
+    prefix: Generated<string>;
+    prefix_configurable: Generated<boolean>;
+    separator: Generated<string>;
+    segments: Generated<unknown>;
+    reset_strategy: Generated<string>;
+    uniqueness_scope: Generated<string>;
+    max_length: number | null;
+    allowed_chars: Generated<string>;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    status_changed_at: Timestamp | null;
+    status_changed_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type entity_numbering_counter = {
+    id: Generated<string>;
+    tenant_id: string | null;
+    config_id: string;
+    company_code_id: string | null;
+    scope_key: Generated<string>;
+    fiscal_year: Generated<number>;
+    period_number: Generated<number>;
+    quarter_number: Generated<number>;
+    last_value: Generated<string>;
+    updated_at: Generated<Timestamp>;
+    updated_by: string | null;
 };
 export type entity_operation = {
     id: Generated<string>;
@@ -5524,6 +5531,7 @@ export type item = {
     name: string;
     company_code_id: string;
     product_id: string | null;
+    commodity_category_id: string | null;
     valuation_method: string;
     standard_cost: string | null;
     reorder_point: string | null;
@@ -5541,7 +5549,6 @@ export type item = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    commodity_category_id: string | null;
 };
 export type job = {
     id: Generated<string>;
@@ -6634,21 +6641,6 @@ export type notification_template = {
     metadata: Generated<unknown>;
     created_at: Generated<Timestamp>;
     created_by: string;
-    updated_at: Timestamp | null;
-    updated_by: string | null;
-};
-export type numbering_series = {
-    id: Generated<string>;
-    tenant_id: string;
-    company_code_id: string;
-    document_type: string;
-    prefix: Generated<string>;
-    fiscal_year: number | null;
-    last_number: Generated<number>;
-    padding: Generated<number>;
-    is_active: Generated<boolean>;
-    created_at: Generated<Timestamp>;
-    created_by: Generated<string>;
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
@@ -7927,7 +7919,7 @@ export type persona_permission = {
 };
 export type plan_feature_access = {
     id: Generated<string>;
-    plan_id: string;
+    plan_version_id: string;
     feature_id: string;
     is_included: Generated<boolean>;
     is_addon: Generated<boolean>;
@@ -7938,7 +7930,7 @@ export type plan_feature_access = {
 };
 export type plan_module_access = {
     id: Generated<string>;
-    plan_id: string;
+    plan_version_id: string;
     module_id: string;
     is_included: Generated<boolean>;
     is_addon: Generated<boolean>;
@@ -7949,7 +7941,7 @@ export type plan_module_access = {
 };
 export type plan_permission_access = {
     id: Generated<string>;
-    plan_id: string;
+    plan_version_id: string;
     permission_id: string;
     is_included: Generated<boolean>;
     is_addon: Generated<boolean>;
@@ -8117,6 +8109,17 @@ export type planning_output = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type platform_audit_log = {
+    id: Generated<string>;
+    entity_type: string;
+    entity_id: string | null;
+    operation: string;
+    actor_id: string;
+    payload: Generated<unknown>;
+    checksum: string | null;
+    row_count: number | null;
+    created_at: Generated<Timestamp>;
+};
 export type policy_acknowledgment = {
     id: Generated<string>;
     tenant_id: string;
@@ -8280,9 +8283,13 @@ export type principal_identity_binding = {
     id: Generated<string>;
     tenant_id: string;
     principal_id: string;
+    realm_key: Generated<string>;
     provider_code: string;
     subject_id: string;
     username: string | null;
+    issuer: string | null;
+    audience: string | null;
+    client_id: string | null;
     federation_link: string | null;
     created_at_millis: string | null;
     not_before: string | null;
@@ -8369,6 +8376,33 @@ export type principal_profile = {
     supervisor_id: string | null;
     supervisor_source: string | null;
 };
+export type principal_relationship = {
+    id: Generated<string>;
+    from_tenant_id: string;
+    from_principal_id: string;
+    to_tenant_id: string;
+    to_principal_id: string;
+    relationship_type: string;
+    verification_status: Generated<string>;
+    verified_method: string | null;
+    verified_at: Timestamp | null;
+    verified_by: string | null;
+    requested_at: Timestamp | null;
+    requested_by: string | null;
+    approved_at: Timestamp | null;
+    approved_by: string | null;
+    effective_from: Generated<Timestamp>;
+    effective_until: Timestamp | null;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    status_changed_at: Timestamp | null;
+    status_changed_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type principal_ui_preference = {
     id: Generated<string>;
     tenant_id: string;
@@ -8443,6 +8477,7 @@ export type product = {
     name: string;
     description: string | null;
     sku: string | null;
+    commodity_category_id: string | null;
     product_type: Generated<string>;
     unit_of_measure: string | null;
     base_price: string | null;
@@ -8460,7 +8495,6 @@ export type product = {
     created_by: string;
     updated_at: Timestamp | null;
     updated_by: string | null;
-    commodity_category_id: string | null;
 };
 export type profit_center = {
     id: Generated<string>;
@@ -9357,32 +9391,6 @@ export type site = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
-export type spend_category = {
-    id: Generated<string>;
-    tenant_id: string;
-    code: string;
-    name: string;
-    description: string | null;
-    parent_id: string | null;
-    root_category_id: string;
-    allowed_domains: Generated<unknown>;
-    procurement_type: Generated<string>;
-    visibility: Generated<string>;
-    is_classification_required: Generated<boolean>;
-    is_hs_required: Generated<boolean>;
-    is_regulated: Generated<boolean>;
-    default_intent_id: string | null;
-    sort_order: Generated<number>;
-    metadata: Generated<unknown>;
-    status: Generated<string>;
-    is_active: Generated<boolean | null>;
-    status_changed_at: Timestamp | null;
-    status_changed_by: string | null;
-    created_at: Generated<Timestamp>;
-    created_by: string;
-    updated_at: Timestamp | null;
-    updated_by: string | null;
-};
 export type state_region = {
     id: Generated<string>;
     code: string;
@@ -9492,6 +9500,18 @@ export type subscription_plan = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type subscription_plan_version = {
+    id: Generated<string>;
+    plan_id: string;
+    version_number: Generated<number>;
+    valid_from: Generated<Timestamp>;
+    valid_to: Timestamp | null;
+    max_users: number | null;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+};
 export type supplier = {
     id: Generated<string>;
     tenant_id: string;
@@ -9562,6 +9582,25 @@ export type supplier_block = {
     updated_at: Timestamp | null;
     updated_by: string | null;
 };
+export type supplier_commodity_category = {
+    id: Generated<string>;
+    tenant_id: string;
+    supplier_id: string;
+    commodity_category_id: string;
+    is_primary: Generated<boolean>;
+    effective_from: Timestamp | null;
+    effective_until: Timestamp | null;
+    notes: string | null;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    status_changed_at: Timestamp | null;
+    status_changed_by: string | null;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
 export type supplier_posting_override = {
     id: Generated<string>;
     tenant_id: string;
@@ -9614,25 +9653,6 @@ export type supplier_qualification = {
     metadata: Generated<unknown>;
     status: Generated<string>;
     is_active: Generated<boolean | null>;
-    created_at: Generated<Timestamp>;
-    created_by: string;
-    updated_at: Timestamp | null;
-    updated_by: string | null;
-};
-export type supplier_spend_category = {
-    id: Generated<string>;
-    tenant_id: string;
-    supplier_id: string;
-    commodity_category_id: string;
-    is_primary: Generated<boolean>;
-    effective_from: Timestamp | null;
-    effective_until: Timestamp | null;
-    notes: string | null;
-    metadata: Generated<unknown>;
-    status: Generated<string>;
-    is_active: Generated<boolean | null>;
-    status_changed_at: Timestamp | null;
-    status_changed_by: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -9948,6 +9968,7 @@ export type tenant = {
     name: string;
     display_name: string;
     realm_key: Generated<string>;
+    tenant_type: Generated<string>;
     region: string | null;
     subscription: Generated<string>;
     metadata: Generated<unknown>;
@@ -10072,6 +10093,29 @@ export type tenant_profile = {
     default_brand_profile_id: string | null;
     default_letterhead_id: string | null;
     metadata: Generated<unknown>;
+    created_at: Generated<Timestamp>;
+    created_by: string;
+    updated_at: Timestamp | null;
+    updated_by: string | null;
+};
+export type tenant_relationship = {
+    id: Generated<string>;
+    from_tenant_id: string;
+    to_tenant_id: string;
+    relationship_type: string;
+    relationship_direction: Generated<string>;
+    scopes: Generated<unknown>;
+    external_ref: string | null;
+    invited_email: string | null;
+    invited_at: Timestamp | null;
+    accepted_at: Timestamp | null;
+    effective_from: Generated<Timestamp>;
+    effective_until: Timestamp | null;
+    metadata: Generated<unknown>;
+    status: Generated<string>;
+    is_active: Generated<boolean | null>;
+    status_changed_at: Timestamp | null;
+    status_changed_by: string | null;
     created_at: Generated<Timestamp>;
     created_by: string;
     updated_at: Timestamp | null;
@@ -10640,8 +10684,6 @@ export type DB = {
     "control.cron_schedule": cron_schedule;
     "control.dimension_policy": dimension_policy;
     "control.dimension_policy_allowed_value": dimension_policy_allowed_value;
-    "control.document_sequence_config": document_sequence_config;
-    "control.document_sequence_counter": document_sequence_counter;
     "control.entity": entity;
     "control.entity_class_profile": entity_class_profile;
     "control.entity_field": entity_field;
@@ -10650,6 +10692,8 @@ export type DB = {
     "control.entity_flow_section": entity_flow_section;
     "control.entity_flow_step": entity_flow_step;
     "control.entity_lifecycle": entity_lifecycle;
+    "control.entity_numbering_config": entity_numbering_config;
+    "control.entity_numbering_counter": entity_numbering_counter;
     "control.entity_operation": entity_operation;
     "control.entity_policy": entity_policy;
     "control.entity_publish_state": entity_publish_state;
@@ -10867,6 +10911,7 @@ export type DB = {
     "log.parameter_change_log": parameter_change_log;
     "log.password_history": password_history;
     "log.permission_decision_log": permission_decision_log;
+    "log.platform_audit_log": platform_audit_log;
     "log.policy_evaluation_log": policy_evaluation_log;
     "log.render_dlq": render_dlq;
     "log.resolution_log": resolution_log;
@@ -10977,7 +11022,6 @@ export type DB = {
     "master.multipart_upload": multipart_upload;
     "master.network_provider": network_provider;
     "master.notification": notification;
-    "master.numbering_series": numbering_series;
     "master.org_unit": org_unit;
     "master.owner_type": owner_type;
     "master.party_contact_person": party_contact_person;
@@ -11010,6 +11054,7 @@ export type DB = {
     "master.principal_notification_preference": principal_notification_preference;
     "master.principal_persona": principal_persona;
     "master.principal_profile": principal_profile;
+    "master.principal_relationship": principal_relationship;
     "master.principal_ui_preference": principal_ui_preference;
     "master.principal_ui_profile": principal_ui_profile;
     "master.print_profile": print_profile;
@@ -11026,13 +11071,12 @@ export type DB = {
     "master.saved_view": saved_view;
     "master.shift_type": shift_type;
     "master.site": site;
-    "master.spend_category": spend_category;
     "master.statutory_scheme": statutory_scheme;
     "master.supplier": supplier;
     "master.supplier_app_index": supplier_app_index;
     "master.supplier_block": supplier_block;
+    "master.supplier_commodity_category": supplier_commodity_category;
     "master.supplier_qualification": supplier_qualification;
-    "master.supplier_spend_category": supplier_spend_category;
     "master.tax_jurisdiction": tax_jurisdiction;
     "master.tax_type": tax_type;
     "master.team": team;
@@ -11046,6 +11090,7 @@ export type DB = {
     "master.tenant_parameter_value": tenant_parameter_value;
     "master.tenant_permission_override": tenant_permission_override;
     "master.tenant_profile": tenant_profile;
+    "master.tenant_relationship": tenant_relationship;
     "master.tenant_risk_source_config": tenant_risk_source_config;
     "master.trusted_device": trusted_device;
     "master.warehouse": warehouse;
@@ -11073,6 +11118,7 @@ export type DB = {
     "shared.role": role;
     "shared.state_region": state_region;
     "shared.subscription_plan": subscription_plan;
+    "shared.subscription_plan_version": subscription_plan_version;
     "shared.timezone": timezone;
     "shared.uom": uom;
     "shared.workspace": workspace;

@@ -52,6 +52,7 @@ interface StatementLine {
   description:      string;
   reference_number: string | null;
   amount:           string;  // numeric from DB as string
+  currency_code:    string;
   recon_status:     string;
 }
 
@@ -79,7 +80,8 @@ export async function runAutoMatch(
     .selectFrom("document.bank_statement_line as bsl")
     .select([
       "bsl.id", "bsl.line_no", "bsl.transaction_date",
-      "bsl.description", "bsl.reference_number", "bsl.amount", "bsl.recon_status",
+      "bsl.description", "bsl.reference_number", "bsl.amount",
+      "bsl.currency_code", "bsl.recon_status",
     ])
     .where("bsl.tenant_id",       "=", input.tenantId)
     .where("bsl.bank_statement_id","=", input.statementId)
@@ -225,7 +227,7 @@ async function createMatchCase(
   const shortId  = Math.random().toString(36).slice(2, 7).toUpperCase();
   const caseNumber = `RC-${datePart}-${shortId}`;
 
-  const currencyCode = "USD"; // resolved from bank account at runtime in real impl
+  const matchedAt = status === "matched" ? sql`now()` : sql`NULL`;
 
   const caseRow = await sql<{ id: string }>`
     INSERT INTO document.bank_recon_case
@@ -236,8 +238,8 @@ async function createMatchCase(
     VALUES (
       ${input.tenantId}::uuid, ${input.companyCodeId}::uuid, ${input.bankAccountId}::uuid,
       ${caseNumber}, ${caseType}, ${confidence}, ${status},
-      ${diffAmount}, ${currencyCode},
-      ${status === "matched" ? "now()" : null},
+      ${diffAmount}, ${line.currency_code},
+      ${matchedAt},
       now(), ${input.createdBy}::uuid
     )
     RETURNING id
@@ -274,6 +276,7 @@ async function createMatchCase(
     .updateTable("document.bank_statement_line")
     .set({ recon_status: newReconStatus, recon_case_id: caseId, updated_at: sql`now()` })
     .where("id", "=", line.id)
+    .where("tenant_id", "=", input.tenantId)
     .execute();
 
   // Update payment_entry: set cleared_date + bank_statement_line_id
@@ -287,6 +290,7 @@ async function createMatchCase(
         updated_at:            sql`now()`,
       })
       .where("id", "=", pay.id)
+      .where("tenant_id", "=", input.tenantId)
       .execute();
   }
 }

@@ -65,6 +65,29 @@ async function resolveBankAccount(
   // 1. Explicit bank_account_id → check metadata for a gl_account_id hint
   //    (bank_account_link has no gl_account_id column; optional metadata convention)
   if (bankAccountId) {
+    const house = await sql<{ account_id: string }>`
+      SELECT hc.gl_account_id AS account_id
+      FROM   master.bank_account_link bal
+      JOIN   master.bank_account ba
+             ON ba.tenant_id = bal.tenant_id
+            AND ba.id        = bal.bank_account_id
+      JOIN   master.bank_account_house_config hc
+             ON hc.tenant_id            = bal.tenant_id
+            AND hc.bank_account_link_id = bal.id
+      WHERE  bal.tenant_id       = ${tenantId}
+        AND  bal.owner_type      = 'company_code'
+        AND  bal.owner_id        = ${companyId}
+        AND  bal.bank_account_id = ${bankAccountId}
+        AND  ba.status           = 'active'
+        AND  hc.status           = 'active'
+        AND  hc.is_disbursement_enabled = true
+        AND  (bal.effective_until IS NULL OR bal.effective_until >= CURRENT_DATE)
+      ORDER  BY hc.is_default_disbursement DESC, bal.is_primary DESC, hc.priority ASC
+      LIMIT  1
+    `.execute(db);
+    const houseGlId = house.rows[0]?.account_id;
+    if (houseGlId) return houseGlId;
+
     const ba = await sql<{ gl_meta: string | null }>`
       SELECT metadata->>'gl_account_id' AS gl_meta
       FROM   master.bank_account

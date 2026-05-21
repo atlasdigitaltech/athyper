@@ -2,7 +2,7 @@
  * IntentResolutionService — orchestrates the 5-step procurement intake pipeline:
  *
  *   Step 1  Load invoice + line context (single JOIN query)
- *   Step 2  Resolve spend-category policy   → control.resolve_spend_category_policy()
+ *   Step 2  Resolve commodity-category policy → control.resolve_commodity_category_policy()
  *   Step 3  Resolve classification → intent → control.resolve_classification_to_intent()
  *   Step 4  Resolve intent → profile        → control.resolve_intent_to_profile()
  *   Step 5  Assemble ClassificationDecision, compute status, optionally persist
@@ -191,12 +191,12 @@ function lineCommodityCodeHasDomain(
   return code?.domain_code.toLowerCase() === domain;
 }
 
-async function commodityCodesForSpendCategory(
+async function commodityCodesForCategory(
   db: AnyDb,
   tenantId: string,
-  spendCategoryId: string | null,
+  commodityCategoryId: string | null,
 ): Promise<CategoryCommodityCodes> {
-  if (!spendCategoryId) return { unspsc: null, hs: null };
+  if (!commodityCategoryId) return { unspsc: null, hs: null };
 
   const { rows } = await sql<{
     domain_code: string;
@@ -209,12 +209,12 @@ async function commodityCodesForSpendCategory(
         ON cc.id = cl.code_id
        AND cc.domain_code = cl.domain_code
      WHERE cl.tenant_id = ${tenantId}::uuid
-       AND cl.owner_type IN ('commodity_category', 'spend_category')
-       AND cl.owner_id = ${spendCategoryId}::uuid
+       AND cl.owner_type = 'commodity_category'
+       AND cl.owner_id = ${commodityCategoryId}::uuid
        AND cl.classification_type = 'commodity'
        AND cl.domain_code IN ('unspsc', 'hs')
        AND cl.is_active = true
-     ORDER BY (cl.owner_type = 'commodity_category') DESC, cl.is_primary DESC, cl.confidence DESC NULLS LAST, cl.created_at ASC
+     ORDER BY cl.is_primary DESC, cl.confidence DESC NULLS LAST, cl.created_at ASC
   `.execute(db);
 
   const result: CategoryCommodityCodes = { unspsc: null, hs: null };
@@ -495,7 +495,7 @@ async function resolveLineClassificationFromContext(
     itemId:        ctx.item_id,
     commodityCode: explicitLineCommodityCode,
   }).catch((e) => {
-    logger?.error?.("spend_category_suggest_error", { err: String(e), lineId });
+    logger?.error?.("commodity_category_suggest_error", { err: String(e), lineId });
     return [];
   });
   const autoSpendCategory = pickAutoSpendCategory(suggestions, ctx.commodity_category_id);
@@ -507,14 +507,14 @@ async function resolveLineClassificationFromContext(
     selectedSpendCategoryId && selectedSuggestion?.source !== "commodity",
   );
   const autoSpendCategoryExplanation = autoSpendCategory
-    ? `Auto-selected spend category ${autoSpendCategory.code} (${autoSpendCategory.name}) from ${autoSpendCategory.source} suggestion at ${Math.round(autoSpendCategory.confidence * 100)}% confidence`
+    ? `Auto-selected commodity category ${autoSpendCategory.code} (${autoSpendCategory.name}) from ${autoSpendCategory.source} suggestion at ${Math.round(autoSpendCategory.confidence * 100)}% confidence`
     : null;
-  const categoryCommodityCodes = await commodityCodesForSpendCategory(
+  const categoryCommodityCodes = await commodityCodesForCategory(
     db,
     tenantId,
     selectedSpendCategoryId,
   ).catch((e) => {
-    logger?.error?.("spend_category_commodity_lookup_error", { err: String(e), lineId });
+    logger?.error?.("commodity_category_code_lookup_error", { err: String(e), lineId });
     return { unspsc: null, hs: null };
   });
   const explicitHsCode = lineCommodityCodeHasDomain(explicitLineCommodityCode, "hs")
@@ -553,13 +553,13 @@ async function resolveLineClassificationFromContext(
     inferredMetadata["trade_code"] = null;
   }
 
-  // ── Step 2: spend-category policy ────────────────────────────────────────
+  // ── Step 2: commodity-category policy ────────────────────────────────────
 
   let policy: PolicyResult = POLICY_ALLOW;
   if (selectedSpendCategoryId) {
     try {
       const { rows } = await sql<{ result: PolicyResult }>`
-        SELECT control.resolve_spend_category_policy(
+        SELECT control.resolve_commodity_category_policy(
           ${tenantId}::uuid,
           ${selectedSpendCategoryId}::uuid,
           ${ctx.company_code_id}::uuid
@@ -619,7 +619,7 @@ async function resolveLineClassificationFromContext(
         method:          "CLASSIFICATION_DEFAULT",
         rule_id:         null,
         confidence:      0.60,
-        explanation:     "Resolved from spend category default intent",
+        explanation:     "Resolved from commodity category default intent",
         rules_evaluated: intent.rules_evaluated,
       };
     }
@@ -672,11 +672,11 @@ async function resolveLineClassificationFromContext(
   const blockers: ClassificationDecision["blockers"] = [];
   if (policy.resolved_mapping_mode === "DENY") {
     blockers.push({ code: "SAVE_BLOCKED_DENY", field: "commodity_category_id",
-      message: "This spend category is denied for your company" });
+      message: "This commodity category is denied for your company" });
   }
   if (policy.classification_required && !selectedSpendCategoryId) {
     blockers.push({ code: "CLASSIFICATION_MISSING", field: "commodity_category_id",
-      message: "Spend category classification is required" });
+      message: "Commodity category classification is required" });
   }
   if (policy.hs_required && !resolvedHsCode) {
     blockers.push({ code: "HS_MISSING", field: "line_commodity_code",
@@ -735,10 +735,10 @@ async function resolveLineClassificationFromContext(
     explanations: [
       autoSpendCategoryExplanation,
       resolvedUnspscCode && !explicitUnspscCode
-        ? `Defaulted UNSPSC ${resolvedUnspscCode.code} from spend category classification`
+        ? `Defaulted UNSPSC ${resolvedUnspscCode.code} from commodity category classification`
         : null,
       resolvedHsCode && !explicitHsCode
-        ? `Defaulted HS / trade code ${resolvedHsCode.code} from spend category classification`
+        ? `Defaulted HS / trade code ${resolvedHsCode.code} from commodity category classification`
         : null,
       intent.explanation,
       profile.explanation,

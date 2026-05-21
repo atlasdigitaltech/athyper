@@ -17,7 +17,7 @@ import {
   CustomerPicker,
   CostCenterPicker,
   ProjectPicker,
-  SpendCategoryPicker,
+  CommodityCategoryPicker,
   BusinessIntentPicker,
   ItemPicker,
   entityRowToPickerOption,
@@ -352,9 +352,6 @@ function UuidRenderer({ value, mode, density }: FieldRendererProps) {
 
 function getReferenceEntityCode(field: FieldRendererProps["field"]): string | null {
   if (field.reference_config?.target_entity) return field.reference_config.target_entity;
-  const v = field.validation_rules as Record<string, unknown> | null;
-  if (v?.ref_entity) return String(v.ref_entity);
-  if (v?.ref_hint) return String(v.ref_hint);
   return null;
 }
 
@@ -563,7 +560,7 @@ function ReferenceRenderer({ value, field, mode, density, formData, onChange, er
 
   if (entityCode === "commodity_category") {
     return (
-      <SpendCategoryPicker
+      <CommodityCategoryPicker
         value={uuid}
         displayLabel={pickerDisplayLabel}
         field={field}

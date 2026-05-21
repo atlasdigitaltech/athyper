@@ -56,7 +56,7 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
       </div>
 
       {/* Bucket summary cards */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         {BUCKETS.map((b) => {
           const val = totals[b.key] ?? 0;
           const pct = grandTotal > 0 ? (val / grandTotal) * 100 : 0;
@@ -77,8 +77,8 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
           No outstanding receivables for the selected scope.
         </div>
       ) : (
-        <div className="rounded-xl border overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
+          <table className="w-full min-w-[760px] text-xs">
             <thead>
               <tr className="bg-muted/50 border-b">
                 <th className="py-2 px-3 text-left font-medium text-muted-foreground">Customer</th>
@@ -158,8 +158,8 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
       <div className="text-doc-support text-muted-foreground text-right">
         {data?.total ?? 0} invoice{data?.total !== 1 ? "s" : ""}
       </div>
-      <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
+        <table className="w-full min-w-[900px] text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Invoice #</th>
@@ -410,8 +410,8 @@ function ReceiptsTab({ scope, onRecordReceipt }: { scope: FinanceScope; onRecord
           Record Receipt
         </button>
       </div>
-      <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
+        <table className="w-full min-w-[860px] text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-2 w-6"></th>

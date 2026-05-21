@@ -72,6 +72,7 @@ export interface CompiledEntity {
   display_config: Record<string, unknown>;
   identity_config: Record<string, unknown>;
   search_config: Record<string, unknown>;
+  data_policy: Record<string, unknown>;
   feature_flags: Record<string, unknown>;
   governance_level: string;
   security_tier: string;
@@ -100,6 +101,7 @@ interface EntityRow {
   display_config: unknown;
   identity_config: unknown;
   search_config: unknown;
+  data_policy: unknown;
   feature_flags: unknown;
   governance_level: string;
   security_tier: string;
@@ -505,11 +507,15 @@ function normalizeReferenceConfig(
   const targetEntity = referenceTargetEntity(row);
 
   if (rawConfig) {
+    const strippedConfig = { ...rawConfig };
+    for (const key of ["ref_entity", "ref_hint", "entity", "entity_code", "targetEntity", "refEntity"]) {
+      delete strippedConfig[key];
+    }
     const normalized = withDefinedValues({
-      ...rawConfig,
+      ...strippedConfig,
       target_entity: targetEntity ?? "",
-      target_field: rawConfig["target_field"],
-      display_field: rawConfig["display_field"],
+      target_field: strippedConfig["target_field"],
+      display_field: strippedConfig["display_field"],
     });
     return mergeReferencePickerProfile(normalized, referencePickerProfile);
   }
@@ -526,11 +532,98 @@ function normalizeReferenceConfig(
   return null;
 }
 
+const RULE_EXPRESSION_KEYS = new Set([
+  "field",
+  "operator",
+  "value",
+  "values",
+  "and",
+  "or",
+  "not",
+  "var",
+  "==",
+  "!=",
+  ">",
+  ">=",
+  "<",
+  "<=",
+]);
+
+function isRuleExpression(value: unknown): boolean {
+  const record = coerceRecord(value);
+  return Boolean(record && Object.keys(record).some((key) => RULE_EXPRESSION_KEYS.has(key)));
+}
+
+function compactRecord(record: Record<string, unknown>): Record<string, unknown> | null {
+  const entries = Object.entries(record).filter(([, value]) => value !== undefined && value !== null);
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+function normalizeUiHint(value: unknown, visibility: unknown): Record<string, unknown> | null {
+  const raw = coerceRecord(value);
+  if (!raw) return null;
+
+  const out: Record<string, unknown> = { ...raw };
+  const display = { ...(coerceRecord(out["display"]) ?? {}) };
+  const topLevelRule = out["visible_when"];
+  const legacyVisibility = coerceRecord(visibility);
+
+  if (!display["visible_when"] && isRuleExpression(topLevelRule)) {
+    display["visible_when"] = topLevelRule;
+  }
+  if (!display["visible_when"] && isRuleExpression(legacyVisibility)) {
+    display["visible_when"] = legacyVisibility;
+  }
+  if (Object.keys(display).length > 0) out["display"] = display;
+
+  const copyBehavior = out["copy_behavior"];
+  if (copyBehavior !== undefined) {
+    const copy = { ...(coerceRecord(out["copy"]) ?? {}) };
+    if (copy["behavior"] === undefined) copy["behavior"] = copyBehavior;
+    out["copy"] = copy;
+  }
+
+  delete out["filter"];
+  delete out["copy_behavior"];
+  delete out["group_key"];
+  delete out["visible_when"];
+
+  return compactRecord(out);
+}
+
+function normalizeMoneyConfig(value: unknown): Record<string, unknown> | null {
+  const raw = coerceRecord(value);
+  if (!raw) return null;
+  const out: Record<string, unknown> = { ...raw };
+
+  if (!out["currency_code"]) out["currency_code"] = out["constant_currency"];
+  if (!out["currency_code_position"]) out["currency_code_position"] = out["code_position"] ?? out["currency_position"];
+
+  delete out["constant_currency"];
+  delete out["code_position"];
+  delete out["currency_position"];
+
+  return compactRecord(out);
+}
+
+function normalizeLookupConfig(value: unknown): Record<string, unknown> | null {
+  const raw = coerceRecord(value);
+  if (!raw) return null;
+  const out: Record<string, unknown> = { ...raw };
+
+  if (!out["dependent_filter"]) out["dependent_filter"] = out["depends_on"] ?? out["dependency"];
+  delete out["depends_on"];
+  delete out["dependency"];
+
+  return compactRecord(out);
+}
+
 function mapField(
   row: EntityFieldRow,
   referencePickerProfiles?: Map<string, Record<string, unknown>>,
 ): CompiledField {
-  const uiHint = coerceRecord(row.ui_hint);
+  const rawUiHint = coerceRecord(row.ui_hint);
+  const uiHint = normalizeUiHint(row.ui_hint, row.visibility);
   const validation = coerceRecord(row.validation);
   const targetEntity = referenceTargetEntity(row);
   const referencePickerProfile = targetEntity ? referencePickerProfiles?.get(targetEntity) : undefined;
@@ -563,16 +656,16 @@ function mapField(
     validation_rules: normalizeValidationRules(validation),
     enum_domain_code: row.enum_domain_code,
     reference_config: normalizeReferenceConfig(row, referencePickerProfile),
-    money_config: coerceRecord(row.money_config),
+    money_config: normalizeMoneyConfig(row.money_config),
     json_config: coerceRecord(row.json_config),
     sort_order: row.sort_order,
-    group_key: row.group_key ?? stringValue(uiHint?.["group_key"]),
+    group_key: row.group_key ?? stringValue(rawUiHint?.["group_key"]),
     ui_hint: uiHint,
     visibility: coerceRecord(row.visibility),
     editability: coerceRecord(row.editability),
-    lookup_config: coerceRecord(row.lookup_config),
-    filter_config: coerceRecord(row.filter_config) ?? coerceRecord(uiHint?.["filter"]),
-    i18n_key: stringValue(uiHint?.["i18n_key"]),
+    lookup_config: normalizeLookupConfig(row.lookup_config),
+    filter_config: coerceRecord(row.filter_config) ?? coerceRecord(rawUiHint?.["filter"]),
+    i18n_key: stringValue(rawUiHint?.["i18n_key"]),
   };
 }
 
@@ -692,6 +785,7 @@ export class EntityCompilerService {
         "e.display_config",
         "e.identity_config",
         "e.search_config",
+        "e.data_policy",
         "e.feature_flags",
         "e.governance_level",
         "e.security_tier",
@@ -737,6 +831,7 @@ export class EntityCompilerService {
     );
     const identityConfig = coerceRecord(entityRow.identity_config) ?? {};
     const searchConfig = coerceRecord(entityRow.search_config) ?? {};
+    const dataPolicy = coerceRecord(entityRow.data_policy) ?? {};
     const featureFlags = normalizeFeatureFlags(coerceRecord(entityRow.feature_flags) ?? {});
     const versionHash = versionRow.version_hash ?? sha256(`${entityRow.id}:v${versionRow.version_no}`);
 
@@ -756,6 +851,7 @@ export class EntityCompilerService {
       display_config: displayConfig,
       identity_config: identityConfig,
       search_config: searchConfig,
+      data_policy: dataPolicy,
       feature_flags: featureFlags,
       governance_level: entityRow.governance_level,
       security_tier: entityRow.security_tier,

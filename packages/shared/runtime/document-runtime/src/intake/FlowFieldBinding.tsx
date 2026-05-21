@@ -471,11 +471,13 @@ function BaseInput({
 // ── LOOKUP STUBS (replace with real picker components when available) ─────────
 // Typed option set — code is the stored value, name is the display label.
 // display_tier: "primary" = always visible, "advanced" = behind "More types…"
-interface FieldOption { code: string; name: string; display_tier?: "primary" | "advanced" }
+interface FieldOption { code: string; name: string; description?: string; display_tier?: "primary" | "advanced" }
 
 interface LookupValue {
   code: string;
   name: string;
+  description?: string | null;
+  is_extensible?: boolean | null;
   status?: string;
   sort_order?: number;
 }
@@ -580,12 +582,14 @@ const PROVISIONAL_OPTIONS: Record<string, FieldOption[]> = {
     { code: "one_time_supplier", name: "One-Time Supplier" },
   ],
   payment_type: [
-    { code: "bank_transfer",   name: "Bank Transfer",   display_tier: "primary"  },
-    { code: "cheque",          name: "Cheque",           display_tier: "primary"  },
-    { code: "cash",            name: "Cash",             display_tier: "primary"  },
-    { code: "online_transfer", name: "Online Transfer",  display_tier: "primary"  },
-    { code: "card",            name: "Card",             display_tier: "advanced" },
-    { code: "direct_debit",    name: "Direct Debit",     display_tier: "advanced" },
+    { code: "standard",          name: "Standard",          display_tier: "primary"  },
+    { code: "partial",           name: "Partial",           display_tier: "primary"  },
+    { code: "final",             name: "Final",             display_tier: "primary"  },
+    { code: "advance",           name: "Advance",           display_tier: "primary"  },
+    { code: "retention_release", name: "Retention Release", display_tier: "advanced" },
+    { code: "down_payment",      name: "Down Payment",      display_tier: "advanced" },
+    { code: "urgent",            name: "Urgent",            display_tier: "advanced" },
+    { code: "netting",           name: "Netting",           display_tier: "advanced" },
   ],
   payment_direction: [
     { code: "OUTBOUND", name: "Outbound (Payment)" },
@@ -720,6 +724,19 @@ function LookupSelectInput({
       disabled={disabled || loading || !domainCode}
       error={error}
     />
+  );
+}
+
+function useLookupFieldOptions(domainCode: string | null): FieldOption[] {
+  const { values } = useLookupValues(domainCode);
+  return useMemo(
+    () => values.map((opt) => ({
+      code: opt.code,
+      name: opt.name,
+      description: opt.description ?? opt.code,
+      display_tier: opt.is_extensible ? "advanced" : "primary",
+    })),
+    [values],
   );
 }
 
@@ -1198,6 +1215,8 @@ export function FlowFieldBinding({
   draftCtx,
 }: FlowFieldBindingProps) {
   const { mode, ui_variant, data_type, field_label, field_name, help_text, derivation_mode } = binding;
+  const enumDomainCode = binding.enum_domain_code ?? ENUM_DOMAIN_BY_FIELD[field_name] ?? null;
+  const lookupOptions = useLookupFieldOptions(enumDomainCode);
 
   // chip mode → DerivedChip
   if (mode === "chip") {
@@ -1242,8 +1261,7 @@ export function FlowFieldBinding({
 
   // editable / required
   const isDisabled = Boolean(disabled);
-  const options = PROVISIONAL_OPTIONS[field_name];
-  const enumDomainCode = binding.enum_domain_code ?? ENUM_DOMAIN_BY_FIELD[field_name] ?? null;
+  const options = lookupOptions.length > 0 ? lookupOptions : PROVISIONAL_OPTIONS[field_name];
   const enumExcludeCodes = field_name === "contact_role" ? ["primary"] : [];
   const handleValueChange = derivation_mode === "derived_overrideable" ? onOverride : onChange;
   const placeholder = placeholderForField(field_name, binding.placeholder);
@@ -1276,7 +1294,7 @@ export function FlowFieldBinding({
           <StateRegionSelectInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} draftCtx={draftCtx} />
         ) : ui_variant === "currency" ? (
           <CurrencySelectInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} />
-        ) : enumDomainCode && (ui_variant === "select" || data_type === "enum") ? (
+        ) : enumDomainCode && ui_variant === "select" ? (
           <LookupSelectInput domainCode={enumDomainCode} value={value} onChange={handleValueChange} disabled={isDisabled} error={error} excludeCodes={enumExcludeCodes} />
         ) : ui_variant === "radio_cards" && options ? (
           <RadioCards value={value} options={options} onChange={handleValueChange} disabled={isDisabled} />
@@ -1284,6 +1302,8 @@ export function FlowFieldBinding({
           <SegmentedControl value={value} options={options} onChange={handleValueChange} disabled={isDisabled} />
         ) : ui_variant === "select" && options ? (
           <StaticSelectInput value={value} options={options} onChange={handleValueChange} disabled={isDisabled} error={error} />
+        ) : enumDomainCode && data_type === "enum" ? (
+          <LookupSelectInput domainCode={enumDomainCode} value={value} onChange={handleValueChange} disabled={isDisabled} error={error} excludeCodes={enumExcludeCodes} />
         ) : ui_variant === "textarea" || data_type === "text_long" || field_name === "notes" || field_name === "hold_reason" ? (
           <TextareaInput value={value} onChange={handleValueChange} disabled={isDisabled} placeholder={placeholder} />
         ) : data_type === "date" ? (
@@ -1330,7 +1350,7 @@ export function FlowFieldBinding({
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function colSpanClass(span: number): string {
-  if (span === 2) return "col-span-2";
+  if (span === 2) return "col-span-1 sm:col-span-2";
   if (span === 3) return "col-span-full";
   return "col-span-1";
 }

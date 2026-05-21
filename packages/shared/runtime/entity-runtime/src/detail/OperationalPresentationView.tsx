@@ -225,10 +225,6 @@ function getReferenceEntityCode(field: EntityField | undefined, overrideConfig: 
   if (referenceConfig && typeof referenceConfig.target_entity === "string" && referenceConfig.target_entity.trim()) {
     return referenceConfig.target_entity;
   }
-  const validation = field?.validation_rules;
-  if (validation && typeof validation.ref_entity === "string" && validation.ref_entity.trim()) {
-    return validation.ref_entity;
-  }
   return null;
 }
 

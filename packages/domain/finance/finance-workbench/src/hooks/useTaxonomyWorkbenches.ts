@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export const COMMODITY_CATEGORY_TREE_BATCH_SIZE_PARAMETER = "workbench.supply_chain.commodity_category_tree_batch_size";
-export const LEGACY_SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER = "workbench.supply_chain.spend_category_tree_batch_size";
 export const DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE = 500;
 const MIN_COMMODITY_CATEGORY_TREE_BATCH_SIZE = 50;
 const MAX_COMMODITY_CATEGORY_TREE_BATCH_SIZE = 1000;
@@ -415,8 +414,7 @@ export function useCommodityCategoryTreeBatchSize({ enabled = true }: { enabled?
     queryFn: async () => {
       const snapshot = await fetchJson<ParameterSnapshotPayload>("/api/iam/parameters/effective?namespace=workbench.supply_chain");
       return normalizeTreeBatchSize(
-        snapshot.values?.[COMMODITY_CATEGORY_TREE_BATCH_SIZE_PARAMETER]
-          ?? snapshot.values?.[LEGACY_SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER],
+        snapshot.values?.[COMMODITY_CATEGORY_TREE_BATCH_SIZE_PARAMETER],
       );
     },
     enabled,
@@ -561,32 +559,3 @@ export function useAccountingProfiles() {
     staleTime: 5 * 60 * 1000,
   });
 }
-
-/** @deprecated Use COMMODITY_CATEGORY_TREE_BATCH_SIZE_PARAMETER. */
-export const SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER = LEGACY_SPEND_CATEGORY_TREE_BATCH_SIZE_PARAMETER;
-/** @deprecated Use DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE. */
-export const DEFAULT_SPEND_CATEGORY_TREE_BATCH_SIZE = DEFAULT_COMMODITY_CATEGORY_TREE_BATCH_SIZE;
-
-/** @deprecated Use CommodityCategoryRow. */
-export type SpendCategoryRow = CommodityCategoryRow;
-/** @deprecated Use CommodityCategoryRuleRow. */
-export type SpendCategoryRuleRow = CommodityCategoryRuleRow;
-/** @deprecated Use CommodityCategorySummary. */
-export type SpendCategorySummary = CommodityCategorySummary;
-/** @deprecated Use CommodityCategoryPayload. */
-export type SpendCategoryPayload = CommodityCategoryPayload;
-
-/** @deprecated Use useCommodityCategoryTreeBatchSize. */
-export const useSpendCategoryTreeBatchSize = useCommodityCategoryTreeBatchSize;
-/** @deprecated Use useCommodityCategories. */
-export const useSpendCategories = useCommodityCategories;
-/** @deprecated Use useCommodityCategorySummary. */
-export const useSpendCategorySummary = useCommodityCategorySummary;
-/** @deprecated Use useCommodityCategoryChildren. */
-export const useSpendCategoryChildren = useCommodityCategoryChildren;
-/** @deprecated Use useCommodityCategoryDetail. */
-export const useSpendCategoryDetail = useCommodityCategoryDetail;
-/** @deprecated Use useCommodityCategorySearch. */
-export const useSpendCategorySearch = useCommodityCategorySearch;
-/** @deprecated Use useLazyCommodityCategoryHierarchy. */
-export const useLazySpendCategoryHierarchy = useLazyCommodityCategoryHierarchy;

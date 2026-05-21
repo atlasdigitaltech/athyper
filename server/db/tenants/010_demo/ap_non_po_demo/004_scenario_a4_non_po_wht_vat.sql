@@ -33,7 +33,7 @@ BEGIN
     SELECT id INTO v_supplier_id FROM master.supplier
       WHERE tenant_id = v_tenant_id AND supplier_code = 'ACME-CONSULT-US';
 
-    SELECT id INTO v_sc_opex_id FROM master.spend_category
+    SELECT id INTO v_sc_opex_id FROM master.commodity_category
       WHERE tenant_id = v_tenant_id
         AND code IN ('SC-OPEX-CONSULT','CONSULTING','OPEX')
       ORDER BY sort_order LIMIT 1;

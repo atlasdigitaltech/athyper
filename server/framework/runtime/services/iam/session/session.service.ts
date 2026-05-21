@@ -242,6 +242,7 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
       )
       .select(["pab.principal_id", "p.is_active", "p.is_locked"])
       .where("pab.subject_id", "=", sub)
+      .where("pab.realm_key", "=", realmKey)
       .where("pab.provider_code", "=", "keycloak")
       .where("pab.tenant_id", "=", tenantId)
       .executeTakeFirst();
@@ -259,6 +260,7 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
             display_name: name,
             email,
             tenant_id: tenantId,
+            realm_key: realmKey,
           });
 
           if (jit) {
@@ -270,6 +272,7 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
               )
               .select(["pab.principal_id", "p.is_active", "p.is_locked"])
               .where("pab.subject_id", "=", sub)
+              .where("pab.realm_key", "=", realmKey)
               .where("pab.provider_code", "=", "keycloak")
               .where("pab.tenant_id", "=", tenantId)
               .executeTakeFirst();

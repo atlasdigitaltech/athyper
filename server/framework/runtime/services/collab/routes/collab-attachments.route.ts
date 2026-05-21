@@ -42,12 +42,13 @@ export interface CollabAttachmentsRouteDeps {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolvePrincipal(db: Kysely<any>, sub: string, tenantId: string): Promise<string> {
+async function resolvePrincipal(db: Kysely<any>, sub: string, tenantId: string, realmKey = "athyper"): Promise<string> {
   if (!sub) return SYSTEM_PRINCIPAL_UUID;
   const row = await db
     .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
+    .where("pab.realm_key", "=", realmKey)
     .where("pab.tenant_id", "=", tenantId)
     .executeTakeFirst();
   return row ? (row.principal_id as string) : SYSTEM_PRINCIPAL_UUID;
@@ -182,7 +183,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipal(db, sub, tenantId);
+      const principalId = await resolvePrincipal(db, sub, tenantId, xRealm);
       const contentType = (body.content_type ?? "application/octet-stream").slice(0, 200);
       const fileName    = body.filename.slice(0, 500);
       const sizeBytes   = body.size_bytes ?? fileBuffer.length;
@@ -359,7 +360,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
       // Append access audit — best-effort
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipal(db, sub, tenantId);
+      const principalId = await resolvePrincipal(db, sub, tenantId, xRealm);
       void db.insertInto("log.attachment_access_log" as never).values({
         tenant_id:             tenantId,
         principal_id:          principalId,
@@ -414,7 +415,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipal(db, sub, tenantId);
+      const principalId = await resolvePrincipal(db, sub, tenantId, xRealm);
 
       await db.insertInto("master.entity_document_link" as never).values({
         tenant_id:   tenantId,

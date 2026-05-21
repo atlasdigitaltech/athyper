@@ -166,3 +166,24 @@ DROP TRIGGER IF EXISTS trg_persona_scope_mode_lookup ON shared.persona;
 CREATE TRIGGER trg_persona_scope_mode_lookup
     BEFORE INSERT OR UPDATE OF scope_mode ON shared.persona
     FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('shared.persona_scope_mode', 'scope_mode');
+
+-- [H] Plan version gate (subscription_plan_version)
+-- Closes the prior active version when a new version is inserted.
+
+CREATE OR REPLACE FUNCTION shared.fn_close_prior_plan_version()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE shared.subscription_plan_version
+    SET    valid_to = NEW.valid_from
+    WHERE  plan_id  = NEW.plan_id
+      AND  valid_to IS NULL
+      AND  status   = 'active'
+      AND  id       <> NEW.id;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_subscription_plan_version_gate ON shared.subscription_plan_version;
+CREATE TRIGGER trg_subscription_plan_version_gate
+AFTER INSERT ON shared.subscription_plan_version
+FOR EACH ROW EXECUTE FUNCTION shared.fn_close_prior_plan_version();

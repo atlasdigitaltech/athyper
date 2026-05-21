@@ -7,6 +7,7 @@
 
 -- tenant
 CREATE INDEX IF NOT EXISTS tenant_active_pidx ON master.tenant (code) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS tenant_type_idx ON master.tenant (tenant_type);
 CREATE INDEX IF NOT EXISTS tenant_subscription_idx ON master.tenant (subscription);
 
 -- Auth lookup regardless of status (suspended tenants still log in to see error)
@@ -698,14 +699,7 @@ CREATE INDEX IF NOT EXISTS im_no_product_pidx
     ON master.item (tenant_id, company_code_id)
     WHERE product_id IS NULL AND is_active = true;
 
--- ── master.spend_category ──────────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS sc_tenant_idx         ON master.spend_category (tenant_id);
-CREATE INDEX IF NOT EXISTS sc_parent_idx         ON master.spend_category (tenant_id, parent_id) WHERE parent_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS sc_root_cat_idx       ON master.spend_category (tenant_id, root_category_id);
-CREATE INDEX IF NOT EXISTS sc_active_pidx        ON master.spend_category (tenant_id) WHERE is_active = true;
-
--- ── master.company_code_spend_policy ────────────────────────────────────
--- Note: (tenant_id, company_code_id, spend_category_id) is already covered by UNIQUE constraint.
+-- Legacy spend-category indexes retired; commodity_category owns taxonomy posture.
 -- ── master.commodity_classification ────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS cc_owner_idx          ON master.commodity_classification (tenant_id, owner_type, owner_id);
 CREATE INDEX IF NOT EXISTS cc_owner_domain_pidx  ON master.commodity_classification
@@ -1022,6 +1016,12 @@ CREATE INDEX IF NOT EXISTS bahc_gl_account_idx
 CREATE INDEX IF NOT EXISTS pib_principal_idx
     ON master.principal_identity_binding (tenant_id, principal_id);
 
+CREATE INDEX IF NOT EXISTS pib_tenant_realm_principal_idx
+    ON master.principal_identity_binding (tenant_id, realm_key, principal_id);
+
+CREATE INDEX IF NOT EXISTS pib_realm_subject_idx
+    ON master.principal_identity_binding (realm_key, provider_code, subject_id);
+
 CREATE INDEX IF NOT EXISTS pib_sync_status_pidx
     ON master.principal_identity_binding (tenant_id, sync_status)
     WHERE sync_status IN ('pending', 'drift', 'error');
@@ -1029,6 +1029,32 @@ CREATE INDEX IF NOT EXISTS pib_sync_status_pidx
 -- ── Profile extension indexes ──────────────────────────────────────────────
 
 -- principal_profile working-context defaults
+-- tenant_relationship
+CREATE INDEX IF NOT EXISTS tenant_relationship_from_idx
+    ON master.tenant_relationship (from_tenant_id, relationship_type, status);
+
+CREATE INDEX IF NOT EXISTS tenant_relationship_to_idx
+    ON master.tenant_relationship (to_tenant_id, relationship_type, status);
+
+CREATE INDEX IF NOT EXISTS tenant_relationship_active_from_pidx
+    ON master.tenant_relationship (from_tenant_id, to_tenant_id, relationship_type)
+    WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS tenant_relationship_active_to_pidx
+    ON master.tenant_relationship (to_tenant_id, from_tenant_id, relationship_type)
+    WHERE status = 'active';
+
+-- principal_relationship
+CREATE INDEX IF NOT EXISTS principal_relationship_from_idx
+    ON master.principal_relationship (from_tenant_id, from_principal_id, relationship_type, status);
+
+CREATE INDEX IF NOT EXISTS principal_relationship_to_idx
+    ON master.principal_relationship (to_tenant_id, to_principal_id, relationship_type, status);
+
+CREATE INDEX IF NOT EXISTS principal_relationship_verified_pidx
+    ON master.principal_relationship (relationship_type, verified_method, verified_at)
+    WHERE verification_status = 'verified';
+
 CREATE INDEX IF NOT EXISTS pp_default_company_idx
     ON master.principal_profile (tenant_id, default_company_code_id)
     WHERE default_company_code_id IS NOT NULL;

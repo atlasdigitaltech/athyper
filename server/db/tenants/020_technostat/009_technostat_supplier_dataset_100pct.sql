@@ -1,6 +1,6 @@
 -- Technostat supplier 100% dataset seed
 -- Purpose:
---   1. Complete supplier-side coverage for app index, spend categories,
+--   1. Complete supplier-side coverage for app index, commodity categories,
 --      qualification, block history, company-code profiles, intent policies,
 --      spend policies, and posting overrides.
 --   2. Keep every demo supplier usable for AP/procurement demos. Block rows are
@@ -15,7 +15,7 @@ DECLARE
   v_supplier_total integer;
   v_real_supplier_total integer;  -- excludes universal demo suppliers (SUP-DEMO-*)
   v_supplier_app_index_count integer;
-  v_supplier_spend_category_count integer;
+  v_supplier_commodity_category_count integer;
   v_supplier_qualification_count integer;
   v_supplier_block_count integer;
   v_supplier_profile_count integer;
@@ -87,7 +87,7 @@ BEGIN
 
   CREATE TEMP TABLE tmp_technostat_supplier_category (
     supplier_code text NOT NULL,
-    spend_category_code text NOT NULL,
+    commodity_category_code text NOT NULL,
     is_primary boolean NOT NULL,
     effective_from date NOT NULL,
     notes text NOT NULL
@@ -95,7 +95,7 @@ BEGIN
 
   INSERT INTO tmp_technostat_supplier_category (
     supplier_code,
-    spend_category_code,
+    commodity_category_code,
     is_primary,
     effective_from,
     notes
@@ -230,7 +230,7 @@ BEGIN
   -- Business intent rows are domain-level only; this dataset links categories to canonical BI-* records.
 
   CREATE TEMP TABLE tmp_technostat_category_intent_map (
-    spend_category_code text NOT NULL,
+    commodity_category_code text NOT NULL,
     intent_code text NOT NULL,
     is_primary_intent boolean NOT NULL
   ) ON COMMIT DROP;
@@ -271,16 +271,16 @@ BEGIN
       FROM tmp_technostat_supplier_category d
       LEFT JOIN master.commodity_category cc
         ON cc.tenant_id = v_tenant_id
-       AND cc.code = d.spend_category_code
+       AND cc.code = d.commodity_category_code
      WHERE cc.id IS NULL
   ) THEN
-    RAISE NOTICE 'Some Technostat spend category codes not yet seeded — related rows will be skipped. Run universal/industry seeds first for full coverage.';
+    RAISE NOTICE 'Some Technostat commodity category codes not yet seeded — related rows will be skipped. Run universal/industry seeds first for full coverage.';
   END IF;
 
-  UPDATE master.spend_category sc
-     SET default_intent_id = bi.id,
-         metadata = COALESCE(sc.metadata, '{}'::jsonb) || jsonb_build_object(
+  UPDATE master.commodity_category cc
+     SET metadata = COALESCE(cc.metadata, '{}'::jsonb) || jsonb_build_object(
            'seed_pack', 'technostat_supplier_100pct',
+           'default_intent_code', bi.code,
            'default_intent_seeded', true
          ),
          updated_by = v_system_user_id,
@@ -289,16 +289,68 @@ BEGIN
     JOIN master.business_intent bi
       ON bi.tenant_id = v_tenant_id
      AND bi.code = m.intent_code
-   WHERE sc.tenant_id = v_tenant_id
-     AND sc.code = m.spend_category_code
+   WHERE cc.tenant_id = v_tenant_id
+     AND cc.code = m.commodity_category_code
      AND m.is_primary_intent;
+
+  INSERT INTO control.commodity_category_buy_policy (
+    tenant_id,
+    commodity_category_id,
+    business_intent_id,
+    scope_type,
+    mapping_mode,
+    is_default,
+    is_selectable,
+    sort_order,
+    effective_from,
+    metadata,
+    status,
+    created_by,
+    updated_by
+  )
+  SELECT v_tenant_id,
+         cc.id,
+         bi.id,
+         'TENANT',
+         'ALLOW',
+         true,
+         true,
+         0,
+         DATE '2025-01-01',
+         jsonb_build_object(
+           'seed_pack', 'technostat_supplier_100pct',
+           'policy_kind', 'tenant_category_default',
+           'commodity_category_code', cc.code,
+           'intent_code', bi.code
+         ),
+         'active',
+         v_system_user_id,
+         v_system_user_id
+    FROM tmp_technostat_category_intent_map m
+    JOIN master.commodity_category cc
+      ON cc.tenant_id = v_tenant_id
+     AND cc.code = m.commodity_category_code
+    JOIN master.business_intent bi
+      ON bi.tenant_id = v_tenant_id
+     AND bi.code = m.intent_code
+   WHERE m.is_primary_intent
+     AND NOT EXISTS (
+       SELECT 1
+         FROM control.commodity_category_buy_policy existing
+        WHERE existing.tenant_id = v_tenant_id
+          AND existing.commodity_category_id = cc.id
+          AND existing.scope_type = 'TENANT'
+          AND existing.mapping_mode = 'ALLOW'
+          AND existing.is_default
+          AND existing.is_active
+     );
 
   UPDATE master.supplier s
      SET anticipated_risk_tier = q.risk_tier,
          metadata = COALESCE(s.metadata, '{}'::jsonb) || jsonb_build_object(
            'seed_pack', 'technostat_supplier_100pct',
-           'primary_spend_category_code', d.spend_category_code,
-           'spend_category_source', 'master.supplier_spend_category'
+           'primary_commodity_category_code', d.commodity_category_code,
+           'commodity_category_source', 'master.supplier_commodity_category'
          ),
          updated_by = v_system_user_id,
          updated_at = now()
@@ -309,7 +361,7 @@ BEGIN
      AND s.supplier_code = d.supplier_code
      AND d.is_primary;
 
-  UPDATE master.supplier_spend_category ssc
+  UPDATE master.supplier_commodity_category ssc
      SET is_primary = false,
          updated_by = v_system_user_id,
          updated_at = now()
@@ -323,7 +375,7 @@ BEGIN
      )
      AND ssc.is_primary;
 
-  INSERT INTO master.supplier_spend_category (
+  INSERT INTO master.supplier_commodity_category (
     tenant_id,
     supplier_id,
     commodity_category_id,
@@ -345,7 +397,7 @@ BEGIN
          jsonb_build_object(
            'seed_pack', 'technostat_supplier_100pct',
            'supplier_code', d.supplier_code,
-           'spend_category_code', d.spend_category_code
+           'commodity_category_code', d.commodity_category_code
          ),
          v_system_user_id,
          v_system_user_id
@@ -355,14 +407,14 @@ BEGIN
      AND s.supplier_code = d.supplier_code
     JOIN master.commodity_category cc
       ON cc.tenant_id = v_tenant_id
-     AND cc.code = d.spend_category_code
+     AND cc.code = d.commodity_category_code
   ON CONFLICT (tenant_id, supplier_id, commodity_category_id) DO UPDATE
      SET is_primary = EXCLUDED.is_primary,
          effective_from = EXCLUDED.effective_from,
          effective_until = NULL,
          status = 'active',
          notes = EXCLUDED.notes,
-         metadata = COALESCE(master.supplier_spend_category.metadata, '{}'::jsonb) || EXCLUDED.metadata,
+         metadata = COALESCE(master.supplier_commodity_category.metadata, '{}'::jsonb) || EXCLUDED.metadata,
          updated_by = v_system_user_id,
          updated_at = now();
 
@@ -744,7 +796,7 @@ BEGIN
     JOIN master.supplier s
       ON s.tenant_id = p.tenant_id
      AND s.id = p.supplier_id
-    JOIN master.supplier_spend_category ssc
+    JOIN master.supplier_commodity_category ssc
       ON ssc.tenant_id = s.tenant_id
      AND ssc.supplier_id = s.id
      AND ssc.status = 'active'
@@ -757,7 +809,7 @@ BEGIN
         JOIN master.business_intent bi
           ON bi.tenant_id = cc.tenant_id
          AND bi.code = cim.intent_code
-       WHERE cim.spend_category_code = cc.code
+       WHERE cim.commodity_category_code = cc.code
        ORDER BY cim.is_primary_intent DESC, cim.intent_code
        LIMIT 1
     ) mapped_intent ON true
@@ -811,7 +863,7 @@ BEGIN
     JOIN master.supplier s
       ON s.tenant_id = p.tenant_id
      AND s.id = p.supplier_id
-    JOIN master.supplier_spend_category ssc
+    JOIN master.supplier_commodity_category ssc
       ON ssc.tenant_id = s.tenant_id
      AND ssc.supplier_id = s.id
      AND ssc.status = 'active'
@@ -846,7 +898,7 @@ BEGIN
       JOIN master.supplier s
         ON s.tenant_id = p.tenant_id
        AND s.id = p.supplier_id
-      JOIN master.supplier_spend_category ssc
+      JOIN master.supplier_commodity_category ssc
         ON ssc.tenant_id = s.tenant_id
        AND ssc.supplier_id = s.id
        AND ssc.status = 'active'
@@ -854,7 +906,7 @@ BEGIN
         ON cc.tenant_id = ssc.tenant_id
        AND cc.id = ssc.commodity_category_id
       JOIN tmp_technostat_category_intent_map cim
-        ON cim.spend_category_code = cc.code
+        ON cim.commodity_category_code = cc.code
       JOIN master.business_intent bi
         ON bi.tenant_id = s.tenant_id
        AND bi.code = cim.intent_code
@@ -876,7 +928,7 @@ BEGIN
       JOIN master.supplier s
         ON s.tenant_id = p.tenant_id
        AND s.id = p.supplier_id
-      JOIN master.supplier_spend_category ssc
+      JOIN master.supplier_commodity_category ssc
         ON ssc.tenant_id = s.tenant_id
        AND ssc.supplier_id = s.id
        AND ssc.status = 'active'
@@ -1068,7 +1120,7 @@ BEGIN
        SELECT 1 FROM master.supplier s
         WHERE s.tenant_id = sq.tenant_id AND s.id = sq.supplier_id
      );
-  DELETE FROM master.supplier_spend_category ssc
+  DELETE FROM master.supplier_commodity_category ssc
    WHERE ssc.tenant_id = v_tenant_id
      AND NOT EXISTS (
        SELECT 1 FROM master.supplier s
@@ -1095,7 +1147,7 @@ BEGIN
 
   -- Universal blueprint seed (020_universal/080_party_risk) inserts SUP-DEMO-*
   -- suppliers for every tenant before tenant post-org files run.  Those demo
-  -- fixtures are not expected to have spend categories, qualifications, block
+  -- fixtures are not expected to have commodity categories, qualifications, block
   -- history, or company-code profiles, so exclude them from coverage checks.
   SELECT count(*)
     INTO v_real_supplier_total
@@ -1112,8 +1164,8 @@ BEGIN
      AND s.status <> 'archived';
 
   SELECT count(DISTINCT ssc.supplier_id)
-    INTO v_supplier_spend_category_count
-    FROM master.supplier_spend_category ssc
+    INTO v_supplier_commodity_category_count
+    FROM master.supplier_commodity_category ssc
     JOIN master.supplier s ON s.tenant_id = ssc.tenant_id AND s.id = ssc.supplier_id
    WHERE ssc.tenant_id = v_tenant_id
      AND ssc.status = 'active'
@@ -1189,8 +1241,8 @@ BEGIN
     RAISE EXCEPTION 'Supplier app index coverage failed: % of % suppliers', v_supplier_app_index_count, v_supplier_total;
   END IF;
 
-  IF v_supplier_spend_category_count <> v_real_supplier_total THEN
-    RAISE EXCEPTION 'Supplier primary spend category coverage failed: % of % suppliers', v_supplier_spend_category_count, v_real_supplier_total;
+  IF v_supplier_commodity_category_count <> v_real_supplier_total THEN
+    RAISE EXCEPTION 'Supplier primary commodity category coverage failed: % of % suppliers', v_supplier_commodity_category_count, v_real_supplier_total;
   END IF;
 
   IF v_supplier_qualification_count <> v_real_supplier_total THEN

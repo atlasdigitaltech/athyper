@@ -1304,21 +1304,7 @@ CREATE POLICY tenant_delete ON master.item FOR DELETE USING     (tenant_id = sha
 CREATE POLICY admin_read    ON master.item FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.item FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
--- ── master.spend_category ──────────────────────────────────────────────────
-ALTER TABLE master.spend_category ENABLE ROW LEVEL SECURITY;
-ALTER TABLE master.spend_category FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON master.spend_category;
-DROP POLICY IF EXISTS tenant_insert ON master.spend_category;
-DROP POLICY IF EXISTS tenant_update ON master.spend_category;
-DROP POLICY IF EXISTS tenant_delete ON master.spend_category;
-DROP POLICY IF EXISTS admin_read    ON master.spend_category;
-DROP POLICY IF EXISTS admin_write   ON master.spend_category;
-CREATE POLICY tenant_read   ON master.spend_category FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON master.spend_category FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON master.spend_category FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON master.spend_category FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON master.spend_category FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON master.spend_category FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+-- Legacy master.spend_category retired; master.commodity_category owns taxonomy.
 
 -- ── master.commodity_classification ────────────────────────────────────────
 ALTER TABLE master.commodity_classification ENABLE ROW LEVEL SECURITY;
@@ -1547,6 +1533,82 @@ CREATE POLICY tenant_read ON master.principal_identity_binding
 CREATE POLICY admin_read ON master.principal_identity_binding
     FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write ON master.principal_identity_binding
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- tenant_relationship
+ALTER TABLE master.tenant_relationship ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.tenant_relationship FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON master.tenant_relationship;
+DROP POLICY IF EXISTS tenant_insert ON master.tenant_relationship;
+DROP POLICY IF EXISTS tenant_update ON master.tenant_relationship;
+DROP POLICY IF EXISTS tenant_delete ON master.tenant_relationship;
+DROP POLICY IF EXISTS admin_read    ON master.tenant_relationship;
+DROP POLICY IF EXISTS admin_write   ON master.tenant_relationship;
+CREATE POLICY tenant_read ON master.tenant_relationship
+    FOR SELECT USING (
+        from_tenant_id = shared.current_tenant_id_soft()
+        OR to_tenant_id = shared.current_tenant_id_soft()
+    );
+CREATE POLICY tenant_insert ON master.tenant_relationship
+    FOR INSERT WITH CHECK (
+        from_tenant_id = shared.current_tenant_id()
+        OR to_tenant_id = shared.current_tenant_id()
+    );
+CREATE POLICY tenant_update ON master.tenant_relationship
+    FOR UPDATE USING (
+        from_tenant_id = shared.current_tenant_id()
+        OR to_tenant_id = shared.current_tenant_id()
+    ) WITH CHECK (
+        from_tenant_id = shared.current_tenant_id()
+        OR to_tenant_id = shared.current_tenant_id()
+    );
+CREATE POLICY tenant_delete ON master.tenant_relationship
+    FOR DELETE USING (
+        from_tenant_id = shared.current_tenant_id()
+        OR to_tenant_id = shared.current_tenant_id()
+    );
+CREATE POLICY admin_read ON master.tenant_relationship
+    FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.tenant_relationship
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- principal_relationship
+ALTER TABLE master.principal_relationship ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.principal_relationship FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON master.principal_relationship;
+DROP POLICY IF EXISTS tenant_insert ON master.principal_relationship;
+DROP POLICY IF EXISTS tenant_update ON master.principal_relationship;
+DROP POLICY IF EXISTS tenant_delete ON master.principal_relationship;
+DROP POLICY IF EXISTS admin_read    ON master.principal_relationship;
+DROP POLICY IF EXISTS admin_write   ON master.principal_relationship;
+CREATE POLICY tenant_read ON master.principal_relationship
+    FOR SELECT USING (
+        from_tenant_id = shared.current_tenant_id_soft()
+        OR to_tenant_id = shared.current_tenant_id_soft()
+    );
+CREATE POLICY tenant_insert ON master.principal_relationship
+    FOR INSERT WITH CHECK (
+        from_tenant_id = shared.current_tenant_id()
+        OR to_tenant_id = shared.current_tenant_id()
+    );
+CREATE POLICY tenant_update ON master.principal_relationship
+    FOR UPDATE USING (
+        from_tenant_id = shared.current_tenant_id()
+        OR to_tenant_id = shared.current_tenant_id()
+    ) WITH CHECK (
+        from_tenant_id = shared.current_tenant_id()
+        OR to_tenant_id = shared.current_tenant_id()
+    );
+CREATE POLICY tenant_delete ON master.principal_relationship
+    FOR DELETE USING (
+        from_tenant_id = shared.current_tenant_id()
+        OR to_tenant_id = shared.current_tenant_id()
+    );
+CREATE POLICY admin_read ON master.principal_relationship
+    FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.principal_relationship
     FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
 

@@ -38,7 +38,6 @@ export default function FinanceWorkbenchLayout({ children }: { children: ReactNo
   const showContextBar = ![
     "/finance/gl",
     "/finance/reports",
-    "/finance/spend-categories",
     "/finance/commodity-categories",
     "/finance/business-intents",
     "/finance/accounting-profiles",

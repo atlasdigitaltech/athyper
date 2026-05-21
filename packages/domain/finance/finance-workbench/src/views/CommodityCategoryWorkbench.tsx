@@ -281,7 +281,7 @@ const DEFAULT_SIMULATOR_INPUTS: SimulatorInputs = {
   crossBorder: false,
 };
 
-const WORKBENCH_SPEND_CATEGORY_PICKER_CONFIG: EntityPickerOptionConfig = {
+const WORKBENCH_COMMODITY_CATEGORY_PICKER_CONFIG: EntityPickerOptionConfig = {
   variant: "standard",
   labelField: "name",
   codeField: "code",
@@ -1213,8 +1213,8 @@ function CategoryHierarchyRail({
   onLoadChildren?: (row: CommodityCategoryRow) => void | Promise<void>;
 }) {
   const resultSummary = totalCount && totalCount > 0
-    ? `Showing ${items.length.toLocaleString()} of ${totalCount.toLocaleString()} spend categories`
-    : `Showing ${items.length.toLocaleString()} spend categories`;
+    ? `Showing ${items.length.toLocaleString()} of ${totalCount.toLocaleString()} commodity categories`
+    : `Showing ${items.length.toLocaleString()} commodity categories`;
 
   const rootStats = useMemo(() => {
     const stats = new Map<string, { children: number; linked: number }>();
@@ -2067,7 +2067,7 @@ function bodyTabFromMode(mode: TaxonomyWorkbenchMode): SelectedCategoryBodyTab {
   return "profile";
 }
 
-function SpendCategorySelectedData({
+function CommodityCategorySelectedData({
   row,
   rules = [],
   rulesLoading,
@@ -2141,7 +2141,7 @@ function SpendCategorySelectedData({
         ) : bodyTab === "inventoryPolicy" ? (
           <CategoryPolicyProjection kind="inventory" row={row} returnToHref={returnToHref} />
         ) : (
-          <SpendCategoryClassificationProjection row={row} returnToHref={returnToHref} />
+          <CommodityCategoryClassificationProjection row={row} returnToHref={returnToHref} />
         )}
       </div>
     </section>
@@ -2295,7 +2295,7 @@ function ClassificationColumn({
   );
 }
 
-function SpendCategoryClassificationProjection({
+function CommodityCategoryClassificationProjection({
   row,
   returnToHref,
 }: {
@@ -2367,11 +2367,11 @@ function SpendCategoryClassificationProjection({
   );
 }
 
-function spendCategoryDisplayLabel(row?: CommodityCategoryRow): string | null {
+function commodityCategoryDisplayLabel(row?: CommodityCategoryRow): string | null {
   return row?.name ?? null;
 }
 
-function WorkbenchSpendCategoryField({
+function WorkbenchCommodityCategoryField({
   selected,
   onSelectId,
 }: {
@@ -2382,9 +2382,9 @@ function WorkbenchSpendCategoryField({
     <EntityPicker
       entityCode="commodity_category"
       value={selected?.id ?? null}
-      displayLabel={spendCategoryDisplayLabel(selected)}
+      displayLabel={commodityCategoryDisplayLabel(selected)}
       onChange={onSelectId}
-      optionConfig={WORKBENCH_SPEND_CATEGORY_PICKER_CONFIG}
+      optionConfig={WORKBENCH_COMMODITY_CATEGORY_PICKER_CONFIG}
       optionActionLabel="Open category"
       placeholder="Search category..."
       loadOnOpen
@@ -2498,7 +2498,7 @@ function WorkbenchCurrencyField({
   );
 }
 
-function SpendCategorySimulator({
+function CommodityCategorySimulator({
   rows,
   selected,
   onSelect,
@@ -2595,7 +2595,7 @@ function SpendCategorySimulator({
         <div className="grid gap-3">
           <label className="grid gap-1.5">
             <span className="text-doc-support font-medium text-muted-foreground">Category</span>
-            <WorkbenchSpendCategoryField
+            <WorkbenchCommodityCategoryField
               selected={selected}
               onSelectId={(id) => {
                 const next = rows.find((row) => row.id === id);
@@ -3033,7 +3033,7 @@ function AuditPanel({ row }: { row: CommodityCategoryRow }) {
   );
 }
 
-function SpendCategoryOverview({
+function CommodityCategoryOverview({
   summary,
   linkedPct,
   policyPct,
@@ -3389,7 +3389,7 @@ function ScopeFirstEditorBody({
   );
 }
 
-function SpendCategoryEditor({
+function CommodityCategoryEditor({
   rows,
   selected,
   onSelect,
@@ -3446,7 +3446,7 @@ function SpendCategoryEditor({
 
         <label className="grid gap-1.5">
           <span className="text-doc-support font-medium text-muted-foreground">Category</span>
-          <WorkbenchSpendCategoryField
+          <WorkbenchCommodityCategoryField
             selected={selected}
             onSelectId={(id) => {
               const next = rows.find((row) => row.id === id);
@@ -3609,7 +3609,7 @@ function spendMatrixExportColumnHref(definitionApps: TaxonomyRelatedApp[], sourc
   return nextQuery ? `${path}?${nextQuery}` : path;
 }
 
-function SpendCategoryMatrix({
+function CommodityCategoryMatrix({
   rows,
   roots,
   summary,
@@ -3910,7 +3910,7 @@ export function CommodityCategoryWorkbench() {
 
       {activeMode === "overview" ? (
         <>
-          <SpendCategoryOverview
+          <CommodityCategoryOverview
             summary={summary}
             linkedPct={linkedPct}
             policyPct={policyPct}
@@ -3929,7 +3929,7 @@ export function CommodityCategoryWorkbench() {
           </section>
         ) : (
           <>
-            <SpendCategorySimulator
+            <CommodityCategorySimulator
               rows={items}
               selected={selected}
               onSelect={(row) => setSelectedId(row.id)}
@@ -3948,7 +3948,7 @@ export function CommodityCategoryWorkbench() {
           </section>
         ) : (
           <>
-            <SpendCategoryEditor
+            <CommodityCategoryEditor
               rows={items}
               selected={selected}
               onSelect={(row) => setSelectedId(row.id)}
@@ -3968,7 +3968,7 @@ export function CommodityCategoryWorkbench() {
           </section>
         ) : (
           <>
-            <SpendCategoryMatrix
+            <CommodityCategoryMatrix
               rows={items}
               roots={roots}
               summary={summary}
@@ -4003,7 +4003,7 @@ export function CommodityCategoryWorkbench() {
                   Spend taxonomy service is unavailable.
                 </section>
               ) : (
-                <SpendCategorySelectedData
+                <CommodityCategorySelectedData
                   row={selected}
                   activeMode={activeMode}
                   rules={detailQuery.data?.rules ?? []}

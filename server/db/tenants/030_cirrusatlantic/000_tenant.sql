@@ -48,13 +48,14 @@ BEGIN
     END IF;
 
     INSERT INTO master.tenant (
-        code, name, display_name, realm_key, region, subscription,
+        code, name, display_name, realm_key, tenant_type, region, subscription,
         status, metadata, created_by
     ) VALUES (
         'cirrusatlantic',
         'CirrusAtlantic Ltd',
         'CirrusAtlantic Limited',
         'athyper',
+        'customer',
         'UK',
         'enterprise',
         'active',
@@ -77,6 +78,7 @@ BEGIN
     ON CONFLICT (realm_key, code) DO UPDATE SET
         name         = EXCLUDED.name,
         display_name = EXCLUDED.display_name,
+        tenant_type  = EXCLUDED.tenant_type,
         region       = EXCLUDED.region,
         subscription = EXCLUDED.subscription,
         status       = EXCLUDED.status,
@@ -88,9 +90,9 @@ BEGIN
                           )),
         updated_at   = now(),
         updated_by   = v_su
-    WHERE (master.tenant.realm_key, master.tenant.name, master.tenant.status)
+    WHERE (master.tenant.realm_key, master.tenant.tenant_type, master.tenant.name, master.tenant.status)
        IS DISTINCT FROM
-          (EXCLUDED.realm_key, EXCLUDED.name, EXCLUDED.status);
+          (EXCLUDED.realm_key, EXCLUDED.tenant_type, EXCLUDED.name, EXCLUDED.status);
 
     RAISE NOTICE '[000_tenant] CirrusAtlantic tenant ready (id=%)',
         (SELECT id FROM master.tenant WHERE code = 'cirrusatlantic' AND realm_key = 'athyper');

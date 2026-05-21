@@ -497,11 +497,13 @@ export function CloseCycleWorkbench({ scope, runId: initialRunId, phaseCode: ini
   const searchParams = useSearchParams();
 
   const { data: runs = [], isLoading, isError } = usePeriodCloseRuns(scope);
+  const startRun = useStartCloseRun(scope);
 
   // Derive selectedRunId from URL; default to most recent run
   const selectedRunId = initialRunId ?? runs[0]?.id ?? null;
   const selectedRun   = runs.find((r) => r.id === selectedRunId) ?? null;
   const [activePhaseCode, setActivePhaseCode] = useState<string | null>(initialPhaseCode ?? null);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const pushState = useCallback((runId: string, phaseCode?: string) => {
     const p = new URLSearchParams(searchParams.toString());
@@ -520,6 +522,18 @@ export function CloseCycleWorkbench({ scope, runId: initialRunId, phaseCode: ini
     setActivePhaseCode(code);
     if (selectedRunId) pushState(selectedRunId, code);
   };
+
+  const handleStartRun = async () => {
+    setStartError(null);
+    try {
+      const run = await startRun.mutateAsync();
+      if (run.id) pushState(run.id);
+    } catch (err) {
+      setStartError(err instanceof Error ? err.message : "Failed to start close run");
+    }
+  };
+
+  const canStartRun = !!scope.scopeId && scope.period !== null && scope.period !== undefined;
 
   return (
     <PageFrame
@@ -546,6 +560,21 @@ export function CloseCycleWorkbench({ scope, runId: initialRunId, phaseCode: ini
           <Play className="h-8 w-8 text-muted-foreground/30" />
           <p className="text-sm font-medium text-muted-foreground">No close runs for this period</p>
           <p className="text-xs text-muted-foreground/70">Start a new close run to begin the period close process.</p>
+          <Button
+            size="sm"
+            className="mt-1 gap-1.5"
+            onClick={() => void handleStartRun()}
+            disabled={!canStartRun || startRun.isPending}
+          >
+            {startRun.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+            New Run
+          </Button>
+          {!canStartRun && (
+            <p className="text-doc-support text-muted-foreground">Select a company and fiscal period first.</p>
+          )}
+          {startError && (
+            <p className="text-doc-support text-destructive">{startError}</p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-[280px_1fr] gap-4 h-[calc(100vh-14rem)] min-h-0">

@@ -8,7 +8,7 @@
 --           resolution works on first login without a JIT create.
 --
 -- KEY DESIGN: KC user UUID == DB principal UUID == principal_identity_binding.subject_id
---   The auth adapter looks up (tenant_id, provider_code, subject_id) on every
+--   The auth adapter looks up (tenant_id, realm_key, provider_code, subject_id) on every
 --   authenticated request. With this seed, that binding exists before first login.
 --
 -- All 17 demo users belong to the 'athyper' tenant.
@@ -157,28 +157,28 @@ BEGIN
 
     INSERT INTO master.principal_identity_binding (
         tenant_id, principal_id,
-        provider_code, subject_id, username,
+        realm_key, provider_code, subject_id, username,
         sync_status, idp_enabled, idp_email_verified,
         synced_at, created_by
     ) VALUES
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000001', 'keycloak', 'aa001000-0000-0000-0000-000000000001', 'athq.viewer',    'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000002', 'keycloak', 'aa001000-0000-0000-0000-000000000002', 'athq.reporter',  'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000003', 'keycloak', 'aa001000-0000-0000-0000-000000000003', 'athq.requester', 'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000004', 'keycloak', 'aa001000-0000-0000-0000-000000000004', 'athq.agent',     'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000005', 'keycloak', 'aa001000-0000-0000-0000-000000000005', 'athq.manager',   'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000006', 'keycloak', 'aa001000-0000-0000-0000-000000000006', 'athq.owner',     'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000007', 'keycloak', 'aa001000-0000-0000-0000-000000000007', 'athq.admin',     'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000008', 'keycloak', 'aa001000-0000-0000-0000-000000000008', 'aqtu.manager',   'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000009', 'keycloak', 'aa001000-0000-0000-0000-000000000009', 'asac.manager',   'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000a', 'keycloak', 'aa001000-0000-0000-0000-00000000000a', 'auic.manager',   'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000b', 'keycloak', 'aa001000-0000-0000-0000-00000000000b', 'asgf.manager',   'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000c', 'keycloak', 'aa001000-0000-0000-0000-00000000000c', 'athq.cfo',       'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000d', 'keycloak', 'aa001000-0000-0000-0000-00000000000d', 'partner.viewer', 'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000e', 'keycloak', 'aa001000-0000-0000-0000-00000000000e', 'partner.agent',  'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000f', 'keycloak', 'aa001000-0000-0000-0000-00000000000f', 'partner.manager','synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000010', 'keycloak', 'aa001000-0000-0000-0000-000000000010', 'partner.owner',  'synced', true, true, now(), v_su),
-    (v_tenant_id, 'aa001000-0000-0000-0000-000000000011', 'keycloak', 'aa001000-0000-0000-0000-000000000011', 'karim.dual',     'synced', true, true, now(), v_su)
-    ON CONFLICT (tenant_id, principal_id, provider_code) DO NOTHING;
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000001', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000001', 'athq.viewer',    'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000002', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000002', 'athq.reporter',  'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000003', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000003', 'athq.requester', 'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000004', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000004', 'athq.agent',     'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000005', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000005', 'athq.manager',   'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000006', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000006', 'athq.owner',     'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000007', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000007', 'athq.admin',     'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000008', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000008', 'aqtu.manager',   'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000009', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000009', 'asac.manager',   'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000a', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-00000000000a', 'auic.manager',   'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000b', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-00000000000b', 'asgf.manager',   'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000c', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-00000000000c', 'athq.cfo',       'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000d', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-00000000000d', 'partner.viewer', 'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000e', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-00000000000e', 'partner.agent',  'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-00000000000f', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-00000000000f', 'partner.manager','synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000010', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000010', 'partner.owner',  'synced', true, true, now(), v_su),
+    (v_tenant_id, 'aa001000-0000-0000-0000-000000000011', 'athyper', 'keycloak', 'aa001000-0000-0000-0000-000000000011', 'karim.dual',     'synced', true, true, now(), v_su)
+    ON CONFLICT (tenant_id, principal_id, realm_key, provider_code) DO NOTHING;
 
     RAISE NOTICE '[001_demo_principals] 17 principals + profiles + auth bindings seeded';
 

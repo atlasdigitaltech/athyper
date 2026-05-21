@@ -64,22 +64,7 @@ const nextConfig = {
       { source: "/workbench/partner", destination: "/dashboard",          permanent: true },
       { source: "/workbench/user",    destination: "/dashboard",          permanent: true },
 
-      // Phase 1 workbench canonicalization: Commodity Categories is Supply Chain-owned.
-      {
-        source:      "/finance/spend-categories",
-        destination: "/workbench/supply-chain/commodity-categories",
-        permanent:   false,
-      },
-      {
-        source:      "/workbench/finance/spend-categories",
-        destination: "/workbench/supply-chain/commodity-categories",
-        permanent:   false,
-      },
-      {
-        source:      "/workbench/supply-chain/spend-categories",
-        destination: "/workbench/supply-chain/commodity-categories",
-        permanent:   false,
-      },
+      // Commodity Categories is Supply Chain-owned.
       {
         source:      "/finance/commodity-categories",
         destination: "/workbench/supply-chain/commodity-categories",
@@ -88,26 +73,6 @@ const nextConfig = {
       {
         source:      "/workbench/finance/commodity-categories",
         destination: "/workbench/supply-chain/commodity-categories",
-        permanent:   false,
-      },
-      {
-        source:      "/app/cc_supplier_spend_policy",
-        destination: "/app/commodity-category-buy-policy?filter.scope_type=SUPPLIER_PROFILE",
-        permanent:   false,
-      },
-      {
-        source:      "/app/cc_supplier_spend_policy/:rest*",
-        destination: "/app/commodity-category-buy-policy/:rest*",
-        permanent:   false,
-      },
-      {
-        source:      "/app/commodity_category_spend_policy",
-        destination: "/app/commodity-category-buy-policy",
-        permanent:   false,
-      },
-      {
-        source:      "/app/commodity_category_spend_policy/:rest*",
-        destination: "/app/commodity-category-buy-policy/:rest*",
         permanent:   false,
       },
       {

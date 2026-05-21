@@ -7,7 +7,7 @@
 --   §RSK-CFG   tenant_risk_source_config     — 8 risk sources enabled
 --   §IDX       supplier_app_index            — denorm index for 6 suppliers
 --              customer_app_index            — denorm index for 6 customers
---   §SUP-SCX   supplier_spend_category       — multi-category bridges (6 sups)
+--   §SUP-SCX   supplier_commodity_category       — multi-category bridges (6 sups)
 --   §SUP-BLK   supplier_block                — 1 lifted (ANIC) + 1 active (NTP)
 --   §CUS-BLK   customer_block                — 1 lifted (STH) + 1 active (SCTC)
 --   §CSIP      supplier-scoped commodity_category_buy_policy intent allows
@@ -148,8 +148,8 @@ END $idx$;
 
 
 -- ============================================================================
--- §SUP-SCX  Supplier spend category bridges
--- Links each supplier to its approved spend categories at the tenant level.
+-- §SUP-SCX  Supplier commodity category bridges
+-- Links each supplier to its approved commodity categories at the tenant level.
 -- is_primary mirrors supplier.commodity_category_id (the dominant category).
 -- ============================================================================
 DO $sup_scx$
@@ -162,7 +162,7 @@ DECLARE
     v_amts uuid; v_anic uuid; v_ntp  uuid; v_csi  uuid;
     v_gps  uuid; v_mgi  uuid;
 
-    -- Spend category IDs (leaf)
+    -- Commodity category IDs (leaf)
     v_sc_it_svc  uuid; v_sc_it_hw   uuid; v_sc_it_sw   uuid;
     v_sc_prof_mg uuid; v_sc_prof_lg uuid;
     v_sc_const_m uuid; v_sc_const_e uuid;
@@ -178,122 +178,122 @@ BEGIN
     SELECT id INTO v_gps  FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-GLB-GPS-001';
     SELECT id INTO v_mgi  FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-GLB-MGI-001';
 
-    -- Spend category lookups
-    SELECT id INTO v_sc_it_svc  FROM master.spend_category WHERE tenant_id=v_tid AND code='SC-IT-SVC';
-    SELECT id INTO v_sc_it_hw   FROM master.spend_category WHERE tenant_id=v_tid AND code='SC-IT-HW';
-    SELECT id INTO v_sc_it_sw   FROM master.spend_category WHERE tenant_id=v_tid AND code='SC-IT-SW';
-    SELECT id INTO v_sc_prof_mg FROM master.spend_category WHERE tenant_id=v_tid AND code='SC-PROF-MGMT';
-    SELECT id INTO v_sc_prof_lg FROM master.spend_category WHERE tenant_id=v_tid AND code='SC-PROF-LEGAL';
-    SELECT id INTO v_sc_const_m FROM master.spend_category WHERE tenant_id=v_tid AND code='SC-CONST-MAT';
-    SELECT id INTO v_sc_const_e FROM master.spend_category WHERE tenant_id=v_tid AND code='SC-CONST-EQUIP';
+    -- Commodity category lookups
+    SELECT id INTO v_sc_it_svc  FROM master.commodity_category WHERE tenant_id=v_tid AND code='SC-IT-SVC';
+    SELECT id INTO v_sc_it_hw   FROM master.commodity_category WHERE tenant_id=v_tid AND code='SC-IT-HW';
+    SELECT id INTO v_sc_it_sw   FROM master.commodity_category WHERE tenant_id=v_tid AND code='SC-IT-SW';
+    SELECT id INTO v_sc_prof_mg FROM master.commodity_category WHERE tenant_id=v_tid AND code='SC-PROF-MGMT';
+    SELECT id INTO v_sc_prof_lg FROM master.commodity_category WHERE tenant_id=v_tid AND code='SC-PROF-LEGAL';
+    SELECT id INTO v_sc_const_m FROM master.commodity_category WHERE tenant_id=v_tid AND code='SC-CONST-MAT';
+    SELECT id INTO v_sc_const_e FROM master.commodity_category WHERE tenant_id=v_tid AND code='SC-CONST-EQUIP';
 
-    -- Helper: insert a spend category for a supplier.
+    -- Helper: insert a commodity category for a supplier.
     -- is_primary is only claimed when no primary row already exists for that supplier
     -- (guards against sscat_one_primary_uidx when 009 has already assigned a primary).
 
     -- AMTS: IT Services + IT Hardware
     IF v_amts IS NOT NULL AND v_sc_it_svc IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_amts, v_sc_it_svc,
-               NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_amts AND is_primary=true),
+               NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_amts AND is_primary=true),
                '2023-03-01', 'Primary category — managed IT services and outsourcing.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_amts AND commodity_category_id=v_sc_it_svc);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_amts AND commodity_category_id=v_sc_it_svc);
     END IF;
     IF v_amts IS NOT NULL AND v_sc_it_hw IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_amts, v_sc_it_hw, false, '2023-03-01', 'Secondary — hardware supply and infrastructure.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_amts AND commodity_category_id=v_sc_it_hw);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_amts AND commodity_category_id=v_sc_it_hw);
     END IF;
 
     -- ANIC: Construction Materials + Equipment Rental
     IF v_anic IS NOT NULL AND v_sc_const_m IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_anic, v_sc_const_m,
-               NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_anic AND is_primary=true),
+               NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_anic AND is_primary=true),
                '2024-01-10', 'Primary — passive network components and civils materials.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_anic AND commodity_category_id=v_sc_const_m);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_anic AND commodity_category_id=v_sc_const_m);
     END IF;
     IF v_anic IS NOT NULL AND v_sc_const_e IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_anic, v_sc_const_e, false, '2024-01-10', 'Secondary — crane and heavy plant hire for KAEC deployments.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_anic AND commodity_category_id=v_sc_const_e);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_anic AND commodity_category_id=v_sc_const_e);
     END IF;
 
     -- NTP: IT Services + IT Software
     IF v_ntp IS NOT NULL AND v_sc_it_svc IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_ntp, v_sc_it_svc,
-               NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_ntp AND is_primary=true),
+               NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_ntp AND is_primary=true),
                '2023-07-01', 'Primary — digital transformation services for TEGY projects.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_ntp AND commodity_category_id=v_sc_it_svc);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_ntp AND commodity_category_id=v_sc_it_svc);
     END IF;
     IF v_ntp IS NOT NULL AND v_sc_it_sw IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_ntp, v_sc_it_sw, false, '2023-07-01', 'Secondary — local software and SaaS licences resold.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_ntp AND commodity_category_id=v_sc_it_sw);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_ntp AND commodity_category_id=v_sc_it_sw);
     END IF;
 
     -- CSI: IT Services + Management Consulting
     IF v_csi IS NOT NULL AND v_sc_it_svc IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_csi, v_sc_it_svc,
-               NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_csi AND is_primary=true),
+               NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_csi AND is_primary=true),
                '2024-06-01', 'Primary — satellite systems integration for SDTX.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_csi AND commodity_category_id=v_sc_it_svc);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_csi AND commodity_category_id=v_sc_it_svc);
     END IF;
     IF v_csi IS NOT NULL AND v_sc_prof_mg IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_csi, v_sc_prof_mg, false, '2024-06-01', 'Secondary — technical consulting and advisory.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_csi AND commodity_category_id=v_sc_prof_mg);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_csi AND commodity_category_id=v_sc_prof_mg);
     END IF;
 
     -- GPS: Management Consulting + IT Services + Legal
     IF v_gps IS NOT NULL AND v_sc_prof_mg IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_gps, v_sc_prof_mg,
-               NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_gps AND is_primary=true),
+               NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_gps AND is_primary=true),
                '2022-06-01', 'Primary — global procurement advisory and consulting.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_gps AND commodity_category_id=v_sc_prof_mg);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_gps AND commodity_category_id=v_sc_prof_mg);
     END IF;
     IF v_gps IS NOT NULL AND v_sc_it_svc IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_gps, v_sc_it_svc, false, '2022-06-01', 'Secondary — technology sourcing and supplier management platforms.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_gps AND commodity_category_id=v_sc_it_svc);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_gps AND commodity_category_id=v_sc_it_svc);
     END IF;
     IF v_gps IS NOT NULL AND v_sc_prof_lg IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_gps, v_sc_prof_lg, false, '2022-06-01', 'Tertiary — contract review and regulatory advisory.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_gps AND commodity_category_id=v_sc_prof_lg);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_gps AND commodity_category_id=v_sc_prof_lg);
     END IF;
 
     -- MGI supplier: IT Services + Management Consulting
     IF v_mgi IS NOT NULL AND v_sc_it_svc IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_mgi, v_sc_it_svc,
-               NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_mgi AND is_primary=true),
+               NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_mgi AND is_primary=true),
                '2021-01-01', 'Primary — satellite comms systems integration and managed services.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_mgi AND commodity_category_id=v_sc_it_svc);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_mgi AND commodity_category_id=v_sc_it_svc);
     END IF;
     IF v_mgi IS NOT NULL AND v_sc_prof_mg IS NOT NULL THEN
-        INSERT INTO master.supplier_spend_category
+        INSERT INTO master.supplier_commodity_category
             (tenant_id, supplier_id, commodity_category_id, is_primary, effective_from, notes, metadata, status, created_by)
         SELECT v_tid, v_mgi, v_sc_prof_mg, false, '2021-01-01', 'Secondary — digital transformation consulting across group entities.', v_meta, 'active', v_sys
-        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_spend_category WHERE tenant_id=v_tid AND supplier_id=v_mgi AND commodity_category_id=v_sc_prof_mg);
+        WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_mgi AND commodity_category_id=v_sc_prof_mg);
     END IF;
 
-    RAISE NOTICE '[sup_scx] supplier_spend_category seeded for 6 suppliers';
+    RAISE NOTICE '[sup_scx] supplier_commodity_category seeded for 6 suppliers';
 END $sup_scx$;
 
 
@@ -464,7 +464,7 @@ BEGIN
            'active',
            p_sys
       FROM master.company_code_supplier_profile p
-      JOIN master.supplier_spend_category ssc
+      JOIN master.supplier_commodity_category ssc
         ON ssc.tenant_id = p.tenant_id
        AND ssc.supplier_id = p.supplier_id
        AND ssc.status = 'active'
@@ -572,7 +572,7 @@ DROP FUNCTION IF EXISTS _seed_csip_add_intent(uuid, jsonb, uuid, uuid, text, boo
 
 -- ============================================================================
 -- §CSSPO  Company code supplier spend policies
--- Per-supplier-profile eligibility for each approved spend category.
+-- Per-supplier-profile eligibility for each approved commodity category.
 -- qualification_status='qualified' = approved to invoice against this category.
 -- ============================================================================
 
@@ -587,10 +587,35 @@ DECLARE
     v_sc_id uuid;
     v_intent_id uuid;
 BEGIN
-    SELECT id, default_intent_id
+    SELECT cc.id, bp.business_intent_id
       INTO v_sc_id, v_intent_id
-      FROM master.spend_category
-     WHERE tenant_id=p_tid AND code=p_sc_code;
+      FROM master.commodity_category cc
+      LEFT JOIN LATERAL (
+          SELECT p.business_intent_id
+            FROM control.commodity_category_buy_policy p
+           WHERE p.tenant_id = cc.tenant_id
+             AND p.commodity_category_id = cc.id
+             AND p.scope_type = 'TENANT'
+             AND p.mapping_mode = 'ALLOW'
+             AND p.is_default
+             AND p.is_active
+           ORDER BY p.sort_order, p.effective_from DESC
+           LIMIT 1
+      ) bp ON true
+     WHERE cc.tenant_id=p_tid AND cc.code=p_sc_code;
+
+    IF v_sc_id IS NOT NULL AND v_intent_id IS NULL THEN
+        SELECT bi.id
+          INTO v_intent_id
+          FROM master.business_intent bi
+          JOIN master.commodity_category cc
+            ON cc.tenant_id = bi.tenant_id
+           AND cc.id = v_sc_id
+         WHERE bi.tenant_id = p_tid
+           AND bi.code = COALESCE(NULLIF(cc.metadata ->> 'default_intent_code', ''), 'BI-OPEX')
+         LIMIT 1;
+    END IF;
+
     IF v_sc_id IS NULL OR v_intent_id IS NULL THEN RETURN; END IF;
 
     INSERT INTO control.commodity_category_buy_policy

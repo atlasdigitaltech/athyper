@@ -62,7 +62,7 @@ export interface DraftInvoiceLine {
   currency_code:    string | null;
   uom_code:         string | null;
   tax_rate_pct:     number | null;
-  spend_category_suggestion: string | null;
+  commodity_category_suggestion: string | null;
   hs_code:          string | null;
   /** Extraction confidence for this line (0.0–1.0) */
   _confidence:      number;
@@ -216,7 +216,7 @@ function mapExtractedLines(items: ExtractedLineItem[], defaultCurrency: string):
     currency_code:     item.currency_code ?? defaultCurrency,
     uom_code:          item.uom_code,
     tax_rate_pct:      item.tax_rate_pct,
-    spend_category_suggestion: item.spend_category_suggestion,
+    commodity_category_suggestion: item.commodity_category_suggestion,
     hs_code:           item.hs_code,
     _confidence:       item.confidence,
   }));

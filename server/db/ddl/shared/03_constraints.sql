@@ -109,11 +109,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- plan_module_access → subscription_plan
+-- plan_module_access → subscription_plan_version
 DO $$ BEGIN
     ALTER TABLE shared.plan_module_access
-        ADD CONSTRAINT pma_plan_fk
-        FOREIGN KEY (plan_id) REFERENCES shared.subscription_plan (id)
+        ADD CONSTRAINT pma_plan_version_fk
+        FOREIGN KEY (plan_version_id) REFERENCES shared.subscription_plan_version (id)
         ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -127,11 +127,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- plan_permission_access → subscription_plan
+-- plan_permission_access → subscription_plan_version
 DO $$ BEGIN
     ALTER TABLE shared.plan_permission_access
-        ADD CONSTRAINT ppa_plan_fk
-        FOREIGN KEY (plan_id) REFERENCES shared.subscription_plan (id)
+        ADD CONSTRAINT ppa_plan_version_fk
+        FOREIGN KEY (plan_version_id) REFERENCES shared.subscription_plan_version (id)
         ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -145,11 +145,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- plan_feature_access → subscription_plan
+-- plan_feature_access → subscription_plan_version
 DO $$ BEGIN
     ALTER TABLE shared.plan_feature_access
-        ADD CONSTRAINT pfa_plan_fk
-        FOREIGN KEY (plan_id) REFERENCES shared.subscription_plan (id)
+        ADD CONSTRAINT pfa_plan_version_fk
+        FOREIGN KEY (plan_version_id) REFERENCES shared.subscription_plan_version (id)
         ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -161,6 +161,63 @@ DO $$ BEGIN
         FOREIGN KEY (feature_id) REFERENCES shared.enterprise_feature (id)
         ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- UNIQUE constraints on access tables (may be missing when the table existed
+-- before the plan_id → plan_version_id migration and was altered in-place).
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'shared.plan_module_access'::regclass
+          AND conname = 'plan_module_access_uq'
+    ) THEN
+        DROP INDEX IF EXISTS shared.plan_module_access_uq;
+        ALTER TABLE shared.plan_module_access
+            ADD CONSTRAINT plan_module_access_uq UNIQUE (plan_version_id, module_id);
+    END IF;
+END $$;
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'shared.plan_permission_access'::regclass
+          AND conname = 'plan_permission_access_uq'
+    ) THEN
+        DROP INDEX IF EXISTS shared.plan_permission_access_uq;
+        ALTER TABLE shared.plan_permission_access
+            ADD CONSTRAINT plan_permission_access_uq UNIQUE (plan_version_id, permission_id);
+    END IF;
+END $$;
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'shared.plan_feature_access'::regclass
+          AND conname = 'plan_feature_access_uq'
+    ) THEN
+        DROP INDEX IF EXISTS shared.plan_feature_access_uq;
+        ALTER TABLE shared.plan_feature_access
+            ADD CONSTRAINT plan_feature_access_uq UNIQUE (plan_version_id, feature_id);
+    END IF;
+END $$;
+
+-- Enforce NOT NULL on plan_version_id across all three access tables.
+-- On fresh DBs the column is already NOT NULL from CREATE TABLE IF NOT EXISTS.
+-- On migrated DBs the ALTER TABLE migration path adds it as nullable; this
+-- block enforces NOT NULL after the FK is in place (no rows exist yet at
+-- DDL time, so the constraint is safe to add immediately).
+DO $$ BEGIN
+    ALTER TABLE shared.plan_module_access     ALTER COLUMN plan_version_id SET NOT NULL;
+EXCEPTION WHEN others THEN NULL;
+END $$;
+DO $$ BEGIN
+    ALTER TABLE shared.plan_permission_access ALTER COLUMN plan_version_id SET NOT NULL;
+EXCEPTION WHEN others THEN NULL;
+END $$;
+DO $$ BEGIN
+    ALTER TABLE shared.plan_feature_access    ALTER COLUMN plan_version_id SET NOT NULL;
+EXCEPTION WHEN others THEN NULL;
 END $$;
 
 

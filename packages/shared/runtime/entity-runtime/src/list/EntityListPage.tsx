@@ -1804,8 +1804,7 @@ function getReferenceEntityCode(field: EntityField | undefined): string | null {
   if (field?.reference_config?.target_entity?.trim()) {
     return field.reference_config.target_entity.trim();
   }
-  const refEntity = field?.validation_rules?.["ref_entity"];
-  return typeof refEntity === "string" && refEntity.trim() ? refEntity.trim() : null;
+  return null;
 }
 
 function formatFilterEntryWithValues(

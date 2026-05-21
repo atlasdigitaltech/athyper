@@ -6,7 +6,8 @@
 |---|---|---|---|
 | `010_platform/` | 2 | **Platform** | Once at install / upgrade. No tenant required. |
 | `020_universal/` | 3 | **Universal Blueprint** | Per-tenant — TIER 1 foundation + TIER 2a COA (always apply). |
-| `030_industry/` | 3 | **Industry Blueprint** | Per-tenant — TIER 2b industry packs + TIER 3 module packs. |
+| `030_industry/` | 3 | **Industry Blueprint** | Per-tenant — TIER 2b industry packs. |
+| `040_modules/` | 3 | **Module Packs** | Per-tenant — TIER 3 optional subscription modules. |
 | `040_tenants/{client}/` | 3 | **Tenant Instance** | Per-client onboarding, after all blueprint tiers complete. |
 
 > **Adding a new client:** copy `040_tenants/_template/` to `040_tenants/{client_code}/`,
@@ -77,10 +78,10 @@ Files sort alphabetically by subfolder prefix (numeric order):
 010_platform/000_bootstrap/000_bootstrap.sql          ← MUST be first
 
 010_platform/000_lookups/LookupDomain/000_lookup_domains.sql
+010_platform/000_lookups/LookupDomain/010_ai_lookup_domains.sql
 010_platform/000_lookups/LookupDomain/control/*.sql
 010_platform/000_lookups/LookupDomain/document/*.sql
 010_platform/000_lookups/LookupDomain/event/*.sql
-010_platform/000_lookups/LookupDomain/governance/*.sql
 010_platform/000_lookups/LookupDomain/log/*.sql
 010_platform/000_lookups/LookupDomain/master/*.sql
 010_platform/000_lookups/LookupDomain/shared/*.sql
@@ -93,6 +94,7 @@ Files sort alphabetically by subfolder prefix (numeric order):
 010_platform/001_global_reference/005_locale.sql
 010_platform/001_global_reference/006_timezone.sql
 010_platform/001_global_reference/007_uom.sql
+010_platform/001_global_reference/008a_commodity_code_unspsc.sql
 010_platform/001_global_reference/008b_commodity_code_hs.sql
 010_platform/001_global_reference/008c_commodity_crosswalk.sql
 010_platform/001_global_reference/008d_commodity_code_keywords.sql
@@ -108,69 +110,41 @@ Files sort alphabetically by subfolder prefix (numeric order):
 010_platform/002_permission_model/013_enterprise_feature.sql
 010_platform/002_permission_model/014_subscription_plan.sql
 010_platform/002_permission_model/015_permission_category.sql
-010_platform/002_permission_model/016_permission.sql
-010_platform/002_permission_model/017_persona_permission.sql
-010_platform/002_permission_model/018_role.sql
-010_platform/002_permission_model/019_permission_return.sql
-010_platform/002_permission_model/020_permission_platform_admin.sql
-010_platform/002_permission_model/021_persona_permission_platform_admin.sql
+010_platform/002_permission_model/016_plan_module_access.sql
+010_platform/002_permission_model/017_permission.sql
+010_platform/002_permission_model/018_persona_permission.sql
+010_platform/002_permission_model/019_role.sql
 
-010_platform/003_control/001_entity_class_profile.sql
-010_platform/003_control/002_hook_actions.sql
-010_platform/003_control/005_transaction_event_catalog.sql     ← 23 canonical lifecycle event codes
-010_platform/003_control/007_upupr_entity_registration.sql
-010_platform/003_control/008_upupr_lifecycle.sql
-010_platform/003_control/009_upupr_workflow.sql
-010_platform/003_control/010_transaction_flow_template.sql
-010_platform/003_control/011_notification_routing_collab.sql   ← global collab routing rules (tenant_id=NULL)
-010_platform/003_control/012_backfill_entity_code.sql          ← idempotent backfill; safe to re-run
-010_platform/003_control/013_platform_cron_backup.sql          ← daily pg_dump backup cron schedule
-010_platform/003_control/020_parameter_definitions.sql          ← parameter domain registry
-010_platform/003_control/021_parameter_definitions_finance.sql  ← Tier 1 tenant-configurable params (25)
-010_platform/003_control/022_parameter_definitions_ops.sql      ← Tier 2 system-controlled readonly params (38)
+# Control tables
+# One table-owned file per control table. Entity-engine, domain-registration,
+# workflow, operation, and blueprint-registry control metadata lives here.
+# Lookup domain/value seeds remain in 000_lookups/LookupDomain/*.
+010_platform/003_control/010_entity_class_profile.sql
+010_platform/003_control/020_field_group.sql
+010_platform/003_control/030_lifecycle.sql
+010_platform/003_control/040_entity.sql
+010_platform/003_control/041_entity_version.sql
+010_platform/003_control/042_entity_field.sql
+010_platform/003_control/042b_field_group_member.sql
+010_platform/003_control/043_entity_relation.sql
+010_platform/003_control/044_entity_operation.sql
+010_platform/003_control/045_entity_lifecycle.sql
+010_platform/003_control/046_entity_flow.sql
+010_platform/003_control/050_entity_numbering_config.sql
+010_platform/003_control/060_workflow_template.sql
+010_platform/003_control/070_hook_action_registry.sql
+010_platform/003_control/080_transaction_event_catalog.sql
+010_platform/003_control/081_transaction_flow_template.sql
+010_platform/003_control/082_notification_template.sql
+010_platform/003_control/083_notification_routing_rule.sql
+010_platform/003_control/084_cron_schedule.sql
+010_platform/003_control/085_parameter_definition.sql
+010_platform/003_control/090_blueprint_registry.sql
 
 010_platform/003_master/*.sql
-010_platform/005_domain_registrations/000_normalize_system_entities.sql  ← one-time: set tenant_id=NULL on system entities
-010_platform/005_domain_registrations/100_master/*.sql
-010_platform/005_domain_registrations/200_document/*.sql
-010_platform/005_domain_registrations/900_operations/*.sql
-010_platform/005_domain_registrations/300_control/*.sql
-
-# Entity Engine registry
-010_platform/004_entity_engine/010_lifecycles/*.sql
-010_platform/004_entity_engine/020_entities/*.sql
-010_platform/004_entity_engine/025_entity_versions.sql
-010_platform/004_entity_engine/030_canonical_fields/*.sql
-010_platform/004_entity_engine/035_version_fields/*.sql
-010_platform/004_entity_engine/002_field_groups.sql
-010_platform/004_entity_engine/040_field_group_members.sql
-010_platform/004_entity_engine/060_entity_operations/*.sql
-010_platform/004_entity_engine/050_entity_lifecycles.sql
-010_platform/004_entity_engine/051_master_schema_coverage_lifecycles.sql
-010_platform/004_entity_engine/070_entity_relations.sql
-
-# Schema migrations (idempotent rename / cleanup — run on upgrades, skip on fresh installs)
-010_platform/999_schema_migrations/20260510_vendor_to_supplier.sql
-010_platform/999_schema_migrations/20260516_decommission_item_category.sql
-010_platform/999_schema_migrations/20260517_business_intent_domain_policy_cleanup.sql
-010_platform/999_schema_migrations/20260517_rename_commodity_category_policy_tables.sql
-010_platform/999_schema_migrations/20260517_rename_commodity_category_workbench_parameter.sql
-010_platform/999_schema_migrations/20260517_rename_commodity_classification_tables.sql
-010_platform/999_schema_migrations/20260517_rename_spend_category_refs_to_commodity_category.sql
 
 # Athyper system tenant (blueprint owner — platform-level singleton)
 010_platform/006_system_tenant/000_athyper_tenant.sql
-```
-
----
-
-### Phase 3 — Blueprint Registry (020_universal/000_registry/)
-
-Run once at system install; re-run when new packs are added.
-
-```
-020_universal/000_registry/000_blueprint_registry.sql   ← all foundation + COA + industry packs
-020_universal/000_registry/001_ap_non_po_registry.sql   ← module pack registration
 ```
 
 ---
@@ -271,9 +245,6 @@ post-company org templates, then tenant-local operational data.
 020_universal/060_org_structure/301_cost_centers.sql                ← universal cost centers
 020_universal/060_org_structure/302_profit_centers.sql              ← universal profit centers
 030_industry/200_org_structure/000_industry_org_templates.sql       ← applies only tagged industry/company mappings
-040_tenants/{client}/100_org_structure/300_operating_units.sql      ← retired no-op compatibility placeholder
-040_tenants/{client}/100_org_structure/301_cost_centers.sql         ← retired no-op compatibility placeholder
-040_tenants/{client}/100_org_structure/302_profit_centers.sql       ← retired no-op compatibility placeholder
 040_tenants/{client}/100_org_structure/303_sites.sql
 040_tenants/{client}/100_org_structure/304_warehouses.sql
 040_tenants/{client}/100_org_structure/310_fiscal_periods.sql
@@ -301,17 +272,24 @@ post-company org templates, then tenant-local operational data.
 SET app.seed_tenant_id = '<tenant_uuid>';
 
 -- AP Non-PO Cycle
-030_industry/600_modules/ap_non_po/005_accounting_profile_ddl.sql
-030_industry/600_modules/ap_non_po/010_posting_roles.sql
-030_industry/600_modules/ap_non_po/020_accounting_profiles.sql
-030_industry/600_modules/ap_non_po/030_acct_profile_configs.sql
-030_industry/600_modules/ap_non_po/040_acct_profile_events.sql
-030_industry/600_modules/ap_non_po/050_acct_profile_entry_templates.sql
-030_industry/600_modules/ap_non_po/060_category_intent_rules.sql
-030_industry/600_modules/ap_non_po/070_intent_profile_rules.sql
-030_industry/600_modules/ap_non_po/080_payment_settlement_rules.sql
-030_industry/600_modules/ap_non_po/090_entity_operations_delta.sql
-030_industry/600_modules/ap_non_po/099_apply.sql              ← records application receipt
+040_modules/ap_non_po/005_accounting_profile_ddl.sql
+040_modules/ap_non_po/010_posting_roles.sql
+040_modules/ap_non_po/020_accounting_profiles.sql
+040_modules/ap_non_po/030_acct_profile_configs.sql
+040_modules/ap_non_po/040_acct_profile_events.sql
+040_modules/ap_non_po/050_acct_profile_entry_templates.sql
+040_modules/ap_non_po/055_acct_profile_settlement_config.sql
+040_modules/ap_non_po/056_acct_profile_commitment_config.sql
+040_modules/ap_non_po/057_acct_profile_book_rule.sql
+040_modules/ap_non_po/058_acct_profile_dimension_rule.sql
+040_modules/ap_non_po/060_category_intent_rules.sql
+040_modules/ap_non_po/061_min_intake_rules.sql
+040_modules/ap_non_po/062_full_coverage_rules.sql
+040_modules/ap_non_po/070_intent_profile_rules.sql
+040_modules/ap_non_po/072_profile_domain_fallbacks.sql
+040_modules/ap_non_po/080_payment_settlement_rules.sql
+040_modules/ap_non_po/090_entity_operations_delta.sql
+040_modules/ap_non_po/099_apply.sql              ← records application receipt
 ```
 
 ---
@@ -354,9 +332,9 @@ ORDER BY tba.applied_at;
 
 ## Adding a New Blueprint Pack
 
-1. Add SQL files to the appropriate tier subfolder under `020_universal/` (TIER 1/2a) or `030_industry/` (TIER 2b/3)
-2. Register in `020_universal/000_registry/000_blueprint_registry.sql` (or a new `00N_*_registry.sql` for module packs)
-3. Set `seed_files` paths relative to `900_seed_data/` root (e.g., `'030_industry/100_industry_packs/116_pack_xxx.sql'`)
+1. Add SQL files to the appropriate tier subfolder under `020_universal/` (TIER 1/2a), `030_industry/` (TIER 2b), or `040_modules/` (TIER 3)
+2. Register in `010_platform/003_control/090_blueprint_registry.sql`
+3. Set `seed_files` paths relative to the seed root (e.g., `'030_industry/100_industry_packs/116_pack_xxx.sql'`)
 4. Ensure all SQL files use `current_setting('app.seed_tenant_id', true)::uuid` — no hardcoded tenant codes
 5. Re-run the registry file — it is idempotent (`ON CONFLICT (code) DO UPDATE`)
 6. The pack is immediately available for new tenant provisioning

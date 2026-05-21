@@ -130,6 +130,7 @@ export function createBootstrapService(deps: BootstrapServiceDeps): BootstrapSer
           join
             .onRef("pab.tenant_id", "=", "t.id")
             .on("pab.subject_id", "=", sub)
+            .on("pab.realm_key", "=", realmKey)
             .on("pab.provider_code", "=", "keycloak"),
         )
         .innerJoin("master.delegation_grant as dg", (join) =>
@@ -224,6 +225,7 @@ async function resolveTenant(
     )
     .select(["pab.principal_id", "p.is_active", "p.is_locked"])
     .where("pab.subject_id", "=", sub)
+    .where("pab.realm_key", "=", realmKey)
     .where("pab.provider_code", "=", "keycloak")
     .where("pab.tenant_id", "=", tenantId)
     .executeTakeFirst();

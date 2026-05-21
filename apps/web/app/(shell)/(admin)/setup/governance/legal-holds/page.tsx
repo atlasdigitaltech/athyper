@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { cn } from "@athyper/theme/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { bffFetch } from "@/lib/bff-fetch";
 import {
   Lock, LockOpen, RefreshCw, Plus, ChevronDown, ChevronRight,
   AlertTriangle, Shield, Database,
@@ -90,13 +91,7 @@ function NewHoldDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
 
   const create = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
-      const res = await fetch("/api/relay/audit/legal-holds", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed to create hold");
-      return res.json();
+      return bffFetch("/api/relay/audit/legal-holds", { method: "POST", body });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["legal-holds"] });
@@ -266,13 +261,10 @@ function ReleaseHoldDialog({
 
   const release = useMutation({
     mutationFn: async ({ id, releaseReason }: { id: string; releaseReason: string }) => {
-      const res = await fetch(`/api/relay/audit/legal-holds/${id}/release`, {
+      return bffFetch(`/api/relay/audit/legal-holds/${id}/release`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ releaseReason }),
+        body: { releaseReason },
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed to release hold");
-      return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["legal-holds"] });
@@ -349,8 +341,7 @@ function HoldCard({
 
   const refreshManifest = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/relay/audit/legal-holds/${id}/manifest/refresh`, { method: "POST" });
-      return res.ok ? res.json() : Promise.reject();
+      return bffFetch(`/api/relay/audit/legal-holds/${id}/manifest/refresh`, { method: "POST" });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["legal-hold-detail", hold.id] }),
   });

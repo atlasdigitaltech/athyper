@@ -1267,3 +1267,36 @@ COMMENT ON TABLE log.notification_dlq IS
 -- mismatch that caused insertDlq() writes to silently fail against the live
 -- table. The render worker now uses framework/runtime/services/jobs/render-dlq.ts
 -- which targets the §28 column set directly.
+
+
+-- ============================================================================
+-- §platform  platform_audit_log
+-- Global audit for shared.* schema mutations (no tenant_id — these are
+-- platform-level changes affecting all tenants). Separate from log.audit_log
+-- which requires tenant_id NOT NULL and is scoped to tenant data mutations.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS log.platform_audit_log (
+    id           uuid        NOT NULL DEFAULT shared.uuidv7() PRIMARY KEY,
+    entity_type  text        NOT NULL,
+    entity_id    uuid,
+    operation    text        NOT NULL,
+    actor_id     uuid        NOT NULL,
+    payload      jsonb       NOT NULL DEFAULT '{}',
+    checksum     text,
+    row_count    integer,
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT pal_entity_chk    CHECK (btrim(entity_type) <> ''),
+    CONSTRAINT pal_operation_chk CHECK (operation IN (
+        'create', 'update', 'delete',
+        'bulk_import', 'version_create', 'access_grant', 'access_revoke'
+    )),
+    CONSTRAINT pal_row_count_chk CHECK (row_count IS NULL OR row_count >= 0)
+);
+
+COMMENT ON TABLE log.platform_audit_log IS
+    'ARCHETYPE=D;SCOPE=N;SUBTYPE=APPEND_ONLY. Audit trail for shared.* schema mutations. '
+    'No tenant_id — shared tables are global. entity_type = schema.table_name. '
+    'checksum/row_count populated for bulk_import operations.';
+
+CREATE INDEX IF NOT EXISTS pal_entity_idx  ON log.platform_audit_log (entity_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS pal_actor_idx   ON log.platform_audit_log (actor_id, created_at DESC);

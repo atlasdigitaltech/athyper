@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { bffFetch } from "@/lib/bff-fetch";
 import { Plus, RefreshCw, GitBranch, Calendar, ChevronRight } from "lucide-react";
 import { PageFrame } from "@athyper/ui/layout";
 import { EmptyState } from "@athyper/ui/composites";
@@ -76,12 +77,7 @@ function NewRunDialog({ open, onOpenChange, cycleTypes }: {
 
   const create = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
-      const res = await fetch("/api/governance/cycle-runs", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed");
-      return res.json();
+      return bffFetch("/api/governance/cycle-runs", { method: "POST", body });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["governance-runs"] });

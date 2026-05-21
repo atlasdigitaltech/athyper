@@ -225,7 +225,15 @@ DO UPDATE SET
     updated_at = now(), updated_by = EXCLUDED.created_by;
 
 
--- ── spend_category / commodity_category ──────────────────────────────────────────
+-- ── commodity_category ─────────────────────────────────────────────────────────
+
+UPDATE master.owner_type
+   SET status = 'deprecated',
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+ WHERE tenant_id IS NULL
+   AND code = 'spend_category'
+   AND status <> 'deprecated';
 
 INSERT INTO master.owner_type (
     tenant_id, code, name, description,
@@ -236,16 +244,6 @@ INSERT INTO master.owner_type (
     allowed_address_purposes, allowed_contact_purposes,
     status, created_by
 ) VALUES
-(
-    NULL, 'spend_category', 'Spend Category',
-    'Procurement spend category. Target for commodity classification bridges.',
-    'master', 'spend_category', 'id',
-    true, 'tenant_id',
-    false, false,
-    true, 'custom',
-    ARRAY[]::text[], ARRAY[]::text[],
-    'active', '00000000-0000-0000-0000-000000000000'
-),
 (
     NULL, 'commodity_category', 'Commodity Category',
     'Shared commodity category. Target for commodity classification bridges across spend, sales, and inventory.',

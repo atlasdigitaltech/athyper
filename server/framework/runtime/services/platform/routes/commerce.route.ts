@@ -110,6 +110,19 @@ async function resolvePlanId(db: Kysely<any>, planCode: string): Promise<string 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveActivePlanVersionId(db: Kysely<any>, planCode: string): Promise<string | null> {
+  const row = await db
+    .selectFrom("shared.subscription_plan_version as spv")
+    .innerJoin("shared.subscription_plan as sp", "sp.id" as never, "spv.plan_id" as never)
+    .select("spv.id" as never)
+    .where("sp.code" as never, "=", planCode as never)
+    .where("spv.valid_to" as never, "is" as never, null as never)
+    .where("spv.status" as never, "=", "active" as never)
+    .executeTakeFirst() as { id: string } | undefined;
+  return row?.id ?? null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function resolveModuleId(db: Kysely<any>, moduleCode: string): Promise<string | null> {
   const row = await db
     .selectFrom("shared.module as m")
@@ -455,6 +468,55 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // Plan versioning
+  // POST /plans/:planCode/versions — create a new active version, closing prior
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // POST /platform/control/commerce/plans/:planCode/versions
+  // body: { valid_from?: ISO date string, max_users?: number, metadata?: object }
+  // The trigger fn_close_prior_plan_version() automatically closes the prior active version.
+  const createPlanVersionHandler: RequestHandler = async (req, res, next) => {
+    try {
+      if (!await adminGuard(req, res, auth)) return;
+      const { planCode } = req.params as Record<string, string>;
+      const body = req.body as Record<string, unknown>;
+
+      const planId = await resolvePlanId(db, planCode!);
+      if (!planId) {
+        res.status(404).json({ error: "NOT_FOUND", message: `Plan '${planCode}' not found` });
+        return;
+      }
+
+      const validFrom = typeof body["valid_from"] === "string" ? body["valid_from"] : new Date().toISOString().slice(0, 10);
+      const maxUsers  = typeof body["max_users"]  === "number" ? body["max_users"]  : null;
+      const metadata  = body["metadata"] != null && typeof body["metadata"] === "object" ? body["metadata"] : null;
+
+      const row = await db
+        .insertInto("shared.subscription_plan_version" as never)
+        .values({
+          plan_id:        planId   as never,
+          valid_from:     validFrom as never,
+          valid_to:       null     as never,
+          max_users:      maxUsers  as never,
+          metadata:       metadata  as never,
+          status:         "active"  as never,
+          created_by:     SYSTEM_PRINCIPAL_UUID as never,
+        } as never)
+        .returning([
+          "id" as never, "plan_id" as never, "version_number" as never,
+          "valid_from" as never, "valid_to" as never,
+          "max_users" as never, "status" as never, "created_at" as never,
+        ])
+        .executeTakeFirstOrThrow();
+
+      res.status(201).json({ data: { ...row as object, plan_code: planCode } });
+    } catch (err) {
+      logger?.error("commerce.plan.versions.create.error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // Surface 3 — Plan composition
   // plan × module  |  plan × permission  |  plan × feature
   // plan_*_access tables have no updated_at/updated_by — upsert overwrites only.
@@ -471,8 +533,9 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = await (db.selectFrom("shared.plan_module_access as pma") as any)
-        .innerJoin("shared.module as m",             "m.id",   "pma.module_id")
-        .innerJoin("shared.subscription_plan as sp", "sp.id",  "pma.plan_id")
+        .innerJoin("shared.module as m",                        "m.id",   "pma.module_id")
+        .innerJoin("shared.subscription_plan_version as spv",  "spv.id", "pma.plan_version_id")
+        .innerJoin("shared.subscription_plan as sp",           "sp.id",  "spv.plan_id")
         .select([
           "pma.id"                as never,
           "m.code"                as never,
@@ -483,7 +546,9 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
           "pma.user_limit"        as never,
           "pma.created_at"        as never,
         ])
-        .where("sp.code" as never, "=", planCode as never)
+        .where("sp.code"      as never, "=",    planCode as never)
+        .where("spv.valid_to" as never, "is",   null     as never)
+        .where("spv.status"   as never, "=",    "active" as never)
         .orderBy("m.code" as never, "asc")
         .execute();
 
@@ -509,12 +574,12 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
         return;
       }
 
-      const [planId, moduleId] = await Promise.all([
-        resolvePlanId(db, planCode!),
+      const [planVersionId, moduleId] = await Promise.all([
+        resolveActivePlanVersionId(db, planCode!),
         resolveModuleId(db, moduleCode!),
       ]);
-      if (!planId)   { res.status(404).json({ error: "NOT_FOUND", message: `Plan '${planCode}' not found` }); return; }
-      if (!moduleId) { res.status(404).json({ error: "NOT_FOUND", message: `Module '${moduleCode}' not found` }); return; }
+      if (!planVersionId) { res.status(404).json({ error: "NOT_FOUND", message: `No active version for plan '${planCode}'` }); return; }
+      if (!moduleId)      { res.status(404).json({ error: "NOT_FOUND", message: `Module '${moduleCode}' not found` }); return; }
 
       const addonPrice = typeof body["addon_price_monthly"] === "number" ? body["addon_price_monthly"] : null;
       const userLimit  = typeof body["user_limit"]  === "number" ? body["user_limit"]  : null;
@@ -522,8 +587,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       const row = await db
         .insertInto("shared.plan_module_access" as never)
         .values({
-          plan_id:             planId     as never,
-          module_id:           moduleId   as never,
+          plan_version_id:     planVersionId as never,
+          module_id:           moduleId      as never,
           is_included:         isIncluded as never,
           is_addon:            isAddon    as never,
           addon_price_monthly: addonPrice as never,
@@ -557,19 +622,19 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       if (!await adminGuard(req, res, auth)) return;
       const { planCode, moduleCode } = req.params as Record<string, string>;
 
-      const [planId, moduleId] = await Promise.all([
-        resolvePlanId(db, planCode!),
+      const [planVersionId, moduleId] = await Promise.all([
+        resolveActivePlanVersionId(db, planCode!),
         resolveModuleId(db, moduleCode!),
       ]);
-      if (!planId || !moduleId) {
-        res.status(404).json({ error: "NOT_FOUND", message: "Plan or module not found" });
+      if (!planVersionId || !moduleId) {
+        res.status(404).json({ error: "NOT_FOUND", message: "Plan active version or module not found" });
         return;
       }
 
       const result = await db
         .deleteFrom("shared.plan_module_access" as never)
-        .where("plan_id"   as never, "=", planId   as never)
-        .where("module_id" as never, "=", moduleId as never)
+        .where("plan_version_id" as never, "=", planVersionId as never)
+        .where("module_id"       as never, "=", moduleId      as never)
         .returning("id" as never)
         .executeTakeFirst() as { id: string } | undefined;
 
@@ -591,8 +656,9 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = await (db.selectFrom("shared.plan_permission_access as ppa") as any)
-        .innerJoin("shared.permission as p",         "p.id",  "ppa.permission_id")
-        .innerJoin("shared.subscription_plan as sp", "sp.id", "ppa.plan_id")
+        .innerJoin("shared.permission as p",                   "p.id",   "ppa.permission_id")
+        .innerJoin("shared.subscription_plan_version as spv",  "spv.id", "ppa.plan_version_id")
+        .innerJoin("shared.subscription_plan as sp",           "sp.id",  "spv.plan_id")
         .select([
           "ppa.id"                as never,
           "p.code"                as never,
@@ -604,7 +670,9 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
           "ppa.usage_limit"       as never,
           "ppa.created_at"        as never,
         ])
-        .where("sp.code" as never, "=", planCode as never)
+        .where("sp.code"      as never, "=",  planCode as never)
+        .where("spv.valid_to" as never, "is", null     as never)
+        .where("spv.status"   as never, "=",  "active" as never)
         .orderBy("p.sort_order" as never, "asc")
         .execute();
 
@@ -630,12 +698,12 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
         return;
       }
 
-      const [planId, permissionId] = await Promise.all([
-        resolvePlanId(db, planCode!),
+      const [planVersionId, permissionId] = await Promise.all([
+        resolveActivePlanVersionId(db, planCode!),
         resolvePermissionId(db, permissionCode!),
       ]);
-      if (!planId)       { res.status(404).json({ error: "NOT_FOUND", message: `Plan '${planCode}' not found` }); return; }
-      if (!permissionId) { res.status(404).json({ error: "NOT_FOUND", message: `Permission '${permissionCode}' not found` }); return; }
+      if (!planVersionId) { res.status(404).json({ error: "NOT_FOUND", message: `No active version for plan '${planCode}'` }); return; }
+      if (!permissionId)  { res.status(404).json({ error: "NOT_FOUND", message: `Permission '${permissionCode}' not found` }); return; }
 
       const addonPrice = typeof body["addon_price_monthly"] === "number" ? body["addon_price_monthly"] : null;
       const usageLimit = typeof body["usage_limit"] === "number" ? body["usage_limit"] : null;
@@ -643,8 +711,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       const row = await db
         .insertInto("shared.plan_permission_access" as never)
         .values({
-          plan_id:             planId       as never,
-          permission_id:       permissionId as never,
+          plan_version_id:     planVersionId as never,
+          permission_id:       permissionId  as never,
           is_included:         isIncluded   as never,
           is_addon:            isAddon      as never,
           addon_price_monthly: addonPrice   as never,
@@ -678,19 +746,19 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       if (!await adminGuard(req, res, auth)) return;
       const { planCode, permissionCode } = req.params as Record<string, string>;
 
-      const [planId, permissionId] = await Promise.all([
-        resolvePlanId(db, planCode!),
+      const [planVersionId, permissionId] = await Promise.all([
+        resolveActivePlanVersionId(db, planCode!),
         resolvePermissionId(db, permissionCode!),
       ]);
-      if (!planId || !permissionId) {
-        res.status(404).json({ error: "NOT_FOUND", message: "Plan or permission not found" });
+      if (!planVersionId || !permissionId) {
+        res.status(404).json({ error: "NOT_FOUND", message: "Plan active version or permission not found" });
         return;
       }
 
       const result = await db
         .deleteFrom("shared.plan_permission_access" as never)
-        .where("plan_id"       as never, "=", planId       as never)
-        .where("permission_id" as never, "=", permissionId as never)
+        .where("plan_version_id" as never, "=", planVersionId as never)
+        .where("permission_id"   as never, "=", permissionId  as never)
         .returning("id" as never)
         .executeTakeFirst() as { id: string } | undefined;
 
@@ -712,8 +780,9 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = await (db.selectFrom("shared.plan_feature_access as pfa") as any)
-        .innerJoin("shared.enterprise_feature as ef", "ef.id", "pfa.feature_id")
-        .innerJoin("shared.subscription_plan as sp",  "sp.id", "pfa.plan_id")
+        .innerJoin("shared.enterprise_feature as ef",          "ef.id",  "pfa.feature_id")
+        .innerJoin("shared.subscription_plan_version as spv",  "spv.id", "pfa.plan_version_id")
+        .innerJoin("shared.subscription_plan as sp",           "sp.id",  "spv.plan_id")
         .select([
           "pfa.id"                as never,
           "ef.code"               as never,
@@ -724,7 +793,9 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
           "pfa.max_users"         as never,
           "pfa.created_at"        as never,
         ])
-        .where("sp.code" as never, "=", planCode as never)
+        .where("sp.code"      as never, "=",  planCode as never)
+        .where("spv.valid_to" as never, "is", null     as never)
+        .where("spv.status"   as never, "=",  "active" as never)
         .orderBy("ef.sort_order" as never, "asc")
         .execute();
 
@@ -750,12 +821,12 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
         return;
       }
 
-      const [planId, featureId] = await Promise.all([
-        resolvePlanId(db, planCode!),
+      const [planVersionId, featureId] = await Promise.all([
+        resolveActivePlanVersionId(db, planCode!),
         resolveFeatureId(db, featureCode!),
       ]);
-      if (!planId)    { res.status(404).json({ error: "NOT_FOUND", message: `Plan '${planCode}' not found` }); return; }
-      if (!featureId) { res.status(404).json({ error: "NOT_FOUND", message: `Feature '${featureCode}' not found` }); return; }
+      if (!planVersionId) { res.status(404).json({ error: "NOT_FOUND", message: `No active version for plan '${planCode}'` }); return; }
+      if (!featureId)     { res.status(404).json({ error: "NOT_FOUND", message: `Feature '${featureCode}' not found` }); return; }
 
       const addonPrice = typeof body["addon_price_monthly"] === "number" ? body["addon_price_monthly"] : null;
       const maxUsers   = typeof body["max_users"]   === "number" ? body["max_users"]   : null;
@@ -763,8 +834,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       const row = await db
         .insertInto("shared.plan_feature_access" as never)
         .values({
-          plan_id:             planId    as never,
-          feature_id:          featureId as never,
+          plan_version_id:     planVersionId as never,
+          feature_id:          featureId     as never,
           is_included:         isIncluded as never,
           is_addon:            isAddon    as never,
           addon_price_monthly: addonPrice as never,
@@ -798,19 +869,19 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       if (!await adminGuard(req, res, auth)) return;
       const { planCode, featureCode } = req.params as Record<string, string>;
 
-      const [planId, featureId] = await Promise.all([
-        resolvePlanId(db, planCode!),
+      const [planVersionId, featureId] = await Promise.all([
+        resolveActivePlanVersionId(db, planCode!),
         resolveFeatureId(db, featureCode!),
       ]);
-      if (!planId || !featureId) {
-        res.status(404).json({ error: "NOT_FOUND", message: "Plan or feature not found" });
+      if (!planVersionId || !featureId) {
+        res.status(404).json({ error: "NOT_FOUND", message: "Plan active version or feature not found" });
         return;
       }
 
       const result = await db
         .deleteFrom("shared.plan_feature_access" as never)
-        .where("plan_id"    as never, "=", planId    as never)
-        .where("feature_id" as never, "=", featureId as never)
+        .where("plan_version_id" as never, "=", planVersionId as never)
+        .where("feature_id"      as never, "=", featureId     as never)
         .returning("id" as never)
         .executeTakeFirst() as { id: string } | undefined;
 
@@ -1386,6 +1457,7 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
   router.patch( "/platform/control/commerce/features/:featureCode",  patchFeatureHandler);
 
   // Surface 3: Plan composition
+  router.post(  "/platform/control/commerce/plans/:planCode/versions",                             createPlanVersionHandler);
   router.get(   "/platform/control/commerce/plans/:planCode/modules",                              listPlanModulesHandler);
   router.put(   "/platform/control/commerce/plans/:planCode/modules/:moduleCode",                  upsertPlanModuleHandler);
   router.delete("/platform/control/commerce/plans/:planCode/modules/:moduleCode",                  deletePlanModuleHandler);

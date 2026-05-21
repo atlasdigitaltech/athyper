@@ -270,8 +270,12 @@ export async function checkPermissionBatch(
           FROM master.tenant t
           JOIN shared.subscription_plan sp
             ON sp.code = t.subscription
+          JOIN shared.subscription_plan_version spv
+            ON spv.plan_id = sp.id
+           AND spv.valid_to IS NULL
+           AND spv.status = 'active'
           JOIN shared.plan_permission_access ppa
-            ON ppa.plan_id = sp.id
+            ON ppa.plan_version_id = spv.id
           WHERE t.id = ${tenantId}
             AND ppa.permission_id = ap.id
             AND ppa.is_included = true

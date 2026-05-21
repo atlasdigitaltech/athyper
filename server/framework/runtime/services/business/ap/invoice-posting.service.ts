@@ -618,7 +618,7 @@ async function handlePostInvoiceInner(
             status: 422,
             body: {
               error:   "NO_EXPENSE_ACCOUNT",
-              message: `No expense GL account found for line ${line.line_no} (${line.item_description}). Assign a spend_category, business_intent, or ensure the company chart has at least one active posting-type expense account.`,
+              message: `No expense GL account found for line ${line.line_no} (${line.item_description}). Assign a commodity category, business intent, or ensure the company chart has at least one active posting-type expense account.`,
             },
           };
         }

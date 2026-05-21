@@ -3354,7 +3354,7 @@ CREATE TABLE IF NOT EXISTS control.commodity_classification_to_intent_rule (
 
     CONSTRAINT cir_pkey           PRIMARY KEY (id),
     CONSTRAINT cir_source_chk     CHECK (classification_source IN (
-        'COMMODITY_CATEGORY','SPEND_CATEGORY','PRODUCT','SERVICE','ITEM_GROUP','REVENUE_TYPE')),
+        'COMMODITY_CATEGORY','PRODUCT','SERVICE','ITEM_GROUP','REVENUE_TYPE')),
     CONSTRAINT cir_condition_chk  CHECK (condition_type IN (
         'AMOUNT_ABOVE','AMOUNT_BELOW','IS_RECURRING','IS_ONE_TIME','COMPANY_MATCH',
         'PROCUREMENT_METHOD','CROSS_BORDER','DOC_TYPE_MATCH','COMMODITY_MATCH',
@@ -3375,8 +3375,12 @@ COMMENT ON TABLE control.commodity_classification_to_intent_rule IS
 --      All predicates are nullable = wildcard. First match by ascending priority wins.
 -- =============================================================================
 ALTER TABLE control.commodity_classification_to_intent_rule DROP CONSTRAINT IF EXISTS cir_source_chk;
+UPDATE control.commodity_classification_to_intent_rule
+   SET classification_source = 'COMMODITY_CATEGORY',
+       updated_at = now()
+ WHERE classification_source = 'SPEND_CATEGORY';
 ALTER TABLE control.commodity_classification_to_intent_rule ADD CONSTRAINT cir_source_chk CHECK (
-    classification_source IN ('COMMODITY_CATEGORY','SPEND_CATEGORY','PRODUCT','SERVICE','ITEM_GROUP','REVENUE_TYPE')
+    classification_source IN ('COMMODITY_CATEGORY','PRODUCT','SERVICE','ITEM_GROUP','REVENUE_TYPE')
 );
 
 

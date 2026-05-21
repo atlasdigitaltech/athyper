@@ -1136,6 +1136,7 @@ async function resolveUserCompanyAccess(
   db: Kysely<any>,
   tenantId: string,
   keycloakSub: string | null,
+  realmKey = "athyper",
 ): Promise<{ allCompanies: boolean; allowedIds: string[] }> {
   if (!keycloakSub) return { allCompanies: true, allowedIds: [] };
 
@@ -1153,6 +1154,7 @@ async function resolveUserCompanyAccess(
       JOIN   master.auth_group_member   gm ON gm.principal_id = p.id AND gm.tenant_id = ${tenantId}::uuid
       JOIN   master.auth_group_role     gr ON gr.group_id = gm.group_id AND gr.tenant_id = ${tenantId}::uuid
       WHERE  pib.subject_id    = ${keycloakSub}
+        AND  pib.realm_key     = ${realmKey}
         AND  pib.provider_code = 'keycloak'
         AND  pib.tenant_id     = ${tenantId}::uuid
         AND  gr.status         = 'active'
@@ -1215,7 +1217,7 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
       if (!tenantId) { res.json([]); return; }
 
       const userSub = (claims["sub"] as string | undefined) ?? null;
-      const access = await resolveUserCompanyAccess(db, tenantId, userSub);
+      const access = await resolveUserCompanyAccess(db, tenantId, userSub, xRealm);
 
       let query = db
         .selectFrom("master.company_code as cc")

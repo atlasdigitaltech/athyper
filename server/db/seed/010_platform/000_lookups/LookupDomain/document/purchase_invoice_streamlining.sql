@@ -1,17 +1,17 @@
 -- =============================================================================
 -- 010_platform/000_lookups/LookupDomain/document/purchase_invoice_streamlining.sql
 --
--- Streamlines the document.purchase_invoice_type lookup domain and adds two
--- new companion domains required by the AP invoice flow engine:
---   · document.purchase_invoice_tax_mode
---   · document.purchase_invoice_tax_mode_source
+-- Streamlines the document.purchase_invoice_type lookup domain.
 --
 -- §V1  Archive retired lookup values (proforma, down_payment)
 -- §V2  Stamp display_tier metadata on the 7 remaining active types
--- §V3  Insert document.purchase_invoice_tax_mode domain + 3 values
--- §V4  Insert document.purchase_invoice_tax_mode_source domain + 5 values
 --
--- Idempotent: all mutations are guarded (UPDATE WHERE + INSERT WHERE NOT EXISTS).
+-- Note: purchase_invoice_tax_mode and purchase_invoice_tax_mode_source domains
+-- and their values are seeded in their own canonical files:
+--   · purchase_invoice_tax_mode.sql
+--   · purchase_invoice_tax_mode_source.sql
+--
+-- Idempotent: all mutations are guarded (UPDATE WHERE).
 -- Run order: after core lookup bootstrap; before AP flow seed files.
 -- =============================================================================
 
@@ -61,113 +61,129 @@ UPDATE control.lookup_value
    AND code IN ('debit_note', 'self_billed')
    AND tenant_id  IS NULL;
 
--- ---------------------------------------------------------------------------
--- §V3 — document.purchase_invoice_tax_mode domain + values
---
--- Describes how tax_amount relates to Invoice Total on an AP document.
--- is_extensible=false: tenants may not add custom tax modes.
--- ---------------------------------------------------------------------------
-
-INSERT INTO control.lookup_domain
-       (code, name, description, source_schema, is_extensible, status, created_by)
-SELECT 'document.purchase_invoice_tax_mode',
-       'Purchase Invoice Tax Mode',
-       'Interpretation of how tax_amount relates to Invoice Total: inclusive (tax within total), exclusive (tax added on top), or no_tax (exempt/zero-rated).',
-       'document',
-       false,
-       'active',
-       '00000000-0000-0000-0000-000000000000'::uuid
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.lookup_domain
-     WHERE code = 'document.purchase_invoice_tax_mode');
-
-INSERT INTO control.lookup_value
-       (code, name, domain_code, description, sort_order, is_system, status, created_by)
-SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,
-       true, 'active',
-       '00000000-0000-0000-0000-000000000000'::uuid
-FROM (VALUES
-    ('inclusive',
-     'Inclusive',
-     'document.purchase_invoice_tax_mode',
-     'Tax is included within Invoice Total. Net = Total ÷ (1 + rate). Common in B2C and many VAT jurisdictions.',
-     10),
-    ('exclusive',
-     'Exclusive',
-     'document.purchase_invoice_tax_mode',
-     'Tax is added on top of Invoice Total. Payable = Total + Tax. Common in B2B and GST regimes.',
-     20),
-    ('no_tax',
-     'No Tax',
-     'document.purchase_invoice_tax_mode',
-     'Invoice is tax-exempt or zero-rated. tax_amount must be 0.',
-     30)
-) AS v(code, name, domain_code, description, sort_order)
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.lookup_value x
-     WHERE x.domain_code = v.domain_code
-       AND x.code        = v.code
-       AND x.tenant_id  IS NULL);
 
 -- ---------------------------------------------------------------------------
--- §V4 — document.purchase_invoice_tax_mode_source domain + values
---
--- Records how tax_mode was determined on an AP invoice.
--- Provides an audit trail and drives UI attribution labels.
--- is_extensible=false: fixed set of determination sources.
+-- TABLE SPLIT: 029b_purchase_invoice_preflight.sql lookup metadata
 -- ---------------------------------------------------------------------------
 
-INSERT INTO control.lookup_domain
-       (code, name, description, source_schema, is_extensible, status, created_by)
-SELECT 'document.purchase_invoice_tax_mode_source',
-       'Tax Mode Source',
-       'Records how tax_mode was determined on an AP invoice, for audit trail and UI attribution.',
-       'document',
-       false,
-       'active',
-       '00000000-0000-0000-0000-000000000000'::uuid
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.lookup_domain
-     WHERE code = 'document.purchase_invoice_tax_mode_source');
+  UPDATE control.lookup_value lv
+     SET description = v.short_description,
+         sort_order = COALESCE(v.sort_order, lv.sort_order),
+         metadata = jsonb_set(
+           COALESCE(lv.metadata, '{}'::jsonb) ||
+             jsonb_strip_nulls(jsonb_build_object('display_tier', v.display_tier)),
+           '{preflight}',
+           jsonb_strip_nulls(jsonb_build_object(
+             'description', v.card_description,
+             'helper', v.helper
+           )),
+           true
+         )
+    FROM (VALUES
+      (
+        'document.purchase_invoice_type',
+        'standard',
+        'Regular supplier bill for goods received or services delivered.',
+        'Regular supplier bill for goods received or services delivered.',
+        NULL::text,
+        'primary',
+        10
+      ),
+      (
+        'document.purchase_invoice_type',
+        'credit_note',
+        'Supplier-issued credit reducing an outstanding payable.',
+        'Supplier-issued credit reducing an outstanding payable. Mirrors an original invoice in full or in part.',
+        NULL::text,
+        'primary',
+        20
+      ),
+      (
+        'document.purchase_invoice_type',
+        'debit_note',
+        'Buyer-issued document charging the supplier for a shortfall or breach.',
+        'Buyer-issued document charging the supplier for a shortfall or breach. Reduces what we owe them.',
+        NULL::text,
+        'primary',
+        30
+      ),
+      (
+        'document.purchase_invoice_type',
+        'advance',
+        'Standalone prepayment to a supplier before any work or delivery.',
+        'Standalone prepayment to a supplier before any work or delivery and recovered by future invoices.',
+        NULL::text,
+        'primary',
+        40
+      ),
+      (
+        'document.purchase_invoice_type',
+        'retention_release',
+        'Releases previously-withheld retention back to the supplier.',
+        'Releases previously-withheld retention back to the supplier when contractual conditions are met.',
+        NULL::text,
+        'primary',
+        50
+      ),
+      (
+        'document.purchase_invoice_type',
+        'final',
+        'Closing invoice on a PO or contract.',
+        'Closing invoice on a PO or contract. Posts normally and releases any remaining encumbered budget on the parent commitment.',
+        NULL::text,
+        'advanced',
+        60
+      ),
+      (
+        'document.purchase_invoice_type',
+        'self_billed',
+        'Buyer-created invoice on behalf of the supplier under a self-billing agreement.',
+        'Buyer-created invoice on behalf of the supplier under a self-billing agreement. We compute the amount owed and notify the supplier.',
+        'Requires a contractual basis; not valid for Non-PO or One-Time Supplier.',
+        'advanced',
+        70
+      ),
+      (
+        'document.purchase_invoice_source',
+        'po_based',
+        'Invoice against an existing purchase order.',
+        'Invoice against an existing purchase order. Matched against the PO and the goods receipt.',
+        NULL::text,
+        NULL::text,
+        10
+      ),
+      (
+        'document.purchase_invoice_source',
+        'contract_based',
+        'Invoice against an existing master agreement or framework contract.',
+        'Invoice against an existing master agreement or framework contract.',
+        NULL::text,
+        NULL::text,
+        20
+      ),
+      (
+        'document.purchase_invoice_source',
+        'non_po',
+        'Invoice with no upstream PO or contract.',
+        'Invoice with no upstream PO or contract. Approver derives intent from spend category at invoice time.',
+        NULL::text,
+        NULL::text,
+        30
+      ),
+      (
+        'document.purchase_invoice_source',
+        'one_time_supplier',
+        'Invoice from a party not in supplier master data.',
+        'Invoice from a party not in supplier master data. Inline party creation, single-use payment, no recurring relationship.',
+        NULL::text,
+        NULL::text,
+        40
+      )
+    ) AS v(domain_code, code, short_description, card_description, helper, display_tier, sort_order)
+   WHERE lv.domain_code = v.domain_code
+     AND lv.code = v.code
+     AND lv.tenant_id IS NULL;
 
-INSERT INTO control.lookup_value
-       (code, name, domain_code, description, sort_order, is_system, status, created_by)
-SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,
-       true, 'active',
-       '00000000-0000-0000-0000-000000000000'::uuid
-FROM (VALUES
-    ('supplier_profile',
-     'Supplier Profile',
-     'document.purchase_invoice_tax_mode_source',
-     'Tax mode defaulted from the supplier''s tax configuration profile.',
-     10),
-    ('tax_group',
-     'Tax Group',
-     'document.purchase_invoice_tax_mode_source',
-     'Tax mode inferred from the invoice''s tax group settings.',
-     20),
-    ('company_default',
-     'Company Default',
-     'document.purchase_invoice_tax_mode_source',
-     'Tax mode set from the company code''s default tax configuration.',
-     30),
-    ('user_override',
-     'User Override',
-     'document.purchase_invoice_tax_mode_source',
-     'Tax mode was manually overridden by the user (requires ap.override_tax_mode permission).',
-     40),
-    ('cannot_infer',
-     'Cannot Infer',
-     'document.purchase_invoice_tax_mode_source',
-     'System could not determine tax mode from available supplier/tax data — user must enter manually.',
-     50)
-) AS v(code, name, domain_code, description, sort_order)
-WHERE NOT EXISTS (
-    SELECT 1 FROM control.lookup_value x
-     WHERE x.domain_code = v.domain_code
-       AND x.code        = v.code
-       AND x.tenant_id  IS NULL);
-
-RAISE NOTICE 'purchase_invoice_streamlining: lookup values updated, tax_mode and tax_mode_source domains seeded';
+RAISE NOTICE 'purchase_invoice_streamlining: invoice_type lookup values retired and display_tier metadata stamped';
 
 END $$;

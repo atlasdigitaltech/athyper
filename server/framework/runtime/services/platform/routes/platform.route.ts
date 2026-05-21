@@ -112,6 +112,11 @@ function toEntity(row: Record<string, any>) {
     label_plural:    (row.label_plural   ?? null) as string | null,
     description:     (row.description    ?? null) as string | null,
     icon_key:        (row.icon_key       ?? null) as string | null,
+    display_config:  (row.display_config ?? null) as Record<string, unknown> | null,
+    feature_flags:   (row.feature_flags  ?? null) as Record<string, unknown> | null,
+    data_policy:     (row.data_policy    ?? null) as Record<string, unknown> | null,
+    identity_config: (row.identity_config ?? null) as Record<string, unknown> | null,
+    search_config:   (row.search_config  ?? null) as Record<string, unknown> | null,
   };
 }
 
@@ -641,6 +646,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           "e.id", "e.name", "e.entity_class", "e.ownership_model", "e.module_id",
           "e.table_schema", "e.table_name",
           "e.label_singular", "e.label_plural", "e.description", "e.icon_key",
+          "e.display_config", "e.feature_flags", "e.data_policy", "e.identity_config", "e.search_config",
         ])
         .where("e.is_active" as never, "=", true as never);
 
@@ -1221,6 +1227,25 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           "ef.sort_order",
           "ef.origin",
           "ef.cardinality",
+          "ef.default_value",
+          "ef.compute_expr",
+          "ef.enum_config",
+          "ef.enum_domain_code",
+          "ef.reference_config",
+          "ef.money_config",
+          "ef.json_config",
+          "ef.datetime_config",
+          "ef.ui_hint",
+          "ef.visibility",
+          "ef.editability",
+          "ef.lookup_config",
+          "ef.lookup_profile",
+          "ef.filter_config",
+          "ef.collection_behavior",
+          "ef.validation",
+          "ef.validation as validation_rules",
+          "ef.constraints",
+          "ef.group_key",
         ])
         .where("e.name", "=", entityName)
         .where("e.tenant_id", "is", null)
@@ -1263,7 +1288,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       if (!tenantId) { res.json(PREFS_EMPTY); return; }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.json(PREFS_EMPTY); return; }
 
       const row = await db
@@ -1465,12 +1490,13 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           .executeTakeFirst(),
         db.selectFrom("master.principal_identity_binding as ab")
           .select([
-            "ab.provider_code", "ab.username",
+            "ab.realm_key", "ab.provider_code", "ab.username",
             "ab.sync_status", "ab.synced_at", "ab.idp_enabled",
             "ab.idp_email_verified", "ab.required_actions",
           ])
           .where("ab.tenant_id", "=", tenantId)
           .where("ab.principal_id", "=", principalId)
+          .where("ab.realm_key", "=", xRealm)
           .execute(),
       ]);
 
@@ -1499,7 +1525,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       if (!tenantId) { res.json(EMPTY); return; }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.json(EMPTY); return; }
 
       // Persona + shared.persona join
@@ -2104,6 +2130,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         } as never)
         .where("tenant_id"    as never, "=", tenantId as never)
         .where("principal_id" as never, "=", principalId as never)
+        .where("realm_key" as never, "=", xRealm as never)
         .where("provider_code" as never, "=", "keycloak" as never)
         .executeTakeFirst();
 

@@ -40,7 +40,7 @@ BEGIN
 
     -- ── STAGE B: Named Products ───────────────────────────────────────────
     --   commodity_category_id resolved via LEFT JOIN on master.commodity_category
-    --   construction products have no universal spend_category (sc_code = NULL)
+    --   construction products have no universal commodity_category (sc_code = NULL)
 
     INSERT INTO master.product (
         tenant_id,
@@ -151,7 +151,7 @@ BEGIN
         ('PRD-TEL-002', 'Metro Fibre Leased Line 1Gbps',
             'Dedicated symmetric fibre, 99.9% SLA, static IP, monthly charge',
             'IC-ITSVC', 'SC-TELCO-DATA', 'service', 'MON',  3500.00),
-        -- ── Structural Materials (IC-STRUCT, no universal spend category) ────
+        -- ── Structural Materials (IC-STRUCT, no universal commodity category) ────
         ('PRD-STRL-001', 'Structural Steel Beam IPE 300',
             'Hot-rolled I-beam, S275JR grade, SABIC certified, per linear metre',
             'IC-STRUCT', NULL::text, 'physical', 'MTR',    485.00),

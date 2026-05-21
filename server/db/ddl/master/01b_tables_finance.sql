@@ -1208,7 +1208,7 @@ COMMENT ON TABLE master.product IS
     'Classifications via commodity_classification bridge.';
 COMMENT ON COLUMN master.product.default_tax_group_id IS
     'FK → control.tax_group (tenant-composite). Replaces free-text tax_code. '
-    'Resolution order: product -> spend_category -> scoped tax_rate_schedule.';
+    'Resolution order: product -> commodity_category -> scoped tax_rate_schedule.';
 
 
 -- §P6  master.item — company-level inventory config (dual-path entry)
@@ -1225,6 +1225,7 @@ ALTER TABLE master.product
 DO $$
 BEGIN
     IF to_regclass('master.product') IS NOT NULL
+       AND to_regclass('master.spend_category') IS NOT NULL
        AND EXISTS (
            SELECT 1
            FROM information_schema.columns
@@ -1318,7 +1319,7 @@ COMMENT ON TABLE master.item IS
     'UNIQUE(tenant, company, code) universal; partial UNIQUE(tenant, company, product) for Path A.';
 
 
--- §P7  master.spend_category — legacy procurement taxonomy bridge.
+-- §P7  legacy spend-category cleanup.
 -- Commodity behavior and accounting defaults are resolved through
 -- master.commodity_category and control.commodity_category_buy_policy.
 ALTER TABLE master.item
@@ -1326,6 +1327,7 @@ ALTER TABLE master.item
 DO $$
 BEGIN
     IF to_regclass('master.item') IS NOT NULL
+       AND to_regclass('master.spend_category') IS NOT NULL
        AND EXISTS (
            SELECT 1
            FROM information_schema.columns
@@ -1374,64 +1376,73 @@ ALTER TABLE master.item
     ADD CONSTRAINT im_classification_chk
     CHECK (product_id IS NOT NULL OR commodity_category_id IS NOT NULL);
 
-CREATE TABLE IF NOT EXISTS master.spend_category (
-    -- Identity
-    id               uuid         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id        uuid         NOT NULL,
-    code             text         NOT NULL,
-    name             text         NOT NULL,
-
-    -- Hierarchy
-    description      text,
-    parent_id        uuid,
-
-    -- Classification
-    root_category_id      uuid         NOT NULL,   -- trigger-maintained → tree root
-    allowed_domains       jsonb        NOT NULL DEFAULT '[]'::jsonb,
-
-    -- Nature
-    procurement_type      text         NOT NULL DEFAULT 'goods',
-
-    -- Governance (base defaults — OU mapping may override)
-    visibility                   text    NOT NULL DEFAULT 'standard',
-    is_classification_required   boolean NOT NULL DEFAULT false,
-    is_hs_required               boolean NOT NULL DEFAULT false,
-    is_regulated                 boolean NOT NULL DEFAULT false,
-
-    -- Intent default (base-level; OU mapping may override)
-    default_intent_id            uuid,
-
-    -- Display
-    sort_order       smallint     NOT NULL DEFAULT 0,
-
-    -- Metadata
-    metadata         jsonb        NOT NULL DEFAULT '{}'::jsonb,
-
-    -- Lifecycle
-    status           text         NOT NULL DEFAULT 'active',
-    is_active        boolean      GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at timestamptz,
-    status_changed_by uuid,
-
-    -- Audit
-    created_at       timestamptz  NOT NULL DEFAULT now(),
-    created_by       uuid         NOT NULL,
-    updated_at       timestamptz,
-    updated_by       uuid,
-
-    CONSTRAINT spend_category_pkey           PRIMARY KEY (id),
-    CONSTRAINT spend_category_tenant_id_uq   UNIQUE (tenant_id, id),
-    CONSTRAINT spend_category_tenant_code_uq UNIQUE (tenant_id, code),
-    CONSTRAINT spend_category_code_nonempty  CHECK (btrim(code) <> ''),
-    CONSTRAINT spend_category_name_nonempty  CHECK (btrim(name) <> ''),
-    CONSTRAINT spend_category_no_self_parent CHECK (parent_id IS DISTINCT FROM id),
-    CONSTRAINT spend_category_root_is_self   CHECK (parent_id IS NOT NULL OR root_category_id = id)
-);
-
-COMMENT ON TABLE master.spend_category IS
-    'ARCHETYPE=B;SCOPE=T. Legacy procurement taxonomy bridge. Commodity behavior, allowed intents, and accounting defaults are resolved through master.commodity_category and control.commodity_category_buy_policy.';
+DO $$
+BEGIN
+    IF to_regclass('master.spend_category') IS NOT NULL THEN
+        INSERT INTO master.commodity_category (
+            id, tenant_id, code, name, description, parent_id, root_category_id,
+            sort_order, buy_allowed, sell_allowed, inventory_allowed,
+            is_classification_required, is_hs_required, is_regulated,
+            allowed_classification_domains, metadata, status, status_changed_at,
+            status_changed_by, created_at, created_by, updated_at, updated_by
+        )
+        SELECT
+            sc.id,
+            sc.tenant_id,
+            sc.code,
+            sc.name,
+            sc.description,
+            sc.parent_id,
+            sc.root_category_id,
+            sc.sort_order,
+            true,
+            false,
+            false,
+            sc.is_classification_required,
+            sc.is_hs_required,
+            sc.is_regulated,
+            CASE
+                WHEN jsonb_typeof(sc.allowed_domains) = 'array'
+                 AND jsonb_array_length(sc.allowed_domains) > 0
+                    THEN sc.allowed_domains
+                WHEN sc.is_hs_required
+                    THEN jsonb_build_array('unspsc', 'hs')
+                ELSE jsonb_build_array('unspsc')
+            END,
+            COALESCE(sc.metadata, '{}'::jsonb)
+                || jsonb_strip_nulls(jsonb_build_object(
+                    '_legacy_source', 'spend_category',
+                    'procurement_type', sc.procurement_type,
+                    'visibility', sc.visibility,
+                    'legacy_default_intent_id', sc.default_intent_id
+                )),
+            sc.status,
+            sc.status_changed_at,
+            sc.status_changed_by,
+            sc.created_at,
+            sc.created_by,
+            sc.updated_at,
+            sc.updated_by
+        FROM master.spend_category sc
+        ON CONFLICT (tenant_id, code) DO UPDATE SET
+            name = EXCLUDED.name,
+            description = EXCLUDED.description,
+            parent_id = EXCLUDED.parent_id,
+            root_category_id = EXCLUDED.root_category_id,
+            sort_order = EXCLUDED.sort_order,
+            buy_allowed = EXCLUDED.buy_allowed,
+            is_classification_required = EXCLUDED.is_classification_required,
+            is_hs_required = EXCLUDED.is_hs_required,
+            is_regulated = EXCLUDED.is_regulated,
+            allowed_classification_domains = EXCLUDED.allowed_classification_domains,
+            metadata = master.commodity_category.metadata || EXCLUDED.metadata,
+            updated_at = now(),
+            updated_by = EXCLUDED.updated_by;
+    END IF;
+END $$;
 
 DROP TABLE IF EXISTS master.company_code_spend_policy CASCADE;
+DROP TABLE IF EXISTS master.spend_category CASCADE;
 
 
 -- §P8  master.commodity_classification — unified M:N bridge (entity → system code)
@@ -1493,6 +1504,19 @@ COMMENT ON TABLE master.commodity_classification IS
     'in any domain (UNSPSC, HS, NAICS, ISIC, GICS, SITC). Polymorphic owner_type + '
     'owner_id → entity, polymorphic classification_type → commodity_code or industry_code. '
     'EXCLUDE constraint ensures at most one primary per (entity, type, domain).';
+
+UPDATE master.commodity_classification cc
+   SET owner_type = 'commodity_category',
+       metadata = COALESCE(cc.metadata, '{}'::jsonb)
+           || jsonb_build_object('_legacy_owner_type', 'spend_category'),
+       updated_at = now()
+ WHERE cc.owner_type = 'spend_category'
+   AND EXISTS (
+       SELECT 1
+       FROM master.commodity_category ccat
+       WHERE ccat.tenant_id = cc.tenant_id
+         AND ccat.id = cc.owner_id
+   );
 
 
 -- §P9 / §P10  company_code_customer_profile + company_code_supplier_profile

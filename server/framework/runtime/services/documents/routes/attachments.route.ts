@@ -81,12 +81,13 @@ export interface AttachmentsRouteDeps {
 // ── Principal resolver ────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolvePrincipalId(db: Kysely<any>, sub: string, tenantId: string): Promise<string> {
+async function resolvePrincipalId(db: Kysely<any>, sub: string, tenantId: string, realmKey = "athyper"): Promise<string> {
   if (!sub) return SYSTEM_PRINCIPAL_UUID;
   const existing = await db
     .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
+    .where("pab.realm_key", "=", realmKey)
     .where("pab.tenant_id", "=", tenantId)
     .executeTakeFirst();
   return existing ? (existing.principal_id as string) : SYSTEM_PRINCIPAL_UUID;
@@ -257,7 +258,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId);
+      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
       const fileBuffer  = Buffer.from(body.data_base64, "base64");
       const sizeBytes   = body.size_bytes ?? fileBuffer.length;
       const contentType = (body.content_type ?? "application/octet-stream").slice(0, 200);
@@ -321,7 +322,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId);
+      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
 
       // ── Parse multipart with busboy ────────────────────────────────────────
       const bb = busboy({
@@ -444,7 +445,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId);
+      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
 
       const file = await svc.downloadStream({
         tenantId,
@@ -517,7 +518,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId);
+      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
 
       await svc.unlink({
         tenantId,
@@ -594,7 +595,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId);
+      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
 
       // Reset extraction + PII state so the worker doesn't short-circuit on
       // the "already extracted" check.
@@ -673,7 +674,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId);
+      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
 
       // Verify attachment belongs to this entity before renaming
       const link = await db

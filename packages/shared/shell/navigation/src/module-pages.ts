@@ -180,6 +180,7 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
   FND: [
     { key: "tenants",    label: "Tenants",          href: "/setup/tenant" },
     { key: "blueprints", label: "Blueprints",       href: "/setup/blueprints" },
+    { key: "plans",      label: "Subscription plans", href: "/setup/platform/plans" },
   ],
   META: [
     { key: "entities",    label: "Entities",          href: "/setup/metadata" },
@@ -190,6 +191,7 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
     { key: "erd",         label: "Schema ERD",        href: "/setup/metadata/erd" },
     { key: "descriptor",  label: "Descriptor tool",   href: "/setup/metadata/descriptor" },
     { key: "modules",     label: "Modules",           href: "/setup/metadata/modules" },
+    { key: "reference",   label: "Reference data",    href: "/setup/metadata/reference" },
     { key: "studio",      label: "Meta Studio",       href: "/metadata-studio" },
   ],
   IAM: [

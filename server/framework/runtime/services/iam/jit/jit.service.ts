@@ -52,6 +52,8 @@ export interface JitPrincipalInput {
   email?: string;
   /** Already-resolved tenant UUID from the session service. */
   tenant_id: string;
+  /** Realm that issued the JWT subject. */
+  realm_key?: string;
 }
 
 export interface JitPrincipalResult {
@@ -78,13 +80,14 @@ export async function jitProvisionPrincipal(
   db: Kysely<AnyDb>,
   input: JitPrincipalInput,
 ): Promise<JitPrincipalResult | null> {
-  const { sub, username, display_name, email, tenant_id } = input;
+  const { sub, username, display_name, email, tenant_id, realm_key = "athyper" } = input;
 
   // ── Step 1: Fast path — binding already exists ─────────────────────────────
   const existingBinding = await db
     .selectFrom("master.principal_identity_binding")
     .select("principal_id")
     .where("tenant_id", "=", tenant_id)
+    .where("realm_key", "=", realm_key)
     .where("provider_code", "=", "keycloak")
     .where("subject_id", "=", sub)
     .executeTakeFirst();
@@ -107,7 +110,7 @@ export async function jitProvisionPrincipal(
     // Pre-seeded principal found. Check if it already has a keycloak binding —
     // this happens when the seed used a placeholder UUID instead of the real KC sub.
     // In that case we must UPDATE rather than INSERT to avoid a unique constraint
-    // violation on (tenant_id, principal_id, provider_code).
+    // violation on (tenant_id, principal_id, realm_key, provider_code).
     principalId = existingPrincipal.id as string;
 
     const existingKCBinding = await db
@@ -115,6 +118,7 @@ export async function jitProvisionPrincipal(
       .select("subject_id")
       .where("tenant_id", "=", tenant_id)
       .where("principal_id", "=", principalId)
+      .where("realm_key", "=", realm_key)
       .where("provider_code", "=", "keycloak")
       .executeTakeFirst();
 
@@ -138,6 +142,7 @@ export async function jitProvisionPrincipal(
         })
         .where("tenant_id", "=", tenant_id)
         .where("principal_id", "=", principalId)
+        .where("realm_key", "=", realm_key)
         .where("provider_code", "=", "keycloak")
         .execute();
 
@@ -230,6 +235,7 @@ export async function jitProvisionPrincipal(
     .values({
       tenant_id,
       principal_id: principalId,
+      realm_key,
       provider_code: "keycloak",
       subject_id: sub,
       username: username || null,
@@ -240,7 +246,7 @@ export async function jitProvisionPrincipal(
       created_by: SYSTEM_UUID,
     })
     .onConflict((oc) =>
-      oc.columns(["tenant_id", "provider_code", "subject_id"]).doNothing(),
+      oc.columns(["tenant_id", "realm_key", "provider_code", "subject_id"]).doNothing(),
     )
     .execute();
 

@@ -16,7 +16,8 @@
 //
 // Phase 3 – Blueprint + Tenant Seed
 //   Directories: 900_seed_data/020_universal/**   (TIER 1 foundation + TIER 2a COA)
-//                900_seed_data/030_industry/**    (TIER 2b industry packs + TIER 3 modules)
+//                900_seed_data/030_industry/**    (TIER 2b industry packs)
+//                900_seed_data/040_modules/**     (TIER 3 module packs)
 //                900_seed_data/040_tenants/**     (per-client onboarding)
 //
 // Usage:
@@ -30,6 +31,9 @@
 //   tsx db/seed/migrate.ts --drop-only       # Drop all schemas only (no re-seed)
 //   tsx db/seed/migrate.ts --status          # Show status of all SQL files
 //   tsx db/seed/migrate.ts --force           # Re-run even if checksum unchanged
+//   tsx db/seed/migrate.ts --rebuild-entity-metadata
+//                                             # Force a system seed and rebuild
+//                                             # the control entity metadata graph
 //   tsx db/seed/migrate.ts --invalidate=<key> # Clear tracking row(s) matching <key>
 //                                             # then run normally (re-executes cleared files)
 //                                             # Use when a dev reset dropped tables but left
@@ -69,6 +73,7 @@ const __dirname = dirname(__filename);
 const DDL_DIR     = join(__dirname, "../ddl");
 const SEED_DIR    = join(__dirname, "../seed");
 const TENANTS_DIR = join(__dirname, "../tenants");
+const REPO_ROOT   = join(__dirname, "../../..");
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,6 +83,7 @@ export type Phase = 1 | 2 | 3;
 
 type Phase3Scope =
   | "blueprint"
+  | "module"
   | "post_company"
   | "final_tenant"
   | "tenant_pre_org"
@@ -110,7 +116,7 @@ export type DiscoveryOptions = {
   tenantFolder?: string;
   /** Phase 3 only — whitelist of industry-pack folder names (e.g. ["pack_infocomm"]) */
   industryPacks?: string[];
-  /** Phase 3 only — whitelist of module names inside industry packs */
+  /** Phase 3 only — whitelist of module-pack folder names (e.g. ["ap_non_po"]) */
   modules?: string[];
   /** Phase 3 only — when true, skip all files from the tenants/ directory */
   skipTenants?: boolean;
@@ -126,6 +132,92 @@ function log(data: Record<string, unknown>): void {
 
 function logError(data: Record<string, unknown>): void {
   console.error(JSON.stringify(data));
+}
+
+function unquoteEnvValue(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+    || (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function loadEnvDefaults(filePath: string): void {
+  if (!existsSync(filePath)) return;
+
+  const content = readFileSync(filePath, "utf8");
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    const match = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) continue;
+
+    const [, key, rawValue] = match;
+    if (!key || process.env[key] !== undefined) continue;
+
+    process.env[key] = unquoteEnvValue(rawValue ?? "");
+  }
+}
+
+function loadProvisionEnvDefaults(): void {
+  loadEnvDefaults(join(REPO_ROOT, "server", ".env"));
+  loadEnvDefaults(join(REPO_ROOT, "stack", "env", ".env"));
+}
+
+function localDockerHostFallback(connectionString: string): { connectionString: string; fromHost: string } | null {
+  let url: URL;
+  try {
+    url = new URL(connectionString);
+  } catch {
+    return null;
+  }
+
+  const dockerDbHosts = new Set(["db", "athyper-db-1"]);
+  const composeProjectName = process.env.COMPOSE_PROJECT_NAME;
+  if (composeProjectName) {
+    dockerDbHosts.add(`${composeProjectName}-db-1`);
+  }
+
+  if (!dockerDbHosts.has(url.hostname)) {
+    return null;
+  }
+
+  const fromHost = url.hostname;
+  url.hostname = "localhost";
+  return { connectionString: url.toString(), fromHost };
+}
+
+function isNameResolutionError(err: unknown): boolean {
+  const message = String(err);
+  return message.includes("getaddrinfo ENOTFOUND");
+}
+
+async function connectClient(connectionString: string): Promise<pg.Client> {
+  const client = new Client({ connectionString });
+
+  try {
+    await client.connect();
+    return client;
+  } catch (err) {
+    const fallback = localDockerHostFallback(connectionString);
+    if (!fallback || !isNameResolutionError(err)) {
+      throw err;
+    }
+
+    log({
+      msg: "db_connection_retry_localhost",
+      fromHost: fallback.fromHost,
+      toHost: "localhost",
+    });
+
+    const fallbackClient = new Client({ connectionString: fallback.connectionString });
+    await fallbackClient.connect();
+    return fallbackClient;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -182,26 +274,86 @@ function isTenantPreOrgFile(file: SqlFile): boolean {
     || tenantRelative.startsWith("100_org_structure/2");
 }
 
-function scopedTrackingKey(file: SqlFile): string {
+function scopedTrackingKey(file: SqlFile, explicitTenantId?: string): string {
   if (
     file.phase === 3
     && file.tenantFolder
     && (file.phase3Scope === "blueprint"
+      || file.phase3Scope === "module"
       || file.phase3Scope === "post_company"
       || file.phase3Scope === "final_tenant")
   ) {
     return `${file.key}@${file.tenantFolder}`;
   }
+  if (
+    file.phase === 3
+    && explicitTenantId
+    && (file.phase3Scope === "blueprint"
+      || file.phase3Scope === "module"
+      || file.phase3Scope === "post_company"
+      || file.phase3Scope === "final_tenant")
+  ) {
+    return `${file.key}@tenant:${explicitTenantId.toLowerCase()}`;
+  }
   return file.key;
+}
+
+function cleanIndustryPackArg(value: string): string {
+  const fileName = value.trim().replace(/\\/g, "/").split("/").pop() ?? value;
+  return fileName.replace(/\.sql$/i, "");
+}
+
+function buildIndustryPackIndex(): Map<string, string> {
+  const packDir = join(SEED_DIR, "030_industry", "100_industry_packs");
+  const index = new Map<string, string>();
+  if (!existsSync(packDir)) return index;
+
+  for (const absPath of collectSqlFiles(packDir)) {
+    const packFileName = basename(absPath, ".sql");
+    const packAlias = packFileName.replace(/^\d+_/, "");
+    index.set(packFileName, packFileName);
+    index.set(packAlias, packFileName);
+  }
+
+  return index;
+}
+
+function resolveIndustryPacks(requested?: string[]): Set<string> | undefined {
+  if (!requested || requested.length === 0) return undefined;
+
+  const index = buildIndustryPackIndex();
+  const resolved = new Set<string>();
+  const unknown: string[] = [];
+
+  for (const value of requested) {
+    const cleanValue = cleanIndustryPackArg(value);
+    const packFileName = index.get(cleanValue);
+    if (packFileName) {
+      resolved.add(packFileName);
+    } else {
+      unknown.push(value);
+    }
+  }
+
+  if (unknown.length > 0) {
+    const known = [...new Set(index.values())].sort();
+    throw new Error(
+      `Unknown --industry-pack value(s): ${unknown.join(", ")}. Known packs: ${known.join(", ")}`,
+    );
+  }
+
+  return resolved;
 }
 
 /** Discover and classify all SQL files into phases. */
 export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
   const ddlFiles: SqlFile[] = [];
   const seedFiles: SqlFile[] = [];
+  const moduleSeedFiles: SqlFile[] = [];
   const postCompanySeedFiles: SqlFile[] = [];
   const finalTenantSeedFiles: SqlFile[] = [];
   const tenantFiles: SqlFile[] = [];
+  const requestedIndustryPacks = resolveIndustryPacks(opts.industryPacks);
 
   // ── Phase 1: DDL ─────────────────────────────────────────────────────────
   if (existsSync(DDL_DIR)) {
@@ -226,6 +378,7 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
     for (const entry of seedTopEntries) {
       const dirName = entry.name;
       const dirPath = join(SEED_DIR, dirName);
+      const isModuleSeed = dirName.startsWith("040_modules");
 
       let phase: Phase;
       let phaseLabel: string;
@@ -239,6 +392,9 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
       } else if (dirName.startsWith("030_industry")) {
         phase = 3;
         phaseLabel = "Blueprint Seed";
+      } else if (isModuleSeed) {
+        phase = 3;
+        phaseLabel = "Module Seed";
       } else {
         continue;
       }
@@ -259,15 +415,15 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
         // Matching supports both "103_pack_transport" and "pack_transport" forms.
         if (phase === 3 && relFromSeed.includes("/100_industry_packs/")) {
           const packFileName = basename(absPath, ".sql");
-          const packStripped = packFileName.replace(/^\d+_/, "");
-          const allowed = opts.industryPacks ?? [];
-          if (!allowed.includes(packFileName) && !allowed.includes(packStripped)) {
+          if (!requestedIndustryPacks?.has(packFileName)) {
             continue;
           }
         }
 
-        // Module filter: include only files whose path contains a matching module name
-        if (phase === 3 && opts.modules && opts.modules.length > 0) {
+        // Module filter: include only module-pack files whose path contains
+        // a matching module name. Foundation blueprint files remain available
+        // because module packs depend on them.
+        if (isModuleSeed && opts.modules && opts.modules.length > 0) {
           const pathParts = relFromSeed.split("/");
           const matches = opts.modules.some((m) =>
             pathParts.some((p) => p === m || p.endsWith(`_${m}`)),
@@ -281,10 +437,12 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
           absPath,
           phase,
           phaseLabel,
-          ...(phase === 3 ? { phase3Scope: "blueprint" as const } : {}),
+          ...(phase === 3 ? { phase3Scope: isModuleSeed ? "module" as const : "blueprint" as const } : {}),
         };
 
-        if (isFinalTenantSeed) {
+        if (isModuleSeed) {
+          moduleSeedFiles.push(file);
+        } else if (isFinalTenantSeed) {
           if (!opts.skipTenants) finalTenantSeedFiles.push({ ...file, phase3Scope: "final_tenant" });
         } else if (isPostCompanySeed) {
           if (!opts.skipTenants) postCompanySeedFiles.push({ ...file, phase3Scope: "post_company" });
@@ -387,6 +545,7 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
   // Seed and tenant files sort alphabetically by relPath. The numeric prefixes
   // in each subfolder name provide the correct execution order.
   seedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
+  moduleSeedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
   postCompanySeedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
   finalTenantSeedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
   tenantFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
@@ -413,6 +572,7 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
       ...tenantPreOrgFiles.filter((file) => file.tenantFolder === tenantFolder),
       ...blueprintSeedFiles.map((file) => ({ ...file, tenantFolder })),
       ...postCompanySeedFiles.map((file) => ({ ...file, tenantFolder })),
+      ...moduleSeedFiles.map((file) => ({ ...file, tenantFolder })),
       ...tenantPostOrgFiles.filter((file) => file.tenantFolder === tenantFolder),
       ...finalTenantSeedFiles.map((file) => ({ ...file, tenantFolder })),
     );
@@ -420,7 +580,7 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
 
   const phase3Files = tenantScopedPhase3Files.length > 0
     ? tenantScopedPhase3Files
-    : [...blueprintSeedFiles, ...postCompanySeedFiles, ...tenantPostOrgFiles, ...finalTenantSeedFiles];
+    : [...blueprintSeedFiles, ...postCompanySeedFiles, ...moduleSeedFiles, ...tenantPostOrgFiles, ...finalTenantSeedFiles];
 
   return [
     ...ddlFiles,
@@ -452,6 +612,11 @@ function shouldAlwaysRunSeedFile(file: SqlFile): boolean {
     && (/_repair$/i.test(file.key)
       || /303_company_code_tax_fx_links$/i.test(file.key)
       || /999_common_onboarding_assertions$/i.test(file.key));
+}
+
+function shouldForceEntityMetadataRebuildFile(file: SqlFile): boolean {
+  return file.phase === 2
+    && file.key.startsWith("seed/010_platform/003_control/");
 }
 
 // ---------------------------------------------------------------------------
@@ -497,6 +662,41 @@ async function setSeedTenant(client: pg.Client, tenantId: string): Promise<void>
   await client.query(`SELECT set_config('app.seed_tenant_id', $1, false)`, [tenantId]);
 }
 
+async function teardownSeedPhaseSetup(client: pg.Client): Promise<void> {
+  await client.query(`
+    DO $seed_trigger_teardown$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgrelid = 'control.entity_lifecycle'::regclass
+          AND tgname = 'trg_el_validate_entity_binding'
+      ) THEN
+        ALTER TABLE control.entity_lifecycle ENABLE TRIGGER trg_el_validate_entity_binding;
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgrelid = 'control.entity_operation'::regclass
+          AND tgname = 'trg_eo_validate_entity_binding'
+      ) THEN
+        ALTER TABLE control.entity_operation ENABLE TRIGGER trg_eo_validate_entity_binding;
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgrelid = 'control.entity_relation'::regclass
+          AND tgname = 'trg_er_validate_target_entity'
+      ) THEN
+        ALTER TABLE control.entity_relation ENABLE TRIGGER trg_er_validate_target_entity;
+      END IF;
+    END
+    $seed_trigger_teardown$;
+
+    DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity;
+    DROP FUNCTION IF EXISTS control.trg_fn_seed_entity_code_default();
+  `);
+}
+
 async function resolveTenantIdForFolder(
   client: pg.Client,
   tenantFolder: string,
@@ -531,7 +731,7 @@ async function resolveTenantIdForFolder(
 async function runPhases(
   connectionString: string,
   phases: Phase[],
-  opts: { force: boolean; tenantId?: string; discovery?: DiscoveryOptions },
+  opts: { force: boolean; rebuildEntityMetadata?: boolean; tenantId?: string; discovery?: DiscoveryOptions },
 ): Promise<void> {
   const files = discoverSqlFiles(opts.discovery ?? {}).filter((f) => phases.includes(f.phase));
   const tenantFolders = [
@@ -549,10 +749,9 @@ async function runPhases(
     );
   }
 
-  const client = new Client({ connectionString });
+  const client = await connectClient(connectionString);
 
   try {
-    await client.connect();
     await ensureTrackingTable(client);
 
     // Set system tenant context so triggers that call shared.current_tenant_id()
@@ -561,6 +760,11 @@ async function runPhases(
     await client.query(
       `SET app.current_tenant_id = '00000000-0000-0000-0000-000000000000'`,
     );
+
+    if (opts.rebuildEntityMetadata) {
+      await client.query(`SET app.rebuild_entity_metadata = 'true'`);
+      log({ msg: "migrate_rebuild_entity_metadata_enabled" });
+    }
 
     // Set seed tenant for Phase 3 blueprint/tenant provisioning.
     // SQL files under 020_universal/ and 030_industry/ call
@@ -601,10 +805,13 @@ async function runPhases(
       totalFiles: files.length,
       alreadyExecuted: executed.size,
       force: opts.force,
+      rebuildEntityMetadata: !!opts.rebuildEntityMetadata,
       seedTenantId: opts.tenantId ?? "(not set — will auto-resolve from master.tenant before Phase 3)",
     });
 
-    for (const file of files) {
+    let seedLoopSucceeded = false;
+    try {
+      for (const file of files) {
       if (
         file.phase === 3
         && file.tenantFolder
@@ -681,6 +888,7 @@ async function runPhases(
           END
           $seed_trigger_setup$;
         `);
+        seedSetupApplied = true;
 
         // 2. Install a temporary BEFORE INSERT trigger on control.entity that
         //    derives entity_code from name when the caller omits it.
@@ -705,16 +913,17 @@ async function runPhases(
               BEFORE INSERT ON control.entity
               FOR EACH ROW EXECUTE FUNCTION control.trg_fn_seed_entity_code_default();
         `);
-        seedSetupApplied = true;
       }
 
       const sql = readFileSync(file.absPath, "utf-8");
       const hash = checksum(sql);
-      const fileKey = scopedTrackingKey(file);
+      const fileKey = scopedTrackingKey(file, opts.tenantId);
       const prev = executed.get(fileKey);
       const alwaysRun = shouldAlwaysRunSeedFile(file);
+      const forceFile = opts.force
+        || (!!opts.rebuildEntityMetadata && shouldForceEntityMetadataRebuildFile(file));
 
-      if (prev === hash && !opts.force && !alwaysRun) {
+      if (prev === hash && !forceFile && !alwaysRun) {
         log({ msg: "migrate_skip", file: fileKey, sourceFile: file.key, reason: "already_executed" });
         continue;
       }
@@ -729,6 +938,7 @@ async function runPhases(
         tenantFolder: file.tenantFolder,
         tenantId: activeTenantId,
         changed: prev != null && prev !== hash,
+        forced: forceFile && prev === hash,
         alwaysRun,
       });
 
@@ -765,7 +975,7 @@ async function runPhases(
                 `DELETE FROM public.schema_provisions
                  WHERE file_name LIKE $1
                  RETURNING file_name`,
-                [`${missingSchema}/01%`],
+                [`ddl/${missingSchema}/01%`],
               );
               if (cleared.rows.length > 0) {
                 for (const row of cleared.rows) {
@@ -794,6 +1004,23 @@ async function runPhases(
         throw new Error(`Migration failed at ${fileKey}: ${errStr}`);
       }
     }
+      seedLoopSucceeded = true;
+    } finally {
+      if (seedSetupApplied) {
+        try {
+          await teardownSeedPhaseSetup(client);
+          seedSetupApplied = false;
+        } catch (err) {
+          logError({
+            msg: "migrate_seed_setup_teardown_failed",
+            error: String(err),
+          });
+          if (seedLoopSucceeded) {
+            throw err;
+          }
+        }
+      }
+    }
 
     log({
       msg: "migrate_complete",
@@ -801,52 +1028,15 @@ async function runPhases(
       executed: results.length,
       totalMs: results.reduce((sum, r) => sum + r.durationMs, 0),
     });
-
-    // Tear down seed-phase setup (only if it was actually applied).
-    if (seedSetupApplied) {
-      await client.query(`
-        DO $seed_trigger_teardown$
-        BEGIN
-          IF EXISTS (
-            SELECT 1 FROM pg_trigger
-            WHERE tgrelid = 'control.entity_lifecycle'::regclass
-              AND tgname = 'trg_el_validate_entity_binding'
-          ) THEN
-            ALTER TABLE control.entity_lifecycle ENABLE TRIGGER trg_el_validate_entity_binding;
-          END IF;
-
-          IF EXISTS (
-            SELECT 1 FROM pg_trigger
-            WHERE tgrelid = 'control.entity_operation'::regclass
-              AND tgname = 'trg_eo_validate_entity_binding'
-          ) THEN
-            ALTER TABLE control.entity_operation ENABLE TRIGGER trg_eo_validate_entity_binding;
-          END IF;
-
-          IF EXISTS (
-            SELECT 1 FROM pg_trigger
-            WHERE tgrelid = 'control.entity_relation'::regclass
-              AND tgname = 'trg_er_validate_target_entity'
-          ) THEN
-            ALTER TABLE control.entity_relation ENABLE TRIGGER trg_er_validate_target_entity;
-          END IF;
-        END
-        $seed_trigger_teardown$;
-
-        DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity;
-        DROP FUNCTION IF EXISTS control.trg_fn_seed_entity_code_default();
-      `);
-    }
   } finally {
     await client.end();
   }
 }
 
 async function runReset(connectionString: string): Promise<void> {
-  const client = new Client({ connectionString });
+  const client = await connectClient(connectionString);
 
   try {
-    await client.connect();
     log({ msg: "reset_start" });
 
     const schemas = [
@@ -888,9 +1078,8 @@ async function runInvalidate(
   connectionString: string,
   pattern: string,
 ): Promise<void> {
-  const client = new Client({ connectionString });
+  const client = await connectClient(connectionString);
   try {
-    await client.connect();
     await ensureTrackingTable(client);
     const result = await client.query<{ file_name: string }>(
       `DELETE FROM public.schema_provisions
@@ -911,11 +1100,14 @@ async function runInvalidate(
   }
 }
 
-async function runStatus(connectionString: string, discovery: DiscoveryOptions = {}): Promise<void> {
-  const client = new Client({ connectionString });
+async function runStatus(
+  connectionString: string,
+  discovery: DiscoveryOptions = {},
+  tenantId?: string,
+): Promise<void> {
+  const client = await connectClient(connectionString);
 
   try {
-    await client.connect();
     await ensureTrackingTable(client);
 
     const executed = await getExecuted(client);
@@ -939,7 +1131,7 @@ async function runStatus(connectionString: string, discovery: DiscoveryOptions =
     for (const file of allFiles) {
       const sql = readFileSync(file.absPath, "utf-8");
       const hash = checksum(sql);
-      const fileKey = scopedTrackingKey(file);
+      const fileKey = scopedTrackingKey(file, tenantId);
       const prev = executed.get(fileKey);
 
       let status: string;
@@ -982,6 +1174,8 @@ async function runStatus(connectionString: string, discovery: DiscoveryOptions =
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
+  loadProvisionEnvDefaults();
+
   const args = process.argv.slice(2);
 
   const LOCAL_DEFAULT =
@@ -995,6 +1189,9 @@ async function main(): Promise<void> {
   }
 
   const force = args.includes("--force");
+  const rebuildEntityMetadata =
+    args.includes("--rebuild-entity-metadata")
+    || /^(1|true|on|yes)$/i.test(process.env.REBUILD_ENTITY_METADATA ?? "");
   const reset = args.includes("--reset");
   const dropOnly = args.includes("--drop-only");
   const status = args.includes("--status");
@@ -1008,7 +1205,7 @@ async function main(): Promise<void> {
 
   // High-level convenience flags (all idempotent via checksum tracking)
   const ddlOnly    = args.includes("--ddl-only");     // Stage 1 only
-  const systemOnly = args.includes("--system-only");  // Stage 2 only (DDL must exist)
+  const systemOnly = args.includes("--system-only");  // Stages 1+2
   const noDemo     = args.includes("--no-demo");      // Stages 1+2
   const demoOnly   = args.includes("--demo-only");    // Stages 1+2+3 (ensures prerequisites)
   const runAll     = args.includes("--all");
@@ -1057,14 +1254,14 @@ async function main(): Promise<void> {
           console.log(`\n  Phase ${f.phase} — ${f.phaseLabel}`);
           lastPhase = f.phase;
         }
-        console.log(`    ${scopedTrackingKey(f)}`);
+        console.log(`    ${scopedTrackingKey(f, tenantId)}`);
       }
       console.log();
       return;
     }
 
     if (status) {
-      await runStatus(connectionString, discovery);
+      await runStatus(connectionString, discovery, tenantId);
       return;
     }
 
@@ -1112,7 +1309,12 @@ async function main(): Promise<void> {
       phases = [1, 2, 3];
     }
 
-    await runPhases(connectionString, phases, { force, tenantId, discovery });
+    await runPhases(connectionString, phases, {
+      force,
+      rebuildEntityMetadata,
+      tenantId,
+      discovery,
+    });
   } catch (err) {
     const errStr =
       err instanceof AggregateError

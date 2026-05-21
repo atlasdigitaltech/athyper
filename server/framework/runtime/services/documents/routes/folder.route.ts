@@ -32,12 +32,13 @@ export interface FolderRouteDeps {
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolvePrincipalId(db: Kysely<any>, sub: string, tenantId: string): Promise<string> {
+async function resolvePrincipalId(db: Kysely<any>, sub: string, tenantId: string, realmKey = "athyper"): Promise<string> {
   if (!sub) return SYSTEM_PRINCIPAL_UUID;
   const row = await db
     .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
+    .where("pab.realm_key", "=", realmKey)
     .where("pab.tenant_id", "=", tenantId)
     .executeTakeFirst();
   return row ? (row.principal_id as string) : SYSTEM_PRINCIPAL_UUID;
@@ -114,7 +115,7 @@ export function registerFolderRoutes(router: Router, deps: FolderRouteDeps): voi
       }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId);
+      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
       const folderId    = crypto.randomUUID();
 
       await db
@@ -160,7 +161,7 @@ export function registerFolderRoutes(router: Router, deps: FolderRouteDeps): voi
       if (!name) { res.status(400).json({ error: "MISSING_FIELDS", message: "name is required" }); return; }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId);
+      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
 
       await db
         .updateTable("master.attachment_folder" as never)

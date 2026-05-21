@@ -342,196 +342,122 @@ BEGIN
     v_sc_const := shared.uuidv7();
     v_sc_trade := shared.uuidv7();
 
-    INSERT INTO master.spend_category (
+    INSERT INTO master.commodity_category (
         id, tenant_id, code, name, description,
         parent_id, root_category_id,
-        procurement_type, visibility, sort_order,
-        metadata, created_by)
+        level_no, sort_order, buy_allowed,
+        metadata, status, created_by)
     VALUES
     (v_sc_it,    v_tid, 'SC-IT',    'Information Technology',
      'All IT goods and services: hardware, software, managed services',
-     NULL, v_sc_it,    'services', 'standard', 10, v_meta, v_su),
+     NULL, v_sc_it,    1, 10, true, v_meta || '{"procurement_type":"services","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_sc_prof,  v_tid, 'SC-PROF',  'Professional Services',
      'Legal, audit, advisory, consulting and other professional services',
-     NULL, v_sc_prof,  'services', 'standard', 20, v_meta, v_su),
+     NULL, v_sc_prof,  1, 20, true, v_meta || '{"procurement_type":"services","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_sc_facil, v_tid, 'SC-FACIL', 'Facilities & Utilities',
      'Office rent, utilities, telecommunications, maintenance',
-     NULL, v_sc_facil, 'goods',    'standard', 30, v_meta, v_su),
+     NULL, v_sc_facil, 1, 30, true, v_meta || '{"procurement_type":"goods","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_sc_const, v_tid, 'SC-CONST', 'Construction Materials',
      'Raw materials, consumables, and equipment for SSK construction operations',
-     NULL, v_sc_const, 'goods',    'standard', 40, v_meta, v_su),
+     NULL, v_sc_const, 1, 40, true, v_meta || '{"procurement_type":"goods","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_sc_trade, v_tid, 'SC-TRADE', 'Trading Goods',
      'Import and local procurement of goods for TEGY trading operations',
-     NULL, v_sc_trade, 'goods',    'standard', 50, v_meta, v_su)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
+     NULL, v_sc_trade, 1, 50, true, v_meta || '{"procurement_type":"goods","visibility":"standard"}'::jsonb, 'active', v_su)
+    ON CONFLICT (tenant_id, code) DO UPDATE
+       SET name             = EXCLUDED.name,
+           description      = EXCLUDED.description,
+           parent_id        = NULL,
+           root_category_id = master.commodity_category.id,
+           level_no         = 1,
+           sort_order       = EXCLUDED.sort_order,
+           buy_allowed      = true,
+           metadata         = master.commodity_category.metadata
+                              || jsonb_build_object('_seed', EXCLUDED.metadata -> '_seed')
+                              || jsonb_build_object(
+                                   'procurement_type', EXCLUDED.metadata ->> 'procurement_type',
+                                   'visibility', EXCLUDED.metadata ->> 'visibility'
+                                 ),
+           status           = 'active',
+           updated_at       = now(),
+           updated_by       = v_su;
 
     -- Re-resolve root IDs in case of conflict (already existed)
-    SELECT id INTO v_sc_it    FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-IT';
-    SELECT id INTO v_sc_prof  FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-PROF';
-    SELECT id INTO v_sc_facil FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-FACIL';
-    SELECT id INTO v_sc_const FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-CONST';
-    SELECT id INTO v_sc_trade FROM master.spend_category WHERE tenant_id = v_tid AND code = 'SC-TRADE';
+    SELECT id INTO v_sc_it    FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-IT';
+    SELECT id INTO v_sc_prof  FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-PROF';
+    SELECT id INTO v_sc_facil FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-FACIL';
+    SELECT id INTO v_sc_const FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-CONST';
+    SELECT id INTO v_sc_trade FROM master.commodity_category WHERE tenant_id = v_tid AND code = 'SC-TRADE';
 
     -- ── STAGE B: Leaf categories ─────────────────────────────────────────────
-    INSERT INTO master.spend_category (
+    INSERT INTO master.commodity_category (
         tenant_id, code, name, description,
         parent_id, root_category_id,
-        procurement_type, visibility, sort_order,
-        metadata, created_by)
+        level_no, sort_order, buy_allowed,
+        metadata, status, created_by)
     VALUES
     -- IT children
     (v_tid, 'SC-IT-HW', 'Hardware & Infrastructure',
      'Servers, network equipment, end-user devices, DC infrastructure, cables',
-     v_sc_it, v_sc_it, 'goods',    'standard', 11, v_meta, v_su),
+     v_sc_it, v_sc_it, 2, 11, true, v_meta || '{"procurement_type":"goods","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_tid, 'SC-IT-SW', 'Software & Licenses',
      'Commercial software, SaaS subscriptions, OS, database, productivity',
-     v_sc_it, v_sc_it, 'services', 'standard', 12, v_meta, v_su),
+     v_sc_it, v_sc_it, 2, 12, true, v_meta || '{"procurement_type":"services","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_tid, 'SC-IT-SVC', 'IT Services & Consulting',
      'Managed services, outsourcing, NOC/SOC, implementation, support',
-     v_sc_it, v_sc_it, 'services', 'standard', 13, v_meta, v_su),
+     v_sc_it, v_sc_it, 2, 13, true, v_meta || '{"procurement_type":"services","visibility":"standard"}'::jsonb, 'active', v_su),
     -- Professional Services children
     (v_tid, 'SC-PROF-LEGAL', 'Legal & Compliance',
      'Legal fees, regulatory filings, compliance advisory',
-     v_sc_prof, v_sc_prof, 'services', 'standard', 21, v_meta, v_su),
+     v_sc_prof, v_sc_prof, 2, 21, true, v_meta || '{"procurement_type":"services","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_tid, 'SC-PROF-AUDIT', 'Audit & Advisory',
      'External audit, internal audit, tax advisory, financial due diligence',
-     v_sc_prof, v_sc_prof, 'services', 'standard', 22, v_meta, v_su),
+     v_sc_prof, v_sc_prof, 2, 22, true, v_meta || '{"procurement_type":"services","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_tid, 'SC-PROF-MGMT', 'Management Consulting',
      'Strategy, transformation, HR advisory, process improvement',
-     v_sc_prof, v_sc_prof, 'services', 'standard', 23, v_meta, v_su),
+     v_sc_prof, v_sc_prof, 2, 23, true, v_meta || '{"procurement_type":"services","visibility":"standard"}'::jsonb, 'active', v_su),
     -- Facilities children
     (v_tid, 'SC-FACIL-RENT', 'Office Rent & Leases',
      'Office premises, warehouse leases, compound fees, car parking',
-     v_sc_facil, v_sc_facil, 'services', 'standard', 31, v_meta, v_su),
+     v_sc_facil, v_sc_facil, 2, 31, true, v_meta || '{"procurement_type":"services","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_tid, 'SC-FACIL-UTIL', 'Utilities & Telecoms',
      'Electricity, water, gas, internet connectivity, mobile data',
-     v_sc_facil, v_sc_facil, 'goods',    'standard', 32, v_meta, v_su),
+     v_sc_facil, v_sc_facil, 2, 32, true, v_meta || '{"procurement_type":"goods","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_tid, 'SC-FACIL-MAINT', 'Maintenance & Repairs',
      'Building maintenance, AC, janitorial, security, pest control',
-     v_sc_facil, v_sc_facil, 'services', 'standard', 33, v_meta, v_su),
+     v_sc_facil, v_sc_facil, 2, 33, true, v_meta || '{"procurement_type":"services","visibility":"standard"}'::jsonb, 'active', v_su),
     -- Construction children
     (v_tid, 'SC-CONST-MAT', 'Raw Materials & Supplies',
      'Cement, steel, aggregates, electrical, MEP materials, site consumables',
-     v_sc_const, v_sc_const, 'goods',    'standard', 41, v_meta, v_su),
+     v_sc_const, v_sc_const, 2, 41, true, v_meta || '{"procurement_type":"goods","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_tid, 'SC-CONST-EQUIP', 'Equipment Rental',
      'Crane, excavator, scaffolding, heavy plant and specialised tool hire',
-     v_sc_const, v_sc_const, 'goods',    'standard', 42, v_meta, v_su),
+     v_sc_const, v_sc_const, 2, 42, true, v_meta || '{"procurement_type":"goods","visibility":"standard"}'::jsonb, 'active', v_su),
     -- Trading Goods children
     (v_tid, 'SC-TRADE-IMP', 'Imported Goods',
      'CIF/FOB imported goods for resale: electronics, industrial, consumer',
-     v_sc_trade, v_sc_trade, 'goods',    'standard', 51, v_meta, v_su),
+     v_sc_trade, v_sc_trade, 2, 51, true, v_meta || '{"procurement_type":"goods","visibility":"standard"}'::jsonb, 'active', v_su),
     (v_tid, 'SC-TRADE-LOC', 'Local Procurement',
      'Locally-sourced goods for resale or distribution within Egypt',
-     v_sc_trade, v_sc_trade, 'goods',    'standard', 52, v_meta, v_su)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
-
-    INSERT INTO master.commodity_category (
-        id, tenant_id, code, name, description, parent_id, root_category_id,
-        level_no, sort_order, buy_allowed, is_classification_required,
-        is_hs_required, is_regulated, allowed_classification_domains,
-        metadata, status, created_by)
-    SELECT
-        sc.id,
-        sc.tenant_id,
-        sc.code,
-        sc.name,
-        sc.description,
-        NULL,
-        sc.id,
-        1,
-        sc.sort_order,
-        true,
-        sc.is_classification_required,
-        sc.is_hs_required,
-        sc.is_regulated,
-        COALESCE(sc.allowed_domains, '[]'::jsonb),
-        COALESCE(sc.metadata, '{}'::jsonb)
-            || jsonb_build_object('_commodity_model', jsonb_build_object(
-                'pack', '004_finance_controls',
-                'source_table', 'master.spend_category',
-                'source_id', sc.id,
-                'seeded_at', now()::text
-            )),
-        sc.status,
-        v_su
-    FROM master.spend_category sc
-    WHERE sc.tenant_id = v_tid
-      AND sc.parent_id IS NULL
+     v_sc_trade, v_sc_trade, 2, 52, true, v_meta || '{"procurement_type":"goods","visibility":"standard"}'::jsonb, 'active', v_su)
     ON CONFLICT (tenant_id, code) DO UPDATE
-       SET name                           = EXCLUDED.name,
-           description                    = EXCLUDED.description,
-           buy_allowed                    = true,
-           is_classification_required     = EXCLUDED.is_classification_required,
-           is_hs_required                 = EXCLUDED.is_hs_required,
-           is_regulated                   = EXCLUDED.is_regulated,
-           allowed_classification_domains = EXCLUDED.allowed_classification_domains,
-           metadata                       = master.commodity_category.metadata
-                                            || jsonb_build_object('_commodity_model', EXCLUDED.metadata -> '_commodity_model'),
-           updated_at                     = now(),
-           updated_by                     = v_su;
+       SET name             = EXCLUDED.name,
+           description      = EXCLUDED.description,
+           parent_id        = EXCLUDED.parent_id,
+           root_category_id = EXCLUDED.root_category_id,
+           level_no         = EXCLUDED.level_no,
+           sort_order       = EXCLUDED.sort_order,
+           buy_allowed      = true,
+           metadata         = master.commodity_category.metadata
+                              || jsonb_build_object('_seed', EXCLUDED.metadata -> '_seed')
+                              || jsonb_build_object(
+                                   'procurement_type', EXCLUDED.metadata ->> 'procurement_type',
+                                   'visibility', EXCLUDED.metadata ->> 'visibility'
+                                 ),
+           status           = 'active',
+           updated_at       = now(),
+           updated_by       = v_su;
 
-    INSERT INTO master.commodity_category (
-        id, tenant_id, code, name, description, parent_id, root_category_id,
-        level_no, sort_order, buy_allowed, is_classification_required,
-        is_hs_required, is_regulated, allowed_classification_domains,
-        metadata, status, created_by)
-    SELECT
-        sc.id,
-        sc.tenant_id,
-        sc.code,
-        sc.name,
-        sc.description,
-        parent_cc.id,
-        root_cc.id,
-        COALESCE(parent_cc.level_no + 1, 2),
-        sc.sort_order,
-        true,
-        sc.is_classification_required,
-        sc.is_hs_required,
-        sc.is_regulated,
-        COALESCE(sc.allowed_domains, '[]'::jsonb),
-        COALESCE(sc.metadata, '{}'::jsonb)
-            || jsonb_build_object('_commodity_model', jsonb_build_object(
-                'pack', '004_finance_controls',
-                'source_table', 'master.spend_category',
-                'source_id', sc.id,
-                'seeded_at', now()::text
-            )),
-        sc.status,
-        v_su
-    FROM master.spend_category sc
-    JOIN master.spend_category parent_sc
-      ON parent_sc.tenant_id = sc.tenant_id
-     AND parent_sc.id = sc.parent_id
-    JOIN master.spend_category root_sc
-      ON root_sc.tenant_id = sc.tenant_id
-     AND root_sc.id = sc.root_category_id
-    JOIN master.commodity_category parent_cc
-      ON parent_cc.tenant_id = sc.tenant_id
-     AND parent_cc.code = parent_sc.code
-    JOIN master.commodity_category root_cc
-      ON root_cc.tenant_id = sc.tenant_id
-     AND root_cc.code = root_sc.code
-    WHERE sc.tenant_id = v_tid
-      AND sc.parent_id IS NOT NULL
-    ON CONFLICT (tenant_id, code) DO UPDATE
-       SET name                           = EXCLUDED.name,
-           description                    = EXCLUDED.description,
-           parent_id                      = EXCLUDED.parent_id,
-           root_category_id               = EXCLUDED.root_category_id,
-           level_no                       = EXCLUDED.level_no,
-           sort_order                     = EXCLUDED.sort_order,
-           buy_allowed                    = true,
-           is_classification_required     = EXCLUDED.is_classification_required,
-           is_hs_required                 = EXCLUDED.is_hs_required,
-           is_regulated                   = EXCLUDED.is_regulated,
-           allowed_classification_domains = EXCLUDED.allowed_classification_domains,
-           metadata                       = master.commodity_category.metadata
-                                            || jsonb_build_object('_commodity_model', EXCLUDED.metadata -> '_commodity_model'),
-           updated_at                     = now(),
-           updated_by                     = v_su;
-
-    RAISE NOTICE '[P06] 17 spend categories seeded (5 root + 12 leaf)';
+    RAISE NOTICE '[P06] 17 commodity categories seeded (5 root + 12 leaf)';
 END $p06$;
 
 
@@ -854,7 +780,7 @@ BEGIN
         FROM master.accounting_profile WHERE tenant_id = v_tid;
 
     SELECT count(*) INTO v_spend_cat
-        FROM master.spend_category WHERE tenant_id = v_tid;
+        FROM master.commodity_category WHERE tenant_id = v_tid;
 
     SELECT count(*) INTO v_bank_accts
         FROM master.bank_account WHERE tenant_id = v_tid;
@@ -870,7 +796,7 @@ BEGIN
     IF v_rounding   < 2  THEN RAISE EXCEPTION '[P10] Expected ≥2 rounding rules, got %',  v_rounding; END IF;
     IF v_tax_groups < 4  THEN RAISE EXCEPTION '[P10] Expected ≥4 tax groups, got %',      v_tax_groups; END IF;
     IF v_acct_prof  < 6  THEN RAISE EXCEPTION '[P10] Expected ≥6 accounting profiles, got %', v_acct_prof; END IF;
-    IF v_spend_cat  < 17 THEN RAISE EXCEPTION '[P10] Expected ≥17 spend categories, got %', v_spend_cat; END IF;
+    IF v_spend_cat  < 17 THEN RAISE EXCEPTION '[P10] Expected ≥17 commodity categories, got %', v_spend_cat; END IF;
     IF v_bank_accts < 4  THEN RAISE EXCEPTION '[P10] Expected ≥4 bank accounts, got %',   v_bank_accts; END IF;
     IF v_pay_methods < 5 THEN RAISE EXCEPTION '[P10] Expected ≥5 payment methods, got %', v_pay_methods; END IF;
     IF v_ic_agmt    < 4  THEN RAISE EXCEPTION '[P10] Expected ≥4 IC agreements, got %',   v_ic_agmt; END IF;

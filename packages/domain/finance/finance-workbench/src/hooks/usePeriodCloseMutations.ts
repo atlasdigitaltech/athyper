@@ -8,6 +8,7 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCsrfToken } from "@athyper/runtime-shared/client";
 import { scopeCacheKey, type FinanceScope } from "../lib/scope";
 
 // ── Task action ───────────────────────────────────────────────────────────────
@@ -24,7 +25,7 @@ export function useCompleteTask(runId: string) {
     mutationFn: ({ taskId, action, remarks }: TaskActionVars) =>
       fetch(`/api/finance/period-close/runs/${runId}/tasks/${taskId}/action`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body:    JSON.stringify({ action, remarks }),
       }).then(async (res) => {
         if (!res.ok) {
@@ -52,7 +53,7 @@ export function useSignOffPhase(runId: string) {
     mutationFn: ({ phaseCode, remarks }: SignOffVars) =>
       fetch(`/api/finance/period-close/runs/${runId}/sign-off`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body:    JSON.stringify({ phaseCode, remarks }),
       }).then(async (res) => {
         if (!res.ok) {
@@ -75,7 +76,7 @@ export function useStartCloseRun(scope: FinanceScope) {
     mutationFn: () =>
       fetch("/api/finance/period-close/runs", {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body:    JSON.stringify({
           scopeType:    scope.scopeType,
           scopeId:      scope.scopeId,

@@ -237,7 +237,7 @@ async function resolveFromIntent(
   if (spendCategoryId) {
     const r = await sql<{ account_id: string }>`
       SELECT resolved_gl_account_id::text AS account_id
-        FROM master.fn_resolve_spend_category_defaults(
+        FROM master.fn_resolve_commodity_category_defaults(
                ${tenantId}::uuid,
                ${spendCategoryId}::uuid,
                ${companyId}::uuid

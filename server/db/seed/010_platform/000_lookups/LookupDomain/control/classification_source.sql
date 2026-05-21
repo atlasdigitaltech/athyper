@@ -10,7 +10,6 @@ SELECT v.code, v.name, v.domain_code, v.sort, true, 'active',
        '00000000-0000-0000-0000-000000000000'
 FROM (VALUES
     ('commodity_category', 'Commodity Category', 'control.classification_source', 10),
-    ('spend_category',     'Spend Category',     'control.classification_source', 20),
     ('product',            'Product',            'control.classification_source', 30),
     ('service',            'Service',            'control.classification_source', 40),
     ('item_group',         'Item Group',         'control.classification_source', 50),
@@ -27,5 +26,5 @@ UPDATE control.lookup_value
        updated_by = '00000000-0000-0000-0000-000000000000'
  WHERE domain_code = 'control.classification_source'
    AND tenant_id IS NULL
-   AND code IN ('commodity','supplier')
+   AND code IN ('commodity','supplier','spend_category')
    AND status <> 'deprecated';

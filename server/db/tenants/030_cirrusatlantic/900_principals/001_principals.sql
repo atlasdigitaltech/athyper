@@ -68,13 +68,13 @@ BEGIN
 
         -- Identity binding (KC provider)
         INSERT INTO master.principal_identity_binding (
-            principal_id, tenant_id, provider_code,
+            principal_id, tenant_id, realm_key, provider_code,
             subject_id, created_by
         ) VALUES (
-            v_pid, v_tid, 'keycloak',
+            v_pid, v_tid, 'athyper', 'keycloak',
             v_pid::text, v_su
         )
-        ON CONFLICT (tenant_id, provider_code, subject_id) DO NOTHING;
+        ON CONFLICT (tenant_id, realm_key, provider_code, subject_id) DO NOTHING;
 
     END LOOP;
 

@@ -11,13 +11,11 @@ export {
 } from "./DimensionPicker";
 export {
   CatalogPicker,
-  SpendCategoryPicker,
   CommodityCategoryPicker,
   BusinessIntentPicker,
   ItemPicker,
   ProductPicker,
   type CatalogPickerProps,
-  type SpendCategoryPickerProps,
   type CommodityCategoryPickerProps,
   type BusinessIntentPickerProps,
   type ItemPickerProps,

@@ -36,34 +36,15 @@ BEGIN
     END IF;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- B1: Add 'seed' to master.cc_provenance lookup (§7.5)
+    -- B1: Verify 'seed' provenance value exists in cc_provenance lookup (§7.5)
+    -- Note: 'seed' is now seeded in the canonical lookup file:
+    --   010_platform/000_lookups/LookupDomain/master/cc_provenance.sql
     -- ══════════════════════════════════════════════════════════════════════
-    -- The platform seeds cc_provenance with: manual, ai_generated,
-    -- ai_verified, imported, official. 'seed' is NOT included.
-    -- The trigger trg_cc_provenance_lookup validates provenance against
-    -- this lookup at INSERT time — without 'seed', all bridge files fail.
-    -- ──────────────────────────────────────────────────────────────────────
-    INSERT INTO control.lookup_value (
-        code, name, domain_code, description,
-        sort_order, is_system, status, created_by
-    ) VALUES (
-        'seed',
-        'Seed',
-        'master.cc_provenance',
-        'Platform seed data — loaded by blueprint seed scripts',
-        60,
-        true,
-        'active',
-        v_su
-    )
-    ON CONFLICT DO NOTHING;
-
-    -- Verify it landed
     IF NOT EXISTS (
         SELECT 1 FROM control.lookup_value
         WHERE domain_code = 'master.cc_provenance' AND code = 'seed'
     ) THEN
-        RAISE EXCEPTION '[019_base] Failed to register provenance "seed" in cc_provenance lookup';
+        RAISE EXCEPTION '[019_base] Provenance "seed" not found in cc_provenance lookup — ensure 010_platform/000_lookups ran first';
     END IF;
 
     -- ══════════════════════════════════════════════════════════════════════

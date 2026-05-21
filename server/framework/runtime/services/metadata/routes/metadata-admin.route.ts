@@ -42,12 +42,21 @@
  *
  *  Entities catalogue (read-only — for picker dropdowns)
  *   GET    /metadata/admin/entities
+ *
+ *  Entity contract writes
+ *   PATCH  /metadata/admin/entities/:id/contracts
+ *   PATCH  /metadata/admin/entity-fields/:id/contracts
  */
 
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { verifyBearer } from "@athyper/svc-shared";
+import {
+  validateEntityContractWrite,
+  validateEntityFieldContractWrite,
+  type ContractWriteIssue,
+} from "./contract-write-validation.js";
 
 // ─── Deps ─────────────────────────────────────────────────────────────────────
 
@@ -83,6 +92,52 @@ function badRequest(res: { status: (c: number) => { json: (b: unknown) => void }
   res.status(400).json({ error: "BAD_REQUEST", message: msg });
 }
 
+function contractValidationFailed(
+  res: { status: (c: number) => { json: (b: unknown) => void } },
+  errors: ContractWriteIssue[],
+) {
+  res.status(400).json({
+    error: "CONTRACT_VALIDATION_FAILED",
+    message: "Metadata contract input failed registry validation.",
+    errors,
+  });
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function mergeJsonPatch(current: unknown, patch: unknown): unknown {
+  const currentRecord = asRecord(current);
+  const patchRecord = asRecord(patch);
+  if (!currentRecord || !patchRecord) return patch;
+  return { ...currentRecord, ...patchRecord };
+}
+
+const ENTITY_CONTRACT_COLUMNS = [
+  "display_config",
+  "feature_flags",
+  "data_policy",
+  "identity_config",
+  "search_config",
+] as const;
+
+const ENTITY_FIELD_CONTRACT_COLUMNS: Record<string, string> = {
+  reference_config: "reference_config",
+  money_config: "money_config",
+  filter_config: "filter_config",
+  ui_hint: "ui_hint",
+  editability: "editability",
+  lookup_config: "lookup_config",
+  validation_rules: "validation",
+  default_value: "default_value",
+  enum_config: "enum_config",
+  enum_domain_code: "enum_domain_code",
+  group_key: "group_key",
+};
+
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRoutesDeps): Router {
@@ -110,6 +165,100 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
   // ═══════════════════════════════════════════════════════════════════════════
   // LOOKUP DOMAINS
   // ═══════════════════════════════════════════════════════════════════════════
+
+  // PATCH /metadata/admin/entities/:id/contracts
+  const updateEntityContractsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const ctx = await guard(req, res);
+      if (!ctx) return;
+
+      const id = req.params["id"] as string;
+      const validation = validateEntityContractWrite(req.body);
+      if (validation.errors.length > 0) {
+        return contractValidationFailed(res as never, validation.errors);
+      }
+
+      const current = await db
+        .selectFrom("control.entity")
+        .select(["id", ...ENTITY_CONTRACT_COLUMNS])
+        .where("id", "=", id)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+      if (!current) return notFound(res as never, `Entity '${id}' not found`);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updates: Record<string, any> = { updated_by: ctx.pId, updated_at: new Date() };
+      for (const column of ENTITY_CONTRACT_COLUMNS) {
+        if (!(column in validation.values)) continue;
+        const value = validation.values[column];
+        updates[column] = value === null ? {} : mergeJsonPatch(current[column], value);
+      }
+
+      if (Object.keys(updates).length <= 2) {
+        return badRequest(res as never, "No entity contract properties were supplied.");
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updated = await (db.updateTable("control.entity" as never) as any)
+        .set(updates)
+        .where("id" as never, "=", id as never)
+        .returningAll()
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      res.json({ item: updated, warnings: validation.warnings });
+    } catch (err) {
+      logger?.error("meta_admin_update_entity_contracts", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // PATCH /metadata/admin/entity-fields/:id/contracts
+  const updateEntityFieldContractsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const ctx = await guard(req, res);
+      if (!ctx) return;
+
+      const id = req.params["id"] as string;
+      const validation = validateEntityFieldContractWrite(req.body);
+      if (validation.errors.length > 0) {
+        return contractValidationFailed(res as never, validation.errors);
+      }
+
+      const current = await db
+        .selectFrom("control.entity_field")
+        .select(["id", ...Object.values(ENTITY_FIELD_CONTRACT_COLUMNS)])
+        .where("id", "=", id)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+      if (!current) return notFound(res as never, `Entity field '${id}' not found`);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updates: Record<string, any> = { updated_by: ctx.pId, updated_at: new Date() };
+      for (const [property, value] of Object.entries(validation.values)) {
+        const column = ENTITY_FIELD_CONTRACT_COLUMNS[property];
+        if (!column) continue;
+        const shouldMerge =
+          value !== null &&
+          value !== undefined &&
+          !["default_value", "enum_domain_code", "group_key"].includes(property);
+        updates[column] = shouldMerge ? mergeJsonPatch(current[column], value) : value;
+      }
+
+      if (Object.keys(updates).length <= 2) {
+        return badRequest(res as never, "No entity_field contract properties were supplied.");
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updated = await (db.updateTable("control.entity_field" as never) as any)
+        .set(updates)
+        .where("id" as never, "=", id as never)
+        .returningAll()
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+
+      res.json({ item: updated, warnings: validation.warnings });
+    } catch (err) {
+      logger?.error("meta_admin_update_entity_field_contracts", { err: String(err) });
+      next(err);
+    }
+  };
 
   // GET /metadata/admin/lookup-domains
   const listDomainsHandler: RequestHandler = async (req, res, next) => {
@@ -1028,6 +1177,9 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
   // ─── Route Registration ────────────────────────────────────────────────────
 
   router.get("/metadata/admin/erd",                     getErdHandler);
+
+  router.patch("/metadata/admin/entities/:id/contracts",       updateEntityContractsHandler);
+  router.patch("/metadata/admin/entity-fields/:id/contracts",  updateEntityFieldContractsHandler);
 
   router.get("/metadata/admin/lookup-domains",          listDomainsHandler);
   router.post("/metadata/admin/lookup-domains",         createDomainHandler);

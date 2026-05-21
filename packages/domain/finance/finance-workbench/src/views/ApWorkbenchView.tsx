@@ -15,6 +15,7 @@ import {
   useApInvoiceDetail, useApPaymentMethods, useCreateApPayment,
   useCreateApInvoice,
 } from "../hooks/useApWorkbench";
+import { useBankAccounts } from "../hooks/useBankReconciliation";
 import type { ApInvoice } from "../hooks/useApWorkbench";
 
 type ApTab = "invoices" | "aging" | "payments" | "ar-receipts";
@@ -33,12 +34,14 @@ interface ApWorkbenchViewProps {
 // ── Pay Invoice dialog ────────────────────────────────────────────────────────
 
 function PayInvoiceDialog({
+  scope,
   invoiceId,
   outstandingAmount,
   currencyCode,
   open,
   onOpenChange,
 }: {
+  scope: FinanceScope;
   invoiceId: string;
   outstandingAmount: number;
   currencyCode: string;
@@ -46,16 +49,19 @@ function PayInvoiceDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const { data: methods } = useApPaymentMethods();
+  const { data: bankAccounts } = useBankAccounts(scope);
   const createPayment = useCreateApPayment();
   const today = new Date().toISOString().slice(0, 10);
 
   const [paymentMethodId, setPaymentMethodId] = useState("");
+  const [bankAccountId, setBankAccountId]     = useState("");
   const [valueDate, setValueDate]             = useState(today);
   const [notes, setNotes]                     = useState("");
   const [error, setError]                     = useState<string | null>(null);
 
   function reset() {
     setPaymentMethodId("");
+    setBankAccountId("");
     setValueDate(today);
     setNotes("");
     setError(null);
@@ -64,11 +70,13 @@ function PayInvoiceDialog({
   async function handleSubmit() {
     setError(null);
     if (!paymentMethodId) { setError("Select a payment method"); return; }
+    if (!bankAccountId) { setError("Select a bank account"); return; }
 
     try {
       await createPayment.mutateAsync({
         invoice_id:        invoiceId,
         payment_method_id: paymentMethodId,
+        bank_account_id:   bankAccountId,
         value_date:        valueDate,
         notes:             notes.trim() || undefined,
       });
@@ -105,6 +113,26 @@ function PayInvoiceDialog({
               {(methods?.items ?? []).map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <div className="text-doc-support text-muted-foreground mb-1">Bank Account</div>
+            <select
+              value={bankAccountId}
+              onChange={(e) => setBankAccountId(e.target.value)}
+              className="w-full h-8 rounded-md border px-2 text-xs bg-background"
+            >
+              <option value="">Select...</option>
+              {(bankAccounts ?? [])
+                .filter((account) => !currencyCode || account.currencyCode === currencyCode)
+                .map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {[account.name, account.accountLast4 ? `...${account.accountLast4}` : null, account.currencyCode]
+                      .filter(Boolean)
+                      .join(" - ")}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -159,7 +187,7 @@ function PayInvoiceDialog({
 
 // ── Invoice detail panel ──────────────────────────────────────────────────────
 
-function InvoiceDetailPanel({ invoiceId }: { invoiceId: string }) {
+function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: FinanceScope }) {
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const { data, isLoading, isError } = useApInvoiceDetail(invoiceId);
 
@@ -211,8 +239,8 @@ function InvoiceDetailPanel({ invoiceId }: { invoiceId: string }) {
 
       {/* Lines table */}
       {data.lines.length > 0 && (
-        <div className="rounded-lg border overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="rounded-lg border overflow-x-auto overflow-y-hidden">
+          <table className="w-full min-w-[760px] text-xs">
             <thead>
               <tr className="bg-muted/40 border-b">
                 <th className="py-1.5 px-2 text-left font-medium text-muted-foreground w-8">#</th>
@@ -252,8 +280,8 @@ function InvoiceDetailPanel({ invoiceId }: { invoiceId: string }) {
       {data.allocations.length > 0 && (
         <div>
           <p className="text-doc-support font-medium text-muted-foreground mb-1">Payment Allocations</p>
-          <div className="rounded-lg border overflow-hidden">
-            <table className="w-full text-xs">
+          <div className="rounded-lg border overflow-x-auto overflow-y-hidden">
+            <table className="w-full min-w-[560px] text-xs">
               <thead>
                 <tr className="bg-muted/40 border-b">
                   <th className="py-1 px-2 text-left font-medium text-muted-foreground">Payment #</th>
@@ -292,6 +320,7 @@ function InvoiceDetailPanel({ invoiceId }: { invoiceId: string }) {
       )}
 
       <PayInvoiceDialog
+        scope={scope}
         invoiceId={invoiceId}
         outstandingAmount={data.outstandingAmount}
         currencyCode={data.currencyCode}
@@ -466,8 +495,8 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
 
       <NewInvoiceDialog scope={scope} open={newDialogOpen} onOpenChange={setNewDialogOpen} />
 
-      <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
+        <table className="w-full min-w-[920px] text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="w-7" />
@@ -513,7 +542,7 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
                 {expandedId === inv.id && (
                   <tr className="border-b bg-muted/10">
                     <td colSpan={8}>
-                      <InvoiceDetailPanel invoiceId={inv.id} />
+                      <InvoiceDetailPanel invoiceId={inv.id} scope={scope} />
                     </td>
                   </tr>
                 )}
@@ -560,8 +589,8 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
   return (
     <div className="space-y-2">
       <div className="text-doc-support text-muted-foreground">As at {data?.asAt ? fmtDate(data.asAt) : "—"}</div>
-      <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
+        <table className="w-full min-w-[860px] text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Supplier</th>
@@ -623,8 +652,8 @@ function PaymentsTab({ scope }: { scope: FinanceScope }) {
       <div className="text-doc-support text-muted-foreground text-right">
         {data?.total ?? 0} payment{data?.total !== 1 ? "s" : ""}
       </div>
-      <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
+        <table className="w-full min-w-[820px] text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Payment #</th>
@@ -679,8 +708,8 @@ function ArReceiptsTab({ scope }: { scope: FinanceScope }) {
       <div className="text-doc-support text-muted-foreground text-right">
         {data?.total ?? 0} receipt{data?.total !== 1 ? "s" : ""}
       </div>
-      <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-xs">
+      <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
+        <table className="w-full min-w-[820px] text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Receipt #</th>

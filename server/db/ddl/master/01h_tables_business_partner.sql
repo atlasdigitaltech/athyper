@@ -1,7 +1,7 @@
 -- ============================================================================
 -- master/01h_tables_business_partner.sql
 -- Concept: Business Partner master — BP-first identity spine
--- Depends on: 01b_tables_finance.sql (master.company_code, master.spend_category)
+-- Depends on: 01b_tables_finance.sql (master.company_code, master.commodity_category)
 --             01_tables_identity.sql (master.principal)
 --
 -- Design rule:
@@ -485,8 +485,8 @@ COMMENT ON COLUMN master.company_code_supplier_profile.default_wht_tax_group_id 
 
 
 -- ============================================================================
--- BP6  master.company_code_supplier_spend_policy
--- Per-spend-category sourcing, qualification, PO, and invoice eligibility for a
--- supplier inside one company-code extension.
+-- BP6 legacy supplier spend policy retired
+-- Per-category sourcing, qualification, PO, and invoice eligibility now live in
+-- control.commodity_category_buy_policy.
 -- Supplier spend/intent policy tables moved to control.commodity_category_buy_policy.
 -- Supplier posting overrides moved to control.supplier_posting_override.

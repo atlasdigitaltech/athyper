@@ -978,7 +978,7 @@ function isBusinessIntentField(field: EntityField): boolean {
 
 function isItemReferenceField(field: EntityField): boolean {
   const ref = field.reference_config as Record<string, unknown> | null | undefined;
-  const refEntity = ref?.["ref_entity"] ?? ref?.["target_entity"] ?? ref?.["entity"];
+  const refEntity = ref?.["target_entity"];
   return field.name === "item_id" || refEntity === "item";
 }
 
@@ -1029,12 +1029,12 @@ function syntheticClassificationField(
     is_computed: false,
     default_value: null,
     validation_rules: { max_length: 32 },
-    enum_domain_code: null,
+    enum_domain_code: taxonomyDomain,
     reference_config: null,
     money_config: null,
     sort_order: sortOrder,
     group_key: "classification",
-    ui_hint: { group_key: "classification", taxonomy_domain: taxonomyDomain },
+    ui_hint: null,
     lookup_config: null,
     filter_config: null,
     i18n_key: null,

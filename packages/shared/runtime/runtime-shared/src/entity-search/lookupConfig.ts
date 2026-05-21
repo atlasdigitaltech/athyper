@@ -105,77 +105,30 @@ export function readLookupDependency(
   lookupConfig?: Record<string, unknown> | null,
 ): LookupDependencyConfig | null {
   const root = asRecord(lookupConfig);
-  const raw = asRecord(root?.["dependent_filter"] ?? root?.["depends_on"] ?? root?.["dependency"]);
+  const raw = asRecord(root?.["dependent_filter"]);
   if (!raw) return null;
 
-  const through = asRecord(raw["through"]);
-  const sourceField = textConfig(
-    raw["source_field"] ??
-    raw["sourceField"] ??
-    raw["field"] ??
-    raw["depends_on"] ??
-    raw["dependsOn"],
-  );
+  const sourceField = textConfig(raw["source_field"]);
   if (!sourceField) return null;
 
-  const throughEntity = textConfig(
-    raw["through_entity"] ??
-    raw["throughEntity"] ??
-    through?.["entity"] ??
-    through?.["entity_code"] ??
-    through?.["entityCode"],
-  );
-  const throughSourceField = textConfig(
-    raw["through_source_field"] ??
-    raw["throughSourceField"] ??
-    through?.["source_field"] ??
-    through?.["sourceField"],
-  ) ?? sourceField;
-  const throughTargetField = textConfig(
-    raw["through_target_field"] ??
-    raw["throughTargetField"] ??
-    raw["value_field"] ??
-    raw["valueField"] ??
-    through?.["target_field"] ??
-    through?.["targetField"] ??
-    through?.["value_field"] ??
-    through?.["valueField"],
-  );
+  const throughEntity = textConfig(raw["through_entity"]);
+  const throughSourceField = textConfig(raw["through_source_field"]) ?? sourceField;
+  const throughTargetField = textConfig(raw["through_target_field"]);
 
   if (throughEntity && !throughTargetField) return null;
 
   return {
     sourceField,
-    targetField: textConfig(raw["target_field"] ?? raw["targetField"]) ?? sourceField,
+    targetField: textConfig(raw["target_field"]) ?? sourceField,
     throughEntity,
     throughSourceField,
     throughTargetField,
     throughFilters: readLookupFilters({
-      filters: raw["through_filters"] ?? raw["throughFilters"] ?? through?.["filters"],
+      filters: raw["through_filters"],
     }),
-    sortField: textConfig(
-      raw["sort_field"] ??
-      raw["sortField"] ??
-      raw["through_sort_field"] ??
-      raw["throughSortField"] ??
-      raw["order_by"] ??
-      raw["orderBy"] ??
-      through?.["sort_field"] ??
-      through?.["sortField"] ??
-      through?.["order_by"] ??
-      through?.["orderBy"],
-    ),
-    sortDirection: directionConfig(
-      raw["sort_direction"] ??
-      raw["sortDirection"] ??
-      raw["order_direction"] ??
-      raw["orderDirection"] ??
-      through?.["sort_direction"] ??
-      through?.["sortDirection"] ??
-      through?.["order_direction"] ??
-      through?.["orderDirection"],
-    ),
-    emptyBehavior: emptyBehaviorConfig(raw["empty_behavior"] ?? raw["emptyBehavior"]),
+    sortField: textConfig(raw["sort_field"]),
+    sortDirection: directionConfig(raw["sort_direction"]),
+    emptyBehavior: emptyBehaviorConfig(raw["empty_behavior"]),
   };
 }
 

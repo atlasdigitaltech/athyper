@@ -11,7 +11,8 @@ FROM (VALUES
     ('ai_generated', 'AI generated', 'master.cc_provenance', 'Machine-learning suggestion',           20),
     ('ai_verified',  'AI verified',  'master.cc_provenance', 'AI suggestion confirmed by human',      30),
     ('imported',     'Imported',     'master.cc_provenance', 'Bulk import from external system',      40),
-    ('official',     'Official',     'master.cc_provenance', 'Authoritative source (manufacturer)',   50)
+    ('official',     'Official',     'master.cc_provenance', 'Authoritative source (manufacturer)',   50),
+    ('seed',         'Seed',         'master.cc_provenance', 'Platform seed data — loaded by blueprint seed scripts', 60)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

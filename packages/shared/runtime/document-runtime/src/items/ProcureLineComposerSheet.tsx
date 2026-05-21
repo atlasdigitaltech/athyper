@@ -518,7 +518,7 @@ function isCommodityCategoryField(field: EntityField): boolean {
 
 function isItemReferenceField(field: EntityField): boolean {
   const ref = field.reference_config as Record<string, unknown> | null | undefined;
-  const refEntity = ref?.["ref_entity"] ?? ref?.["target_entity"] ?? ref?.["entity"];
+  const refEntity = ref?.["target_entity"];
   return field.name === "item_id" || refEntity === "item";
 }
 
@@ -683,15 +683,12 @@ function headerHasSourceDocumentReference(headerRecord?: Record<string, unknown>
 
 function isSourceDocumentReferenceField(field: EntityField): boolean {
   const ref = field.reference_config as Record<string, unknown> | null | undefined;
-  const hint = field.ui_hint as Record<string, unknown> | null | undefined;
   const text = [
     field.name,
     field.column_name,
     field.label,
-    ref?.["ref_entity"],
     ref?.["target_entity"],
-    ref?.["entity"],
-    hint?.["group_key"],
+    field.group_key,
   ]
     .filter((value) => value != null)
     .join(" ")

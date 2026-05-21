@@ -1512,14 +1512,6 @@ BEGIN
         EXCEPTION WHEN undefined_table THEN
             v_default := NULL;
         END;
-    ELSIF p_classification_source = 'SPEND_CATEGORY' THEN
-        BEGIN
-            SELECT default_intent_id INTO v_default
-            FROM master.spend_category
-            WHERE id = p_classification_id AND tenant_id = p_tenant_id;
-        EXCEPTION WHEN undefined_table THEN
-            v_default := NULL;
-        END;
     END IF;
 
     IF v_default IS NOT NULL THEN
@@ -1544,7 +1536,7 @@ $$;
 COMMENT ON FUNCTION control.resolve_business_intent IS
     'Engine 4.13 §F1: classification → business intent. '
     'Evaluates all 16 condition types in priority order. '
-    'Fallback: classification default (COMMODITY_CATEGORY policy, then legacy SPEND_CATEGORY). '
+    'Fallback: classification default from COMMODITY_CATEGORY policy. '
     'Returns JSONB with method=RULE_MATCH|CLASSIFICATION_DEFAULT|FAILED.';
 
 
@@ -1764,6 +1756,10 @@ COMMENT ON FUNCTION control.resolve_accounting_profile IS
 -- Called by the JE generation orchestrator for each entry template line.
 -- Returns JSONB: gl_account_id, method, fallback_used, resolved.
 -- ============================================================================
+DROP FUNCTION IF EXISTS control.resolve_entry_account(
+    uuid, text, text, text, text, text, uuid, text, uuid, uuid, date
+);
+
 CREATE OR REPLACE FUNCTION control.resolve_entry_account(
     p_tenant_id          uuid,
     p_account_source     text,
@@ -1774,7 +1770,7 @@ CREATE OR REPLACE FUNCTION control.resolve_entry_account(
     p_company_code_id    uuid,
     p_book_code          text    DEFAULT 'statutory',
     p_intent_id          uuid    DEFAULT NULL,
-    p_spend_category_id  uuid    DEFAULT NULL,
+    p_commodity_category_id uuid DEFAULT NULL,
     p_as_of_date         date    DEFAULT CURRENT_DATE
 ) RETURNS jsonb
     LANGUAGE plpgsql STABLE
@@ -1855,12 +1851,12 @@ BEGIN
             v_method := 'FROM_INTENT';
 
         WHEN 'FROM_CATEGORY' THEN
-            IF p_spend_category_id IS NOT NULL THEN
+            IF p_commodity_category_id IS NOT NULL THEN
                 BEGIN
                     SELECT resolved_gl_account_id INTO v_gl_account_id
-                    FROM master.fn_resolve_spend_category_defaults(
+                    FROM master.fn_resolve_commodity_category_defaults(
                         p_tenant_id,
-                        p_spend_category_id,
+                        p_commodity_category_id,
                         p_company_code_id
                     );
                 EXCEPTION WHEN undefined_table THEN NULL;
@@ -3679,7 +3675,7 @@ COMMENT ON FUNCTION control.trg_fn_validate_target_entity() IS
 -- Three functions implement the 3-step resolution chain called by
 -- IntentResolutionService.ts:
 --
---   Step 2 → control.resolve_spend_category_policy()
+--   Step 2 → control.resolve_commodity_category_policy()
 --            Merges master.commodity_category base attributes with
 --            control.commodity_category_buy_policy defaults.
 --
@@ -3697,11 +3693,13 @@ COMMENT ON FUNCTION control.trg_fn_validate_target_entity() IS
 -- CREATE OR REPLACE — safe to re-run.
 -- ============================================================================
 
--- ── Step 2: spend category policy ────────────────────────────────────────────
+-- ── Step 2: commodity category policy ────────────────────────────────────────
 
-CREATE OR REPLACE FUNCTION control.resolve_spend_category_policy(
+DROP FUNCTION IF EXISTS control.resolve_spend_category_policy(uuid, uuid, uuid);
+
+CREATE OR REPLACE FUNCTION control.resolve_commodity_category_policy(
     p_tenant_id             uuid,
-    p_spend_category_id uuid,
+    p_commodity_category_id uuid,
     p_company_code_id       uuid
 )
 RETURNS jsonb
@@ -3718,7 +3716,7 @@ BEGIN
            cc.is_regulated
     INTO   v_category
     FROM   master.commodity_category cc
-    WHERE  cc.id        = p_spend_category_id
+    WHERE  cc.id        = p_commodity_category_id
       AND  cc.tenant_id = p_tenant_id
       AND  cc.is_active = true;
 
@@ -3737,7 +3735,7 @@ BEGIN
     INTO   v_policy
     FROM   control.commodity_category_buy_policy csp
     WHERE  csp.tenant_id        = p_tenant_id
-      AND  csp.commodity_category_id = p_spend_category_id
+      AND  csp.commodity_category_id = p_commodity_category_id
       AND  csp.mapping_mode     = 'ALLOW'
       AND  csp.is_default       = true
       AND  csp.is_active        = true
@@ -3756,7 +3754,7 @@ BEGIN
     LIMIT  1;
 
     RETURN jsonb_strip_nulls(jsonb_build_object(
-        'category_id',             p_spend_category_id,
+        'category_id',             p_commodity_category_id,
         'category_code',           v_category.code,
         'category_name',           v_category.name,
         'resolved_mapping_mode',   COALESCE(v_policy.mapping_mode, 'ALLOW'),
@@ -3774,7 +3772,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION control.resolve_spend_category_policy(uuid, uuid, uuid) IS
+COMMENT ON FUNCTION control.resolve_commodity_category_policy(uuid, uuid, uuid) IS
     'Step 2 of the procurement intake pipeline. Merges commodity_category base attributes '
     'with commodity_category_buy_policy overrides. Returns ALLOW/DENY mapping_mode, '
     'effective intent, capex threshold, and classification/HS requirement flags. '

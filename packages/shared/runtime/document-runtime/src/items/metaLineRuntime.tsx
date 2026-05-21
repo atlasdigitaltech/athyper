@@ -7,9 +7,9 @@ import { cn } from "@athyper/theme/utils";
 import { resolveFieldRenderer, BOOLEAN_UI_TYPES } from "@athyper/entity-runtime/field-renderers";
 import {
   BusinessIntentPicker,
+  CommodityCategoryPicker,
   EntityPicker,
   ItemPicker,
-  SpendCategoryPicker,
   entityRowToPickerOption,
   resolveEntityPickerOptionConfig,
   searchLookupOptions,
@@ -579,9 +579,9 @@ function inputStringValue(field: EntityField, value: unknown): string {
 }
 
 export function fieldOptions(field: EntityField): Array<{ value: string; label: string }> {
-  const hintOptions = asRecord(field.ui_hint)?.["options"];
-  const ruleOptions = field.validation_rules?.["options"] ?? field.validation_rules?.["enum"];
-  const raw = Array.isArray(hintOptions) ? hintOptions : Array.isArray(ruleOptions) ? ruleOptions : [];
+  const enumConfig = asRecord(field.enum_config);
+  const enumValues = enumConfig?.["values"] ?? enumConfig?.["options"];
+  const raw = Array.isArray(enumValues) ? enumValues : [];
   return raw.flatMap((item): Array<{ value: string; label: string }> => {
     const config = asRecord(item);
     if (config) {
@@ -812,7 +812,7 @@ function ReferenceInput({
   };
 
   if (targetEntity === "commodity_category") {
-    return <SpendCategoryPicker {...pickerProps} onChange={commit} />;
+    return <CommodityCategoryPicker {...pickerProps} onChange={commit} />;
   }
   if (targetEntity === "business_intent") {
     return <BusinessIntentPicker {...pickerProps} onChange={commit} />;
@@ -836,8 +836,7 @@ function ReferenceInput({
 }
 
 function commodityDomainForField(field: EntityField): "unspsc" | "hs" | null {
-  const hint = asRecord(field.ui_hint);
-  const configured = textValue(hint?.["taxonomy_domain"] ?? hint?.["commodity_domain"])?.toLowerCase();
+  const configured = textValue(field.enum_domain_code)?.toLowerCase();
   if (configured === "unspsc" || configured === "hs") return configured;
 
   const name = field.name.toLowerCase();
@@ -994,14 +993,7 @@ function CommodityCodeInput({
 
 function referenceTargetEntity(field: EntityField): string | null {
   const config = asRecord(field.reference_config);
-  const explicit = textValue(
-    config?.["target_entity"] ??
-    config?.["targetEntity"] ??
-    config?.["ref_entity"] ??
-    config?.["refEntity"] ??
-    config?.["entity"] ??
-    config?.["entity_code"],
-  );
+  const explicit = textValue(config?.["target_entity"]);
   if (explicit) return explicit;
 
   const name = field.name.toLowerCase();

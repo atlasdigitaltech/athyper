@@ -24,7 +24,7 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
-    v_zero := '{"_seed": {"pack": "323_org", "version": "2.0.0", "zero_rated": true}}'::jsonb;
+    v_zero := '{"_seed": {"pack": "323_org", "version": "2.1.0", "zero_rated": true}}'::jsonb;
 
     -- ══════════════════════════════════════════════════════════════════════
     -- C0: Remove stale tax groups not in the current canonical code set.
@@ -53,7 +53,7 @@ BEGIN
               'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
               'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN','TG-IN-MH-GST-5-OUT','TG-IN-MH-GST-5-IN',
               'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10','TG-IN-TCS-GOODS','TG-IN-TCS-SCRAP',
-              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-HST-13-OUT','TG-CA-HST-13-IN','TG-CA-WHT-25',
               'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
               'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
               'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
@@ -81,7 +81,7 @@ BEGIN
               'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
               'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN','TG-IN-MH-GST-5-OUT','TG-IN-MH-GST-5-IN',
               'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10','TG-IN-TCS-GOODS','TG-IN-TCS-SCRAP',
-              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-HST-13-OUT','TG-CA-HST-13-IN','TG-CA-WHT-25',
               'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
               'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
               'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
@@ -111,7 +111,7 @@ BEGIN
               'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
               'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN','TG-IN-MH-GST-5-OUT','TG-IN-MH-GST-5-IN',
               'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10','TG-IN-TCS-GOODS','TG-IN-TCS-SCRAP',
-              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-HST-13-OUT','TG-CA-HST-13-IN','TG-CA-WHT-25',
               'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
               'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
               'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
@@ -139,7 +139,7 @@ BEGIN
               'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
               'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN','TG-IN-MH-GST-5-OUT','TG-IN-MH-GST-5-IN',
               'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10','TG-IN-TCS-GOODS','TG-IN-TCS-SCRAP',
-              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-HST-13-OUT','TG-CA-HST-13-IN','TG-CA-WHT-25',
               'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
               'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
               'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
@@ -166,7 +166,7 @@ BEGIN
               'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
               'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN','TG-IN-MH-GST-5-OUT','TG-IN-MH-GST-5-IN',
               'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10','TG-IN-TCS-GOODS','TG-IN-TCS-SCRAP',
-              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+              'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-HST-13-OUT','TG-CA-HST-13-IN','TG-CA-WHT-25',
               'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
               'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
               'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
@@ -190,7 +190,7 @@ BEGIN
         'TG-IN-TN-GST-18-OUT','TG-IN-TN-GST-18-IN','TG-IN-TN-GST-5-OUT','TG-IN-TN-GST-5-IN',
         'TG-IN-MH-GST-18-OUT','TG-IN-MH-GST-18-IN','TG-IN-MH-GST-5-OUT','TG-IN-MH-GST-5-IN',
         'TG-IN-IGST-18-OUT','TG-IN-IGST-18-IN','TG-IN-TDS-10','TG-IN-TCS-GOODS','TG-IN-TCS-SCRAP',
-        'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-WHT-25',
+        'TG-CA-GST-5-OUT','TG-CA-GST-5-IN','TG-CA-HST-13-OUT','TG-CA-HST-13-IN','TG-CA-WHT-25',
         'TG-DE-UST-19-OUT','TG-DE-UST-19-IN','TG-DE-UST-7-OUT','TG-DE-UST-7-IN','TG-DE-WHT-25',
         'TG-TW-VAT-5-OUT','TG-TW-VAT-5-IN','TG-TW-WHT-20',
         'TG-ZA-VAT-15-OUT','TG-ZA-VAT-15-IN','TG-ZA-VAT-ZERO',
@@ -262,6 +262,8 @@ BEGIN
     -- ─── CANADA (paired) ───────────────────────────────────────────────
     (v_tid, 'TG-CA-GST-5-OUT',    'CA GST 5% Output',    'Sales GST',              false,'active',v_su,v_meta),
     (v_tid, 'TG-CA-GST-5-IN',     'CA GST 5% Input',     'Purchase GST recovery',  false,'active',v_su,v_meta),
+    (v_tid, 'TG-CA-HST-13-OUT',   'CA HST 13% Output',   'HST output (ON/NB/NS/NL/PE)', false,'active',v_su,v_meta),
+    (v_tid, 'TG-CA-HST-13-IN',    'CA HST 13% Input',    'HST input recovery',     false,'active',v_su,v_meta),
     (v_tid, 'TG-CA-WHT-25',       'CA WHT 25%',          'Non-resident WHT',       false,'active',v_su,v_meta),
 
     -- ─── GERMANY (paired) ──────────────────────────────────────────────
@@ -394,6 +396,8 @@ BEGIN
     -- CA
     ('TG-CA-GST-5-OUT',   'TJ-CA|CA-GST|SALE|',                   1),
     ('TG-CA-GST-5-IN',    'TJ-CA|CA-GST|PURCHASE|',               1),
+    ('TG-CA-HST-13-OUT',  'TJ-CA|CA-HST|SALE|standard',           1),
+    ('TG-CA-HST-13-IN',   'TJ-CA|CA-HST|PURCHASE|standard',       1),
     ('TG-CA-WHT-25',      'TJ-CA|CA-WHT|SALE|standard',           1),
     -- DE
     ('TG-DE-UST-19-OUT',  'TJ-DE|DE-UST|SALE|standard',           1),

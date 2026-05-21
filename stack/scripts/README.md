@@ -836,7 +836,7 @@ seed-db.bat [flags...]
 |------|-------------|
 | _(none)_ or `--all` | Full provision: DDL + platform seed + blueprint/tenant data (same result) |
 | `--ddl-only` | Phase/Stage 1 only — DDL migrations; no seed data |
-| `--system-only` | Phase/Stage 2 only — platform seed (`010_platform/`); DDL must already exist |
+| `--system-only` | Phases/Stages 1+2 — DDL plus platform seed (`010_platform/`) |
 | `--no-demo` | Phase/Stage 1+2 only — DDL + platform seed; skips blueprint/tenant phases |
 | `--demo-only` | All phases with checksum tracking; explicit alias for the default |
 | `--reset` | **Destructive**: drop all schemas + re-provision all phases from scratch |
@@ -846,6 +846,7 @@ seed-db.bat [flags...]
 | `--status` | Read-only report — shows OK / PENDING / CHANGED per file, no DB changes |
 | `--force` | Re-run all phases even if checksum unchanged |
 | `--phase=N` (`.sh`) / `--stage=N` (`.bat`) | Run only phase N (1 = DDL, 2 = platform seed, 3 = blueprint/tenant) |
+| `--industry-pack=pack_transport` | Opt in a `030_industry/100_industry_packs` seed; repeatable, numeric prefix optional, invalid names fail fast |
 | `--tenant-id=UUID` | Set `app.seed_tenant_id` for Phase 3; overrides `SEED_TENANT_ID` env var. Required when seeding a new client tenant; omit to use the baked-in UUID (demo tenant). |
 
 Seed phases:

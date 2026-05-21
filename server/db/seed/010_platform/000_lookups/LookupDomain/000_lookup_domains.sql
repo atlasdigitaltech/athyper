@@ -213,9 +213,51 @@ VALUES
      'master', false, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
+    ('master.tenant_type',
+     'Tenant Type',
+     'Plane-aware tenant classification: platform owner, customer, partner, prospects, and system tenants.',
+     'master', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
     ('master.principal_type',
      'Principal Type',
      'Classification of actors in master.principal: human users, automated service accounts, or bots.',
+     'master', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.tenant_relationship_type',
+     'Tenant Relationship Type',
+     'Explicit tenant-to-tenant relationship categories used for partner, supplier, support, and network onboarding.',
+     'master', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.tenant_relationship_direction',
+     'Tenant Relationship Direction',
+     'Direction marker for tenant_relationship from/to semantics.',
+     'master', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.tenant_relationship_status',
+     'Tenant Relationship Status',
+     'Lifecycle status of a tenant-to-tenant relationship or onboarding invite.',
+     'master', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.principal_relationship_type',
+     'Principal Relationship Type',
+     'Correlation types between principals, such as same-human, duplicate candidate, merge, transfer, or support shadow.',
+     'master', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.principal_relationship_verification_status',
+     'Principal Relationship Verification Status',
+     'Verification state for a principal relationship correlation.',
+     'master', false, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.principal_relationship_verified_method',
+     'Principal Relationship Verification Method',
+     'Method used to verify a principal relationship correlation.',
      'master', false, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
@@ -643,7 +685,7 @@ VALUES
 
     ('master.cc_owner_type',
      'Classification owner type',
-     'Which entity types can be classified (product, spend_category, commodity_category, item, customer, supplier).',
+     'Which entity types can be classified (product, commodity_category, item, customer, supplier).',
      'master', false, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
@@ -1060,6 +1102,49 @@ VALUES
     ('document.procurement_type',            'Invoice Line Procurement Type',          'Nature of the item or service on an invoice line (goods, services, mixed, freight, misc). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.invoice_match_status',        'Invoice Match Status',                   'Three-way match progress status for an invoice or invoice line (unmatched, partially_matched, fully_matched, match_exception). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.invoice_budget_check_result', 'Invoice Budget Check Result',            'Outcome of the budget availability check on a purchase invoice (PASSED, WARNED, OVERRIDE, BLOCKED, EXEMPT). Platform-governed.',                        'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    -- ── AP invoice tax mode domains ─────────────────────────────────────────
+    ('document.purchase_invoice_tax_mode',
+     'Purchase Invoice Tax Mode',
+     'Interpretation of how tax_amount relates to Invoice Total: inclusive (tax within total), exclusive (tax added on top), or no_tax (exempt/zero-rated). Platform-governed.',
+     'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('document.purchase_invoice_tax_mode_source',
+     'Tax Mode Source',
+     'Records how tax_mode was determined on an AP invoice, for audit trail and UI attribution. Platform-governed.',
+     'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    -- ── AP invoice sub-type lookup domains (credit / debit / advance / retention) ─
+    ('document.purchase_invoice_credit_reason',
+     'Purchase Invoice Credit Reason',
+     'Reason selected for a supplier credit note. Platform-governed.',
+     'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('document.purchase_invoice_debit_reason',
+     'Purchase Invoice Debit Reason',
+     'Reason selected for a buyer-issued debit note. Platform-governed.',
+     'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('document.purchase_invoice_advance_type',
+     'Purchase Invoice Advance Type',
+     'Commercial basis for an advance payment (% of contract value, fixed amount, milestone). Platform-governed.',
+     'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('document.purchase_invoice_recovery_method',
+     'Purchase Invoice Recovery Method',
+     'How an advance payment is recovered from future invoices. Platform-governed.',
+     'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('document.purchase_invoice_release_type',
+     'Purchase Invoice Retention Release Type',
+     'How retained balances are released (partial, full, milestone-based). Platform-governed.',
+     'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('document.purchase_invoice_application_strategy',
+     'Purchase Invoice Application Strategy',
+     'How a credit or debit is applied to open payables (apply now, hold, pro-rata, net). Platform-governed.',
+     'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
     ('master.company_code_access_entity_type',  'Company Code Access Entity Type',  'Entity types scoped to company codes via master.company_code_access. is_extensible=true — tenants may add new entity types without DDL.',                  'master', true,  'active', '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (code) DO NOTHING;
 
@@ -1445,6 +1530,99 @@ VALUES
      'Holiday Observance Type',
      'How the holiday date is determined (fixed, floating, calculated, transferred). '
      'is_extensible=false — observance types are jurisdiction-defined.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000')
+
+ON CONFLICT (code) DO NOTHING;
+
+
+-- ── Entity-field contract lookup domains (master schema) ─────────────────────
+-- Domains wired to entity fields by 20260518 contract hardening migration.
+
+INSERT INTO control.lookup_domain (code, name, description, source_schema, is_extensible, status, created_by)
+VALUES
+    ('master.asset_component.component_type',
+     'Asset Component Type',
+     'IAS 16 componentization role for an asset component (major, replacement, inspection). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.brand_profile.direction',
+     'Brand Text Direction',
+     'Text direction for tenant brand rendering (ltr, rtl). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.business_intent.domain',
+     'Business Intent Domain',
+     'Purpose/domain classification for business intents (opex, capex, revenue, etc.). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.business_intent.visibility',
+     'Business Intent Visibility',
+     'Visibility classification for business intents (standard, restricted, confidential). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.company_code_intent_policy.mapping_mode',
+     'Intent Policy Mapping Mode',
+     'Allow/deny mapping mode for company intent policies. Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.content_item_access_grant.access_level',
+     'Content Access Level',
+     'Access grant level for CMS content items (read, write, publish, admin). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.content_item_access_grant.subject_type',
+     'Content Access Subject Type',
+     'Subject type for CMS content grants (principal, role, group, public). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.entity_document_link.link_kind',
+     'Entity Document Link Kind',
+     'Attachment link kind for entity document links (primary, related, supporting, compliance, audit). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.fiscal_period.status',
+     'Fiscal Period Status',
+     'Posting status for fiscal periods (future, open, soft_close, hard_close). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.principal_identity_binding.sync_status',
+     'Principal Identity Sync Status',
+     'IdP synchronization health for principal identity bindings (pending, synced, drift, error, disabled). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.principal_profile.keycloak_sync_status',
+     'Principal Profile Keycloak Sync Status',
+     'Legacy Keycloak synchronization health on principal profiles (pending, synced, drift, error). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.print_profile.color_mode',
+     'Print Color Mode',
+     'Output color mode for print profiles (color, bw, grayscale). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.print_profile.orientation',
+     'Print Orientation',
+     'Page orientation for print profiles (portrait, landscape). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.print_profile.output_format',
+     'Print Output Format',
+     'Rendered output format for print profiles (pdf, html, png). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.print_profile.paper_size',
+     'Print Paper Size',
+     'Paper size for print profiles (a3, a4, a5, b4, letter, legal). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.tenant_feature_entitlement.status',
+     'Tenant Feature Entitlement Status',
+     'Lifecycle status for tenant feature entitlements (active, suspended, trial). Platform-governed.',
+     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
+
+    ('master.tenant_module_subscription.status',
+     'Tenant Module Subscription Status',
+     'Lifecycle status for tenant module subscriptions (active, suspended, trial). Platform-governed.',
      'master', false, 'active', '00000000-0000-0000-0000-000000000000')
 
 ON CONFLICT (code) DO NOTHING;

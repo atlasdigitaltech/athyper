@@ -535,11 +535,19 @@ COMMENT ON TABLE master.business_partner_relation IS
     'country_scope=NULL means global coverage.';
 
 
--- ─── M4: master.supplier_spend_category — multi-category bridge per supplier ──
+-- ─── M4: master.supplier_commodity_category — multi-category bridge per supplier ──
 -- supplier.commodity_category_id holds the primary / dominant category.
 -- This table allows a supplier to be approved for multiple commodity categories
--- at the tenant level, before company-code-specific eligibility (company_code_supplier_spend_policy).
-CREATE TABLE IF NOT EXISTS master.supplier_spend_category (
+-- at the tenant level, before company-code-specific eligibility in commodity buy policy.
+DO $$
+BEGIN
+    IF to_regclass('master.supplier_commodity_category') IS NULL
+       AND to_regclass('master.supplier_spend_category') IS NOT NULL THEN
+        ALTER TABLE master.supplier_spend_category RENAME TO supplier_commodity_category;
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS master.supplier_commodity_category (
     id                uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id         uuid        NOT NULL,
     supplier_id       uuid        NOT NULL,   -- FK → master.supplier
@@ -575,31 +583,31 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'master' AND table_name = 'supplier_spend_category'
+        WHERE table_schema = 'master' AND table_name = 'supplier_commodity_category'
           AND column_name = 'spend_category_id'
     ) AND NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'master' AND table_name = 'supplier_spend_category'
+        WHERE table_schema = 'master' AND table_name = 'supplier_commodity_category'
           AND column_name = 'commodity_category_id'
     ) THEN
-        ALTER TABLE master.supplier_spend_category RENAME COLUMN spend_category_id TO commodity_category_id;
+        ALTER TABLE master.supplier_commodity_category RENAME COLUMN spend_category_id TO commodity_category_id;
     END IF;
 END $$;
 
 -- At most one primary category per supplier (active only).
 CREATE UNIQUE INDEX IF NOT EXISTS sscat_one_primary_uidx
-    ON master.supplier_spend_category (tenant_id, supplier_id)
+    ON master.supplier_commodity_category (tenant_id, supplier_id)
     WHERE is_primary = true AND status = 'active';
 
 CREATE INDEX IF NOT EXISTS sscat_supplier_idx
-    ON master.supplier_spend_category (tenant_id, supplier_id);
+    ON master.supplier_commodity_category (tenant_id, supplier_id);
 CREATE INDEX IF NOT EXISTS sscat_category_idx
-    ON master.supplier_spend_category (tenant_id, commodity_category_id);
+    ON master.supplier_commodity_category (tenant_id, commodity_category_id);
 
-COMMENT ON TABLE master.supplier_spend_category IS
+COMMENT ON TABLE master.supplier_commodity_category IS
     'ARCHETYPE=B;SCOPE=T. Tenant-level commodity category memberships per supplier. '
     'Allows a supplier to be approved for multiple commodity categories before '
-    'company-code eligibility is configured via company_code_supplier_spend_policy. '
+    'company-code eligibility is configured via control.commodity_category_buy_policy. '
     'is_primary: matches supplier.commodity_category_id (the dominant category). '
     'Enforced at most one active primary per supplier.';
 
@@ -709,25 +717,25 @@ DO $$ BEGIN
         REFERENCES master.business_partner (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- supplier_spend_category → supplier
+-- supplier_commodity_category → supplier
 -- Purge orphaned rows: master.supplier is dropped and recreated by 01h.
-DELETE FROM master.supplier_spend_category sscat
+DELETE FROM master.supplier_commodity_category sscat
 WHERE NOT EXISTS (
     SELECT 1 FROM master.supplier s
     WHERE s.tenant_id = sscat.tenant_id AND s.id = sscat.supplier_id
 );
 DO $$ BEGIN
-    ALTER TABLE master.supplier_spend_category
+    ALTER TABLE master.supplier_commodity_category
         ADD CONSTRAINT sscat_supplier_fk
         FOREIGN KEY (tenant_id, supplier_id)
         REFERENCES master.supplier (tenant_id, id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- supplier_spend_category → commodity_category
+-- supplier_commodity_category → commodity_category
 DO $$ BEGIN
-    ALTER TABLE master.supplier_spend_category
+    ALTER TABLE master.supplier_commodity_category
         DROP CONSTRAINT IF EXISTS sscat_category_fk;
-    ALTER TABLE master.supplier_spend_category
+    ALTER TABLE master.supplier_commodity_category
         ADD CONSTRAINT sscat_category_fk
         FOREIGN KEY (tenant_id, commodity_category_id)
         REFERENCES master.commodity_category (tenant_id, id);

@@ -11,7 +11,7 @@
 --   is auto-generated and NOT predictable at seed time.
 --   The JIT service (jit.service.ts) creates/updates the binding on first
 --   login using the real KC sub. Seeding a wrong subject_id here would block
---   JIT from working due to a UNIQUE(tenant_id, principal_id, provider_code)
+--   JIT from working due to a UNIQUE(tenant_id, principal_id, realm_key, provider_code)
 --   constraint conflict.
 --
 --   001_demo_principals.sql IS safe to include bindings because those users

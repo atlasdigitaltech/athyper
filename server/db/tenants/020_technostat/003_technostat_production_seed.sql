@@ -70,13 +70,14 @@ DECLARE
     v_su uuid := '00000000-0000-0000-0000-000000000000';
 BEGIN
     INSERT INTO master.tenant (
-        code, name, display_name, realm_key, region, subscription,
+        code, name, display_name, realm_key, tenant_type, region, subscription,
         status, metadata, created_by
     ) VALUES (
         'technostat',
         'Technostat Group',
         'Technostat Group Holdings',
         'athyper',
+        'customer',
         'MEA',
         'enterprise',
         'active',
@@ -99,14 +100,15 @@ BEGIN
     ON CONFLICT (realm_key, code) DO UPDATE SET
         name         = EXCLUDED.name,
         display_name = EXCLUDED.display_name,
+        tenant_type  = EXCLUDED.tenant_type,
         region       = EXCLUDED.region,
         subscription = EXCLUDED.subscription,
         status       = EXCLUDED.status,
         metadata     = master.tenant.metadata
                        || jsonb_build_object('_seed', (EXCLUDED.metadata->'_seed')),
         updated_at   = now(), updated_by = v_su
-    WHERE (master.tenant.name, master.tenant.status)
-       IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.status);
+    WHERE (master.tenant.tenant_type, master.tenant.name, master.tenant.status)
+       IS DISTINCT FROM (EXCLUDED.tenant_type, EXCLUDED.name, EXCLUDED.status);
 
     RAISE NOTICE '[P01] technostat tenant ready (id=%)',
         (SELECT id FROM master.tenant WHERE code = 'technostat');
@@ -1223,16 +1225,16 @@ BEGIN
     -- STAGE C: master.principal_identity_binding
     INSERT INTO master.principal_identity_binding (
         tenant_id, principal_id,
-        provider_code, subject_id, username,
+        realm_key, provider_code, subject_id, username,
         sync_status, idp_enabled, idp_email_verified,
         synced_at, created_by)
     VALUES
-    (v_tid, 'cc001000-0000-0000-0000-000000000001', 'keycloak', 'cc001000-0000-0000-0000-000000000001', 'tksa.owner', 'synced', true, true, now(), v_su),
-    (v_tid, 'cc001000-0000-0000-0000-000000000002', 'keycloak', 'cc001000-0000-0000-0000-000000000002', 'tksa.admin', 'synced', true, true, now(), v_su),
-    (v_tid, 'cc001000-0000-0000-0000-000000000003', 'keycloak', 'cc001000-0000-0000-0000-000000000003', 'ssk.admin',  'synced', true, true, now(), v_su),
-    (v_tid, 'cc001000-0000-0000-0000-000000000004', 'keycloak', 'cc001000-0000-0000-0000-000000000004', 'tegy.admin', 'synced', true, true, now(), v_su),
-    (v_tid, 'cc001000-0000-0000-0000-000000000005', 'keycloak', 'cc001000-0000-0000-0000-000000000005', 'sdtx.admin', 'synced', true, true, now(), v_su)
-    ON CONFLICT (tenant_id, principal_id, provider_code) DO NOTHING;
+    (v_tid, 'cc001000-0000-0000-0000-000000000001', 'athyper', 'keycloak', 'cc001000-0000-0000-0000-000000000001', 'tksa.owner', 'synced', true, true, now(), v_su),
+    (v_tid, 'cc001000-0000-0000-0000-000000000002', 'athyper', 'keycloak', 'cc001000-0000-0000-0000-000000000002', 'tksa.admin', 'synced', true, true, now(), v_su),
+    (v_tid, 'cc001000-0000-0000-0000-000000000003', 'athyper', 'keycloak', 'cc001000-0000-0000-0000-000000000003', 'ssk.admin',  'synced', true, true, now(), v_su),
+    (v_tid, 'cc001000-0000-0000-0000-000000000004', 'athyper', 'keycloak', 'cc001000-0000-0000-0000-000000000004', 'tegy.admin', 'synced', true, true, now(), v_su),
+    (v_tid, 'cc001000-0000-0000-0000-000000000005', 'athyper', 'keycloak', 'cc001000-0000-0000-0000-000000000005', 'sdtx.admin', 'synced', true, true, now(), v_su)
+    ON CONFLICT (tenant_id, principal_id, realm_key, provider_code) DO NOTHING;
 
     RAISE NOTICE '[P17] 5 KC-compatible principals seeded: tksa.owner, tksa.admin, ssk.admin, tegy.admin, sdtx.admin';
 END $p17$;

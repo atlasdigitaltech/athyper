@@ -888,6 +888,12 @@ function fieldTooltip(field: EntityField): string | undefined {
   return textConfig(hint?.["tooltip"] ?? hint?.["tooltip_text"] ?? hint?.["tooltipText"]);
 }
 
+function fieldDynamicVisibleWhen(field: EntityField): unknown {
+  const hint = fieldUiHint(field);
+  const display = asConfigRecord(hint?.["display"]);
+  return display?.["visible_when"] ?? null;
+}
+
 function DocumentFieldLabel({
   field,
   required = false,
@@ -988,7 +994,7 @@ function DocumentFieldsPanel({
     entity.fields
       .filter(isDocumentDisplayField)
       .filter((f) => {
-        const rule = (f.ui_hint as Record<string, unknown> | null)?.["visible_when"];
+        const rule = fieldDynamicVisibleWhen(f);
         if (!rule) return true;
         return Boolean(evaluateRule(rule, { draft: data }));
       }),
@@ -1046,7 +1052,7 @@ function DocumentEditableFieldsPanel({
     entity.fields
       .filter((field) => isDocumentEditableField(field, skipFields))
       .filter((f) => {
-        const rule = (f.ui_hint as Record<string, unknown> | null)?.["visible_when"];
+        const rule = fieldDynamicVisibleWhen(f);
         if (!rule) return true;
         return Boolean(evaluateRule(rule, { draft: data }));
       }),

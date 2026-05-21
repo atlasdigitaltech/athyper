@@ -72,16 +72,16 @@ CREATE INDEX IF NOT EXISTS persona_permission_granted_pidx ON shared.persona_per
 -- ou_type — REMOVED: migrated to control.lookup_domain / control.lookup_value
 
 -- plan_module_access
-CREATE INDEX IF NOT EXISTS pma_plan_idx ON shared.plan_module_access (plan_id);
-CREATE INDEX IF NOT EXISTS pma_included_pidx ON shared.plan_module_access (plan_id, module_id) WHERE is_included = true;
+CREATE INDEX IF NOT EXISTS pma_plan_ver_idx ON shared.plan_module_access (plan_version_id);
+CREATE INDEX IF NOT EXISTS pma_included_pidx ON shared.plan_module_access (plan_version_id, module_id) WHERE is_included = true;
 
 -- plan_permission_access
-CREATE INDEX IF NOT EXISTS ppa_plan_idx ON shared.plan_permission_access (plan_id);
-CREATE INDEX IF NOT EXISTS ppa_included_pidx ON shared.plan_permission_access (plan_id, permission_id) WHERE is_included = true;
+CREATE INDEX IF NOT EXISTS ppa_plan_ver_idx ON shared.plan_permission_access (plan_version_id);
+CREATE INDEX IF NOT EXISTS ppa_included_pidx ON shared.plan_permission_access (plan_version_id, permission_id) WHERE is_included = true;
 
 -- plan_feature_access
-CREATE INDEX IF NOT EXISTS pfa_plan_idx ON shared.plan_feature_access (plan_id);
-CREATE INDEX IF NOT EXISTS pfa_included_pidx ON shared.plan_feature_access (plan_id, feature_id) WHERE is_included = true;
+CREATE INDEX IF NOT EXISTS pfa_plan_ver_idx ON shared.plan_feature_access (plan_version_id);
+CREATE INDEX IF NOT EXISTS pfa_included_pidx ON shared.plan_feature_access (plan_version_id, feature_id) WHERE is_included = true;
 
 
 -- ── §CCW  shared.commodity_crosswalk ─────────────────────────────────────────
