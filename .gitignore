@@ -182,6 +182,7 @@ __pycache__/
 # Scratch / Prototype work
 # =========================
 tmp/
+.tmp/
 
 # =========================
 # Local-only docs (not synced to GitHub)
