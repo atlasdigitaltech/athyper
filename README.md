@@ -1,12 +1,14 @@
 # athyper
 
-Multi-tenant enterprise platform — monorepo containing the API server, Next.js web app, shared packages, and infrastructure stack.
+Multi-tenant enterprise platform: monorepo containing three Next.js product
+planes, a shared runtime server, shared packages, and the infrastructure stack.
 
 ## Quick links
 
 | Resource | Path |
 |----------|------|
 | Local development setup | [stack/docs/local-dev-setup.md](stack/docs/local-dev-setup.md) |
+| Folder boundary map | [docs/architecture/folder-boundary-map.md](docs/architecture/folder-boundary-map.md) |
 | Staging deployment runbook | [stack/docs/staging-setup.md](stack/docs/staging-setup.md) |
 | Env file contract | [stack/env/README.md](stack/env/README.md) |
 | Secrets management | [stack/docs/secrets-management.md](stack/docs/secrets-management.md) |
@@ -43,16 +45,18 @@ cd server && tsx db/seed/migrate.ts --all && cd ..
 pnpm dev
 ```
 
-Web app: http://localhost:3000 · API: http://localhost:4000
+Neon app: http://localhost:3000 · API: http://localhost:4000
 
 See [stack/docs/local-dev-setup.md](stack/docs/local-dev-setup.md) for the full local walkthrough and [stack/docs/staging-setup.md](stack/docs/staging-setup.md) for the Ubuntu staging runbook.
 
 ## Repo structure
 
 ```
-apps/web/        Next.js 16 frontend
-packages/        Shared TypeScript packages (data, ui, runtime, shell, domain)
-server/          Express API + BullMQ workers + DB migrations
+apps/neon/       Tenant/customer operating plane
+apps/mesh/       Partner/supplier collaboration plane
+apps/admin/      Internal platform administration plane
+packages/        Shared, domain, and product TypeScript packages
+server/          Shared Express API + BullMQ workers + DB DDL/seeds
 stack/           Docker Compose infrastructure stack
 perf/k6/         Load test scripts
 tooling/         Shared tsconfig bases
@@ -67,7 +71,9 @@ pnpm typecheck            # TypeScript strict check
 pnpm test                 # Vitest unit tests
 
 # Scoped
-pnpm dev --filter @athyper/web              # Next.js only
+pnpm dev --filter @athyper/neon             # Neon app only
+pnpm dev --filter @athyper/mesh             # Mesh app only
+pnpm dev --filter @athyper/admin            # Admin app only
 pnpm dev --filter @athyper/runtime-server   # API + workers only
 
 # DB

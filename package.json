@@ -16,18 +16,23 @@
     "db:setup:rebuild-entity-metadata": "pnpm --dir server/db run db:setup:rebuild-entity-metadata",
     "clean": "turbo clean && rm -rf node_modules",
     "brand:build": "tsx scripts/brand/build-brand.ts",
+    "brand:sync:apps": "tsx scripts/brand/sync-app-brand.ts",
     "brand:sync:keycloak": "tsx scripts/brand/sync-keycloak.ts",
     "brand:verify": "tsx scripts/brand/verify-brand-sync.ts",
-    "brand:refresh": "pnpm brand:build && pnpm brand:sync:keycloak",
+    "brand:refresh": "pnpm brand:build && pnpm brand:sync:apps && pnpm brand:sync:keycloak",
     "brand:check": "pnpm brand:build && pnpm brand:verify",
-    "policy:versions": "syncpack list-mismatches",
-    "policy:versions:fix": "syncpack fix-mismatches",
+    "policy:versions": "syncpack lint",
+    "policy:versions:fix": "syncpack fix",
     "policy:peers": "tsx scripts/policy/verify-peer-ranges.ts",
     "policy:tsconfig": "tsx scripts/policy/verify-tsconfig.ts",
     "policy:typography": "pnpm --filter @athyper/theme run check:typography",
     "policy:style-tokens": "tsx scripts/policy/audit-style-tokens.ts",
     "policy:style-tokens:strict": "tsx scripts/policy/audit-style-tokens.ts --strict",
-    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:typography && pnpm policy:style-tokens"
+    "policy:server-boundaries": "node scripts/policy/verify-server-boundaries.mjs",
+    "policy:neon-mesh-boundary": "node scripts/policy/verify-neon-mesh-boundary.mjs",
+    "policy:mesh-boundaries": "node scripts/policy/verify-plane-boundaries.mjs",
+    "policy:plane-boundaries": "node scripts/policy/verify-plane-boundaries.mjs",
+    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:typography && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -44,7 +49,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "syncpack": "^14.3.0",
-    "tsx": "^4.19.0",
+    "tsx": "^4.19.2",
     "turbo": "^2.9.6",
     "typescript": "^6.0.3"
   }

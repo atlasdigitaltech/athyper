@@ -1,0 +1,9 @@
+{
+  "extends": "@athyper/config/tsconfig",
+  "compilerOptions": {
+    "rootDir": "src",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

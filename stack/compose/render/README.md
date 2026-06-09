@@ -1,14 +1,14 @@
-# Render Profile — Gotenberg + Tika
+# Render Profile — docrender (Gotenberg) + docparser (Tika)
 
-Document rendering and content extraction services. Gotenberg replaced the
+Document rendering and content extraction services. docrender (Gotenberg) replaced the
 planned `athyper-renderer` stub.
 
 ## Services
 
 | Service | Purpose | Internal URL |
 |---|---|---|
-| `gotenberg` | HTML/Office → PDF | `http://gotenberg:3000` |
-| `tika` | Text/metadata extraction from binaries | `http://tika:9998` |
+| `docrender` | HTML/Office → PDF | `http://docrender:3000` |
+| `docparser` | Text/metadata extraction from binaries | `http://docparser:9998` |
 
 Both are stateless, internal-only (no Traefik labels), and have no DB or
 Redis coupling.
@@ -26,12 +26,12 @@ status-code surface changes.
 
 | File | Consumed by |
 |---|---|
-| `stack/config/render/gotenberg.conf` | Operator reference (mounted read-only into gotenberg container) |
-| `stack/config/render/environments/gotenberg.{staging,production}.conf` | Per-env diff targets |
-| `stack/config/render/tika-config.xml` | **Tika** via `--config` CLI flag (mounted at `/config/tika-config.xml`) |
-| `stack/config/render/environments/tika-config.{staging,production}.xml` | Per-env variants |
+| `stack/config/render/docrender.conf` | Operator reference (mounted read-only into docrender container) |
+| `stack/config/render/environments/docrender.{staging,production}.conf` | Per-env diff targets |
+| `stack/config/render/docparser-config.xml` | **docparser / Tika** via `--config` CLI flag (mounted at `/config/docparser-config.xml`) |
+| `stack/config/render/environments/docparser-config.{staging,production}.xml` | Per-env variants |
 
-### Why Gotenberg's `.conf` is not read by Gotenberg
+### Why docrender's `.conf` is not read by Gotenberg
 
 Gotenberg 8.x has no config-file option; every knob is a CLI flag passed
 at container launch. The `.conf` file is a documented, diffable
@@ -43,8 +43,8 @@ tuning changes lives in
 ## Adapter status — Track B / B1 #2
 
 - **Synchronous path (`RenderService`)**: `GotenbergClient` implemented at
-  `server/src/foundation/render/gotenberg-client.ts`. Preferred over the
-  legacy `PdfRendererClient` when `GOTENBERG_BASE_URL` is set in the
+  `server/packages/foundation/render/gotenberg-client.ts`. Preferred over the
+  legacy `PdfRendererClient` when `DOCRENDER_BASE_URL` is set in the
   runtime env. Throws `GotenbergError` with `category` set per the
   contract in `stack/config/render/README.md`.
 - **Async path (`render-document.worker.ts`)**: still uses in-process
@@ -74,8 +74,8 @@ tuning changes lives in
 
 - Chromium (HTML→PDF) is **concurrent within one instance**.
 - LibreOffice (Office→PDF) is **serialised per instance** — scale via
-  `GOTENBERG_REPLICAS`, not by raising in-process parallelism.
-- `GOTENBERG_LIBREOFFICE_RESTART_AFTER` guards against memory leaks at
+  `DOCRENDER_REPLICAS`, not by raising in-process parallelism.
+- `DOCRENDER_LIBREOFFICE_RESTART_AFTER` guards against memory leaks at
   the cost of a cold-start every N conversions.
 
 ## Environment variables
@@ -83,9 +83,9 @@ tuning changes lives in
 See `stack/env/.env.example` (search `# --- Render profile ---` and
 `# RENDER PROFILE`):
 
-- `GOTENBERG_REPLICAS` — 1 local, 2 staging/production
-- `GOTENBERG_MEMORY_LIMIT` — 1 g local, 1.5 g staging, 2 g production
-- `GOTENBERG_API_TIMEOUT` — HTTP request ceiling (120 s local, 180 s staging/production)
-- `GOTENBERG_LIBREOFFICE_RESTART_AFTER` — LibreOffice restart cadence (50 local, 100 staging/production)
-- `GOTENBERG_CHROMIUM_ALLOW_LIST` — Chromium URL allow-list (default `file:///tmp.*` — **security-sensitive**)
-- `TIKA_MEMORY_LIMIT` — 1 g local, 1.5 g staging, 2 g production
+- `DOCRENDER_REPLICAS` — 1 local, 2 staging/production
+- `DOCRENDER_MEMORY_LIMIT` — 1 g local, 1.5 g staging, 2 g production
+- `DOCRENDER_API_TIMEOUT` — HTTP request ceiling (120 s local, 180 s staging/production)
+- `DOCRENDER_LIBREOFFICE_RESTART_AFTER` — LibreOffice restart cadence (50 local, 100 staging/production)
+- `DOCRENDER_CHROMIUM_ALLOW_LIST` — Chromium URL allow-list (default `file:///tmp.*` — **security-sensitive**)
+- `DOCPARSER_MEMORY_LIMIT` — 1 g local, 1.5 g staging, 2 g production

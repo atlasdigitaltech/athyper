@@ -1,0 +1,60 @@
+{
+  "name": "@athyper/adapter-db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "prisma",
+    "migrations",
+    "types"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --external kysely --external pg --external @athyper/core",
+    "dev": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --watch --external kysely --external pg --external @athyper/core",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "db:codegen": "pnpm run prisma:generate",
+    "db:codegen:mesh": "pnpm run prisma:generate:mesh",
+    "prisma:generate": "node --max-old-space-size=4096 ./node_modules/prisma/build/index.js generate",
+    "prisma:generate:mesh": "node --max-old-space-size=4096 ./node_modules/prisma/build/index.js generate --schema src/prisma/schema.mesh.prisma",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:pull": "prisma db pull && python3 scripts/fix-prisma-relations.py && pnpm run prisma:generate",
+    "prisma:pull:mesh": "prisma db pull --schema src/prisma/schema.mesh.prisma && pnpm run prisma:generate:mesh",
+    "prisma:pull:force": "prisma db pull --force && python3 scripts/fix-prisma-relations.py && pnpm run prisma:generate",
+    "prisma:studio": "prisma studio",
+    "kysely:codegen": "pnpm run prisma:generate",
+    "db:export-meta": "tsx src/scripts/export-meta-tables.ts"
+  },
+  "dependencies": {
+    "@athyper/core": "workspace:*",
+    "exceljs": "^4.4.0",
+    "kysely": "^0.28.16",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "prisma": "^7.7.0",
+    "prisma-kysely": "^3.0.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.3"
+  }
+}

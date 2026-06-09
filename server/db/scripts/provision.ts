@@ -12,21 +12,23 @@
 //   shared.uuidv7() bootstrap dependency.
 //
 // Phase 2 – System Seed: Platform-wide reference and control data
-//   Directory: 900_seed_data/010_platform/**
+//   Directory: 900_seed_data/platform/**
 //
 // Phase 3 – Blueprint + Tenant Seed
-//   Directories: 900_seed_data/020_universal/**   (TIER 1 foundation + TIER 2a COA)
-//                900_seed_data/030_industry/**    (TIER 2b industry packs)
-//                900_seed_data/040_modules/**     (TIER 3 module packs)
-//                900_seed_data/040_tenants/**     (per-client onboarding)
+//   Directories: 900_seed_data/blueprints/universal/**   (TIER 1 foundation + TIER 2a COA)
+//                900_seed_data/blueprints/industry/**    (TIER 2b industry packs)
+//                900_seed_data/blueprints/modules/**     (TIER 3 module packs)
+//                900_seed_data/tenants/**         (per-client onboarding)
 //
 // Usage:
 //   tsx db/seed/migrate.ts                   # Run all three stages (default)
 //   tsx db/seed/migrate.ts --all             # Same as default
 //   tsx db/seed/migrate.ts --ddl-only        # Stage 1 only (DDL)
-//   tsx db/seed/migrate.ts --system-only     # Stages 1+2 (DDL + 010_platform seed; DDL idempotent)
+//   tsx db/seed/migrate.ts --system-only     # Stages 1+2 (DDL + platform seed; DDL idempotent)
 //   tsx db/seed/migrate.ts --no-demo         # Stages 1+2 (DDL + system, no demo/tenant data)
 //   tsx db/seed/migrate.ts --demo-only       # Stages 1+2+3 (all; checksum tracking skips done files)
+//   tsx db/seed/migrate.ts --with-mesh       # Legacy combined-DB mode; normally use scripts/provision-mesh.ts instead
+//   tsx db/seed/migrate.ts --no-mesh         # Explicitly keep Mesh/Mesh-log/Mesh-control out of NEON provisioning (default)
 //   tsx db/seed/migrate.ts --reset           # Drop all schemas then re-run all stages
 //   tsx db/seed/migrate.ts --drop-only       # Drop all schemas only (no re-seed)
 //   tsx db/seed/migrate.ts --status          # Show status of all SQL files
@@ -42,7 +44,7 @@
 //   tsx db/seed/migrate.ts --phase=1         # Alias for --stage=1
 //   tsx db/seed/migrate.ts --stage=1 --stage=2  # Multiple stages
 //
-// Industry pack selection (030_industry/100_industry_packs/ files are OPT-IN):
+// Industry pack selection (blueprints/industry/100_industry_packs/ files are OPT-IN):
 //   Industry packs are excluded by default — they must be explicitly requested.
 //   Without --industry-pack the provisioner runs foundation + COA only (no TIER 2b).
 //
@@ -72,7 +74,9 @@ const __dirname = dirname(__filename);
 
 const DDL_DIR     = join(__dirname, "../ddl");
 const SEED_DIR    = join(__dirname, "../seed");
-const TENANTS_DIR = join(__dirname, "../tenants");
+const TENANTS_DIR = join(__dirname, "../seed/tenants/neon");
+const ADMIN_DIR   = join(__dirname, "../seed/tenants/admin");
+const MESH_DIR    = join(__dirname, "../seed/tenants/mesh");
 const REPO_ROOT   = join(__dirname, "../../..");
 
 // ---------------------------------------------------------------------------
@@ -87,7 +91,8 @@ type Phase3Scope =
   | "post_company"
   | "final_tenant"
   | "tenant_pre_org"
-  | "tenant_post_org";
+  | "tenant_post_org"
+  | "plane_seed";
 
 export type SqlFile = {
   /** Relative path from SQL_DIR, using forward slashes, e.g. "control/01_tables.sql" */
@@ -120,6 +125,8 @@ export type DiscoveryOptions = {
   modules?: string[];
   /** Phase 3 only — when true, skip all files from the tenants/ directory */
   skipTenants?: boolean;
+  /** Cutover gate — when true, skip Mesh/Mesh-log/Mesh-control DDL and Mesh plane seed files */
+  skipMesh?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -274,6 +281,13 @@ function isTenantPreOrgFile(file: SqlFile): boolean {
     || tenantRelative.startsWith("100_org_structure/2");
 }
 
+function postCompanyBlueprintOrder(file: SqlFile): number {
+  const relPath = file.relPath;
+  if (relPath.startsWith("seed/blueprints/universal/060_org_structure/")) return 0;
+  if (relPath.startsWith("seed/blueprints/industry/200_org_structure/")) return 10;
+  return 50;
+}
+
 function scopedTrackingKey(file: SqlFile, explicitTenantId?: string): string {
   if (
     file.phase === 3
@@ -304,7 +318,7 @@ function cleanIndustryPackArg(value: string): string {
 }
 
 function buildIndustryPackIndex(): Map<string, string> {
-  const packDir = join(SEED_DIR, "030_industry", "100_industry_packs");
+  const packDir = join(SEED_DIR, "blueprints/industry", "100_industry_packs");
   const index = new Map<string, string>();
   if (!existsSync(packDir)) return index;
 
@@ -359,6 +373,14 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
   if (existsSync(DDL_DIR)) {
     for (const absPath of collectSqlFiles(DDL_DIR)) {
       const relPath = `ddl/${relative(DDL_DIR, absPath).replace(/\\/g, "/")}`;
+      if (
+        opts.skipMesh
+        && (
+          relPath.startsWith("ddl/mesh/")
+          || relPath.startsWith("ddl/mesh_log/")
+          || relPath.startsWith("ddl/mesh_control/")
+        )
+      ) continue;
       ddlFiles.push({
         relPath,
         key: relPath.replace(/\.sql$/, ""),
@@ -371,46 +393,36 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
 
   // ── Phases 2 & 3: Seed data ───────────────────────────────────────────────
   if (existsSync(SEED_DIR)) {
-    const seedTopEntries = readdirSync(SEED_DIR, { withFileTypes: true })
-      .filter((e) => e.isDirectory() && !e.name.startsWith("_"))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const seedRoots: Array<{
+      relPath: string;
+      phase: Phase;
+      phaseLabel: string;
+      isModuleSeed?: boolean;
+    }> = [
+      { relPath: "platform", phase: 2, phaseLabel: "System Seed" },
+      { relPath: "blueprints/universal", phase: 3, phaseLabel: "Blueprint Seed" },
+      { relPath: "blueprints/industry", phase: 3, phaseLabel: "Blueprint Seed" },
+      { relPath: "blueprints/modules", phase: 3, phaseLabel: "Module Seed", isModuleSeed: true },
+    ];
 
-    for (const entry of seedTopEntries) {
-      const dirName = entry.name;
-      const dirPath = join(SEED_DIR, dirName);
-      const isModuleSeed = dirName.startsWith("040_modules");
-
-      let phase: Phase;
-      let phaseLabel: string;
-
-      if (dirName.startsWith("010_platform")) {
-        phase = 2;
-        phaseLabel = "System Seed";
-      } else if (dirName.startsWith("020_universal")) {
-        phase = 3;
-        phaseLabel = "Blueprint Seed";
-      } else if (dirName.startsWith("030_industry")) {
-        phase = 3;
-        phaseLabel = "Blueprint Seed";
-      } else if (isModuleSeed) {
-        phase = 3;
-        phaseLabel = "Module Seed";
-      } else {
-        continue;
-      }
+    for (const seedRoot of seedRoots) {
+      const dirPath = join(SEED_DIR, ...seedRoot.relPath.split("/"));
+      if (!existsSync(dirPath)) continue;
+      const { phase, phaseLabel } = seedRoot;
+      const isModuleSeed = seedRoot.isModuleSeed === true;
 
       for (const absPath of collectSqlFiles(dirPath)) {
         const relFromSeed = relative(SEED_DIR, absPath).replace(/\\/g, "/");
         const relPath = `seed/${relFromSeed}`;
         const isFinalTenantSeed =
-          relFromSeed === "020_universal/060_org_structure/303_company_code_tax_fx_links.sql"
-          || relFromSeed.startsWith("020_universal/990_validation/");
+          relFromSeed === "blueprints/universal/060_org_structure/303_company_code_tax_fx_links.sql"
+          || relFromSeed.startsWith("blueprints/universal/990_validation/");
         const isPostCompanySeed =
           !isFinalTenantSeed
-          && (relFromSeed.startsWith("020_universal/060_org_structure/")
-            || relFromSeed.startsWith("030_industry/200_org_structure/"));
+          && (relFromSeed.startsWith("blueprints/universal/060_org_structure/")
+            || relFromSeed.startsWith("blueprints/industry/200_org_structure/"));
 
-        // Industry pack filter: files under 030_industry/100_industry_packs/ are
+        // Industry pack filter: files under blueprints/industry/100_industry_packs/ are
         // excluded by default and must be explicitly opted-in via --industry-pack.
         // Matching supports both "103_pack_transport" and "pack_transport" forms.
         if (phase === 3 && relFromSeed.includes("/100_industry_packs/")) {
@@ -497,7 +509,7 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
   // Phase 120 — ddl/security/*
 
   const SCHEMAS: string[] = [
-    "shared", "master", "control", "document",
+    "shared", "master", "mesh", "mesh_log", "mesh_control", "control", "document",
     "ledger", "log", "event", "governance", "snapshot", "aggregate",
   ];
 
@@ -546,7 +558,12 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
   // in each subfolder name provide the correct execution order.
   seedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
   moduleSeedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
-  postCompanySeedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
+  postCompanySeedFiles.sort((a, b) => {
+    const orderA = postCompanyBlueprintOrder(a);
+    const orderB = postCompanyBlueprintOrder(b);
+    if (orderA !== orderB) return orderA - orderB;
+    return a.relPath.localeCompare(b.relPath);
+  });
   finalTenantSeedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
   tenantFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
 
@@ -582,10 +599,32 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
     ? tenantScopedPhase3Files
     : [...blueprintSeedFiles, ...postCompanySeedFiles, ...moduleSeedFiles, ...tenantPostOrgFiles, ...finalTenantSeedFiles];
 
+  // ── Plane seeds: admin/ and mesh/ ─────────────────────────────────────────
+  // These directories contain self-contained SQL files for ADMIN and optional
+  // combined-DB MESH plane data. Standalone Mesh uses provision-mesh.ts.
+  const planeSeedFiles: SqlFile[] = [];
+  for (const [label, dir] of [["Admin Plane Seed", ADMIN_DIR], ["Mesh Plane Seed", MESH_DIR]] as const) {
+    if (opts.skipMesh && dir === MESH_DIR) continue;
+    if (!existsSync(dir)) continue;
+    for (const absPath of collectSqlFiles(dir)) {
+      const relPath = `${dir === ADMIN_DIR ? "admin" : "mesh"}/${relative(dir, absPath).replace(/\\/g, "/")}`;
+      planeSeedFiles.push({
+        relPath,
+        key: relPath.replace(/\.sql$/, ""),
+        absPath,
+        phase: 3,
+        phaseLabel: label,
+        phase3Scope: "plane_seed",
+      });
+    }
+  }
+  planeSeedFiles.sort((a, b) => a.relPath.localeCompare(b.relPath));
+
   return [
     ...ddlFiles,
     ...systemSeedFiles,
     ...phase3Files,
+    ...planeSeedFiles,
   ];
 }
 
@@ -603,6 +642,13 @@ function checksum(sql: string): string {
 }
 
 function shouldAlwaysRunSeedFile(file: SqlFile): boolean {
+  if (
+    file.phase === 2
+    && file.key === "seed/platform/003_control/044b_site_warehouse_metadata"
+  ) {
+    return true;
+  }
+
   // Repair seeds are idempotent health checks, not one-time migrations. They
   // restore tenant lookup/list surfaces when rows were truncated after the
   // original seed was marked executed in public.schema_provisions.
@@ -616,7 +662,7 @@ function shouldAlwaysRunSeedFile(file: SqlFile): boolean {
 
 function shouldForceEntityMetadataRebuildFile(file: SqlFile): boolean {
   return file.phase === 2
-    && file.key.startsWith("seed/010_platform/003_control/");
+    && file.key.startsWith("seed/platform/003_control/");
 }
 
 // ---------------------------------------------------------------------------
@@ -656,6 +702,70 @@ async function markExecuted(
        executed_at = now()`,
     [key, hash],
   );
+}
+
+async function replaySchemaBootstrapAndTables(
+  client: pg.Client,
+  allFiles: SqlFile[],
+  executed: Map<string, string>,
+  schema: string,
+  stopBeforeTrackingKey?: string,
+): Promise<number> {
+  const ddlFiles = allFiles.filter((file) =>
+    file.phase === 1
+    && (file.relPath.startsWith(`ddl/${schema}/00`)
+      || file.relPath.startsWith(`ddl/${schema}/01`))
+  );
+
+  let replayed = 0;
+  for (const ddlFile of ddlFiles) {
+    const sql = readFileSync(ddlFile.absPath, "utf-8").replace(/^\uFEFF/, "");
+    const hash = checksum(sql);
+    const key = scopedTrackingKey(ddlFile);
+    if (stopBeforeTrackingKey && key === stopBeforeTrackingKey) break;
+
+    const startTime = Date.now();
+
+    log({
+      msg: "migrate_recovery_replay_executing",
+      schema,
+      file: key,
+      sourceFile: ddlFile.key,
+    });
+
+    await client.query(sql);
+    await markExecuted(client, key, hash);
+    executed.set(key, hash);
+    replayed += 1;
+
+    log({
+      msg: "migrate_recovery_replay_success",
+      schema,
+      file: key,
+      sourceFile: ddlFile.key,
+      durationMs: Date.now() - startTime,
+    });
+  }
+
+  return replayed;
+}
+
+const RECOVERABLE_SCHEMAS = new Set([
+  "shared", "master", "mesh", "mesh_log", "mesh_control", "control", "document",
+  "ledger", "log", "event", "governance", "snapshot", "aggregate",
+]);
+
+function schemaFromProvisionError(errStr: string, file: SqlFile): string {
+  const schemaMatch = errStr.match(/schema\s+"([a-z_]+)"\s+does not exist/i);
+  if (schemaMatch?.[1]) return schemaMatch[1];
+
+  const relationMatch = errStr.match(/"([a-z_]+)\.[a-z_]+"/i);
+  if (relationMatch?.[1]) return relationMatch[1];
+
+  const pathParts = file.relPath.split("/");
+  if (pathParts[0] === "ddl") return pathParts[1] ?? "";
+
+  return pathParts[0] ?? "";
 }
 
 async function setSeedTenant(client: pg.Client, tenantId: string): Promise<void> {
@@ -733,7 +843,8 @@ async function runPhases(
   phases: Phase[],
   opts: { force: boolean; rebuildEntityMetadata?: boolean; tenantId?: string; discovery?: DiscoveryOptions },
 ): Promise<void> {
-  const files = discoverSqlFiles(opts.discovery ?? {}).filter((f) => phases.includes(f.phase));
+  const discoveredFiles = discoverSqlFiles(opts.discovery ?? {});
+  const files = discoveredFiles.filter((f) => phases.includes(f.phase));
   const tenantFolders = [
     ...new Set(files.map((file) => file.tenantFolder).filter((folder): folder is string => !!folder)),
   ];
@@ -756,7 +867,7 @@ async function runPhases(
 
     // Set system tenant context so triggers that call shared.current_tenant_id()
     // do not raise during seed execution. The system tenant UUID is the well-known
-    // zero UUID established in 900_seed_data/010_platform/000_bootstrap/000_bootstrap.sql.
+    // zero UUID established in 900_seed_data/platform/000_bootstrap/000_bootstrap.sql.
     await client.query(
       `SET app.current_tenant_id = '00000000-0000-0000-0000-000000000000'`,
     );
@@ -767,7 +878,7 @@ async function runPhases(
     }
 
     // Set seed tenant for Phase 3 blueprint/tenant provisioning.
-    // SQL files under 020_universal/ and 030_industry/ call
+    // SQL files under blueprints/universal/ and blueprints/industry/ call
     // current_setting('app.seed_tenant_id', true)::uuid to scope their inserts.
     // When --tenant-id / SEED_TENANT_ID is supplied, set the session variable
     // once here so every Phase 3 file in this connection inherits it.
@@ -915,7 +1026,7 @@ async function runPhases(
         `);
       }
 
-      const sql = readFileSync(file.absPath, "utf-8");
+      const sql = readFileSync(file.absPath, "utf-8").replace(/^\uFEFF/, "");
       const hash = checksum(sql);
       const fileKey = scopedTrackingKey(file, opts.tenantId);
       const prev = executed.get(fileKey);
@@ -951,33 +1062,29 @@ async function runPhases(
 
         log({ msg: "migrate_success", file: fileKey, sourceFile: file.key, durationMs });
       } catch (err) {
-        const errStr = String(err);
+        let errStr = String(err);
 
         // Stale-tracking auto-recovery: if any file fails because a relation
-        // doesn't exist, the 01_tables tracking row for that schema is stale —
+        // doesn't exist, the bootstrap/table tracking rows for that schema are stale —
         // tables were dropped (e.g. via a dev reset script) after the last
         // successful run, so checksums matched and the file was silently skipped.
         // This affects both constraints files (03_constraints.sql) and seed files
         // when the constraints file was also skipped (checksum unchanged).
         // Strategy: extract the missing schema from the error message, clear all
-        // 01* tracking rows for that schema, and let the next run recreate them.
+        // 00*/01* tracking rows for that schema, replay them, and retry once.
         if (errStr.toLowerCase().includes("does not exist")) {
-          // Parse schema from PostgreSQL error: relation "schema.table" does not exist
-          const relationMatch = errStr.match(/"([a-z_]+)\.[a-z_]+"/i);
-          const missingSchema = relationMatch?.[1] ?? file.relPath.split("/")[0] ?? "";
-          const KNOWN_SCHEMAS = new Set([
-            "shared", "master", "control", "document",
-            "ledger", "log", "event", "governance", "snapshot", "aggregate",
-          ]);
-          if (missingSchema && KNOWN_SCHEMAS.has(missingSchema)) {
+          const missingSchema = schemaFromProvisionError(errStr, file);
+          if (missingSchema && RECOVERABLE_SCHEMAS.has(missingSchema)) {
             try {
               const cleared = await client.query<{ file_name: string }>(
                 `DELETE FROM public.schema_provisions
                  WHERE file_name LIKE $1
+                    OR file_name LIKE $2
                  RETURNING file_name`,
-                [`ddl/${missingSchema}/01%`],
+                [`ddl/${missingSchema}/00%`, `ddl/${missingSchema}/01%`],
               );
-              if (cleared.rows.length > 0) {
+              const canReplayCurrentDdl = file.phase === 1 && file.relPath.startsWith(`ddl/${missingSchema}/`);
+              if (cleared.rows.length > 0 || canReplayCurrentDdl) {
                 for (const row of cleared.rows) {
                   log({ msg: "migrate_stale_cleared", file: row.file_name });
                 }
@@ -985,11 +1092,62 @@ async function runPhases(
                   msg: "migrate_recovery_hint",
                   schema: missingSchema,
                   cleared: cleared.rows.length,
-                  message: `Cleared stale table-file tracking for schema "${missingSchema}". Re-run migrate to recreate the missing tables and retry.`,
+                  message: `Cleared stale DDL tracking for schema "${missingSchema}". Replaying bootstrap/table DDL and retrying current file.`,
                 });
+
+                const replayed = await replaySchemaBootstrapAndTables(
+                  client,
+                  discoveredFiles,
+                  executed,
+                  missingSchema,
+                  canReplayCurrentDdl ? fileKey : undefined,
+                );
+
+                if (replayed > 0) {
+                  log({
+                    msg: "migrate_recovery_retrying",
+                    schema: missingSchema,
+                    replayed,
+                    file: fileKey,
+                    sourceFile: file.key,
+                  });
+
+                  const retryStartTime = Date.now();
+                  try {
+                    await client.query(sql);
+                    await markExecuted(client, fileKey, hash);
+
+                    const durationMs = Date.now() - retryStartTime;
+                    results.push({ key: fileKey, durationMs });
+
+                    log({
+                      msg: "migrate_success",
+                      file: fileKey,
+                      sourceFile: file.key,
+                      durationMs,
+                      recovered: true,
+                    });
+                    continue;
+                  } catch (retryErr) {
+                    errStr = String(retryErr);
+                    logError({
+                      msg: "migrate_recovery_retry_failed",
+                      schema: missingSchema,
+                      file: fileKey,
+                      sourceFile: file.key,
+                      error: errStr,
+                    });
+                  }
+                }
               }
-            } catch {
-              // recovery cleanup is best-effort; original error takes precedence
+            } catch (recoveryErr) {
+              logError({
+                msg: "migrate_recovery_failed",
+                schema: missingSchema,
+                file: fileKey,
+                sourceFile: file.key,
+                error: String(recoveryErr),
+              });
             }
           }
         }
@@ -1038,11 +1196,15 @@ async function runReset(connectionString: string): Promise<void> {
 
   try {
     log({ msg: "reset_start" });
+    await prepareResetConnection(client);
 
     const schemas = [
       "shared",
       "control",
       "master",
+      "mesh",
+      "mesh_log",
+      "mesh_control",
       "document",
       "ledger",
       "log",
@@ -1064,6 +1226,43 @@ async function runReset(connectionString: string): Promise<void> {
   } finally {
     await client.end();
   }
+}
+
+async function prepareResetConnection(client: pg.Client): Promise<void> {
+  await client.query(`SET lock_timeout = '15s'`);
+  await client.query(`SET statement_timeout = '10min'`);
+
+  const blockers = await client.query<{
+    pid: number;
+    application_name: string | null;
+    state: string | null;
+  }>(`
+    SELECT pid, application_name, state
+    FROM pg_stat_activity
+    WHERE datname = current_database()
+      AND pid <> pg_backend_pid()
+      AND backend_type = 'client backend'
+  `);
+
+  if (blockers.rows.length === 0) return;
+
+  log({
+    msg: "reset_terminating_existing_sessions",
+    count: blockers.rows.length,
+    sessions: blockers.rows.map((row) => ({
+      pid: row.pid,
+      applicationName: row.application_name,
+      state: row.state,
+    })),
+  });
+
+  await client.query(`
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE datname = current_database()
+      AND pid <> pg_backend_pid()
+      AND backend_type = 'client backend'
+  `);
 }
 
 /**
@@ -1129,7 +1328,7 @@ async function runStatus(
 
     let lastPhase = 0;
     for (const file of allFiles) {
-      const sql = readFileSync(file.absPath, "utf-8");
+      const sql = readFileSync(file.absPath, "utf-8").replace(/^\uFEFF/, "");
       const hash = checksum(sql);
       const fileKey = scopedTrackingKey(file, tenantId);
       const prev = executed.get(fileKey);
@@ -1223,6 +1422,7 @@ async function main(): Promise<void> {
   // Scoped Phase 3 discovery options
   const discover = args.includes("--discover");
   const skipTenants = args.includes("--skip-tenants");
+  const skipMesh = args.includes("--no-mesh") || !args.includes("--with-mesh");
 
   const tenantArg = args.find((a) => a.startsWith("--tenant="));
   const tenantFolder = tenantArg ? tenantArg.split("=").slice(1).join("=") : undefined;
@@ -1242,6 +1442,7 @@ async function main(): Promise<void> {
     ...(industryPacks ? { industryPacks } : {}),
     ...(modules ? { modules } : {}),
     ...(skipTenants ? { skipTenants: true } : {}),
+    ...(skipMesh ? { skipMesh: true } : {}),
   };
 
   try {

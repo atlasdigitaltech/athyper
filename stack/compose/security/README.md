@@ -4,9 +4,9 @@ Two independent services live under `stack/compose/security/`, each with
 its own profile. They are separated intentionally — activation is opt-in
 per service.
 
-## `security` — ClamAV (core-path)
+## `security` — virusscan / ClamAV (core-path)
 
-File: `athyper-clamav.yml`
+File: `athyper-virusscan.yml`
 
 - Profile: `security` (runs with `core`)
 - Purpose: on-access virus scan for every uploaded file before it reaches
@@ -14,14 +14,14 @@ File: `athyper-clamav.yml`
   environments — if ClamAV is unreachable, uploads return 503 rather
   than bypassing scanning. See F2 in the April 2026 infra review.
 
-## `security-infisical` — Infisical platform secret manager (Track B3.1)
+## `security-infisical` — secretstore / Infisical platform secret manager (Track B3.1)
 
-File: `athyper-infisical.yml`
+File: `athyper-secretstore.yml`
 
 - Profile: `security-infisical` (opt-in, NOT included in `core`)
 - Purpose: self-hosted secret manager that will eventually hold
   `CREDENTIAL_MASTER_KEY`, DB URLs, Redis URL, IAM client secret,
-  Meilisearch master, S3 keys, Gotenberg timeouts — everything that
+  searchcore master, S3 keys, docrender timeouts — everything that
   lives as `${VAR}` placeholders in `staging.env.example` and
   `production.env.example` today.
 
@@ -57,15 +57,15 @@ bash stack/scripts/stack-profile/up.sh security-infisical
 ```
 
 First-boot signup happens via the Infisical UI at
-`https://${INFISICAL_HOST}`. No secrets are seeded by IaC in B3.1.
+`https://${SECRETSTORE_HOST}`. No secrets are seeded by IaC in B3.1.
 
 ### State, backup, rotation
 
 - State lives in the `infisical` Postgres database (seeded by
   `stack/config/db/local/init-databases.sh`) + Redis DB index 2 on the
   existing `memorycache`. No container volume.
-- Backups flow through the same pg_dump runbook as `glitchtip` and
-  `healthchecks` — add `infisical` to the database list.
+- Backups flow through the same pg_dump runbook as `errorcollect` and
+  `cronwatch` — add the `infisical` database to the database list.
 - Rotation of `INFISICAL_ENCRYPTION_KEY` / `INFISICAL_AUTH_SECRET` is
   covered by Infisical's own operational docs — see
   `stack/docs/secrets-management.md` Track B3 section for the athyper

@@ -187,8 +187,9 @@ CREATE TABLE IF NOT EXISTS event.notification_delivery (
     tenant_id       uuid            NOT NULL,
 
     -- Origin
-    message_id      uuid            NOT NULL,
+    message_id      uuid,
     notification_id uuid,
+    outbox_id       uuid,
 
     -- Recipient
     recipient_id    uuid,
@@ -237,6 +238,9 @@ CREATE TABLE IF NOT EXISTS event.notification_delivery (
     updated_by      uuid,
 
     CONSTRAINT ndlv_pkey             PRIMARY KEY (id, created_at),
+    CONSTRAINT ndlv_origin_chk       CHECK (
+        message_id IS NOT NULL OR (channel = 'webhook' AND outbox_id IS NOT NULL)
+    ),
     CONSTRAINT ndlv_addr_chk         CHECK (btrim(recipient_addr) <> ''),
     CONSTRAINT ndlv_status_chk       CHECK (status IN (
         'pending', 'queued', 'sent', 'delivered',
@@ -273,6 +277,40 @@ COMMENT ON COLUMN event.notification_delivery.subscription_id IS
 -- The DEFAULT partition catches any rows outside defined ranges.
 CREATE TABLE IF NOT EXISTS event.notification_delivery_default
     PARTITION OF event.notification_delivery DEFAULT;
+
+-- ============================================================================
+-- Section 3a: notification_delivery_claim - semantic idempotency claims
+-- ============================================================================
+-- Small non-partitioned claim table used before external provider sends.
+-- notification_delivery is partitioned by created_at, so this table carries the
+-- durable unique (tenant_id, idempotency_key) guard for retries and races.
+
+CREATE TABLE IF NOT EXISTS event.notification_delivery_claim (
+    id              uuid            NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid            NOT NULL,
+    idempotency_key text            NOT NULL,
+    message_id      uuid            NOT NULL,
+    recipient_id    uuid            NOT NULL,
+    channel         text            NOT NULL,
+    claimed_at      timestamptz     NOT NULL DEFAULT now(),
+    completed_at    timestamptz,
+    expires_at      timestamptz     NOT NULL,
+    created_by      uuid            NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT ndcl_pkey            PRIMARY KEY (id),
+    CONSTRAINT ndcl_idempotency_uq  UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT ndcl_key_chk         CHECK (btrim(idempotency_key) <> ''),
+    CONSTRAINT ndcl_channel_chk     CHECK (btrim(channel) <> ''),
+    CONSTRAINT ndcl_expiry_chk      CHECK (expires_at > claimed_at)
+);
+
+COMMENT ON TABLE event.notification_delivery_claim IS
+    'ARCHETYPE=E;SCOPE=T. Semantic notification delivery idempotency claim table. '
+    'Workers claim (tenant_id, idempotency_key) before provider dispatch to avoid duplicate sends across retries and concurrent workers.';
+COMMENT ON COLUMN event.notification_delivery_claim.idempotency_key IS
+    'SHA-256 delivery fingerprint for message/rule, recipient, and channel.';
 
 
 -- ============================================================================

@@ -39,6 +39,30 @@ if "!_rv_ok!"=="1" if "!_val:~0,2!"=="${" if "!_val:~-1!"=="}" (
 goto :eof
 
 REM ----------------------------
+REM Subroutine: require_file_path  %1=path  %2=label
+REM ----------------------------
+:require_file_path
+set "_rf_path=%~1"
+set "_rf_label=%~2"
+if "!_rf_path!"=="" (
+  echo   FAIL  !_rf_label! path is empty
+  set /a ERRORS+=1
+  goto :eof
+)
+if exist "!_rf_path!\*" (
+  echo   FAIL  !_rf_label! is a directory, expected a file: !_rf_path!
+  echo         Run stack\scripts\setup\setup-config.bat !ENVIRONMENT! --update to repair live config.
+  set /a ERRORS+=1
+  goto :eof
+)
+if not exist "!_rf_path!" (
+  echo   FAIL  !_rf_label! not found: !_rf_path!
+  echo         Run stack\scripts\setup\setup-config.bat !ENVIRONMENT! --update to deploy live config.
+  set /a ERRORS+=1
+)
+goto :eof
+
+REM ----------------------------
 REM Subroutine: parse_env  %1=env-file-path
 REM Isolates nested for/f loop in its own call frame so that CMD's
 REM compound-block state does not bleed into subsequent call :label
@@ -120,13 +144,28 @@ call :require_var REDIS_URL
 call :require_var PUBLIC_BASE_URL
 call :require_var PUBLIC_WEB_URL
 call :require_var APPS_ATHYPER_WEB_HOST
+call :require_var APPS_ATHYPER_NEON_HOST
+call :require_var APPS_ATHYPER_MESH_HOST
+call :require_var APPS_ATHYPER_ADMIN_HOST
 call :require_var APPS_ATHYPER_API_HOST
 call :require_var APPS_ATHYPER_WEB_UPSTREAM_URL
+call :require_var APPS_ATHYPER_NEON_UPSTREAM_URL
+call :require_var APPS_ATHYPER_MESH_UPSTREAM_URL
+call :require_var APPS_ATHYPER_ADMIN_UPSTREAM_URL
 call :require_var GATEWAY_HOST
 call :require_var IAM_HOST
 call :require_var ALERTMANAGER_HOST
 call :require_var IAM_ISSUER_URL
 call :require_var ATHYPER_KERNEL_CONFIG_PATH
+
+set "LIVE_CONFIG_ROOT=!ENV_ATHYPER_CONFIG_ROOT!"
+if "!LIVE_CONFIG_ROOT!"=="" set "LIVE_CONFIG_ROOT=!ENV_ATHYPER_CONFIG!"
+if "!LIVE_CONFIG_ROOT!"=="" set "LIVE_CONFIG_ROOT=%STACK_DIR%\config"
+echo   Live config root: !LIVE_CONFIG_ROOT!
+call :require_file_path "!LIVE_CONFIG_ROOT!\telemetry\alertmanager\config.yml.tpl" "Alertmanager live template"
+call :require_file_path "!LIVE_CONFIG_ROOT!\telemetry\metrics\config.yml" "Prometheus live config"
+call :require_file_path "!LIVE_CONFIG_ROOT!\gateway\dynamic\athyper.workbench.yml" "Gateway workbench live config"
+call :require_file_path "!LIVE_CONFIG_ROOT!\!ENV_ATHYPER_KERNEL_CONFIG_PATH!" "Kernel live config"
 
 REM ----------------------------
 REM 3. Non-local secrets (must not be missing or placeholders)
@@ -141,8 +180,13 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
   call :require_var DBPOOL_SESSION_PASSWORD
   call :require_var IAM_ADMIN_PASSWORD
   call :require_var IAM_CLIENT_SECRET
+  call :require_var ADMIN_WEB_CLIENT_SECRET
   call :require_var ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET
   call :require_var NEON_SVC_BFF_CLIENT_SECRET
+  call :require_var AUTH_DISCOVERY_SHARED_SECRET
+  call :require_var VAPID_SUBJECT
+  call :require_var VAPID_PUBLIC_KEY
+  call :require_var VAPID_PRIVATE_KEY
   call :require_var MEMORYCACHE_PASSWORD
   call :require_var REDIS_EXPORTER_PASSWORD
   call :require_var REDIS_GLITCHTIP_PASSWORD
@@ -164,6 +208,12 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
   call :require_var ALERTMANAGER_FINANCE_EMAIL
   call :require_var ALERTMANAGER_COMPLIANCE_EMAIL
   call :require_var ALERTMANAGER_SECURITY_EMAIL
+  call :require_var NEON_ALLOWED_HOSTS
+  call :require_var NEON_GATEWAY_ORIGIN
+  call :require_var MESH_ALLOWED_HOSTS
+  call :require_var MESH_GATEWAY_ORIGIN
+  call :require_var ADMIN_ALLOWED_HOSTS
+  call :require_var ADMIN_GATEWAY_ORIGIN
   call :require_var APP_S3_ACCESS_KEY
   call :require_var APP_S3_SECRET_KEY
   call :require_var BACKUP_S3_ACCESS_KEY
@@ -174,6 +224,21 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
 :sec3_done
 
 REM ----------------------------
+REM Redis ACL render
+REM ----------------------------
+echo [3b/6] Redis ACL render...
+where node >nul 2>&1
+if errorlevel 1 (
+  echo   FAIL  node is required to render Redis ACL hashes
+  set /a ERRORS+=1
+) else (
+  node "%STACK_DIR%\..\tools\scripts\render-redis-acl.cjs" --env-file "%ENV_FILE%" --stack-dir "%STACK_DIR%"
+  if errorlevel 1 (
+    set /a ERRORS+=1
+  )
+)
+
+REM ----------------------------
 REM 4. Kernel config hostname parity
 REM    Note: full JSON parsing not available in batch without jq.
 REM    A partial check is performed via findstr for the three URL keys.
@@ -181,7 +246,7 @@ REM ----------------------------
 echo [4/6] Kernel config hostname parity...
 set "KERNEL_CONFIG_PATH=!ENV_ATHYPER_KERNEL_CONFIG_PATH!"
 if not "!KERNEL_CONFIG_PATH!"=="" (
-  set "KERNEL_FILE=%STACK_DIR%\config\!KERNEL_CONFIG_PATH!"
+  set "KERNEL_FILE=!LIVE_CONFIG_ROOT!\!KERNEL_CONFIG_PATH!"
   if exist "!KERNEL_FILE!" (
     set "ENV_BASE_URL=!ENV_PUBLIC_BASE_URL!"
     set "ENV_ISSUER_URL=!ENV_IAM_ISSUER_URL!"
@@ -248,7 +313,7 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
   )
 
   REM Dev passwords must not appear in non-local
-  for %%V in (DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET ALERTMANAGER_SMTP_AUTH_PASSWORD) do (
+  for %%V in (DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET ADMIN_WEB_CLIENT_SECRET ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET VAPID_PRIVATE_KEY ALERTMANAGER_SMTP_AUTH_PASSWORD) do (
     if "!ENV_%%V!"=="athyperadmin" (
       echo   FAIL  %%V = 'athyperadmin' in !ENVIRONMENT! ^(dev password in non-local^)
       set /a ERRORS+=1
@@ -263,9 +328,9 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
     )
   )
 
-  echo !ENV_ALERTMANAGER_SMTP_SMARTHOST! | findstr /B /C:"mailhog:" >nul
+  echo !ENV_ALERTMANAGER_SMTP_SMARTHOST! | findstr /B /C:"mailtrap:" >nul
   if not errorlevel 1 (
-    echo   FAIL  ALERTMANAGER_SMTP_SMARTHOST=!ENV_ALERTMANAGER_SMTP_SMARTHOST! in !ENVIRONMENT! ^(MailHog is local-only^)
+    echo   FAIL  ALERTMANAGER_SMTP_SMARTHOST=!ENV_ALERTMANAGER_SMTP_SMARTHOST! in !ENVIRONMENT! ^(mailtrap is local-only^)
     set /a ERRORS+=1
   )
   if /I not "!ENV_ALERTMANAGER_SMTP_REQUIRE_TLS!"=="true" (
@@ -281,14 +346,16 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
     set /a ERRORS+=1
   )
 
-  REM P2.4 - Traefik workbench upstream must NOT use host.docker.internal
-  echo !ENV_APPS_ATHYPER_WEB_UPSTREAM_URL! | findstr /C:"host.docker.internal" >nul
-  if not errorlevel 1 (
-    echo   FAIL  APPS_ATHYPER_WEB_UPSTREAM_URL=!ENV_APPS_ATHYPER_WEB_UPSTREAM_URL! in !ENVIRONMENT! ^(host.docker.internal is dev-only^)
-    set /a ERRORS+=1
+  REM P2.4 - Traefik plane upstreams must NOT use host.docker.internal outside local
+  for %%U in (APPS_ATHYPER_WEB_UPSTREAM_URL APPS_ATHYPER_NEON_UPSTREAM_URL APPS_ATHYPER_MESH_UPSTREAM_URL APPS_ATHYPER_ADMIN_UPSTREAM_URL) do (
+    echo !ENV_%%U! | findstr /C:"host.docker.internal" >nul
+    if not errorlevel 1 (
+      echo   FAIL  %%U=!ENV_%%U! in !ENVIRONMENT! ^(host.docker.internal is dev-only^)
+      set /a ERRORS+=1
+    )
   )
 
-  REM P2.4 - RFC 5737 TEST-NET CIDRs are deploy-blocker fail-safes in workbench templates
+  REM P2.4 - RFC 5737 TEST-NET CIDRs are deploy-blocker fail-safes in plane templates
   set "WB_FILE=%STACK_DIR%\config\gateway\dynamic\athyper.workbench.yml"
   if exist "!WB_FILE!" (
     findstr /R /C:"\"192\.0\.2\.0/24\"" /C:"\"198\.51\.100\.0/24\"" /C:"\"203\.0\.113\.0/24\"" "!WB_FILE!" >nul
@@ -344,14 +411,14 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
     set /a ERRORS+=1
   )
 
-  REM I-18 - Healthchecks secret key default rejection
-  echo !ENV_HEALTHCHECKS_SECRET_KEY! | findstr /C:"change-me" >nul
+  REM I-18 - cronwatch secret key default rejection
+  echo !ENV_CRONWATCH_SECRET_KEY! | findstr /C:"change-me" >nul
   if not errorlevel 1 (
-    echo   FAIL  HEALTHCHECKS_SECRET_KEY = local default in !ENVIRONMENT! ^(rotate to a random string^)
+    echo   FAIL  CRONWATCH_SECRET_KEY = local default in !ENVIRONMENT! ^(rotate to a random string^)
     set /a ERRORS+=1
   )
-  if "!ENV_HEALTHCHECKS_SECRET_KEY:~0,12!"=="athyperadmin" (
-    echo   FAIL  HEALTHCHECKS_SECRET_KEY = local default in !ENVIRONMENT! ^(rotate to a random string^)
+  if "!ENV_CRONWATCH_SECRET_KEY:~0,12!"=="athyperadmin" (
+    echo   FAIL  CRONWATCH_SECRET_KEY = local default in !ENVIRONMENT! ^(rotate to a random string^)
     set /a ERRORS+=1
   )
 
@@ -380,15 +447,15 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
     set /a ERRORS+=1
   )
 
-  REM Track B4 - analytics profile (Metabase) governance gate
+  REM Track B4 - analytics profile (analyticsboard) governance gate
   set "STACK_PROFILE_VAL=!ENV_STACK_PROFILE!"
   if "!STACK_PROFILE_VAL!"=="" set "STACK_PROFILE_VAL=core"
   echo .!STACK_PROFILE_VAL!. | findstr /C:"analytics" >nul
   if not errorlevel 1 (
-    if /I not "!ENV_METABASE_GOVERNANCE_APPROVED!"=="approved" (
-      echo   FAIL  STACK_PROFILE=!STACK_PROFILE_VAL! includes 'analytics' but METABASE_GOVERNANCE_APPROVED='!ENV_METABASE_GOVERNANCE_APPROVED!'
+    if /I not "!ENV_ANALYTICSBOARD_GOVERNANCE_APPROVED!"=="approved" (
+      echo   FAIL  STACK_PROFILE=!STACK_PROFILE_VAL! includes 'analytics' but ANALYTICSBOARD_GOVERNANCE_APPROVED='!ENV_ANALYTICSBOARD_GOVERNANCE_APPROVED!'
       echo         Read stack/compose/analytics/README.md, complete the four
-      echo         governance bullets, then set METABASE_GOVERNANCE_APPROVED=approved.
+      echo         governance bullets, then set ANALYTICSBOARD_GOVERNANCE_APPROVED=approved.
       set /a ERRORS+=1
     )
     set "MBDB=!ENV_MB_DB_TYPE!"

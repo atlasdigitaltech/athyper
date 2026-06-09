@@ -321,7 +321,7 @@ export function FiscalLensChooser({
         >
           <div className="flex shrink-0 items-center justify-between gap-3 border-b px-3 py-1.5">
             <div>
-              <div className="text-sm font-semibold text-foreground">Fiscal lens</div>
+              <div className="text-sm font-medium text-foreground">Fiscal lens</div>
             </div>
             <div className="rounded-full border bg-muted/30 px-2 py-0.5 text-xs font-medium text-muted-foreground">
               FY {scope.fiscalYear}
@@ -428,12 +428,12 @@ export function FiscalLensChooser({
                       )}
                     >
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-[11px] font-medium text-foreground">
+                        <span className="truncate text-xs font-medium text-foreground">
                           {period === 0 ? "Opening" : `P${period}`}
                         </span>
                         {selected && <Check className="h-3 w-3 text-primary" />}
                       </span>
-                      <span className="flex items-center text-[10px] text-muted-foreground">
+                      <span className="flex items-center text-xs text-muted-foreground">
                         <span className="truncate">
                           {periodLabel(draftYear, period, fiscalYearStartMonth)}
                           {" "}
@@ -476,7 +476,7 @@ export function FiscalLensChooser({
                 ))}
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <label className="space-y-1 text-xs font-medium text-muted-foreground">
                   From
                   <input
                     type="date"
@@ -485,7 +485,7 @@ export function FiscalLensChooser({
                     className="h-10 w-full rounded-md border bg-background px-3 text-sm font-normal text-foreground outline-none focus:ring-2 focus:ring-ring"
                   />
                 </label>
-                <label className="space-y-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <label className="space-y-1 text-xs font-medium text-muted-foreground">
                   To
                   <input
                     type="date"

@@ -101,6 +101,18 @@ describe("startScheduler", () => {
     expect(deps.jobs.start).toHaveBeenCalledOnce();
   });
 
+  it("signals lifecycle readiness after scheduler startup", async () => {
+    const deps = makeStubDeps();
+    const onReady = vi.fn();
+    deps.lifecycle.onReady(onReady);
+
+    const { startScheduler } = await import("../scheduler.js");
+    await startScheduler(deps);
+    await new Promise((r) => setImmediate(r));
+
+    expect(onReady).toHaveBeenCalledOnce();
+  });
+
   it("does NOT create an IAM outbox worker", async () => {
     const { createIamOutboxWorker } = await import("@athyper/svc-iam");
     const deps = makeStubDeps();

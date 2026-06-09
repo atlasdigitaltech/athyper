@@ -5,23 +5,32 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "db:setup": "tsx scripts/provision.ts --all",
-    "db:setup:ddl": "tsx scripts/provision.ts --phase=1",
-    "db:setup:system": "tsx scripts/provision.ts --system-only",
-    "db:setup:tenant": "tsx scripts/provision.ts --phase=3",
+    "db:setup": "tsx scripts/provision.ts --all --no-mesh",
+    "db:setup:ddl": "tsx scripts/provision.ts --phase=1 --no-mesh",
+    "db:setup:system": "tsx scripts/provision.ts --system-only --no-mesh",
+    "db:setup:tenant": "tsx scripts/provision.ts --phase=3 --no-mesh",
     "db:setup:status": "tsx scripts/provision.ts --status",
-    "db:setup:discover": "tsx scripts/provision.ts --discover",
-    "db:setup:rebuild-entity-metadata": "tsx scripts/provision.ts --system-only --rebuild-entity-metadata",
+    "db:setup:discover": "tsx scripts/provision.ts --discover --no-mesh",
+    "db:setup:rebuild-entity-metadata": "tsx scripts/provision.ts --system-only --rebuild-entity-metadata --no-mesh",
     "db:setup:drop": "tsx scripts/provision.ts --drop-only",
     "db:setup:reset": "tsx scripts/provision.ts --reset",
-    "db:setup:force": "tsx scripts/provision.ts --all --force",
+    "db:setup:force": "tsx scripts/provision.ts --all --force --no-mesh",
+    "db:sync:shared-to-mesh": "tsx scripts/sync-shared-to-mesh.ts",
+    "db:sync:shared-to-mesh:dry": "tsx scripts/sync-shared-to-mesh.ts --dry-run",
+    "db:verify:rls": "tsx scripts/verify/verify-rls.ts",
+    "db:verify:field-security": "tsx scripts/verify/verify-field-security.ts",
+    "db:verify:secdef": "tsx scripts/verify/verify-security-definer.ts",
+    "db:verify:archetypes": "tsx scripts/verify/verify-archetypes.ts",
+    "db:verify": "pnpm run db:verify:rls && pnpm run db:verify:field-security && pnpm run db:verify:secdef && pnpm run db:verify:archetypes",
     "db:setup:ddl:sh": "bash ddl/runner.sh",
-    "lint:sql": "bash ../framework/adapters/db/ci/lint_sql_hardcoded.sh"
+    "lint:sql": "bash ../packages/adapters/db/ci/lint_sql_hardcoded.sh"
   },
   "dependencies": {
-    "pg": "^8.13.0"
+    "pg": "^8.13.0",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
+    "@types/node": "^25.6.0",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2",
     "typescript": "^6.0.3"

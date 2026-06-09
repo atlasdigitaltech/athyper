@@ -13,10 +13,22 @@ CREATE INDEX IF NOT EXISTS tenant_subscription_idx ON master.tenant (subscriptio
 -- Auth lookup regardless of status (suspended tenants still log in to see error)
 CREATE INDEX IF NOT EXISTS tenant_realm_code_all_idx ON master.tenant (realm_key, code);
 
+-- tenant_admin_grant
+CREATE INDEX IF NOT EXISTS tenant_admin_grant_principal_status_idx
+    ON master.tenant_admin_grant (principal_id, status);
+CREATE INDEX IF NOT EXISTS tenant_admin_grant_tenant_status_idx
+    ON master.tenant_admin_grant (tenant_id, status);
+CREATE INDEX IF NOT EXISTS tenant_admin_grant_active_persona_idx
+    ON master.tenant_admin_grant (tenant_id, principal_id, persona_key)
+    WHERE is_active = true;
+
 -- principal
 CREATE INDEX IF NOT EXISTS principal_tenant_type_idx ON master.principal (tenant_id, principal_type);
 CREATE INDEX IF NOT EXISTS principal_tenant_active_pidx ON master.principal (tenant_id, principal_type) WHERE is_active = true AND is_locked = false;
 CREATE INDEX IF NOT EXISTS principal_login_email_idx ON master.principal (tenant_id, login_email) WHERE login_email IS NOT NULL;
+CREATE INDEX IF NOT EXISTS principal_login_email_global_active_idx
+    ON master.principal (login_email, tenant_id, id)
+    WHERE login_email IS NOT NULL AND is_active = true AND is_locked = false;
 
 -- principal_profile
 CREATE INDEX IF NOT EXISTS principal_profile_principal_idx ON master.principal_profile (tenant_id, principal_id);
@@ -192,6 +204,9 @@ CREATE INDEX IF NOT EXISTS agr_assignment_le_idx
 CREATE INDEX IF NOT EXISTS agr_assignment_cc_idx
     ON master.auth_group_role (tenant_id, assignment_scope_ref_id)
     WHERE assignment_scope_type = 'company_code' AND status = 'active';
+CREATE INDEX IF NOT EXISTS agr_assignment_network_membership_idx
+    ON master.auth_group_role (tenant_id, assignment_scope_ref_id)
+    WHERE assignment_scope_type = 'network_membership' AND status = 'active';
 
 -- auth_group_member
 CREATE INDEX IF NOT EXISTS agm_principal_idx ON master.auth_group_member (tenant_id, principal_id);
@@ -230,6 +245,9 @@ CREATE INDEX IF NOT EXISTS ag_assignment_cc_idx
 CREATE INDEX IF NOT EXISTS ag_assignment_le_idx
     ON master.access_grant (tenant_id, permission_id, assignment_scope_ref_id)
     WHERE assignment_scope_type = 'legal_entity' AND status = 'active' AND effect = 'allow';
+CREATE INDEX IF NOT EXISTS ag_assignment_network_membership_idx
+    ON master.access_grant (tenant_id, permission_id, assignment_scope_ref_id)
+    WHERE assignment_scope_type = 'network_membership' AND status = 'active' AND effect = 'allow';
 
 -- group_feature_grant
 CREATE INDEX IF NOT EXISTS gfg_group_idx ON master.group_feature_grant (tenant_id, group_id);
@@ -1043,6 +1061,51 @@ CREATE INDEX IF NOT EXISTS tenant_relationship_active_from_pidx
 CREATE INDEX IF NOT EXISTS tenant_relationship_active_to_pidx
     ON master.tenant_relationship (to_tenant_id, from_tenant_id, relationship_type)
     WHERE status = 'active';
+
+-- business_network
+CREATE UNIQUE INDEX IF NOT EXISTS bn_provider_external_uidx
+    ON master.business_network (provider_code, external_network_id)
+    WHERE external_network_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS bn_owner_status_idx
+    ON master.business_network (owner_tenant_id, status);
+
+CREATE INDEX IF NOT EXISTS bn_provider_idx
+    ON master.business_network (provider_code);
+
+-- business_network_membership
+CREATE INDEX IF NOT EXISTS bnm_network_status_idx
+    ON master.business_network_membership (network_id, status);
+
+CREATE INDEX IF NOT EXISTS bnm_participant_idx
+    ON master.business_network_membership (participant_tenant_id, status);
+
+CREATE INDEX IF NOT EXISTS bnm_legal_entity_idx
+    ON master.business_network_membership (participant_tenant_id, participant_legal_entity_id)
+    WHERE participant_legal_entity_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS bnm_owner_bp_idx
+    ON master.business_network_membership (owner_business_partner_id)
+    WHERE owner_business_partner_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS bnm_relationship_idx
+    ON master.business_network_membership (tenant_relationship_id)
+    WHERE tenant_relationship_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS bnm_network_link_uidx
+    ON master.business_network_membership (network_id, network_link_id)
+    WHERE network_link_id IS NOT NULL;
+
+-- business_network_membership_role
+CREATE INDEX IF NOT EXISTS bnmrole_membership_status_idx
+    ON master.business_network_membership_role (membership_id, status);
+
+CREATE INDEX IF NOT EXISTS bnmrole_relationship_idx
+    ON master.business_network_membership_role (role_type, relationship_type, status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS bnmrole_active_role_uidx
+    ON master.business_network_membership_role (membership_id, role_type, relationship_type)
+    WHERE status = 'active' AND effective_until IS NULL;
 
 -- principal_relationship
 CREATE INDEX IF NOT EXISTS principal_relationship_from_idx

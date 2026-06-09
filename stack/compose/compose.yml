@@ -23,7 +23,7 @@ include:
   - db/athyper-dbpool-session.yml
   - gateway/athyper-gateway.yml
   - iam/athyper-iam.yml
-  - mail/athyper-mailhog.yml
+  - mail/athyper-mailtrap.yml
   - memorycache/athyper-memorycache.yml
   - memorycache/athyper-memorycache-exporter.yml
   # Opt-in dedicated Redis for BullMQ (profile `memorycache-jobs`, not in
@@ -37,31 +37,31 @@ include:
   - telemetry/athyper-metrics.yml
   - telemetry/athyper-tracing.yml
   - telemetry/athyper-telemetry.yml
-  - security/athyper-clamav.yml
-  # Track B3.1 — Infisical platform secret manager. Profile
-  # `security-infisical` is distinct from `security` (ClamAV is core-path;
-  # Infisical is opt-in until B3.2 config-loader integration lands).
-  - security/athyper-infisical.yml
+  - security/athyper-virusscan.yml
+  # Track B3.1 — platform secret manager. Profile `security-infisical`
+  # is distinct from `security` (virusscan is core-path; secretstore is
+  # opt-in until B3.2 config-loader integration lands).
+  - security/athyper-secretstore.yml
   - apps/athyper-apps.yml
-  # Track A — Phase 5.1 replacement: Gotenberg supersedes the planned
+  # Track A — Phase 5.1 replacement: docrender supersedes the planned
   # athyper-renderer. See stack/compose/render/README.md for the
   # render_dlq error-category contract that binds the GotenbergAdapter.
-  - render/athyper-gotenberg.yml
-  - render/athyper-tika.yml
+  - render/athyper-docrender.yml
+  - render/athyper-docparser.yml
   # Monitoring profile — off by default on `up.sh core`; enable with
   # `up.sh core,monitoring` locally or via the staging/production override.
-  - monitoring/athyper-uptime-kuma.yml
-  - monitoring/athyper-healthchecks.yml
-  - monitoring/athyper-glitchtip.yml
-  # Admin profile — BullBoard + pgweb. Never activate in production
-  # without DASHBOARD_AUTH_MW; pgweb is dev-only.
-  - admin/athyper-bullboard.yml
-  - admin/athyper-pgweb.yml
-  # Search profile (Track B2.1) — Meilisearch. Indexing worker and search
+  - monitoring/athyper-statuswatch.yml
+  - monitoring/athyper-cronwatch.yml
+  - monitoring/athyper-errorcollect.yml
+  # Admin profile — queueconsole + dbconsole. Never activate in production
+  # without DASHBOARD_AUTH_MW; dbconsole is dev-only.
+  - admin/athyper-queueconsole.yml
+  - admin/athyper-dbconsole.yml
+  # Search profile (Track B2.1) — searchcore. Indexing worker and search
   # API arrive in B2.2; compose service is inert until then.
-  - search/athyper-meilisearch.yml
-  # Analytics profile (Track B4) — Metabase, DEFERRED / hedge stage.
+  - search/athyper-searchcore.yml
+  # Analytics profile (Track B4) — analyticsboard, DEFERRED / hedge stage.
   # Profile is OFF by default and not in any preset profile set. Do NOT
   # enable in staging/production without read replica + governance
   # sign-off. See analytics/README.md for the gating contract.
-  - analytics/athyper-metabase.yml
+  - analytics/athyper-analyticsboard.yml

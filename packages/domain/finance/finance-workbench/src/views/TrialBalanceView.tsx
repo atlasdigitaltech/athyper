@@ -175,11 +175,11 @@ export function TrialBalanceView({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Class</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Debit</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Credit</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Net</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground"># Accts</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Class</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Debit</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Credit</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Net</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground"># Accts</th>
               </tr>
             </thead>
             <tbody>
@@ -209,7 +209,7 @@ export function TrialBalanceView({
                 <td className="px-3 py-2 font-medium">Total</td>
                 <td className="px-3 py-2 text-right font-medium tabular-nums">{fmtFull(totalDr)}</td>
                 <td className="px-3 py-2 text-right font-medium tabular-nums">{fmtFull(totalCr)}</td>
-                <td className={cn("px-3 py-2 text-right font-semibold tabular-nums", balanced ? "text-success" : "text-destructive")}>
+                <td className={cn("px-3 py-2 text-right font-medium tabular-nums", balanced ? "text-success" : "text-destructive")}>
                   {balanced ? "✓" : fmtFull(totalDr - totalCr)}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{rows.length}</td>
@@ -225,12 +225,12 @@ export function TrialBalanceView({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Account</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Name</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Class</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Closing DR</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Closing CR</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Net</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Account</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Name</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Class</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Closing DR</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Closing CR</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Net</th>
               </tr>
             </thead>
             <tbody>
@@ -275,7 +275,7 @@ export function TrialBalanceView({
                 <td colSpan={3} className="px-3 py-2 font-medium">Total</td>
                 <td className="px-3 py-2 text-right font-medium tabular-nums">{fmtFull(totalDr)}</td>
                 <td className="px-3 py-2 text-right font-medium tabular-nums">{fmtFull(totalCr)}</td>
-                <td className={cn("px-3 py-2 text-right font-semibold tabular-nums", balanced ? "text-success" : "text-destructive")}>
+                <td className={cn("px-3 py-2 text-right font-medium tabular-nums", balanced ? "text-success" : "text-destructive")}>
                   {balanced ? "✓" : fmtFull(totalDr - totalCr)}
                 </td>
               </tr>
@@ -285,7 +285,7 @@ export function TrialBalanceView({
       )}
 
       <div className="flex justify-end">
-        <span className="inline-flex max-w-full items-center gap-1 rounded-full border bg-background px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground shadow-sm">
+        <span className="inline-flex max-w-full items-center gap-1 rounded-full border bg-background px-1.5 py-0.5 text-xs leading-none text-muted-foreground shadow-sm">
           <span className="truncate">
             Source: ledger.gl_balance
             {data.asAt && ` \u00b7 As at ${new Date(data.asAt).toLocaleString()}`}

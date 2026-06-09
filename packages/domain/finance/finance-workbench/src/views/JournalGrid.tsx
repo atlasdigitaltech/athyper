@@ -129,7 +129,7 @@ function JeRow({
             </span>
           </td>
           <td className="px-3 py-1 align-middle">
-            <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
               <span className="size-2 rounded-full bg-muted-foreground" aria-hidden />
               <span className="capitalize">{je.status}</span>
             </span>
@@ -193,7 +193,7 @@ function JeRow({
             : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
         </td>
         <td className="px-3 py-2.5">
-          <span className="font-mono text-xs font-medium">{je.jeNumber}</span>
+          <span className="tabular-nums text-xs font-medium">{je.jeNumber}</span>
         </td>
         <td className="px-3 py-2.5">
           <Badge variant={statusVariant(je.status)} className="capitalize">{je.status}</Badge>
@@ -395,7 +395,7 @@ function NewJournalDialog({
           <div className="space-y-1.5">
             <Label className="text-xs">Currency</Label>
             <Input
-              className="h-8 text-xs font-mono uppercase"
+              className="h-8 text-xs font-mono"
               placeholder="USD"
               maxLength={3}
               value={currencyCode}
@@ -633,9 +633,9 @@ export function JournalGrid({
       {entityListStyle && (
         <div className="flex min-h-8 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
           <span className="text-muted-foreground">
-            Showing <strong className="font-semibold text-foreground">{visibleCount.toLocaleString()}</strong>
+            Showing <strong className="font-medium text-foreground">{visibleCount.toLocaleString()}</strong>
             {" of "}
-            <strong className="font-semibold text-foreground">{totalCount.toLocaleString()}</strong>
+            <strong className="font-medium text-foreground">{totalCount.toLocaleString()}</strong>
             {" "}journal entry
           </span>
 
@@ -734,37 +734,37 @@ export function JournalGrid({
           <table className="w-full min-w-[1040px] caption-bottom text-sm text-foreground">
             <thead className="sticky top-0 z-10 border-b bg-muted">
               <tr>
-                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                <th className="h-7 px-3 text-left align-middle text-xs font-medium text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
                     JE Number <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
                   </span>
                 </th>
-                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                <th className="h-7 px-3 text-left align-middle text-xs font-medium text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
                     Status <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
                   </span>
                 </th>
-                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                <th className="h-7 px-3 text-left align-middle text-xs font-medium text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
                     Posting Date <ArrowDown className="h-3.5 w-3.5" />
                   </span>
                 </th>
-                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                <th className="h-7 px-3 text-left align-middle text-xs font-medium text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
                     Period <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
                   </span>
                 </th>
-                <th className="h-7 px-3 text-left align-middle text-xs font-semibold text-muted-foreground">
+                <th className="h-7 px-3 text-left align-middle text-xs font-medium text-muted-foreground">
                   <span className="inline-flex items-center gap-2">
                     Transaction Currency <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
                   </span>
                 </th>
-                <th className="h-7 px-3 text-right align-middle text-xs font-semibold text-muted-foreground">
+                <th className="h-7 px-3 text-right align-middle text-xs font-medium text-muted-foreground">
                   <span className="inline-flex items-center justify-end gap-2">
                     Total Debit <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
                   </span>
                 </th>
-                <th className="h-7 px-3 text-right align-middle text-xs font-semibold text-muted-foreground">
+                <th className="h-7 px-3 text-right align-middle text-xs font-medium text-muted-foreground">
                   <span className="inline-flex items-center justify-end gap-2">
                     Total Credit <ArrowDownUp className="h-3.5 w-3.5 opacity-45" />
                   </span>
@@ -857,7 +857,7 @@ export function JournalGrid({
           <div className="space-y-2 text-sm text-muted-foreground">
             <p>
               This will create a mirror reversal of{" "}
-              <span className="font-mono font-medium text-foreground">
+              <span className="tabular-nums font-medium text-foreground">
                 {reverseTarget?.jeNumber}
               </span>{" "}
               with all debit and credit lines swapped.

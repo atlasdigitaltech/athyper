@@ -1,0 +1,78 @@
+# =======================================================================
+# Stack       : athyper Stack – Monitoring
+# Service     : errorcollect — Sentry-compatible error tracking (self-hosted)
+#
+# Description :
+#   Captures unhandled errors from api, worker, and scheduler via the Sentry SDK.
+#   Replaces log-grep-for-stacktraces.
+#
+#   The Sentry SDK ingest endpoint (POST /api/<project>/store/) MUST NOT
+#   be gateway-auth-gated — clients send events unauthenticated using a
+#   DSN. The admin UI is protected by GlitchTip's own login.
+#
+# Notes :
+#   - Routes through dbpool-apps:6432 (transaction pool) to database
+#     athyper_errors. Created by init-databases.sh.
+#   - Connects to memorycache as ACL user `glitchtip` on DB index 1.
+#     Least-privilege: strings/hashes/lists/sets/sorted-sets + pubsub.
+#     No admin/dangerous/scripting commands. DB 1 isolates its keyspace
+#     from bull:* and session:* on DB 0.
+# =======================================================================
+
+services:
+  errorcollect:
+    # Pin explicitly — `:latest` drifts across unrelated deploys. Verify the
+    # tag on https://hub.docker.com/r/glitchtip/glitchtip/tags and bump
+    # deliberately.
+    image: glitchtip/glitchtip:v4.1.1
+    profiles: ["monitoring"]
+    networks: [edge, internal]
+    environment:
+      DATABASE_URL: postgresql://${DB_ADMIN_USER}:${DB_ADMIN_PASSWORD}@dbpool-apps:6432/athyper_errors
+      SECRET_KEY: ${ERRORCOLLECT_SECRET_KEY}
+      PORT: "8000"
+      REDIS_URL: redis://glitchtip:${REDIS_GLITCHTIP_PASSWORD}@memorycache:6379/${REDIS_GLITCHTIP_DB:-1}  # DB 1 — see cache.conf DB index assignments
+      GLITCHTIP_DOMAIN: https://${ERRORCOLLECT_HOST}
+      DEFAULT_FROM_EMAIL: ${KC_SMTP_FROM:-noreply@athyper.local}
+      EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+      EMAIL_HOST: ${KC_SMTP_HOST:-mailtrap}
+      EMAIL_PORT: ${KC_SMTP_PORT:-1025}
+      EMAIL_USE_TLS: ${KC_SMTP_STARTTLS:-False}
+      EMAIL_HOST_USER: ${KC_SMTP_USERNAME:-}
+      EMAIL_HOST_PASSWORD: ${KC_SMTP_PASSWORD:-}
+      CELERY_WORKER_AUTOSCALE: "1,3"
+      CELERY_WORKER_MAX_TASKS_PER_CHILD: "10000"
+    deploy:
+      resources:
+        limits:
+          memory: "${ERRORCOLLECT_MEMORY_LIMIT}"
+    depends_on:
+      dbpool-apps:
+        condition: service_healthy
+      memorycache:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket; socket.create_connection(('127.0.0.1', 8000), timeout=3)\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.routers.errorcollect.rule=Host(`${ERRORCOLLECT_HOST}`)
+      - traefik.http.routers.errorcollect.entrypoints=websecure
+      - traefik.http.routers.errorcollect.tls=true
+      - traefik.http.routers.errorcollect.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.errorcollect.tls.certresolver=${GATEWAY_CERT_RESOLVER}
+      - traefik.http.services.errorcollect.loadbalancer.server.port=8000

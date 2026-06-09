@@ -1,7 +1,9 @@
 -- ============================================================================
 -- 00_platform/002_schemas.sql
--- Concept: Schema Namespaces — creates the 10 domain PostgreSQL schemas
+-- Concept: Schema Namespaces — creates the 9 domain PostgreSQL schemas
 -- Depends on: 00_extensions
+--
+-- Note: mesh/mesh_control/mesh_log live exclusively in athyper_mesh (partner plane).
 -- ============================================================================
 
 -- Shared lookup data: currencies, countries, UoM, and standard codes

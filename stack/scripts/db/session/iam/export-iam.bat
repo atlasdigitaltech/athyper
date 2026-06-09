@@ -12,7 +12,7 @@ REM   [1/5] Create temp export directory (%TEMP%\keycloak-export-*)
 REM   [2/5] Export athyper realm
 REM   [3/5] Export platform-control realm
 REM   [4/5] Move exported JSON files to stack\config\iam\
-REM           -> realm-demosetup.json (athyper)
+REM           -> realm-athyper.json (athyper)
 REM           -> realm-platform-control.json (platform-control, if provisioned)
 REM   [5/5] Clean up temp directory
 REM
@@ -32,7 +32,7 @@ set "STACK_DIR=%CD%"
 popd >nul
 
 set "CONFIG_DIR=%STACK_DIR%\config\iam"
-set "EXPORT_FILE=%CONFIG_DIR%\realm-demosetup.json"
+set "EXPORT_FILE=%CONFIG_DIR%\realm-athyper.json"
 set "PLATFORM_EXPORT_FILE=%CONFIG_DIR%\realm-platform-control.json"
 set "TEMP_EXPORT_DIR=%TEMP%\keycloak-export-%RANDOM%%RANDOM%"
 
@@ -118,7 +118,14 @@ if "!IAM_DB_PASSWORD!"=="" (
 echo [1/5] Creating temporary export directory...
 mkdir "%TEMP_EXPORT_DIR%" 2>nul
 
-echo [2/5] Exporting athyper realm...
+set "DEMO_REALM_NAME="
+if defined KEYCLOAK_REALM set "DEMO_REALM_NAME=%KEYCLOAK_REALM%"
+if "!DEMO_REALM_NAME!"=="" (
+    for /f "usebackq delims=" %%r in (`node -e "const fs=require('fs'); const file=process.argv[1]; const realm=JSON.parse(fs.readFileSync(file,'utf8')).realm; if(realm===undefined||realm===null||realm==='') process.exit(1); process.stdout.write(realm);" "%EXPORT_FILE%" 2^>nul`) do set "DEMO_REALM_NAME=%%r"
+)
+if "!DEMO_REALM_NAME!"=="" set "DEMO_REALM_NAME=athyper"
+
+echo [2/5] Exporting !DEMO_REALM_NAME! realm...
 docker run --rm ^
   --network %DOCKER_NETWORK% ^
   -v "%TEMP_EXPORT_DIR%:/opt/keycloak/data/export" ^
@@ -130,7 +137,7 @@ docker run --rm ^
   export ^
   --dir /opt/keycloak/data/export ^
   --users realm_file ^
-  --realm athyper
+  --realm !DEMO_REALM_NAME!
 
 if errorlevel 1 (
     echo Export failed!
@@ -157,11 +164,11 @@ if errorlevel 1 (
 )
 
 echo [4/5] Moving exports to config directory...
-if exist "%TEMP_EXPORT_DIR%\athyper-realm.json" (
-    move /y "%TEMP_EXPORT_DIR%\athyper-realm.json" "%EXPORT_FILE%" >nul
-    echo athyper realm exported
+if exist "%TEMP_EXPORT_DIR%\!DEMO_REALM_NAME!-realm.json" (
+    move /y "%TEMP_EXPORT_DIR%\!DEMO_REALM_NAME!-realm.json" "%EXPORT_FILE%" >nul
+    echo !DEMO_REALM_NAME! realm exported
 ) else (
-    echo Error: athyper realm export file not found
+    echo Error: !DEMO_REALM_NAME! realm export file not found
     rmdir /s /q "%TEMP_EXPORT_DIR%" 2>nul
     exit /b 1
 )
@@ -181,7 +188,7 @@ echo Export completed successfully!
 echo Exported to: %CONFIG_DIR%
 echo.
 echo What's exported:
-echo   - Realm configuration (athyper + platform-control)
+echo   - Realm configuration (neon + platform-control)
 echo   - Clients and client scopes
 echo   - Roles (realm and client)
 echo   - Groups and users

@@ -1,235 +1,121 @@
 # IAM Configuration Directory
 
-This directory contains Keycloak realm configurations for the athyper platform.
+This directory contains the checked-in Keycloak realm configuration for the
+Athyper local, staging, and production stacks.
 
-## Files
+## Realm Files
 
-### `realm-demosetup.json`
+Importable Keycloak realm files:
 
-Keycloak realm export containing:
+- `realm-athyper.json` - Unified tenant-facing realm for Neon, Mesh, and Admin plane clients.
+- `realm-platform-control.json` - Platform-control product-owner support realm.
 
-- **Realm**: athyper
-- **Clients**: neon-web, admin-console, etc.
-- **Users**: Demo users and credentials
-- **Roles**: Realm and client roles
-- **Groups**: User groups and hierarchies
-- **Organizations**: Multi-tenant org setup (demo_in, demo_my, demo_sa, demo_qa, demo_fr)
-- **Authentication Flows**: Custom auth flows
-- **Identity Providers**: External IdP configurations (if any)
+Non-importable demo fixtures:
 
-## Usage
+- `realm-athyper-demosetup.json` - Unified demo organizations, memberships, and demo metadata.
+- `realm-platform-control-demosetup.json` - Platform-control demo users.
 
-### Export Current Configuration
+Only importable `realm-*.json` files are mounted into `/opt/keycloak/data/import`.
+`*-demosetup.json` files have `"importableByKeycloak": false` and are applied
+after import by `tools/scripts/apply-realm-demo-setup.cjs` through
+`seed-iam-credentials`.
 
-**Linux/macOS:**
+## Unified Realm
+
+`realm-athyper.json` owns the production IAM contract:
+
+- `neon-web`, `mesh-web`, and `admin-web` clients
+- service-account clients and service users
+- realm roles such as `NEON_USER`, `MESH_BUYER_USER`, `MESH_PARTNER_USER`, and `ADMIN_USER`
+- client roles such as `AUTHORIZED`
+- client scopes, protocol mappers, flows, required actions, and realm security policy
+
+`realm-athyper-demosetup.json` owns demo organization metadata. Keycloak
+organizations use stable `ORG-*` aliases, while business meaning is carried in
+attributes such as `tenant_code`, `legal_entity_code`, `buyer_account_code`, and
+`supplier_account_code`.
+
+## Common Commands
+
+Export current IAM realms:
 
 ```bash
 bash stack/scripts/db/session/iam/export-iam.sh
 ```
 
-**Windows:**
-
-```cmd
-stack\scripts\db\session\iam\export-iam.bat
-```
-
-This will export the current `athyper` realm to `realm-demosetup.json`.
-
-### Import Configuration
-
-**Linux/macOS:**
+Import checked-in realms into a running Keycloak:
 
 ```bash
 bash stack/scripts/db/session/iam/import-iam.sh
 ```
 
-**Windows:**
-
-```cmd
-stack\scripts\db\session\iam\import-iam.bat
-```
-
-This will import `realm-demosetup.json` into Keycloak, overriding existing data.
-
-## Workflow
-
-### 1. Initial Setup (New Environment)
+Reset Keycloak IAM from the checked-in realm files:
 
 ```bash
-# Start stack infrastructure
-bash stack/scripts/stack-profile/up.sh core
-
-# Import demo realm configuration
-bash stack/scripts/db/session/iam/import-iam.sh
-
-# Verify in Admin Console
-# http://localhost/auth
+bash stack/scripts/db/session/iam/reset-iam.sh
 ```
 
-### 2. Making Changes
+Seed demo organizations and passwords:
 
 ```bash
-# 1. Make changes via Keycloak Admin Console
-# 2. Export updated configuration
-bash stack/scripts/db/session/iam/export-iam.sh
-
-# 3. Commit changes (if desired)
-git add stack/config/iam/realm-demosetup.json
-git commit -m "IAM: Updated client redirect URIs for staging"
+bash stack/scripts/db/session/iam/seed-iam-credentials.sh
 ```
 
-### 3. Environment Promotion
+Windows equivalents live beside the shell scripts as `.bat` files.
+
+## Security Rules
+
+Passwords are never committed to realm JSON. Demo passwords are applied after
+realm import by `seed-iam-credentials` using `kcadm.sh set-password` inside the
+running Keycloak container.
+
+Safe to commit:
+
+- realm settings, flows, policies, and themes
+- client and redirect URI configuration
+- role and group definitions
+- demo user accounts without credentials
+- demo organizations and memberships
+
+Do not commit:
+
+- plaintext passwords or password hashes
+- production user credentials
+- production client secrets
+- signing keys or private keys
+
+## Validation
+
+Validate all realm JSON files:
 
 ```bash
-# Development → Staging
-git checkout staging
-git merge development
-bash stack/scripts/db/session/iam/import-iam.sh
-
-# Verify changes in staging environment
+node -e "const fs=require('fs'); for (const f of fs.readdirSync('stack/config/iam').filter(f=>f.endsWith('.json'))) JSON.parse(fs.readFileSync('stack/config/iam/'+f,'utf8'));"
 ```
 
-## Security Considerations
-
-⚠️ **Important Security Notes:**
-
-### Passwords are NEVER committed to realm JSON
-
-Demo user passwords are set **after** realm import by
-[`stack/scripts/db/session/iam/seed-iam-credentials.sh`](../../scripts/db/session/iam/seed-iam-credentials.sh) using
-`kcadm.sh set-password`. Source values come from the merged environment:
-local reads `stack/env/.env`, while staging/production read the non-secret
-bootstrap plus `/opt/stack/athyper/secrets/.env`.
-
-Every user in the committed JSON has `"credentials": []` and `"requiredActions": ["UPDATE_PASSWORD"]`
-as a defense-in-depth guard: if an older JSON with inline passwords is ever re-imported, the required
-action forces a password reset at first login.
-
-### What's Safe to Commit
-
-- ✅ Realm configuration (settings, flows, policies)
-- ✅ Client configurations (redirect URIs, settings)
-- ✅ Role definitions
-- ✅ Group structures
-- ✅ Demo/test user accounts **without** credentials (`credentials: []`)
-
-### What NOT to Commit
-
-- ❌ Plaintext passwords or password hashes in the `credentials[]` array
-- ❌ Real user credentials
-- ❌ Production secrets (client secrets, signing keys)
-- ❌ Real email addresses
-- ❌ SMTP credentials
-- ❌ LDAP/AD credentials
-
-Before committing a re-exported realm JSON, strip credentials:
+Check the unified realm shape:
 
 ```bash
-jq '(.users[].credentials) = []' realm-demosetup.json > realm-demosetup.clean.json
-mv realm-demosetup.clean.json realm-demosetup.json
-```
-
-### Best Practices
-
-1. **Sanitize before committing:**
-
-   ```bash
-   # Review the export before committing
-   cat realm-demosetup.json | jq '.users[] | {username, email}'
-   ```
-
-2. **Use environment-specific secrets:**
-   - Client secrets should be regenerated per environment
-   - Don't rely on exported secrets for production
-
-3. **Separate demo and production:**
-   - Keep demo users in version control
-   - Manage production users through proper IAM processes
-
-4. **Encrypt sensitive exports:**
-   ```bash
-   # If you must export production config
-   gpg --symmetric --cipher-algo AES256 realm-production.json
-   ```
-
-## File Format
-
-The exported JSON follows [Keycloak's realm export format](https://www.keycloak.org/docs/latest/server_admin/#_export_import).
-
-Key sections:
-
-```json
-{
-  "realm": "athyper",
-  "enabled": true,
-  "clients": [...],
-  "users": [...],
-  "roles": {
-    "realm": [...],
-    "client": {...}
-  },
-  "groups": [...],
-  "organizations": [...],
-  "authenticationFlows": [...],
-  "identityProviders": [...]
-}
+node -e "const fs=require('fs'); const base=JSON.parse(fs.readFileSync('stack/config/iam/realm-athyper.json','utf8')); const demo=JSON.parse(fs.readFileSync('stack/config/iam/realm-athyper-demosetup.json','utf8')); console.log({realm:base.realm, clients:(base.clients||[]).map(c=>c.clientId), demoOrgs:(demo.organizations||[]).length});"
 ```
 
 ## Troubleshooting
 
-### Export fails: "Container not running"
+If import fails, validate the JSON files first. If import succeeds but demo
+users or organizations are missing, run `seed-iam-credentials` so the
+non-importable demo fixtures are applied.
 
-```bash
-# Check if IAM is running
-docker ps | grep iam
+Keycloak admin console:
 
-# Start stack if needed
-bash stack/scripts/stack-profile/up.sh core
+```text
+http://localhost/auth
 ```
 
-### Import fails: "Cannot connect to database"
+## Related
 
-```bash
-# Check database connection
-docker exec athyper-stack-dbpool-session-1 \
-  psql -U athyperauth -d athyper_iam -c '\l'
+- Keycloak export/import docs: https://www.keycloak.org/docs/latest/server_admin/#_export_import
+- Stack IAM scripts: `stack/scripts/db/session/iam/`
+- Demo fixture applier: `tools/scripts/apply-realm-demo-setup.cjs`
 
-# Local: check password in stack/env/.env
-grep IAM_DB_PASSWORD stack/env/.env
-
-# Staging/production: password lives in the secrets-only env file
-grep IAM_DB_PASSWORD /opt/stack/athyper/secrets/.env
-```
-
-### Import succeeds but changes not visible
-
-```bash
-# Keycloak caches realm data - restart required
-bash stack/scripts/stack-profile/restart.sh iam
-
-# Wait for health check
-bash stack/scripts/stack-profile/logs.sh iam -f
-```
-
-### "Invalid JSON" error
-
-```bash
-# Validate JSON syntax
-jq empty stack/config/iam/realm-demosetup.json
-
-# Pretty print for debugging
-jq '.' stack/config/iam/realm-demosetup.json > realm-formatted.json
-```
-
-## Related Documentation
-
-- [Keycloak Export/Import Docs](https://www.keycloak.org/docs/latest/server_admin/#_export_import)
-- Project Auth Architecture: `../../docs/security/AUTH_ARCHITECTURE.md`
-- Stack Scripts: `../../scripts/`
-- Database Scripts: `../../framework/adapters/db/scripts/README-KEYCLOAK-EXPORT.md`
-
----
-
-**Last Updated**: 2026-02-16
-**Keycloak Version**: 26.5.1
-**Realm**: athyper
+Last updated: 2026-05-25
+Keycloak version: 26.6.1
+Realms: athyper, platform-control

@@ -1,0 +1,86 @@
+# =======================================================================
+# Stack       : athyper Stack – Monitoring
+# Service     : cronwatch — dead-man's-switch for scheduled jobs
+#
+# Description :
+#   Paired with the BullMQ job lifecycle. Each job pings a check URL on
+#   completion; cronwatch alerts when the expected ping interval is
+#   missed ("job never fired" / "job didn't report success").
+#
+#   Wiring lives in createJobsService() (server/src/kernel/bootstrap.ts):
+#   onCompleted → pingSuccess(queue, jobName); onFailed → pingFail(...).
+#   The slug is `{queue}-{jobName}` lowercased and dash-collapsed — see
+#   server/packages/foundation/monitoring/healthchecks.ts. Operators create a
+#   cronwatch check per slug they want to alert on; unmatched pings are
+#   dropped server-side. control.cron_schedule.code is NOT used as the
+#   slug today.
+#
+# Notes :
+#   - Routes through dbpool-apps:6432 (transaction pool) to database
+#     athyper_health. Created by init-databases.sh.
+#   - Couples monitoring uptime to the apps pool — acceptable at current
+#     scale; revisit if cronwatch becomes the only signal for an outage.
+# =======================================================================
+
+services:
+  cronwatch:
+    # Pin explicitly — `:latest` drifts across unrelated deploys. Verify the
+    # tag on https://hub.docker.com/r/healthchecks/healthchecks/tags and
+    # bump deliberately.
+    image: healthchecks/healthchecks:v4.1.1
+    profiles: ["monitoring"]
+    networks: [edge, internal]
+    environment:
+      DB: postgres
+      DB_HOST: dbpool-apps
+      DB_PORT: "6432"
+      DB_NAME: athyper_health
+      DB_USER: ${DB_ADMIN_USER}
+      DB_PASSWORD: ${DB_ADMIN_PASSWORD}
+      SECRET_KEY: ${CRONWATCH_SECRET_KEY}
+      ALLOWED_HOSTS: ${CRONWATCH_HOST}
+      SITE_ROOT: https://${CRONWATCH_HOST}
+      SITE_NAME: "Athyper Cronwatch"
+      DEFAULT_FROM_EMAIL: ${KC_SMTP_FROM:-noreply@athyper.local}
+      EMAIL_HOST: ${KC_SMTP_HOST:-mailtrap}
+      EMAIL_PORT: ${KC_SMTP_PORT:-1025}
+      EMAIL_USE_TLS: ${CRONWATCH_EMAIL_USE_TLS:-False}
+      EMAIL_HOST_USER: ${KC_SMTP_USERNAME:-}
+      EMAIL_HOST_PASSWORD: ${KC_SMTP_PASSWORD:-}
+      DEBUG: "False"
+      # Redis for Celery task queue (DB 3 — reserved in cache.conf to avoid
+      # colliding with errorcollect on DB 1). Set REDIS_CRONWATCH_PASSWORD in
+      # .env and add a `cronwatch` ACL user to redis-acl.conf before enabling.
+      # REDIS_URL: redis://cronwatch:${REDIS_CRONWATCH_PASSWORD}@memorycache:6379/${REDIS_CRONWATCH_DB:-3}
+    deploy:
+      resources:
+        limits:
+          memory: "${CRONWATCH_MEMORY_LIMIT}"
+    depends_on:
+      dbpool-apps:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket; socket.create_connection(('127.0.0.1', 8000), timeout=3)\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    stop_grace_period: 15s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.routers.cronwatch.rule=Host(`${CRONWATCH_HOST}`)
+      - traefik.http.routers.cronwatch.entrypoints=websecure
+      - traefik.http.routers.cronwatch.tls=true
+      - traefik.http.routers.cronwatch.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.cronwatch.tls.certresolver=${GATEWAY_CERT_RESOLVER}
+      - traefik.http.services.cronwatch.loadbalancer.server.port=8000

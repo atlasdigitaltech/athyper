@@ -60,18 +60,18 @@ function RunCard({ run, selected, onClick }: { run: CycleRun; selected: boolean;
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-xs font-medium">{run.entityCode} — {run.cycleTypeName}</div>
-          <div className="text-doc-support text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             FY{run.fiscalYear} P{String(run.periodNumber).padStart(2, "0")} · Run #{run.runNumber}
           </div>
         </div>
-        <span className={cn("text-doc-support px-1.5 py-0.5 rounded font-medium", RUN_STATUS_COLOR[run.status] ?? "bg-muted text-muted-foreground")}>
+        <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium", RUN_STATUS_COLOR[run.status] ?? "bg-muted text-muted-foreground")}>
           {run.status.replace("_", " ")}
         </span>
       </div>
 
       <ProgressBar pct={ts.completionPct} blocked={ts.blocked} failed={ts.failed} />
 
-      <div className="flex items-center gap-3 text-doc-support text-muted-foreground">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span className="text-success font-medium">{ts.completed} done</span>
         {ts.inProgress > 0 && <span className="text-warning">{ts.inProgress} in progress</span>}
         {ts.blocked > 0 && <span className="text-warning/80">{ts.blocked} blocked</span>}
@@ -80,12 +80,12 @@ function RunCard({ run, selected, onClick }: { run: CycleRun; selected: boolean;
       </div>
 
       {run.currentPhaseName && (
-        <div className="text-doc-support text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           Phase: <span className="text-foreground">{run.currentPhaseName}</span>
         </div>
       )}
 
-      <div className="flex gap-3 text-doc-support text-muted-foreground">
+      <div className="flex gap-3 text-xs text-muted-foreground">
         {run.cycleStartDate && <span>Started: {fmtDate(run.cycleStartDate)}</span>}
         {run.cycleTargetDate && <span>Target: {fmtDate(run.cycleTargetDate)}</span>}
         {run.completedAt && <span>Completed: {fmtDate(run.completedAt)}</span>}
@@ -103,21 +103,21 @@ function PhasePanel({ phase }: { phase: CyclePhase }) {
       <div className="flex items-center gap-2 py-1.5">
         <div className="text-xs font-medium">{phase.phaseName}</div>
         <div className="flex-1 h-px bg-border" />
-        <div className="text-doc-support text-muted-foreground">{done}/{phase.tasks.length}</div>
+        <div className="text-xs text-muted-foreground">{done}/{phase.tasks.length}</div>
       </div>
       <div className="space-y-1">
         {phase.tasks.map((task) => (
           <div key={task.id} className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted/30">
-            <span className={cn("text-doc-support px-1.5 py-0.5 rounded shrink-0", TASK_STATUS_COLOR[task.status] ?? "bg-muted text-muted-foreground")}>
+            <span className={cn("text-xs px-1.5 py-0.5 rounded shrink-0", TASK_STATUS_COLOR[task.status] ?? "bg-muted text-muted-foreground")}>
               {task.status.replace("_", " ")}
             </span>
             <div className="flex-1 min-w-0">
               <div className="text-xs truncate">{task.taskName}</div>
               {task.categoryName && (
-                <div className="text-doc-support text-muted-foreground">{task.categoryName}</div>
+                <div className="text-xs text-muted-foreground">{task.categoryName}</div>
               )}
             </div>
-            <div className="text-doc-support text-muted-foreground shrink-0 text-right">
+            <div className="text-xs text-muted-foreground shrink-0 text-right">
               {task.isMandatory && <span className="text-destructive mr-1">*</span>}
               {task.dueAt ? fmtDate(task.dueAt) : ""}
             </div>
@@ -139,7 +139,7 @@ function TaskDetailPanel({ runId }: { runId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-doc-support text-muted-foreground">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span>{data.totalTasks} tasks</span>
         <span>·</span>
         <span>{data.run.entityCode} FY{data.run.fiscalYear} P{String(data.run.periodNumber).padStart(2, "0")}</span>
@@ -200,7 +200,7 @@ export function PeriodCloseDashboardView({ scope }: PeriodCloseDashboardViewProp
     <div className="grid grid-cols-[300px_1fr] gap-4 h-full min-h-0">
       {/* Run list */}
       <div className="space-y-2 overflow-auto">
-        <div className="text-doc-label text-muted-foreground uppercase mb-1">
+        <div className="text-sm font-medium text-muted-foreground mb-1">
           {runs.length} run{runs.length !== 1 ? "s" : ""}
         </div>
         {runs.map((run) => (

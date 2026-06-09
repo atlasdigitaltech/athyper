@@ -34,14 +34,22 @@ services:
       KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD}
 
   # Neon Web: fix build context (base file resolves ../.. from apps/ subfolder)
-  athyper-neon-web:
+  neon-web:
+    build:
+      context: ../..
+
+  mesh-web:
+    build:
+      context: ../..
+
+  admin-web:
     build:
       context: ../..
 
   # API: 2 replicas behind Traefik load balancer.
   # Dockerfile.prod compiles TS → JS and strips devDeps; Dockerfile.dev is
   # local-only (tsx watch).
-  athyper-api:
+  api:
     build:
       context: ../..
       dockerfile: server/Dockerfile.prod
@@ -56,7 +64,7 @@ services:
           memory: 512M
 
   # Worker: 2 replicas for job throughput
-  athyper-worker:
+  worker:
     build:
       context: ../..
       dockerfile: server/Dockerfile.prod
@@ -71,7 +79,7 @@ services:
           memory: 512M
 
   # Scheduler: uses the same compiled image as api/worker
-  athyper-scheduler:
+  scheduler:
     build:
       context: ../..
       dockerfile: server/Dockerfile.prod

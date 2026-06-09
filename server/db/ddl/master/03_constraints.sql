@@ -132,6 +132,49 @@ BEGIN
     END IF;
 END $$;
 
+-- tenant_admin_grant -> tenant, principal, audit principals
+ALTER TABLE master.tenant_admin_grant DROP CONSTRAINT IF EXISTS tag_tenant_fk;
+DO $$ BEGIN
+    ALTER TABLE master.tenant_admin_grant
+        ADD CONSTRAINT tag_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE master.tenant_admin_grant DROP CONSTRAINT IF EXISTS tag_principal_fk;
+DO $$ BEGIN
+    ALTER TABLE master.tenant_admin_grant
+        ADD CONSTRAINT tag_principal_fk
+        FOREIGN KEY (tenant_id, principal_id)
+        REFERENCES master.principal (tenant_id, id)
+        ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE master.tenant_admin_grant DROP CONSTRAINT IF EXISTS tag_created_by_fk;
+DO $$ BEGIN
+    ALTER TABLE master.tenant_admin_grant
+        ADD CONSTRAINT tag_created_by_fk
+        FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE master.tenant_admin_grant DROP CONSTRAINT IF EXISTS tag_updated_by_fk;
+DO $$ BEGIN
+    ALTER TABLE master.tenant_admin_grant
+        ADD CONSTRAINT tag_updated_by_fk
+        FOREIGN KEY (updated_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE master.tenant_admin_grant DROP CONSTRAINT IF EXISTS tag_status_changed_by_fk;
+DO $$ BEGIN
+    ALTER TABLE master.tenant_admin_grant
+        ADD CONSTRAINT tag_status_changed_by_fk
+        FOREIGN KEY (status_changed_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- tenant audit pair: updated_at and updated_by must both be set or both be NULL.
 -- NULL = never modified (initial insert). Prevents partial audit state.
 DO $$ BEGIN
@@ -297,6 +340,94 @@ DO $$ BEGIN
     ALTER TABLE master.tenant_relationship
         ADD CONSTRAINT tenant_relationship_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- business_network -> tenant, network_provider, principal
+ALTER TABLE master.business_network DROP CONSTRAINT IF EXISTS bn_owner_tenant_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network
+        ADD CONSTRAINT bn_owner_tenant_fk
+        FOREIGN KEY (owner_tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.business_network DROP CONSTRAINT IF EXISTS bn_provider_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network
+        ADD CONSTRAINT bn_provider_fk
+        FOREIGN KEY (provider_code) REFERENCES master.network_provider (code);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.business_network DROP CONSTRAINT IF EXISTS bn_created_by_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network
+        ADD CONSTRAINT bn_created_by_fk
+        FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- business_network_membership -> network, participant tenant/LE, owner BP, relationship, network link
+ALTER TABLE master.business_network_membership DROP CONSTRAINT IF EXISTS bnm_network_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network_membership
+        ADD CONSTRAINT bnm_network_fk
+        FOREIGN KEY (network_id) REFERENCES master.business_network (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.business_network_membership DROP CONSTRAINT IF EXISTS bnm_participant_tenant_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network_membership
+        ADD CONSTRAINT bnm_participant_tenant_fk
+        FOREIGN KEY (participant_tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.business_network_membership DROP CONSTRAINT IF EXISTS bnm_participant_legal_entity_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network_membership
+        ADD CONSTRAINT bnm_participant_legal_entity_fk
+        FOREIGN KEY (participant_tenant_id, participant_legal_entity_id)
+        REFERENCES master.legal_entity (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.business_network_membership DROP CONSTRAINT IF EXISTS bnm_owner_business_partner_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network_membership
+        ADD CONSTRAINT bnm_owner_business_partner_fk
+        FOREIGN KEY (owner_business_partner_id) REFERENCES master.business_partner (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.business_network_membership DROP CONSTRAINT IF EXISTS bnm_tenant_relationship_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network_membership
+        ADD CONSTRAINT bnm_tenant_relationship_fk
+        FOREIGN KEY (tenant_relationship_id) REFERENCES master.tenant_relationship (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.business_network_membership DROP CONSTRAINT IF EXISTS bnm_network_link_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network_membership
+        ADD CONSTRAINT bnm_network_link_fk
+        FOREIGN KEY (network_link_id) REFERENCES master.business_partner_network_link (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.business_network_membership DROP CONSTRAINT IF EXISTS bnm_created_by_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network_membership
+        ADD CONSTRAINT bnm_created_by_fk
+        FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- business_network_membership_role -> membership, principal
+ALTER TABLE master.business_network_membership_role DROP CONSTRAINT IF EXISTS bnmrole_membership_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network_membership_role
+        ADD CONSTRAINT bnmrole_membership_fk
+        FOREIGN KEY (membership_id) REFERENCES master.business_network_membership (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.business_network_membership_role DROP CONSTRAINT IF EXISTS bnmrole_created_by_fk;
+DO $$ BEGIN
+    ALTER TABLE master.business_network_membership_role
+        ADD CONSTRAINT bnmrole_created_by_fk
+        FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 ALTER TABLE master.principal_relationship DROP CONSTRAINT IF EXISTS principal_relationship_from_principal_fk;
@@ -1393,6 +1524,14 @@ DO $$ BEGIN ALTER TABLE master.site ADD CONSTRAINT site_manager_fk
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.site ADD CONSTRAINT site_country_fk
     FOREIGN KEY (country_code) REFERENCES shared.country (code);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.site ADD CONSTRAINT site_timezone_fk
+    FOREIGN KEY (timezone_code) REFERENCES shared.timezone (code);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Existing seed/demo rows can contain capacity_uom codes before shared.uom is
+-- fully aligned. Protect new writes now, then validate after data cleanup.
+DO $$ BEGIN ALTER TABLE master.site ADD CONSTRAINT site_capacity_uom_fk
+    FOREIGN KEY (capacity_uom) REFERENCES shared.uom (code) NOT VALID;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.site ADD CONSTRAINT site_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
@@ -2900,5 +3039,25 @@ DO $$ BEGIN ALTER TABLE master.tenant_parameter_value ADD CONSTRAINT tpv_created
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.tenant_parameter_value ADD CONSTRAINT tpv_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- master.legal_entity_network_account (§PQ5)
+ALTER TABLE master.legal_entity_network_account DROP CONSTRAINT IF EXISTS lena_tenant_fk;
+DO $$ BEGIN ALTER TABLE master.legal_entity_network_account ADD CONSTRAINT lena_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+ALTER TABLE master.legal_entity_network_account DROP CONSTRAINT IF EXISTS lena_legal_entity_fk;
+DO $$ BEGIN ALTER TABLE master.legal_entity_network_account ADD CONSTRAINT lena_legal_entity_fk
+    FOREIGN KEY (tenant_id, legal_entity_id)
+    REFERENCES master.legal_entity (tenant_id, id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.legal_entity_network_account ADD CONSTRAINT lena_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.legal_entity_network_account ADD CONSTRAINT lena_updated_by_fk
     FOREIGN KEY (updated_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;

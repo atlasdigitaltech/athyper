@@ -69,32 +69,32 @@ echo ""
 # ----------------------------
 echo "Creating data directory structure..."
 mkdir -p "$ATHYPER_DATA/db"                       # postgres
-mkdir -p "$ATHYPER_DATA/meilisearch"              # search profile
+mkdir -p "$ATHYPER_DATA/searchcore"               # search profile
 mkdir -p "$ATHYPER_DATA/memorycache"              # redis (shared)
 mkdir -p "$ATHYPER_DATA/memorycache-jobs"         # redis (bullmq isolation, opt-in)
-mkdir -p "$ATHYPER_DATA/metabase"                 # analytics profile (deferred)
+mkdir -p "$ATHYPER_DATA/analyticsboard"           # analytics profile (deferred)
 mkdir -p "$ATHYPER_DATA/objectstorage"            # minio
 mkdir -p "$ATHYPER_DATA/telemetry/alertmanager"   # alertmanager
 mkdir -p "$ATHYPER_DATA/telemetry/logging"        # loki
 mkdir -p "$ATHYPER_DATA/telemetry/metrics"        # prometheus
 mkdir -p "$ATHYPER_DATA/telemetry/observability"  # grafana
 mkdir -p "$ATHYPER_DATA/telemetry/tracing"        # tempo (wal + local backend)
-mkdir -p "$ATHYPER_DATA/uptime-kuma"              # monitoring profile
+mkdir -p "$ATHYPER_DATA/statuswatch"              # monitoring profile
 
 echo ""
 echo "Done:"
 echo "  $ATHYPER_DATA/db"
-echo "  $ATHYPER_DATA/meilisearch"
+echo "  $ATHYPER_DATA/searchcore"
 echo "  $ATHYPER_DATA/memorycache"
 echo "  $ATHYPER_DATA/memorycache-jobs"
-echo "  $ATHYPER_DATA/metabase"
+echo "  $ATHYPER_DATA/analyticsboard"
 echo "  $ATHYPER_DATA/objectstorage"
 echo "  $ATHYPER_DATA/telemetry/alertmanager"
 echo "  $ATHYPER_DATA/telemetry/logging"
 echo "  $ATHYPER_DATA/telemetry/metrics"
 echo "  $ATHYPER_DATA/telemetry/observability"
 echo "  $ATHYPER_DATA/telemetry/tracing"
-echo "  $ATHYPER_DATA/uptime-kuma"
+echo "  $ATHYPER_DATA/statuswatch"
 echo ""
 
 # ----------------------------
@@ -142,13 +142,13 @@ if [[ "${ATHYPER_DATA_ROOT:-}" == /opt/* ]] && [[ "$(id -u)" -eq 0 ]]; then
   chown svc-grafana:svc-grafana "$ATHYPER_DATA/telemetry/observability"
   chmod 0750 "$ATHYPER_DATA/telemetry/observability"
 
-  # svc-meili (9105:9105) — meilisearch, uptime-kuma, metabase
-  chown svc-meili:svc-meili "$ATHYPER_DATA/meilisearch"
-  chown svc-meili:svc-meili "$ATHYPER_DATA/uptime-kuma"
-  chown svc-meili:svc-meili "$ATHYPER_DATA/metabase"
-  chmod 0750 "$ATHYPER_DATA/meilisearch"
-  chmod 0750 "$ATHYPER_DATA/uptime-kuma"
-  chmod 0750 "$ATHYPER_DATA/metabase"
+  # svc-meili (9105:9105) — searchcore, statuswatch, analyticsboard
+  chown svc-meili:svc-meili "$ATHYPER_DATA/searchcore"
+  chown svc-meili:svc-meili "$ATHYPER_DATA/statuswatch"
+  chown svc-meili:svc-meili "$ATHYPER_DATA/analyticsboard"
+  chmod 0750 "$ATHYPER_DATA/searchcore"
+  chmod 0750 "$ATHYPER_DATA/statuswatch"
+  chmod 0750 "$ATHYPER_DATA/analyticsboard"
 
   echo "Per-service ownership set."
 
@@ -157,9 +157,9 @@ if [[ "${ATHYPER_DATA_ROOT:-}" == /opt/* ]] && [[ "$(id -u)" -eq 0 ]]; then
     "svc-redis:svc-redis:$ATHYPER_DATA/memorycache" \
     "svc-redis:svc-redis:$ATHYPER_DATA/memorycache-jobs" \
     "svc-minio:svc-minio:$ATHYPER_DATA/objectstorage" \
-    "svc-meili:svc-meili:$ATHYPER_DATA/meilisearch" \
-    "svc-meili:svc-meili:$ATHYPER_DATA/uptime-kuma" \
-    "svc-meili:svc-meili:$ATHYPER_DATA/metabase" \
+    "svc-meili:svc-meili:$ATHYPER_DATA/searchcore" \
+    "svc-meili:svc-meili:$ATHYPER_DATA/statuswatch" \
+    "svc-meili:svc-meili:$ATHYPER_DATA/analyticsboard" \
     "svc-prometheus:svc-prometheus:$ATHYPER_DATA/telemetry/alertmanager" \
     "svc-loki:svc-loki:$ATHYPER_DATA/telemetry/logging" \
     "svc-prometheus:svc-prometheus:$ATHYPER_DATA/telemetry/metrics" \

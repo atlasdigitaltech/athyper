@@ -80,7 +80,7 @@ function TreeRow({
 
         <AccountClassDot cls={node.accountClass} />
 
-        <span className="font-mono text-doc-support text-muted-foreground w-28 shrink-0 truncate">
+        <span className="tabular-nums text-xs text-muted-foreground w-28 shrink-0 truncate">
           {node.code}
         </span>
 
@@ -98,14 +98,14 @@ function TreeRow({
         )}
 
         {node.subledgerType && (
-          <Badge variant="muted" className="text-doc-support py-0">
+          <Badge variant="muted" className="text-xs py-0">
             {node.subledgerType}
           </Badge>
         )}
 
         <span
           className={cn(
-            "font-mono text-doc-support w-20 text-right shrink-0",
+            "tabular-nums text-xs w-20 text-right shrink-0",
             displayNet >= 0 ? "text-foreground/70" : "text-destructive",
           )}
         >

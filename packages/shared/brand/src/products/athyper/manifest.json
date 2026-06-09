@@ -1,0 +1,25 @@
+{
+  "productCode": "athyper",
+  "productName": "athyper",
+  "descriptor": "Business Technology Platform",
+  "logoFiles": {
+    "primary": "wordmark-black.svg",
+    "compact": "wordmark-black.svg",
+    "icon": "icon.svg"
+  },
+  "publicAssets": {
+    "wordmarkBlack": "wordmark-black.svg",
+    "wordmarkWhite": "wordmark-white.svg",
+    "wordmarkOnBlack": "wordmark-on-black.svg",
+    "wordmarkOnWhite": "wordmark-on-white.svg",
+    "icon": "icon.svg",
+    "appIcon": "appicon.svg",
+    "favicon": "favicon.svg"
+  },
+  "rules": {
+    "officialAppLockup": "wordmark-black.svg",
+    "officialKeycloakLockup": "wordmark-white.svg",
+    "minWidthPx": 120,
+    "clearSpaceRatio": 0.5
+  }
+}

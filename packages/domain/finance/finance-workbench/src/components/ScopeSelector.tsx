@@ -28,7 +28,7 @@ export function ScopeSelector({
   allowGroup = true,
   size = "sm",
 }: ScopeSelectorProps) {
-  const triggerClass = size === "sm" ? "h-6 w-52 text-doc-support" : "h-7 w-64 text-xs";
+  const triggerClass = size === "sm" ? "h-6 w-52 text-xs" : "h-7 w-64 text-xs";
 
   // Build a single flat list: "company:AUKA", "entity:<uuid>", "group:GROUP"
   const current = `${value.scopeType}:${value.scopeId}`;
@@ -51,7 +51,7 @@ export function ScopeSelector({
         )}
         {entities.length > 0 && (
           <>
-            <div className="px-2 py-1 text-doc-label font-semibold text-muted-foreground uppercase tracking-wider">
+            <div className="px-2 py-1 text-sm font-medium text-muted-foregroundr">
               Legal entities
             </div>
             {entities.map((e) => (
@@ -61,7 +61,7 @@ export function ScopeSelector({
             ))}
           </>
         )}
-        <div className="px-2 py-1 text-doc-label font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="px-2 py-1 text-sm font-medium text-muted-foregroundr">
           Companies
         </div>
         {companies.map((c) => (

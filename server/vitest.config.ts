@@ -6,8 +6,8 @@ export default defineConfig({
     environment: "node",
     include: [
       "src/**/__tests__/**/*.test.ts",
-      "framework/runtime/src/**/__tests__/**/*.test.ts",
-      "framework/adapters/db/src/**/__tests__/**/*.test.ts",
+      "packages/runtime/**/__tests__/**/*.test.ts",
+      "packages/adapters/db/src/**/__tests__/**/*.test.ts",
     ],
   },
 });

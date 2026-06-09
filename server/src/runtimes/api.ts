@@ -15,6 +15,7 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import { Router } from "express";
 import { trace } from "@opentelemetry/api";
+import { randomUUID } from "node:crypto";
 
 import { registerIamRoutes, checkPermissionBatch } from "@athyper/svc-iam";
 import { registerMetadataRoutes } from "@athyper/svc-metadata";
@@ -22,9 +23,8 @@ import { registerRecordsRoutes } from "@athyper/svc-records";
 import { registerSearchRoutes } from "@athyper/svc-search";
 import { registerDocumentsRoutes } from "@athyper/svc-documents";
 import { registerCollabRoutes } from "@athyper/svc-collab";
-import { registerCollabAttachmentRoutes } from "../../framework/runtime/services/collab/routes/collab-attachments.route.js";
-import { registerMasterContactsRoutes } from "../../framework/runtime/services/master/routes/contacts.route.js";
-import { registerMasterAddressRoutes } from "../../framework/runtime/services/master/routes/addresses.route.js";
+import { registerCollabAttachmentRoutes } from "../../packages/services/collab/routes/collab-attachments.route.js";
+import { registerMasterContactsRoutes, registerMasterAddressRoutes } from "@athyper/svc-master";
 import { registerFinanceRoutes } from "@athyper/svc-finance";
 import {
   registerPlatformRoutes,
@@ -36,21 +36,21 @@ import {
 } from "@athyper/svc-platform";
 import { registerJobsRoutes } from "@athyper/svc-jobs";
 import { mapPostgresBusinessError } from "@athyper/svc-shared";
-import { registerJobsAdminRoutes } from "../../framework/runtime/services/jobs/routes/jobs.admin.route.js";
-import { registerJobsBoardRoutes } from "../../framework/runtime/services/jobs/routes/jobs.board.route.js";
+import { registerJobsAdminRoutes } from "../../packages/services/jobs/routes/jobs.admin.route.js";
+import { registerJobsBoardRoutes } from "../../packages/services/jobs/routes/jobs.board.route.js";
 
-import { registerWorkflowRoutes } from "../../framework/runtime/services/workflow/routes/index.js";
-import { registerPolicyRoutes } from "../../framework/runtime/services/policy/routes/index.js";
-import { registerAuditRoutes } from "../../framework/runtime/services/audit/routes/index.js";
-import { registerContentRoutes } from "../../framework/runtime/services/content/routes/index.js";
-import { ClamavScanner } from "../../framework/runtime/services/content/services/clamav.service.js";
-import { registerIntegrationRoutes } from "../../framework/runtime/services/integration/routes/index.js";
-import { registerDocServicesRoutes } from "../../framework/runtime/services/docservices/routes/index.js";
-import { createOpenApiRouter } from "../../framework/runtime/openapi/openapi-generator.js";
+import { registerWorkflowRoutes } from "@athyper/svc-workflow";
+import { registerPolicyRoutes } from "@athyper/svc-policy";
+import { registerAuditRoutes } from "@athyper/svc-audit";
+import { ClamavScanner, registerContentRoutes } from "@athyper/svc-content";
+import { registerIntegrationRoutes } from "@athyper/svc-integration";
+import { registerDocServicesRoutes } from "@athyper/svc-docservices";
+import { createGotenbergClient } from "@athyper/server-foundation/render/gotenberg-client";
+import { createOpenApiRouter } from "@athyper/server-foundation/openapi/openapi-generator";
 import {
   createAiServiceBundle,
   registerAiRoutes,
-} from "../../framework/runtime/services/ai/index.js";
+} from "@athyper/svc-ai";
 
 import {
   createAiLogMetrics,
@@ -61,10 +61,10 @@ import {
   registerMetricCollectors,
 } from "../metrics.js";
 import { makeAuditEvent } from "../audit.js";
-import { runComplianceSuiteIfDev } from "../foundation/metadata/entity-compliance.js";
-import { createEntityCompilerService } from "../foundation/metadata/entity-compiler.service.js";
-import { createPlatformMetricCollector } from "../foundation/monitoring/platform-metrics.js";
-import { runWithContext, tryGetContext } from "../kernel/request-context.js";
+import { runComplianceSuiteIfDev } from "../../packages/services/metadata/src/entity-compliance.js";
+import { createEntityCompilerService } from "../../packages/services/metadata/src/entity-compiler.service.js";
+import { createPlatformMetricCollector } from "@athyper/server-foundation/monitoring/platform-metrics";
+import { normalizePlaneKey, parseOrgHeader, runWithContext, tryGetContext } from "../kernel/request-context.js";
 import type { ServerDeps } from "../kernel/bootstrap.js";
 import { livenessHandler } from "./liveness.js";
 
@@ -115,6 +115,39 @@ function exposeActiveTraceId(res: Response): void {
   appendExposeHeader(res, "X-Trace-ID");
 }
 
+type ApiObjectStorage = NonNullable<ServerDeps["objectStorageRef"]["current"]>;
+
+function createObjectStorageRouteAdapter(
+  objectStorageRef: ServerDeps["objectStorageRef"],
+): ApiObjectStorage {
+  const current = (): ApiObjectStorage => {
+    const adapter = objectStorageRef.current;
+    if (!adapter) {
+      throw new Error("object_storage_unavailable");
+    }
+    return adapter;
+  };
+
+  return {
+    put: (key, body, opts) => current().put(key, body, opts),
+    putStream: (key, stream, opts) => current().putStream(key, stream, opts),
+    get: (key) => current().get(key),
+    getStream: (key) => current().getStream(key),
+    delete: (key) => current().delete(key),
+    exists: (key) => current().exists(key),
+    list: (prefix) => current().list(prefix),
+    getPresignedUrl: (key, expirySeconds) => current().getPresignedUrl(key, expirySeconds),
+    putPresignedUrl: (key, expirySeconds) => current().putPresignedUrl(key, expirySeconds),
+    getMetadata: (key) => current().getMetadata(key),
+    deleteMany: (keys) => current().deleteMany(keys),
+    copyObject: (sourceKey, destKey) => current().copyObject(sourceKey, destKey),
+    healthCheck: () => objectStorageRef.current
+      ? objectStorageRef.current.healthCheck()
+      : Promise.resolve({ healthy: false, message: "object_storage_unavailable" }),
+    validateBucketAccess: () => current().validateBucketAccess(),
+  };
+}
+
 // ─── startApi ─────────────────────────────────────────────────────────────────
 
 /**
@@ -134,9 +167,11 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   const startedAt = Date.now();
   const {
     config,
+    kernelConfig,
     logger,
     lifecycle,
     db,
+    meshDb,
     redis,
     auth,
     objectStorageRef,
@@ -150,6 +185,38 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const _db = db.kysely as unknown as import("kysely").Kysely<Record<string, any>>;
+
+  const verifyTokenForCurrentContext = async (token: string): Promise<Record<string, unknown>> => {
+    const ctx = tryGetContext();
+    const requestedRealmKey = ctx?.realmKey ?? ctx?.realm;
+    const kernelRealmKey = requestedRealmKey ?? kernelConfig?.iam.defaultRealmKey;
+    const kernelRealm = kernelConfig && kernelRealmKey
+      ? kernelConfig.iam.realms[kernelRealmKey]
+      : undefined;
+
+    if (kernelConfig && kernelRealmKey && !kernelRealm) {
+      throw new Error(`Unknown realm: ${kernelRealmKey}`);
+    }
+
+    const claims = kernelConfig && kernelRealmKey && kernelRealmKey !== kernelConfig.iam.defaultRealmKey
+      ? (await (await auth.getVerifier(kernelRealmKey)).verifyJwt(token)).claims
+      : await auth.verifyToken(token);
+
+    const allowedAzp = kernelRealm?.iam.allowedAzp ?? [];
+    if (allowedAzp.length > 0) {
+      const azp = claims["azp"];
+      if (typeof azp !== "string" || !allowedAzp.includes(azp)) {
+        throw new Error(`Token azp is not allowed for realm "${kernelRealmKey}"`);
+      }
+    }
+
+    return claims;
+  };
+
+  const routeAuth = { verifyToken: verifyTokenForCurrentContext };
+  const objectStorage = config.objectStorage
+    ? createObjectStorageRouteAdapter(objectStorageRef)
+    : undefined;
 
   // Register BullMQ queues for /metrics queue depth gauges.
   // Cast to Record<string, unknown> — DepthQueue duck-type is satisfied by BullMQ Queue.
@@ -293,9 +360,21 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // getContext() / tryGetContext() without needing explicit prop-drilling.
   app.use((req: Request, _res: Response, next: NextFunction) => {
     const requestId =
-      (req.headers["x-request-id"] as string) ?? crypto.randomUUID();
+      (req.headers["x-request-id"] as string) ?? randomUUID();
     req.headers["x-request-id"] = requestId;
-    runWithContext({ requestId }, next);
+    const planeKey = normalizePlaneKey(
+      req.headers["x-plane-key"] ?? req.headers["x-plane"] ?? req.query.plane,
+    );
+    const realmKey =
+      (req.headers["x-realm-key"] as string | undefined) ??
+      (req.headers["x-realm"] as string | undefined);
+
+    runWithContext({
+      requestId,
+      ...(planeKey ? { planeKey } : {}),
+      ...(realmKey ? { realmKey, realm: realmKey } : {}),
+      ...parseOrgHeader(req.headers["x-org"]),
+    }, next);
   });
 
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -387,7 +466,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
         return;
       }
       try {
-        const claims = await auth.verifyToken(match[1]!);
+        const claims = await verifyTokenForCurrentContext(match[1]!);
         const sub      = typeof claims["sub"]       === "string" ? claims["sub"]       : "";
         const tenantId = typeof claims["tenant_id"] === "string" ? claims["tenant_id"] : "";
 
@@ -430,7 +509,20 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // supplier, etc.) return 0 rows even when WHERE tenant_id = ? is applied.
   apiRouter.use(async (req: Request, _res: Response, next: NextFunction) => {
     const xOrg   = (req.headers["x-org"]   as string) ?? "";
-    const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+    const xRealm =
+      (req.headers["x-realm-key"] as string | undefined) ??
+      (req.headers["x-realm"] as string | undefined) ??
+      "athyper";
+    const ctx = tryGetContext();
+    if (ctx) {
+      const planeKey = normalizePlaneKey(
+        req.headers["x-plane-key"] ?? req.headers["x-plane"] ?? req.query.plane,
+      );
+      if (planeKey) ctx.planeKey = planeKey;
+      ctx.realmKey = xRealm;
+      ctx.realm = xRealm;
+      Object.assign(ctx, parseOrgHeader(xOrg));
+    }
     if (xOrg) {
       const tenantCode = xOrg.split("--")[0];
       if (tenantCode) {
@@ -442,7 +534,6 @@ export async function startApi(deps: ServerDeps): Promise<void> {
             .where("t.realm_key", "=", xRealm || "athyper")
             .executeTakeFirst();
           if (row) {
-            const ctx = tryGetContext();
             if (ctx) ctx.tenantId = row.id as string;
           }
         } catch { /* swallow — route handlers will 401/404 appropriately */ }
@@ -500,8 +591,9 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   registerIamRoutes(apiRouter, {
     db: db.kysely,
+    meshDb: meshDb?.kysely,
     cache: iamCache,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
     sessionMetrics: createCacheMetrics("session"),
     bootstrapMetrics: createCacheMetrics("bootstrap"),
@@ -516,31 +608,34 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   registerMetadataRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
     cache: descriptorCache,
     checkPermissionBatch,
   });
 
   registerRecordsRoutes(apiRouter, {
-    db:           db.kysely,
-    auth:         { verifyToken: (token: string) => auth.verifyToken(token) },
+    db:                   db.kysely,
+    auth:                 routeAuth,
     logger,
-    cache:         iamCache,
-    objectStorage: objectStorageRef.current ?? undefined,
-    importQueue:   jobs.queues.import,
-    importMaxUploadMb: config.objectStorage?.maxUploadMb,
+    cache:                iamCache,
+    objectStorage,
+    importQueue:          jobs.queues.import,
+    notificationQueue:    jobs.queues.notifications,
+    importMaxUploadMb:    config.objectStorage?.maxUploadMb,
+    checkPermissionBatch,
+    tokenSecret:          process.env["EXPORT_TOKEN_SECRET"],
   });
 
   registerMasterContactsRoutes(apiRouter, {
     db:     db.kysely,
-    auth:   { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth:   routeAuth,
     logger,
   });
 
   registerMasterAddressRoutes(apiRouter, {
     db:     db.kysely,
-    auth:   { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth:   routeAuth,
     logger,
   });
 
@@ -548,17 +643,17 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // not configured; the route returns 503 in that case.
   registerSearchRoutes(apiRouter, {
     db:     db.kysely,
-    auth:   { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth:   routeAuth,
     search: deps.searchService,
     logger,
   });
 
   registerDocumentsRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
-    objectStorage: objectStorageRef.current
+    auth: routeAuth,
+    objectStorage: objectStorage
       ? {
-          adapter: objectStorageRef.current,
+          adapter: objectStorage,
           bucket: config.objectStorage!.bucket,
           maxUploadMb: config.objectStorage!.maxUploadMb,
         }
@@ -569,7 +664,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   registerCollabRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     mentionService,
     redis,
     logger,
@@ -577,7 +672,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   registerCollabAttachmentRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     objectStorage: config.objectStorage
       ? { adapterRef: objectStorageRef, bucket: config.objectStorage.bucket, maxUploadMb: config.objectStorage.maxUploadMb }
       : undefined,
@@ -586,57 +681,57 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   registerPlatformRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     cache: iamCache,
     logger,
   });
 
   registerRefRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
   });
 
   registerTaxonomyRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
   });
 
   registerClassificationRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
   });
 
   registerCommerceRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
   });
 
   registerFinanceRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     cache: iamCache,
     logger,
   });
 
   registerWorkflowRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
   });
 
   registerPolicyRoutes(apiRouter, {
     db: db.kysely,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
   });
 
   registerJobsRoutes(apiRouter, {
     queues: jobs.queues,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
   });
 
@@ -644,7 +739,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     queues: jobs.queues as any,
     db:     _db,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
   });
 
@@ -655,24 +750,24 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   registerJobsBoardRoutes(apiRouter, {
     queues: jobs.queues,
     db:     _db,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
   });
 
   registerAuditRoutes(apiRouter, {
     db: _db,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
-    storage: objectStorageRef.current,
+    auth: routeAuth,
+    storage: objectStorage ?? null,
     cache: iamCache,
     logger,
   });
 
   registerContentRoutes(apiRouter, {
     db: _db,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
-    objectStorage: objectStorageRef.current
+    auth: routeAuth,
+    objectStorage: objectStorage
       ? {
-          adapter:     objectStorageRef.current,
+          adapter:     objectStorage,
           bucket:      config.objectStorage!.bucket,
           maxUploadMb: config.objectStorage!.maxUploadMb,
         }
@@ -691,7 +786,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   registerIntegrationRoutes(apiRouter, {
     db: _db,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     cache: iamCache,
     logger,
     credentialEncryption: credentialEncryption ?? undefined,
@@ -699,14 +794,22 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   registerNotificationRoutes(apiRouter, {
     db: _db,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
+    notificationQueue: jobs.queues.notifications as never,
+    bounceWebhookSecret: deps.config.email?.bounce_webhook_secret,
+    webPush: {
+      configured: Boolean(config.push?.vapidSubject && config.push.vapidPublicKey && config.push.vapidPrivateKey),
+      publicKey:  config.push?.vapidPublicKey,
+    },
   });
 
+  const _gotenberg = createGotenbergClient({ logger });
   registerDocServicesRoutes(apiRouter, {
     db: _db,
-    auth: { verifyToken: (token: string) => auth.verifyToken(token) },
+    auth: routeAuth,
     logger,
+    renderer: _gotenberg ?? undefined,
   });
 
   // ─── AI Foundation routes ──────────────────────────────────────────────────
@@ -739,7 +842,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   });
   registerAiRoutes(apiRouter, {
     db:    _db,
-    auth:  { verifyToken: (token: string) => auth.verifyToken(token) as Promise<{ sub: string; [k: string]: unknown }> },
+    auth:  routeAuth as { verifyToken(token: string): Promise<{ sub: string; [k: string]: unknown }> },
     aiRuntime:          aiBundle.aiRuntime,
     autonomyResolver:   aiBundle.autonomyResolver,
     confidenceResolver: aiBundle.confidenceResolver,
@@ -755,8 +858,9 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // tenant-header contract, and schema field — useful for reconnaissance.
   // Local/staging stay open so openapi-client generators + CI can pull it.
   app.use("/", createOpenApiRouter({
-    requireAuth: process.env["NODE_ENV"] === "production",
-    authVerify:  (token: string) => auth.verifyToken(token),
+    requireAuth: config.env === "production",
+    serveDocs:   config.env !== "production",
+    authVerify:  verifyTokenForCurrentContext,
   }));
 
   // ─── Prometheus metrics ────────────────────────────────────────────────────

@@ -17,6 +17,13 @@ CREATE TRIGGER trg_tenant_status_changed BEFORE UPDATE ON master.tenant FOR EACH
 DROP TRIGGER IF EXISTS trg_tenant_status_transition ON master.tenant;
 CREATE TRIGGER trg_tenant_status_transition BEFORE UPDATE OF status ON master.tenant FOR EACH ROW EXECUTE FUNCTION master.trg_guard_tenant_status_transition();
 
+-- tenant_admin_grant
+DROP TRIGGER IF EXISTS trg_tenant_admin_grant_updated_at ON master.tenant_admin_grant;
+CREATE TRIGGER trg_tenant_admin_grant_updated_at BEFORE UPDATE ON master.tenant_admin_grant FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_tenant_admin_grant_status_changed ON master.tenant_admin_grant;
+CREATE TRIGGER trg_tenant_admin_grant_status_changed BEFORE UPDATE OF status ON master.tenant_admin_grant FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
 -- principal
 DROP TRIGGER IF EXISTS trg_principal_updated_at ON master.principal;
 CREATE TRIGGER trg_principal_updated_at BEFORE UPDATE ON master.principal FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
@@ -2981,6 +2988,39 @@ CREATE TRIGGER trg_cq_updated_at BEFORE UPDATE ON master.customer_qualification
 DROP TRIGGER IF EXISTS trg_bpnl_updated_at ON master.business_partner_network_link;
 CREATE TRIGGER trg_bpnl_updated_at BEFORE UPDATE ON master.business_partner_network_link
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- ── master.business_network ─────────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_bn_updated_at ON master.business_network;
+CREATE TRIGGER trg_bn_updated_at BEFORE UPDATE ON master.business_network
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_bn_status_changed ON master.business_network;
+CREATE TRIGGER trg_bn_status_changed BEFORE UPDATE OF status ON master.business_network
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+-- ── master.business_network_membership ──────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_bnm_updated_at ON master.business_network_membership;
+CREATE TRIGGER trg_bnm_updated_at BEFORE UPDATE ON master.business_network_membership
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_bnm_status_changed ON master.business_network_membership;
+CREATE TRIGGER trg_bnm_status_changed BEFORE UPDATE OF status ON master.business_network_membership
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+DROP TRIGGER IF EXISTS trg_bnm_validate ON master.business_network_membership;
+CREATE TRIGGER trg_bnm_validate
+    BEFORE INSERT OR UPDATE OF network_id, participant_tenant_id, owner_business_partner_id, tenant_relationship_id, network_link_id
+    ON master.business_network_membership
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_business_network_membership();
+
+-- ── master.business_network_membership_role ─────────────────────────────────
+DROP TRIGGER IF EXISTS trg_bnmrole_updated_at ON master.business_network_membership_role;
+CREATE TRIGGER trg_bnmrole_updated_at BEFORE UPDATE ON master.business_network_membership_role
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_bnmrole_status_changed ON master.business_network_membership_role;
+CREATE TRIGGER trg_bnmrole_status_changed BEFORE UPDATE OF status ON master.business_network_membership_role
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 -- ── master.legal_entity_identity_binding ─────────────────────────────────────
 DROP TRIGGER IF EXISTS trg_leib_updated_at ON master.legal_entity_identity_binding;

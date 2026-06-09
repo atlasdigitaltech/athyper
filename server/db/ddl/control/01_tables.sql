@@ -2249,10 +2249,26 @@ CREATE TABLE IF NOT EXISTS control.field_group (
     -- Display
     sort_order                  smallint    NOT NULL DEFAULT 0,
 
+    -- Layout hints — consumed by both UI (FieldsRenderer) and print (EntityPrintTemplate)
+    -- columns: field grid column count within the section (1=single, 2=two-col, 3=three-col)
+    -- page_span: in two_column print mode — 'half' participates in left/right split, 'full' spans the page
+    columns                     smallint    NOT NULL DEFAULT 3,
+    page_span                   text        NOT NULL DEFAULT 'half',
+
     CONSTRAINT fg_pkey              PRIMARY KEY (group_key),
     CONSTRAINT fg_key_fmt_chk       CHECK (group_key ~ '^[a-z][a-z0-9_]*$'),
-    CONSTRAINT fg_label_chk         CHECK (btrim(label) <> '')
+    CONSTRAINT fg_label_chk         CHECK (btrim(label) <> ''),
+    CONSTRAINT fg_columns_chk       CHECK (columns IN (1, 2, 3)),
+    CONSTRAINT fg_page_span_chk     CHECK (page_span IN ('full', 'half'))
 );
+
+-- Idempotent schema evolution for existing databases
+ALTER TABLE control.field_group ADD COLUMN IF NOT EXISTS columns   smallint NOT NULL DEFAULT 3;
+ALTER TABLE control.field_group ADD COLUMN IF NOT EXISTS page_span text     NOT NULL DEFAULT 'half';
+ALTER TABLE control.field_group DROP CONSTRAINT IF EXISTS fg_columns_chk;
+ALTER TABLE control.field_group DROP CONSTRAINT IF EXISTS fg_page_span_chk;
+ALTER TABLE control.field_group ADD CONSTRAINT fg_columns_chk   CHECK (columns   IN (1, 2, 3));
+ALTER TABLE control.field_group ADD CONSTRAINT fg_page_span_chk CHECK (page_span IN ('full', 'half'));
 
 COMMENT ON TABLE  control.field_group IS
     'ARCHETYPE=F;SCOPE=N. Logical UI sections grouping canonical fields. '

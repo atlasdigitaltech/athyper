@@ -1,12 +1,13 @@
-<#-- Neon Theme — webauthn-error.ftl -->
+﻿<#-- Neon Theme — webauthn-error.ftl -->
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Security Key Error — Neon</title>
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico"/>
-  <script>(function(){var t=['default','atlas-vintage','neon-mono','mesh-night','athyper-pop','atlas-neo','neon-tangerine','neon-modern','athyper-bubble','mesh-bloom','atlas-doom'];function apply(v){if(v&&t.indexOf(v)!==-1){document.documentElement.setAttribute('data-theme-preset',v);try{localStorage.setItem('theme_preset',v);}catch(e){}return true;}return false;}var p=document.cookie.split('; ').find(function(r){return r.startsWith('theme_preset=');});if(p&&apply(decodeURIComponent(p.split('=')[1])))return;try{apply(localStorage.getItem('theme_preset')||'');}catch(e){}})();</script>
+  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
+  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css"/>
 </head>
 <body>

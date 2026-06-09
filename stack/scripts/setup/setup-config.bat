@@ -92,24 +92,24 @@ REM Environment-variant source selection
 REM ----------------------------
 if /I "!ENV_NAME!"=="staging" (
   set "MEMORYCACHE_SRC=memorycache\environments\cache.staging.conf"
-  set "GOTENBERG_SRC=render\environments\gotenberg.staging.conf"
-  set "TIKA_SRC=render\environments\tika-config.staging.xml"
+  set "DOCRENDER_SRC=render\environments\docrender.staging.conf"
+  set "DOCPARSER_SRC=render\environments\docparser-config.staging.xml"
   set "GATEWAY_TLS_SRC=gateway\environments\athyper.tls.staging.yml"
   set "WORKBENCH_SRC=gateway\environments\neon-workbench-routes.staging.yml"
   set "METRICS_CONFIG_SRC=telemetry\metrics\config.staging.yml"
 )
 if /I "!ENV_NAME!"=="production" (
   set "MEMORYCACHE_SRC=memorycache\environments\cache.production.conf"
-  set "GOTENBERG_SRC=render\environments\gotenberg.production.conf"
-  set "TIKA_SRC=render\environments\tika-config.production.xml"
+  set "DOCRENDER_SRC=render\environments\docrender.production.conf"
+  set "DOCPARSER_SRC=render\environments\docparser-config.production.xml"
   set "GATEWAY_TLS_SRC=gateway\environments\athyper.tls.production.yml"
   set "WORKBENCH_SRC=gateway\environments\neon-workbench-routes.prod.yml"
   set "METRICS_CONFIG_SRC=telemetry\metrics\config.production.yml"
 )
 if /I "!ENV_NAME!"=="local" (
   set "MEMORYCACHE_SRC=memorycache\cache.conf"
-  set "GOTENBERG_SRC=render\gotenberg.conf"
-  set "TIKA_SRC=render\tika-config.xml"
+  set "DOCRENDER_SRC=render\docrender.conf"
+  set "DOCPARSER_SRC=render\docparser-config.xml"
   set "GATEWAY_TLS_SRC=gateway\dynamic\athyper.tls.yml"
   set "WORKBENCH_SRC=gateway\dynamic\athyper.workbench.yml"
   set "METRICS_CONFIG_SRC=telemetry\metrics\config.yml"
@@ -133,17 +133,20 @@ call :pf "!GATEWAY_TLS_SRC!" "gateway\dynamic\athyper.tls.yml" 1
 call :pf "!WORKBENCH_SRC!" "gateway\dynamic\athyper.workbench.yml" 1
 call :pf "gateway\dynamic\athyper.api.yml" "gateway\dynamic\athyper.api.yml" 1
 
-REM db — db/local/* always deployed (postgres mounts these paths on all envs, hardcoded in compose)
-call :pf "db\local\postgresql.conf" "db\local\postgresql.conf" 0
-call :pf "db\local\pg_hba.conf" "db\local\pg_hba.conf" 0
-call :pf "db\local\init-databases.sh" "db\local\init-databases.sh" 0
-call :pf "db\local\dbpool\pgbouncer-apps.ini" "db\local\dbpool\pgbouncer-apps.ini" 0
-call :pf "db\local\dbpool\pgbouncer-auth.ini" "db\local\dbpool\pgbouncer-auth.ini" 0
-call :pf "db\local\dbpool\pgbouncer-session.ini" "db\local\dbpool\pgbouncer-session.ini" 0
-call :pf "db\local\dbpool\userlist.txt" "db\local\dbpool\userlist.txt" 0
+REM db — compose mounts db/${ENVIRONMENT:-local}/ so every environment needs its own
+REM     postgresql.conf, pg_hba.conf, and init-databases.sh deployed to that path.
+call :pf "db\!ENV_NAME!\postgresql.conf" "db\!ENV_NAME!\postgresql.conf" 0
+call :pf "db\!ENV_NAME!\pg_hba.conf" "db\!ENV_NAME!\pg_hba.conf" 0
+call :pf "db\!ENV_NAME!\init-databases.sh" "db\!ENV_NAME!\init-databases.sh" 0
 
-REM db/{env}/dbpool — staging/production PgBouncer use env-specific ini files
-REM (DBPOOL_APPS_CONFIG / DBPOOL_SESSION_CONFIG in .env point to these paths)
+REM db pgbouncer configs — local uses flat dbpool/; staging/production use env-specific paths
+REM (DBPOOL_APPS_CONFIG / DBPOOL_SESSION_CONFIG in .env point to the correct subpath)
+if /I "!ENV_NAME!"=="local" (
+  call :pf "db\local\dbpool\pgbouncer-apps.ini" "db\local\dbpool\pgbouncer-apps.ini" 0
+  call :pf "db\local\dbpool\pgbouncer-auth.ini" "db\local\dbpool\pgbouncer-auth.ini" 0
+  call :pf "db\local\dbpool\pgbouncer-session.ini" "db\local\dbpool\pgbouncer-session.ini" 0
+  call :pf "db\local\dbpool\userlist.txt" "db\local\dbpool\userlist.txt" 0
+)
 if /I "!ENV_NAME!"=="staging" (
   call :pf "db\staging\dbpool\apps\pgbouncer-apps.ini" "db\staging\dbpool\apps\pgbouncer-apps.ini" 0
   call :pf "db\staging\dbpool\session\pgbouncer-session.ini" "db\staging\dbpool\session\pgbouncer-session.ini" 0
@@ -154,8 +157,10 @@ if /I "!ENV_NAME!"=="production" (
 )
 
 REM iam
-call :pf "iam\realm-demosetup.json" "iam\realm-demosetup.json" 0
+call :pf "iam\realm-athyper.json" "iam\realm-athyper.json" 0
+call :pf "iam\realm-athyper-demosetup.json" "iam\realm-athyper-demosetup.json" 0
 call :pf "iam\realm-platform-control.json" "iam\realm-platform-control.json" 0
+call :pf "iam\realm-platform-control-demosetup.json" "iam\realm-platform-control-demosetup.json" 0
 
 REM memorycache (env-variant source)
 call :pf "!MEMORYCACHE_SRC!" "memorycache\cache.conf" 0
@@ -178,12 +183,19 @@ call :pf "telemetry\tracing\config.yml" "telemetry\tracing\config.yml" 0
 call :pf "telemetry\provisioning.env\dashboards.!ENV_NAME!.yml" "telemetry\provisioning.env\dashboards.!ENV_NAME!.yml" 0
 
 REM render (env-variant source)
-call :pf "!GOTENBERG_SRC!" "render\gotenberg.conf" 0
-call :pf "!TIKA_SRC!" "render\tika-config.xml" 0
+call :pf "!DOCRENDER_SRC!" "render\docrender.conf" 0
+call :pf "!DOCPARSER_SRC!" "render\docparser-config.xml" 0
 
 REM ── Directory copies: CALL :pd "dir_rel" ─────────────────────────────────────
 call :pd "iam\themes\neon"
 call :pd "telemetry\provisioning"
+
+if /I "!MODE!" NEQ "--diff" (
+  echo.
+  echo Applying IAM realm policy for !ENV_NAME!...
+  node "%STACK_DIR%\..\tools\scripts\apply-iam-realm-policy.cjs" --environment "!ENV_NAME!" --root "!LIVE_CFG!\iam" --write
+  if errorlevel 1 exit /b 1
+)
 
 REM ── MANIFEST (server only: LIVE_CFG != REPO_CFG, skipped for --diff) ─────────
 if /I "!MODE!"=="--diff" goto :sc_no_manifest
@@ -265,7 +277,9 @@ if /I "!_S!"=="!_D!" (
 )
 
 if /I "!MODE!"=="--diff" (
-  if not exist "!DST!" (
+  if exist "!DST!\*" (
+    echo   BLOCKED  !DST_REL!  (directory at file path^)
+  ) else if not exist "!DST!" (
     echo   MISSING  !DST_REL!
   ) else (
     fc /b "!SRC!" "!DST!" >nul 2>&1
@@ -279,6 +293,11 @@ if /I "!MODE!"=="--diff" (
 )
 
 if /I "!MODE!"=="--update" (
+  if exist "!DST!\*" (
+    for /f "tokens=*" %%T in ('powershell -NoProfile -Command "[datetime]::UtcNow.ToString(\"yyyyMMdd-HHmmss\")"') do set "_TS=%%T"
+    move /Y "!DST!" "!DST!.dir.bak.!_TS!" >nul
+    echo   BACKUPD !DST_REL!  (directory moved to .dir.bak.!_TS!^)
+  )
   if "!OM!"=="1" (
     REM Operator-managed: only prompt if files actually differ
     if exist "!DST!" (
@@ -306,7 +325,9 @@ if /I "!MODE!"=="--update" (
 )
 
 REM Default: first-deploy — copy only if absent
-if not exist "!DST!" (
+if exist "!DST!\*" (
+  echo   BLOCKED !DST_REL!  (directory at file path; run --update to repair^)
+) else if not exist "!DST!" (
   for %%D in ("!DST!") do if not exist "%%~dpD" mkdir "%%~dpD"
   copy /Y "!SRC!" "!DST!" >nul
   echo   COPIED  !DST_REL!

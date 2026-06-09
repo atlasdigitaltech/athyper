@@ -21,7 +21,7 @@ const mockRedisDisconnect = vi.fn();
 const mockRedisGet = vi.fn();
 const mockRedisSetex = vi.fn();
 const ORIGINAL_MODE = process.env["MODE"];
-const ORIGINAL_TIKA_URL = process.env["TIKA_URL"];
+const ORIGINAL_DOCPARSER_URL = process.env["DOCPARSER_URL"];
 
 vi.mock("@athyper/adapter-db", () => ({
   createDbAdapter: vi.fn(() => ({
@@ -80,21 +80,21 @@ vi.mock("@athyper/svc-jobs", () => ({
 // Stub relative framework adapters loaded by bootstrap.
 // Paths are resolved relative to this test file:
 //   __tests__/ → kernel/ → src/ → server/ → framework/
-vi.mock("../../../framework/runtime/services/jobs/adapters/webhook.adapter.js", () => ({
+vi.mock("../../../packages/services/jobs/adapters/webhook.adapter.js", () => ({
   createWebhookAdapter: vi.fn(() => ({
     send: vi.fn(),
     healthCheck: vi.fn(() => Promise.resolve("healthy")),
   })),
 }));
 
-vi.mock("../../../framework/runtime/services/jobs/adapters/email.adapter.js", () => ({
+vi.mock("../../../packages/services/jobs/adapters/email.adapter.js", () => ({
   createEmailAdapter: vi.fn(() => ({
     send: vi.fn(),
     healthCheck: vi.fn(() => Promise.resolve("healthy")),
   })),
 }));
 
-vi.mock("../../../framework/runtime/services/jobs/workers/webhook-delivery.worker.js", () => ({
+vi.mock("../../../packages/services/jobs/workers/webhook-delivery.worker.js", () => ({
   createWebhookDeliveryWorker: vi.fn(() => ({
     worker: { close: vi.fn(() => Promise.resolve()) },
     queue:  { close: vi.fn(() => Promise.resolve()) },
@@ -106,7 +106,7 @@ vi.mock("../../../framework/runtime/services/jobs/workers/webhook-delivery.worke
 import { bootstrap } from "../bootstrap.js";
 import type { ServerConfig } from "../../config.js";
 import { createJobsService } from "@athyper/svc-jobs";
-import { createWebhookDeliveryWorker } from "../../../framework/runtime/services/jobs/workers/webhook-delivery.worker.js";
+import { createWebhookDeliveryWorker } from "../../../packages/services/jobs/workers/webhook-delivery.worker.js";
 
 // ─── Minimal valid config (no email, no object storage) ───────────────────────
 
@@ -156,7 +156,7 @@ describe("bootstrap", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete process.env["MODE"];
-    delete process.env["TIKA_URL"];
+    delete process.env["DOCPARSER_URL"];
   });
 
   afterEach(() => {
@@ -165,10 +165,10 @@ describe("bootstrap", () => {
     } else {
       process.env["MODE"] = ORIGINAL_MODE;
     }
-    if (ORIGINAL_TIKA_URL === undefined) {
-      delete process.env["TIKA_URL"];
+    if (ORIGINAL_DOCPARSER_URL === undefined) {
+      delete process.env["DOCPARSER_URL"];
     } else {
-      process.env["TIKA_URL"] = ORIGINAL_TIKA_URL;
+      process.env["DOCPARSER_URL"] = ORIGINAL_DOCPARSER_URL;
     }
   });
 

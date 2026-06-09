@@ -11,19 +11,40 @@
 /* ── Geist font ── */
 @import url('https://fonts.bunny.net/css?family=geist:300,400,500,600&display=swap');
 
-/* ── Color tokens (mono preset — matches Neon app base.css defaults) ── */
+/* ── Color tokens (neon-base preset — mirrors @athyper/theme) ── */
 :root {
-  --bg:          oklch(0.985 0 0);
-  --fg:          oklch(0.14 0 0);
-  --primary:     oklch(0.205 0 0);
-  --primary-fg:  oklch(0.985 0 0);
-  --muted-fg:    oklch(0.556 0 0);
-  --border:      oklch(0.922 0 0);
-  --input-bg:    oklch(1 0 0);
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --radius:      0.5rem;
-  --shadow-sm:   0px 1px 3px 0px hsl(0 0% 0% / 0.06),
-                 0px 1px 2px -1px hsl(0 0% 0% / 0.06);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --success: oklch(0.527 0.154 150.069);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.769 0.188 70.08);
+  --warning-foreground: oklch(0.145 0 0);
+  --info: oklch(0.55 0.2 264.376);
+  --info-foreground: oklch(0.985 0 0);
+  --shadow-sm: 0px 1px 2px 0px #0000000d, 0px 1px 2px -1px #0000000d;
+  --bg: var(--background);
+  --fg: var(--foreground);
+  --primary-fg: var(--primary-foreground);
+  --muted-fg: var(--muted-foreground);
+  --input-bg: var(--card);
 }
 
 /* ── Reset ── */
@@ -664,77 +685,36 @@ html, body {
 .kc-form-row-end { justify-content: flex-end; }
 
 /* =======================================================================
- * Palette overrides — mirrors Neon app preset CSS variables.
- * Applied when JS reads theme_preset cookie → sets data-theme-preset.
+ * Palette override — mirrors @athyper/theme/presets/neon-base.css.
+ * Applied when _theme-resolver.ftl sets data-theme-preset.
  * ======================================================================= */
 
-:root[data-theme-preset="default"],
-:root[data-theme-preset="mono"] {
-  --bg: oklch(0.985 0 0); --fg: oklch(0.14 0 0);
-  --primary: oklch(0.205 0 0); --primary-fg: oklch(0.985 0 0);
-  --muted-fg: oklch(0.556 0 0); --border: oklch(0.922 0 0);
-  --input-bg: oklch(1 0 0); --radius: 0.5rem;
-}
-
-:root[data-theme-preset="modern-minimal"] {
-  --bg: oklch(0.995 0 0); --fg: oklch(0.15 0 0);
-  --primary: oklch(0.45 0.18 250); --primary-fg: oklch(0.99 0 0);
-  --muted-fg: oklch(0.52 0 0); --border: oklch(0.93 0 0);
-  --input-bg: oklch(0.93 0 0); --radius: 0.5rem;
-}
-
-:root[data-theme-preset="tangerine"] {
-  --bg: oklch(0.94 0 236.5); --fg: oklch(0.32 0 0);
-  --primary: oklch(0.64 0.17 36.44); --primary-fg: oklch(1 0 0);
-  --muted-fg: oklch(0.55 0.02 264.36); --border: oklch(0.9 0.01 247.88);
-  --input-bg: oklch(0.97 0 264.54); --radius: 0.625rem;
-}
-
-:root[data-theme-preset="cosmic-night"] {
-  --bg: oklch(0.96 0.012 280); --fg: oklch(0.18 0.04 280);
-  --primary: oklch(0.45 0.2 275); --primary-fg: oklch(0.98 0 0);
-  --muted-fg: oklch(0.45 0.03 275); --border: oklch(0.88 0.02 280);
-  --input-bg: oklch(0.9 0.015 280); --radius: 0.75rem;
-}
-
-:root[data-theme-preset="violet-bloom"] {
-  --bg: oklch(0.965 0.015 305); --fg: oklch(0.2 0.05 300);
-  --primary: oklch(0.5 0.22 300); --primary-fg: oklch(0.98 0 0);
-  --muted-fg: oklch(0.48 0.04 300); --border: oklch(0.88 0.025 305);
-  --input-bg: oklch(0.9 0.02 305); --radius: 0.75rem;
-}
-
-:root[data-theme-preset="vintage-paper"] {
-  --bg: oklch(0.96 0.015 90); --fg: oklch(0.34 0.03 55);
-  --primary: oklch(0.59 0.09 63); --primary-fg: oklch(1 0 0);
-  --muted-fg: oklch(0.51 0.05 60); --border: oklch(0.85 0.03 82);
-  --input-bg: oklch(0.85 0.03 82); --radius: 0.375rem;
-}
-
-:root[data-theme-preset="soft-pop"] {
-  --bg: oklch(0.9789 0.0082 121.6272); --fg: oklch(0 0 0);
-  --primary: oklch(0.5106 0.2301 276.9656); --primary-fg: oklch(1 0 0);
-  --muted-fg: oklch(0.3211 0 0); --border: oklch(0 0 0);
-  --input-bg: oklch(0.5555 0 0); --radius: 1rem;
-}
-
-:root[data-theme-preset="bubblegum"] {
-  --bg: oklch(0.97 0.015 340); --fg: oklch(0.2 0.04 340);
-  --primary: oklch(0.6 0.22 340); --primary-fg: oklch(0.99 0 0);
-  --muted-fg: oklch(0.45 0.04 340); --border: oklch(0.88 0.03 340);
-  --input-bg: oklch(0.9 0.025 340); --radius: 1.25rem;
-}
-
-:root[data-theme-preset="brutalist"] {
-  --bg: oklch(1 0 0); --fg: oklch(0 0 0);
-  --primary: oklch(0.6489 0.237 26.9728); --primary-fg: oklch(1 0 0);
-  --muted-fg: oklch(0.3211 0 0); --border: oklch(0 0 0);
-  --input-bg: oklch(0 0 0); --radius: 0px;
-}
-
-:root[data-theme-preset="doom-64"] {
-  --bg: oklch(0.92 0.01 100); --fg: oklch(0.15 0.02 120);
-  --primary: oklch(0.55 0.2 145); --primary-fg: oklch(0.98 0 0);
-  --muted-fg: oklch(0.45 0.02 120); --border: oklch(0.82 0.02 100);
-  --input-bg: oklch(0.85 0.015 100); --radius: 0.25rem;
+:root[data-theme-preset="neon-base"] {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --success: oklch(0.527 0.154 150.069);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.769 0.188 70.08);
+  --warning-foreground: oklch(0.145 0 0);
+  --info: oklch(0.55 0.2 264.376);
+  --info-foreground: oklch(0.985 0 0);
+  --shadow-sm: 0px 1px 2px 0px #0000000d, 0px 1px 2px -1px #0000000d;
 }

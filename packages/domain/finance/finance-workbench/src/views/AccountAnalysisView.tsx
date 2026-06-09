@@ -14,7 +14,7 @@ function DeltaBadge({ value }: { value: number }) {
   if (!value) return <span className="text-muted-foreground">—</span>;
   const pos = value > 0;
   return (
-    <span className={cn("font-mono", pos ? "text-success" : "text-destructive")}>
+    <span className={cn("tabular-nums", pos ? "text-success" : "text-destructive")}>
       {pos ? "+" : ""}{fmtCompact(value)}
     </span>
   );
@@ -61,28 +61,28 @@ export function AccountAnalysisView({ scope, accountCode }: AccountAnalysisViewP
     <div className="space-y-3">
       {/* Account header */}
       <div className="flex items-center gap-3 rounded-lg border bg-muted/20 px-4 py-2.5">
-        <span className="font-mono text-xs text-muted-foreground">{data.accountCode}</span>
-        <span className="font-semibold text-sm">{data.accountName}</span>
-        <span className="text-doc-support rounded border bg-background px-1.5 py-0.5 uppercase font-medium text-muted-foreground">
+        <span className="tabular-nums text-xs text-muted-foreground">{data.accountCode}</span>
+        <span className="font-medium text-sm">{data.accountName}</span>
+        <span className="text-xs rounded border bg-background px-1.5 py-0.5 font-medium text-muted-foreground">
           {data.accountClass}
         </span>
-        <span className="text-doc-support rounded border bg-background px-1.5 py-0.5 text-muted-foreground">
+        <span className="text-xs rounded border bg-background px-1.5 py-0.5 text-muted-foreground">
           Normal: {data.normalBalance}
         </span>
         {data.isLive && (
-          <span className="text-doc-support rounded border bg-info/10 border-info/30 px-1.5 py-0.5 text-info font-medium">
+          <span className="text-xs rounded border bg-info/10 border-info/30 px-1.5 py-0.5 text-info font-medium">
             Live
           </span>
         )}
         <div className="flex-1" />
         <div className="flex gap-6 text-xs text-muted-foreground">
           <div className="text-right">
-            <div className="text-doc-label uppercase mb-0.5">Year Opening</div>
-            <span className="font-mono font-medium text-foreground">{fmtCompact(data.yearOpeningBalance)}</span>
+            <div className="text-sm font-medium mb-0.5">Year Opening</div>
+            <span className="tabular-nums font-medium text-foreground">{fmtCompact(data.yearOpeningBalance)}</span>
           </div>
           <div className="text-right">
-            <div className="text-doc-label uppercase mb-0.5">Year Closing</div>
-            <span className="font-mono font-medium text-foreground">{fmtCompact(data.yearClosingBalance)}</span>
+            <div className="text-sm font-medium mb-0.5">Year Closing</div>
+            <span className="tabular-nums font-medium text-foreground">{fmtCompact(data.yearClosingBalance)}</span>
           </div>
         </div>
       </div>
@@ -116,19 +116,19 @@ export function AccountAnalysisView({ scope, accountCode }: AccountAnalysisViewP
                   )}
                 >
                   <td className="py-1.5 px-3 font-medium">{p.periodLabel}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">
+                  <td className="py-1.5 px-3 text-right tabular-nums text-muted-foreground">
                     {fmtFull(p.openingBalance)}
                   </td>
-                  <td className="py-1.5 px-3 text-right font-mono text-success">
+                  <td className="py-1.5 px-3 text-right tabular-nums text-success">
                     {p.totalDebits ? fmtFull(p.totalDebits) : "—"}
                   </td>
-                  <td className="py-1.5 px-3 text-right font-mono text-destructive">
+                  <td className="py-1.5 px-3 text-right tabular-nums text-destructive">
                     {p.totalCredits ? fmtFull(p.totalCredits) : "—"}
                   </td>
                   <td className="py-1.5 px-3 text-right">
                     <DeltaBadge value={p.netMovement} />
                   </td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold">
+                  <td className="py-1.5 px-3 text-right tabular-nums font-medium">
                     {fmtFull(p.closingBalance)}
                   </td>
                   <td className="py-1.5 px-3 text-right text-muted-foreground">{p.entryCount || "—"}</td>
@@ -136,15 +136,15 @@ export function AccountAnalysisView({ scope, accountCode }: AccountAnalysisViewP
               ))}
             </tbody>
             <tfoot>
-              <tr className="bg-muted/50 border-t-2 font-semibold">
+              <tr className="bg-muted/50 border-t-2 font-medium">
                 <td className="py-2 px-3">FY Total</td>
-                <td className="py-2 px-3 text-right font-mono">{fmtFull(data.yearOpeningBalance)}</td>
-                <td className="py-2 px-3 text-right font-mono text-success">{fmtFull(data.yearTotalDebits)}</td>
-                <td className="py-2 px-3 text-right font-mono text-destructive">{fmtFull(data.yearTotalCredits)}</td>
+                <td className="py-2 px-3 text-right tabular-nums">{fmtFull(data.yearOpeningBalance)}</td>
+                <td className="py-2 px-3 text-right tabular-nums text-success">{fmtFull(data.yearTotalDebits)}</td>
+                <td className="py-2 px-3 text-right tabular-nums text-destructive">{fmtFull(data.yearTotalCredits)}</td>
                 <td className="py-2 px-3 text-right">
                   <DeltaBadge value={data.yearClosingBalance - data.yearOpeningBalance} />
                 </td>
-                <td className="py-2 px-3 text-right font-mono font-bold">{fmtFull(data.yearClosingBalance)}</td>
+                <td className="py-2 px-3 text-right tabular-nums font-medium">{fmtFull(data.yearClosingBalance)}</td>
                 <td className="py-2 px-3 text-right text-muted-foreground">
                   {periods.reduce((s, p) => s + p.entryCount, 0)}
                 </td>

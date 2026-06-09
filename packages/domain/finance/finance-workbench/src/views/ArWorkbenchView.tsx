@@ -50,9 +50,9 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-doc-support text-muted-foreground">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>As at {data.asAt ? fmtDate(data.asAt) : "period end"} · {rows.length} customer{rows.length !== 1 ? "s" : ""}</span>
-        <span>Total outstanding: <span className="font-semibold text-foreground">{fmtCompact(grandTotal)}</span></span>
+        <span>Total outstanding: <span className="font-medium text-foreground">{fmtCompact(grandTotal)}</span></span>
       </div>
 
       {/* Bucket summary cards */}
@@ -62,11 +62,11 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
           const pct = grandTotal > 0 ? (val / grandTotal) * 100 : 0;
           return (
             <div key={b.key} className="rounded-lg border p-2.5 space-y-1">
-              <div className="text-doc-support text-muted-foreground">{b.label}</div>
-              <div className={cn("text-sm font-semibold font-mono", b.key !== "current" && val > 0 ? "text-warning" : "")}>
+              <div className="text-xs text-muted-foreground">{b.label}</div>
+              <div className={cn("text-sm font-medium tabular-nums", b.key !== "current" && val > 0 ? "text-warning" : "")}>
                 {fmtCompact(val)}
               </div>
-              <div className="text-doc-support text-muted-foreground">{pct.toFixed(1)}%</div>
+              <div className="text-xs text-muted-foreground">{pct.toFixed(1)}%</div>
             </div>
           );
         })}
@@ -97,25 +97,25 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
                   {BUCKETS.map((b) => {
                     const val = row[b.key] as number;
                     return (
-                      <td key={b.key} className={cn("py-1.5 px-3 text-right font-mono", b.key !== "current" && val > 0 ? "text-warning" : "")}>
+                      <td key={b.key} className={cn("py-1.5 px-3 text-right tabular-nums", b.key !== "current" && val > 0 ? "text-warning" : "")}>
                         {val ? fmtFull(val) : "—"}
                       </td>
                     );
                   })}
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold">{fmtFull(row.total)}</td>
+                  <td className="py-1.5 px-3 text-right tabular-nums font-medium">{fmtFull(row.total)}</td>
                 </tr>
               ))}
             </tbody>
             {rows.length > 0 && (
               <tfoot>
                 <tr className="bg-muted/50 border-t-2">
-                  <td className="py-2 px-3 font-semibold">Total</td>
+                  <td className="py-2 px-3 font-medium">Total</td>
                   {BUCKETS.map((b) => (
-                    <td key={b.key} className="py-2 px-3 text-right font-mono font-semibold">
+                    <td key={b.key} className="py-2 px-3 text-right tabular-nums font-medium">
                       {totals[b.key] ? fmtFull(totals[b.key]!) : "—"}
                     </td>
                   ))}
-                  <td className="py-2 px-3 text-right font-mono font-bold">{fmtFull(grandTotal)}</td>
+                  <td className="py-2 px-3 text-right tabular-nums font-medium">{fmtFull(grandTotal)}</td>
                 </tr>
               </tfoot>
             )}
@@ -155,7 +155,7 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-doc-support text-muted-foreground text-right">
+      <div className="text-xs text-muted-foreground text-right">
         {data?.total ?? 0} invoice{data?.total !== 1 ? "s" : ""}
       </div>
       <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
@@ -177,12 +177,12 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
             )}
             {(data?.items ?? []).map((inv: ArInvoice) => (
               <tr key={inv.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="py-1.5 px-3 font-mono text-muted-foreground">{inv.invoiceNumber}</td>
+                <td className="py-1.5 px-3 tabular-nums text-muted-foreground">{inv.invoiceNumber}</td>
                 <td className="py-1.5 px-3">{inv.customerName ?? "—"}</td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.invoiceDate)}</td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.dueDate)}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{fmtCurrency(inv.totalAmount)}</td>
-                <td className={cn("py-1.5 px-3 text-right font-mono font-medium",
+                <td className="py-1.5 px-3 text-right tabular-nums">{fmtCurrency(inv.totalAmount)}</td>
+                <td className={cn("py-1.5 px-3 text-right tabular-nums font-medium",
                   inv.outstandingAmount > 0 ? "text-warning" : "text-success")}>
                   {fmtCurrency(inv.outstandingAmount)}
                 </td>
@@ -290,7 +290,7 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm font-mono"
+                className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm tabular-nums"
               />
             </div>
             <div>
@@ -301,7 +301,7 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value.toUpperCase())}
                 placeholder="USD"
-                className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm font-mono uppercase"
+                className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm tabular-nums"
               />
             </div>
           </div>
@@ -332,7 +332,7 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
           {/* Reference */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">
-              Payment Reference <span className="text-doc-support font-normal">(optional)</span>
+              Payment Reference <span className="text-xs font-normal">(optional)</span>
             </label>
             <input
               type="text"
@@ -346,7 +346,7 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
           {/* Notes */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">
-              Notes <span className="text-doc-support font-normal">(optional)</span>
+              Notes <span className="text-xs font-normal">(optional)</span>
             </label>
             <textarea
               value={notes}
@@ -398,7 +398,7 @@ function ReceiptsTab({ scope, onRecordReceipt }: { scope: FinanceScope; onRecord
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <div className="text-doc-support text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {data?.total ?? 0} receipt{data?.total !== 1 ? "s" : ""}
         </div>
         <button
@@ -443,11 +443,11 @@ function ReceiptsTab({ scope, onRecordReceipt }: { scope: FinanceScope; onRecord
                         ? <ChevronDown className="size-3" />
                         : <ChevronRight className="size-3" />}
                     </td>
-                    <td className="py-1.5 px-3 font-mono text-muted-foreground">{r.paymentNumber}</td>
+                    <td className="py-1.5 px-3 tabular-nums text-muted-foreground">{r.paymentNumber}</td>
                     <td className="py-1.5 px-3">{r.counterpartyName ?? "—"}</td>
                     <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(r.valueDate)}</td>
-                    <td className="py-1.5 px-3 text-right font-mono text-success font-medium">{fmtCurrency(r.paymentAmount)}</td>
-                    <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">{r.paymentReference ?? "—"}</td>
+                    <td className="py-1.5 px-3 text-right tabular-nums text-success font-medium">{fmtCurrency(r.paymentAmount)}</td>
+                    <td className="py-1.5 px-3 tabular-nums text-muted-foreground text-xs">{r.paymentReference ?? "—"}</td>
                     <td className={cn("py-1.5 px-3 capitalize", statusTextClass(r.status))}>{r.status}</td>
                   </tr>
                   {isExpanded && (
@@ -482,46 +482,46 @@ function ReceiptDetailPanel({ receipt: r }: { receipt: ArReceipt }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 text-xs">
       <div>
-        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Receipt #</div>
-        <div className="font-mono mt-0.5">{r.paymentNumber}</div>
+        <div className="text-xs text-muted-foreground">Receipt #</div>
+        <div className="tabular-nums mt-0.5">{r.paymentNumber}</div>
       </div>
       <div>
-        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Payment Type</div>
+        <div className="text-xs text-muted-foreground">Payment Type</div>
         <div className="capitalize mt-0.5">{r.paymentType ?? "Standard"}</div>
       </div>
       <div>
-        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Value Date</div>
+        <div className="text-xs text-muted-foreground">Value Date</div>
         <div className="mt-0.5">{fmtDate(r.valueDate)}</div>
       </div>
       <div>
-        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Posting Date</div>
+        <div className="text-xs text-muted-foreground">Posting Date</div>
         <div className="mt-0.5">{fmtDate(r.postingDate)}</div>
       </div>
       <div>
-        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Counterparty</div>
+        <div className="text-xs text-muted-foreground">Counterparty</div>
         <div className="mt-0.5">{r.counterpartyName ?? "—"}</div>
       </div>
       <div>
-        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Currency</div>
-        <div className="font-mono mt-0.5">{r.currencyCode}</div>
+        <div className="text-xs text-muted-foreground">Currency</div>
+        <div className="tabular-nums mt-0.5">{r.currencyCode}</div>
       </div>
       <div>
-        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Amount</div>
-        <div className="font-mono font-semibold text-success mt-0.5">{fmtCurrency(r.paymentAmount)}</div>
+        <div className="text-xs text-muted-foreground">Amount</div>
+        <div className="tabular-nums font-medium text-success mt-0.5">{fmtCurrency(r.paymentAmount)}</div>
       </div>
       <div>
-        <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Status</div>
+        <div className="text-xs text-muted-foreground">Status</div>
         <div className={cn("capitalize mt-0.5", statusTextClass(r.status))}>{r.status}</div>
       </div>
       {r.paymentReference && (
         <div className="col-span-2">
-          <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Payment Reference</div>
-          <div className="font-mono mt-0.5">{r.paymentReference}</div>
+          <div className="text-xs text-muted-foreground">Payment Reference</div>
+          <div className="tabular-nums mt-0.5">{r.paymentReference}</div>
         </div>
       )}
       {r.isPosted && (
         <div>
-          <div className="text-doc-support text-muted-foreground uppercase tracking-wide">Posted</div>
+          <div className="text-xs text-muted-foreground">Posted</div>
           <div className="text-success mt-0.5">Yes</div>
         </div>
       )}

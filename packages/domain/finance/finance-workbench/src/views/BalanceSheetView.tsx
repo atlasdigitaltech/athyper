@@ -175,7 +175,7 @@ function BalanceSheetTrendGraph({
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b px-3 py-2">
         <div>
-          <div className="text-sm font-semibold">Balance movement</div>
+          <div className="text-sm font-medium">Balance movement</div>
           <div className="text-xs text-muted-foreground">
             Assets, liabilities, equity, and balance check by {modeLabel.toLowerCase()}
           </div>
@@ -285,7 +285,7 @@ function BalanceSheetTrendGraph({
                       x={x}
                       y={height - 10}
                       textAnchor="middle"
-                      className="fill-muted-foreground text-[10px]"
+                      className="fill-muted-foreground text-xs"
                     >
                       {point.label}
                     </text>
@@ -301,7 +301,7 @@ function BalanceSheetTrendGraph({
           <ReportGraphMetric label="Liabilities" value={latest.liabilities} tone="neutral" />
           <ReportGraphMetric label="Equity" value={latest.equity} tone={latest.equity >= 0 ? "success" : "danger"} />
           <ReportGraphMetric label="Balance Check" value={latest.balanceCheck} displayValue={balanced ? "Balanced" : undefined} tone={balanced ? "success" : "danger"} />
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-info" /> Assets</span>
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> L + E</span>
             <span className={cn("inline-flex items-center gap-1", balanced ? "text-success" : "text-destructive")}><span className="h-2 w-2 rounded-full bg-current" /> Check</span>
@@ -537,7 +537,7 @@ export function BalanceSheetView({
       />
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Assets</span>
+          <span className="text-xs font-medium text-muted-foreground">Assets</span>
         </div>
         {assetSections.map((sec) => (
           <StatementSection
@@ -555,7 +555,7 @@ export function BalanceSheetView({
 
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Liabilities</span>
+          <span className="text-xs font-medium text-muted-foreground">Liabilities</span>
         </div>
         {liabilitySections.map((sec) => (
           <StatementSection
@@ -573,7 +573,7 @@ export function BalanceSheetView({
 
       <div>
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Equity</span>
+          <span className="text-xs font-medium text-muted-foreground">Equity</span>
         </div>
         {equitySections.map((sec) => (
           <StatementSection

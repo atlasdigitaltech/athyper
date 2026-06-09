@@ -184,6 +184,11 @@ __pycache__/
 tmp/
 
 # =========================
+# Local-only docs (not synced to GitHub)
+# =========================
+docs/local/
+
+# =========================
 # Claude Code artifacts
 # =========================
 .codex/

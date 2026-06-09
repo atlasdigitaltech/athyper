@@ -60,12 +60,14 @@ stack/scripts/
 │   └── restart.sh / .bat             # Stop then start the Docker engine
 │
 ├── app/                              # Application service scripts (environment-aware)
-│   ├── api-up.sh / .bat              # local → pnpm dev; staging/prod → compose up athyper-api
-│   ├── api-down.sh / .bat            # local → guidance; staging/prod → compose stop athyper-api
-│   ├── api-restart.sh / .bat         # Restart the backend API service
-│   ├── web-up.sh / .bat              # local → pnpm dev; staging/prod → compose up athyper-neon-web
-│   ├── web-down.sh / .bat            # local → guidance; staging/prod → compose stop athyper-neon-web
-│   └── web-restart.sh / .bat         # Restart the web frontend service
+│   ├── api-up.sh / .bat              # local → pnpm dev; staging/prod → compose up api/worker/scheduler
+│   ├── api-down.sh / .bat            # local → guidance; staging/prod → compose stop api/worker/scheduler
+│   ├── api-restart.sh / .bat         # Restart the API, worker, or scheduler service
+│   ├── web-up.sh / .bat              # local → plane dev server(s); staging/prod → compose up selected web plane(s)
+│   ├── web-down.sh / .bat            # local → guidance; staging/prod → compose stop selected web plane(s)
+│   ├── web-restart.sh / .bat         # Restart selected web plane service(s)
+│   ├── local-ui-up.bat               # Windows local shortcut: Neon + Mesh + Admin host dev servers
+│   └── planes-up.sh / .bat           # Start Neon, Mesh, and Admin plane apps together
 │
 └── db/                               # Database and IAM operations, organised by PgBouncer pool
     ├── session/                      # Databases on dbpool-session (port 6433 — session mode)
@@ -116,9 +118,9 @@ Waits until the Docker daemon is ready before returning. Safe to run when Docker
 
 ```bash
 # Git Bash / WSL
-bash stack/scripts/setup/setup-env.sh local            # local env, all targets (stack + server + apps/web)
+bash stack/scripts/setup/setup-env.sh local            # local env, stack + server; plane scripts read stack/env/.env
 bash stack/scripts/setup/setup-env.sh staging stack    # staging, stack only (split-server: stack machine)
-bash stack/scripts/setup/setup-env.sh staging runtime  # staging, server + apps (split-server: app machine)
+bash stack/scripts/setup/setup-env.sh staging runtime  # staging, server + legacy apps/web env (split-server app machine)
 ```
 ```bat
 :: Command Prompt / PowerShell
@@ -132,11 +134,16 @@ The `target` argument controls which component `.env` files are written:
 
 | Target | Files written | Use for |
 |--------|--------------|---------|
-| `all` (default) | `stack/env/.env` + `server/.env` + `apps/web/.env.local` | Single-machine / local dev |
+| `all` (default) | `stack/env/.env` + `server/.env` + legacy `apps/web/.env.local` where applicable | Single-machine / local dev |
 | `stack` | `stack/env/.env` only | Split-server: stack/Docker machine |
-| `runtime` | `server/.env` + `apps/web/.env.local` | Split-server: app machine |
+| `runtime` | `server/.env` + legacy `apps/web/.env.local` | Split-server: app machine |
 | `server` | `server/.env` only | Server tier only |
-| `apps` | `apps/web/.env.local` only | Web tier only |
+| `apps` | legacy `apps/web/.env.local` only | Legacy web tier only |
+
+The active plane apps (`apps/neon`, `apps/mesh`, `apps/admin`) normally get their
+runtime env from `web-up` / `planes-up`, which parse `stack/env/.env` and inject
+host-local values into the Next.js dev processes. Create per-plane `.env.local`
+files manually only when you run package commands outside those wrappers.
 
 ### Step 2 — Kernel config
 
@@ -202,8 +209,8 @@ sudo bash /opt/products/athyper/stack/scripts/setup/data-dirs-create.sh
 ```
 
 Creates the directory tree under `ATHYPER_DATA` (default: `stack/data/`):
-`db`, `meilisearch`, `memorycache`, `memorycache-jobs`, `metabase`, `objectstorage`,
-`telemetry/logging`, `telemetry/metrics`, `telemetry/observability`, `telemetry/tracing`, `uptime-kuma`
+`db`, `searchcore`, `memorycache`, `memorycache-jobs`, `analyticsboard`, `objectstorage`,
+`telemetry/logging`, `telemetry/metrics`, `telemetry/observability`, `telemetry/tracing`, `statuswatch`
 
 On server runs (root + `/opt/…` path), the script also sets per-container ownership on each leaf dir
 (Redis 999, MinIO 1000, Loki/Tempo 10001, Prometheus 65534, Grafana 472). See `infrastructure-plan.md`
@@ -333,7 +340,7 @@ bash stack/scripts/db/session/iam/import-iam.sh
 stack\scripts\db\session\iam\import-iam.bat
 ```
 
-Use this when you already have up-to-date `stack/config/iam/realm-demosetup.json` and want to import into an already-running Keycloak without wiping it.
+Use this when you already have up-to-date `stack/config/iam/realm-*.json` files and want to import into an already-running Keycloak without wiping it.
 
 **Seed passwords (after Option B or standalone):**
 
@@ -344,8 +351,8 @@ bash stack/scripts/db/session/iam/seed-iam-credentials.sh
 stack\scripts\db\session\iam\seed-iam-credentials.bat
 ```
 
-Demo user passwords are controlled by `IAM_DEMO_USER_PASSWORD` in `stack/env/.env`.
-Default (if unset): `Demo@1234` for athyper realm, `admin` for platform-control realm.
+Demo user passwords are controlled by `IAM_DEMO_USER_PASSWORD`, `IAM_ADMIN_REALM_USER_PASSWORD`, and `IAM_PLATFORM_CONTROL_USER_PASSWORD` in `stack/env/.env`.
+Defaults satisfy the active realm policy: `Demo@1234` for local/staging demo users, `DemoUser@1234` for production demo users, `AdminDemo@1234` for admin, and `Platform@1234` for platform-control.
 
 ---
 
@@ -415,7 +422,8 @@ bash stack/scripts/db/transaction/neon/seed-db.sh --tenant-id=<UUID>  # Provisio
 bash stack/scripts/app/api-up.sh                      # Start backend API (default mode)
 bash stack/scripts/app/api-up.sh worker               # Start backend in BullMQ worker mode
 bash stack/scripts/app/api-up.sh scheduler            # Start backend in scheduler mode
-bash stack/scripts/app/web-up.sh                      # Start web frontend
+bash stack/scripts/app/web-up.sh neon                 # Start one web plane
+bash stack/scripts/app/planes-up.sh                   # Start Neon, Mesh, and Admin planes
 
 # Individual container control (by alias)
 bash stack/scripts/stack-service/start.sh iam db redis   # Start named containers
@@ -439,7 +447,9 @@ stack\scripts\db\transaction\neon\seed-db.bat --tenant-id=<UUID>
 stack\scripts\app\api-up.bat
 stack\scripts\app\api-up.bat worker
 stack\scripts\app\api-up.bat scheduler
-stack\scripts\app\web-up.bat
+stack\scripts\app\web-up.bat neon
+stack\scripts\app\local-ui-up.bat
+stack\scripts\app\planes-up.bat
 
 stack\scripts\stack-service\start.bat iam db redis
 stack\scripts\stack-service\stop.bat gateway
@@ -454,18 +464,18 @@ The `STACK_PROFILE` env var (also settable as a CLI arg to `stack-profile/up`) c
 
 | Profile | Services included | Typical use |
 |---------|-------------------|-------------|
-| `core` | db, dbpool-apps, dbpool-session, gateway, IAM, Redis, MinIO, Mailhog | Daily dev |
-| `telemetry` | core + Grafana, Loki, Tempo, Prometheus, Promtail | Observability work |
-| `search` | core + Meilisearch | Full-text search development |
-| `analytics` | core + Metabase | Analytics / BI (requires governance gate — see validate-env) |
-| `monitoring` | core + GlitchTip, Healthchecks, Uptime Kuma | Error tracking + uptime monitoring |
-| `render` | core + Gotenberg + Tika | Document rendering / extraction |
-| `security-infisical` | core + Infisical | Secrets management |
+| `core` | db, dbpool-apps, dbpool-session, gateway, IAM, Redis, MinIO, mailtrap, virusscan, socket proxies | Daily dev |
+| `telemetry` | core + Grafana, Loki, Tempo, Prometheus, Alertmanager, logshipper | Observability work |
+| `search` | core + searchcore (Meilisearch) | Full-text search development |
+| `analytics` | core + analyticsboard (Metabase) | Analytics / BI (requires governance gate — see validate-env) |
+| `monitoring` | core + errorcollect, cronwatch, statuswatch | Error tracking + uptime monitoring |
+| `render` | core + docrender + docparser | Document rendering / extraction |
+| `security-infisical` | core + secretstore (Infisical) | Secrets management |
 | `memorycache` | standalone Redis container | Add Redis independently of `core` |
 | `memorycache-jobs` | dedicated Redis for BullMQ | High-isolation job queue |
 | `objectstorage` | standalone MinIO container | Add MinIO independently of `core` |
-| `admin` | core + BullBoard + pgweb | Admin UIs for queues and database |
-| `apps` | core + athyper-api + athyper-neon-web (containerised) | Staging / production full-stack |
+| `admin` | core + dbconsole | Dev-only database console |
+| `apps` | core + api + worker + scheduler + neon-web + mesh-web + admin-web | Staging / production full-stack |
 | `db` | standalone Postgres + PgBouncer containers | Add DB tier independently of `core` |
 | `iam` | standalone Keycloak container | Add IAM independently of `core` |
 | `gateway` | standalone Traefik container | Add ingress independently of `core` |
@@ -494,19 +504,21 @@ stack\scripts\stack-profile\up.bat telemetry
 
 | Alias | Container | Notes |
 |-------|-----------|-------|
-| `iam` | `athyper-stack-iam-1` | Keycloak |
-| `db` | `athyper-stack-db-1` | Postgres |
-| `dbpool-session` | `athyper-stack-dbpool-session-1` | PgBouncer session pool |
-| `dbpool-apps` | `athyper-stack-dbpool-apps-1` | PgBouncer apps pool |
-| `gateway` / `traefik` | `athyper-stack-gateway-1` | Traefik ingress |
-| `redis` / `cache` / `memorycache` | `athyper-stack-memorycache-1` | Redis |
-| `minio` / `storage` | `athyper-stack-objectstorage-1` | MinIO |
-| `mail` / `mailhog` | `athyper-stack-mailhog-1` | Mailhog |
-| `web` / `frontend` | `athyper-stack-athyper-neon-web-1` | Next.js (staging/prod only) |
-| `api` / `backend` | `athyper-stack-athyper-api-1` | Backend API (staging/prod only) |
-| `search` / `meilisearch` | `athyper-stack-meilisearch-1` | Meilisearch |
+| `iam` | `athyper-iam-1` | Keycloak |
+| `db` | `athyper-db-1` | Postgres |
+| `dbpool-session` | `athyper-dbpool-session-1` | PgBouncer session pool |
+| `dbpool-apps` | `athyper-dbpool-apps-1` | PgBouncer apps pool |
+| `gateway` / `traefik` | `athyper-gateway-1` | Traefik ingress |
+| `redis` / `cache` / `memorycache` | `athyper-memorycache-1` | Redis |
+| `minio` / `storage` | `athyper-objectstorage-1` | MinIO |
+| `mail` / `mailtrap` | `athyper-mailtrap-1` | Mailtrap |
+| `web` / `frontend` / `neon` | `athyper-neon-web-1` | Neon Next.js plane |
+| `mesh` | `athyper-mesh-web-1` | Mesh Next.js plane |
+| `admin` | `athyper-admin-web-1` | Admin Next.js plane |
+| `api` / `backend` | `athyper-api-1` | Backend API |
+| `search` / `searchcore` | `athyper-searchcore-1` | Meilisearch |
 
-Raw container names are passed through unchanged, so `stack-service/start.sh athyper-stack-iam-1` also works.
+Raw container names are passed through unchanged, so `stack-service/start.sh athyper-iam-1` also works.
 
 ---
 
@@ -516,17 +528,17 @@ Raw container names are passed through unchanged, so `stack-service/start.sh ath
 
 | Environment | `api-up` behaviour | `web-up` behaviour |
 |-------------|-------------------|-------------------|
-| `local` | `pnpm --filter @athyper/runtime-server dev` (foreground) | `pnpm --filter @athyper/web dev` (foreground, HMR) |
-| `staging` | `docker compose up -d --no-deps athyper-api` | `docker compose up -d --no-deps athyper-neon-web` |
-| `production` | `docker compose up -d --no-deps athyper-api` | `docker compose up -d --no-deps athyper-neon-web` |
+| `local` | `pnpm --filter @athyper/runtime-server dev` (foreground) | `pnpm --filter @athyper/<plane> exec next dev` |
+| `staging` | `docker compose up -d --no-deps <api\|worker\|scheduler>` | `docker compose up -d --no-deps <neon-web\|mesh-web\|admin-web>` |
+| `production` | `docker compose up -d --no-deps <api\|worker\|scheduler>` | `docker compose up -d --no-deps <neon-web\|mesh-web\|admin-web>` |
 
-API modes (local only):
+API runtime targets:
 
-| Argument | pnpm script | Purpose |
-|----------|------------|---------|
-| _(none)_ | `dev` | Standard API server |
-| `worker` | `dev:worker` | BullMQ worker process |
-| `scheduler` | `dev:scheduler` | Job scheduler process |
+| Argument | local command | staging / production service |
+|----------|---------------|------------------------------|
+| _(none)_ / `api` | `pnpm dev` | `api` |
+| `worker` | `.sh`: `pnpm dev:worker`; `.bat`: `MODE=worker pnpm dev` | `worker` |
+| `scheduler` | `.sh`: `pnpm dev:scheduler`; `.bat`: `MODE=scheduler pnpm dev` | `scheduler` |
 
 ---
 
@@ -552,7 +564,7 @@ Template resolution:
 |--------|----------------|-------------|
 | `stack` | `stack/env/{env}.env.example` (falls back to `.env.example` for `local`) | `stack/env/.env` |
 | `server` | `server/{env}.env.example` (falls back to `.env.example`) | `server/.env` |
-| `apps` | `apps/web/{env}.env.example` (falls back to `.env.example`) | `apps/web/.env.local` |
+| `apps` | `apps/web/{env}.env.example` (falls back to `.env.example`; legacy runtime env target) | `apps/web/.env.local` |
 
 ### setup/setup-config
 
@@ -760,37 +772,37 @@ No parameters. Stops Docker, waits for it to fully exit, then starts it again.
 ### app/api-up
 
 ```
-api-up.sh [mode]
-api-up.bat [mode]
+api-up.sh [api|worker|scheduler] [--build]
+api-up.bat [api|worker|scheduler] [--build]
 ```
 
 | Argument | local (pnpm) | staging / production |
 |----------|-------------|---------------------|
-| _(none)_ | `pnpm dev` — standard API server | `docker compose up -d --no-deps athyper-api` |
-| `worker` | `pnpm dev:worker` — BullMQ worker | same compose up |
-| `scheduler` | `pnpm dev:scheduler` — job scheduler | same compose up |
+| _(none)_ | `pnpm dev` — standard API server | `docker compose up -d --no-deps api` |
+| `worker` | `pnpm dev:worker` (`.bat`: `MODE=worker pnpm dev`) — BullMQ worker | `docker compose up -d --no-deps worker` |
+| `scheduler` | `pnpm dev:scheduler` (`.bat`: `MODE=scheduler pnpm dev`) — job scheduler | `docker compose up -d --no-deps scheduler` |
 
 ### app/api-down
 
 ```
-api-down.sh
-api-down.bat
+api-down.sh [api|worker|scheduler]
+api-down.bat [api|worker|scheduler]
 ```
 
-No parameters.
+Defaults to `api`.
 - **local**: prints guidance (tsx watch handles hot-reload; use Ctrl+C in the terminal running `api-up`)
-- **staging/production**: `docker compose stop athyper-api`
+- **staging/production**: `docker compose stop <api|worker|scheduler>`
 
 ### app/api-restart
 
 ```
-api-restart.sh
-api-restart.bat
+api-restart.sh [api|worker|scheduler]
+api-restart.bat [api|worker|scheduler]
 ```
 
-No parameters.
+Defaults to `api`.
 - **local**: prints guidance (tsx watch restarts on file changes automatically)
-- **staging/production**: restarts `athyper-api` through the shared compose/env-file chain; prints `docker compose ps` after
+- **staging/production**: restarts the selected `api`, `worker`, or `scheduler` service through the shared compose/env-file chain; prints `docker compose ps` after
 
 ### app/web-up
 
@@ -799,9 +811,21 @@ web-up.sh
 web-up.bat
 ```
 
-No parameters.
-- **local**: `pnpm --filter @athyper/web dev` — Next.js dev server with HMR
-- **staging/production**: `docker compose up -d --no-deps athyper-neon-web`
+Parameters: `[neon|mesh|admin|all] [--build]`. Defaults to `neon`.
+- **local**: `pnpm --filter @athyper/<plane> exec next dev --port 310x`
+- **staging/production**: optional build, then `docker compose up -d --no-deps` for the selected plane service(s)
+
+### app/local-ui-up
+
+```
+local-ui-up.bat
+```
+
+Windows local development shortcut. Starts Neon, Mesh, and Admin through
+`planes-up.bat all`, so TypeScript changes hot reload through the host Next.js dev
+servers. It does not build Docker images or recreate containers. Use this only with
+`ENVIRONMENT=local`; staging and production use the `.sh` scripts and Docker service
+upstreams.
 
 ### app/web-down
 
@@ -810,9 +834,9 @@ web-down.sh
 web-down.bat
 ```
 
-No parameters.
+Parameters: `[neon|mesh|admin|all]`. Defaults to `neon`.
 - **local**: prints guidance
-- **staging/production**: `docker compose stop athyper-neon-web`
+- **staging/production**: `docker compose stop` for the selected plane service(s)
 
 ### app/web-restart
 
@@ -821,9 +845,9 @@ web-restart.sh
 web-restart.bat
 ```
 
-No parameters.
+Parameters: `[neon|mesh|admin|all] [--build]`. Defaults to `neon`.
 - **local**: prints guidance (HMR handles hot reload automatically)
-- **staging/production**: restarts `athyper-neon-web` through the shared compose/env-file chain
+- **staging/production**: restarts the selected plane service(s); with `--build`, rebuilds and force-recreates them so the new image is used
 
 ### db/transaction/neon/seed-db
 
@@ -836,7 +860,7 @@ seed-db.bat [flags...]
 |------|-------------|
 | _(none)_ or `--all` | Full provision: DDL + platform seed + blueprint/tenant data (same result) |
 | `--ddl-only` | Phase/Stage 1 only — DDL migrations; no seed data |
-| `--system-only` | Phases/Stages 1+2 — DDL plus platform seed (`010_platform/`) |
+| `--system-only` | Phases/Stages 1+2 — DDL plus platform seed (`platform/`) |
 | `--no-demo` | Phase/Stage 1+2 only — DDL + platform seed; skips blueprint/tenant phases |
 | `--demo-only` | All phases with checksum tracking; explicit alias for the default |
 | `--reset` | **Destructive**: drop all schemas + re-provision all phases from scratch |
@@ -846,16 +870,17 @@ seed-db.bat [flags...]
 | `--status` | Read-only report — shows OK / PENDING / CHANGED per file, no DB changes |
 | `--force` | Re-run all phases even if checksum unchanged |
 | `--phase=N` (`.sh`) / `--stage=N` (`.bat`) | Run only phase N (1 = DDL, 2 = platform seed, 3 = blueprint/tenant) |
-| `--industry-pack=pack_transport` | Opt in a `030_industry/100_industry_packs` seed; repeatable, numeric prefix optional, invalid names fail fast |
+| `--industry-pack=pack_transport` | Opt in a `blueprints/industry/100_industry_packs` seed; repeatable, numeric prefix optional, invalid names fail fast |
 | `--tenant-id=UUID` | Set `app.seed_tenant_id` for Phase 3; overrides `SEED_TENANT_ID` env var. Required when seeding a new client tenant; omit to use the baked-in UUID (demo tenant). |
 
 Seed phases:
 1. **DDL** — all dirs under `server/db/sql/` except `900_seed_data/`
-2. **Platform data** — `server/db/sql/900_seed_data/010_platform/`
+2. **Platform data** — `server/db/seed/platform/`
 3. **Blueprint + Tenant data**:
-   - `900_seed_data/020_universal/` — TIER 1 foundation + TIER 2a COA
-   - `900_seed_data/030_industry/` — TIER 2b industry packs + TIER 3 modules
-   - `900_seed_data/040_tenants/{client}/` — per-client tenant instance files
+   - `server/db/seed/blueprints/universal/` — TIER 1 foundation + TIER 2a COA
+   - `server/db/seed/blueprints/industry/` — TIER 2b industry packs
+   - `server/db/seed/blueprints/modules/` — TIER 3 module packs
+   - `server/db/seed/tenants/{plane}/{client}/` — per-client tenant instance files
 
 Requires `DATABASE_ADMIN_URL` (direct Postgres; **not** PgBouncer) set in `stack/env/.env` or `server/.env`. Docker-internal hostnames (`@db:`, `@dbpool-apps:`, `@dbpool-session:`) are rewritten to `localhost` automatically.
 
@@ -866,9 +891,10 @@ seed-iam-credentials.sh
 seed-iam-credentials.bat
 ```
 
-No parameters. Reads:
-- `IAM_DEMO_USER_PASSWORD` — password for all 17 athyper realm users (default: `Demo@1234`)
-- `IAM_PLATFORM_CONTROL_USER_PASSWORD` / `IAM_ADMIN_PASSWORD` — password for 3 platform-control users (default: `admin`)
+No parameters. Applies non-importable `realm-*-demosetup.json` fixtures, then reads:
+- `IAM_DEMO_USER_PASSWORD` - password for Neon and Mesh demo users (default: `Demo@1234`; production default: `DemoUser@1234`)
+- `IAM_ADMIN_REALM_USER_PASSWORD` - password for Admin realm demo users (default: `AdminDemo@1234`)
+- `IAM_PLATFORM_CONTROL_USER_PASSWORD` - password for platform-control users (default: `Platform@1234`)
 
 Idempotent: safe to re-run at any time. Uses `kcadm.sh` inside the running IAM container.
 
@@ -885,7 +911,7 @@ Steps `[0/5]`–`[5/5]`:
 
 | Step | Action |
 |------|--------|
-| `[0/5]` | Regenerates `realm-demosetup.json` via `update-realm-demosetup.cjs` |
+| `[0/5]` | Validates `realm-athyper.json` and the checked-in realm files |
 | `[1/5]` | Stops the Keycloak container |
 | `[2/5]` | Wipes the IAM database (`DROP SCHEMA public CASCADE; CREATE SCHEMA public`) |
 | `[3/5]` | Starts Keycloak fresh — initializes schema, creates master realm + bootstrap admin, auto-imports realm files from `/opt/keycloak/data/import/`; polls healthy status (up to ~105 seconds) |
@@ -901,7 +927,7 @@ import-iam.sh
 import-iam.bat
 ```
 
-No parameters. Imports `stack/config/iam/realm-demosetup.json` (and `realm-platform-control.json` if present) into Keycloak via `kc import --override true`.
+No parameters. Imports `stack/config/iam/realm-athyper.json` and `realm-platform-control.json` into Keycloak via `kc import --override true`, then applies the unified demo fixture.
 
 Steps `.sh` [1/5]–[5/5] / `.bat` [1/6]–[6/6]:
 
@@ -909,11 +935,11 @@ Steps `.sh` [1/5]–[5/5] / `.bat` [1/6]–[6/6]:
 |-----------|------------|--------|
 | — | `[1/6]` | Copy realm file(s) to temp directory (`%TEMP%\keycloak-import-*`) — Windows CMD requires a host-side copy for docker volume mounts; `.sh` mounts the file directly |
 | `[1/5]` | `[2/6]` | Check database connection |
-| `[2/5]` | `[3/6]` | Import athyper realm (5-second countdown to cancel) |
+| `[2/5]` | `[3/6]` | Import Neon realm (5-second countdown to cancel) |
 | `[2b/5]` | `[3b/6]` | Import platform-control realm (if `realm-platform-control.json` exists; `.bat` uses a separate temp dir) |
 | `[3/5]` | `[4/6]` | Clean up (`.sh`: import complete marker; `.bat`: remove temp directory) |
 | `[4/5]` | `[5/6]` | Restart Keycloak container; wait for healthy status (`.sh`: 30 attempts × 2s = 60s max; `.bat`: 60 attempts × 3s = 180s max — Docker Desktop on Windows restarts containers more slowly than the Linux/macOS daemon) |
-| `[5/5]` | `[6/6]` | Run `provision-keycloak-users.mjs` to seed passwords |
+| `[5/5]` | `[6/6]` | Run `seed-iam-credentials` to apply demo fixtures and seed passwords |
 
 Requires: running `dbpool-session` container; `KEYCLOAK_IMAGE_TAG` in `.env`.
 
@@ -931,7 +957,7 @@ Steps `.sh` [1/4]–[4/4] / `.bat` [1/5]–[5/5]:
 | Step | `.sh` | `.bat` |
 |------|-------|--------|
 | 1 | Create temp export dir (`stack/.tmp/`) | Create temp export dir (`%TEMP%`) |
-| 2 | Export athyper realm | Export athyper realm |
+| 2 | Export Neon realm | Export Neon realm |
 | 3 | Export platform-control realm | Export platform-control realm |
 | 4 | Move exports → `stack/config/iam/`; cleanup | Move exports → `stack\config\iam\` |
 | 5 | _(merged into step 4)_ | Cleanup temp dir |
@@ -947,7 +973,7 @@ Requires: running IAM container; `KEYCLOAK_IMAGE_TAG` in `.env`.
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `ENVIRONMENT` | Yes | `local` / `staging` / `production` |
-| `COMPOSE_PROJECT_NAME` | Yes | Docker project name prefix (e.g. `athyper-stack`) |
+| `COMPOSE_PROJECT_NAME` | Yes | Docker project name prefix (default `athyper`) |
 | `STACK_PROFILE` | No | Default compose profile (default: `core`) |
 | `DATABASE_URL` | Yes | App DB connection string (Docker-internal hostname) |
 | `DATABASE_ADMIN_URL` | No | Admin DB URL for seeding (falls back to `DB_ADMIN_*` vars) |
@@ -957,8 +983,9 @@ Requires: running IAM container; `KEYCLOAK_IMAGE_TAG` in `.env`.
 | `IAM_ISSUER_URL` | Yes | Keycloak issuer URL |
 | `IAM_ADMIN` | Yes | Keycloak bootstrap admin username |
 | `IAM_ADMIN_PASSWORD` | Yes | Keycloak bootstrap admin password |
-| `IAM_DEMO_USER_PASSWORD` | No | Demo user password for athyper realm (default: `Demo@1234`) |
-| `IAM_PLATFORM_CONTROL_USER_PASSWORD` | No | Demo user password for platform-control realm (default: `admin`) |
+| `IAM_DEMO_USER_PASSWORD` | No | Demo user password for Neon/Mesh demo users (default: `Demo@1234`; production default: `DemoUser@1234`) |
+| `IAM_ADMIN_REALM_USER_PASSWORD` | No | Demo user password for Admin realm users (default: `AdminDemo@1234`) |
+| `IAM_PLATFORM_CONTROL_USER_PASSWORD` | No | Demo user password for platform-control realm (default: `Platform@1234`) |
 | `KEYCLOAK_IMAGE_TAG` | Yes | Keycloak Docker image tag (used by import/export scripts) |
 | `ATHYPER_DATA` | Yes | Absolute path to data volume root (e.g. `/path/to/stack/data`) |
 | `ATHYPER_KERNEL_CONFIG_PATH` | Yes | Relative path to kernel config JSON under `stack/config/` |
@@ -975,21 +1002,23 @@ See the env templates in `stack/env/` for the full list with defaults:
 
 ## Customising Container Names
 
-All scripts read container and database names from environment variables before using defaults. Override them if your `COMPOSE_PROJECT_NAME` differs from `athyper-stack`:
+All scripts read container and database names from environment variables before using defaults. Override them if your `COMPOSE_PROJECT_NAME` differs from `athyper`:
 
 | Variable | Default |
 |----------|---------|
-| `DOCKER_CONTAINER_IAM` | `athyper-stack-iam-1` |
-| `DOCKER_CONTAINER_DB` | `athyper-stack-db-1` |
-| `DOCKER_CONTAINER_DBPOOL_SESSION` | `athyper-stack-dbpool-session-1` |
-| `DOCKER_CONTAINER_DBPOOL_APPS` | `athyper-stack-dbpool-apps-1` |
-| `DOCKER_CONTAINER_GATEWAY` | `athyper-stack-gateway-1` |
-| `DOCKER_CONTAINER_REDIS` | `athyper-stack-memorycache-1` |
-| `DOCKER_CONTAINER_MINIO` | `athyper-stack-objectstorage-1` |
-| `DOCKER_CONTAINER_MAIL` | `athyper-stack-mailhog-1` |
-| `DOCKER_CONTAINER_WEB` | `athyper-stack-athyper-neon-web-1` |
-| `DOCKER_CONTAINER_API` | `athyper-stack-athyper-api-1` |
-| `DOCKER_CONTAINER_SEARCH` | `athyper-stack-meilisearch-1` |
+| `DOCKER_CONTAINER_IAM` | `athyper-iam-1` |
+| `DOCKER_CONTAINER_DB` | `athyper-db-1` |
+| `DOCKER_CONTAINER_DBPOOL_SESSION` | `athyper-dbpool-session-1` |
+| `DOCKER_CONTAINER_DBPOOL_APPS` | `athyper-dbpool-apps-1` |
+| `DOCKER_CONTAINER_GATEWAY` | `athyper-gateway-1` |
+| `DOCKER_CONTAINER_REDIS` | `athyper-memorycache-1` |
+| `DOCKER_CONTAINER_MINIO` | `athyper-objectstorage-1` |
+| `DOCKER_CONTAINER_MAIL` | `athyper-mailtrap-1` |
+| `DOCKER_CONTAINER_WEB` | `athyper-neon-web-1` |
+| `DOCKER_CONTAINER_MESH_WEB` | `athyper-mesh-web-1` |
+| `DOCKER_CONTAINER_ADMIN_WEB` | `athyper-admin-web-1` |
+| `DOCKER_CONTAINER_API` | `athyper-api-1` |
+| `DOCKER_CONTAINER_SEARCH` | `athyper-searchcore-1` |
 | `DB_NAME_AUTH` | `athyper_iam` |
 | `DB_NAME_APPS` | `athyper_dev1` |
 | `DOCKER_NETWORK` | `athyper-internal` |
@@ -1037,10 +1066,10 @@ Fix every `FAIL` line in the output before running `up`. Common causes:
 ### Keycloak not healthy after reset-iam
 
 ```bash
-docker logs athyper-stack-iam-1 --tail=50
+docker logs athyper-iam-1 --tail=50
 ```
 
-Common causes: port 8080 already in use, DB not reachable, or import JSON has invalid syntax. Validate with `jq empty stack/config/iam/realm-demosetup.json`.
+Common causes: port 8080 already in use, DB not reachable, or import JSON has invalid syntax. Validate with `jq empty stack/config/iam/realm-athyper.json`.
 
 **KC reset approach**: always wipe the DB then `docker start` KC. Never run `kc import` first — the bootstrap admin is only created when KC starts against a clean DB.
 
@@ -1094,12 +1123,12 @@ The `.bat` scripts are not affected by MSYS path mangling.
 | `docker/start` | _(none)_ | Start the Docker engine / Desktop; polls 120s | No |
 | `docker/stop` | _(none)_ | Stop the Docker engine / Desktop | No |
 | `docker/restart` | _(none)_ | Restart the Docker engine / Desktop | No |
-| `app/api-up` | `[mode]` — blank\|worker\|scheduler | Start backend API (local: pnpm dev; staging/prod: compose up) | No |
-| `app/api-down` | _(none)_ | Stop backend API | No |
-| `app/api-restart` | _(none)_ | Restart backend API | No |
-| `app/web-up` | _(none)_ | Start web frontend (local: pnpm dev; staging/prod: compose up) | No |
-| `app/web-down` | _(none)_ | Stop web frontend | No |
-| `app/web-restart` | _(none)_ | Restart web frontend | No |
+| `app/api-up` | `[api\|worker\|scheduler] [--build]` | Start runtime service (local: pnpm dev; staging/prod: compose up selected service) | No |
+| `app/api-down` | `[api\|worker\|scheduler]` | Stop selected runtime service | No |
+| `app/api-restart` | `[api\|worker\|scheduler]` | Restart selected runtime service | No |
+| `app/web-up` | `[neon|mesh|admin|all] [--build]` | Start selected web plane(s) (local: pnpm dev; staging/prod: compose up) | No |
+| `app/web-down` | `[neon|mesh|admin|all]` | Stop selected web plane(s) | No |
+| `app/web-restart` | `[neon|mesh|admin|all] [--build]` | Restart selected web plane(s) | No |
 | `db/transaction/neon/seed-db` | `[--all\|--ddl-only\|--system-only\|--no-demo\|--demo-only\|--reset\|--drop-only\|--status\|--force\|--phase=N (.sh) / --stage=N (.bat)\|--tenant-id=UUID]` | Run database provisioner (DDL + seed data) | Additive |
 | `db/transaction/neon/seed-db --reset` | `--reset [--ddl-only\|--no-demo\|--force]` | Drop and re-provision all schemas | **Yes** |
 | `db/transaction/neon/seed-db --drop-only` | `--drop-only` | Drop all schemas without re-seeding | **Yes** |

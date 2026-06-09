@@ -6,8 +6,14 @@ const STRICT = process.argv.includes("--strict");
 const QUIET = process.argv.includes("--quiet");
 
 const SCAN_ROOTS = [
-  "apps/web",
+  "apps/neon",
+  "apps/mesh",
+  "apps/admin",
+  "packages/apps/admin",
+  "packages/apps/mesh",
   "packages/shared",
+  "packages/product/design",
+  "packages/product/runtime-ui",
   "packages/domain/finance",
 ] as const;
 
@@ -22,14 +28,14 @@ const IGNORE_DIRS = new Set([
 ]);
 
 const ALLOWLIST = [
-  /^packages\/shared\/foundation\/theme\/src\/presets\//,
-  /^packages\/shared\/foundation\/theme\/src\/base\.css$/,
-  /^packages\/shared\/foundation\/theme\/src\/tailwind-preset\.ts$/,
-  /^packages\/shared\/foundation\/theme\/src\/theme-contract\.ts$/,
-  /^packages\/shared\/foundation\/theme\/src\/typography\.ts$/,
-  /^packages\/shared\/foundation\/theme\/src\/typography\.generated\.css$/,
-  /^packages\/shared\/foundation\/theme\/src\/presets\/registry\.ts$/,
-  /^packages\/shared\/foundation\/icons\/src\/custom\//,
+  /^packages\/shared\/theme\/src\/presets\//,
+  /^packages\/shared\/theme\/src\/base\.css$/,
+  /^packages\/shared\/theme\/src\/tailwind-preset\.ts$/,
+  /^packages\/shared\/theme\/src\/theme-contract\.ts$/,
+  /^packages\/shared\/theme\/src\/typography\.ts$/,
+  /^packages\/shared\/theme\/src\/typography\.generated\.css$/,
+  /^packages\/shared\/theme\/src\/presets\/registry\.ts$/,
+  /^packages\/product\/design\/icons\/src\/custom\//,
   /^apps\/web\/components\/auth\/SocialLoginButtons\.tsx$/,
 ] as const;
 

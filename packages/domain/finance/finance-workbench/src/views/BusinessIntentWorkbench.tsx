@@ -96,7 +96,7 @@ function StatusLine({
           {detail && <div className="mt-0.5 text-xs leading-5 text-muted-foreground">{detail}</div>}
         </div>
       </div>
-      <div className="shrink-0 text-right text-sm font-semibold text-foreground">{value}</div>
+      <div className="shrink-0 text-right text-sm font-medium text-foreground">{value}</div>
     </div>
   );
 }
@@ -115,7 +115,7 @@ function DomainRail({
   return (
     <aside className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
       <div className="border-b px-3 py-2">
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Intent Domains</div>
+        <div className="text-xs font-medium text-muted-foreground">Intent Domains</div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-2">
         <button
@@ -175,7 +175,7 @@ function IntentTable({
 }) {
   return (
     <div className="overflow-hidden rounded-lg border">
-      <div className="grid min-w-[880px] grid-cols-[1.15fr_1.6fr_1fr_0.85fr_0.85fr_0.8fr] border-b bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
+      <div className="grid min-w-[880px] grid-cols-[1.15fr_1.6fr_1fr_0.85fr_0.85fr_0.8fr] border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
         <span>Code</span>
         <span>Name</span>
         <span>Domain</span>
@@ -199,7 +199,7 @@ function IntentTable({
                 active && "bg-primary/10",
               )}
             >
-              <span className={cn("font-mono text-xs", row.parentId ? "text-muted-foreground" : "font-semibold text-foreground")}>
+              <span className={cn("tabular-nums text-xs", row.parentId ? "text-muted-foreground" : "font-medium text-foreground")}>
                 {row.code}
               </span>
               <span className="min-w-0">
@@ -246,8 +246,8 @@ function IntentDetail({ row }: { row?: BusinessIntentRow }) {
       <div className="border-b px-4 py-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-mono text-xs text-muted-foreground">{row.code}</div>
-            <h2 className="mt-1 truncate text-base font-semibold text-foreground">{row.name}</h2>
+            <div className="tabular-nums text-xs text-muted-foreground">{row.code}</div>
+            <h2 className="mt-1 truncate text-base font-medium text-foreground">{row.name}</h2>
             <p className="mt-1 line-clamp-2 text-sm leading-5 text-muted-foreground">
               {row.description ?? "No description"}
             </p>

@@ -91,10 +91,10 @@ REM in stack\compose\**\*.yml. Keep this list in sync with data-dirs-create.bat.
 REM ----------------------------
 echo Recreating folder structure...
 mkdir "!ATHYPER_DATA!\db"                      >nul 2>&1
-mkdir "!ATHYPER_DATA!\meilisearch"             >nul 2>&1
+mkdir "!ATHYPER_DATA!\searchcore"              >nul 2>&1
 mkdir "!ATHYPER_DATA!\memorycache"             >nul 2>&1
 mkdir "!ATHYPER_DATA!\memorycache-jobs"        >nul 2>&1
-mkdir "!ATHYPER_DATA!\metabase"                >nul 2>&1
+mkdir "!ATHYPER_DATA!\analyticsboard"          >nul 2>&1
 mkdir "!ATHYPER_DATA!\objectstorage"           >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry"               >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\alertmanager"  >nul 2>&1
@@ -102,7 +102,7 @@ mkdir "!ATHYPER_DATA!\telemetry\logging"       >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\metrics"       >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\observability" >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\tracing"       >nul 2>&1
-mkdir "!ATHYPER_DATA!\uptime-kuma"             >nul 2>&1
+mkdir "!ATHYPER_DATA!\statuswatch"             >nul 2>&1
 
 echo.
 echo Done.

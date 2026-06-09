@@ -8,12 +8,12 @@
 // Vitest's esbuild loader resolves the cross-tree import at test time even
 // though server's tsconfig "include" does not cover apps/web.
 //
-// SUT: apps/web/lib/host-guard.ts
-// Consumer that wires this into the Next.js middleware: apps/web/middleware.ts
+// SUT: packages/shared/session-plane/src/index.ts
+// Consumers: apps/{neon,mesh,admin}/proxy.ts
 
 import { describe, expect, it } from "vitest";
 
-import { decideHostGuard } from "../../../apps/web/lib/host-guard.js";
+import { decideHostGuard } from "../../../packages/shared/session-plane/src/index.js";
 
 describe("F8 Phase 1 — decideHostGuard", () => {
   const allowed = new Set(["neon.athyper.local", "api.athyper.local"]);
@@ -28,14 +28,14 @@ describe("F8 Phase 1 — decideHostGuard", () => {
     ).toEqual({ action: "pass" });
   });
 
-  it("passes when the allowlist is empty (feature disabled)", () => {
+  it("rejects when the allowlist is empty (fail-closed misconfiguration)", () => {
     expect(
       decideHostGuard({
         host:               "anything.test",
         allowedHosts:       new Set<string>(),
         allowDirectAccess:  false,
       }),
-    ).toEqual({ action: "pass" });
+    ).toEqual({ action: "reject", reason: "host_not_allowed" });
   });
 
   it("passes when the host matches the allowlist", () => {

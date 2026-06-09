@@ -4,11 +4,15 @@ setlocal EnableExtensions EnableDelayedExpansion
 REM ============================================================
 REM athyper - Backend API DOWN - Windows Batch
 REM Location: stack\scripts\app\api-down.bat
+REM Usage:
+REM   api-down.bat             : stop API
+REM   api-down.bat worker      : stop worker
+REM   api-down.bat scheduler   : stop scheduler
 REM
 REM Behaviour (auto-detected from ENVIRONMENT in .env):
-REM   local      -> prints guidance (server runs in your terminal)
-REM   staging    -> docker compose stop athyper-api
-REM   production -> docker compose stop athyper-api
+REM   local      : prints guidance (server runs in your terminal)
+REM   staging    : docker compose stop selected api/worker/scheduler service
+REM   production : docker compose stop selected api/worker/scheduler service
 REM ============================================================
 REM
 REM LOCAL WINDOWS DEVELOPMENT ONLY.
@@ -36,6 +40,39 @@ set "ENV_DIR=%STACK_DIR%\env"
 set "ENV_FILE=%ENV_DIR%\.env"
 REM Ensure npm global bin and standalone pnpm installer are on PATH
 set "PATH=%APPDATA%\npm;%LOCALAPPDATA%\pnpm;%PATH%"
+
+set "SERVICE_TARGET=api"
+set "SERVICE_TARGET_SEEN=0"
+
+:parse_args
+if "%~1"=="" goto :after_parse_args
+if /I "%~1"=="-h" goto :arg_help
+if /I "%~1"=="--help" goto :arg_help
+if /I "%~1"=="api" goto :arg_target
+if /I "%~1"=="worker" goto :arg_target
+if /I "%~1"=="scheduler" goto :arg_target
+echo ERROR: unsupported target or option: %~1
+call :usage
+exit /b 1
+
+:arg_help
+call :usage
+exit /b 0
+
+:arg_target
+if "!SERVICE_TARGET_SEEN!"=="1" (
+  echo ERROR: only one service target can be supplied.
+  call :usage
+  exit /b 1
+)
+if /I "%~1"=="api" set "SERVICE_TARGET=api"
+if /I "%~1"=="worker" set "SERVICE_TARGET=worker"
+if /I "%~1"=="scheduler" set "SERVICE_TARGET=scheduler"
+set "SERVICE_TARGET_SEEN=1"
+shift
+goto :parse_args
+
+:after_parse_args
 
 set "ENVIRONMENT=local"
 set "_CR_FROM_ENV=" & set "_DR_FROM_ENV="
@@ -73,7 +110,7 @@ set "_TMP=!ATHYPER_DATA_ROOT:\=/!"   & set "ATHYPER_DATA=!_TMP!"
 echo.
 echo ==========================
 echo ENVIRONMENT = "!ENVIRONMENT!"
-echo SERVICE     = athyper-api ^(@athyper/runtime-server^)
+echo SERVICE     = !SERVICE_TARGET! ^(@athyper/runtime-server^)
 echo ==========================
 echo.
 
@@ -81,7 +118,7 @@ REM ----------------------------
 REM Local: guidance only
 REM ----------------------------
 if /I "!ENVIRONMENT!"=="local" (
-  echo Local mode: the backend server runs in your terminal via "pnpm dev".
+  echo Local mode: the !SERVICE_TARGET! process runs in your terminal via api-up.bat.
   echo To stop: press Ctrl+C in that terminal.
   echo.
   goto :end
@@ -115,34 +152,35 @@ if exist "%COMPOSE_DIR%\db\athyper-dbpool-session.yml"                set "COMPO
 if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml"    set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml""
 if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml""
 if exist "%COMPOSE_DIR%\gateway\athyper-gateway.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\gateway\athyper-gateway.yml""
-if exist "%COMPOSE_DIR%\mail\athyper-mailhog.yml"                     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\mail\athyper-mailhog.yml""
+if exist "%COMPOSE_DIR%\mail\athyper-mailtrap.yml"                     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\mail\athyper-mailtrap.yml""
 if exist "%COMPOSE_DIR%\iam\athyper-iam.yml"                          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\iam\athyper-iam.yml""
 if exist "%COMPOSE_DIR%\objectstorage\athyper-objectstorage.yml"      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\objectstorage\athyper-objectstorage.yml""
-if exist "%COMPOSE_DIR%\security\athyper-clamav.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-clamav.yml""
+if exist "%COMPOSE_DIR%\security\athyper-virusscan.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-virusscan.yml""
 if exist "%COMPOSE_DIR%\memorycache\athyper-memorycache.yml"          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\memorycache\athyper-memorycache.yml""
 if exist "%COMPOSE_DIR%\memorycache\athyper-memorycache-exporter.yml" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\memorycache\athyper-memorycache-exporter.yml""
+if exist "%COMPOSE_DIR%\telemetry\athyper-alertmanager.yml"           set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-alertmanager.yml""
 if exist "%COMPOSE_DIR%\telemetry\athyper-metrics.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-metrics.yml""
 if exist "%COMPOSE_DIR%\telemetry\athyper-tracing.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-tracing.yml""
 if exist "%COMPOSE_DIR%\telemetry\athyper-logging.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-logging.yml""
 if exist "%COMPOSE_DIR%\telemetry\athyper-logshipper.yml"             set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-logshipper.yml""
 if exist "%COMPOSE_DIR%\telemetry\athyper-telemetry.yml"              set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-telemetry.yml""
 if exist "%COMPOSE_DIR%\apps\athyper-apps.yml"                        set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\apps\athyper-apps.yml""
-if exist "%COMPOSE_DIR%\render\athyper-gotenberg.yml"                 set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\render\athyper-gotenberg.yml""
-if exist "%COMPOSE_DIR%\render\athyper-tika.yml"                      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\render\athyper-tika.yml""
-if exist "%COMPOSE_DIR%\search\athyper-meilisearch.yml"               set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\search\athyper-meilisearch.yml""
-if exist "%COMPOSE_DIR%\monitoring\athyper-glitchtip.yml"             set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\monitoring\athyper-glitchtip.yml""
-if exist "%COMPOSE_DIR%\monitoring\athyper-healthchecks.yml"          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\monitoring\athyper-healthchecks.yml""
-if exist "%COMPOSE_DIR%\monitoring\athyper-uptime-kuma.yml"           set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\monitoring\athyper-uptime-kuma.yml""
-if exist "%COMPOSE_DIR%\analytics\athyper-metabase.yml"               set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\analytics\athyper-metabase.yml""
-if exist "%COMPOSE_DIR%\security\athyper-infisical.yml"               set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-infisical.yml""
-if exist "%COMPOSE_DIR%\admin\athyper-bullboard.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\admin\athyper-bullboard.yml""
-if exist "%COMPOSE_DIR%\admin\athyper-pgweb.yml"                      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\admin\athyper-pgweb.yml""
+if exist "%COMPOSE_DIR%\render\athyper-docrender.yml"                 set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\render\athyper-docrender.yml""
+if exist "%COMPOSE_DIR%\render\athyper-docparser.yml"                      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\render\athyper-docparser.yml""
+if exist "%COMPOSE_DIR%\search\athyper-searchcore.yml"               set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\search\athyper-searchcore.yml""
+if exist "%COMPOSE_DIR%\monitoring\athyper-errorcollect.yml"             set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\monitoring\athyper-errorcollect.yml""
+if exist "%COMPOSE_DIR%\monitoring\athyper-cronwatch.yml"          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\monitoring\athyper-cronwatch.yml""
+if exist "%COMPOSE_DIR%\monitoring\athyper-statuswatch.yml"           set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\monitoring\athyper-statuswatch.yml""
+if exist "%COMPOSE_DIR%\analytics\athyper-analyticsboard.yml"               set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\analytics\athyper-analyticsboard.yml""
+if exist "%COMPOSE_DIR%\security\athyper-secretstore.yml"               set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-secretstore.yml""
+if exist "%COMPOSE_DIR%\admin\athyper-queueconsole.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\admin\athyper-queueconsole.yml""
+if exist "%COMPOSE_DIR%\admin\athyper-dbconsole.yml"                      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\admin\athyper-dbconsole.yml""
 if exist "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml"     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml""
 if exist "!OVERRIDE!" set "COMPOSE_FILES=!COMPOSE_FILES! -f "!OVERRIDE!""
 
-echo Running: docker compose ... stop athyper-api
+echo Running: docker compose ... stop !SERVICE_TARGET!
 docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
-  !COMPOSE_FILES! stop athyper-api
+  !COMPOSE_FILES! stop !SERVICE_TARGET!
 
 if errorlevel 1 (
   echo ERROR: docker compose stop failed.
@@ -150,7 +188,16 @@ if errorlevel 1 (
 )
 
 echo.
-echo API service stopped (env=!ENVIRONMENT!)
+echo !SERVICE_TARGET! service stopped (env=!ENVIRONMENT!)
+
+goto :end
+
+:usage
+echo Usage:
+echo   api-down.bat [api^|worker^|scheduler]
+echo.
+echo Defaults to: api
+exit /b 0
 
 :end
 echo.

@@ -27,6 +27,81 @@ const OptionalNonEmptyString = z.preprocess((v) => {
   return v;
 }, z.string().optional());
 
+const OptionalCredentialMasterKey = z.preprocess((v) => {
+  if (typeof v === "string" && v.trim() === "") return undefined;
+  return v;
+}, z.string().min(32, "CREDENTIAL_MASTER_KEY must be at least 32 characters").optional());
+
+const PushConfigSchema = z
+  .object({
+    fcmProjectId:            OptionalNonEmptyString,
+    fcmServiceAccountKeyJson: OptionalNonEmptyString,
+    vapidSubject:            OptionalNonEmptyString,
+    vapidPublicKey:          OptionalNonEmptyString,
+    vapidPrivateKey:         OptionalNonEmptyString,
+  })
+  .superRefine((value, ctx) => {
+    const hasFcm = Boolean(value.fcmProjectId || value.fcmServiceAccountKeyJson);
+    if (hasFcm) {
+      if (!value.fcmProjectId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fcmProjectId"], message: "PUSH_FCM_PROJECT_ID is required when FCM push is configured" });
+      }
+      if (!value.fcmServiceAccountKeyJson) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fcmServiceAccountKeyJson"], message: "PUSH_FCM_SERVICE_ACCOUNT_KEY is required when FCM push is configured" });
+      }
+    }
+
+    const hasVapid = Boolean(value.vapidSubject || value.vapidPublicKey || value.vapidPrivateKey);
+    if (!hasVapid) return;
+
+    if (!value.vapidSubject) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["vapidSubject"], message: "VAPID_SUBJECT is required when VAPID Web Push is configured" });
+    } else if (!/^mailto:.+@.+|https:\/\/.+/i.test(value.vapidSubject)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["vapidSubject"], message: "VAPID_SUBJECT must be a mailto: or https:// URI" });
+    }
+
+    if (!value.vapidPublicKey) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["vapidPublicKey"], message: "VAPID_PUBLIC_KEY is required when VAPID Web Push is configured" });
+    } else {
+      try {
+        const bytes = Buffer.from(value.vapidPublicKey, "base64url");
+        if (bytes.length !== 65 || bytes[0] !== 0x04) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["vapidPublicKey"], message: "VAPID_PUBLIC_KEY must be an uncompressed P-256 public key" });
+        }
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["vapidPublicKey"], message: "VAPID_PUBLIC_KEY must be base64url encoded" });
+      }
+    }
+
+    if (!value.vapidPrivateKey) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["vapidPrivateKey"], message: "VAPID_PRIVATE_KEY is required when VAPID Web Push is configured" });
+    } else {
+      try {
+        const bytes = Buffer.from(value.vapidPrivateKey, "base64url");
+        if (bytes.length !== 32) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["vapidPrivateKey"], message: "VAPID_PRIVATE_KEY must be a raw P-256 private key" });
+        }
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["vapidPrivateKey"], message: "VAPID_PRIVATE_KEY must be base64url encoded" });
+      }
+    }
+  });
+
+function deriveLocalMeshDatabaseUrl(databaseUrl: string | undefined, env: "local" | "staging" | "production"): string | undefined {
+  if (env !== "local" || !databaseUrl) return undefined;
+  try {
+    const url = new URL(databaseUrl);
+    const databaseName = url.pathname.replace(/^\//, "");
+    if (databaseName === "athyper_neon") {
+      url.pathname = "/athyper_mesh";
+      return url.toString();
+    }
+  } catch {
+    // Invalid DATABASE_URL is reported by schema validation below.
+  }
+  return undefined;
+}
+
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
 const ServerConfigSchema = z.object({
@@ -44,15 +119,17 @@ const ServerConfigSchema = z.object({
    * Required in staging/production; optional in local dev (encryption is
    * disabled when absent).
    */
-  credentialMasterKey: z
-    .string()
-    .min(32, "CREDENTIAL_MASTER_KEY must be at least 32 characters")
-    .optional(),
+  credentialMasterKey: OptionalCredentialMasterKey,
 
   db: z.object({
     url: z.string().min(1, "DATABASE_URL is required"),
     poolMax: z.coerce.number().int().positive().default(5),
   }),
+
+  meshDb: z.object({
+    url: z.string().min(1),
+    poolMax: z.coerce.number().int().positive().default(2),
+  }).optional(),
 
   redis: z.object({
     url: z.string().min(1, "REDIS_URL is required"),
@@ -91,12 +168,16 @@ const ServerConfigSchema = z.object({
    */
   email: z
     .object({
-      host:         z.string().min(1),
-      port:         z.coerce.number().int().positive().default(587),
-      secure:       z.boolean().default(false),
-      user:         z.string().default(""),
-      pass:         z.string().default(""),
-      from_address: z.string().default(""),
+      host:                  z.string().min(1),
+      port:                  z.coerce.number().int().positive().default(587),
+      secure:                Bool.default(false),
+      user:                  z.string().default(""),
+      pass:                  z.string().default(""),
+      from_address:          z.string().default(""),
+      bounce_webhook_secret: z.string().optional(),
+      from_neon:             z.string().optional(),
+      from_mesh:             z.string().optional(),
+      from_admin:            z.string().optional(),
     })
     .optional(),
 
@@ -130,15 +211,7 @@ const ServerConfigSchema = z.object({
    *
    * Generate VAPID keys: npx web-push generate-vapid-keys
    */
-  push: z
-    .object({
-      fcmProjectId:            z.string().optional(),
-      fcmServiceAccountKeyJson: z.string().optional(),
-      vapidSubject:            z.string().optional(),
-      vapidPublicKey:          z.string().optional(),
-      vapidPrivateKey:         z.string().optional(),
-    })
-    .optional(),
+  push: PushConfigSchema.optional(),
 
   /**
    * Object storage (S3 / MinIO).
@@ -211,7 +284,7 @@ const ServerConfigSchema = z.object({
 
   /**
    * Healthchecks cron-heartbeat pings.
-   * Optional — when HEALTHCHECKS_BASE_URL is unset, hooks are no-ops.
+   * Optional — when CRONWATCH_BASE_URL is unset, hooks are no-ops.
    * Base URL format: https://healthchecks.athyper.local/ping
    */
   healthchecks: z
@@ -339,6 +412,12 @@ export function loadConfig(): ServerConfig {
     ? "production"
     : "local") as "local" | "staging" | "production";
 
+  const meshDatabaseUrl =
+    process.env.MESH_DB_URL
+    ?? process.env.MESH_DATABASE_URL
+    ?? deriveLocalMeshDatabaseUrl(process.env.DATABASE_URL, env);
+  const meshDatabasePoolMax = process.env.MESH_DB_POOL_MAX ?? process.env.MESH_DATABASE_POOL_MAX;
+
   const raw = {
     env,
     port: process.env.PORT,
@@ -350,6 +429,9 @@ export function loadConfig(): ServerConfig {
       url: process.env.DATABASE_URL,
       poolMax: process.env.DB_POOL_MAX,
     },
+    meshDb: meshDatabaseUrl
+      ? { url: meshDatabaseUrl, poolMax: meshDatabasePoolMax }
+      : undefined,
     redis: {
       url:                  process.env.REDIS_URL,
       bullmqUrl:            process.env.REDIS_BULLMQ_URL,
@@ -387,12 +469,16 @@ export function loadConfig(): ServerConfig {
 
     email: process.env.SMTP_HOST
       ? {
-          host:         process.env.SMTP_HOST,
-          port:         process.env.SMTP_PORT,
-          secure:       process.env.SMTP_SECURE,
-          user:         process.env.SMTP_USER,
-          pass:         process.env.SMTP_PASS,
-          from_address: process.env.SMTP_FROM ?? "",
+          host:                  process.env.SMTP_HOST,
+          port:                  process.env.SMTP_PORT,
+          secure:                process.env.SMTP_SECURE,
+          user:                  process.env.SMTP_USER,
+          pass:                  process.env.SMTP_PASS,
+          from_address:          process.env.SMTP_FROM ?? "",
+          bounce_webhook_secret: process.env.SMTP_BOUNCE_WEBHOOK_SECRET,
+          from_neon:             process.env.SMTP_FROM_NEON,
+          from_mesh:             process.env.SMTP_FROM_MESH,
+          from_admin:            process.env.SMTP_FROM_ADMIN,
         }
       : undefined,
 
@@ -405,7 +491,13 @@ export function loadConfig(): ServerConfig {
         }
       : undefined,
 
-    push: (process.env.PUSH_FCM_PROJECT_ID ?? process.env.VAPID_PUBLIC_KEY)
+    push: (
+      process.env.PUSH_FCM_PROJECT_ID
+      ?? process.env.PUSH_FCM_SERVICE_ACCOUNT_KEY
+      ?? process.env.VAPID_SUBJECT
+      ?? process.env.VAPID_PUBLIC_KEY
+      ?? process.env.VAPID_PRIVATE_KEY
+    )
       ? {
           fcmProjectId:            process.env.PUSH_FCM_PROJECT_ID,
           fcmServiceAccountKeyJson: process.env.PUSH_FCM_SERVICE_ACCOUNT_KEY,
@@ -431,23 +523,23 @@ export function loadConfig(): ServerConfig {
         }
       : undefined,
 
-    healthchecks: process.env.HEALTHCHECKS_BASE_URL
+    healthchecks: process.env.CRONWATCH_BASE_URL
       ? {
-          baseUrl: process.env.HEALTHCHECKS_BASE_URL,
+          baseUrl: process.env.CRONWATCH_BASE_URL,
         }
       : undefined,
 
-    gotenberg: process.env.GOTENBERG_BASE_URL
+    gotenberg: process.env.DOCRENDER_BASE_URL
       ? {
-          baseUrl:   process.env.GOTENBERG_BASE_URL,
-          timeoutMs: process.env.GOTENBERG_TIMEOUT_MS,
+          baseUrl:   process.env.DOCRENDER_BASE_URL,
+          timeoutMs: process.env.DOCRENDER_TIMEOUT_MS,
         }
       : undefined,
 
-    meilisearch: process.env.MEILISEARCH_URL && process.env.MEILISEARCH_MASTER_KEY
+    meilisearch: process.env.SEARCHCORE_URL && process.env.SEARCHCORE_MASTER_KEY
       ? {
-          url:       process.env.MEILISEARCH_URL,
-          masterKey: process.env.MEILISEARCH_MASTER_KEY,
+          url:       process.env.SEARCHCORE_URL,
+          masterKey: process.env.SEARCHCORE_MASTER_KEY,
         }
       : undefined,
 
@@ -471,7 +563,7 @@ export function loadConfig(): ServerConfig {
 
     if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
       violations.push(
-        "NODE_TLS_REJECT_UNAUTHORIZED=0 disables TLS certificate verification — remove from non-local env"
+        "NODE_TLS_REJECT_UNAUTHORIZED=0 disables TLS certificate verification - remove from non-local env"
       );
     }
 

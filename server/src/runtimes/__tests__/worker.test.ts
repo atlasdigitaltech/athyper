@@ -117,6 +117,18 @@ describe("startWorker", () => {
     expect(deps.jobs.start).toHaveBeenCalledOnce();
   });
 
+  it("signals lifecycle readiness after worker startup", async () => {
+    const deps = makeStubDeps();
+    const onReady = vi.fn();
+    deps.lifecycle.onReady(onReady);
+
+    const { startWorker } = await import("../worker.js");
+    await startWorker(deps);
+    await new Promise((r) => setImmediate(r));
+
+    expect(onReady).toHaveBeenCalledOnce();
+  });
+
   it("does not create an HTTP server (express() not called)", async () => {
     const express = await import("express");
     const deps = makeStubDeps();

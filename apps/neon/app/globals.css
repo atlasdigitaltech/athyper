@@ -1,0 +1,42 @@
+@config "../tailwind.config.ts";
+
+@import "@athyper/theme/presets/base.css";
+@import "@athyper/theme/presets/neon-base.css";
+@import "@athyper/theme/presets/neon-modern.css";
+@import "@athyper/theme/presets/neon-mono.css";
+@import "@athyper/theme/presets/neon-tangerine.css";
+@import "@athyper/theme/presets/mesh-night.css";
+@import "@athyper/theme/presets/mesh-bloom.css";
+@import "@athyper/theme/presets/athyper-pop.css";
+@import "@athyper/theme/presets/athyper-bubble.css";
+@import "@athyper/theme/presets/atlas-neo.css";
+@import "@athyper/theme/presets/atlas-doom.css";
+@import "@athyper/theme/presets/atlas-vintage.css";
+@import "@athyper/theme/base.css";
+
+/*
+ * Neon treats user theme presets as color skins. Keep the product chrome shape
+ * stable so expressive/retro presets do not turn the app into a different UI.
+ */
+:root[data-theme-preset] {
+  --radius: 0.625rem;
+  --border: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --input: color-mix(in oklab, var(--foreground) 16%, transparent);
+  --sidebar-border: color-mix(in oklab, var(--sidebar-foreground) 12%, transparent);
+  --shadow-2xs: 0px 1px 2px 0px #0000000d;
+  --shadow-xs: 0px 1px 2px 0px #0000000d;
+  --shadow-sm: 0px 1px 2px 0px #0000000d, 0px 1px 2px -1px #0000000d;
+  --shadow: 0px 1px 2px 0px #0000000d, 0px 1px 2px -1px #0000000d;
+  --shadow-md: 0px 2px 4px 0px #0000001a, 0px 2px 4px -1px #0000001a;
+  --shadow-lg: 0px 4px 6px 0px #0000001a, 0px 4px 6px -1px #0000001a;
+  --shadow-xl: 0px 8px 10px 0px #00000026, 0px 8px 10px -1px #00000026;
+  --shadow-2xl: 0px 12px 20px 0px #0000004d;
+}
+
+:where(.border, .border-x, .border-y, .border-t, .border-r, .border-b, .border-l) {
+  border-color: var(--border);
+}
+
+:where(.divide-x > :not([hidden]) ~ :not([hidden]), .divide-y > :not([hidden]) ~ :not([hidden])) {
+  border-color: var(--border);
+}

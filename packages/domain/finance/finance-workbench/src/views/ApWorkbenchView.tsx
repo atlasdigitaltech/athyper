@@ -31,7 +31,7 @@ interface ApWorkbenchViewProps {
   scope: FinanceScope;
 }
 
-// ── Pay Invoice dialog ────────────────────────────────────────────────────────
+// â”€â”€ Pay Invoice dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function PayInvoiceDialog({
   scope,
@@ -96,20 +96,20 @@ function PayInvoiceDialog({
 
         <div className="space-y-3">
           <div>
-            <div className="text-doc-support text-muted-foreground mb-1">Amount</div>
-            <div className="font-mono font-medium text-sm">
+            <div className="text-xs text-muted-foreground mb-1">Amount</div>
+            <div className="tabular-nums font-medium text-sm">
               {fmtCurrency(outstandingAmount, currencyCode)}
             </div>
           </div>
 
           <div>
-            <div className="text-doc-support text-muted-foreground mb-1">Payment Method</div>
+            <div className="text-xs text-muted-foreground mb-1">Payment Method</div>
             <select
               value={paymentMethodId}
               onChange={(e) => setPaymentMethodId(e.target.value)}
               className="w-full h-8 rounded-md border px-2 text-xs bg-background"
             >
-              <option value="">Select…</option>
+              <option value="">Selectâ€¦</option>
               {(methods?.items ?? []).map((m) => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
@@ -117,7 +117,7 @@ function PayInvoiceDialog({
           </div>
 
           <div>
-            <div className="text-doc-support text-muted-foreground mb-1">Bank Account</div>
+            <div className="text-xs text-muted-foreground mb-1">Bank Account</div>
             <select
               value={bankAccountId}
               onChange={(e) => setBankAccountId(e.target.value)}
@@ -137,7 +137,7 @@ function PayInvoiceDialog({
           </div>
 
           <div>
-            <div className="text-doc-support text-muted-foreground mb-1">Value Date</div>
+            <div className="text-xs text-muted-foreground mb-1">Value Date</div>
             <input
               type="date"
               value={valueDate}
@@ -147,7 +147,7 @@ function PayInvoiceDialog({
           </div>
 
           <div>
-            <div className="text-doc-support text-muted-foreground mb-1">Notes (optional)</div>
+            <div className="text-xs text-muted-foreground mb-1">Notes (optional)</div>
             <input
               type="text"
               value={notes}
@@ -177,7 +177,7 @@ function PayInvoiceDialog({
             onClick={() => void handleSubmit()}
             disabled={createPayment.isPending}
           >
-            {createPayment.isPending ? "Creating…" : "Create Payment Draft"}
+            {createPayment.isPending ? "Creatingâ€¦" : "Create Payment Draft"}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -185,7 +185,7 @@ function PayInvoiceDialog({
   );
 }
 
-// ── Invoice detail panel ──────────────────────────────────────────────────────
+// â”€â”€ Invoice detail panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: FinanceScope }) {
   const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -213,7 +213,7 @@ function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: Fi
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
         <div>
           <span className="text-muted-foreground">Currency: </span>
-          <span className="font-mono">{data.currencyCode}</span>
+          <span className="tabular-nums">{data.currencyCode}</span>
         </div>
         <div>
           <span className="text-muted-foreground">Period: </span>
@@ -222,13 +222,13 @@ function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: Fi
         {data.tax_amount > 0 && (
           <div>
             <span className="text-muted-foreground">Tax: </span>
-            <span className="font-mono">{fmtCurrency(data.tax_amount)}</span>
+            <span className="tabular-nums">{fmtCurrency(data.tax_amount)}</span>
           </div>
         )}
         {data.outstandingAmount > 0 && (
           <div>
             <span className="text-muted-foreground">Outstanding: </span>
-            <span className="font-mono text-warning font-medium">{fmtCurrency(data.outstandingAmount)}</span>
+            <span className="tabular-nums text-warning font-medium">{fmtCurrency(data.outstandingAmount)}</span>
           </div>
         )}
       </div>
@@ -257,10 +257,10 @@ function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: Fi
                   <td className="py-1 px-2 text-muted-foreground">{l.line_no}</td>
                   <td className="py-1 px-2">{l.item_description}</td>
                   <td className="py-1 px-2 text-right tabular-nums">{l.quantity}</td>
-                  <td className="py-1 px-2 text-right tabular-nums font-mono">{fmtCurrency(Number(l.unit_price))}</td>
-                  <td className="py-1 px-2 text-right tabular-nums font-mono font-medium">{fmtCurrency(Number(l.net_amount))}</td>
-                  <td className="py-1 px-2 text-right tabular-nums font-mono text-muted-foreground">
-                    {Number(l.tax_amount) > 0 ? fmtCurrency(Number(l.tax_amount)) : "—"}
+                  <td className="py-1 px-2 text-right tabular-nums">{fmtCurrency(Number(l.unit_price))}</td>
+                  <td className="py-1 px-2 text-right tabular-nums font-medium">{fmtCurrency(Number(l.net_amount))}</td>
+                  <td className="py-1 px-2 text-right tabular-nums text-muted-foreground">
+                    {Number(l.tax_amount) > 0 ? fmtCurrency(Number(l.tax_amount)) : "â€”"}
                   </td>
                 </tr>
               ))}
@@ -268,7 +268,7 @@ function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: Fi
             <tfoot>
               <tr className="bg-muted/30 border-t">
                 <td colSpan={4} className="py-1.5 px-2 text-right font-medium text-muted-foreground">Total Payable</td>
-                <td className="py-1.5 px-2 text-right tabular-nums font-mono font-bold">{fmtCurrency(data.payableAmount)}</td>
+                <td className="py-1.5 px-2 text-right tabular-nums font-medium">{fmtCurrency(data.payableAmount)}</td>
                 <td />
               </tr>
             </tfoot>
@@ -279,7 +279,7 @@ function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: Fi
       {/* Allocations */}
       {data.allocations.length > 0 && (
         <div>
-          <p className="text-doc-support font-medium text-muted-foreground mb-1">Payment Allocations</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Payment Allocations</p>
           <div className="rounded-lg border overflow-x-auto overflow-y-hidden">
             <table className="w-full min-w-[560px] text-xs">
               <thead>
@@ -293,9 +293,9 @@ function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: Fi
               <tbody>
                 {data.allocations.map((a) => (
                   <tr key={a.id} className="border-b last:border-0">
-                    <td className="py-1 px-2 font-mono text-doc-support">{a.paymentNumber}</td>
+                    <td className="py-1 px-2 tabular-nums text-xs">{a.paymentNumber}</td>
                     <td className="py-1 px-2 text-muted-foreground">{fmtDate(a.postingDate)}</td>
-                    <td className="py-1 px-2 text-right tabular-nums font-mono">{fmtCurrency(Number(a.allocatedAmount))}</td>
+                    <td className="py-1 px-2 text-right tabular-nums">{fmtCurrency(Number(a.allocatedAmount))}</td>
                     <td className={cn("py-1 px-2 capitalize", statusTextClass(a.paymentStatus))}>{a.paymentStatus}</td>
                   </tr>
                 ))}
@@ -305,7 +305,7 @@ function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: Fi
         </div>
       )}
 
-      {/* Pay action — only when outstanding balance remains */}
+      {/* Pay action â€” only when outstanding balance remains */}
       {data.outstandingAmount > 0 && (
         <div className="flex justify-end pt-1">
           <button
@@ -331,7 +331,7 @@ function InvoiceDetailPanel({ invoiceId, scope }: { invoiceId: string; scope: Fi
   );
 }
 
-// ── New Invoice dialog ────────────────────────────────────────────────────────
+// â”€â”€ New Invoice dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function NewInvoiceDialog({
   scope,
@@ -382,7 +382,7 @@ function NewInvoiceDialog({
 
         <div className="space-y-3">
           <div>
-            <div className="text-doc-support text-muted-foreground mb-1">Invoice Source</div>
+            <div className="text-xs text-muted-foreground mb-1">Invoice Source</div>
             <select
               value={source}
               onChange={(e) => setSource(e.target.value as "non_po" | "po_based")}
@@ -396,19 +396,19 @@ function NewInvoiceDialog({
           </div>
 
           <div>
-            <div className="text-doc-support text-muted-foreground mb-1">Currency</div>
+            <div className="text-xs text-muted-foreground mb-1">Currency</div>
             <input
               type="text"
               value={currency}
               onChange={(e) => setCurrency(e.target.value.toUpperCase())}
               maxLength={3}
               placeholder="USD"
-              className="w-full h-8 rounded-md border px-2 text-xs bg-background font-mono"
+              className="w-full h-8 rounded-md border px-2 text-xs bg-background tabular-nums"
             />
           </div>
 
           <div>
-            <div className="text-doc-support text-muted-foreground mb-1">Notes (optional)</div>
+            <div className="text-xs text-muted-foreground mb-1">Notes (optional)</div>
             <input
               type="text"
               value={notes}
@@ -438,7 +438,7 @@ function NewInvoiceDialog({
             onClick={() => void handleSubmit()}
             disabled={createInvoice.isPending || !scope.scopeId}
           >
-            {createInvoice.isPending ? "Creating…" : "Create Invoice"}
+            {createInvoice.isPending ? "Creatingâ€¦" : "Create Invoice"}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -446,7 +446,7 @@ function NewInvoiceDialog({
   );
 }
 
-// ── AP Invoices tab ───────────────────────────────────────────────────────────
+// â”€â”€ AP Invoices tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function InvoicesTab({ scope }: { scope: FinanceScope }) {
   const [statusFilter, setStatusFilter]   = useState<string>("");
@@ -480,7 +480,7 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
             <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
           ))}
         </select>
-        <span className="text-doc-support text-muted-foreground ml-auto">
+        <span className="text-xs text-muted-foreground ml-auto">
           {data?.total ?? 0} invoice{data?.total !== 1 ? "s" : ""}
         </span>
         <button
@@ -524,15 +524,15 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
                       ? <ChevronDown  className="h-3.5 w-3.5 text-muted-foreground" />
                       : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
                   </td>
-                  <td className="py-1.5 px-3 font-mono text-muted-foreground">{inv.invoiceNumber}</td>
-                  <td className="py-1.5 px-3">{inv.supplierName ?? <span className="text-muted-foreground">—</span>}</td>
+                  <td className="py-1.5 px-3 tabular-nums text-muted-foreground">{inv.invoiceNumber}</td>
+                  <td className="py-1.5 px-3">{inv.supplierName ?? <span className="text-muted-foreground">â€”</span>}</td>
                   <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.invoiceDate)}</td>
                   <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(inv.dueDate)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono">{fmtCurrency(inv.payableAmount)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono">
+                  <td className="py-1.5 px-3 text-right tabular-nums">{fmtCurrency(inv.payableAmount)}</td>
+                  <td className="py-1.5 px-3 text-right tabular-nums">
                     {inv.outstandingAmount > 0
                       ? <span className="text-warning font-medium">{fmtCurrency(inv.outstandingAmount)}</span>
-                      : <span className="text-muted-foreground">—</span>
+                      : <span className="text-muted-foreground">â€”</span>
                     }
                   </td>
                   <td className={cn("py-1.5 px-3 capitalize", statusTextClass(inv.status))}>
@@ -564,7 +564,7 @@ function InvoicesTab({ scope }: { scope: FinanceScope }) {
   );
 }
 
-// ── Aging tab ─────────────────────────────────────────────────────────────────
+// â”€â”€ Aging tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function AgingTab({ scope }: { scope: FinanceScope }) {
   const { data, isLoading, isError } = useApAging(scope);
@@ -588,16 +588,16 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-doc-support text-muted-foreground">As at {data?.asAt ? fmtDate(data.asAt) : "—"}</div>
+      <div className="text-xs text-muted-foreground">As at {data?.asAt ? fmtDate(data.asAt) : "â€”"}</div>
       <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
         <table className="w-full min-w-[860px] text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-3 text-left font-medium text-muted-foreground">Supplier</th>
               <th className="py-2 px-3 text-right font-medium text-muted-foreground">Current</th>
-              <th className="py-2 px-3 text-right font-medium text-muted-foreground">1–30 days</th>
-              <th className="py-2 px-3 text-right font-medium text-muted-foreground">31–60 days</th>
-              <th className="py-2 px-3 text-right font-medium text-muted-foreground">61–90 days</th>
+              <th className="py-2 px-3 text-right font-medium text-muted-foreground">1â€“30 days</th>
+              <th className="py-2 px-3 text-right font-medium text-muted-foreground">31â€“60 days</th>
+              <th className="py-2 px-3 text-right font-medium text-muted-foreground">61â€“90 days</th>
               <th className="py-2 px-3 text-right font-medium text-muted-foreground text-destructive/80">&gt;90 days</th>
               <th className="py-2 px-3 text-right font-medium text-muted-foreground">Total</th>
             </tr>
@@ -609,12 +609,12 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
             {rows.map((r, i) => (
               <tr key={r.supplierId ?? i} className="border-b last:border-0 hover:bg-muted/30">
                 <td className="py-1.5 px-3">{r.supplierName ?? <span className="text-muted-foreground italic">Unknown</span>}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{r.current > 0 ? fmtCurrency(r.current) : "—"}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{r.days1to30 > 0 ? fmtCurrency(r.days1to30) : "—"}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{r.days31to60 > 0 ? <span className="text-warning">{fmtCurrency(r.days31to60)}</span> : "—"}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{r.days61to90 > 0 ? <span className="text-warning/80">{fmtCurrency(r.days61to90)}</span> : "—"}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{r.over90 > 0 ? <span className="text-destructive font-medium">{fmtCurrency(r.over90)}</span> : "—"}</td>
-                <td className="py-1.5 px-3 text-right font-mono font-medium">{fmtCurrency(r.total)}</td>
+                <td className="py-1.5 px-3 text-right tabular-nums">{r.current > 0 ? fmtCurrency(r.current) : "â€”"}</td>
+                <td className="py-1.5 px-3 text-right tabular-nums">{r.days1to30 > 0 ? fmtCurrency(r.days1to30) : "â€”"}</td>
+                <td className="py-1.5 px-3 text-right tabular-nums">{r.days31to60 > 0 ? <span className="text-warning">{fmtCurrency(r.days31to60)}</span> : "â€”"}</td>
+                <td className="py-1.5 px-3 text-right tabular-nums">{r.days61to90 > 0 ? <span className="text-warning/80">{fmtCurrency(r.days61to90)}</span> : "â€”"}</td>
+                <td className="py-1.5 px-3 text-right tabular-nums">{r.over90 > 0 ? <span className="text-destructive font-medium">{fmtCurrency(r.over90)}</span> : "â€”"}</td>
+                <td className="py-1.5 px-3 text-right tabular-nums font-medium">{fmtCurrency(r.total)}</td>
               </tr>
             ))}
           </tbody>
@@ -622,12 +622,12 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
             <tfoot>
               <tr className="bg-muted/50 border-t-2">
                 <td className="py-2 px-3 font-medium">Total</td>
-                <td className="py-2 px-3 text-right font-mono font-medium">{fmtCurrency(totals.current)}</td>
-                <td className="py-2 px-3 text-right font-mono font-medium">{fmtCurrency(totals.days1to30)}</td>
-                <td className="py-2 px-3 text-right font-mono font-medium">{fmtCurrency(totals.days31to60)}</td>
-                <td className="py-2 px-3 text-right font-mono font-medium">{fmtCurrency(totals.days61to90)}</td>
-                <td className="py-2 px-3 text-right font-mono font-bold text-destructive">{fmtCurrency(totals.over90)}</td>
-                <td className="py-2 px-3 text-right font-mono font-bold">{fmtCurrency(totals.total)}</td>
+                <td className="py-2 px-3 text-right tabular-nums font-medium">{fmtCurrency(totals.current)}</td>
+                <td className="py-2 px-3 text-right tabular-nums font-medium">{fmtCurrency(totals.days1to30)}</td>
+                <td className="py-2 px-3 text-right tabular-nums font-medium">{fmtCurrency(totals.days31to60)}</td>
+                <td className="py-2 px-3 text-right tabular-nums font-medium">{fmtCurrency(totals.days61to90)}</td>
+                <td className="py-2 px-3 text-right tabular-nums font-medium text-destructive">{fmtCurrency(totals.over90)}</td>
+                <td className="py-2 px-3 text-right tabular-nums font-medium">{fmtCurrency(totals.total)}</td>
               </tr>
             </tfoot>
           )}
@@ -637,7 +637,7 @@ function AgingTab({ scope }: { scope: FinanceScope }) {
   );
 }
 
-// ── Payments tab ──────────────────────────────────────────────────────────────
+// â”€â”€ Payments tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function PaymentsTab({ scope }: { scope: FinanceScope }) {
   const [page, setPage] = useState(1);
@@ -649,7 +649,7 @@ function PaymentsTab({ scope }: { scope: FinanceScope }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-doc-support text-muted-foreground text-right">
+      <div className="text-xs text-muted-foreground text-right">
         {data?.total ?? 0} payment{data?.total !== 1 ? "s" : ""}
       </div>
       <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
@@ -670,11 +670,11 @@ function PaymentsTab({ scope }: { scope: FinanceScope }) {
             )}
             {(data?.items ?? []).map((p) => (
               <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.paymentNumber}</td>
-                <td className="py-1.5 px-3">{p.supplierName ?? "—"}</td>
+                <td className="py-1.5 px-3 tabular-nums text-muted-foreground">{p.paymentNumber}</td>
+                <td className="py-1.5 px-3">{p.supplierName ?? "â€”"}</td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(p.valueDate)}</td>
-                <td className="py-1.5 px-3 text-right font-mono">{fmtCurrency(p.paymentAmount)}</td>
-                <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">{p.paymentReference ?? "—"}</td>
+                <td className="py-1.5 px-3 text-right tabular-nums">{fmtCurrency(p.paymentAmount)}</td>
+                <td className="py-1.5 px-3 tabular-nums text-muted-foreground text-xs">{p.paymentReference ?? "â€”"}</td>
                 <td className={cn("py-1.5 px-3 capitalize", statusTextClass(p.status))}>{p.status}</td>
               </tr>
             ))}
@@ -693,7 +693,7 @@ function PaymentsTab({ scope }: { scope: FinanceScope }) {
   );
 }
 
-// ── AR Receipts tab ───────────────────────────────────────────────────────────
+// â”€â”€ AR Receipts tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ArReceiptsTab({ scope }: { scope: FinanceScope }) {
   const [page, setPage] = useState(1);
@@ -705,7 +705,7 @@ function ArReceiptsTab({ scope }: { scope: FinanceScope }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-doc-support text-muted-foreground text-right">
+      <div className="text-xs text-muted-foreground text-right">
         {data?.total ?? 0} receipt{data?.total !== 1 ? "s" : ""}
       </div>
       <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
@@ -726,11 +726,11 @@ function ArReceiptsTab({ scope }: { scope: FinanceScope }) {
             )}
             {(data?.items ?? []).map((r) => (
               <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
-                <td className="py-1.5 px-3 font-mono text-muted-foreground">{r.paymentNumber}</td>
-                <td className="py-1.5 px-3">{r.counterpartyName ?? "—"}</td>
+                <td className="py-1.5 px-3 tabular-nums text-muted-foreground">{r.paymentNumber}</td>
+                <td className="py-1.5 px-3">{r.counterpartyName ?? "â€”"}</td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(r.valueDate)}</td>
-                <td className="py-1.5 px-3 text-right font-mono text-success font-medium">{fmtCurrency(r.paymentAmount)}</td>
-                <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">{r.paymentReference ?? "—"}</td>
+                <td className="py-1.5 px-3 text-right tabular-nums text-success font-medium">{fmtCurrency(r.paymentAmount)}</td>
+                <td className="py-1.5 px-3 tabular-nums text-muted-foreground text-xs">{r.paymentReference ?? "â€”"}</td>
                 <td className={cn("py-1.5 px-3 capitalize", statusTextClass(r.status))}>{r.status}</td>
               </tr>
             ))}
@@ -749,7 +749,7 @@ function ArReceiptsTab({ scope }: { scope: FinanceScope }) {
   );
 }
 
-// ── Shared UI primitives ──────────────────────────────────────────────────────
+// â”€â”€ Shared UI primitives â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -783,7 +783,7 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-/** Prev / Next pagination strip — only renders when there are enough items. */
+/** Prev / Next pagination strip â€” only renders when there are enough items. */
 function TablePagination({
   page,
   total,
@@ -811,7 +811,7 @@ function TablePagination({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function ApWorkbenchView({ scope }: ApWorkbenchViewProps) {
   const [tab, setTab] = useState<ApTab>("invoices");

@@ -15,7 +15,8 @@ REM   bash /opt/products/athyper/stack/scripts/app/build.sh
 REM
 REM Available flags (run on the server):
 REM   --no-cache       Force a clean rebuild (slow but resets cache).
-REM   --service=LIST   Narrow scope (api,worker,scheduler,web or all).
+REM   --service=LIST   Narrow scope (api,worker,scheduler,neon,mesh,admin,web or all).
+REM                    web means all three web planes.
 REM ============================================================
 
 echo.

@@ -32,7 +32,7 @@
 # =======================================================================
 
 services:
-  memorycache_jobs:
+  memorycache-jobs:
     image: redis:7.4.8-alpine
     profiles: ["memorycache-jobs"]
     user: "9100:9100"
@@ -87,7 +87,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          'result=$$(REDISCLI_AUTH="$$MEMORYCACHE_PASSWORD" redis-cli --user app --no-auth-warning ACL WHOAMI 2>/dev/null); test "$$result" = "app"',
+          'result=$$(REDISCLI_AUTH="$$MEMORYCACHE_PASSWORD" redis-cli --user app --no-auth-warning ping 2>/dev/null); test "$$result" = "PONG"',
         ]
       interval: 10s
       timeout: 3s

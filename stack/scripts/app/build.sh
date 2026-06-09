@@ -3,11 +3,13 @@
 # athyper - Full Application Build - Linux/macOS
 # Location: stack/scripts/app/build.sh
 #
-# Builds the four application service images:
-#   - athyper-api          (server/Dockerfile.prod in staging)
-#   - athyper-worker       (server/Dockerfile.prod in staging)
-#   - athyper-scheduler    (server/Dockerfile.prod in staging)
-#   - athyper-neon-web     (apps/web/Dockerfile)
+# Builds the application service images:
+#   - api          (server/Dockerfile.prod in staging)
+#   - worker       (server/Dockerfile.prod in staging)
+#   - scheduler    (server/Dockerfile.prod in staging)
+#   - neon-web     (apps/neon/Dockerfile)
+#   - mesh-web     (apps/mesh/Dockerfile)
+#   - admin-web    (apps/admin/Dockerfile)
 #
 # This script ONLY builds images. It does not pull source, deploy
 # new containers, or prune anything. To deploy after building, use:
@@ -16,14 +18,15 @@
 # (or `docker compose up -d --no-deps <service>` directly).
 #
 # Usage:
-#   ./build.sh                     -> build all four services
+#   ./build.sh                     -> build all app services
 #   ./build.sh --no-cache          -> rebuild from scratch (slow)
 #   ./build.sh --service=api       -> build a single service
-#   ./build.sh --service=api,web   -> comma-separated subset
-#                                     (api | worker | scheduler | web)
+#   ./build.sh --service=api,neon  -> comma-separated subset
+#                                     (api | worker | scheduler | neon | mesh | admin | web | planes)
+#                                     web/planes builds neon-web, mesh-web, and admin-web
 #
 # Local mode is rejected — there is no compose build pipeline in
-# local dev (use `pnpm --filter @athyper/web dev` and api-up.sh).
+# local dev (use planes-up.sh/.bat and api-up.sh).
 # ============================================================
 
 set -euo pipefail
@@ -37,38 +40,57 @@ source "${SCRIPT_DIR}/../lib/compose.sh"
 NO_CACHE=0
 SERVICE_FILTER="all"
 
-ALL_SERVICES=( athyper-api athyper-worker athyper-scheduler athyper-neon-web )
+ALL_SERVICES=( api worker scheduler neon-web mesh-web admin-web )
 
 usage() {
-  sed -n '2,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
-  exit 1
+  sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  exit "${1:-1}"
 }
 
 for _arg in "$@"; do
   case "$_arg" in
     --no-cache)        NO_CACHE=1 ;;
     --service=*)       SERVICE_FILTER="${_arg#--service=}" ;;
-    -h|--help)         usage ;;
-    *) echo "Unknown flag: $_arg" >&2; usage ;;
+    -h|--help)         usage 0 ;;
+    *) echo "Unknown flag: $_arg" >&2; usage 1 ;;
   esac
 done
 
 # Resolve the service list from the filter.
 declare -a TARGET_SERVICES=()
+add_target_service() {
+  local service="$1"
+  local existing
+  for existing in "${TARGET_SERVICES[@]}"; do
+    [[ "$existing" == "$service" ]] && return 0
+  done
+  TARGET_SERVICES+=( "$service" )
+}
+
 if [[ "$SERVICE_FILTER" == "all" ]]; then
   TARGET_SERVICES=( "${ALL_SERVICES[@]}" )
 else
   IFS=',' read -ra _parts <<< "$SERVICE_FILTER"
   for _p in "${_parts[@]}"; do
     case "$_p" in
-      api)        TARGET_SERVICES+=( athyper-api ) ;;
-      worker)     TARGET_SERVICES+=( athyper-worker ) ;;
-      scheduler)  TARGET_SERVICES+=( athyper-scheduler ) ;;
-      web)        TARGET_SERVICES+=( athyper-neon-web ) ;;
-      *) echo "Unknown service: $_p (expected api|worker|scheduler|web)" >&2; exit 1 ;;
+      api)        add_target_service api ;;
+      worker)     add_target_service worker ;;
+      scheduler)  add_target_service scheduler ;;
+      neon|neon-web)
+                  add_target_service neon-web ;;
+      mesh|mesh-web)
+                  add_target_service mesh-web ;;
+      admin|admin-web)
+                  add_target_service admin-web ;;
+      web|planes|all-web)
+                  add_target_service neon-web
+                  add_target_service mesh-web
+                  add_target_service admin-web ;;
+      *) echo "Unknown service: $_p (expected api|worker|scheduler|neon|mesh|admin|web|planes)" >&2; exit 1 ;;
     esac
   done
 fi
+unset -f add_target_service
 
 # ----------------------------
 # Environment + compose setup

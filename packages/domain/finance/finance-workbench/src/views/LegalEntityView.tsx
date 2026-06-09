@@ -62,7 +62,7 @@ function EntityRow({
         <div
           title={countryLabel}
           className={cn(
-            "flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded text-[10px] font-bold uppercase leading-none",
+            "flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded text-xs font-medium leading-none",
             entity.entityType === "holding"
               ? "bg-accent/10 text-accent-foreground"
               : "bg-info/10 text-info",
@@ -71,14 +71,14 @@ function EntityRow({
           {countryCode}
         </div>
 
-        <span className="font-mono text-doc-support text-muted-foreground w-14 shrink-0">{entity.code}</span>
+        <span className="tabular-nums text-xs text-muted-foreground w-14 shrink-0">{entity.code}</span>
         <span className={cn("min-w-0 flex-1 truncate text-xs", entity.entityType === "holding" ? "font-medium" : "")}>{entity.name}</span>
 
         {entity.consolidationMethod && (
           <ConsolBadge method={entity.consolidationMethod} className="shrink-0" />
         )}
         {!entity.consolidationMethod && (
-          <Badge variant="outline" className="shrink-0 text-doc-support py-0 bg-accent/10 text-accent-foreground border-accent/30">
+          <Badge variant="outline" className="shrink-0 text-xs py-0 bg-accent/10 text-accent-foreground border-accent/30">
             root
           </Badge>
         )}
@@ -86,7 +86,7 @@ function EntityRow({
         {entity.ownershipPct !== null && (
           <span
             className={cn(
-              "w-16 shrink-0 text-right font-mono text-doc-support",
+              "w-16 shrink-0 text-right tabular-nums text-xs",
               entity.ownershipPct < 100 ? "text-warning font-medium" : "text-muted-foreground",
             )}
           >
@@ -141,13 +141,13 @@ export function LegalEntityView() {
       {/* Left: tree */}
       <div className={cn("flex flex-col border-r", selected ? "w-[55%]" : "flex-1")}>
         <div className="px-3 py-1.5 border-b flex items-center gap-2">
-          <h2 className="text-xs font-semibold">Group structure</h2>
-          <span className="text-doc-support text-muted-foreground">
+          <h2 className="text-xs font-medium">Group structure</h2>
+          <span className="text-xs text-muted-foreground">
             {entities.length} entities · {holdingCount} holdings · {operatingCount} operating
           </span>
           <span className="flex-1" />
           <Select value={filterCountry} onValueChange={setFilterCountry}>
-            <SelectTrigger className="h-6 w-28 text-doc-support"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-6 w-28 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All countries</SelectItem>
               {countries.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -155,14 +155,14 @@ export function LegalEntityView() {
           </Select>
 
           <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="h-6 w-28 text-doc-support"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-6 w-28 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All types</SelectItem>
               <SelectItem value="holding">Holding</SelectItem>
               <SelectItem value="operating">Operating</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-2 text-doc-label text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-success" />full</span>
             <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-info" />proportional</span>
             <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-warning" />equity</span>
@@ -190,11 +190,11 @@ export function LegalEntityView() {
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
           {/* Header line */}
           <div className="flex items-center gap-2">
-            <span className="font-mono text-doc-subtitle text-muted-foreground">{selected.code}</span>
+            <span className="tabular-nums text-xs text-muted-foreground">{selected.code}</span>
             <Badge
               variant="outline"
               className={cn(
-                "text-doc-support py-0",
+                "text-xs py-0",
                 selected.entityType === "holding"
                   ? "bg-accent/10 text-accent-foreground border-accent/30"
                   : "bg-info/10 text-info border-info/30",
@@ -205,29 +205,29 @@ export function LegalEntityView() {
             {selected.consolidationMethod && (
               <ConsolBadge method={selected.consolidationMethod} />
             )}
-            <span className="text-sm font-semibold">{selected.name}</span>
+            <span className="text-sm font-medium">{selected.name}</span>
           </div>
 
           {/* Properties - single inline row */}
           <div className="flex items-center gap-4 text-xs py-1 px-2 bg-muted/30 rounded-md">
             <div>
-              <span className="text-doc-label text-muted-foreground uppercase mr-1">Own</span>
-              <span className={cn("font-semibold", selected.ownershipPct !== null && selected.ownershipPct < 100 ? "text-warning" : "")}>
+              <span className="text-sm font-medium text-muted-foreground mr-1">Own</span>
+              <span className={cn("font-medium", selected.ownershipPct !== null && selected.ownershipPct < 100 ? "text-warning" : "")}>
                 {selected.ownershipPct !== null ? `${selected.ownershipPct}%` : "Root"}
               </span>
               {selected.ownershipPct !== null && selected.ownershipPct < 100 && (
-                <span className="text-doc-support text-muted-foreground ml-1">(NCI {100 - selected.ownershipPct}%)</span>
+                <span className="text-xs text-muted-foreground ml-1">(NCI {100 - selected.ownershipPct}%)</span>
               )}
             </div>
             <Separator orientation="vertical" className="h-4" />
             <div>
-              <span className="text-doc-label text-muted-foreground uppercase mr-1">Country</span>
-              <span className="font-semibold">{entityCountryLabel(selected)}</span>
+              <span className="text-sm font-medium text-muted-foreground mr-1">Country</span>
+              <span className="font-medium">{entityCountryLabel(selected)}</span>
             </div>
             <Separator orientation="vertical" className="h-4" />
             <div>
-              <span className="text-doc-label text-muted-foreground uppercase mr-1">Currency</span>
-              <span className="font-semibold">{selected.functionalCurrency}</span>
+              <span className="text-sm font-medium text-muted-foreground mr-1">Currency</span>
+              <span className="font-medium">{selected.functionalCurrency}</span>
               <span className="text-muted-foreground"> / {selected.reportingCurrency}</span>
             </div>
           </div>
@@ -235,14 +235,14 @@ export function LegalEntityView() {
           {/* Company codes */}
           {linkedCompanies.length > 0 && (
             <div>
-              <h3 className="text-doc-support text-muted-foreground uppercase mb-1">
+              <h3 className="text-xs text-muted-foreground mb-1">
                 Company codes ({linkedCompanies.length})
               </h3>
               {linkedCompanies.map((c) => (
-                <div key={c.code} className="flex items-center gap-2 py-0.5 text-doc-subtitle">
-                  <span className="font-mono font-medium w-12">{c.code}</span>
+                <div key={c.code} className="flex items-center gap-2 py-0.5 text-xs">
+                  <span className="tabular-nums font-medium w-12">{c.code}</span>
                   <span className="flex-1 text-muted-foreground truncate">{c.name}</span>
-                  <span className="font-mono text-muted-foreground text-doc-support">{c.functionalCurrency}</span>
+                  <span className="tabular-nums text-muted-foreground text-xs">{c.functionalCurrency}</span>
                 </div>
               ))}
             </div>
@@ -252,19 +252,19 @@ export function LegalEntityView() {
           {children.length > 0 && (
             <div>
               <Separator className="mb-1.5" />
-              <h3 className="text-doc-support text-muted-foreground uppercase mb-1">
+              <h3 className="text-xs text-muted-foreground mb-1">
                 Subsidiaries ({children.length})
               </h3>
               {children.map((child) => (
                 <div
                   key={child.id}
                   onClick={() => setSelectedId(child.id)}
-                  className="flex items-center gap-1.5 py-[3px] px-1 rounded-md text-doc-subtitle cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-1.5 py-[3px] px-1 rounded-md text-xs cursor-pointer hover:bg-muted/50 transition-colors"
                 >
-                  <span className="font-mono text-doc-support text-muted-foreground w-14">{child.code}</span>
+                  <span className="tabular-nums text-xs text-muted-foreground w-14">{child.code}</span>
                   <span className="flex-1 truncate">{child.name}</span>
                   <ConsolBadge method={child.consolidationMethod!} />
-                  <span className={cn("text-doc-support font-mono", child.ownershipPct! < 100 ? "text-warning" : "text-muted-foreground")}>
+                  <span className={cn("text-xs tabular-nums", child.ownershipPct! < 100 ? "text-warning" : "text-muted-foreground")}>
                     {child.ownershipPct}%
                   </span>
                 </div>

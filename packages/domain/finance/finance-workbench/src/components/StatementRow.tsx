@@ -42,7 +42,7 @@ export function StatementRow({
       className={cn(
         "flex items-center py-1.5 transition-colors",
         isClickable && "cursor-pointer hover:bg-muted/30",
-        row.isTotal && "font-semibold bg-muted/20 border-t",
+        row.isTotal && "font-medium bg-muted/20 border-t",
         row.isSubtotal && "font-medium",
       )}
       style={{ paddingLeft: `${indent * 16 + 8}px` }}
@@ -50,7 +50,7 @@ export function StatementRow({
       <span className={cn(
         "flex-1 truncate text-sm",
         isRecordLink && "cursor-context-menu",
-        row.isTotal && "font-semibold",
+        row.isTotal && "font-medium",
       )}
       title={isRecordLink ? `${row.accountName} (${row.accountCode})` : undefined}
       onContextMenu={isRecordLink
@@ -63,7 +63,7 @@ export function StatementRow({
       <div className="flex items-center gap-6 pr-0">
         <span className={cn(
           "w-28 text-right text-sm tabular-nums",
-          row.isTotal && "font-semibold",
+          row.isTotal && "font-medium",
           row.current < 0 && "text-destructive",
         )}>
           {fmtCompact(row.current)}

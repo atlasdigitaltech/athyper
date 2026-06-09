@@ -56,7 +56,7 @@ function ReportPlaceholderTile({ code }: { code: ReportCode }) {
       <div className="space-y-1">
         <p className="text-sm font-medium">{meta.label}</p>
         <p className="text-xs text-muted-foreground">{meta.description}</p>
-        <Badge variant="outline" className="mt-2 text-doc-support">Coming soon</Badge>
+        <Badge variant="outline" className="mt-2 text-xs">Coming soon</Badge>
       </div>
     </div>
   );
@@ -76,7 +76,7 @@ interface FinancialReportsSwitcherProps {
 function FinancialReportsSwitcher({ report, onReportChange, onBack }: FinancialReportsSwitcherProps) {
   return (
     <DropdownMenu>
-      <div className="inline-flex h-8 shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground text-sm font-semibold tracking-wide text-background">
+      <div className="inline-flex h-8 shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground text-sm font-medium text-background">
         <button
           type="button"
           className="flex h-full w-9 items-center justify-center border-r border-background/20 bg-inherit text-inherit transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-background"

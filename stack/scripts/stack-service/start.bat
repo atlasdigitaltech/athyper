@@ -17,10 +17,12 @@ REM   dbpool-apps    -> PgBouncer apps    (athyper-dbpool-apps-1)
 REM   gateway|traefik     -> Traefik ingress   (athyper-gateway-1)
 REM   redis|cache|memorycache -> Redis cache   (athyper-memorycache-1)
 REM   minio|storage  -> MinIO object store (athyper-objectstorage-1)
-REM   mail|mailhog   -> Mailhog            (athyper-mailhog-1)
-REM   web|frontend   -> Next.js frontend   (athyper-athyper-neon-web-1)
-REM   api|backend    -> Backend API        (athyper-athyper-api-1)
-REM   search|meilisearch -> Meilisearch    (athyper-meilisearch-1)
+REM   mail|mailtrap  -> mailtrap           (athyper-mailtrap-1)
+REM   web|frontend|neon -> Neon frontend   (%COMPOSE_PROJECT_NAME%-neon-web-1)
+REM   mesh           -> Mesh frontend       (%COMPOSE_PROJECT_NAME%-mesh-web-1)
+REM   admin          -> Admin frontend      (%COMPOSE_PROJECT_NAME%-admin-web-1)
+REM   api|backend    -> Backend API         (%COMPOSE_PROJECT_NAME%-api-1)
+REM   search|searchcore -> searchcore      (athyper-searchcore-1)
 REM ============================================================
 
 REM Derive STACK_DIR (script is at stack\scripts\stack-service\)
@@ -47,14 +49,16 @@ if not defined DOCKER_CONTAINER_DBPOOL_APPS   set "DOCKER_CONTAINER_DBPOOL_APPS=
 if not defined DOCKER_CONTAINER_GATEWAY       set "DOCKER_CONTAINER_GATEWAY=!COMPOSE_PROJECT_NAME!-gateway-1"
 if not defined DOCKER_CONTAINER_REDIS         set "DOCKER_CONTAINER_REDIS=!COMPOSE_PROJECT_NAME!-memorycache-1"
 if not defined DOCKER_CONTAINER_MINIO         set "DOCKER_CONTAINER_MINIO=!COMPOSE_PROJECT_NAME!-objectstorage-1"
-if not defined DOCKER_CONTAINER_MAIL          set "DOCKER_CONTAINER_MAIL=!COMPOSE_PROJECT_NAME!-mailhog-1"
-if not defined DOCKER_CONTAINER_WEB           set "DOCKER_CONTAINER_WEB=!COMPOSE_PROJECT_NAME!-athyper-neon-web-1"
-if not defined DOCKER_CONTAINER_API           set "DOCKER_CONTAINER_API=!COMPOSE_PROJECT_NAME!-athyper-api-1"
-if not defined DOCKER_CONTAINER_SEARCH        set "DOCKER_CONTAINER_SEARCH=!COMPOSE_PROJECT_NAME!-meilisearch-1"
+if not defined DOCKER_CONTAINER_MAIL          set "DOCKER_CONTAINER_MAIL=!COMPOSE_PROJECT_NAME!-mailtrap-1"
+if not defined DOCKER_CONTAINER_WEB           set "DOCKER_CONTAINER_WEB=!COMPOSE_PROJECT_NAME!-neon-web-1"
+if not defined DOCKER_CONTAINER_MESH_WEB      set "DOCKER_CONTAINER_MESH_WEB=!COMPOSE_PROJECT_NAME!-mesh-web-1"
+if not defined DOCKER_CONTAINER_ADMIN_WEB     set "DOCKER_CONTAINER_ADMIN_WEB=!COMPOSE_PROJECT_NAME!-admin-web-1"
+if not defined DOCKER_CONTAINER_API           set "DOCKER_CONTAINER_API=!COMPOSE_PROJECT_NAME!-api-1"
+if not defined DOCKER_CONTAINER_SEARCH        set "DOCKER_CONTAINER_SEARCH=!COMPOSE_PROJECT_NAME!-searchcore-1"
 
 if "%~1"=="" (
   echo Usage: start.bat ^<alias^|name^> [alias^|name ...]
-  echo Aliases: iam  db  dbpool-session  dbpool-apps  gateway  redis  minio  mail  web  api  search
+  echo Aliases: iam  db  dbpool-session  dbpool-apps  gateway  redis  minio  mail  web  neon  mesh  admin  api  search
   pause & exit /b 1
 )
 
@@ -103,13 +107,16 @@ if /I "!A!"=="memorycache"  set "RESULT=!DOCKER_CONTAINER_REDIS!"
 if /I "!A!"=="minio"        set "RESULT=!DOCKER_CONTAINER_MINIO!"
 if /I "!A!"=="storage"      set "RESULT=!DOCKER_CONTAINER_MINIO!"
 if /I "!A!"=="mail"         set "RESULT=!DOCKER_CONTAINER_MAIL!"
-if /I "!A!"=="mailhog"      set "RESULT=!DOCKER_CONTAINER_MAIL!"
+if /I "!A!"=="mailtrap"     set "RESULT=!DOCKER_CONTAINER_MAIL!"
 if /I "!A!"=="web"          set "RESULT=!DOCKER_CONTAINER_WEB!"
 if /I "!A!"=="frontend"     set "RESULT=!DOCKER_CONTAINER_WEB!"
+if /I "!A!"=="neon"         set "RESULT=!DOCKER_CONTAINER_WEB!"
+if /I "!A!"=="mesh"         set "RESULT=!DOCKER_CONTAINER_MESH_WEB!"
+if /I "!A!"=="admin"        set "RESULT=!DOCKER_CONTAINER_ADMIN_WEB!"
 if /I "!A!"=="api"          set "RESULT=!DOCKER_CONTAINER_API!"
 if /I "!A!"=="backend"      set "RESULT=!DOCKER_CONTAINER_API!"
 if /I "!A!"=="search"       set "RESULT=!DOCKER_CONTAINER_SEARCH!"
-if /I "!A!"=="meilisearch"  set "RESULT=!DOCKER_CONTAINER_SEARCH!"
+if /I "!A!"=="searchcore"   set "RESULT=!DOCKER_CONTAINER_SEARCH!"
 if "!RESULT!"=="" set "RESULT=!A!"
 set "%~2=!RESULT!"
 goto :eof

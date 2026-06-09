@@ -1,107 +1,113 @@
 // server/src/kernel/request-context.ts
 //
-// AsyncLocalStorage-based request context for the athyper runtime.
+// AsyncLocalStorage-based request context for the Athyper runtime.
 //
 // Design rules:
-//   - getContext() throws if called outside a request/job context — fail fast.
-//   - tryGetContext() returns undefined safely — for optional enrichment only.
-//   - runWithContext() is for Express middleware: wraps the next() call so the
-//     full downstream async chain inherits the context automatically.
+//   - getContext() throws if called outside a request/job context.
+//   - tryGetContext() returns undefined safely for optional enrichment.
+//   - runWithContext() is for Express middleware: wraps next() so the
+//     downstream async chain inherits the context automatically.
 //   - runWithJobContext() is for BullMQ workers: synthesizes a context from job
-//     payload fields so handlers can call getContext() without triggering
-//     "outside request scope" errors. Required exit criterion for Phase 3.
-//
-// Usage in Express middleware (runtimes/api.ts):
-//   app.use((req, _res, next) => {
-//     const requestId = (req.headers["x-request-id"] as string) ?? crypto.randomUUID();
-//     req.headers["x-request-id"] = requestId;
-//     runWithContext({ requestId }, next);
-//   });
-//
-// Usage in BullMQ job processor:
-//   worker.process("my-queue", async (job) =>
-//     runWithJobContext({ requestId: job.data.requestId }, async () => {
-//       // getContext() works here
-//     })
-//   );
+//     payload fields so handlers can call getContext().
 
 import { AsyncLocalStorage } from "node:async_hooks";
+import { randomUUID } from "node:crypto";
 
-// ─── Context shape ────────────────────────────────────────────────────────────
+export type PlaneKey = "neon" | "mesh" | "admin";
 
 export interface RequestContext {
   /** Unique identifier for this request or job invocation. Always present. */
   requestId: string;
-  /** Keycloak realm for this request — populated by auth middleware. */
+  /** Product plane for this request. Used as a trust boundary, not a backend silo. */
+  planeKey?: PlaneKey;
+  /** Keycloak realm key for this request. */
+  realmKey?: string;
+  /** Legacy alias for realmKey while older callers still read `realm`. */
   realm?: string;
-  /** Authenticated user ID — populated by auth middleware. */
+  /** Authenticated user ID, usually the JWT subject. */
   userId?: string;
-  /** Tenant ID resolved from the token — populated by auth middleware. */
+  /** Application principal UUID after token-to-principal resolution. */
+  principalId?: string;
+  /** Tenant UUID resolved from org/realm or token context. */
   tenantId?: string;
+  /** Tenant/org key from X-Org before it is resolved to tenantId. */
+  orgKey?: string;
+  /** Company code key from X-Org when present as {tenant}--{companyCode}. */
+  companyCodeKey?: string;
 }
 
-// ─── Storage ─────────────────────────────────────────────────────────────────
+export function normalizePlaneKey(value: unknown): PlaneKey | undefined {
+  const key = Array.isArray(value) ? value[0] : value;
+  if (key === "neon" || key === "mesh" || key === "admin") return key;
+  return undefined;
+}
 
-const _store = new AsyncLocalStorage<RequestContext>();
+export function parseOrgHeader(value: unknown): Pick<RequestContext, "orgKey" | "companyCodeKey"> {
+  const header = Array.isArray(value) ? value[0] : value;
+  if (typeof header !== "string" || header.trim().length === 0) return {};
 
-// ─── Accessors ────────────────────────────────────────────────────────────────
+  const [orgKey, companyCodeKey] = header.split("--").map((part) => part.trim());
+  return {
+    ...(orgKey ? { orgKey } : {}),
+    ...(companyCodeKey ? { companyCodeKey } : {}),
+  };
+}
+
+const store = new AsyncLocalStorage<RequestContext>();
 
 /**
- * Returns the current context, or `undefined` when called outside a
- * request/job scope. Prefer `getContext()` where context is always required.
+ * Returns the current context, or undefined when called outside a request/job
+ * scope. Prefer getContext() where context is always required.
  */
 export function tryGetContext(): RequestContext | undefined {
-  return _store.getStore();
+  return store.getStore();
 }
 
 /**
- * Returns the current context.
- * Throws when called outside a request/job context scope.
+ * Returns the current context. Throws when called outside a request/job context.
  */
 export function getContext(): RequestContext {
-  const ctx = _store.getStore();
+  const ctx = store.getStore();
   if (!ctx) {
     throw new Error(
-      "getContext() called outside request scope — use runWithContext() or runWithJobContext()",
+      "getContext() called outside request scope; use runWithContext() or runWithJobContext()",
     );
   }
   return ctx;
 }
 
-// ─── Runners ─────────────────────────────────────────────────────────────────
-
 /**
- * Runs `fn` within the given request context.
+ * Runs fn within the given request context.
  *
- * Pass directly as the Express `next` callback to capture the full async chain:
+ * Pass directly as the Express next callback to capture the full async chain:
  *   runWithContext({ requestId }, next);
- *
- * All downstream middleware and route handlers in the same async continuation
- * will see this context via getContext() / tryGetContext().
  */
 export function runWithContext<T>(
   ctx: RequestContext,
   fn: (...args: unknown[]) => T,
 ): T {
-  return _store.run(ctx, fn);
+  return store.run(ctx, fn);
 }
 
 /**
- * Runs an async handler within a synthesized context built from job payload fields.
- * Generates a fresh `requestId` when the payload does not carry one.
- *
- * Call this at the top of every BullMQ job processor so that domain helpers
- * which use getContext() do not throw "outside request scope" errors.
+ * Runs an async handler within a synthesized context built from job payload
+ * fields. Generates a fresh requestId when the payload does not carry one.
  */
 export async function runWithJobContext<T>(
   payloadCtx: Partial<RequestContext>,
   fn: () => T | Promise<T>,
 ): Promise<T> {
+  const realmKey = payloadCtx.realmKey ?? payloadCtx.realm;
   const ctx: RequestContext = {
-    requestId: payloadCtx.requestId ?? crypto.randomUUID(),
-    realm: payloadCtx.realm,
+    requestId: payloadCtx.requestId ?? randomUUID(),
+    planeKey: payloadCtx.planeKey,
+    realmKey,
+    realm: realmKey,
     userId: payloadCtx.userId,
+    principalId: payloadCtx.principalId,
     tenantId: payloadCtx.tenantId,
+    orgKey: payloadCtx.orgKey,
+    companyCodeKey: payloadCtx.companyCodeKey,
   };
-  return _store.run(ctx, () => Promise.resolve(fn()));
+  return store.run(ctx, () => Promise.resolve(fn()));
 }

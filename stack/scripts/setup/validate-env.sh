@@ -89,6 +89,27 @@ require_var() {
   fi
 }
 
+require_file_path() {
+  local path="$1"
+  local label="$2"
+  if [[ -z "$path" ]]; then
+    echo "  FAIL  $label path is empty"
+    ERRORS=$((ERRORS + 1))
+    return
+  fi
+  if [[ -d "$path" ]]; then
+    echo "  FAIL  $label is a directory, expected a file: $path"
+    echo "        Run stack/scripts/setup/setup-config.sh $ENVIRONMENT --update to repair live config."
+    ERRORS=$((ERRORS + 1))
+    return
+  fi
+  if [[ ! -f "$path" ]]; then
+    echo "  FAIL  $label not found: $path"
+    echo "        Run stack/scripts/setup/setup-config.sh $ENVIRONMENT --update to deploy live config."
+    ERRORS=$((ERRORS + 1))
+  fi
+}
+
 warn_var() {
   local var="$1"
   local msg="$2"
@@ -105,6 +126,21 @@ warn_placeholder() {
   if [[ "$val" =~ ^\$\{.+\}$ ]]; then
     echo "  WARN  $var = $val (placeholder not resolved)"
     WARNINGS=$((WARNINGS + 1))
+  fi
+}
+
+fail_unexpanded_placeholders() {
+  local found=0
+  local key val
+  for key in "${!ENV_MAP[@]}"; do
+    val="${ENV_MAP[$key]:-}"
+    if [[ "$val" =~ \$\{[^}]+\} ]]; then
+      echo "  FAIL  $key = $val (placeholder not resolved - inject from secrets manager)"
+      found=1
+    fi
+  done
+  if [[ "$found" -eq 1 ]]; then
+    ERRORS=$((ERRORS + 1))
   fi
 }
 
@@ -132,13 +168,29 @@ require_var REDIS_URL
 require_var PUBLIC_BASE_URL
 require_var PUBLIC_WEB_URL
 require_var APPS_ATHYPER_WEB_HOST
+require_var APPS_ATHYPER_NEON_HOST
+require_var APPS_ATHYPER_MESH_HOST
+require_var APPS_ATHYPER_ADMIN_HOST
 require_var APPS_ATHYPER_API_HOST
 require_var APPS_ATHYPER_WEB_UPSTREAM_URL
+require_var APPS_ATHYPER_NEON_UPSTREAM_URL
+require_var APPS_ATHYPER_MESH_UPSTREAM_URL
+require_var APPS_ATHYPER_ADMIN_UPSTREAM_URL
 require_var GATEWAY_HOST
 require_var IAM_HOST
 require_var ALERTMANAGER_HOST
 require_var IAM_ISSUER_URL
 require_var ATHYPER_KERNEL_CONFIG_PATH
+
+ATHYPER_CONFIG_VAL="${ENV_MAP[ATHYPER_CONFIG]:-${ENV_MAP[ATHYPER_CONFIG_ROOT]:-}}"
+if [[ -z "$ATHYPER_CONFIG_VAL" ]]; then
+  ATHYPER_CONFIG_VAL="$STACK_DIR/config"
+fi
+echo "  Live config root: $ATHYPER_CONFIG_VAL"
+require_file_path "$ATHYPER_CONFIG_VAL/telemetry/alertmanager/config.yml.tpl" "Alertmanager live template"
+require_file_path "$ATHYPER_CONFIG_VAL/telemetry/metrics/config.yml" "Prometheus live config"
+require_file_path "$ATHYPER_CONFIG_VAL/gateway/dynamic/athyper.workbench.yml" "Gateway workbench live config"
+require_file_path "$ATHYPER_CONFIG_VAL/${ENV_MAP[ATHYPER_KERNEL_CONFIG_PATH]:-}" "Kernel live config"
 
 # ----------------------------
 # 3. Non-local only: secrets that MUST be injected
@@ -155,8 +207,13 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   require_var DBPOOL_SESSION_PASSWORD
   require_var IAM_ADMIN_PASSWORD
   require_var IAM_CLIENT_SECRET
+  require_var ADMIN_WEB_CLIENT_SECRET
   require_var ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET
   require_var NEON_SVC_BFF_CLIENT_SECRET
+  require_var AUTH_DISCOVERY_SHARED_SECRET
+  require_var VAPID_SUBJECT
+  require_var VAPID_PUBLIC_KEY
+  require_var VAPID_PRIVATE_KEY
   require_var MEMORYCACHE_PASSWORD
   require_var REDIS_EXPORTER_PASSWORD
   require_var REDIS_GLITCHTIP_PASSWORD
@@ -184,6 +241,13 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   require_var ALERTMANAGER_FINANCE_EMAIL
   require_var ALERTMANAGER_COMPLIANCE_EMAIL
   require_var ALERTMANAGER_SECURITY_EMAIL
+  require_var NEON_ALLOWED_HOSTS
+  require_var NEON_GATEWAY_ORIGIN
+  require_var MESH_ALLOWED_HOSTS
+  require_var MESH_GATEWAY_ORIGIN
+  require_var ADMIN_ALLOWED_HOSTS
+  require_var ADMIN_GATEWAY_ORIGIN
+  fail_unexpanded_placeholders
 else
   echo "[3/6] Skipping non-local secrets check (ENVIRONMENT=local)"
 fi
@@ -194,7 +258,6 @@ fi
 # config dir so the memorycache container mounts a hash-ready file —
 # no sed/sha256sum at container startup, no substitution race window.
 # ----------------------------
-ATHYPER_CONFIG_VAL="${ENV_MAP[ATHYPER_CONFIG]:-${ENV_MAP[ATHYPER_CONFIG_ROOT]:-}}"
 ACL_TPL="$STACK_DIR/config/memorycache/redis-acl.conf.tpl"
 if [[ -z "$ATHYPER_CONFIG_VAL" ]]; then
   echo "  FAIL  ATHYPER_CONFIG not set — Redis ACL cannot be rendered (memorycache will refuse to start)"
@@ -311,7 +374,7 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   fi
 
   # Detect dev passwords in non-local environments
-  for var in DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET APP_S3_ACCESS_KEY APP_S3_SECRET_KEY BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY TEMPO_S3_ACCESS_KEY TEMPO_S3_SECRET_KEY LOKI_S3_ACCESS_KEY LOKI_S3_SECRET_KEY ALERTMANAGER_SMTP_AUTH_PASSWORD; do
+  for var in DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET ADMIN_WEB_CLIENT_SECRET ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET VAPID_PRIVATE_KEY APP_S3_ACCESS_KEY APP_S3_SECRET_KEY BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY TEMPO_S3_ACCESS_KEY TEMPO_S3_SECRET_KEY LOKI_S3_ACCESS_KEY LOKI_S3_SECRET_KEY ALERTMANAGER_SMTP_AUTH_PASSWORD; do
     val="${ENV_MAP[$var]:-}"
     if [[ "$val" == "athyperadmin" ]]; then
       echo "  FAIL  $var = 'athyperadmin' in $ENVIRONMENT environment (dev password leaked to non-local)"
@@ -323,8 +386,8 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   # non-local environments. That hostname only resolves on the dev operator's
   # host; in staging/production the upstream is an in-network Docker service.
   AM_SMARTHOST="${ENV_MAP[ALERTMANAGER_SMTP_SMARTHOST]:-}"
-  if [[ "$AM_SMARTHOST" == mailhog:* ]]; then
-    echo "  FAIL  ALERTMANAGER_SMTP_SMARTHOST=$AM_SMARTHOST in $ENVIRONMENT (MailHog is local-only)"
+  if [[ "$AM_SMARTHOST" == mailtrap:* ]]; then
+    echo "  FAIL  ALERTMANAGER_SMTP_SMARTHOST=$AM_SMARTHOST in $ENVIRONMENT (mailtrap is local-only)"
     ERRORS=$((ERRORS + 1))
   fi
   AM_REQUIRE_TLS="${ENV_MAP[ALERTMANAGER_SMTP_REQUIRE_TLS]:-}"
@@ -333,15 +396,17 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
     ERRORS=$((ERRORS + 1))
   fi
 
-  UPSTREAM="${ENV_MAP[APPS_ATHYPER_WEB_UPSTREAM_URL]:-}"
-  if [[ "$UPSTREAM" == *"host.docker.internal"* ]]; then
-    echo "  FAIL  APPS_ATHYPER_WEB_UPSTREAM_URL=$UPSTREAM in $ENVIRONMENT (host.docker.internal is dev-only)"
-    ERRORS=$((ERRORS + 1))
-  fi
+  for upstream_var in APPS_ATHYPER_WEB_UPSTREAM_URL APPS_ATHYPER_NEON_UPSTREAM_URL APPS_ATHYPER_MESH_UPSTREAM_URL APPS_ATHYPER_ADMIN_UPSTREAM_URL; do
+    UPSTREAM="${ENV_MAP[$upstream_var]:-}"
+    if [[ "$UPSTREAM" == *"host.docker.internal"* ]]; then
+      echo "  FAIL  $upstream_var=$UPSTREAM in $ENVIRONMENT (host.docker.internal is dev-only)"
+      ERRORS=$((ERRORS + 1))
+    fi
+  done
 
   # P2.4 — RFC 5737 TEST-NET CIDRs are the deploy-blocker fail-safe in the
-  # committed workbench templates. If they survive into the deployed dynamic
-  # file for a non-local environment, /admin and /ops would reject all traffic.
+  # committed plane templates. If they survive into the deployed dynamic
+  # file for a non-local environment, the admin plane rejects all traffic.
   # Refuse to start the stack until the allowlist is replaced with real CIDRs.
   WB_FILE="$STACK_DIR/config/gateway/dynamic/athyper.workbench.yml"
   if [[ -f "$WB_FILE" ]]; then
@@ -392,10 +457,10 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
     ERRORS=$((ERRORS + 1))
   fi
 
-  # I-18 — Healthchecks secret key default rejection.
-  HCK="${ENV_MAP[HEALTHCHECKS_SECRET_KEY]:-}"
+  # I-18 — cronwatch secret key default rejection.
+  HCK="${ENV_MAP[CRONWATCH_SECRET_KEY]:-}"
   if [[ "$HCK" == *"change-me"* || "$HCK" == "athyperadmin"* ]]; then
-    echo "  FAIL  HEALTHCHECKS_SECRET_KEY = local default in $ENVIRONMENT (rotate to a random string)"
+    echo "  FAIL  CRONWATCH_SECRET_KEY = local default in $ENVIRONMENT (rotate to a random string)"
     ERRORS=$((ERRORS + 1))
   fi
 
@@ -456,20 +521,20 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
     require_var LOKI_S3_ENDPOINT
   fi
 
-  # Track B4 — analytics profile (Metabase) governance gate.
+  # Track B4 — analytics profile (analyticsboard) governance gate.
   # The analytics profile cannot come up in staging/production unless
-  # METABASE_GOVERNANCE_APPROVED=approved is set explicitly. That flag
+  # ANALYTICSBOARD_GOVERNANCE_APPROVED=approved is set explicitly. That flag
   # is the contract that the four bullets in
   # stack/compose/analytics/README.md ("Before you enable this profile")
   # have been answered: read replica wired, account provisioning
   # decided, schema/PII exposure scoped, audit posture confirmed.
   STACK_PROFILE_VAL="${ENV_MAP[STACK_PROFILE]:-core}"
   if [[ ",$STACK_PROFILE_VAL," == *",analytics,"* ]]; then
-    GOV="${ENV_MAP[METABASE_GOVERNANCE_APPROVED]:-}"
+    GOV="${ENV_MAP[ANALYTICSBOARD_GOVERNANCE_APPROVED]:-}"
     if [[ "$GOV" != "approved" ]]; then
-      echo "  FAIL  STACK_PROFILE=$STACK_PROFILE_VAL includes 'analytics' but METABASE_GOVERNANCE_APPROVED='$GOV'"
+      echo "  FAIL  STACK_PROFILE=$STACK_PROFILE_VAL includes 'analytics' but ANALYTICSBOARD_GOVERNANCE_APPROVED='$GOV'"
       echo "        Read stack/compose/analytics/README.md, complete the four"
-      echo "        governance bullets, then set METABASE_GOVERNANCE_APPROVED=approved."
+      echo "        governance bullets, then set ANALYTICSBOARD_GOVERNANCE_APPROVED=approved."
       ERRORS=$((ERRORS + 1))
     fi
     # H2 is unsupported beyond the dormant hedge / local exploration.

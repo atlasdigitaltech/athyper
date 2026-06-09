@@ -180,6 +180,7 @@ CREATE TABLE IF NOT EXISTS master.network_provider (
 -- ON CONFLICT DO NOTHING makes this idempotent.
 INSERT INTO master.network_provider (code, name, network_type, is_platform, participant_id_pattern) VALUES
     ('athyper_network', 'Athyper Business Network',        'b2b_portal',          true,  NULL),
+    ('athyper_mesh',    'Athyper Mesh Exchange',           'b2b_portal',          true,  '^BNA-[0-9]{10}$'),
     ('peppol',          'Peppol e-Invoicing Network',      'e_invoicing',         true,  '^\d{4}:.+$'),
     ('ariba',           'SAP Business Network (Ariba)',    'procurement_network', true,  NULL),
     ('tradeshift',      'Tradeshift Network',              'b2b_portal',          true,  NULL),
@@ -193,12 +194,188 @@ ALTER TABLE master.business_partner_network_link
 
 COMMENT ON TABLE master.network_provider IS
     'ARCHETYPE=A;SCOPE=P. Extensible registry of B2B network providers. '
-    'Platform-seeded (is_platform=true): athyper_network, peppol, ariba, tradeshift, custom. '
+    'Platform-seeded (is_platform=true): athyper_network (legacy Neon business-network grouping), athyper_mesh (read-only Mesh BNA exchange shadow), peppol, ariba, tradeshift, custom. '
     'Tenant-added providers: INSERT a new row (is_platform=false). '
     'Replaces hardcoded CHECK constraint on business_partner_network_link.provider_code.';
 
+CREATE OR REPLACE FUNCTION master.fn_guard_mesh_network_provider()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.code = 'athyper_mesh' THEN
+        RAISE EXCEPTION 'athyper_mesh provider is Mesh-owned; mutate via Mesh API';
+    END IF;
 
--- ─── H1: master.customer_block — temporal block history for customers ─────────
+    IF TG_OP = 'UPDATE' AND NEW.code = 'athyper_mesh' THEN
+        RAISE EXCEPTION 'athyper_mesh provider is Mesh-owned; mutate via Mesh API';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_guard_mesh_network_provider ON master.network_provider;
+CREATE TRIGGER trg_guard_mesh_network_provider
+    BEFORE UPDATE OR DELETE ON master.network_provider
+    FOR EACH ROW EXECUTE FUNCTION master.fn_guard_mesh_network_provider();
+
+
+-- Business network instance registry
+-- Business network instance owned by a tenant/platform tenant.
+-- Participants and their buyer/partner roles are normalized into child tables.
+CREATE TABLE IF NOT EXISTS master.business_network (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    owner_tenant_id     uuid        NOT NULL,
+    code                text        NOT NULL,
+    name                text        NOT NULL,
+    network_type        text        NOT NULL,
+    provider_code       text        NOT NULL,
+    external_network_id text,
+
+    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    status              text        NOT NULL DEFAULT 'active',
+    is_active           boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at   timestamptz,
+    status_changed_by   uuid,
+
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT bn_pkey                    PRIMARY KEY (id),
+    CONSTRAINT bn_owner_id_uq             UNIQUE (owner_tenant_id, id),
+    CONSTRAINT bn_owner_code_uq           UNIQUE (owner_tenant_id, code),
+    CONSTRAINT bn_code_nonempty           CHECK (btrim(code) <> ''),
+    CONSTRAINT bn_name_nonempty           CHECK (btrim(name) <> ''),
+    CONSTRAINT bn_network_type_chk        CHECK (network_type IN (
+                                             'buyer_network', 'supplier_network',
+                                             'partner_network', 'platform_network',
+                                             'marketplace', 'custom')),
+    CONSTRAINT bn_provider_code_nonempty  CHECK (btrim(provider_code) <> ''),
+    CONSTRAINT bn_external_network_id_chk CHECK (external_network_id IS NULL OR btrim(external_network_id) <> ''),
+    CONSTRAINT bn_metadata_obj_chk        CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT bn_status_chk              CHECK (status IN ('draft', 'active', 'suspended', 'archived')),
+    CONSTRAINT bn_audit_pair_chk          CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE master.business_network IS
+    'DEPRECATED: legacy Neon-side business-network grouping retained for seed and analytics compatibility only. '
+    'Production document exchange uses master.legal_entity_network_account for local BNA meaning and mesh.network_connection in the Mesh DB for the actual network graph.';
+COMMENT ON COLUMN master.business_network.owner_tenant_id IS
+    'Tenant that owns or operates this business network instance.';
+COMMENT ON COLUMN master.business_network.provider_code IS
+    'FK to master.network_provider(code).';
+COMMENT ON COLUMN master.business_network.external_network_id IS
+    'Provider-side network identifier. Unique per provider when populated.';
+
+
+-- Who participates in a business network. How they participate is held in
+-- master.business_network_membership_role to avoid overloaded "both" values.
+CREATE TABLE IF NOT EXISTS master.business_network_membership (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    network_id                  uuid        NOT NULL,
+    participant_tenant_id       uuid        NOT NULL,
+    participant_legal_entity_id uuid,
+    owner_business_partner_id   uuid,
+    tenant_relationship_id      uuid,
+    network_link_id             uuid,
+
+    status                      text        NOT NULL DEFAULT 'pending',
+    is_active                   boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    effective_from              timestamptz NOT NULL DEFAULT now(),
+    effective_until             timestamptz,
+
+    metadata                    jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status_changed_at           timestamptz,
+    status_changed_by           uuid,
+
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT bnm_pkey                    PRIMARY KEY (id),
+    CONSTRAINT bnm_network_id_uq           UNIQUE (network_id, id),
+    CONSTRAINT bnm_participant_uq          UNIQUE NULLS NOT DISTINCT (
+                                             network_id,
+                                             participant_tenant_id,
+                                             participant_legal_entity_id,
+                                             owner_business_partner_id
+                                           ),
+    CONSTRAINT bnm_status_chk              CHECK (status IN (
+                                             'pending', 'active', 'suspended',
+                                             'expired', 'archived')),
+    CONSTRAINT bnm_effective_range_chk     CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT bnm_metadata_obj_chk        CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT bnm_audit_pair_chk          CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE master.business_network_membership IS
+    'DEPRECATED: legacy participant grouping retained for seed and analytics compatibility only. '
+    'New document-exchange relationships are governed by business_partner_network_link/capability in Neon and mesh.network_connection in Mesh.';
+COMMENT ON COLUMN master.business_network_membership.participant_tenant_id IS
+    'Tenant participating in the network.';
+COMMENT ON COLUMN master.business_network_membership.participant_legal_entity_id IS
+    'Optional participant legal entity within participant_tenant_id.';
+COMMENT ON COLUMN master.business_network_membership.owner_business_partner_id IS
+    'Business partner row in the network owner tenant that represents this participant.';
+COMMENT ON COLUMN master.business_network_membership.tenant_relationship_id IS
+    'Optional generic tenant-to-tenant relationship anchor.';
+COMMENT ON COLUMN master.business_network_membership.network_link_id IS
+    'Optional external provider/account identity for the owner BP on this network.';
+
+
+-- How a participant acts inside a membership. Multiple active roles allow a
+-- tenant such as Kumari LTD to be both buyer and partner without a "both" enum.
+CREATE TABLE IF NOT EXISTS master.business_network_membership_role (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    membership_id       uuid        NOT NULL,
+    role_type           text        NOT NULL,
+    relationship_type   text        NOT NULL,
+    display_label       text        NOT NULL,
+
+    status              text        NOT NULL DEFAULT 'active',
+    is_active           boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    effective_from      timestamptz NOT NULL DEFAULT now(),
+    effective_until     timestamptz,
+
+    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status_changed_at   timestamptz,
+    status_changed_by   uuid,
+
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT bnmrole_pkey                PRIMARY KEY (id),
+    CONSTRAINT bnmrole_membership_id_uq    UNIQUE (membership_id, id),
+    CONSTRAINT bnmrole_role_type_chk       CHECK (role_type IN ('buyer', 'partner')),
+    CONSTRAINT bnmrole_relationship_chk    CHECK (relationship_type IN (
+                                             'supplier', 'customer', 'carrier', 'broker',
+                                             'service_provider', 'buyer')),
+    CONSTRAINT bnmrole_display_label_chk   CHECK (btrim(display_label) <> ''),
+    CONSTRAINT bnmrole_status_chk          CHECK (status IN ('active', 'suspended', 'expired', 'archived')),
+    CONSTRAINT bnmrole_effective_range_chk CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT bnmrole_metadata_obj_chk    CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT bnmrole_audit_pair_chk      CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE master.business_network_membership_role IS
+    'DEPRECATED: legacy membership role rows retained for seed and analytics compatibility only. '
+    'New Mesh exchange authorization should derive from principal_identity_binding and Mesh account membership.';
+COMMENT ON COLUMN master.business_network_membership_role.role_type IS
+    'High-level Mesh role: buyer or partner.';
+COMMENT ON COLUMN master.business_network_membership_role.relationship_type IS
+    'Business relationship role shown in Mesh selectors, such as supplier, carrier, broker, service_provider, buyer.';
+
+
+-- H1: master.customer_block - temporal block history for customers
 -- Mirrors master.supplier_block. Source of truth for customer credit/AR blocks.
 -- is_active is computed: true while lifted_at IS NULL (block still in effect).
 CREATE TABLE IF NOT EXISTS master.customer_block (

@@ -9,14 +9,15 @@ REM Usage:
 REM   seed-db.bat                 # Run all stages (DDL + platform seed + blueprints + tenants)
 REM   seed-db.bat --all           # Same as default
 REM   seed-db.bat --ddl-only      # Stage 1 only - DDL (schemas/tables/indexes/triggers)
-REM   seed-db.bat --system-only   # Stages 1+2 - DDL + 010_platform platform seed
+REM   seed-db.bat --system-only   # Stages 1+2 - DDL + platform seed
 REM   seed-db.bat --no-demo       # Stages 1+2   - DDL + platform seed only
-REM                               #   blueprints/modules (020_universal/ 030_industry/ 040_modules/) and
-REM                               #   tenant data (040_tenants/) are skipped
+REM                               #   blueprints/modules and tenant data are skipped
 REM   seed-db.bat --demo-only     # Stages 1+2+3 - same as default; alias for clarity
+REM   seed-db.bat --no-mesh       # Explicitly exclude Mesh/Mesh-log/Mesh-control DDL and Mesh plane seeds (default)
 REM   seed-db.bat --reset         # DROP all app schemas + tracking tables, then re-seed
-REM                               #   Drops: shared control master document ledger log event
-REM                               #          governance snapshot aggregate schemas, plus
+REM                               #   Drops: shared control master mesh mesh_log mesh_control
+REM                               #          document ledger log event governance snapshot aggregate
+REM                               #          schemas, plus
 REM                               #          public.schema_provisions and public.migrations.
 REM                               #   can combine: --reset --ddl-only  (drop + Stage 1 only)
 REM                               #                --reset --no-demo   (drop + Stages 1+2 only)
@@ -26,10 +27,10 @@ REM   seed-db.bat --force         # Re-run all stages even if checksum unchanged
 REM   seed-db.bat --stage=N       # Low-level: run explicit stage(s) - N is 1, 2, or 3
 REM                               #   e.g. --stage=1 --stage=2 for DDL + platform seed only
 REM   seed-db.bat --industry-pack=pack_transport
-REM                               # Opt in a 030_industry/100_industry_packs file.
+REM                               # Opt in a blueprints/industry/100_industry_packs file.
 REM                               # Numeric prefix is optional; typos fail fast.
 REM   seed-db.bat --tenant-id=UUID  # Set app.seed_tenant_id for the entire Stage 3 session
-REM                               #   Blueprints/modules (020_universal/ 030_industry/ 040_modules/) and tenant
+REM                               #   Blueprints/modules and tenant
 REM                               #   instance files use this UUID to scope their inserts.
 REM                               #   Can also be set via SEED_TENANT_ID env var.
 REM                               #   If omitted, each SQL file uses its own baked-in UUID
@@ -65,14 +66,15 @@ REM                          Sub-stage order: 000_bootstrap -> public -> 00_boot
 REM                          shared/01_tables -> shared/02_pre_constraint + shared/05_functions ->
 REM                          */01_tables -> 02_pre_constraint -> 03_constraints -> 04_indexes ->
 REM                          05_functions -> 06_triggers -> 07_views -> 08_rls -> security/
-REM   Stage 2 - Platform   : server/db/seed/010_platform/
+REM   Stage 2 - Platform   : server/db/seed/platform/
 REM                          Seed order: 000_bootstrap -> 000_lookups ->
 REM                          001_global_reference -> 002_permission_model -> 003_control ->
 REM                          003_master -> 006_system_tenant
-REM   Stage 3 - Blueprint  : server/db/seed/020_universal/  (TIER 1 foundation + TIER 2a COA)
-REM                        : server/db/seed/030_industry/   (TIER 2b industry packs)
-REM                        : server/db/seed/040_modules/    (TIER 3 module packs)
-REM             Tenant     : server/db/tenants/{client}/
+REM   Stage 3 - Blueprint  : server/db/seed/blueprints/universal/  (TIER 1 foundation + TIER 2a COA)
+REM                        : server/db/seed/blueprints/industry/   (TIER 2b industry packs)
+REM                        : server/db/seed/blueprints/modules/    (TIER 3 module packs)
+REM             Tenant     : server/db/seed/tenants/neon/{client}/
+REM           Admin Plane  : server/db/seed/tenants/admin/
 REM                          Per-client order: 000_tenant.sql -> 001_tenant_profile.sql ->
 REM                          100_org_structure -> 200_finance -> 300_governance ->
 REM                          800_subscriptions -> 900_principals -> 950_rbac ->
@@ -214,9 +216,11 @@ REM   --reset [--ddl-only | --no-demo] / --drop-only / --status / --force
 REM   --stage=N  (repeatable, N = 1 | 2 | 3)
 REM   --industry-pack=pack_transport  (repeatable; numeric prefix optional)
 REM   --tenant-id=UUID  (sets app.seed_tenant_id for Stage 3; overrides SEED_TENANT_ID)
+REM   Mesh DDL/seeds are excluded by default. Use transaction\mesh\seed-db.bat for athyper_mesh.
 REM ---------------------------------------------------------------------------
 set "MIGRATE_ARGS=%*"
 if "!MIGRATE_ARGS!"=="" set "MIGRATE_ARGS=--all"
+set "MIGRATE_ARGS=!MIGRATE_ARGS! --no-mesh"
 
 REM ---------------------------------------------------------------------------
 REM Run the provisioner (cd to server/ so node_modules and tsconfig resolve correctly)

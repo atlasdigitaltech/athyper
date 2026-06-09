@@ -1,6 +1,6 @@
 # Tempo OTLP ingest (gRPC 4317 / HTTP 4318). The Node runtime ships traces
 # direct via @opentelemetry/sdk-node → OTLPTraceExporter (see
-# server/src/foundation/monitoring/otel.ts), gated on OTEL_EXPORTER_OTLP_ENDPOINT.
+# server/packages/foundation/monitoring/otel.ts), gated on OTEL_EXPORTER_OTLP_ENDPOINT.
 # Alloy stays log-only for now; if per-pipeline sampling or tail-based filtering
 # is needed later, add an otelcol.receiver.otlp block to alloy.alloy and point
 # runtimes at the logshipper instead.

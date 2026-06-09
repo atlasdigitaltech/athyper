@@ -43,7 +43,7 @@ function CashFlowMovementGraph({
     <section className="mb-3 mt-3 overflow-hidden rounded-lg border bg-card animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b px-3 py-2">
         <div>
-          <div className="text-sm font-semibold">Cash movement</div>
+          <div className="text-sm font-medium">Cash movement</div>
           <div className="text-xs text-muted-foreground">
             Operating, investing, and financing cash movements
           </div>
@@ -67,7 +67,7 @@ function CashFlowMovementGraph({
                     style={{ width: `${width}%` }}
                   />
                 </span>
-                <span className={positive ? "text-right font-semibold tabular-nums text-success" : "text-right font-semibold tabular-nums text-destructive"}>
+                <span className={positive ? "text-right font-medium tabular-nums text-success" : "text-right font-medium tabular-nums text-destructive"}>
                   {fmtCompact(flow.value)}
                 </span>
               </div>
@@ -159,11 +159,11 @@ export function CashFlowView({
           />
           <div className="flex justify-between px-2 py-1 text-xs text-muted-foreground border-t">
             <span>Opening cash balance</span>
-            <span className="font-mono">{fmtFull(data.openingCash)}</span>
+            <span className="tabular-nums">{fmtFull(data.openingCash)}</span>
           </div>
-          <div className="flex justify-between px-2 py-1 text-xs font-semibold border-t-2">
+          <div className="flex justify-between px-2 py-1 text-xs font-medium border-t-2">
             <span>Closing cash balance</span>
-            <span className="font-mono">{fmtFull(data.closingCash)}</span>
+            <span className="tabular-nums">{fmtFull(data.closingCash)}</span>
           </div>
         </div>
       }
@@ -188,7 +188,7 @@ export function CashFlowView({
       {/* Operating Activities */}
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">
+          <span className="text-xs font-medium text-muted-foreground">
             Operating Activities
           </span>
         </div>
@@ -215,7 +215,7 @@ export function CashFlowView({
       {/* Investing Activities */}
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">
+          <span className="text-xs font-medium text-muted-foreground">
             Investing Activities
           </span>
         </div>
@@ -242,7 +242,7 @@ export function CashFlowView({
       {/* Financing Activities */}
       <div>
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">
+          <span className="text-xs font-medium text-muted-foreground">
             Financing Activities
           </span>
         </div>

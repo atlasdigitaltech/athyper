@@ -131,22 +131,22 @@ function TaskRow({
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-medium">{task.taskName}</span>
             {task.isMandatory && (
-              <span className="text-doc-label text-destructive font-medium">required</span>
+              <span className="text-sm font-medium text-destructive font-medium">required</span>
             )}
-            <Badge variant="outline" className="text-doc-label px-1 py-0 capitalize">
+            <Badge variant="outline" className="text-sm font-medium px-1 py-0 capitalize">
               {task.categoryName}
             </Badge>
           </div>
           {task.description && (
-            <p className="mt-0.5 text-doc-support text-muted-foreground line-clamp-1">{task.description}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{task.description}</p>
           )}
-          <div className="mt-1 flex items-center gap-3 text-doc-support text-muted-foreground">
+          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
             {task.dueAt && <span>Due {fmtDate(task.dueAt)}</span>}
             {task.completedAt && <span>Completed {fmtDate(task.completedAt)}</span>}
             {task.assignedRole && <span>{task.assignedRole}</span>}
           </div>
           {task.failureReason && (
-            <p className="mt-1 text-doc-support text-destructive">{task.failureReason}</p>
+            <p className="mt-1 text-xs text-destructive">{task.failureReason}</p>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -154,7 +154,7 @@ function TaskRow({
             <Button
               variant="outline"
               size="sm"
-              className="h-6 px-2 text-doc-support gap-1"
+              className="h-6 px-2 text-xs gap-1"
               onClick={() => setShowRemarks(!showRemarks)}
             >
               <CheckCircle2 className="h-3 w-3" /> Complete
@@ -164,7 +164,7 @@ function TaskRow({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-doc-support gap-1 text-muted-foreground"
+              className="h-6 px-2 text-xs gap-1 text-muted-foreground"
               onClick={() => void handleAction("reopen")}
               disabled={mutation.isPending}
             >
@@ -206,7 +206,7 @@ function TaskRow({
       )}
 
       {mutation.isError && (
-        <p className="pl-6 text-doc-support text-destructive">
+        <p className="pl-6 text-xs text-destructive">
           {mutation.error instanceof Error ? mutation.error.message : "Action failed"}
         </p>
       )}
@@ -251,7 +251,7 @@ function PhasePanel({
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{phase.phaseName}</span>
-            <span className="text-doc-support text-muted-foreground">{done}/{total} tasks</span>
+            <span className="text-xs text-muted-foreground">{done}/{total} tasks</span>
           </div>
           <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
             <div
@@ -285,9 +285,9 @@ function PhasePanel({
       {/* Blockers */}
       {isActive && blockers.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 space-y-0.5">
-          <p className="text-doc-support font-medium text-warning">Sign-off blocked:</p>
+          <p className="text-xs font-medium text-warning">Sign-off blocked:</p>
           {blockers.map((b) => (
-            <p key={b.type} className="text-doc-support text-warning/80">
+            <p key={b.type} className="text-xs text-warning/80">
               • {b.label} ({b.count})
             </p>
           ))}
@@ -319,7 +319,7 @@ function PhasePanel({
             </Button>
           </div>
           {signOff.isError && (
-            <p className="text-doc-support text-destructive">
+            <p className="text-xs text-destructive">
               {signOff.error instanceof Error ? signOff.error.message : "Sign-off failed"}
             </p>
           )}
@@ -357,13 +357,13 @@ function RunSidebar({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-doc-support uppercase tracking-wider text-muted-foreground font-medium">
+        <span className="text-xsr text-muted-foreground font-medium">
           {runs.length} run{runs.length !== 1 ? "s" : ""}
         </span>
         <Button
           variant="outline"
           size="sm"
-          className="h-6 px-2 text-doc-support gap-1"
+          className="h-6 px-2 text-xs gap-1"
           onClick={() => void startRun.mutate()}
           disabled={startRun.isPending}
         >
@@ -387,9 +387,9 @@ function RunSidebar({
                 <div className="text-xs font-medium">
                   FY{run.fiscalYear} P{String(run.periodNumber).padStart(2, "0")} · Run #{run.runNumber}
                 </div>
-                <div className="text-doc-support text-muted-foreground">{run.cycleTypeName}</div>
+                <div className="text-xs text-muted-foreground">{run.cycleTypeName}</div>
               </div>
-              <span className={cn("text-doc-support px-1.5 py-0.5 rounded font-medium shrink-0", RUN_STATUS_COLOR[run.status] ?? "bg-muted")}>
+              <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium shrink-0", RUN_STATUS_COLOR[run.status] ?? "bg-muted")}>
                 {run.status.replace("_", " ")}
               </span>
             </div>
@@ -399,7 +399,7 @@ function RunSidebar({
                 style={{ width: `${ts.completionPct}%` }}
               />
             </div>
-            <div className="flex gap-2 text-doc-support text-muted-foreground">
+            <div className="flex gap-2 text-xs text-muted-foreground">
               <span className="text-success">{ts.completed} done</span>
               {ts.inProgress > 0 && <span className="text-warning">{ts.inProgress} active</span>}
               {ts.blocked > 0  && <span className="text-warning/80">{ts.blocked} blocked</span>}
@@ -407,7 +407,7 @@ function RunSidebar({
               <span className="ml-auto">{ts.completionPct}%</span>
             </div>
             {run.currentPhaseName && (
-              <div className="flex items-center gap-1 text-doc-support text-muted-foreground">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <ChevronRight className="h-3 w-3" />
                 {run.currentPhaseName}
               </div>
@@ -468,7 +468,7 @@ function TaskDetailPanel({
               )}
             >
               {phase.phaseName}
-              <span className="text-doc-support text-muted-foreground">({done}/{total})</span>
+              <span className="text-xs text-muted-foreground">({done}/{total})</span>
             </button>
           );
         })}
@@ -570,10 +570,10 @@ export function CloseCycleWorkbench({ scope, runId: initialRunId, phaseCode: ini
             New Run
           </Button>
           {!canStartRun && (
-            <p className="text-doc-support text-muted-foreground">Select a company and fiscal period first.</p>
+            <p className="text-xs text-muted-foreground">Select a company and fiscal period first.</p>
           )}
           {startError && (
-            <p className="text-doc-support text-destructive">{startError}</p>
+            <p className="text-xs text-destructive">{startError}</p>
           )}
         </div>
       ) : (

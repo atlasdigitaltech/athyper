@@ -1,0 +1,75 @@
+# =======================================================================
+# Stack       : athyper Stack – Search
+# Service     : searchcore — cross-entity full-text search
+#
+# Description :
+#   searchcore backs the Sprint 41 SearchInput and future cross-entity
+#   queries. Indexing is driven by a jobs-search-index BullMQ worker
+#   that subscribes to event.outbox (Track B2.2, not yet wired).
+#
+#   Tenant isolation uses Meilisearch tenant tokens (JWTs) minted per
+#   request BY THE API RUNTIME (backend) from tenantContext, with an
+#   embedded `_tenant_id` filter rule. Tokens are NEVER issued
+#   client-side — doing so would require shipping the parent API key to
+#   the browser and defeat the isolation guarantee. The backend issues a
+#   scoped token per session and returns it to the frontend, which uses
+#   it to query searchcore directly.
+#
+# Notes :
+#   - Persistent volume at $ATHYPER_DATA/searchcore (indexes + settings).
+#   - MEILI_ENV=production removes the bundled mini-dashboard entirely
+#     (the root path returns the JSON status). Set MEILI_ENV=development
+#     to expose the UI — staging does this in the override file.
+#   - Master-key auth is enforced regardless of MEILI_ENV.
+#   - Master key is admin-only; application code uses scoped API keys or
+#     tenant tokens, never the master.
+# =======================================================================
+
+services:
+  searchcore:
+    image: getmeili/meilisearch:v1.13
+    profiles: ["search"]
+    user: "9105:9105"
+    networks: [edge, internal]
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_ENV: ${MEILI_ENV:-production}
+      MEILI_MAX_INDEXING_MEMORY: ${MEILI_MAX_INDEXING_MEMORY:-512MiB}
+      MEILI_HTTP_ADDR: 0.0.0.0:7700
+      MEILI_LOG_LEVEL: ${MEILI_LOG_LEVEL:-INFO}
+    volumes:
+      - ${ATHYPER_DATA}/searchcore:/meili_data
+    deploy:
+      resources:
+        limits:
+          memory: "${SEARCHCORE_MEMORY_LIMIT}"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:7700/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Shutdown: 20s — Meili flushes the LMDB journal on SIGTERM
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.routers.searchcore.rule=Host(`${SEARCHCORE_HOST}`)
+      - traefik.http.routers.searchcore.entrypoints=websecure
+      - traefik.http.routers.searchcore.tls=true
+      - traefik.http.routers.searchcore.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.searchcore.tls.certresolver=${GATEWAY_CERT_RESOLVER}
+      - traefik.http.services.searchcore.loadbalancer.server.port=7700
+      - traefik.http.routers.searchcore.middlewares=${DASHBOARD_AUTH_MW}

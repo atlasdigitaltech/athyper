@@ -31,7 +31,7 @@ export function BalanceCard({ label, value, variant = "neutral", compact = false
       <div className="mb-1 text-xs font-medium text-muted-foreground">
         {label}
       </div>
-      <span className={cn("text-sm font-semibold tabular-nums", textColor)}>
+      <span className={cn("text-sm font-medium tabular-nums", textColor)}>
         {displayValue}
       </span>
     </div>

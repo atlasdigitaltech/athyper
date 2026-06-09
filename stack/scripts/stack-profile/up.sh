@@ -164,7 +164,7 @@ build_compose_file_list
 # ----------------------------
 if [[ "$USE_PROFILE" -eq 1 ]]; then
   # Always include "core" alongside the requested profile so that core-profile
-  # services (memorycache, dbpool-*, clamav …) remain visible for depends_on
+  # services (memorycache, dbpool-*, virusscan …) remain visible for depends_on
   # validation. COMPOSE_PROFILES is used instead of --profile to guarantee both
   # profiles are active regardless of Docker Compose version merge behaviour.
   EFFECTIVE_PROFILES="core,${ACTIVE_PROFILE}"
@@ -176,7 +176,7 @@ else
 fi
 
 echo "Stack is UP (profile=$ACTIVE_PROFILE, env=$ENVIRONMENT)"
-echo "NOTE: --scale gotenberg=N is not forwarded by this script. To run multiple gotenberg replicas, append it directly: docker compose ... up -d --scale gotenberg=N"
+echo "NOTE: --scale docrender=N is not forwarded by this script. To run multiple docrender replicas, append it directly: docker compose ... up -d --scale docrender=N"
 
 # Show status
 if [[ "$USE_PROFILE" -eq 1 ]]; then

@@ -33,11 +33,11 @@ function StampContent({
           {icon}
         </span>
       )}
-      <span className="text-doc-label font-semibold uppercase text-muted-foreground">
+      <span className="text-sm font-medium text-muted-foreground">
         {label}
       </span>
       <span className={cn(
-        "text-doc-subtitle font-semibold",
+        "text-xs font-medium",
         pressed ? "text-foreground" : "text-muted-foreground",
       )}>
         {pressed ? activeText : inactiveText}

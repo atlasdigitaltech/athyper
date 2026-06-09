@@ -93,7 +93,7 @@ export function ArAgingView({ scope, showReportHeader = false }: ArAgingViewProp
           Source: fin.ar_invoice · As at {data.asAt ? new Date(data.asAt).toLocaleDateString() : "period end"}
         </span>
         <div className="flex gap-3 text-xs text-muted-foreground">
-          <span>Total outstanding: <span className="font-semibold text-foreground">{fmtCompact(grandTotal)}</span></span>
+          <span>Total outstanding: <span className="font-medium text-foreground">{fmtCompact(grandTotal)}</span></span>
           <span>{rows.length} customer{rows.length !== 1 ? "s" : ""}</span>
         </div>
       </div>
@@ -126,13 +126,13 @@ export function ArAgingView({ scope, showReportHeader = false }: ArAgingViewProp
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/50 border-b">
-                <th className="py-2 px-3 text-left text-xs font-semibold text-muted-foreground">Customer</th>
+                <th className="py-2 px-3 text-left text-xs font-medium text-muted-foreground">Customer</th>
                 {BUCKETS.map((b) => (
-                  <th key={b.key} className="py-2 px-3 text-right text-xs font-semibold text-muted-foreground">
+                  <th key={b.key} className="py-2 px-3 text-right text-xs font-medium text-muted-foreground">
                     {b.label}
                   </th>
                 ))}
-                <th className="py-2 px-3 text-right text-xs font-semibold text-muted-foreground">Total</th>
+                <th className="py-2 px-3 text-right text-xs font-medium text-muted-foreground">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -141,7 +141,7 @@ export function ArAgingView({ scope, showReportHeader = false }: ArAgingViewProp
                   <td className="py-1.5 px-3">
                     <div className="font-medium">{row.customerName ?? "Unknown customer"}</div>
                     {row.customerId && (
-                      <div className="text-doc-support text-muted-foreground">{row.customerId}</div>
+                      <div className="text-xs text-muted-foreground">{row.customerId}</div>
                     )}
                   </td>
                   {BUCKETS.map((b) => {
@@ -152,7 +152,7 @@ export function ArAgingView({ scope, showReportHeader = false }: ArAgingViewProp
                       </td>
                     );
                   })}
-                  <td className="py-1.5 px-3 text-right font-semibold tabular-nums">
+                  <td className="py-1.5 px-3 text-right font-medium tabular-nums">
                     {fmtFull(row.total)}
                   </td>
                 </tr>
@@ -160,13 +160,13 @@ export function ArAgingView({ scope, showReportHeader = false }: ArAgingViewProp
             </tbody>
             <tfoot>
               <tr className="bg-muted/50 border-t-2">
-                <td className="py-2 px-3 font-semibold">Total</td>
+                <td className="py-2 px-3 font-medium">Total</td>
                 {BUCKETS.map((b) => (
-                  <td key={b.key} className="py-2 px-3 text-right font-semibold tabular-nums">
+                  <td key={b.key} className="py-2 px-3 text-right font-medium tabular-nums">
                     {totals[b.key] ? fmtFull(totals[b.key]!) : "—"}
                   </td>
                 ))}
-                <td className="py-2 px-3 text-right font-semibold tabular-nums">
+                <td className="py-2 px-3 text-right font-medium tabular-nums">
                   {fmtFull(grandTotal)}
                 </td>
               </tr>

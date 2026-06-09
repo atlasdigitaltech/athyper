@@ -212,7 +212,7 @@ GET /readyz  -> 200, dependencies ready
 GET /health  -> 200, alias for readiness
 ```
 
-If checking through the web app, use:
+If checking through the Neon plane app, use:
 
 ```text
 /api/admin/health
@@ -220,7 +220,7 @@ If checking through the web app, use:
 
 That route requires a logged-in session.
 
-Manual UI smoke checklist:
+Manual Neon UI smoke checklist:
 
 - Login succeeds for the demo tenant user.
 - Finance GL page loads: `/finance/gl`.

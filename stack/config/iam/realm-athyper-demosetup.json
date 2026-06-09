@@ -1,0 +1,2430 @@
+{
+  "kind": "athyper.keycloak.realm-demo-setup",
+  "version": 3,
+  "realm": "athyper",
+  "planes": [
+    "neon",
+    "mesh",
+    "admin"
+  ],
+  "sourceRealmFile": "realm-athyper.json",
+  "importableByKeycloak": false,
+  "description": "Unified athyper demo IAM setup. One Keycloak realm serves Neon, Mesh, and Admin through plane-scoped clients. Keycloak organizations use stable ORG-* aliases; business meaning is carried by tenant_code, legal_entity_code, buyer_account_code, and supplier_account_code attributes.",
+  "namingPolicy": {
+    "organizationAlias": "ORG-{10-digit-zero-padded}",
+    "tenantLegalEntityBlock": "ORG-1000000001..ORG-1999999999",
+    "partnerSupplierBlock": "ORG-3000000001..ORG-3999999999",
+    "networkAccountCode": "BNA-{10-digit-zero-padded}",
+    "requiredClientRole": "AUTHORIZED",
+    "realmRoles": [
+      "NEON_USER",
+      "MESH_BUYER_USER",
+      "MESH_PARTNER_USER",
+      "ADMIN_USER"
+    ]
+  },
+  "organizationAttributePolicy": {
+    "tenant_code": "Required when NEON_USER or ADMIN_USER is granted for the organization context.",
+    "legal_entity_code": "Required when NEON_USER or ADMIN_USER is granted for the organization context.",
+    "buyer_account_code": "Required when MESH_BUYER_USER is granted for the organization context.",
+    "supplier_account_code": "Required when MESH_PARTNER_USER is granted for the organization context."
+  },
+  "organizations": [
+    {
+      "alias": "ORG-1000000001",
+      "name": "Athyper Group Holdings",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-ATHQ"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000001"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000001"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa001000-0000-0000-0000-000000000007",
+          "username": "athq.admin"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-000000000004",
+          "username": "athq.agent"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-00000000000c",
+          "username": "athq.cfo"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-000000000005",
+          "username": "athq.manager"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-000000000006",
+          "username": "athq.owner"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-000000000002",
+          "username": "athq.reporter"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-000000000003",
+          "username": "athq.requester"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-000000000001",
+          "username": "athq.viewer"
+        },
+        {
+          "id": "aa000001-0000-0000-0000-000000000001",
+          "username": "kumar"
+        },
+        {
+          "id": "aa000001-0000-0000-0000-000000000004",
+          "username": "laks"
+        },
+        {
+          "id": "ff001000-0000-0000-0000-000000000002",
+          "username": "platform.admin"
+        },
+        {
+          "id": "ff001000-0000-0000-0000-000000000001",
+          "username": "platform.owner"
+        },
+        {
+          "id": "aa000001-0000-0000-0000-000000000002",
+          "username": "raja"
+        },
+        {
+          "id": "aa000001-0000-0000-0000-000000000003",
+          "username": "rama"
+        },
+        {
+          "id": "ff001000-0000-0000-0000-000000000003",
+          "username": "support.agent"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000002",
+      "name": "Athyper Malaysia Real Estate",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-AMRE"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000002"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000002"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa001000-0000-0000-0000-00000000000c",
+          "username": "athq.cfo"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000003",
+      "name": "Athyper Qatar Utilities",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-AQTU"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000003"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000003"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa001000-0000-0000-0000-000000000008",
+          "username": "aqtu.manager"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-00000000000c",
+          "username": "athq.cfo"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-000000000011",
+          "username": "karim.dual"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-00000000000e",
+          "username": "partner.agent"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-00000000000f",
+          "username": "partner.manager"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-000000000010",
+          "username": "partner.owner"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-00000000000d",
+          "username": "partner.viewer"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000004",
+      "name": "Athyper Saudi Construction",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-ASAC"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000004"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000004"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa001000-0000-0000-0000-000000000009",
+          "username": "asac.manager"
+        },
+        {
+          "id": "aa001000-0000-0000-0000-00000000000c",
+          "username": "athq.cfo"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000005",
+      "name": "Athyper Qatar Transport & Storage",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-AQTS"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000005"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000005"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa001000-0000-0000-0000-00000000000c",
+          "username": "athq.cfo"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000006",
+      "name": "Athyper UAE Trading",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-AUET"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000006"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000006"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa001000-0000-0000-0000-00000000000c",
+          "username": "athq.cfo"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000007",
+      "name": "Athyper Saudi Hospitality",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-ASAH"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000007"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000007"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa001000-0000-0000-0000-00000000000c",
+          "username": "athq.cfo"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000008",
+      "name": "Athyper US Information & Communication",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-AUIC"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000008"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000008"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa001000-0000-0000-0000-00000000000a",
+          "username": "auic.manager"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000009",
+      "name": "Athyper Singapore Financial Services",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-ASGF"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000009"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000009"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa001000-0000-0000-0000-00000000000b",
+          "username": "asgf.manager"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000010",
+      "name": "Athyper India Textile & Leather Mfg",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-AITM"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000010"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000010"
+        ]
+      }
+    },
+    {
+      "alias": "ORG-1000000011",
+      "name": "Athyper Canada Food & Beverage Mfg",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-ACFB"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000011"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000011"
+        ]
+      }
+    },
+    {
+      "alias": "ORG-1000000012",
+      "name": "Athyper Germany Pharmaceutical Mfg",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-ADPM"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000012"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000012"
+        ]
+      }
+    },
+    {
+      "alias": "ORG-1000000013",
+      "name": "Athyper Taiwan Electronics Mfg",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-ATEM"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000013"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000013"
+        ]
+      }
+    },
+    {
+      "alias": "ORG-1000000014",
+      "name": "Athyper South Africa Petroleum Extraction",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-ASPE"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000014"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000014"
+        ]
+      }
+    },
+    {
+      "alias": "ORG-1000000015",
+      "name": "Athyper UK Agriculture",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-AUKA"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000015"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000015"
+        ]
+      }
+    },
+    {
+      "alias": "ORG-1000000016",
+      "name": "Athyper Japan Education Services",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-AJED"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000016"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000016"
+        ]
+      }
+    },
+    {
+      "alias": "ORG-1000000017",
+      "name": "Athyper Philippines Hospital Services",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "athyper"
+        ],
+        "legal_entity_code": [
+          "LE-APHS"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000017"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000017"
+        ]
+      }
+    },
+    {
+      "alias": "ORG-1000000018",
+      "name": "Technostat Group",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "technostat"
+        ],
+        "legal_entity_code": [
+          "LE-TKSA"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000018"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000018"
+        ]
+      },
+      "members": [
+        {
+          "id": "cc001000-0000-0000-0000-000000000002",
+          "username": "tksa.admin"
+        },
+        {
+          "id": "cc001000-0000-0000-0000-000000000001",
+          "username": "tksa.owner"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000019",
+      "name": "SSK Saudi",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "technostat"
+        ],
+        "legal_entity_code": [
+          "LE-SSK"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000019"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000019"
+        ]
+      },
+      "members": [
+        {
+          "id": "cc001000-0000-0000-0000-000000000003",
+          "username": "ssk.admin"
+        },
+        {
+          "id": "cc001000-0000-0000-0000-000000000002",
+          "username": "tksa.admin"
+        },
+        {
+          "id": "cc001000-0000-0000-0000-000000000001",
+          "username": "tksa.owner"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000020",
+      "name": "Technostat Egypt",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "technostat"
+        ],
+        "legal_entity_code": [
+          "LE-TEGY"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000020"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000020"
+        ]
+      },
+      "members": [
+        {
+          "id": "cc001000-0000-0000-0000-000000000004",
+          "username": "tegy.admin"
+        },
+        {
+          "id": "cc001000-0000-0000-0000-000000000002",
+          "username": "tksa.admin"
+        },
+        {
+          "id": "cc001000-0000-0000-0000-000000000001",
+          "username": "tksa.owner"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000021",
+      "name": "Satellites for Digital Transformation",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "technostat"
+        ],
+        "legal_entity_code": [
+          "LE-SDTX"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000021"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000021"
+        ]
+      },
+      "members": [
+        {
+          "id": "cc001000-0000-0000-0000-000000000005",
+          "username": "sdtx.admin"
+        },
+        {
+          "id": "cc001000-0000-0000-0000-000000000002",
+          "username": "tksa.admin"
+        },
+        {
+          "id": "cc001000-0000-0000-0000-000000000001",
+          "username": "tksa.owner"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-1000000022",
+      "name": "CirrusAtlantic Ltd",
+      "enabled": true,
+      "attributes": {
+        "tenant_code": [
+          "cirrusatlantic"
+        ],
+        "legal_entity_code": [
+          "CATL"
+        ],
+        "buyer_account_code": [
+          "BNA-1000000022"
+        ],
+        "supplier_account_code": [
+          "BNA-1000000022"
+        ]
+      },
+      "members": [
+        {
+          "id": "aa003000-0000-0000-0000-000000000001",
+          "username": "catl.admin"
+        },
+        {
+          "username": "catl.finance"
+        },
+        {
+          "id": "aa003000-0000-0000-0000-000000000002",
+          "username": "catl.owner"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-3000000001",
+      "name": "Nimubus Solutions",
+      "enabled": true,
+      "attributes": {
+        "supplier_account_code": [
+          "BNA-3000000001"
+        ]
+      },
+      "members": [
+        {
+          "id": "ee001000-0000-0000-0000-000000000013",
+          "username": "nim.agent"
+        },
+        {
+          "id": "ee001000-0000-0000-0000-000000000014",
+          "username": "nim.finance"
+        },
+        {
+          "id": "ee001000-0000-0000-0000-000000000012",
+          "username": "nim.manager"
+        },
+        {
+          "id": "ee001000-0000-0000-0000-000000000011",
+          "username": "nim.owner"
+        }
+      ]
+    },
+    {
+      "alias": "ORG-3000000002",
+      "name": "Stratus Commerce",
+      "enabled": true,
+      "attributes": {
+        "supplier_account_code": [
+          "BNA-3000000002"
+        ]
+      },
+      "members": [
+        {
+          "id": "ee002000-0000-0000-0000-000000000013",
+          "username": "str.agent"
+        },
+        {
+          "id": "ee002000-0000-0000-0000-000000000012",
+          "username": "str.manager"
+        },
+        {
+          "id": "ee002000-0000-0000-0000-000000000011",
+          "username": "str.owner"
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "aa001000-0000-0000-0000-000000000008",
+      "username": "aqtu.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "AQTU",
+      "lastName": "Manager",
+      "email": "aqtu.manager@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000009",
+      "username": "asac.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ASAC",
+      "lastName": "Manager",
+      "email": "asac.manager@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-00000000000b",
+      "username": "asgf.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ASGF",
+      "lastName": "Manager",
+      "email": "asgf.manager@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000007",
+      "username": "athq.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ATHQ",
+      "lastName": "Admin",
+      "email": "athq.admin@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon",
+          "mesh",
+          "admin"
+        ],
+        "principal_type": [
+          "tenant_admin",
+          "buyer_user"
+        ],
+        "tenant_admin_surface": [
+          "neon_tenant_btp"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ],
+        "tenant_code": [
+          "athyper"
+        ],
+        "source_realm": [
+          "athyper"
+        ],
+        "source_username": [
+          "athq.admin"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER",
+        "MESH_BUYER_USER",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ],
+        "mesh-web": [
+          "AUTHORIZED"
+        ],
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000004",
+      "username": "athq.agent",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ATHQ",
+      "lastName": "Agent",
+      "email": "athq.agent@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-00000000000c",
+      "username": "athq.cfo",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ATHQ",
+      "lastName": "CFO",
+      "email": "athq.cfo@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000005",
+      "username": "athq.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ATHQ",
+      "lastName": "Manager",
+      "email": "athq.manager@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000006",
+      "username": "athq.owner",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ATHQ",
+      "lastName": "Owner",
+      "email": "athq.owner@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon",
+          "mesh",
+          "admin"
+        ],
+        "principal_type": [
+          "tenant_user",
+          "buyer_owner",
+          "tenant_admin"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ],
+        "tenant_code": [
+          "athyper"
+        ],
+        "source_realm": [
+          "athyper"
+        ],
+        "source_username": [
+          "athq.owner"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER",
+        "MESH_BUYER_USER",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ],
+        "mesh-web": [
+          "AUTHORIZED"
+        ],
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000002",
+      "username": "athq.reporter",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ATHQ",
+      "lastName": "Reporter",
+      "email": "athq.reporter@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000003",
+      "username": "athq.requester",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ATHQ",
+      "lastName": "Requester",
+      "email": "athq.requester@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000001",
+      "username": "athq.viewer",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "ATHQ",
+      "lastName": "Viewer",
+      "email": "athq.viewer@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-00000000000a",
+      "username": "auic.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "AUIC",
+      "lastName": "Manager",
+      "email": "auic.manager@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa003000-0000-0000-0000-000000000001",
+      "username": "catl.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "CATL",
+      "lastName": "Admin",
+      "email": "admin@cirrusatlantic.com",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon",
+          "mesh",
+          "admin"
+        ],
+        "principal_type": [
+          "tenant_admin",
+          "buyer_user"
+        ],
+        "tenant_admin_surface": [
+          "neon_tenant_btp"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ],
+        "tenant_code": [
+          "cirrusatlantic"
+        ],
+        "source_realm": [
+          "athyper"
+        ],
+        "source_username": [
+          "catl.admin"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER",
+        "MESH_BUYER_USER",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ],
+        "mesh-web": [
+          "AUTHORIZED"
+        ],
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa003000-0000-0000-0000-000000000003",
+      "username": "catl.finance",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "CATL",
+      "lastName": "Finance Lead",
+      "email": "finance@cirrusatlantic.com",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa003000-0000-0000-0000-000000000002",
+      "username": "catl.owner",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "CATL",
+      "lastName": "Owner",
+      "email": "owner@cirrusatlantic.com",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon",
+          "mesh",
+          "admin"
+        ],
+        "principal_type": [
+          "tenant_user",
+          "buyer_owner",
+          "tenant_admin"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ],
+        "tenant_code": [
+          "cirrusatlantic"
+        ],
+        "source_realm": [
+          "athyper"
+        ],
+        "source_username": [
+          "catl.owner"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER",
+        "MESH_BUYER_USER",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ],
+        "mesh-web": [
+          "AUTHORIZED"
+        ],
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000011",
+      "username": "karim.dual",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Karim",
+      "lastName": "Dual",
+      "email": "karim.dual@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa000001-0000-0000-0000-000000000001",
+      "username": "kumar",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Kumar",
+      "lastName": "Rajan",
+      "email": "kumar@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa000001-0000-0000-0000-000000000004",
+      "username": "laks",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Lakshmi",
+      "lastName": "Narayanan",
+      "email": "laks@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ee001000-0000-0000-0000-000000000013",
+      "username": "nim.agent",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Nimubus",
+      "lastName": "Agent",
+      "email": "agent@nimubus.demo",
+      "attributes": {
+        "plane_access": [
+          "mesh"
+        ],
+        "principal_type": [
+          "partner_user"
+        ],
+        "tenant_code": [
+          "nimubus"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "MESH_PARTNER_USER"
+      ],
+      "clientRoles": {
+        "mesh-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ee001000-0000-0000-0000-000000000014",
+      "username": "nim.finance",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Nimubus",
+      "lastName": "Finance",
+      "email": "finance@nimubus.demo",
+      "attributes": {
+        "plane_access": [
+          "mesh"
+        ],
+        "principal_type": [
+          "partner_user"
+        ],
+        "tenant_code": [
+          "nimubus"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "MESH_PARTNER_USER"
+      ],
+      "clientRoles": {
+        "mesh-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ee001000-0000-0000-0000-000000000012",
+      "username": "nim.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Nimubus",
+      "lastName": "Manager",
+      "email": "manager@nimubus.demo",
+      "attributes": {
+        "plane_access": [
+          "mesh"
+        ],
+        "principal_type": [
+          "partner_user"
+        ],
+        "tenant_code": [
+          "nimubus"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "MESH_PARTNER_USER"
+      ],
+      "clientRoles": {
+        "mesh-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ee001000-0000-0000-0000-000000000011",
+      "username": "nim.owner",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Nimubus",
+      "lastName": "Owner",
+      "email": "owner@nimubus.demo",
+      "attributes": {
+        "plane_access": [
+          "mesh"
+        ],
+        "principal_type": [
+          "partner_owner"
+        ],
+        "tenant_code": [
+          "nimubus"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "MESH_PARTNER_USER"
+      ],
+      "clientRoles": {
+        "mesh-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-00000000000e",
+      "username": "partner.agent",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Partner",
+      "lastName": "Agent",
+      "email": "partner.agent@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-00000000000f",
+      "username": "partner.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Partner",
+      "lastName": "Manager",
+      "email": "partner.manager@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-000000000010",
+      "username": "partner.owner",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Partner",
+      "lastName": "Owner",
+      "email": "partner.owner@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa001000-0000-0000-0000-00000000000d",
+      "username": "partner.viewer",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Partner",
+      "lastName": "Viewer",
+      "email": "partner.viewer@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ff001000-0000-0000-0000-000000000002",
+      "username": "platform.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Platform",
+      "lastName": "Admin",
+      "email": "platform.admin@athyper.com",
+      "attributes": {
+        "plane_access": [
+          "admin"
+        ],
+        "principal_type": [
+          "platform_staff"
+        ],
+        "tenant_code": [
+          "athyper"
+        ],
+        "tenant_type": [
+          "platform_owner"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ff001000-0000-0000-0000-000000000001",
+      "username": "platform.owner",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Platform",
+      "lastName": "Owner",
+      "email": "platform.owner@athyper.com",
+      "attributes": {
+        "plane_access": [
+          "admin"
+        ],
+        "principal_type": [
+          "platform_staff"
+        ],
+        "tenant_code": [
+          "athyper"
+        ],
+        "tenant_type": [
+          "platform_owner"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa000001-0000-0000-0000-000000000002",
+      "username": "raja",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Raja",
+      "lastName": "Krishnan",
+      "email": "raja@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "aa000001-0000-0000-0000-000000000003",
+      "username": "rama",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Rama",
+      "lastName": "Subramaniam",
+      "email": "rama@athyper.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon"
+        ],
+        "principal_type": [
+          "tenant_user"
+        ],
+        "tenant_admin_surface": [
+          "none"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "none"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "cc001000-0000-0000-0000-000000000005",
+      "username": "sdtx.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Satellites",
+      "lastName": "DT Admin",
+      "email": "sdtx.admin@technostat.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon",
+          "admin"
+        ],
+        "principal_type": [
+          "tenant_admin"
+        ],
+        "tenant_admin_surface": [
+          "neon_tenant_btp"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ],
+        "source_realm": [
+          "athyper"
+        ],
+        "source_username": [
+          "sdtx.admin"
+        ],
+        "tenant_code": [
+          "technostat"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ],
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "cc001000-0000-0000-0000-000000000003",
+      "username": "ssk.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "SSK",
+      "lastName": "Saudi Admin",
+      "email": "ssk.admin@technostat.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon",
+          "admin"
+        ],
+        "principal_type": [
+          "tenant_admin"
+        ],
+        "tenant_admin_surface": [
+          "neon_tenant_btp"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ],
+        "source_realm": [
+          "athyper"
+        ],
+        "source_username": [
+          "ssk.admin"
+        ],
+        "tenant_code": [
+          "technostat"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ],
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ee002000-0000-0000-0000-000000000013",
+      "username": "str.agent",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Stratus",
+      "lastName": "Agent",
+      "email": "agent@stratus.demo",
+      "attributes": {
+        "plane_access": [
+          "mesh"
+        ],
+        "principal_type": [
+          "partner_user"
+        ],
+        "tenant_code": [
+          "stratus"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "MESH_PARTNER_USER"
+      ],
+      "clientRoles": {
+        "mesh-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ee002000-0000-0000-0000-000000000012",
+      "username": "str.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Stratus",
+      "lastName": "Manager",
+      "email": "manager@stratus.demo",
+      "attributes": {
+        "plane_access": [
+          "mesh"
+        ],
+        "principal_type": [
+          "partner_user"
+        ],
+        "tenant_code": [
+          "stratus"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "MESH_PARTNER_USER"
+      ],
+      "clientRoles": {
+        "mesh-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ee002000-0000-0000-0000-000000000011",
+      "username": "str.owner",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Stratus",
+      "lastName": "Owner",
+      "email": "owner@stratus.demo",
+      "attributes": {
+        "plane_access": [
+          "mesh"
+        ],
+        "principal_type": [
+          "partner_owner"
+        ],
+        "tenant_code": [
+          "stratus"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "MESH_PARTNER_USER"
+      ],
+      "clientRoles": {
+        "mesh-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "ff001000-0000-0000-0000-000000000003",
+      "username": "support.agent",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Support",
+      "lastName": "Agent",
+      "email": "support.agent@athyper.com",
+      "attributes": {
+        "plane_access": [
+          "admin"
+        ],
+        "principal_type": [
+          "platform_staff"
+        ],
+        "tenant_code": [
+          "athyper"
+        ],
+        "tenant_type": [
+          "platform_owner"
+        ],
+        "realm_key": [
+          "athyper"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "cc001000-0000-0000-0000-000000000004",
+      "username": "tegy.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Technostat",
+      "lastName": "Egypt Admin",
+      "email": "tegy.admin@technostat.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon",
+          "admin"
+        ],
+        "principal_type": [
+          "tenant_admin"
+        ],
+        "tenant_admin_surface": [
+          "neon_tenant_btp"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ],
+        "source_realm": [
+          "athyper"
+        ],
+        "source_username": [
+          "tegy.admin"
+        ],
+        "tenant_code": [
+          "technostat"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ],
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "cc001000-0000-0000-0000-000000000002",
+      "username": "tksa.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Technostat",
+      "lastName": "Group Admin",
+      "email": "tksa.admin@technostat.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon",
+          "mesh",
+          "admin"
+        ],
+        "principal_type": [
+          "tenant_admin",
+          "buyer_user"
+        ],
+        "tenant_admin_surface": [
+          "neon_tenant_btp"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ],
+        "tenant_code": [
+          "technostat"
+        ],
+        "source_realm": [
+          "athyper"
+        ],
+        "source_username": [
+          "tksa.admin"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER",
+        "MESH_BUYER_USER",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ],
+        "mesh-web": [
+          "AUTHORIZED"
+        ],
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
+      "id": "cc001000-0000-0000-0000-000000000001",
+      "username": "tksa.owner",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Technostat",
+      "lastName": "Group Owner",
+      "email": "tksa.owner@technostat.demo",
+      "attributes": {
+        "realm_key": [
+          "athyper"
+        ],
+        "plane_access": [
+          "neon",
+          "mesh",
+          "admin"
+        ],
+        "principal_type": [
+          "tenant_admin",
+          "buyer_owner"
+        ],
+        "tenant_admin_surface": [
+          "neon_tenant_btp"
+        ],
+        "admin_plane_access": [
+          "false"
+        ],
+        "mesh_access_model": [
+          "separate_mesh_principal_required"
+        ],
+        "partner_access": [
+          "mesh_eligible"
+        ],
+        "tenant_code": [
+          "technostat"
+        ],
+        "source_realm": [
+          "athyper"
+        ],
+        "source_username": [
+          "tksa.owner"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER",
+        "MESH_BUYER_USER",
+        "ADMIN_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ],
+        "mesh-web": [
+          "AUTHORIZED"
+        ],
+        "admin-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    }
+  ]
+}

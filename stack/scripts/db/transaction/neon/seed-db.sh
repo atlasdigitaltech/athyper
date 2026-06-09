@@ -9,10 +9,9 @@
 #   ./seed-db.sh                 # Run all phases (DDL + platform seed + blueprints + tenants)
 #   ./seed-db.sh --all           # Same as default
 #   ./seed-db.sh --ddl-only      # Phase 1 only — DDL (schemas/tables/indexes/triggers)
-#   ./seed-db.sh --system-only   # Phases 1+2 — DDL + 010_platform platform seed
+#   ./seed-db.sh --system-only   # Phases 1+2 — DDL + platform seed
 #   ./seed-db.sh --no-demo       # Phase 1+2    — DDL + platform seed only
-#                                #   blueprints (020_universal/ 030_industry/) and
-#                                #   tenant data (040_tenants/) are skipped
+#                                #   blueprints and tenant data are skipped
 #   ./seed-db.sh --demo-only     # Phase 1+2+3  — same as default; alias for clarity
 #   ./seed-db.sh --reset         # DROP all app schemas + tracking tables, then re-seed
 #                                #   can combine: --reset --ddl-only  (drop + DDL only)
@@ -21,9 +20,10 @@
 #   ./seed-db.sh --status        # Read-only report — shows OK / PENDING / CHANGED per file
 #   ./seed-db.sh --force         # Re-run all phases even if checksum unchanged
 #   ./seed-db.sh --phase=N       # Low-level: run explicit phase(s) — N is 1, 2, or 3
+#   Mesh DDL/seeds are excluded by default. Use transaction/mesh/seed-db.sh for athyper_mesh.
 #                                #   e.g. --phase=1 --phase=2 for DDL + platform seed only
 #   ./seed-db.sh --industry-pack=pack_transport
-#                                # Opt in a 030_industry/100_industry_packs file.
+#                                # Opt in a blueprints/industry/100_industry_packs file.
 #                                # Numeric prefix is optional; typos fail fast.
 #   ./seed-db.sh --tenant-id=UUID  # Set app.seed_tenant_id for the entire Phase 3 session
 #   ./seed-db.sh --docker        # Run the provisioner inside a Docker container on the
@@ -36,7 +36,7 @@
 #                                #     --docker --ddl-only
 #   ./seed-db.sh --docker-network=NAME  # Override Docker network (default: athyper-internal)
 #   ./seed-db.sh --docker-image=IMAGE   # Override Node image  (default: node:20-bookworm)
-#                                #   Blueprints (020_universal/ 030_industry/) and tenant
+#                                #   Blueprints and tenant
 #                                #   instance files use this UUID to scope their inserts.
 #                                #   Can also be set via SEED_TENANT_ID env var.
 #                                #   If omitted, each SQL file uses its own baked-in UUID
@@ -68,10 +68,12 @@
 #
 # Phase layout (provision.ts):
 #   Phase 1 — DDL        : all dirs under server/db/ddl/
-#   Phase 2 — Platform   : server/db/seed/010_platform/
-#   Phase 3 — Blueprint  : server/db/seed/020_universal/  (TIER 1 foundation + TIER 2a COA)
-#                        : server/db/seed/030_industry/   (TIER 2b industry packs + TIER 3 modules)
-#             Tenant     : server/db/tenants/{client}/
+#   Phase 2 — Platform   : server/db/seed/platform/
+#   Phase 3 — Blueprint  : server/db/seed/blueprints/universal/  (TIER 1 foundation + TIER 2a COA)
+#                        : server/db/seed/blueprints/industry/   (TIER 2b industry packs)
+#                        : server/db/seed/blueprints/modules/    (TIER 3 module packs)
+#             Tenant     : server/db/seed/tenants/neon/{client}/
+#           Admin Plane  : server/db/seed/tenants/admin/
 #
 # Requires: Node.js with tsx available (npx tsx)
 #           DATABASE_ADMIN_URL must be a DIRECT Postgres connection — not PgBouncer.
@@ -251,7 +253,7 @@ fi
 #   --industry-pack=pack_transport  (repeatable; numeric prefix optional)
 #   --tenant-id=UUID  (sets app.seed_tenant_id for Phase 3; overrides SEED_TENANT_ID)
 # ---------------------------------------------------------------------------
-MIGRATE_ARGS="${*:---all}"
+MIGRATE_ARGS="${*:---all} --no-mesh"
 
 # ---------------------------------------------------------------------------
 # Run the provisioner.

@@ -10,7 +10,7 @@
 # =======================================================================
 
 services:
-  memorycache_exporter:
+  memorycache-exporter:
     image: oliver006/redis_exporter:v1.82.0-alpine
     profiles: ["core", "memorycache"]
     deploy:

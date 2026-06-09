@@ -63,7 +63,7 @@ export function MappingWorkbenchView({ charts, isLoadingCharts = false }: Mappin
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-doc-support text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {isLoadingCharts ? "Loading charts..." : "Source: master.coa_account_mapping · Effective-dated, versioned"}
         </span>
         <Button size="sm" className="h-7 gap-1 text-xs">
@@ -75,7 +75,7 @@ export function MappingWorkbenchView({ charts, isLoadingCharts = false }: Mappin
       {/* Source → Target selector */}
       <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border">
         <div className="flex-1">
-          <div className="text-doc-label text-muted-foreground uppercase mb-0.5">Source chart</div>
+          <div className="text-sm font-medium text-muted-foreground mb-0.5">Source chart</div>
           <Select value={source} onValueChange={setSource}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue />
@@ -91,8 +91,8 @@ export function MappingWorkbenchView({ charts, isLoadingCharts = false }: Mappin
         </div>
         <ArrowRight size={18} className="text-muted-foreground mt-3 shrink-0" />
         <div className="flex-1">
-          <div className="text-doc-label text-muted-foreground uppercase mb-0.5">Target (group)</div>
-          <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-xs font-mono">
+          <div className="text-sm font-medium text-muted-foreground mb-0.5">Target (group)</div>
+          <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-xs tabular-nums">
             COA-IFRS-GROUP
           </div>
         </div>
@@ -105,7 +105,7 @@ export function MappingWorkbenchView({ charts, isLoadingCharts = false }: Mappin
             key={t}
             variant={typeFilter === t ? "primary" : "outline"}
             size="sm"
-            className="h-7 text-doc-support px-2.5"
+            className="h-7 text-xs px-2.5"
             onClick={() => setTypeFilter(t)}
           >
             {t === "all" ? "All" : t}
@@ -114,13 +114,13 @@ export function MappingWorkbenchView({ charts, isLoadingCharts = false }: Mappin
         <Button
           variant={showExpired ? "primary" : "outline"}
           size="sm"
-          className="h-7 text-doc-support px-2.5"
+          className="h-7 text-xs px-2.5"
           onClick={() => setShowExpired(!showExpired)}
         >
           Show expired
         </Button>
         <span className="flex-1" />
-        <span className="text-doc-support text-muted-foreground">{filtered.length} mappings</span>
+        <span className="text-xs text-muted-foreground">{filtered.length} mappings</span>
       </div>
 
       {/* Split validation warnings */}
@@ -132,14 +132,14 @@ export function MappingWorkbenchView({ charts, isLoadingCharts = false }: Mappin
             className="flex items-center gap-2 px-3 py-2 bg-warning/10 rounded-lg border border-warning/20 text-xs text-warning"
           >
             <AlertTriangle size={13} />
-            <span className="font-mono font-medium">{account}</span>: split allocations total{" "}
+            <span className="tabular-nums font-medium">{account}</span>: split allocations total{" "}
             {total}% — must be 100%
           </div>
         ))}
 
       {/* Mapping table */}
       <div className="rounded-xl border overflow-hidden">
-        <table className="w-full text-doc-support">
+        <table className="w-full text-xs">
           <thead>
             <tr className="bg-muted/50 border-b">
               <th className="py-2 px-2 text-left font-medium text-muted-foreground">Source account</th>
@@ -164,25 +164,25 @@ export function MappingWorkbenchView({ charts, isLoadingCharts = false }: Mappin
                   m.status === "expired" && "opacity-50",
                 )}
               >
-                <td className="py-1.5 px-2 font-mono">{m.sourceAccount}</td>
+                <td className="py-1.5 px-2 tabular-nums">{m.sourceAccount}</td>
                 <td className="py-1.5 px-2 text-muted-foreground truncate max-w-[140px]">{m.sourceName}</td>
                 <td className="py-1.5 px-2 text-center">
-                  <Badge variant="outline" className={cn("text-doc-support py-0", TYPE_STYLE[m.mappingType])}>
+                  <Badge variant="outline" className={cn("text-xs py-0", TYPE_STYLE[m.mappingType])}>
                     {m.mappingType}
                   </Badge>
                 </td>
-                <td className="py-1.5 px-2 text-center font-mono">{m.allocationPct ? `${m.allocationPct}%` : "—"}</td>
+                <td className="py-1.5 px-2 text-center tabular-nums">{m.allocationPct ? `${m.allocationPct}%` : "—"}</td>
                 <td className="py-1.5 px-2 text-center">
                   <ArrowRight size={11} className="text-muted-foreground mx-auto" />
                 </td>
-                <td className="py-1.5 px-2 font-mono">{m.targetAccount}</td>
+                <td className="py-1.5 px-2 tabular-nums">{m.targetAccount}</td>
                 <td className="py-1.5 px-2 text-muted-foreground">{m.targetName}</td>
-                <td className="py-1.5 px-2 text-muted-foreground font-mono text-doc-label">
+                <td className="py-1.5 px-2 text-muted-foreground tabular-nums text-sm font-medium">
                   {m.effectiveFrom}{m.effectiveTo ? ` → ${m.effectiveTo}` : ""}
                 </td>
                 <td className="py-1.5 px-2 text-center text-muted-foreground">v{m.version}</td>
                 <td className="py-1.5 px-2">
-                  <Badge variant="outline" className={cn("text-doc-support py-0", STATUS_STYLE[m.status])}>
+                  <Badge variant="outline" className={cn("text-xs py-0", STATUS_STYLE[m.status])}>
                     {m.status}
                   </Badge>
                 </td>
@@ -194,7 +194,7 @@ export function MappingWorkbenchView({ charts, isLoadingCharts = false }: Mappin
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-doc-support text-muted-foreground">
+      <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-success" />direct: 1:1</span>
         <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-info" />merge: N:1 rollup</span>
         <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-warning" />split: 1:N with % (must sum to 100%)</span>

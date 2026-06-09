@@ -1,55 +1,38 @@
 # =======================================================================
-# Stack       : athyper Stack - Workbench Routes (Phase 1)
-# Environment : LOCAL (default: neon.athyper.local, via APPS_ATHYPER_WEB_HOST env var)
-# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Stack       : athyper Stack - Plane Routes
+# Environment : LOCAL
 #
-# Workbench model:
-#   /user/*   - Standard user workbench (role-gated by Next.js middleware)
-#   /admin/*  - Admin workbench (IP-restricted + role-gated)
-#   /ops/*    - Operations workbench (IP-restricted + role-gated)
-#   /         - Default catch-all, routes to user context
+# Local routing model:
+#   neon.athyper.local  -> host dev server for apps/neon
+#   mesh.athyper.local  -> host dev server for apps/mesh
+#   admin.athyper.local -> host dev server for apps/admin
 #
-# Per-environment variants:
-#   Local (this file):  stack/config/gateway/dynamic/athyper.workbench.yml
-#   Staging:            stack/config/gateway/environments/neon-workbench-routes.staging.yml
-#   Production:         stack/config/gateway/environments/neon-workbench-routes.prod.yml
-#
-# Traefik loads ALL .yml files from this directory. Only one workbench
-# file should exist here at a time. Staging/production variants live in
-# environments/ and are copied into dynamic/ during deployment.
+# Staging/production replace this file with the templates in:
+#   stack/config/gateway/environments/neon-workbench-routes.staging.yml
+#   stack/config/gateway/environments/neon-workbench-routes.prod.yml
 # =======================================================================
 
 http:
   middlewares:
-    workbench-strip-user:
-      stripPrefix:
-        prefixes: ["/user"]
-
-    workbench-strip-admin:
-      stripPrefix:
-        prefixes: ["/admin"]
-
-    workbench-strip-ops:
-      stripPrefix:
-        prefixes: ["/ops"]
-
-    workbench-headers-user:
+    plane-neon-headers:
       headers:
         customRequestHeaders:
-          X-Workbench-Context: "user"
+          X-Athyper-Plane: "neon"
+          X-Athyper-Trust-Level: "tenant"
 
-    workbench-headers-admin:
+    plane-mesh-headers:
       headers:
         customRequestHeaders:
-          X-Workbench-Context: "admin"
+          X-Athyper-Plane: "mesh"
+          X-Athyper-Trust-Level: "partner"
 
-    workbench-headers-ops:
+    plane-admin-headers:
       headers:
         customRequestHeaders:
-          X-Workbench-Context: "ops"
+          X-Athyper-Plane: "admin"
+          X-Athyper-Trust-Level: "internal"
 
-    # Local: all private ranges - no VPN in dev
-    workbench-ip-restrict:
+    admin-ip-restrict:
       ipAllowList:
         sourceRange:
           - "127.0.0.1/32"
@@ -57,27 +40,18 @@ http:
           - "172.16.0.0/12"
           - "192.168.0.0/16"
 
-    # Browser auth is enforced by the Next.js BFF/session layer. Traefik
-    # forward-auth is intentionally not attached to these routes because browser
-    # sessions are cookie-based while the runtime verifier is bearer-token-only.
-
-    # ── Production-grade reliability + security ────────────────────────────────
-
-    # Steady-state rate limit — protects backend from spike/scrape load.
     athyper-ratelimit:
       rateLimit:
         average: 100
         burst: 200
         period: 1s
 
-    # Concurrency cap — prevents a single slow upstream from starving all goroutines.
     athyper-inflight:
       inFlightReq:
         amount: 200
         sourceCriterion:
           requestHeaderName: "X-Forwarded-For"
 
-    # Circuit breaker — fail-fast when the backend is consistently unhealthy.
     athyper-circuit-breaker:
       circuitBreaker:
         expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.30 || NetworkErrorRatio() > 0.10"
@@ -85,15 +59,6 @@ http:
         fallbackDuration: 10s
         recoveryDuration: 10s
 
-    # Do not attach retry to the workbench routers below: they carry both page
-    # loads and mutating BFF/API calls, so automatic retries can duplicate writes.
-    # Keep this middleware only for future method-scoped idempotent routers.
-    athyper-retry:
-      retry:
-        attempts: 2
-        initialInterval: 50ms
-
-    # Security response headers — defense against clickjacking, MIME sniffing, etc.
     athyper-security-headers:
       headers:
         frameDeny: true
@@ -103,80 +68,139 @@ http:
           Permissions-Policy: "camera=(), microphone=(), geolocation=()"
           X-XSS-Protection: "0"
 
-    # Brotli/gzip compression for responses ≥ 1 KB.
     athyper-compress:
       compress:
         minResponseBodyBytes: 1024
         encodings: ["br", "gzip"]
 
   routers:
-    neon-workbench-admin:
-      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/admin`)"
+    neon-plane-local-api:
+      rule: "Host(`{{ env "APPS_ATHYPER_NEON_HOST" }}`) && PathPrefix(`/api`)"
       entryPoints: [websecure]
-      service: athyper-neon-web
+      service: neon-web
       priority: 110
       tls: {}
       middlewares:
         - athyper-ratelimit
         - athyper-inflight
-        - workbench-ip-restrict
-        - workbench-strip-admin
-        - workbench-headers-admin
+        - plane-neon-headers
         - athyper-security-headers
         - athyper-compress
         - athyper-circuit-breaker
 
-    neon-workbench-ops:
-      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/ops`)"
+    neon-plane-local:
+      rule: "Host(`{{ env "APPS_ATHYPER_NEON_HOST" }}`)"
       entryPoints: [websecure]
-      service: athyper-neon-web
+      service: neon-web-failover
+      priority: 10
+      tls: {}
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - plane-neon-headers
+        - athyper-security-headers
+        - athyper-compress
+
+    mesh-plane-local-api:
+      rule: "Host(`{{ env "APPS_ATHYPER_MESH_HOST" }}`) && PathPrefix(`/api`)"
+      entryPoints: [websecure]
+      service: mesh-web
       priority: 110
       tls: {}
       middlewares:
         - athyper-ratelimit
         - athyper-inflight
-        - workbench-ip-restrict
-        - workbench-strip-ops
-        - workbench-headers-ops
+        - plane-mesh-headers
         - athyper-security-headers
         - athyper-compress
         - athyper-circuit-breaker
 
-    neon-workbench-user:
-      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/user`)"
+    mesh-plane-local:
+      rule: "Host(`{{ env "APPS_ATHYPER_MESH_HOST" }}`)"
       entryPoints: [websecure]
-      service: athyper-neon-web
-      priority: 100
+      service: mesh-web-failover
+      priority: 10
       tls: {}
       middlewares:
         - athyper-ratelimit
         - athyper-inflight
-        - workbench-strip-user
-        - workbench-headers-user
+        - plane-mesh-headers
+        - athyper-security-headers
+        - athyper-compress
+
+    admin-plane-local-api:
+      rule: "Host(`{{ env "APPS_ATHYPER_ADMIN_HOST" }}`) && PathPrefix(`/api`)"
+      entryPoints: [websecure]
+      service: admin-web
+      priority: 120
+      tls: {}
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - admin-ip-restrict
+        - plane-admin-headers
         - athyper-security-headers
         - athyper-compress
         - athyper-circuit-breaker
 
-    neon-default:
-      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`)"
+    admin-plane-local:
+      rule: "Host(`{{ env "APPS_ATHYPER_ADMIN_HOST" }}`)"
       entryPoints: [websecure]
-      service: athyper-neon-web
-      priority: 1
+      service: admin-web-failover
+      priority: 20
       tls: {}
       middlewares:
         - athyper-ratelimit
         - athyper-inflight
-        - workbench-headers-user
+        - admin-ip-restrict
+        - plane-admin-headers
         - athyper-security-headers
         - athyper-compress
-        - athyper-circuit-breaker
 
   services:
-    athyper-neon-web:
+    neon-web-failover:
+      failover:
+        service: neon-web
+        fallback: athyper-outage-page
+
+    mesh-web-failover:
+      failover:
+        service: mesh-web
+        fallback: athyper-outage-page
+
+    admin-web-failover:
+      failover:
+        service: admin-web
+        fallback: athyper-outage-page
+
+    athyper-outage-page:
       loadBalancer:
         servers:
-          # Upstream is env-driven so one template serves all environments.
-          # Local default (set in stack/env/.env.example): http://host.docker.internal:3000
-          # The gateway container has extra_hosts host.docker.internal:host-gateway so
-          # this resolves on Linux Docker 20.10+ as well as Docker Desktop.
-          - url: "{{ env "APPS_ATHYPER_WEB_UPSTREAM_URL" }}"
+          - url: "http://gateway-outage:8080"
+
+    neon-web:
+      loadBalancer:
+        healthCheck:
+          path: /livez
+          interval: 15s
+          timeout: 5s
+        servers:
+          - url: "{{ env "APPS_ATHYPER_NEON_UPSTREAM_URL" }}"
+
+    mesh-web:
+      loadBalancer:
+        healthCheck:
+          path: /livez
+          interval: 15s
+          timeout: 5s
+        servers:
+          - url: "{{ env "APPS_ATHYPER_MESH_UPSTREAM_URL" }}"
+
+    admin-web:
+      loadBalancer:
+        healthCheck:
+          path: /livez
+          interval: 15s
+          timeout: 5s
+        servers:
+          - url: "{{ env "APPS_ATHYPER_ADMIN_UPSTREAM_URL" }}"

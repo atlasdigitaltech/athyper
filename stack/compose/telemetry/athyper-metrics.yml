@@ -30,7 +30,7 @@ services:
     depends_on:
       alertmanager:
         condition: service_healthy
-      memorycache_exporter:
+      memorycache-exporter:
         condition: service_started
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]

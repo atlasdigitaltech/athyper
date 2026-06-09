@@ -41,8 +41,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { Kysely } from "kysely";
 import pg from "pg";
 
-import { TenantStampDialect } from "../framework/adapters/db/src/kysely/tenant-stamp-driver.js";
-import { createPostgresDialect } from "../framework/adapters/db/src/kysely/dialect.js";
+import { TenantStampDialect } from "../packages/adapters/db/src/kysely/tenant-stamp-driver.js";
+import { createPostgresDialect } from "../packages/adapters/db/src/kysely/dialect.js";
 
 const { Pool } = pg;
 

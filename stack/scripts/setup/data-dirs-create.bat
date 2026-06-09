@@ -81,10 +81,10 @@ mkdir "!ATHYPER_SECRETS_ROOT!\gateway\certs"  >nul 2>&1
 
 echo Creating data directory structure...
 mkdir "!ATHYPER_DATA!\db"                      >nul 2>&1
-mkdir "!ATHYPER_DATA!\meilisearch"             >nul 2>&1
+mkdir "!ATHYPER_DATA!\searchcore"              >nul 2>&1
 mkdir "!ATHYPER_DATA!\memorycache"             >nul 2>&1
 mkdir "!ATHYPER_DATA!\memorycache-jobs"        >nul 2>&1
-mkdir "!ATHYPER_DATA!\metabase"                >nul 2>&1
+mkdir "!ATHYPER_DATA!\analyticsboard"          >nul 2>&1
 mkdir "!ATHYPER_DATA!\objectstorage"           >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry"               >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\alertmanager"  >nul 2>&1
@@ -92,22 +92,22 @@ mkdir "!ATHYPER_DATA!\telemetry\logging"       >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\metrics"       >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\observability" >nul 2>&1
 mkdir "!ATHYPER_DATA!\telemetry\tracing"       >nul 2>&1
-mkdir "!ATHYPER_DATA!\uptime-kuma"             >nul 2>&1
+mkdir "!ATHYPER_DATA!\statuswatch"             >nul 2>&1
 
 echo.
 echo Done:
 echo   !ATHYPER_SECRETS_ROOT!\gateway\certs
 echo   !ATHYPER_DATA!\db
-echo   !ATHYPER_DATA!\meilisearch
+echo   !ATHYPER_DATA!\searchcore
 echo   !ATHYPER_DATA!\memorycache
 echo   !ATHYPER_DATA!\memorycache-jobs
-echo   !ATHYPER_DATA!\metabase
+echo   !ATHYPER_DATA!\analyticsboard
 echo   !ATHYPER_DATA!\objectstorage
 echo   !ATHYPER_DATA!\telemetry\alertmanager
 echo   !ATHYPER_DATA!\telemetry\logging
 echo   !ATHYPER_DATA!\telemetry\metrics
 echo   !ATHYPER_DATA!\telemetry\observability
 echo   !ATHYPER_DATA!\telemetry\tracing
-echo   !ATHYPER_DATA!\uptime-kuma
+echo   !ATHYPER_DATA!\statuswatch
 echo.
 endlocal

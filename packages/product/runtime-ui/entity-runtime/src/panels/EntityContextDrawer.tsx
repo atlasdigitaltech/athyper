@@ -1,0 +1,146 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { Clock, Lock, MessageSquare, Paperclip, type LucideIcon } from "lucide-react";
+import { DrawerShell } from "@athyper/ui/primitives";
+import { formatBytes } from "@athyper/runtime-shared/core";
+import type { CompiledEntity } from "@athyper/api-contracts/metadata";
+import {
+  configuredCodeFieldName,
+  configuredSubtitleFieldName,
+  configuredTitleFieldName,
+  fieldValueByName,
+} from "../metadata/fieldSemantics";
+
+const PANEL_META: Record<string, { label: string; Icon: LucideIcon }> = {
+  comments:    { label: "Comments",    Icon: MessageSquare },
+  attachments: { label: "Attachments", Icon: Paperclip },
+  activity:    { label: "Activity",    Icon: Clock },
+};
+
+export interface EntityContextDrawerAttachmentSummary {
+  count:            number;
+  totalBytes:       number;
+  internalCount:    number;
+  sharedCount:      number;
+  quarantinedCount: number;
+}
+
+export interface EntityContextDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  activePanel: string | null;
+  widthScope: string;
+  entity: CompiledEntity;
+  recordId: string;
+  recordData: Record<string, unknown>;
+  typeLabel?: string;
+  identityName?: string | null;
+  panelCount?: number | null;
+  attachments?: EntityContextDrawerAttachmentSummary;
+  headerRight?: ReactNode;
+  children?: ReactNode;
+}
+
+function text(value: unknown): string | undefined {
+  if (value == null || value === "") return undefined;
+  return String(value);
+}
+
+function resolveIdentitySubtitle(
+  entity: CompiledEntity,
+  data: Record<string, unknown>,
+  recordId: string,
+  identityName?: string | null,
+): string {
+  const numberField = configuredCodeFieldName(entity);
+  const titleField = configuredTitleFieldName(entity);
+  const subtitleField = configuredSubtitleFieldName(entity);
+  const number = text(fieldValueByName(entity, data, numberField)) ?? recordId;
+  const title = text(identityName)
+    ?? text(fieldValueByName(entity, data, titleField !== numberField ? titleField : undefined))
+    ?? text(fieldValueByName(entity, data, subtitleField));
+
+  if (!title || title === number) return number;
+  return `${number} · ${title}`;
+}
+
+function attachmentSubtitle(
+  base: string,
+  summary: EntityContextDrawerAttachmentSummary | undefined,
+): ReactNode {
+  if (!summary || summary.count === 0) return base;
+
+  const sizeStr = formatBytes(summary.totalBytes);
+  if (summary.quarantinedCount > 0) {
+    return `${base} · ${sizeStr} · ${summary.internalCount} internal · ${summary.quarantinedCount} quarantined`;
+  }
+  if (summary.sharedCount > 0) {
+    return `${base} · ${sizeStr} · ${summary.internalCount} internal · ${summary.sharedCount} shared`;
+  }
+  return (
+    <>
+      {base}{" · "}{sizeStr}{" · "}
+      <Lock className="inline size-3 align-middle opacity-60" />
+      {" All internal"}
+    </>
+  );
+}
+
+function panelTitle(activePanel: string | null, count: number | null | undefined): ReactNode {
+  if (!activePanel) return "";
+
+  const meta = PANEL_META[activePanel];
+  const label = meta?.label ?? activePanel;
+  const Icon = meta?.Icon;
+
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      {Icon && <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />}
+      <span className="truncate">{label}</span>
+      {count && count > 0 && (
+        <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-border/60 bg-muted px-1.5 text-xs font-medium leading-none text-muted-foreground tabular-nums">
+          {count}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function EntityContextDrawer({
+  open,
+  onOpenChange,
+  activePanel,
+  widthScope,
+  entity,
+  recordId,
+  recordData,
+  identityName,
+  panelCount,
+  attachments,
+  headerRight,
+  children,
+}: EntityContextDrawerProps) {
+  const identitySubtitle = resolveIdentitySubtitle(entity, recordData, recordId, identityName);
+  const titleCount = activePanel === "attachments" ? attachments?.count : panelCount;
+
+  return (
+    <DrawerShell
+      open={open}
+      onOpenChange={onOpenChange}
+      intent="context"
+      widthKey={activePanel ? `${widthScope}:${entity.entity_code}:${activePanel}` : undefined}
+      defaultWidth="60vw"
+      minWidth="30vw"
+      expandedWidth="80vw"
+      maxWidth="85vw"
+      resizable
+      expandable
+      title={panelTitle(activePanel, titleCount)}
+      subtitle={activePanel === "attachments" ? attachmentSubtitle(identitySubtitle, attachments) : identitySubtitle}
+      headerRight={headerRight}
+    >
+      {children}
+    </DrawerShell>
+  );
+}

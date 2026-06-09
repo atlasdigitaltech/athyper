@@ -14,7 +14,7 @@ Three invariants this document enforces:
 1. [Secret Injection by Environment](#1-secret-injection-by-environment)
 2. [Secrets Inventory](#2-secrets-inventory)
 3. [Secret Generation Reference](#3-secret-generation-reference)
-4. [Infisical — Self-Hosted Secret Manager](#4-infisical--self-hosted-secret-manager)
+4. [secretstore / Infisical — Self-Hosted Secret Manager](#4-secretstore--infisical--self-hosted-secret-manager)
 5. [Alternative Backends](#5-alternative-backends)
 6. [Rotation Runbook](#6-rotation-runbook)
 7. [TELEMETRY_ADMIN_PASSWORD Migration](#7-telemetry_admin_password-migration-action-required)
@@ -82,7 +82,7 @@ provides defaults — do not change these unless you are testing a specific auth
 | Variable | Service | Why it matters |
 |---|---|---|
 | `IAM_ADMIN_PASSWORD` | Keycloak master realm admin | Bootstrap credential. After first boot, Keycloak does not re-read this from `.env` — it stores hashes in its own database. Rotating requires a `kcadm.sh` call or a realm wipe-and-reimport. |
-| `IAM_CLIENT_SECRET` | Keycloak API client | Shared secret between the API and the Keycloak `athyper-api` client. Rotation must be applied in both Keycloak (via admin console or realm JSON) and `.env` simultaneously or JWT verification breaks. |
+| `IAM_CLIENT_SECRET` | Keycloak API client | Shared secret between the API and the Keycloak `athyper-api-runtime` client. Rotation must be applied in both Keycloak (via admin console or realm JSON) and `.env` simultaneously or JWT verification breaks. |
 | `IAM_DB_PASSWORD` | Keycloak database | Password for the `keycloak` Postgres role. Used by Keycloak's JPA datasource. Rotating requires both a Postgres `ALTER ROLE` and a `.env` update before the KC container restarts. |
 
 ### Application Runtime
@@ -112,7 +112,7 @@ provides defaults — do not change these unless you are testing a specific auth
 | `TELEMETRY_ADMIN_USER` | Grafana | `GF_SECURITY_ADMIN_USER`. Use the canonical name exactly — aliases to `GRAFANA_ADMIN_USER` have been removed. See §7. |
 | `TELEMETRY_ADMIN_PASSWORD` | Grafana | `GF_SECURITY_ADMIN_PASSWORD`. An empty or wrong value locks ops out of Loki, Tempo, and Prometheus dashboards — exactly when they are needed during incidents. See §7. |
 
-### Infisical Bootstrap
+### secretstore / Infisical Bootstrap
 
 Only required when the `security-infisical` compose profile is active.
 `validate-env.sh` enforces these in non-local environments regardless of whether the profile
@@ -185,9 +185,10 @@ htpasswd -nbB admin "$(openssl rand -base64 24)" | sed 's/\$/\$\$/g'
 
 ---
 
-## 4. Infisical — Self-Hosted Secret Manager
+## 4. secretstore / Infisical — Self-Hosted Secret Manager
 
-athyper uses Infisical as its self-hosted secret manager. The integration ships in four
+`secretstore` is the stack service name for Infisical, the self-hosted secret manager.
+The integration ships in four
 slices; only B3.1 is implemented. Do not start B3.2 work until all gating questions in
 §4.2 are answered.
 
@@ -202,14 +203,14 @@ slices; only B3.1 is implemented. Do not start B3.2 work until all gating questi
 
 ### B3.1 Operational Contract
 
-- **Activation:** opt-in via `security-infisical` compose profile. `up.sh core` does NOT
-  start Infisical. Use `up.sh core,security-infisical` (or `--profile security-infisical`)
+- **Activation:** opt-in via the `security-infisical` compose profile. `up.sh core` does NOT
+  start secretstore. Use `up.sh security-infisical` (or set `COMPOSE_PROFILES=security-infisical`)
   to include it.
 - **State:** Postgres DB `infisical` (seeded by `stack/config/db/local/init-databases.sh`)
-  + Redis DB index 2 on the shared `memorycache` service. Infisical itself is stateless —
+  + Redis DB index 2 on the shared `memorycache` service. secretstore itself is stateless —
   no named Docker volume. Back up via the standard `pg_dump` runbook; `infisical` is listed
-  alongside `glitchtip` and `healthchecks` in the database registry.
-- **Public route:** `https://${INFISICAL_HOST}` behind Traefik with standard TLS. No
+  alongside the `errorcollect` and `cronwatch` databases in the registry.
+- **Public route:** `https://${SECRETSTORE_HOST}` behind Traefik with standard TLS. No
   additional dashboard-auth middleware — Infisical enforces its own email/password auth.
 - **Bootstrap:** first-boot admin signup happens via the Infisical UI. B3.1 does not seed
   any secrets via IaC.
@@ -395,7 +396,7 @@ echo "Secrets injected into $SECRETS_FILE for environment: $ENV"
    bash stack/scripts/stack-profile/restart.sh memorycache   # Redis password
    bash stack/scripts/stack-profile/restart.sh objectstorage # S3/MinIO credentials
    bash stack/scripts/stack-profile/restart.sh iam           # KC admin or client secret
-   bash stack/scripts/stack-profile/restart.sh athyper-api   # CREDENTIAL_MASTER_KEY, RENDERER_INTERNAL_TOKEN
+   bash stack/scripts/stack-profile/restart.sh api           # CREDENTIAL_MASTER_KEY, RENDERER_INTERNAL_TOKEN
    ```
 6. **Verify service health** — run `smoke-staging.sh` and confirm all checks pass.
 
@@ -421,7 +422,7 @@ already-provisioned server will not have it in its `secrets/.env`. The symptom i
 or more containers entering a crash-restart loop at startup with a config-validation
 error naming the missing variable.
 
-**Do not re-run `write-env-staging.sh`** — that rotates all 22 secrets and requires
+**Do not re-run `write-env-staging.sh`** — that rotates the full generated secret inventory and requires
 re-applying every downstream credential (DB, Redis, IAM, S3, etc.).
 
 Instead, run the patch script as root. It adds only the missing variables and
@@ -453,7 +454,7 @@ you which services to restart. After restarting, re-run `validate-env.sh` to con
    the old key and re-encrypts with the new key in a single transaction.
 4. Once the migration completes successfully, promote `CREDENTIAL_MASTER_KEY_NEW` to
    `CREDENTIAL_MASTER_KEY` and remove the old variable.
-5. Restart the API: `bash stack/scripts/stack-profile/restart.sh athyper-api`
+5. Restart the API: `bash stack/scripts/stack-profile/restart.sh api`
 
 Until B3.4 is implemented, rotating `CREDENTIAL_MASTER_KEY` requires a manual re-encryption
 script against the database. Do not rotate it without coordinating with the team.
@@ -462,10 +463,10 @@ script against the database. Do not rotate it without coordinating with the team
 
 `IAM_CLIENT_SECRET` must be updated in two places atomically or JWT verification breaks:
 
-1. Update the secret in Keycloak: Admin Console → Clients → `athyper-api` → Credentials →
+1. Update the secret in Keycloak: Admin Console → Clients → `athyper-api-runtime` → Credentials →
    Regenerate Secret. Copy the new value.
 2. Update `IAM_CLIENT_SECRET` in `.env`.
-3. Restart the API: `bash stack/scripts/stack-profile/restart.sh athyper-api`
+3. Restart the API: `bash stack/scripts/stack-profile/restart.sh api`
 
 Do not update `.env` first and restart — there is a window where the API tries to use the
 new secret against Keycloak's old record, causing all token exchanges to fail.

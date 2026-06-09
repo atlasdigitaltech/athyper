@@ -1,0 +1,42 @@
+{
+  "name": "@athyper/theme",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./base.css": "./src/base.css",
+    "./presets/*.css": "./src/presets/*.css",
+    "./tailwind-preset": "./src/tailwind-preset.ts",
+    "./typography": "./src/typography.ts",
+    "./semantic-colors": "./src/semanticColors.ts",
+    "./utils": "./src/utils.ts",
+    "./contracts": "./src/theme-contract.ts",
+    "./presets": "./src/presets/registry.ts",
+    "./validator": "./src/preset-validator.ts",
+    "./domain-intents": "./src/domain-intents.ts",
+    "./record-badge": "./src/recordBadge.ts"
+  },
+  "scripts": {
+    "typography:generate": "tsx src/typography.generate.ts",
+    "check:typography": "pnpm run typography:generate && git diff --exit-code -- src/typography.generated.css",
+    "typecheck": "tsc --noEmit",
+    "validate-presets": "tsx src/preset-validator.cli.ts --check-shipped"
+  },
+  "dependencies": {
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^3.5.0"
+  },
+  "peerDependencies": {
+    "tailwindcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@types/node": "^25.6.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.3"
+  }
+}

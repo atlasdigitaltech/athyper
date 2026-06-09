@@ -159,7 +159,7 @@ groups:
           team: platform
         annotations:
           summary: "Platform metric collector is missing"
-          description: "Prometheus is not receiving athyper_metric_collector_up{name=\"platform\"}. Check athyper-api /metrics registration and scrape health."
+          description: "Prometheus is not receiving athyper_metric_collector_up{name=\"platform\"}. Check api /metrics registration and scrape health."
 
       - alert: PlatformMetricCollectorStale
         expr: time() - athyper_metric_collector_last_success_timestamp_seconds{name="platform"} > 120

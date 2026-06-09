@@ -75,16 +75,16 @@ is_operator_managed() {
 case "$ENV_NAME" in
   staging)
     MEMORYCACHE_SRC="memorycache/environments/cache.staging.conf"
-    GOTENBERG_SRC="render/environments/gotenberg.staging.conf"
-    TIKA_SRC="render/environments/tika-config.staging.xml"
+    DOCRENDER_SRC="render/environments/docrender.staging.conf"
+    DOCPARSER_SRC="render/environments/docparser-config.staging.xml"
     GATEWAY_TLS_SRC="gateway/environments/athyper.tls.staging.yml"
     WORKBENCH_SRC="gateway/environments/neon-workbench-routes.staging.yml"
     METRICS_CONFIG_SRC="telemetry/metrics/config.staging.yml"
     ;;
   production)
     MEMORYCACHE_SRC="memorycache/environments/cache.production.conf"
-    GOTENBERG_SRC="render/environments/gotenberg.production.conf"
-    TIKA_SRC="render/environments/tika-config.production.xml"
+    DOCRENDER_SRC="render/environments/docrender.production.conf"
+    DOCPARSER_SRC="render/environments/docparser-config.production.xml"
     GATEWAY_TLS_SRC="gateway/environments/athyper.tls.production.yml"
     WORKBENCH_SRC="gateway/environments/neon-workbench-routes.prod.yml"
     METRICS_CONFIG_SRC="telemetry/metrics/config.production.yml"
@@ -92,8 +92,8 @@ case "$ENV_NAME" in
   *)
     # local: env-variant files happen to be the same as the canonical files
     MEMORYCACHE_SRC="memorycache/cache.conf"
-    GOTENBERG_SRC="render/gotenberg.conf"
-    TIKA_SRC="render/tika-config.xml"
+    DOCRENDER_SRC="render/docrender.conf"
+    DOCPARSER_SRC="render/docparser-config.xml"
     GATEWAY_TLS_SRC="gateway/dynamic/athyper.tls.yml"
     WORKBENCH_SRC="gateway/dynamic/athyper.workbench.yml"
     METRICS_CONFIG_SRC="telemetry/metrics/config.yml"
@@ -130,9 +130,11 @@ else
   FILE_MAP["db/${ENV_NAME}/dbpool/session/pgbouncer-session.ini"]="db/${ENV_NAME}/dbpool/session/pgbouncer-session.ini"
 fi
 
-# iam — realm JSON (themes copied as a directory below)
-FILE_MAP["iam/realm-demosetup.json"]="iam/realm-demosetup.json"
+# iam — unified realm JSON (themes copied as a directory below)
+FILE_MAP["iam/realm-athyper.json"]="iam/realm-athyper.json"
+FILE_MAP["iam/realm-athyper-demosetup.json"]="iam/realm-athyper-demosetup.json"
 FILE_MAP["iam/realm-platform-control.json"]="iam/realm-platform-control.json"
+FILE_MAP["iam/realm-platform-control-demosetup.json"]="iam/realm-platform-control-demosetup.json"
 
 # memorycache — env-variant selects staging/production conf
 # redis-acl.conf is seeded from the .tpl (tokens intact) so that
@@ -156,8 +158,8 @@ FILE_MAP["telemetry/tracing/config.yml"]="telemetry/tracing/config.yml"
 FILE_MAP["telemetry/provisioning.env/dashboards.${ENV_NAME}.yml"]="telemetry/provisioning.env/dashboards.${ENV_NAME}.yml"
 
 # render — env-variant selects staging/production conf
-FILE_MAP["$GOTENBERG_SRC"]="render/gotenberg.conf"
-FILE_MAP["$TIKA_SRC"]="render/tika-config.xml"
+FILE_MAP["$DOCRENDER_SRC"]="render/docrender.conf"
+FILE_MAP["$DOCPARSER_SRC"]="render/docparser-config.xml"
 
 # ── Directory copies (whole subtree) ─────────────────────────────────────────
 declare -a DIR_COPIES=(
@@ -169,10 +171,14 @@ declare -a DIR_COPIES=(
 copy_if_absent() {
   local src="$1" dst="$2"
   [[ "$src" == "$dst" ]] && return 0   # local dev: source == dest, skip
-  if [[ ! -f "$dst" ]]; then
+  if [[ -d "$dst" ]]; then
+    echo "  BLOCKED $(basename "$dst")  (directory at file path; run --update to repair)"
+  elif [[ ! -e "$dst" ]]; then
     mkdir -p "$(dirname "$dst")"
     cp "$src" "$dst"
     echo "  COPIED  $dst"
+  elif [[ ! -f "$dst" ]]; then
+    echo "  BLOCKED $(basename "$dst")  (not a regular file)"
   else
     echo "  EXISTS  $(basename "$dst")  (skipped)"
   fi
@@ -181,7 +187,12 @@ copy_if_absent() {
 backup_and_replace() {
   local src="$1" dst="$2"
   [[ "$src" == "$dst" ]] && return 0
-  if [[ -f "$dst" ]]; then
+  if [[ -d "$dst" ]]; then
+    local ts
+    ts="$(date +%Y%m%d-%H%M%S)"
+    mv "$dst" "${dst}.dir.bak.$ts"
+    echo "  BACKUPD $dst  (directory moved to .dir.bak.$ts)"
+  elif [[ -f "$dst" ]]; then
     cp "$dst" "${dst}.bak.$(date +%Y%m%d-%H%M%S)"
   fi
   mkdir -p "$(dirname "$dst")"
@@ -195,7 +206,9 @@ show_diff() {
     echo "  OK       $key  (local=repo)"
     return 0
   fi
-  if [[ ! -f "$dst" ]]; then
+  if [[ -d "$dst" ]]; then
+    echo "  BLOCKED  $key  (directory at file path)"
+  elif [[ ! -f "$dst" ]]; then
     echo "  MISSING  $key"
   elif ! diff -q "$src" "$dst" &>/dev/null; then
     echo "  DRIFTED  $key"
@@ -288,11 +301,16 @@ for dir_rel in "${DIR_COPIES[@]}"; do
 
   case "$MODE" in
     --diff)
-      diff -rq "$src_dir" "$dst_dir" &>/dev/null \
-        && echo "  OK       $dir_rel" \
-        || echo "  DRIFTED  $dir_rel"
+      if [[ ! -d "$dst_dir" ]]; then
+        echo "  MISSING  $dir_rel"
+      elif diff -rq "$src_dir" "$dst_dir" &>/dev/null; then
+        echo "  OK       $dir_rel"
+      else
+        echo "  DRIFTED  $dir_rel"
+      fi
       ;;
     --update)
+      mkdir -p "$dst_dir"
       cp -r "$src_dir/." "$dst_dir/"
       echo "  UPDATED  $dir_rel"
       ;;
@@ -306,6 +324,15 @@ for dir_rel in "${DIR_COPIES[@]}"; do
       ;;
   esac
 done
+
+if [[ "$MODE" != "--diff" ]]; then
+  echo ""
+  echo "Applying IAM realm policy for $ENV_NAME..."
+  node "$STACK_DIR/../tools/scripts/apply-iam-realm-policy.cjs" \
+    --environment "$ENV_NAME" \
+    --root "$LIVE_CFG/iam" \
+    --write
+fi
 
 # ── MANIFEST ──────────────────────────────────────────────────────────────────
 # Written on server only (LIVE_CFG != REPO_CFG). Preserves initialized_at and

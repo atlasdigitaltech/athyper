@@ -3,14 +3,14 @@ REM =======================================================================
 REM seed-iam-credentials.bat
 REM Location: stack\scripts\db\session\iam\seed-iam-credentials.bat
 REM
-REM Seeds passwords for demo users in both KC realms (athyper, platform-control)
+REM Seeds passwords for demo users in KC realms (athyper and platform-control)
 REM after a realm import. Passwords are NEVER committed to realm JSON - they
 REM are set here via kcadm.sh set-password inside the running KC container.
 REM
 REM Resolution order for passwords:
-REM   1. Shell env var (IAM_DEMO_USER_PASSWORD / IAM_PLATFORM_CONTROL_USER_PASSWORD)
+REM   1. Shell env var (IAM_DEMO_USER_PASSWORD / IAM_PLATFORM_CONTROL_USER_PASSWORD / IAM_ADMIN_REALM_USER_PASSWORD)
 REM   2. .env file (stack\env\.env)
-REM   3. Safe defaults (Demo@1234 / admin) - local dev only
+REM   3. Safe policy-compliant defaults for local/staging; production should use secrets
 REM
 REM Invoked by reset-iam.bat. Can also be run standalone:
 REM     stack\scripts\db\session\iam\seed-iam-credentials.bat
@@ -86,6 +86,12 @@ if "!IAM_ADMIN_PASS!"=="" (
     exit /b 1
 )
 
+set "STACK_ENVIRONMENT=%ENVIRONMENT%"
+if "!STACK_ENVIRONMENT!"=="" (
+    if defined ENV_FILE_SED for /f "tokens=2 delims==" %%a in ('findstr "^ENVIRONMENT=" "!ENV_FILE_SED!" 2^>nul') do set "STACK_ENVIRONMENT=%%a"
+)
+if "!STACK_ENVIRONMENT!"=="" set "STACK_ENVIRONMENT=local"
+
 REM ---------------------------------------------------------------------------
 REM Resolve seed passwords (with safe local-dev defaults)
 REM ---------------------------------------------------------------------------
@@ -93,26 +99,70 @@ set "DEMO_PASS=%IAM_DEMO_USER_PASSWORD%"
 if "!DEMO_PASS!"=="" (
     if defined ENV_FILE_SED for /f "tokens=2 delims==" %%a in ('findstr "^IAM_DEMO_USER_PASSWORD=" "!ENV_FILE_SED!" 2^>nul') do set "DEMO_PASS=%%a"
 )
-if "!DEMO_PASS!"=="" set "DEMO_PASS=Demo@1234"
+if "!DEMO_PASS!"=="" (
+    if /I "!STACK_ENVIRONMENT!"=="production" (
+        set "DEMO_PASS=DemoUser@1234"
+    ) else (
+        set "DEMO_PASS=Demo@1234"
+    )
+)
 
 set "PCC_PASS=%IAM_PLATFORM_CONTROL_USER_PASSWORD%"
 if "!PCC_PASS!"=="" (
     if defined ENV_FILE_SED for /f "tokens=2 delims==" %%a in ('findstr "^IAM_PLATFORM_CONTROL_USER_PASSWORD=" "!ENV_FILE_SED!" 2^>nul') do set "PCC_PASS=%%a"
 )
-if "!PCC_PASS!"=="" set "PCC_PASS=admin"
+if "!PCC_PASS!"=="" set "PCC_PASS=Platform@1234"
 
 REM ---------------------------------------------------------------------------
-REM User lists ? must stay in sync with seed-iam-credentials.sh and:
-REM   stack\config\iam\realm-demosetup.json
-REM   stack\config\iam\realm-platform-control.json
+set "ADMIN_REALM_PASS=%IAM_ADMIN_REALM_USER_PASSWORD%"
+if "!ADMIN_REALM_PASS!"=="" (
+    if defined ENV_FILE_SED for /f "tokens=2 delims==" %%a in ('findstr "^IAM_ADMIN_REALM_USER_PASSWORD=" "!ENV_FILE_SED!" 2^>nul') do set "ADMIN_REALM_PASS=%%a"
+)
+if "!ADMIN_REALM_PASS!"=="" set "ADMIN_REALM_PASS=AdminDemo@1234"
+
 REM ---------------------------------------------------------------------------
-set "ATHYPER_USERS=athq.viewer athq.reporter athq.requester athq.agent athq.manager athq.owner athq.admin aqtu.manager asac.manager auic.manager asgf.manager athq.cfo partner.viewer partner.agent partner.manager partner.owner karim.dual catl.admin catl.owner catl.finance tksa.owner tksa.admin ssk.admin tegy.admin sdtx.admin"
+REM User lists ? derived from checked-in realm demo setup JSONs and must stay in sync with
+REM seed-iam-credentials.sh.
+REM   stack\config\iam\realm-athyper.json
+REM   stack\config\iam\realm-athyper-demosetup.json
+REM   stack\config\iam\realm-platform-control.json
+REM   stack\config\iam\realm-platform-control-demosetup.json
+REM ---------------------------------------------------------------------------
+set "IMPORT_FILE=%STACK_DIR%\config\iam\realm-athyper.json"
+set "DEMO_FILE=%STACK_DIR%\config\iam\realm-athyper-demosetup.json"
+set "PLATFORM_IMPORT_FILE=%STACK_DIR%\config\iam\realm-platform-control.json"
+set "PLATFORM_DEMO_FILE=%STACK_DIR%\config\iam\realm-platform-control-demosetup.json"
+set "DEMO_REALM_NAME="
+for /f "usebackq delims=" %%r in (`node -e "const fs=require('fs'); const file=process.argv[1]; const realm=JSON.parse(fs.readFileSync(file,'utf8')).realm; if(realm===undefined||realm===null||realm==='') process.exit(1); process.stdout.write(realm);" "%IMPORT_FILE%"`) do set "DEMO_REALM_NAME=%%r"
+if "!DEMO_REALM_NAME!"=="" (
+    echo Error: Cannot determine realm name from %IMPORT_FILE%
+    exit /b 1
+)
+
+set "DEMO_USERS="
+set "NEON_USERS_FILE=%IMPORT_FILE%"
+if exist "!DEMO_FILE!" set "NEON_USERS_FILE=!DEMO_FILE!"
+for /f "usebackq delims=" %%u in (`node -e "const fs=require('fs'); const file=process.argv[1]; const realm=JSON.parse(fs.readFileSync(file,'utf8')); const users=(realm.users||[]).filter(u=>u.serviceAccountClientId?false:true).map(u=>u.username).filter(Boolean); process.stdout.write(users.join(' '));" "!NEON_USERS_FILE!"`) do set "DEMO_USERS=%%u"
 set "PCC_USERS=product.admin tenant.manager support.admin"
+if exist "!PLATFORM_DEMO_FILE!" (
+    for /f "usebackq delims=" %%u in (`node -e "const fs=require('fs'); const file=process.argv[1]; const realm=JSON.parse(fs.readFileSync(file,'utf8')); const users=(realm.users||[]).filter(u=>u.serviceAccountClientId?false:true).map(u=>u.username).filter(Boolean); process.stdout.write(users.join(' '));" "!PLATFORM_DEMO_FILE!"`) do set "PCC_USERS=%%u"
+)
 
 echo.
 echo === Seeding IAM credentials ===
-echo   realm athyper:          25 users
+echo   realm !DEMO_REALM_NAME!:          derived from realm-athyper.json
 echo   realm platform-control: 3 users
+echo.
+
+echo [0/2] Applying demo setup fixtures
+if exist "!DEMO_FILE!" (
+    node "%STACK_DIR%\..\tools\scripts\apply-realm-demo-setup.cjs" --container "!DOCKER_CONTAINER_IAM!" --admin-user "!IAM_ADMIN_USER!" --admin-password "!IAM_ADMIN_PASS!" --realm-file "!IMPORT_FILE!" --demo-file "!DEMO_FILE!"
+    if errorlevel 1 exit /b 1
+)
+if exist "!PLATFORM_IMPORT_FILE!" if exist "!PLATFORM_DEMO_FILE!" (
+    node "%STACK_DIR%\..\tools\scripts\apply-realm-demo-setup.cjs" --container "!DOCKER_CONTAINER_IAM!" --admin-user "!IAM_ADMIN_USER!" --admin-password "!IAM_ADMIN_PASS!" --realm-file "!PLATFORM_IMPORT_FILE!" --demo-file "!PLATFORM_DEMO_FILE!"
+    if errorlevel 1 exit /b 1
+)
 echo.
 
 REM ---------------------------------------------------------------------------
@@ -125,26 +175,23 @@ if errorlevel 1 (
 )
 
 REM ---------------------------------------------------------------------------
-REM Seed athyper realm
+REM Seed unified athyper demo realm
 REM ---------------------------------------------------------------------------
-echo [1/2] realm=athyper
-for %%u in (%ATHYPER_USERS%) do (
-    docker exec %DOCKER_CONTAINER_IAM% /opt/keycloak/bin/kcadm.sh set-password -r athyper --username "%%u" --new-password "!DEMO_PASS!" >nul 2>&1
+echo [1/2] realm=!DEMO_REALM_NAME!
+for %%u in (%DEMO_USERS%) do (
+    docker exec %DOCKER_CONTAINER_IAM% /opt/keycloak/bin/kcadm.sh set-password -r !DEMO_REALM_NAME! --username "%%u" --new-password "!DEMO_PASS!" >nul 2>&1
     if errorlevel 1 (
-        echo   ! athyper/%%u - skipped ^(user missing?^)
+        echo   ! !DEMO_REALM_NAME!/%%u - skipped ^(user missing?^)
     ) else (
-        for /f "usebackq delims=" %%i in (`docker exec %DOCKER_CONTAINER_IAM% /opt/keycloak/bin/kcadm.sh get users -r athyper -q username=%%u --fields id --format csv --noquotes 2^>nul`) do (
+        for /f "usebackq delims=" %%i in (`docker exec %DOCKER_CONTAINER_IAM% /opt/keycloak/bin/kcadm.sh get users -r !DEMO_REALM_NAME! -q username=%%u --fields id --format csv --noquotes 2^>nul`) do (
             if not "%%i"=="id" if not "%%i"=="" (
-                docker exec %DOCKER_CONTAINER_IAM% /opt/keycloak/bin/kcadm.sh update "users/%%i" -r athyper -s "requiredActions=[]" >nul 2>&1
+                docker exec %DOCKER_CONTAINER_IAM% /opt/keycloak/bin/kcadm.sh update "users/%%i" -r !DEMO_REALM_NAME! -s "requiredActions=[]" >nul 2>&1
             )
         )
-        echo   OK athyper/%%u
+        echo   OK !DEMO_REALM_NAME!/%%u
     )
 )
 
-REM ---------------------------------------------------------------------------
-REM Seed platform-control realm
-REM ---------------------------------------------------------------------------
 echo.
 echo [2/2] realm=platform-control
 for %%u in (%PCC_USERS%) do (
@@ -163,7 +210,7 @@ for %%u in (%PCC_USERS%) do (
 
 echo.
 echo Credential seeding complete
-echo   Demo user password (athyper realm):          set from IAM_DEMO_USER_PASSWORD
+echo   Demo user password (!DEMO_REALM_NAME! realm): set from IAM_DEMO_USER_PASSWORD
 echo   Demo user password (platform-control realm): set from IAM_PLATFORM_CONTROL_USER_PASSWORD
 echo.
 

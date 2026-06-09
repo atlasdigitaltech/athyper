@@ -1,0 +1,15 @@
+{
+  "productCode": "mesh",
+  "productName": "mesh",
+  "descriptor": "Business Network",
+  "generatedFrom": "packages/apps/mesh/brand/src/products/mesh",
+  "assets": {
+    "wordmarkBlack": "/brand/wordmark-black.svg",
+    "wordmarkWhite": "/brand/wordmark-white.svg",
+    "wordmarkOnBlack": "/brand/wordmark-on-black.svg",
+    "wordmarkOnWhite": "/brand/wordmark-on-white.svg",
+    "icon": "/brand/icon.svg",
+    "appIcon": "/brand/appicon.svg",
+    "favicon": "/brand/favicon.svg"
+  }
+}

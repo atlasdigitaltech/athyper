@@ -19,6 +19,7 @@ export { FinancialReportsWorkbench, type FinancialReportsWorkbenchProps } from "
 export { CommodityCategoryWorkbench } from "./CommodityCategoryWorkbench";
 export { BusinessIntentWorkbench } from "./BusinessIntentWorkbench";
 export { AccountingProfileWorkbench } from "./AccountingProfileWorkbench";
+export { FinanceDataSetupWorkbench } from "./FinanceDataSetupWorkbench";
 export { CashFlowView } from "./CashFlowView";
 export { ApAgingView } from "./ApAgingView";
 export { ArAgingView } from "./ArAgingView";

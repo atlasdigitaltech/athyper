@@ -1,21 +1,30 @@
 # =======================================================================
-# Stack       : athyper Stack – Core Infrastructure & Observability
+# Stack       : athyper Stack – Application Plane Services
 # Maintainer  : Atlas Digital Technology Solutions (athyper Team)
 # Environment : local | staging | production
-# Version     : 1.0.0
+# Version     : 2.0.0
 # Compose     : athyper-apps-config
 #
 # Description :
-#   Neon App (athyper-web) serves workbench UIs at neon.athyper.local
-#   with path-based routing for three workbench contexts:
-#     - /user    → User Workbench (role-gated)
-#     - /admin   → Admin Workbench (restricted: role + IP)
-#     - /ops     → Ops Workbench (restricted: role + IP)
+#   Three-plane architecture — one compose file, three isolated Next.js
+#   services, each with a distinct session boundary and KC realm:
 #
-#   Runtime API (athyper-api) serves the backend at api.athyper.local
+#   neon-web  → neon.athyper.com   (tenant users, realm: neon)
+#   mesh-web  → mesh.athyper.com   (partners,     realm: mesh)
+#   admin-web → admin.athyper.com  (platform ops, realm: admin)
 #
-#   Workbench routes are configured in:
-#     stack/config/gateway/dynamic/athyper.workbench.yml
+#   Runtime API (api) serves the backend at api.athyper.local.
+#   BullMQ worker and scheduler run as separate MODE= containers.
+#
+#   Local dev (Option B): all three web services are in profile `apps` only.
+#   Run pnpm dev on host via stack/scripts/app/planes-up.bat|sh.
+#   Staging/production: `up.sh apps` starts all three containers;
+#   Traefik routes each host to its plane via file-provider workbench configs.
+#
+#   Plane routing configured in:
+#     stack/config/gateway/dynamic/athyper.workbench.yml  (local)
+#     stack/config/gateway/environments/neon-workbench-routes.staging.yml
+#     stack/config/gateway/environments/neon-workbench-routes.prod.yml
 #
 # =======================================================================
 
@@ -44,7 +53,7 @@ x-athyper-shared-env: &athyper-shared-env
   REDIS_MAX_RETRIES: "${REDIS_MAX_RETRIES:-2}"
   REDIS_ERROR_LOG_COOLDOWN_MS: "${REDIS_ERROR_LOG_COOLDOWN_MS:-10000}"
   # Optional dedicated BullMQ Redis (memorycache-jobs profile)
-  REDIS_BULLMQ_URL: "${REDIS_BULLMQ_URL:-}"
+  REDIS_BULLMQ_URL: "${REDIS_BULLMQ_URL:-${REDIS_URL}}"
   # Object Storage
   S3_ENDPOINT: "${S3_ENDPOINT}"
   # Root MinIO credentials — kept for compose (MINIO_ROOT_USER wiring); not
@@ -61,8 +70,8 @@ x-athyper-shared-env: &athyper-shared-env
   BACKUP_S3_BUCKET: "${BACKUP_S3_BUCKET:-athyper-backups}"
   BACKUP_S3_ACCESS_KEY: "${BACKUP_S3_ACCESS_KEY}"
   BACKUP_S3_SECRET_KEY: "${BACKUP_S3_SECRET_KEY}"
-  # Virus scanning (ClamAV)
-  CLAMD_HOST: "${CLAMD_HOST:-clamav}"
+  # Virus scanning (virusscan)
+  CLAMD_HOST: "${CLAMD_HOST:-virusscan}"
   CLAMD_PORT: "${CLAMD_PORT:-3310}"
   CLAMD_ON_UNAVAILABLE: "${CLAMD_ON_UNAVAILABLE:-fail-closed}"
   # IAM
@@ -71,6 +80,8 @@ x-athyper-shared-env: &athyper-shared-env
   IAM_CLIENT_SECRET: "${IAM_CLIENT_SECRET}"
   IAM_DEFAULT_REALM: "${IAM_DEFAULT_REALM}"
   ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET: "${ATHYPER_SUPER__IAM_SECRET__IAM_ATHYPER_CLIENT_SECRET}"
+  AUTH_DISCOVERY_SHARED_SECRET: "${AUTH_DISCOVERY_SHARED_SECRET:-}"
+  AUTH_DISCOVERY_USERNAME_EMAIL_DOMAINS: "${AUTH_DISCOVERY_USERNAME_EMAIL_DOMAINS:-}"
   # IAM outbox worker polling interval
   OUTBOX_POLL_MS: "${OUTBOX_POLL_MS:-10000}"
   # Credential encryption (AES-256-GCM; warns + disables in local dev; REQUIRED in staging/production)
@@ -91,14 +102,33 @@ x-athyper-shared-env: &athyper-shared-env
   NODE_ENV: "${NODE_ENV:-production}"
   # WebAuthn relying-party ID (must match the domain in the browser URL bar)
   WEBAUTHN_RP_ID: "${WEBAUTHN_RP_ID:-athyper.local}"
-  # PDF rendering (Gotenberg) + text extraction (Tika) — render profile; empty disables
-  GOTENBERG_BASE_URL: "${GOTENBERG_BASE_URL:-}"
-  TIKA_URL: "${TIKA_URL:-}"
-  # Cron heartbeats (Healthchecks — monitoring profile; empty disables)
-  HEALTHCHECKS_BASE_URL: "${HEALTHCHECKS_BASE_URL:-}"
-  # Search (Meilisearch — search profile; empty disables)
-  MEILISEARCH_URL: "${MEILISEARCH_URL:-}"
-  MEILISEARCH_MASTER_KEY: "${MEILI_MASTER_KEY:-}"
+  # PDF rendering (docrender) + text extraction (docparser) — render profile; empty disables
+  DOCRENDER_BASE_URL: "${DOCRENDER_BASE_URL:-}"
+  DOCPARSER_URL: "${DOCPARSER_URL:-}"
+  # Cron heartbeats (cronwatch — monitoring profile; empty disables)
+  CRONWATCH_BASE_URL: "${CRONWATCH_BASE_URL:-}"
+  # Search (searchcore — search profile; empty disables)
+  SEARCHCORE_URL: "${SEARCHCORE_URL:-}"
+  SEARCHCORE_MASTER_KEY: "${MEILI_MASTER_KEY:-}"
+  # SMTP — app notification email channel
+  # Dev default: mailtrap container (port 1025, no auth). The email channel
+  # is only registered when SMTP_HOST is non-empty, so these defaults wire
+  # local dev automatically without requiring .env changes.
+  # Staging/production: override all vars via secrets/.env.
+  SMTP_HOST: "${SMTP_HOST:-mailtrap}"
+  SMTP_PORT: "${SMTP_PORT:-1025}"
+  SMTP_SECURE: "${SMTP_SECURE:-false}"
+  SMTP_USER: "${SMTP_USER:-}"
+  SMTP_PASS: "${SMTP_PASS:-}"
+  SMTP_FROM: "${SMTP_FROM:-noreply@athyper.local}"
+  SMTP_FROM_NEON:  "${SMTP_FROM_NEON:-noreply.neon-test@athyper.com}"
+  SMTP_FROM_MESH:  "${SMTP_FROM_MESH:-noreply.mesh-test@athyper.com}"
+  SMTP_FROM_ADMIN: "${SMTP_FROM_ADMIN:-noreply.admin-test@athyper.com}"
+  SMTP_BOUNCE_WEBHOOK_SECRET: "${SMTP_BOUNCE_WEBHOOK_SECRET:-}"
+  # Web Push (VAPID) — provider-independent browser push signing.
+  VAPID_SUBJECT: "${VAPID_SUBJECT:-}"
+  VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY:-}"
+  VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY:-}"
 
 # M7: host-gateway maps to host IP. Requires Docker 20.10+.
 # On Docker Desktop (Win/Mac) this resolves to the VM gateway.
@@ -109,6 +139,8 @@ x-athyper-hosts: &athyper-hosts
   - "iam.athyper.local:host-gateway"
   - "gateway.athyper.local:host-gateway"
   - "neon.athyper.local:host-gateway"
+  - "mesh.athyper.local:host-gateway"
+  - "admin.athyper.local:host-gateway"
   - "api.athyper.local:host-gateway"
   - "objectstorage.athyper.local:host-gateway"
   - "objectstorage.console.athyper.local:host-gateway"
@@ -122,22 +154,22 @@ services:
   # Host:   ${APPS_ATHYPER_WEB_HOST}  (neon.athyper.local | *-stg.athyper.com | *.athyper.com)
   # Paths:  /user, /admin, /ops — workbench routing via file provider
   #         (stack/config/gateway/dynamic/athyper.workbench.yml)
-  # Build:  apps/web/Dockerfile (multi-stage; Next.js output: "standalone")
-  # Rebuild: docker compose --project-directory stack/compose build athyper-neon-web
+  # Build:  apps/neon/Dockerfile (multi-stage; Next.js output: "standalone")
+  # Rebuild: docker compose --project-directory stack/compose build neon-web
   #
   # Local dev (Option B): this service is in profile `apps` only — NOT `core`
   # or `gateway` — so `stack/scripts/stack/up.sh` local presets do not start it.
-  # Local devs continue running `pnpm --filter @athyper/web dev` on the host,
-  # and the workbench.yml file provider routes to host.docker.internal:3000.
+  # Local devs continue running `pnpm --filter @athyper/neon dev -- --port 3101`
+  # on the host, and the workbench.yml file provider routes to host.docker.internal:3101.
   #
   # Staging / production: `up.sh apps` brings this container up and the
   # environments/neon-workbench-routes.{staging,prod}.yml file providers
-  # route to athyper-neon-web:3000 over the internal edge network.
+  # route to neon-web:3000 over the internal edge network.
   # -------------------------------------------------------------------------
-  athyper-neon-web:
+  neon-web:
     build:
       context: ../..
-      dockerfile: apps/web/Dockerfile
+      dockerfile: apps/neon/Dockerfile
     profiles: ["apps"]
     deploy:
       resources:
@@ -151,7 +183,7 @@ services:
       # service_started (not service_healthy) — the web app does not need
       # a ready API at boot; it proxies requests lazily and returns 503
       # upstream-unavailable if the API is still warming up.
-      athyper-api:
+      api:
         condition: service_started
     environment:
       # ── Runtime basics ─────────────────────────────────────────────────
@@ -159,13 +191,17 @@ services:
       NODE_ENV: "${NODE_ENV:-production}"
       PORT: "${WEB_PORT}"
       # ── F8 Phase 1 — single-ingress host guard ────────────────────────
-      # Set by staging/production .env to the gateway-fronted hostname.
+      # Each service receives generic ALLOWED_HOSTS/GATEWAY_ORIGIN values.
+      # The stack-level .env keeps plane-specific source vars so one shared
+      # compose project can deploy all three app containers safely.
       # The host-guard middleware rejects requests whose Host header
       # doesn't match; /livez is excluded from the matcher for healthcheck.
-      ALLOWED_HOSTS: "${ALLOWED_HOSTS}"
-      GATEWAY_ORIGIN: "${GATEWAY_ORIGIN}"
+      ALLOWED_HOSTS: "${NEON_ALLOWED_HOSTS}"
+      GATEWAY_ORIGIN: "${NEON_GATEWAY_ORIGIN}"
       # ── Public base URL (used to build OAuth2 redirect_uri) ───────────
-      PUBLIC_BASE_URL: "https://${APPS_ATHYPER_WEB_HOST}"
+      PUBLIC_BASE_URL: "https://${APPS_ATHYPER_NEON_HOST}"
+      PUBLIC_WEB_URL: "https://${APPS_ATHYPER_NEON_HOST}"
+      NEON_PUBLIC_WEB_URL: "https://${APPS_ATHYPER_NEON_HOST}"
       # ── Keycloak / IAM ────────────────────────────────────────────────
       # KC is fronted by Traefik at IAM_HOST in all non-local envs; DNS
       # resolves to the gateway so the web BFF can hit it over HTTPS like
@@ -173,18 +209,24 @@ services:
       # source them from a secret manager; committing real values is a
       # policy violation (see docs/secrets-management.md).
       KEYCLOAK_BASE_URL:       "https://${IAM_HOST}"
-      KEYCLOAK_REALM:          "${IAM_DEFAULT_REALM}"
-      KEYCLOAK_CLIENT_ID:      "${KEYCLOAK_CLIENT_ID:-neon-web}"
+      KEYCLOAK_REALM:          "${KEYCLOAK_REALM:-athyper}"
+      KEYCLOAK_CLIENT_ID:      "${NEON_KEYCLOAK_CLIENT_ID:-neon-web}"
       KEYCLOAK_ADMIN_USERNAME: "${KEYCLOAK_ADMIN_USERNAME}"
       KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD}"
       # ── Platform control realm (optional) ──────────────────────────────
       PLATFORM_CONTROL_ENABLED:     "${PLATFORM_CONTROL_ENABLED:-false}"
-      PLATFORM_KEYCLOAK_REALM:      "${PLATFORM_CONTROL_REALM_KEY:-platform-control}"
+      PLATFORM_KEYCLOAK_REALM:      "${PLATFORM_KEYCLOAK_REALM:-platform-control}"
       PLATFORM_KEYCLOAK_CLIENT_ID:  "${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-admin}"
       # ── Data-plane proxy target (internal network, no TLS) ─────────────
-      RUNTIME_API_URL: "http://athyper-api:${API_PORT}"
+      RUNTIME_API_URL: "http://api:${API_PORT}"
+      AUTH_CONTEXT_RESOLVER_REQUIRED: "${AUTH_CONTEXT_RESOLVER_REQUIRED:-true}"
+      AUTH_DISCOVERY_SHARED_SECRET: "${AUTH_DISCOVERY_SHARED_SECRET:-}"
+      AUTH_DISCOVERY_DELIVERY_URL: "${AUTH_DISCOVERY_DELIVERY_URL:-}"
+      AUTH_DISCOVERY_DELIVERY_SECRET: "${AUTH_DISCOVERY_DELIVERY_SECRET:-}"
+      AUTH_DISCOVERY_EXPOSE_DEV_LINK: "${AUTH_DISCOVERY_EXPOSE_DEV_LINK:-false}"
       # ── Redis (session storage) ────────────────────────────────────────
       REDIS_URL: "${REDIS_URL}"
+      APP_MFA_ENFORCED: "${APP_MFA_ENFORCED:-false}"
       # ── Feature flags (NEXT_PUBLIC_* baked into browser bundle at build) ─
       NEXT_PUBLIC_GITHUB_LOGIN_ENABLED:     "${NEXT_PUBLIC_GITHUB_LOGIN_ENABLED:-false}"
       NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED: "${NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED:-false}"
@@ -201,6 +243,7 @@ services:
       # Default 1 (enforce). Self-signed staging certs need 0; set in the
       # staging .env. Never set 0 in production.
       NODE_TLS_REJECT_UNAUTHORIZED: "${NODE_TLS_REJECT_UNAUTHORIZED:-1}"
+    extra_hosts: *athyper-hosts
     # F4 — /livez probes only the event loop (middleware.ts matcher excludes
     # it so the host-guard doesn't run). DO NOT point this at any route that
     # exercises Redis / BFF / session — those live behind /api/admin/health.
@@ -226,7 +269,7 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
     # Service labels: register container with Traefik's Docker provider so
-    # staging/prod workbench route files can reference athyper-neon-web@docker
+    # staging/prod workbench route files can reference neon-web@docker
     # (auto-detected IP:port) instead of a static APPS_ATHYPER_WEB_UPSTREAM_URL.
     # No router labels — all routing is declared in the file-provider workbench
     # config (path stripping + forward-auth + IP restriction kept declarative).
@@ -234,13 +277,179 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=athyper-edge
-      - traefik.http.services.athyper-neon-web.loadbalancer.server.port=3000
+      - traefik.http.services.neon-web.loadbalancer.server.port=3000
+      - traefik.http.services.neon-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.neon-web.loadbalancer.healthcheck.interval=15s
+      - traefik.http.services.neon-web.loadbalancer.healthcheck.timeout=5s
+
+  mesh-web:
+    build:
+      context: ../..
+      dockerfile: apps/mesh/Dockerfile
+    profiles: ["apps"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "${APPS_ATHYPER_MEMORY_LIMIT}"
+    networks: [edge, internal]
+    depends_on:
+      memorycache:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      ENVIRONMENT: "${ENVIRONMENT}"
+      NODE_ENV: "${NODE_ENV:-production}"
+      PORT: "${WEB_PORT}"
+      ALLOWED_HOSTS: "${MESH_ALLOWED_HOSTS}"
+      GATEWAY_ORIGIN: "${MESH_GATEWAY_ORIGIN}"
+      PUBLIC_BASE_URL: "https://${APPS_ATHYPER_MESH_HOST}"
+      PUBLIC_WEB_URL: "https://${APPS_ATHYPER_MESH_HOST}"
+      MESH_PUBLIC_WEB_URL: "https://${APPS_ATHYPER_MESH_HOST}"
+      KEYCLOAK_BASE_URL: "https://${IAM_HOST}"
+      KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
+      MESH_KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
+      MESH_KEYCLOAK_CLIENT_ID: "${MESH_KEYCLOAK_CLIENT_ID:-mesh-web}"
+      KEYCLOAK_ADMIN_USERNAME: "${KEYCLOAK_ADMIN_USERNAME}"
+      KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD}"
+      PLATFORM_CONTROL_ENABLED: "${PLATFORM_CONTROL_ENABLED:-false}"
+      PLATFORM_KEYCLOAK_REALM: "${PLATFORM_KEYCLOAK_REALM:-platform-control}"
+      PLATFORM_KEYCLOAK_CLIENT_ID: "${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-admin}"
+      RUNTIME_API_URL: "http://api:${API_PORT}"
+      AUTH_CONTEXT_RESOLVER_REQUIRED: "${AUTH_CONTEXT_RESOLVER_REQUIRED:-true}"
+      AUTH_DISCOVERY_SHARED_SECRET: "${AUTH_DISCOVERY_SHARED_SECRET:-}"
+      AUTH_DISCOVERY_DELIVERY_URL: "${AUTH_DISCOVERY_DELIVERY_URL:-}"
+      AUTH_DISCOVERY_DELIVERY_SECRET: "${AUTH_DISCOVERY_DELIVERY_SECRET:-}"
+      AUTH_DISCOVERY_EXPOSE_DEV_LINK: "${AUTH_DISCOVERY_EXPOSE_DEV_LINK:-false}"
+      REDIS_URL: "${REDIS_URL}"
+      APP_MFA_ENFORCED: "${APP_MFA_ENFORCED:-false}"
+      NEXT_PUBLIC_GITHUB_LOGIN_ENABLED: "${NEXT_PUBLIC_GITHUB_LOGIN_ENABLED:-false}"
+      NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED: "${NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED:-false}"
+      GITHUB_TENANT_ID: "${GITHUB_TENANT_ID:-}"
+      NEXT_PUBLIC_SENTRY_DSN: "${NEXT_PUBLIC_SENTRY_DSN:-}"
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      NEXT_PUBLIC_ENVIRONMENT: "${ENVIRONMENT}"
+      NEXT_PUBLIC_SERVICE_VERSION: "${SERVICE_VERSION:-}"
+      NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: "${SENTRY_TRACES_SAMPLE_RATE:-0}"
+      SENTRY_TRACES_SAMPLE_RATE: "${SENTRY_TRACES_SAMPLE_RATE:-0}"
+      NODE_TLS_REJECT_UNAUTHORIZED: "${NODE_TLS_REJECT_UNAUTHORIZED:-1}"
+    extra_hosts: *athyper-hosts
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-check-certificate -qO- http://localhost:${WEB_PORT:-3000}/livez || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.services.mesh-web.loadbalancer.server.port=3000
+      - traefik.http.services.mesh-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.mesh-web.loadbalancer.healthcheck.interval=15s
+      - traefik.http.services.mesh-web.loadbalancer.healthcheck.timeout=5s
+
+  admin-web:
+    build:
+      context: ../..
+      dockerfile: apps/admin/Dockerfile
+    profiles: ["apps"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "${APPS_ATHYPER_MEMORY_LIMIT}"
+    networks: [edge, internal]
+    depends_on:
+      memorycache:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      ENVIRONMENT: "${ENVIRONMENT}"
+      NODE_ENV: "${NODE_ENV:-production}"
+      PORT: "${WEB_PORT}"
+      ALLOWED_HOSTS: "${ADMIN_ALLOWED_HOSTS}"
+      GATEWAY_ORIGIN: "${ADMIN_GATEWAY_ORIGIN}"
+      PUBLIC_BASE_URL: "https://${APPS_ATHYPER_ADMIN_HOST}"
+      PUBLIC_WEB_URL: "https://${APPS_ATHYPER_ADMIN_HOST}"
+      ADMIN_PUBLIC_WEB_URL: "https://${APPS_ATHYPER_ADMIN_HOST}"
+      KEYCLOAK_BASE_URL: "https://${IAM_HOST}"
+      KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
+      ADMIN_KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
+      ADMIN_KEYCLOAK_CLIENT_ID: "${ADMIN_KEYCLOAK_CLIENT_ID:-admin-web}"
+      ADMIN_KEYCLOAK_CLIENT_SECRET: "${ADMIN_WEB_CLIENT_SECRET:-}"
+      KEYCLOAK_ADMIN_USERNAME: "${KEYCLOAK_ADMIN_USERNAME}"
+      KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD}"
+      PLATFORM_CONTROL_ENABLED: "${PLATFORM_CONTROL_ENABLED:-false}"
+      PLATFORM_KEYCLOAK_REALM: "${PLATFORM_KEYCLOAK_REALM:-platform-control}"
+      PLATFORM_KEYCLOAK_CLIENT_ID: "${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-admin}"
+      RUNTIME_API_URL: "http://api:${API_PORT}"
+      AUTH_CONTEXT_RESOLVER_REQUIRED: "${AUTH_CONTEXT_RESOLVER_REQUIRED:-true}"
+      AUTH_DISCOVERY_SHARED_SECRET: "${AUTH_DISCOVERY_SHARED_SECRET:-}"
+      AUTH_DISCOVERY_DELIVERY_URL: "${AUTH_DISCOVERY_DELIVERY_URL:-}"
+      AUTH_DISCOVERY_DELIVERY_SECRET: "${AUTH_DISCOVERY_DELIVERY_SECRET:-}"
+      AUTH_DISCOVERY_EXPOSE_DEV_LINK: "${AUTH_DISCOVERY_EXPOSE_DEV_LINK:-false}"
+      REDIS_URL: "${REDIS_URL}"
+      APP_MFA_ENFORCED: "${APP_MFA_ENFORCED:-false}"
+      NEXT_PUBLIC_GITHUB_LOGIN_ENABLED: "${NEXT_PUBLIC_GITHUB_LOGIN_ENABLED:-false}"
+      NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED: "${NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED:-false}"
+      GITHUB_TENANT_ID: "${GITHUB_TENANT_ID:-}"
+      NEXT_PUBLIC_SENTRY_DSN: "${NEXT_PUBLIC_SENTRY_DSN:-}"
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      NEXT_PUBLIC_ENVIRONMENT: "${ENVIRONMENT}"
+      NEXT_PUBLIC_SERVICE_VERSION: "${SERVICE_VERSION:-}"
+      NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: "${SENTRY_TRACES_SAMPLE_RATE:-0}"
+      SENTRY_TRACES_SAMPLE_RATE: "${SENTRY_TRACES_SAMPLE_RATE:-0}"
+      NODE_TLS_REJECT_UNAUTHORIZED: "${NODE_TLS_REJECT_UNAUTHORIZED:-1}"
+    extra_hosts: *athyper-hosts
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-check-certificate -qO- http://localhost:${WEB_PORT:-3000}/livez || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.services.admin-web.loadbalancer.server.port=3000
+      - traefik.http.services.admin-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.admin-web.loadbalancer.healthcheck.interval=15s
+      - traefik.http.services.admin-web.loadbalancer.healthcheck.timeout=5s
 
   # -------------------------------------------------------------------------
   # Runtime API - Backend services
   # Host: api.athyper.local
-  # Build: framework/runtime/Dockerfile.dev (context = monorepo root)
-  # Rebuild: docker compose --project-directory stack/compose build athyper-api
+  # Build: server/Dockerfile.dev (context = monorepo root)
+  # Rebuild: docker compose --project-directory stack/compose build api
   #
   # Profiles: gateway | apps — NOT core.
   # Local dev runs the server on the host via api-up.bat (PORT=4000).
@@ -249,7 +458,7 @@ services:
   # When this container IS running (gateway/apps profile), Docker-label router
   # fires at auto-priority ~30 and overrides the static file automatically.
   # -------------------------------------------------------------------------
-  athyper-api:
+  api:
     build:
       context: ../..
       dockerfile: server/Dockerfile.dev
@@ -265,7 +474,7 @@ services:
         condition: service_healthy
       memorycache:
         condition: service_healthy
-      clamav:
+      virusscan:
         condition: service_started
     environment:
       <<: *athyper-shared-env
@@ -298,18 +507,18 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=athyper-edge
-      - traefik.http.routers.athyper-api.entrypoints=websecure
-      - traefik.http.routers.athyper-api.rule=Host(`${APPS_ATHYPER_API_HOST}`)
-      - traefik.http.routers.athyper-api.tls.options=${GATEWAY_TLS_OPTIONS}
-      - traefik.http.routers.athyper-api.tls.certresolver=${GATEWAY_CERT_RESOLVER}
-      - traefik.http.routers.athyper-api.tls=true
-      - traefik.http.services.athyper-api.loadbalancer.server.port=3000
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.rule=Host(`${APPS_ATHYPER_API_HOST}`)
+      - traefik.http.routers.api.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.api.tls.certresolver=${GATEWAY_CERT_RESOLVER}
+      - traefik.http.routers.api.tls=true
+      - traefik.http.services.api.loadbalancer.server.port=3000
 
   # -------------------------------------------------------------------------
   # BullMQ Worker — IAM outbox + job processors (no HTTP, internal only)
   # Runs: MODE=worker node dist/src/app.js
   # -------------------------------------------------------------------------
-  athyper-worker:
+  worker:
     build:
       context: ../..
       dockerfile: server/Dockerfile.dev
@@ -357,7 +566,7 @@ services:
   # BullMQ Scheduler — repeatable job registration only (no HTTP, internal only)
   # Runs: MODE=scheduler node dist/src/app.js
   # -------------------------------------------------------------------------
-  athyper-scheduler:
+  scheduler:
     build:
       context: ../..
       dockerfile: server/Dockerfile.dev

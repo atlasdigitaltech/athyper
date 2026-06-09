@@ -159,6 +159,12 @@ else
   add_key "IAM_CLIENT_SECRET" "$(openssl rand -hex 32)"
 fi
 
+if has_key "ADMIN_WEB_CLIENT_SECRET"; then
+  skip_key "ADMIN_WEB_CLIENT_SECRET"
+else
+  add_key "ADMIN_WEB_CLIENT_SECRET" "$(openssl rand -hex 32)"
+fi
+
 if has_key "ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET"; then
   skip_key "ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET"
 else
@@ -169,6 +175,12 @@ if has_key "NEON_SVC_BFF_CLIENT_SECRET"; then
   skip_key "NEON_SVC_BFF_CLIENT_SECRET"
 else
   add_key "NEON_SVC_BFF_CLIENT_SECRET" "$(openssl rand -hex 32)"
+fi
+
+if has_key "AUTH_DISCOVERY_SHARED_SECRET"; then
+  skip_key "AUTH_DISCOVERY_SHARED_SECRET"
+else
+  add_key "AUTH_DISCOVERY_SHARED_SECRET" "$(openssl rand -hex 32)"
 fi
 
 # ── Redis / MemoryCache ───────────────────────────────────────────────────────
@@ -228,16 +240,16 @@ else
 fi
 
 # ── Monitoring ────────────────────────────────────────────────────────────────
-if has_key "HEALTHCHECKS_SECRET_KEY"; then
-  skip_key "HEALTHCHECKS_SECRET_KEY"
+if has_key "CRONWATCH_SECRET_KEY"; then
+  skip_key "CRONWATCH_SECRET_KEY"
 else
-  add_key "HEALTHCHECKS_SECRET_KEY" "$(openssl rand -base64 32 | tr -d '\n=')"
+  add_key "CRONWATCH_SECRET_KEY" "$(openssl rand -base64 32 | tr -d '\n=')"
 fi
 
-if has_key "GLITCHTIP_SECRET_KEY"; then
-  skip_key "GLITCHTIP_SECRET_KEY"
+if has_key "ERRORCOLLECT_SECRET_KEY"; then
+  skip_key "ERRORCOLLECT_SECRET_KEY"
 else
-  add_key "GLITCHTIP_SECRET_KEY" "$(openssl rand -base64 32 | tr -d '\n=')"
+  add_key "ERRORCOLLECT_SECRET_KEY" "$(openssl rand -base64 32 | tr -d '\n=')"
 fi
 
 # ── Gateway htpasswd ──────────────────────────────────────────────────────────
@@ -280,7 +292,7 @@ if [[ ${#_dupes_removed[@]} -gt 0 || ${#_added[@]} -gt 0 ]]; then
   echo "    docker compose \\"
   echo "      --env-file /opt/products/athyper/stack/env/.env \\"
   echo "      --env-file /opt/stack/athyper/secrets/.env \\"
-  echo "      restart athyper-api athyper-worker athyper-scheduler"
+  echo "      restart api worker scheduler"
   echo ""
   echo "  Then re-validate:"
   echo "    bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \\"

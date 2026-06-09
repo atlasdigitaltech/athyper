@@ -51,7 +51,7 @@ groups:
           summary: "Redis is rejecting connections"
           description: >
             {{ $value }} connection(s) were rejected in the last 5 minutes.
-            Current maxclients is 5000. Check for connection leaks in athyper-api
+            Current maxclients is 5000. Check for connection leaks in api
             or web BFF, or raise the maxclients limit in cache.conf.
 
       # -----------------------------------------------------------------------
@@ -82,7 +82,7 @@ groups:
           summary: "Redis is down"
           description: >
             The redis_exporter cannot connect to the Redis instance.
-            athyper-api and web BFF will return 503 for all auth/session operations.
+            api and web BFF will return 503 for all auth/session operations.
             Restart the memorycache container and investigate logs.
 
       # -----------------------------------------------------------------------

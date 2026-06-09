@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "kernel.config.schema.json",
   "title": "athyper Kernel Runtime Configuration",
-  "description": "Schema for kernel.config.*.parameter.json files. Mirrors the Zod RuntimeConfigSchema in framework/runtime/src/kernel/config.schema.ts. Fields marked LOCKED are stripped from file config at load time and must be set via environment variables.",
+  "description": "Schema for kernel.config.*.parameter.json files. Mirrors the Zod RuntimeConfigSchema in server/src/kernel-config.ts. Fields marked LOCKED are stripped from file config at load time and must be set via environment variables.",
   "type": "object",
   "required": ["db", "redis", "s3", "iam"],
   "properties": {

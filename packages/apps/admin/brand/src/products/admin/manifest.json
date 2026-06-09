@@ -1,0 +1,25 @@
+{
+  "productCode": "admin",
+  "productName": "admin",
+  "descriptor": "Platform Control",
+  "logoFiles": {
+    "primary": "logo-compact.svg",
+    "compact": "logo-compact.svg",
+    "icon": "icon.svg"
+  },
+  "publicAssets": {
+    "wordmarkBlack": "wordmark-black.svg",
+    "wordmarkWhite": "wordmark-white.svg",
+    "wordmarkOnBlack": "wordmark-on-black.svg",
+    "wordmarkOnWhite": "wordmark-on-white.svg",
+    "icon": "public-icon.svg",
+    "appIcon": "appicon.svg",
+    "favicon": "favicon.svg"
+  },
+  "rules": {
+    "officialAppLockup": "logo-compact.svg",
+    "officialKeycloakLockup": "logo-compact.svg",
+    "minWidthPx": 120,
+    "clearSpaceRatio": 0.5
+  }
+}

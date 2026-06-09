@@ -1,0 +1,50 @@
+{
+  "kind": "athyper.keycloak.realm-demo-setup",
+  "version": 2,
+  "realm": "platform-control",
+  "plane": "platform-control",
+  "sourceRealmFile": "realm-platform-control.json",
+  "importableByKeycloak": false,
+  "description": "Product-owner support demo data for the platform-control realm. Stable UUIDs (gg001000-… series) ensure consistent identities across environments.",
+  "users": [
+    {
+      "id": "gg001000-0000-0000-0000-000000000001",
+      "username": "product.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Product",
+      "lastName": "Admin",
+      "email": "admin@athyper.com",
+      "realmRoles": [
+        "PRODUCT_ADMIN",
+        "default-roles-platform-control"
+      ]
+    },
+    {
+      "id": "gg001000-0000-0000-0000-000000000002",
+      "username": "tenant.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Tenant",
+      "lastName": "Manager",
+      "email": "tenantmgr@athyper.com",
+      "realmRoles": [
+        "TENANT_MANAGER",
+        "default-roles-platform-control"
+      ]
+    },
+    {
+      "id": "gg001000-0000-0000-0000-000000000003",
+      "username": "support.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Support",
+      "lastName": "Admin",
+      "email": "support@athyper.com",
+      "realmRoles": [
+        "SUPPORT_ADMIN",
+        "default-roles-platform-control"
+      ]
+    }
+  ]
+}

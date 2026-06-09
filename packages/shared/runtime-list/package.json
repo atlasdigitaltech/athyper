@@ -1,0 +1,35 @@
+{
+  "name": "@athyper/runtime-list",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server/index.ts",
+    "./islands": "./src/islands/index.ts",
+    "./adapter": "./src/adapter/index.ts",
+    "./core": "./src/core/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "peerDependencies": {
+    "@athyper/ui": "workspace:*",
+    "@tanstack/react-query": ">=5 <6",
+    "next": "^16.2.4",
+    "react": "^19.2.5"
+  },
+  "dependencies": {
+    "@athyper/query": "workspace:*"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@athyper/ui": "workspace:*",
+    "@tanstack/react-query": "^5.99.0",
+    "lucide-react": "^1.8.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3"
+  }
+}

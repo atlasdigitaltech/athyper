@@ -5,7 +5,7 @@ REM Location:
 REM   stack\scripts\db\session\iam\reset-iam.bat
 REM
 REM Performs a FULL reset of Keycloak IAM data:
-REM   [0/5] Regenerates realm-demosetup.json via update-realm-demosetup.cjs
+REM   [0/5] Validates realm-athyper.json
 REM   [1/5] Stops the KC container
 REM   [2/5] Drops and recreates the entire KC database schema (true clean slate)
 REM   [3/5] Starts KC - it initializes master realm (admin user created from
@@ -37,8 +37,7 @@ set "REPO_DIR=%CD%"
 popd >nul
 
 set "CONFIG_DIR=%STACK_DIR%\config\iam"
-set "IMPORT_FILE=%CONFIG_DIR%\realm-demosetup.json"
-set "UPDATE_SCRIPT=%REPO_DIR%\tools\scripts\update-realm-demosetup.cjs"
+set "IMPORT_FILE=%CONFIG_DIR%\realm-athyper.json"
 
 REM ---------------------------------------------------------------------------
 REM Container / database names — honour env-var overrides (mirrors lib/constants.sh)
@@ -71,16 +70,11 @@ echo.
 echo === Keycloak IAM FULL RESET ===
 echo WARNING: This will DELETE ALL KC data and reimport from JSON seed files.
 echo Press Ctrl+C to cancel, or wait 10 seconds to continue...
-timeout /t 10 >nul
+timeout /t 10 /nobreak >nul 2>&1
 
-REM --- Step 0: Regenerate realm JSON -----------------------------------------
+REM --- Step 0: Validate realm JSON -------------------------------------------
 echo.
-echo [0/5] Regenerating realm-demosetup.json...
-
-if not exist "%UPDATE_SCRIPT%" (
-    echo Error: update script not found: %UPDATE_SCRIPT%
-    exit /b 1
-)
+echo [0/5] Validating realm-athyper.json...
 
 where node >nul 2>&1
 if errorlevel 1 (
@@ -88,12 +82,19 @@ if errorlevel 1 (
     exit /b 1
 )
 
-node "%UPDATE_SCRIPT%"
+echo Using checked-in realm-athyper.json.
+
+set "DEMO_REALM_NAME="
+for /f "usebackq delims=" %%r in (`node -e "const fs=require('fs'); const file=process.argv[1]; const realm=JSON.parse(fs.readFileSync(file,'utf8')).realm; if(realm===undefined||realm===null||realm==='') process.exit(1); process.stdout.write(realm);" "%IMPORT_FILE%"`) do set "DEMO_REALM_NAME=%%r"
 if errorlevel 1 (
-    echo Error: realm-demosetup.json generation failed
+    echo Error: realm-athyper.json validation failed
     exit /b 1
 )
-echo realm-demosetup.json regenerated
+if "!DEMO_REALM_NAME!"=="" (
+    echo Error: Cannot determine realm name from %IMPORT_FILE%
+    exit /b 1
+)
+echo realm-athyper.json validated ^(realm=!DEMO_REALM_NAME!^)
 
 REM --- Step 1: Stop KC container ---------------------------------------------
 echo.
@@ -154,7 +155,7 @@ REM --- Step 3: Start KC (creates master realm + admin + imports realm files) --
 echo.
 echo [3/5] Starting Keycloak (fresh init + realm import)...
 echo   KC will: initialize schema, create master realm, bootstrap admin, import realm files
-echo   Realm files in container import dir: realm-demosetup.json + realm-platform-control.json
+echo   Realm files in container import dir: !DEMO_REALM_NAME!-realm.json + platform-control-realm.json
 
 docker start %DOCKER_CONTAINER_IAM%
 if errorlevel 1 (
@@ -206,8 +207,10 @@ echo [5/5] Reset complete.
 echo Keycloak IAM fully reset from JSON seed files
 echo.
 echo What was loaded:
-echo   - realm-demosetup.json  = athyper realm (users, orgs, groups, roles)
+echo   - realm-athyper.json = !DEMO_REALM_NAME! realm (Neon, Mesh, and Admin clients/roles/service accounts)
+echo   - realm-athyper-demosetup.json = unified demo organizations and memberships
 echo   - realm-platform-control.json = platform-control realm
+echo   - realm-platform-control-demosetup.json = platform-control demo fixture metadata
 echo.
 REM Resolve IAM admin credentials for verify command
 set "IAM_ADMIN_USER="

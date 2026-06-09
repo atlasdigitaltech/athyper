@@ -92,10 +92,19 @@ CREATE INDEX IF NOT EXISTS ndlv_subscription_pidx
     ON event.notification_delivery (tenant_id, subscription_id, created_at DESC)
     WHERE subscription_id IS NOT NULL;
 
+-- Webhook outbox child rows (one durable row per outbox/subscription delivery)
+CREATE INDEX IF NOT EXISTS ndlv_webhook_outbox_subscription_idx
+    ON event.notification_delivery (tenant_id, outbox_id, subscription_id, created_at DESC)
+    WHERE channel = 'webhook' AND outbox_id IS NOT NULL AND subscription_id IS NOT NULL;
+
 -- Logical dedup: prevent duplicate delivery for same (message, recipient, channel)
 CREATE UNIQUE INDEX IF NOT EXISTS ndlv_message_recipient_channel_uq
     ON event.notification_delivery (tenant_id, message_id, recipient_id, channel, created_at)
     WHERE status NOT IN ('cancelled');
+
+-- Semantic delivery claims: expiry pruning and stuck-claim monitoring
+CREATE INDEX IF NOT EXISTS ndcl_expiry_idx
+    ON event.notification_delivery_claim (expires_at ASC);
 
 -- —— digest_staging ——————————————————————————————————————————————————————
 -- Worker pickup: pending items per recipient+channel+frequency window

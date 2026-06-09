@@ -38,6 +38,25 @@ CREATE POLICY admin_write ON master.tenant
 -- ── principal, principal_profile, contact_link, contact_email, contact_phone ──
 -- Tenant isolation: tenant sees own rows only. Admin full access.
 
+-- tenant_admin_grant
+ALTER TABLE master.tenant_admin_grant ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.tenant_admin_grant FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read  ON master.tenant_admin_grant;
+DROP POLICY IF EXISTS admin_read   ON master.tenant_admin_grant;
+DROP POLICY IF EXISTS admin_write  ON master.tenant_admin_grant;
+
+CREATE POLICY tenant_read ON master.tenant_admin_grant
+    FOR SELECT
+    USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY admin_read ON master.tenant_admin_grant
+    FOR SELECT TO athyperadmin
+    USING (true);
+CREATE POLICY admin_write ON master.tenant_admin_grant
+    FOR ALL TO athyperadmin
+    USING (true)
+    WITH CHECK (true);
+
 ALTER TABLE master.principal         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.principal         FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.principal_profile ENABLE ROW LEVEL SECURITY;
@@ -1573,6 +1592,155 @@ CREATE POLICY admin_read ON master.tenant_relationship
 CREATE POLICY admin_write ON master.tenant_relationship
     FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
+-- business_network
+ALTER TABLE master.business_network ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.business_network FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON master.business_network;
+DROP POLICY IF EXISTS tenant_insert ON master.business_network;
+DROP POLICY IF EXISTS tenant_update ON master.business_network;
+DROP POLICY IF EXISTS tenant_delete ON master.business_network;
+DROP POLICY IF EXISTS admin_read    ON master.business_network;
+DROP POLICY IF EXISTS admin_write   ON master.business_network;
+CREATE POLICY tenant_read ON master.business_network
+    FOR SELECT USING (owner_tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.business_network
+    FOR INSERT WITH CHECK (owner_tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.business_network
+    FOR UPDATE USING (owner_tenant_id = shared.current_tenant_id())
+    WITH CHECK (owner_tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.business_network
+    FOR DELETE USING (owner_tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read ON master.business_network
+    FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.business_network
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+-- business_network_membership
+ALTER TABLE master.business_network_membership ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.business_network_membership FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON master.business_network_membership;
+DROP POLICY IF EXISTS tenant_insert ON master.business_network_membership;
+DROP POLICY IF EXISTS tenant_update ON master.business_network_membership;
+DROP POLICY IF EXISTS tenant_delete ON master.business_network_membership;
+DROP POLICY IF EXISTS admin_read    ON master.business_network_membership;
+DROP POLICY IF EXISTS admin_write   ON master.business_network_membership;
+CREATE POLICY tenant_read ON master.business_network_membership
+    FOR SELECT USING (
+        participant_tenant_id = shared.current_tenant_id_soft()
+        OR EXISTS (
+            SELECT 1
+            FROM master.business_network bn
+            WHERE bn.id = business_network_membership.network_id
+              AND bn.owner_tenant_id = shared.current_tenant_id_soft()
+        )
+    );
+CREATE POLICY tenant_insert ON master.business_network_membership
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1
+            FROM master.business_network bn
+            WHERE bn.id = business_network_membership.network_id
+              AND bn.owner_tenant_id = shared.current_tenant_id()
+        )
+    );
+CREATE POLICY tenant_update ON master.business_network_membership
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1
+            FROM master.business_network bn
+            WHERE bn.id = business_network_membership.network_id
+              AND bn.owner_tenant_id = shared.current_tenant_id()
+        )
+    ) WITH CHECK (
+        EXISTS (
+            SELECT 1
+            FROM master.business_network bn
+            WHERE bn.id = business_network_membership.network_id
+              AND bn.owner_tenant_id = shared.current_tenant_id()
+        )
+    );
+CREATE POLICY tenant_delete ON master.business_network_membership
+    FOR DELETE USING (
+        EXISTS (
+            SELECT 1
+            FROM master.business_network bn
+            WHERE bn.id = business_network_membership.network_id
+              AND bn.owner_tenant_id = shared.current_tenant_id()
+        )
+    );
+CREATE POLICY admin_read ON master.business_network_membership
+    FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.business_network_membership
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+-- business_network_membership_role
+ALTER TABLE master.business_network_membership_role ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.business_network_membership_role FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON master.business_network_membership_role;
+DROP POLICY IF EXISTS tenant_insert ON master.business_network_membership_role;
+DROP POLICY IF EXISTS tenant_update ON master.business_network_membership_role;
+DROP POLICY IF EXISTS tenant_delete ON master.business_network_membership_role;
+DROP POLICY IF EXISTS admin_read    ON master.business_network_membership_role;
+DROP POLICY IF EXISTS admin_write   ON master.business_network_membership_role;
+CREATE POLICY tenant_read ON master.business_network_membership_role
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1
+            FROM master.business_network_membership bnm
+            WHERE bnm.id = business_network_membership_role.membership_id
+              AND bnm.participant_tenant_id = shared.current_tenant_id_soft()
+        )
+        OR EXISTS (
+            SELECT 1
+            FROM master.business_network_membership bnm
+            JOIN master.business_network bn ON bn.id = bnm.network_id
+            WHERE bnm.id = business_network_membership_role.membership_id
+              AND bn.owner_tenant_id = shared.current_tenant_id_soft()
+        )
+    );
+CREATE POLICY tenant_insert ON master.business_network_membership_role
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1
+            FROM master.business_network_membership bnm
+            JOIN master.business_network bn ON bn.id = bnm.network_id
+            WHERE bnm.id = business_network_membership_role.membership_id
+              AND bn.owner_tenant_id = shared.current_tenant_id()
+        )
+    );
+CREATE POLICY tenant_update ON master.business_network_membership_role
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1
+            FROM master.business_network_membership bnm
+            JOIN master.business_network bn ON bn.id = bnm.network_id
+            WHERE bnm.id = business_network_membership_role.membership_id
+              AND bn.owner_tenant_id = shared.current_tenant_id()
+        )
+    ) WITH CHECK (
+        EXISTS (
+            SELECT 1
+            FROM master.business_network_membership bnm
+            JOIN master.business_network bn ON bn.id = bnm.network_id
+            WHERE bnm.id = business_network_membership_role.membership_id
+              AND bn.owner_tenant_id = shared.current_tenant_id()
+        )
+    );
+CREATE POLICY tenant_delete ON master.business_network_membership_role
+    FOR DELETE USING (
+        EXISTS (
+            SELECT 1
+            FROM master.business_network_membership bnm
+            JOIN master.business_network bn ON bn.id = bnm.network_id
+            WHERE bnm.id = business_network_membership_role.membership_id
+              AND bn.owner_tenant_id = shared.current_tenant_id()
+        )
+    );
+CREATE POLICY admin_read ON master.business_network_membership_role
+    FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.business_network_membership_role
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
 
 -- principal_relationship
 ALTER TABLE master.principal_relationship ENABLE ROW LEVEL SECURITY;
@@ -2118,6 +2286,22 @@ DROP POLICY IF EXISTS admin_write   ON master.legal_entity_identity_binding;
 CREATE POLICY tenant_read   ON master.legal_entity_identity_binding FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_read    ON master.legal_entity_identity_binding FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.legal_entity_identity_binding FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- master.legal_entity_network_account
+ALTER TABLE master.legal_entity_network_account ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.legal_entity_network_account FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON master.legal_entity_network_account;
+DROP POLICY IF EXISTS tenant_insert ON master.legal_entity_network_account;
+DROP POLICY IF EXISTS tenant_update ON master.legal_entity_network_account;
+DROP POLICY IF EXISTS tenant_delete ON master.legal_entity_network_account;
+DROP POLICY IF EXISTS admin_read    ON master.legal_entity_network_account;
+DROP POLICY IF EXISTS admin_write   ON master.legal_entity_network_account;
+CREATE POLICY tenant_read   ON master.legal_entity_network_account FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.legal_entity_network_account FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.legal_entity_network_account FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.legal_entity_network_account FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON master.legal_entity_network_account FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON master.legal_entity_network_account FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
 
 -- =============================================================================

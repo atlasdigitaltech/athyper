@@ -283,7 +283,7 @@ RAISE NOTICE '══════════════════════
 RAISE NOTICE '§5  schema_provisions Tracking';
 RAISE NOTICE '════════════════════════════════════════════════════════════════';
 
--- Keep 030_industry rows intact — provisioning script treats them as "done"
+-- Keep blueprints/industry rows intact — provisioning script treats them as "done"
 -- and will skip re-applying packs on the next run.
 -- Only clear ap_non_po/600_modules if the module pack needs to be re-seeded.
 DELETE FROM public.schema_provisions

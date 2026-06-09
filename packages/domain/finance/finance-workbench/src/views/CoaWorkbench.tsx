@@ -81,7 +81,7 @@ function CoaTabTrigger({
     >
       <Icon className="h-3.5 w-3.5" />
       {tab.label}
-      <span className={cn("rounded px-1 py-px font-mono text-[10px] leading-none", SCHEMA_STYLE[tab.schema])}>
+      <span className={cn("rounded px-1 py-px tabular-nums text-xs leading-none", SCHEMA_STYLE[tab.schema])}>
         {tab.schema}
       </span>
     </TabsTrigger>
@@ -151,13 +151,13 @@ export function CoaWorkbench({ defaultTab = "catalog" }: CoaWorkbenchProps) {
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
           <div className="flex min-w-0 items-center gap-2">
-            <span className="text-sm font-semibold tracking-wide text-foreground">COA WORKBENCH</span>
+            <span className="text-sm font-medium text-foreground">COA WORKBENCH</span>
             <Badge variant="muted" className="hidden sm:inline-flex">finance / coa</Badge>
           </div>
           <div className="ml-auto min-w-0 text-sm text-muted-foreground">
             {selectedChart ? (
               <span className="truncate">
-                <span className="font-mono text-foreground">{selectedChart.code}</span>
+                <span className="tabular-nums text-foreground">{selectedChart.code}</span>
                 {" / "}
                 {selectedChart.name}
               </span>

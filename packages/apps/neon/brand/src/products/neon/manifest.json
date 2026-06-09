@@ -1,0 +1,25 @@
+{
+  "productCode": "neon",
+  "productName": "neon",
+  "descriptor": "Business Operating Platform",
+  "logoFiles": {
+    "primary": "logo-primary.svg",
+    "compact": "logo-compact.svg",
+    "icon": "icon.svg"
+  },
+  "publicAssets": {
+    "wordmarkBlack": "wordmark-black.svg",
+    "wordmarkWhite": "wordmark-white.svg",
+    "wordmarkOnBlack": "wordmark-on-black.svg",
+    "wordmarkOnWhite": "wordmark-on-white.svg",
+    "icon": "icon.svg",
+    "appIcon": "appicon.svg",
+    "favicon": "favicon.svg"
+  },
+  "rules": {
+    "officialAppLockup": "logo-primary.svg",
+    "officialKeycloakLockup": "logo-primary.svg",
+    "minWidthPx": 120,
+    "clearSpaceRatio": 0.5
+  }
+}

@@ -7,7 +7,7 @@
 #
 # Description :
 #   Grafana Tempo 2.x — distributed tracing backend.
-#   Receives OTLP from server/src/foundation/monitoring/otel.ts on
+#   Receives OTLP from server/packages/foundation/monitoring/otel.ts on
 #   :4317 (gRPC) / :4318 (HTTP). Storage backend is env-driven:
 #   `local` for dev (filesystem bind-mount), `s3` for staging/prod
 #   (MinIO via the objectstorage service).

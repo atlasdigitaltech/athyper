@@ -113,4 +113,7 @@ export async function startScheduler(deps: ServerDeps): Promise<void> {
       meta: { env: config.env, pid: process.pid },
     }),
   );
+
+  // Fire bootstrap onReady hooks after scheduler registration and probe setup.
+  void lifecycle.signalReady();
 }

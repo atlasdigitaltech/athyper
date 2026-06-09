@@ -40,6 +40,10 @@ DO $$ BEGIN ALTER TABLE event.notification_delivery ADD CONSTRAINT ndlv_message_
     FOREIGN KEY (message_id) REFERENCES event.notification_message (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+DO $$ BEGIN ALTER TABLE event.notification_delivery ADD CONSTRAINT ndlv_outbox_fk
+    FOREIGN KEY (outbox_id) REFERENCES event.outbox (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 DO $$ BEGIN ALTER TABLE event.notification_delivery ADD CONSTRAINT ndlv_recipient_fk
     FOREIGN KEY (recipient_id) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;

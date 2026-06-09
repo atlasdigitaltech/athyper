@@ -29,14 +29,17 @@ const OPTIONAL_GATE_VARS = [
   "SMTP_HOST",
   "TWILIO_ACCOUNT_SID",
   "PUSH_FCM_PROJECT_ID",
+  "PUSH_FCM_SERVICE_ACCOUNT_KEY",
+  "VAPID_SUBJECT",
   "VAPID_PUBLIC_KEY",
+  "VAPID_PRIVATE_KEY",
   "CLAMD_HOST",
   "CLAMD_ON_UNAVAILABLE",
   "GLITCHTIP_DSN",
-  "HEALTHCHECKS_BASE_URL",
-  "GOTENBERG_BASE_URL",
-  "MEILISEARCH_URL",
-  "MEILISEARCH_MASTER_KEY",
+  "CRONWATCH_BASE_URL",
+  "DOCRENDER_BASE_URL",
+  "SEARCHCORE_URL",
+  "SEARCHCORE_MASTER_KEY",
 ] as const;
 
 function stubEnv(overrides: Record<string, string | undefined>) {
@@ -71,6 +74,13 @@ describe("F3 — CREDENTIAL_MASTER_KEY enforcement", () => {
     expect(cfg.credentialMasterKey).toBeUndefined();
   });
 
+  it("treats blank CREDENTIAL_MASTER_KEY as absent in local env", () => {
+    stubEnv({ ATHYPER_ENV: "local", CREDENTIAL_MASTER_KEY: "" });
+    const cfg = loadConfig();
+    expect(cfg.env).toBe("local");
+    expect(cfg.credentialMasterKey).toBeUndefined();
+  });
+
   it("throws when CREDENTIAL_MASTER_KEY is missing in staging", () => {
     stubEnv({ ATHYPER_ENV: "staging", CREDENTIAL_MASTER_KEY: undefined });
     expect(() => loadConfig()).toThrow(/CREDENTIAL_MASTER_KEY is required/);
@@ -93,6 +103,27 @@ describe("F3 — CREDENTIAL_MASTER_KEY enforcement", () => {
     const cfg = loadConfig();
     expect(cfg.env).toBe("production");
     expect(cfg.credentialMasterKey).toBe(key);
+  });
+
+  it("coerces SMTP_SECURE from env string to boolean", () => {
+    stubEnv({
+      ATHYPER_ENV: "local",
+      SMTP_HOST: "smtp.example.test",
+      SMTP_SECURE: "true",
+    });
+
+    const cfg = loadConfig();
+    expect(cfg.email?.secure).toBe(true);
+  });
+
+  it("rejects partial VAPID Web Push configuration", () => {
+    const publicKey = Buffer.concat([Buffer.from([0x04]), Buffer.alloc(64, 1)]).toString("base64url");
+    stubEnv({
+      ATHYPER_ENV: "local",
+      VAPID_PUBLIC_KEY: publicKey,
+    });
+
+    expect(() => loadConfig()).toThrow(/VAPID_SUBJECT is required/);
   });
 
   it("resolves staging even when NODE_ENV=production (ENVIRONMENT wins)", () => {

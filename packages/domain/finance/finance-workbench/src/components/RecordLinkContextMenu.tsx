@@ -97,7 +97,7 @@ export function RecordLinkContextMenu() {
         {copyItems.length > 0 && (
           <>
             <div className="my-1 h-px bg-border" />
-            <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
+            <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground/60">
               Copy field
             </div>
             <div className="max-h-[220px] overflow-y-auto">

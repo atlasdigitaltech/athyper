@@ -90,7 +90,9 @@ if exist "%TMPSCRIPT%" del "%TMPSCRIPT%"
 >> "%TMPSCRIPT%" echo }
 >> "%TMPSCRIPT%" echo $project     = if ($envMap['COMPOSE_PROJECT_NAME']) { $envMap['COMPOSE_PROJECT_NAME'] } else { 'athyper' }
 >> "%TMPSCRIPT%" echo $apiHost     = if ($envMap['APPS_ATHYPER_API_HOST'])  { $envMap['APPS_ATHYPER_API_HOST'] }  else { 'api.athyper.local' }
->> "%TMPSCRIPT%" echo $webHost     = if ($envMap['APPS_ATHYPER_WEB_HOST'])  { $envMap['APPS_ATHYPER_WEB_HOST'] }  else { 'neon.athyper.local' }
+>> "%TMPSCRIPT%" echo $neonHost    = if ($envMap['APPS_ATHYPER_NEON_HOST']) { $envMap['APPS_ATHYPER_NEON_HOST'] } elseif ($envMap['APPS_ATHYPER_WEB_HOST']) { $envMap['APPS_ATHYPER_WEB_HOST'] } else { 'neon.athyper.local' }
+>> "%TMPSCRIPT%" echo $meshHost    = if ($envMap['APPS_ATHYPER_MESH_HOST']) { $envMap['APPS_ATHYPER_MESH_HOST'] } else { 'mesh.athyper.local' }
+>> "%TMPSCRIPT%" echo $adminHost   = if ($envMap['APPS_ATHYPER_ADMIN_HOST']) { $envMap['APPS_ATHYPER_ADMIN_HOST'] } else { 'admin.athyper.local' }
 >> "%TMPSCRIPT%" echo $iamHost     = if ($envMap['IAM_HOST'])               { $envMap['IAM_HOST'] }               else { 'iam.athyper.local' }
 >> "%TMPSCRIPT%" echo $environment = if ($envMap['ENVIRONMENT'])            { $envMap['ENVIRONMENT'] }            else { 'local' }
 >> "%TMPSCRIPT%" echo $scheme      = if ($environment -eq 'local') { 'http' } else { 'https' }
@@ -162,8 +164,10 @@ if exist "%TMPSCRIPT%" del "%TMPSCRIPT%"
 >> "%TMPSCRIPT%" echo HttpCheck "API /livez"  "${scheme}://${apiHost}/livez"
 >> "%TMPSCRIPT%" echo HttpCheck "API /readyz" "${scheme}://${apiHost}/readyz"
 >> "%TMPSCRIPT%" echo Write-Host ""
->> "%TMPSCRIPT%" echo Write-Host "[7/8] Web frontend (${scheme}://${webHost})..."
->> "%TMPSCRIPT%" echo HttpCheck "Web /livez" "${scheme}://${webHost}/livez"
+>> "%TMPSCRIPT%" echo Write-Host "[7/8] Application planes..."
+>> "%TMPSCRIPT%" echo HttpCheck "Neon /livez" "${scheme}://${neonHost}/livez"
+>> "%TMPSCRIPT%" echo HttpCheck "Mesh /livez" "${scheme}://${meshHost}/livez"
+>> "%TMPSCRIPT%" echo HttpCheck "Admin /livez" "${scheme}://${adminHost}/livez"
 >> "%TMPSCRIPT%" echo Write-Host ""
 >> "%TMPSCRIPT%" echo Write-Host "[8/8] IAM OIDC discovery (${scheme}://${iamHost})..."
 >> "%TMPSCRIPT%" echo HttpCheck "IAM /.well-known/openid-configuration" "${scheme}://${iamHost}/realms/athyper/.well-known/openid-configuration"

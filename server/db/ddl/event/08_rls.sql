@@ -78,7 +78,31 @@ CREATE POLICY admin_write   ON event.notification_delivery
     FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
 
--- —— digest_staging (operational work queue — mutable) ————————————————————
+-- notification_delivery_claim (operational idempotency guard)
+ALTER TABLE event.notification_delivery_claim ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event.notification_delivery_claim FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON event.notification_delivery_claim;
+DROP POLICY IF EXISTS tenant_insert ON event.notification_delivery_claim;
+DROP POLICY IF EXISTS tenant_update ON event.notification_delivery_claim;
+DROP POLICY IF EXISTS tenant_delete ON event.notification_delivery_claim;
+DROP POLICY IF EXISTS admin_read    ON event.notification_delivery_claim;
+DROP POLICY IF EXISTS admin_write   ON event.notification_delivery_claim;
+
+CREATE POLICY tenant_read   ON event.notification_delivery_claim
+    FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON event.notification_delivery_claim
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON event.notification_delivery_claim
+    FOR UPDATE USING     (tenant_id = shared.current_tenant_id())
+              WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON event.notification_delivery_claim
+    FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON event.notification_delivery_claim
+    FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON event.notification_delivery_claim
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+-- digest_staging (operational work queue - mutable)
 ALTER TABLE event.digest_staging ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event.digest_staging FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_read   ON event.digest_staging;

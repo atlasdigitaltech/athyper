@@ -48,11 +48,11 @@ services:
   # master-key auth provides access control — the API rejects requests
   # without a valid key, so the dashboard is functional but the indexes
   # remain protected.
-  meilisearch:
+  searchcore:
     environment:
       MEILI_ENV: development
     labels:
-      - traefik.http.routers.meilisearch.middlewares=
+      - traefik.http.routers.searchcore.middlewares=
 
   # Keycloak: optimized mode — disables dev defaults, enables theme caching
   iam:
@@ -61,33 +61,53 @@ services:
       KC_SMTP_USERNAME: ${KC_SMTP_USERNAME}
       KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD}
 
-  # MailHog: disable Traefik routing in staging — dev-only service, no public hostname.
+  # mailtrap: disable Traefik routing in staging — dev-only service, no public hostname.
   # SMTP is still reachable internally by Keycloak on port 1025. Web UI is internal only.
-  mailhog:
+  mailtrap:
     labels:
       - traefik.enable=false
 
   # Neon Web: fix build context (base file resolves ../.. from apps/ subfolder).
   # Suppress Docker provider auto-router (container name becomes invalid hostname).
   # Real routing comes from the file provider (gateway/dynamic/athyper.workbench.yml).
-  athyper-neon-web:
+  neon-web:
     build:
       context: ../..
     labels:
       - traefik.enable=true
       - traefik.docker.network=athyper-edge
-      - traefik.http.services.athyper-neon-web.loadbalancer.server.port=3000
-      - traefik.http.routers.athyper-neon-web-docker.rule=Host(`${APPS_ATHYPER_WEB_HOST}`)
-      - traefik.http.routers.athyper-neon-web-docker.entrypoints=websecure
-      - traefik.http.routers.athyper-neon-web-docker.tls=true
-      - traefik.http.routers.athyper-neon-web-docker.tls.certresolver=${GATEWAY_CERT_RESOLVER}
-      - traefik.http.routers.athyper-neon-web-docker.priority=1
+      - traefik.http.services.neon-web.loadbalancer.server.port=3000
+      - traefik.http.services.neon-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.neon-web.loadbalancer.healthcheck.interval=15s
+      - traefik.http.services.neon-web.loadbalancer.healthcheck.timeout=5s
+
+  mesh-web:
+    build:
+      context: ../..
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.services.mesh-web.loadbalancer.server.port=3000
+      - traefik.http.services.mesh-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.mesh-web.loadbalancer.healthcheck.interval=15s
+      - traefik.http.services.mesh-web.loadbalancer.healthcheck.timeout=5s
+
+  admin-web:
+    build:
+      context: ../..
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.services.admin-web.loadbalancer.server.port=3000
+      - traefik.http.services.admin-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.admin-web.loadbalancer.healthcheck.interval=15s
+      - traefik.http.services.admin-web.loadbalancer.healthcheck.timeout=5s
 
 
   # API: 2 replicas to validate multi-instance behavior before production.
   # Dockerfile.prod compiles TS → JS and strips devDeps; Dockerfile.dev is
   # local-only (tsx watch).
-  athyper-api:
+  api:
     build:
       context: ../..
       dockerfile: server/Dockerfile.prod
@@ -102,7 +122,7 @@ services:
           memory: 256M
 
   # Worker: 2 replicas to validate concurrent job processing
-  athyper-worker:
+  worker:
     build:
       context: ../..
       dockerfile: server/Dockerfile.prod
@@ -117,7 +137,7 @@ services:
           memory: 256M
 
   # Scheduler: uses the same compiled image as api/worker
-  athyper-scheduler:
+  scheduler:
     build:
       context: ../..
       dockerfile: server/Dockerfile.prod

@@ -85,17 +85,17 @@ rm -rf "$ATHYPER_DATA"/*
 # ----------------------------
 echo "Recreating folder structure..."
 mkdir -p "$ATHYPER_DATA/db"                       # postgres
-mkdir -p "$ATHYPER_DATA/meilisearch"              # search profile
+mkdir -p "$ATHYPER_DATA/searchcore"               # search profile
 mkdir -p "$ATHYPER_DATA/memorycache"              # redis (shared)
 mkdir -p "$ATHYPER_DATA/memorycache-jobs"         # redis (bullmq isolation, opt-in)
-mkdir -p "$ATHYPER_DATA/metabase"                 # analytics profile (deferred)
+mkdir -p "$ATHYPER_DATA/analyticsboard"           # analytics profile (deferred)
 mkdir -p "$ATHYPER_DATA/objectstorage"            # minio
 mkdir -p "$ATHYPER_DATA/telemetry/alertmanager"   # alertmanager
 mkdir -p "$ATHYPER_DATA/telemetry/logging"        # loki
 mkdir -p "$ATHYPER_DATA/telemetry/metrics"        # prometheus
 mkdir -p "$ATHYPER_DATA/telemetry/observability"  # grafana
 mkdir -p "$ATHYPER_DATA/telemetry/tracing"        # tempo (wal + local backend)
-mkdir -p "$ATHYPER_DATA/uptime-kuma"              # monitoring profile
+mkdir -p "$ATHYPER_DATA/statuswatch"              # monitoring profile
 
 echo ""
 echo "Done."

@@ -1,0 +1,28 @@
+{
+  "name": "@athyper/app-admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./collaboration": "./src/collaboration/index.ts",
+    "./list": "./src/list/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@athyper/collaboration-ui": "workspace:*",
+    "@athyper/query": "workspace:*",
+    "@athyper/runtime-list": "workspace:*",
+    "@athyper/surface-kit": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3"
+  }
+}

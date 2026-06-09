@@ -11,14 +11,14 @@ REM Steps:
 REM   [1/6] Copy realm file to temp directory (%TEMP%\keycloak-import-*)
 REM         (Windows CMD: Docker volume mounts require a host-side copy)
 REM   [2/6] Check database connection (via db container)
-REM   [3/6] Import athyper realm (5-second countdown to cancel)
+REM   [3/6] Import unified athyper realm (5-second countdown to cancel)
 REM   [3b/6] Import platform-control realm (only if realm-platform-control.json
 REM          exists in stack\config\iam\; uses a separate temp directory)
 REM   [4/6] Clean up temp directory
 REM   [5/6] Restart Keycloak container; wait for healthy status
-REM         (60 attempts x 3 s = 180 s max ? extended vs .sh's 60 s because
+REM         (100 attempts x 3 s = 300 s max because
 REM          Docker Desktop on Windows restarts containers more slowly)
-REM   [6/6] Run provision-keycloak-users.mjs to seed passwords + MFA
+REM   [6/6] Run seed-iam-credentials.bat to seed demo passwords
 REM
 REM Requires: running dbpool-session container; KEYCLOAK_IMAGE_TAG in stack\env\.env
 REM =======================================================================
@@ -33,8 +33,10 @@ set "STACK_DIR=%CD%"
 popd >nul
 
 set "CONFIG_DIR=%STACK_DIR%\config\iam"
-set "IMPORT_FILE=%CONFIG_DIR%\realm-demosetup.json"
+set "IMPORT_FILE=%CONFIG_DIR%\realm-athyper.json"
 set "PLATFORM_IMPORT_FILE=%CONFIG_DIR%\realm-platform-control.json"
+set "DEMO_FILE=%CONFIG_DIR%\realm-athyper-demosetup.json"
+set "PLATFORM_DEMO_FILE=%CONFIG_DIR%\realm-platform-control-demosetup.json"
 set "TEMP_IMPORT_DIR=%TEMP%\keycloak-import-%RANDOM%%RANDOM%"
 
 REM ---------------------------------------------------------------------------
@@ -72,6 +74,11 @@ if "!KEYCLOAK_IMAGE_TAG!"=="" (
     echo Error: KEYCLOAK_IMAGE_TAG not found in stack\env\.env
     exit /b 1
 )
+set "IMPORT_ENVIRONMENT=%ENVIRONMENT%"
+if "!IMPORT_ENVIRONMENT!"=="" (
+    if defined ENV_FILE_IMP for /f "tokens=2 delims==" %%a in ('findstr "^ENVIRONMENT=" "!ENV_FILE_IMP!" 2^>nul') do set "IMPORT_ENVIRONMENT=%%a"
+)
+if "!IMPORT_ENVIRONMENT!"=="" set "IMPORT_ENVIRONMENT=local"
 
 echo.
 echo === Keycloak Realm Import ===
@@ -129,14 +136,31 @@ if "%IAM_DB_PASSWORD%"=="" (
     exit /b 1
 )
 
-for %%V in (KC_SMTP_HOST KC_SMTP_PORT KC_SMTP_FROM KC_SMTP_FROM_DISPLAY_NAME KC_SMTP_AUTH KC_SMTP_SSL KC_SMTP_STARTTLS KC_SMTP_USERNAME KC_SMTP_PASSWORD KC_WEBAUTHN_RP_ID ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID MICROSOFT_CLIENT_SECRET) do (
+set "IAM_ADMIN_USER=%IAM_ADMIN%"
+set "IAM_ADMIN_PASS=%IAM_ADMIN_PASSWORD%"
+if "!IAM_ADMIN_USER!"=="" (
+    if defined ENV_FILE_IMP for /f "tokens=2 delims==" %%a in ('findstr "^IAM_ADMIN=" "!ENV_FILE_IMP!" 2^>nul') do set "IAM_ADMIN_USER=%%a"
+)
+if "!IAM_ADMIN_PASS!"=="" (
+    if defined ENV_FILE_IMP for /f "tokens=2 delims==" %%a in ('findstr "^IAM_ADMIN_PASSWORD=" "!ENV_FILE_IMP!" 2^>nul') do set "IAM_ADMIN_PASS=%%a"
+)
+if "!IAM_ADMIN_USER!"=="" (
+    echo Error: IAM_ADMIN is required for post-restart API check
+    exit /b 1
+)
+if "!IAM_ADMIN_PASS!"=="" (
+    echo Error: IAM_ADMIN_PASSWORD is required for post-restart API check
+    exit /b 1
+)
+
+for %%V in (KC_SMTP_HOST KC_SMTP_PORT KC_SMTP_FROM KC_SMTP_FROM_DISPLAY_NAME KC_SMTP_AUTH KC_SMTP_SSL KC_SMTP_STARTTLS KC_SMTP_USERNAME KC_SMTP_PASSWORD KC_WEBAUTHN_RP_ID ADMIN_WEB_CLIENT_SECRET ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID MICROSOFT_CLIENT_SECRET) do (
     if not defined %%V (
         if defined ENV_FILE_IMP (
             for /f "tokens=2 delims==" %%a in ('findstr /B /C:"%%V=" "!ENV_FILE_IMP!" 2^>nul') do set "%%V=%%a"
         )
     )
 )
-if not defined KC_SMTP_HOST set "KC_SMTP_HOST=mailhog"
+if not defined KC_SMTP_HOST set "KC_SMTP_HOST=mailtrap"
 if not defined KC_SMTP_PORT set "KC_SMTP_PORT=1025"
 if not defined KC_SMTP_FROM set "KC_SMTP_FROM=noreply@athyper.local"
 if not defined KC_SMTP_FROM_DISPLAY_NAME set "KC_SMTP_FROM_DISPLAY_NAME=Athyper"
@@ -147,7 +171,20 @@ if not defined KC_WEBAUTHN_RP_ID set "KC_WEBAUTHN_RP_ID=athyper.local"
 
 echo [1/6] Creating temporary import directory...
 mkdir "%TEMP_IMPORT_DIR%" 2>nul
-copy /y "%IMPORT_FILE%" "%TEMP_IMPORT_DIR%\athyper-realm.json" >nul
+set "IMPORT_REALM_NAME="
+for /f "usebackq delims=" %%r in (`node -e "const fs=require('fs'); const file=process.argv[1]; const realm=JSON.parse(fs.readFileSync(file,'utf8')).realm; if(realm===undefined||realm===null||realm==='') process.exit(1); process.stdout.write(realm);" "%IMPORT_FILE%"`) do set "IMPORT_REALM_NAME=%%r"
+if "!IMPORT_REALM_NAME!"=="" (
+    echo Error: Cannot determine realm name from %IMPORT_FILE%
+    rmdir /s /q "%TEMP_IMPORT_DIR%" 2>nul
+    exit /b 1
+)
+copy /y "%IMPORT_FILE%" "%TEMP_IMPORT_DIR%\!IMPORT_REALM_NAME!-realm.json" >nul
+node "%STACK_DIR%\..\tools\scripts\apply-iam-realm-policy.cjs" --environment "!IMPORT_ENVIRONMENT!" --root "%TEMP_IMPORT_DIR%" --write
+if errorlevel 1 (
+    echo Error: failed to apply IAM realm policy for !IMPORT_ENVIRONMENT!
+    rmdir /s /q "%TEMP_IMPORT_DIR%" 2>nul
+    exit /b 1
+)
 
 echo [2/6] Checking database connection...
 docker exec %DOCKER_CONTAINER_DB% psql -U %IAM_DB_USERNAME% -d %DB_NAME_AUTH% -c "SELECT version();" >nul 2>&1
@@ -180,6 +217,7 @@ docker run --rm ^
   -e KC_SMTP_USERNAME=!KC_SMTP_USERNAME! ^
   -e KC_SMTP_PASSWORD=!KC_SMTP_PASSWORD! ^
   -e KC_WEBAUTHN_RP_ID=!KC_WEBAUTHN_RP_ID! ^
+  -e ADMIN_WEB_CLIENT_SECRET=!ADMIN_WEB_CLIENT_SECRET! ^
   -e ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET=!ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET! ^
   -e NEON_SVC_BFF_CLIENT_SECRET=!NEON_SVC_BFF_CLIENT_SECRET! ^
   -e GITHUB_OAUTH_CLIENT_ID=!GITHUB_OAUTH_CLIENT_ID! ^
@@ -199,7 +237,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo athyper realm imported
+echo !IMPORT_REALM_NAME! realm imported
 
 REM Import platform-control realm (if the file exists)
 if exist "%PLATFORM_IMPORT_FILE%" (
@@ -207,6 +245,10 @@ if exist "%PLATFORM_IMPORT_FILE%" (
     set "TEMP_PLATFORM_DIR=%TEMP%\keycloak-import-platform-%RANDOM%%RANDOM%"
     mkdir "!TEMP_PLATFORM_DIR!" 2>nul
     copy /y "%PLATFORM_IMPORT_FILE%" "!TEMP_PLATFORM_DIR!\platform-control-realm.json" >nul
+    node "%STACK_DIR%\..\tools\scripts\apply-iam-realm-policy.cjs" --environment "!IMPORT_ENVIRONMENT!" --root "!TEMP_PLATFORM_DIR!" --write
+    if errorlevel 1 (
+        echo Warning: failed to apply IAM realm policy to platform-control import
+    )
 
     docker run --rm ^
       --network %DOCKER_NETWORK% ^
@@ -225,6 +267,7 @@ if exist "%PLATFORM_IMPORT_FILE%" (
       -e KC_SMTP_USERNAME=!KC_SMTP_USERNAME! ^
       -e KC_SMTP_PASSWORD=!KC_SMTP_PASSWORD! ^
       -e KC_WEBAUTHN_RP_ID=!KC_WEBAUTHN_RP_ID! ^
+      -e ADMIN_WEB_CLIENT_SECRET=!ADMIN_WEB_CLIENT_SECRET! ^
       -e ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET=!ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET! ^
       -e NEON_SVC_BFF_CLIENT_SECRET=!NEON_SVC_BFF_CLIENT_SECRET! ^
       -e GITHUB_OAUTH_CLIENT_ID=!GITHUB_OAUTH_CLIENT_ID! ^
@@ -251,49 +294,94 @@ if exist "%PLATFORM_IMPORT_FILE%" (
 echo [4/6] Cleaning up...
 rmdir /s /q "%TEMP_IMPORT_DIR%" 2>nul
 
-echo [5/6] Restarting Keycloak container...
-docker ps --format "{{.Names}}" | findstr /C:"%DOCKER_CONTAINER_IAM%" >nul 2>&1
-if not errorlevel 1 (
-    docker restart %DOCKER_CONTAINER_IAM%
-    echo Waiting for Keycloak to be ready ^(health check^)...
-    REM Windows: 60 attempts x 3 s = 180 s max (import-iam.sh uses 30 x 2 s = 60 s).
-    REM Docker Desktop on Windows takes longer to fully restart a container than
-    REM the Linux/macOS daemon, so the extended window prevents false timeouts.
-    set "KC_READY=0"
-    for /L %%i in (1,1,60) do (
-        if "!KC_READY!"=="0" (
-            for /f "tokens=*" %%s in ('docker inspect --format "{{.State.Health.Status}}" %DOCKER_CONTAINER_IAM% 2^>nul') do set "KC_STATUS=%%s"
-            if "!KC_STATUS!"=="healthy" (
-                set "KC_READY=1"
-                echo Keycloak is ready.
-            ) else (
-                timeout /t 3 /nobreak >nul 2>&1
-            )
-        )
-    )
-    if "!KC_READY!"=="0" (
-        echo Warning: Keycloak health check timed out. Waiting an extra 15 seconds...
-        timeout /t 15 /nobreak >nul 2>&1
+echo [5/6] Recreating Keycloak container with current compose mounts...
+set "LIVE_CONFIG_ROOT=%ATHYPER_CONFIG_ROOT%"
+if "!LIVE_CONFIG_ROOT!"=="" (
+    if defined ENV_FILE_IMP for /f "tokens=2 delims==" %%a in ('findstr "^ATHYPER_CONFIG_ROOT=" "!ENV_FILE_IMP!" 2^>nul') do set "LIVE_CONFIG_ROOT=%%a"
+)
+if "!LIVE_CONFIG_ROOT!"=="" set "LIVE_CONFIG_ROOT=%STACK_DIR%\config"
+set "LIVE_IAM_DIR=!LIVE_CONFIG_ROOT!\iam"
+if not exist "!LIVE_IAM_DIR!" mkdir "!LIVE_IAM_DIR!" 2>nul
+copy /y "%IMPORT_FILE%" "!LIVE_IAM_DIR!\realm-athyper.json" >nul
+if errorlevel 1 (
+    echo Warning: failed to sync realm-athyper.json to !LIVE_IAM_DIR!
+)
+if exist "%DEMO_FILE%" copy /y "%DEMO_FILE%" "!LIVE_IAM_DIR!\realm-athyper-demosetup.json" >nul
+if exist "%PLATFORM_IMPORT_FILE%" (
+    copy /y "%PLATFORM_IMPORT_FILE%" "!LIVE_IAM_DIR!\realm-platform-control.json" >nul
+    if errorlevel 1 (
+        echo Warning: failed to sync realm-platform-control.json to !LIVE_IAM_DIR!
     )
 ) else (
-    echo Keycloak container not running, start it to apply changes:
-    echo   cd stack\scripts\stack-profile ^&^& up.bat
+    echo Skipping platform-control sync ^(file not found: %PLATFORM_IMPORT_FILE%^)
+)
+if exist "%PLATFORM_DEMO_FILE%" copy /y "%PLATFORM_DEMO_FILE%" "!LIVE_IAM_DIR!\realm-platform-control-demosetup.json" >nul
+
+node "%STACK_DIR%\..\tools\scripts\apply-iam-realm-policy.cjs" --environment "!IMPORT_ENVIRONMENT!" --root "!LIVE_IAM_DIR!" --write
+if errorlevel 1 (
+    echo Warning: failed to apply IAM realm policy to !LIVE_IAM_DIR!
 )
 
-echo [6/6] Provisioning users (passwords + MFA)...
-set "PROVISION_SCRIPT=%STACK_DIR%\..\tools\devtools\keycloackgen\provision-keycloak-users.mjs"
-if exist "!PROVISION_SCRIPT!" (
-    where node >nul 2>&1
-    if not errorlevel 1 (
-        node "!PROVISION_SCRIPT!"
-        echo Users provisioned successfully
+docker rm -f %DOCKER_CONTAINER_IAM% >nul 2>&1
+
+set "UP_SCRIPT=%STACK_DIR%\scripts\stack-profile\up.bat"
+if exist "!UP_SCRIPT!" (
+    call "!UP_SCRIPT!" core
+) else (
+    echo Error: stack-profile up script not found at: !UP_SCRIPT!
+    exit /b 1
+)
+
+echo Waiting for Keycloak to be ready ^(health check^)...
+REM Windows: 100 attempts x 3 s = 300 s max.
+REM Docker Desktop on Windows takes longer to fully restart a container than
+REM the Linux/macOS daemon, so the extended window prevents false timeouts.
+set "KC_READY=0"
+for /L %%i in (1,1,100) do (
+    if "!KC_READY!"=="0" (
+        for /f "tokens=*" %%s in ('docker inspect --format "{{.State.Health.Status}}" %DOCKER_CONTAINER_IAM% 2^>nul') do set "KC_STATUS=%%s"
+        if "!KC_STATUS!"=="healthy" (
+            set "KC_READY=1"
+            echo Keycloak is ready.
+        ) else (
+            timeout /t 3 /nobreak >nul 2>&1
+        )
+    )
+)
+if "!KC_READY!"=="0" (
+    echo Warning: Keycloak health check timed out after 300 seconds. Waiting an extra 30 seconds...
+    timeout /t 30 /nobreak >nul 2>&1
+)
+
+echo Waiting for Keycloak admin API...
+set "KC_ADMIN_READY=0"
+for /L %%i in (1,1,60) do (
+    if "!KC_ADMIN_READY!"=="0" (
+        docker exec %DOCKER_CONTAINER_IAM% /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user "!IAM_ADMIN_USER!" --password "!IAM_ADMIN_PASS!" >nul 2>&1
+        if not errorlevel 1 (
+            set "KC_ADMIN_READY=1"
+            echo Keycloak admin API is ready.
+        ) else (
+            timeout /t 3 /nobreak >nul 2>&1
+        )
+    )
+)
+if "!KC_ADMIN_READY!"=="0" (
+    echo Warning: Keycloak admin API was not ready after 180 seconds.
+)
+
+echo [6/6] Seeding demo credentials...
+if exist "%SCRIPT_DIR%\seed-iam-credentials.bat" (
+    call "%SCRIPT_DIR%\seed-iam-credentials.bat"
+    if errorlevel 1 (
+        echo Warning: demo credential seeding failed. Import itself succeeded.
+        echo   Re-run manually: stack\scripts\db\session\iam\seed-iam-credentials.bat
     ) else (
-        echo Warning: node not found - run manually:
-        echo   node tools\devtools\keycloackgen\provision-keycloak-users.mjs
+        echo Demo credentials seeded successfully
     )
 ) else (
-    echo Warning: provision script not found at: !PROVISION_SCRIPT!
-    echo   Run manually: node tools\devtools\keycloackgen\provision-keycloak-users.mjs
+    echo Warning: seed script not found at: %SCRIPT_DIR%\seed-iam-credentials.bat
+    echo   Run manually: stack\scripts\db\session\iam\seed-iam-credentials.bat
 )
 
 echo.
@@ -303,8 +391,9 @@ echo Next steps:
 echo   1. Access Keycloak Admin Console
 echo   2. Verify realms: athyper, platform-control
 echo   3. Check clients, users, roles
-echo   4. Demo user password is controlled by IAM_DEMO_USER_PASSWORD in stack\env\.env
-echo      Default (if unset): Demo@1234  ^|  Run seed-iam-credentials.bat to re-apply
+echo   4. Demo user passwords are controlled by IAM_DEMO_USER_PASSWORD, IAM_ADMIN_REALM_USER_PASSWORD,
+echo      and IAM_PLATFORM_CONTROL_USER_PASSWORD in stack\env\.env.
+echo      Run seed-iam-credentials.bat to re-apply.
 echo.
 echo Keycloak Admin URL: http://localhost/auth
 echo.

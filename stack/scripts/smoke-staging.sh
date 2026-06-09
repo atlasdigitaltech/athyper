@@ -88,7 +88,9 @@ _parse_env_file "$ENV_FILE"
 
 PROJECT="${ENV_MAP[COMPOSE_PROJECT_NAME]:-athyper}"
 API_HOST="${ENV_MAP[APPS_ATHYPER_API_HOST]:-}"
-WEB_HOST="${ENV_MAP[APPS_ATHYPER_WEB_HOST]:-}"
+NEON_HOST="${ENV_MAP[APPS_ATHYPER_NEON_HOST]:-${ENV_MAP[APPS_ATHYPER_WEB_HOST]:-}}"
+MESH_HOST="${ENV_MAP[APPS_ATHYPER_MESH_HOST]:-}"
+ADMIN_HOST="${ENV_MAP[APPS_ATHYPER_ADMIN_HOST]:-}"
 IAM_HOST="${ENV_MAP[IAM_HOST]:-}"
 ENVIRONMENT="${ENV_MAP[ENVIRONMENT]:-local}"
 
@@ -101,7 +103,9 @@ fi
 
 # Fall back to Traefik-local hostnames when host vars are absent (local dev)
 API_HOST="${API_HOST:-api.athyper.local}"
-WEB_HOST="${WEB_HOST:-neon.athyper.local}"
+NEON_HOST="${NEON_HOST:-neon.athyper.local}"
+MESH_HOST="${MESH_HOST:-mesh.athyper.local}"
+ADMIN_HOST="${ADMIN_HOST:-admin.athyper.local}"
 IAM_HOST="${IAM_HOST:-iam.athyper.local}"
 
 # ----------------------------
@@ -275,8 +279,10 @@ http_check "API /readyz" "${SCHEME}://${API_HOST}/readyz"
 # [7/8] Web liveness
 # ----------------------------
 echo ""
-echo "[7/8] Web frontend ($SCHEME://$WEB_HOST)..."
-http_check "Web /livez" "${SCHEME}://${WEB_HOST}/livez"
+echo "[7/8] Application planes..."
+http_check "Neon /livez" "${SCHEME}://${NEON_HOST}/livez"
+http_check "Mesh /livez" "${SCHEME}://${MESH_HOST}/livez"
+http_check "Admin /livez" "${SCHEME}://${ADMIN_HOST}/livez"
 
 # ----------------------------
 # [8/8] IAM OIDC discovery

@@ -244,29 +244,13 @@ const EMPTY_SUMMARY: CommodityCategorySummary = {
 };
 
 const WORKBENCH_TYPOGRAPHY_SCOPE = [
-  "text-[13px] leading-5",
-  "[--doc-subtitle-size:0.8125rem]",
-  "[--doc-subtitle-line-height:1.45]",
-  "[--doc-support-size:0.75rem]",
-  "[--doc-support-line-height:1.45]",
-  "[--doc-action-size:0.8125rem]",
-  "[--doc-action-line-height:1]",
-  "[--doc-badge-size:0.75rem]",
-  "[--doc-badge-line-height:1]",
-  "[--doc-field-label-size:0.6875rem]",
-  "[--doc-field-label-line-height:1.1]",
-  "[--doc-field-label-tracking:0]",
-  "[--doc-compact-code-size:0.75rem]",
-  "[--doc-compact-code-line-height:1.2]",
-  "[--doc-compact-code-tracking:0]",
-  "[--doc-field-value-size:0.8125rem]",
-  "[--doc-field-value-line-height:1.35]",
-  "[&_input]:text-[13px]",
-  "[&_select]:text-[13px]",
-  "[&_[role=combobox]]:text-[13px]",
+  "text-sm leading-5",
+  "[&_input]:text-sm",
+  "[&_select]:text-sm",
+  "[&_[role=combobox]]:text-sm",
 ].join(" ");
 
-const CATEGORY_CODE_TEXT_CLASS = "font-mono text-doc-support leading-4 text-muted-foreground";
+const CATEGORY_CODE_TEXT_CLASS = "tabular-nums text-xs leading-4 text-muted-foreground";
 
 const DEFAULT_SIMULATOR_INPUTS: SimulatorInputs = {
   companyCodeId: null,
@@ -1289,15 +1273,15 @@ function ExplorerProjectionHeader({
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-doc-label font-semibold uppercase text-foreground">{label}</span>
+          <span className="text-sm font-medium text-foreground">{label}</span>
           {typeof count === "number" && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-doc-support font-semibold text-muted-foreground">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
               {count}
             </span>
           )}
         </div>
-        <p className="mt-1 text-doc-support text-muted-foreground">{title}</p>
-        {source && <p className="font-mono text-doc-support text-muted-foreground">{source}</p>}
+        <p className="mt-1 text-xs text-muted-foreground">{title}</p>
+        {source && <p className="tabular-nums text-xs text-muted-foreground">{source}</p>}
       </div>
       {action}
     </div>
@@ -1316,7 +1300,7 @@ function ProjectionOpenLink({
   return (
     <Link
       href={href}
-      className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 text-doc-action font-semibold text-foreground hover:bg-muted/60"
+      className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 text-sm font-medium text-foreground hover:bg-muted/60"
     >
       {icon}
       {children}
@@ -1338,8 +1322,8 @@ function SelectedCommodityCategorySummary({ row }: { row: CommodityCategoryRow }
               <span className={CATEGORY_CODE_TEXT_CLASS}>{row.code}</span>
             </div>
             <div className="mt-1.5 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
-              <h2 className="break-words text-doc-subtitle font-semibold text-foreground">{row.name}</h2>
-              <span className="break-words text-doc-support text-muted-foreground">{row.description ?? "No description"}</span>
+              <h2 className="break-words text-xs font-medium text-foreground">{row.name}</h2>
+              <span className="break-words text-xs text-muted-foreground">{row.description ?? "No description"}</span>
             </div>
           </div>
         </div>
@@ -1368,7 +1352,7 @@ function SelectedCategoryBodyTabBar({
               aria-selected={active}
               onClick={() => onTabChange(tab.key)}
               className={cn(
-                "inline-flex h-10 items-center whitespace-nowrap border-b-2 px-0 text-[13px] font-semibold leading-5 transition-colors",
+                "inline-flex h-10 items-center whitespace-nowrap border-b-2 px-0 text-sm font-medium leading-5 transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 active
                   ? "border-foreground text-foreground"
@@ -1411,17 +1395,17 @@ function IntentOutcomeCard({
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-doc-support font-semibold text-muted-foreground">{code ?? "No intent"}</span>
+              <span className="tabular-nums text-xs font-medium text-muted-foreground">{code ?? "No intent"}</span>
               {domain && (
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-doc-support font-semibold text-primary">
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                   {domain}
                 </span>
               )}
             </div>
-            <div className="mt-1 break-words text-doc-subtitle font-semibold text-foreground">
+            <div className="mt-1 break-words text-xs font-medium text-foreground">
               {hasIntent ? name ?? code : "No default intent configured"}
             </div>
-            <div className="mt-1 text-doc-support font-medium text-muted-foreground">
+            <div className="mt-1 text-xs font-medium text-muted-foreground">
               {effectiveWindowText(effectiveFrom, effectiveTo)}
             </div>
           </div>
@@ -1461,13 +1445,13 @@ function ResolutionFlowStep({
         </span>
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-doc-support font-semibold text-muted-foreground">
+            <span className="rounded-full bg-muted px-1.5 py-0.5 tabular-nums text-xs font-medium text-muted-foreground">
               {step}
             </span>
-            <span className="text-doc-label font-semibold uppercase text-muted-foreground">{title}</span>
+            <span className="text-sm font-medium text-muted-foreground">{title}</span>
           </div>
-          <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{value}</div>
-          <div className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">{detail}</div>
+          <div className="mt-1 truncate text-xs font-medium text-foreground">{value}</div>
+          <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{detail}</div>
         </div>
       </div>
     </div>
@@ -1534,22 +1518,22 @@ function CategoryAttributeGrid({ row }: { row: CommodityCategoryRow }) {
   return (
     <section className="grid h-full gap-2 sm:grid-cols-2">
       <div className="flex min-h-9 flex-col justify-center rounded-lg border bg-card px-2.5 py-1.5">
-        <div className="text-doc-label font-semibold uppercase text-muted-foreground">Procurement</div>
-        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{titleize(row.procurementType)}</div>
+        <div className="text-sm font-medium text-muted-foreground">Procurement</div>
+        <div className="mt-1 text-xs font-medium text-foreground">{titleize(row.procurementType)}</div>
       </div>
       <div className="flex min-h-9 flex-col justify-center rounded-lg border bg-card px-2.5 py-1.5">
-        <div className="text-doc-label font-semibold uppercase text-muted-foreground">Parent</div>
-        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">
+        <div className="text-sm font-medium text-muted-foreground">Parent</div>
+        <div className="mt-1 text-xs font-medium text-foreground">
           {row.parentId ? codeName(row.rootCode, row.rootName) : "Root category"}
         </div>
       </div>
       <div className="flex min-h-9 flex-col justify-center rounded-lg border bg-card px-2.5 py-1.5">
-        <div className="text-doc-label font-semibold uppercase text-muted-foreground">Visibility</div>
-        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{titleize(row.visibility)}</div>
+        <div className="text-sm font-medium text-muted-foreground">Visibility</div>
+        <div className="mt-1 text-xs font-medium text-foreground">{titleize(row.visibility)}</div>
       </div>
       <div className="flex min-h-9 flex-col justify-center rounded-lg border bg-card px-2.5 py-1.5">
-        <div className="text-doc-label font-semibold uppercase text-muted-foreground">Controls</div>
-        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{controls}</div>
+        <div className="text-sm font-medium text-muted-foreground">Controls</div>
+        <div className="mt-1 text-xs font-medium text-foreground">{controls}</div>
       </div>
     </section>
   );
@@ -1590,8 +1574,8 @@ function ProfileEnablementProjection({ row }: { row: CommodityCategoryRow }) {
   return (
     <section className="rounded-lg border bg-card p-4">
       <div>
-        <div className="text-doc-label font-semibold uppercase text-foreground">Category profile</div>
-        <p className="mt-1 text-doc-subtitle text-muted-foreground">
+        <div className="text-sm font-medium text-foreground">Category profile</div>
+        <p className="mt-1 text-xs text-muted-foreground">
           Base business flows enabled for this category / {enabledCount} of 3 enabled
         </p>
       </div>
@@ -1617,9 +1601,9 @@ function ProfileEnablementProjection({ row }: { row: CommodityCategoryRow }) {
                 {item.enabled ? <CheckCircle2 className="size-4" aria-hidden="true" /> : <CircleAlert className="size-4" aria-hidden="true" />}
               </span>
               <div className="min-w-0">
-                <div className="text-doc-label font-semibold uppercase text-muted-foreground">{item.label}</div>
+                <div className="text-sm font-medium text-muted-foreground">{item.label}</div>
                 <div className={cn(
-                  "mt-0.5 text-doc-subtitle font-semibold",
+                  "mt-0.5 text-xs font-medium",
                   item.enabled ? "text-foreground" : "text-muted-foreground",
                 )}>
                   {item.enabled ? "Enabled" : "Disabled"}
@@ -1629,10 +1613,10 @@ function ProfileEnablementProjection({ row }: { row: CommodityCategoryRow }) {
 
             <div className="mt-3 grid gap-2">
               {item.facts.map((fact) => (
-                <div key={fact.label} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-doc-support">
+                <div key={fact.label} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-xs">
                   <span className="min-w-0 truncate font-medium text-muted-foreground">{fact.label}</span>
                   <span className={cn(
-                    "min-w-0 truncate text-right font-semibold",
+                    "min-w-0 truncate text-right font-medium",
                     item.enabled ? "text-foreground" : "text-muted-foreground",
                   )}>
                     {fact.value}
@@ -1745,20 +1729,20 @@ function CategoryPolicyRecordCard({
               <Icon className="size-4" aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-doc-subtitle font-semibold text-foreground">
+              <div className="truncate text-xs font-medium text-foreground">
                 {policyIntentTitle(item, intent)}
               </div>
-              <div className="mt-0.5 truncate text-doc-support text-muted-foreground">
+              <div className="mt-0.5 truncate text-xs text-muted-foreground">
                 {policyIntentDetail(kind, item, intent)}
               </div>
 
               <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
-                <span className="text-doc-label font-semibold uppercase text-muted-foreground">{config.label}</span>
-                <span className="rounded-full border bg-muted/30 px-2 py-0.5 text-doc-support font-semibold text-muted-foreground">
+                <span className="text-sm font-medium text-muted-foreground">{config.label}</span>
+                <span className="rounded-full border bg-muted/30 px-2 py-0.5 text-xs font-medium text-muted-foreground">
                   {titleize(item.mappingMode)}
                 </span>
                 {item.isDefault && (
-                  <span className="rounded-full border bg-muted/30 px-2 py-0.5 text-doc-support font-semibold text-foreground">
+                  <span className="rounded-full border bg-muted/30 px-2 py-0.5 text-xs font-medium text-foreground">
                     Default
                   </span>
                 )}
@@ -1777,8 +1761,8 @@ function CategoryPolicyRecordCard({
         )}>
           {facts.map((fact) => (
             <div key={fact.label} className="min-w-0 rounded-md border bg-background px-2 py-1">
-              <div className="text-doc-label font-semibold uppercase text-muted-foreground">{fact.label}</div>
-              <div className="truncate text-doc-support font-semibold text-foreground">{fact.value}</div>
+              <div className="text-sm font-medium text-muted-foreground">{fact.label}</div>
+              <div className="truncate text-xs font-medium text-foreground">{fact.value}</div>
             </div>
           ))}
         </div>
@@ -1851,15 +1835,15 @@ function CategoryPolicyProjection({
 
       <div className="mt-2.5 grid gap-2">
         {policiesQuery.isLoading ? (
-          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-doc-support text-muted-foreground">
+          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-xs text-muted-foreground">
             Loading policies...
           </div>
         ) : policiesQuery.isError ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2.5 text-doc-support text-destructive">
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2.5 text-xs text-destructive">
             Policies are unavailable.
           </div>
         ) : policies.length === 0 ? (
-          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-doc-support text-muted-foreground">
+          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-xs text-muted-foreground">
             {config.empty}
           </div>
         ) : (
@@ -1886,8 +1870,8 @@ function GovernancePostureProjection({ row }: { row: CommodityCategoryRow }) {
     <section className="rounded-lg border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-doc-label font-semibold uppercase text-foreground">Governance posture</div>
-          <p className="mt-1 text-doc-subtitle text-muted-foreground">
+          <div className="text-sm font-medium text-foreground">Governance posture</div>
+          <p className="mt-1 text-xs text-muted-foreground">
             What is enforced on every business spend transaction in this category / {activeCount} of 3 active
           </p>
         </div>
@@ -1931,19 +1915,19 @@ function RuleProjectionRow({ rule, row, returnToHref }: { rule: CommodityCategor
       <div className="min-w-0 rounded-lg border bg-muted/20 p-2.5 text-foreground">
         <div className="flex h-full min-w-0 items-center gap-2.5">
           <span className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-lg font-mono text-doc-subtitle font-semibold",
+            "flex size-7 shrink-0 items-center justify-center rounded-lg tabular-nums text-xs font-medium",
             isFallback ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
           )}>
             {isFallback ? "else" : rule.priority}
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="break-words text-doc-subtitle font-semibold text-foreground">{conditionTitle(rule)}</span>
+              <span className="break-words text-xs font-medium text-foreground">{conditionTitle(rule)}</span>
             </div>
-            <div className="mt-1 text-doc-support text-muted-foreground">
+            <div className="mt-1 text-xs text-muted-foreground">
               {titleize(rule.conditionType)} / {titleize(rule.direction ?? "all directions")} / {flowText(rule.appliesToFlows)}
             </div>
-            <div className="mt-1 text-doc-support text-muted-foreground">
+            <div className="mt-1 text-xs text-muted-foreground">
               Config: {conditionConfigText(rule)}
             </div>
           </div>
@@ -1964,7 +1948,7 @@ function RuleProjectionRow({ rule, row, returnToHref }: { rule: CommodityCategor
       />
 
       <div className="flex items-start justify-between gap-2 md:block md:text-right">
-        <div className="text-doc-subtitle font-semibold text-foreground">{confidenceText(rule.confidence)}</div>
+        <div className="text-xs font-medium text-foreground">{confidenceText(rule.confidence)}</div>
       </div>
 
       <div className="flex justify-end gap-1">
@@ -1992,7 +1976,7 @@ function RuleSequenceDivider() {
   return (
     <div className="relative flex items-center justify-center py-0.5">
       <div className="absolute inset-x-6 top-1/2 h-px bg-border" aria-hidden="true" />
-      <span className="relative inline-flex items-center gap-1 rounded-full border bg-card px-2 py-0.5 text-doc-support font-medium text-muted-foreground">
+      <span className="relative inline-flex items-center gap-1 rounded-full border bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground">
         <ArrowDown className="size-3" aria-hidden="true" />
         if no match
       </span>
@@ -2028,7 +2012,7 @@ function ConditionalOverridesProjection({
               "filter.classification_id": row.id,
               ...(returnToHref ? { returnTo: returnToHref } : {}),
             })}
-            className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 text-doc-action font-semibold text-foreground hover:bg-muted/60"
+            className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2 text-sm font-medium text-foreground hover:bg-muted/60"
           >
             <Plus className="size-3" aria-hidden="true" />
             Add rule
@@ -2038,15 +2022,15 @@ function ConditionalOverridesProjection({
 
       <div className="mt-2.5 grid gap-2">
         {rulesLoading ? (
-          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-doc-support text-muted-foreground">
+          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-xs text-muted-foreground">
             Loading rules...
           </div>
         ) : rulesError ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-doc-support text-destructive">
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
             Rules are unavailable.
           </div>
         ) : sortedRules.length === 0 ? (
-          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-doc-support text-muted-foreground">
+          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2 text-xs text-muted-foreground">
             No resolution rules yet. Add a conditional or fallback rule before this category can default an intent.
           </div>
         ) : (
@@ -2107,14 +2091,14 @@ function CommodityCategorySelectedData({
 
   if (!row) {
     return (
-      <section className="flex min-h-[320px] items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground">
+      <section className="flex min-h-[320px] items-center justify-center rounded-lg border bg-card text-xs text-muted-foreground">
         Select a category.
       </section>
     );
   }
 
   return (
-    <section className="h-full min-h-0 overflow-auto text-[13px] leading-5">
+    <section className="h-full min-h-0 overflow-auto text-sm leading-5">
       <div className="grid gap-2.5">
         <SelectedCommodityCategorySummary row={row} />
         <SelectedCategoryBodyTabBar activeTab={bodyTab} onTabChange={handleBodyTabChange} />
@@ -2190,7 +2174,7 @@ function ClassificationConceptCard({ item, returnToHref }: { item: CommodityClas
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="font-mono text-doc-support font-semibold uppercase text-muted-foreground">
+            <span className="tabular-nums text-xs font-medium text-muted-foreground">
               {item.domainCode ?? "DOMAIN"}
             </span>
             {item.isPrimary && (
@@ -2199,12 +2183,12 @@ function ClassificationConceptCard({ item, returnToHref }: { item: CommodityClas
               </Badge>
             )}
           </div>
-          <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{codeLabel}</div>
-          <div className="mt-1 text-doc-support text-muted-foreground">
+          <div className="mt-1 truncate text-xs font-medium text-foreground">{codeLabel}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
             {titleize(item.classificationType)} / {titleize(item.mappingType)} / confidence {confidencePercentText(item.confidence)}
           </div>
           {item.description && (
-            <div className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">{item.description}</div>
+            <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.description}</div>
           )}
         </div>
         <ExternalLink className="mt-1 size-3 shrink-0 text-muted-foreground opacity-70 group-hover:text-foreground" aria-hidden="true" />
@@ -2227,15 +2211,15 @@ function RoutingRuleCard({ item, returnToHref }: { item: CommodityRoutingRuleRow
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="font-mono text-doc-support font-semibold uppercase text-muted-foreground">
+            <span className="tabular-nums text-xs font-medium text-muted-foreground">
               {item.commodityDomainCode ?? "DOMAIN"}
             </span>
             <Badge variant="outline" size="sm">
               {titleize(item.matchMode)}
             </Badge>
           </div>
-          <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{codeRange}</div>
-          <div className="mt-1 text-doc-support text-muted-foreground">
+          <div className="mt-1 truncate text-xs font-medium text-foreground">{codeRange}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
             Priority {item.priority ?? 0} / level {item.codeLevel ?? "any"} / confidence {confidencePercentText(item.confidence)}
           </div>
         </div>
@@ -2267,26 +2251,26 @@ function ClassificationColumn({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-doc-label font-semibold uppercase text-foreground">{title}</span>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-doc-support font-semibold text-muted-foreground">
+            <span className="text-sm font-medium text-foreground">{title}</span>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
               {count}
             </span>
           </div>
-          <p className="mt-1 text-doc-support text-muted-foreground">{detail}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
         </div>
       </div>
 
       <div className="mt-2.5 grid gap-2">
         {loading ? (
-          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-doc-support text-muted-foreground">
+          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-xs text-muted-foreground">
             Loading...
           </div>
         ) : error ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2.5 text-doc-support text-destructive">
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2.5 text-xs text-destructive">
             Data is unavailable.
           </div>
         ) : count === 0 ? (
-          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-doc-support text-muted-foreground">
+          <div className="rounded-md border border-dashed bg-muted/20 px-2.5 py-2.5 text-xs text-muted-foreground">
             {empty}
           </div>
         ) : children}
@@ -2587,14 +2571,14 @@ function CommodityCategorySimulator({
   return (
     <section className="grid min-h-0 flex-1 gap-3 overflow-hidden lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className="flex min-h-0 flex-col overflow-auto rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-xs font-medium text-foreground">
           <SlidersHorizontal className="size-4 text-muted-foreground" aria-hidden="true" />
           Scenario inputs
         </div>
 
         <div className="grid gap-3">
           <label className="grid gap-1.5">
-            <span className="text-doc-support font-medium text-muted-foreground">Category</span>
+            <span className="text-xs font-medium text-muted-foreground">Category</span>
             <WorkbenchCommodityCategoryField
               selected={selected}
               onSelectId={(id) => {
@@ -2605,7 +2589,7 @@ function CommodityCategorySimulator({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-doc-support font-medium text-muted-foreground">Company Code</span>
+            <span className="text-xs font-medium text-muted-foreground">Company Code</span>
             <WorkbenchCompanyCodeField
               selected={selectedCompany}
               companies={companies}
@@ -2614,7 +2598,7 @@ function CommodityCategorySimulator({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-doc-support font-medium text-muted-foreground">Supplier</span>
+            <span className="text-xs font-medium text-muted-foreground">Supplier</span>
             <SupplierPicker
               value={inputs.supplierId}
               displayLabel={inputs.supplierName}
@@ -2634,7 +2618,7 @@ function CommodityCategorySimulator({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-doc-support font-medium text-muted-foreground">Amount</span>
+            <span className="text-xs font-medium text-muted-foreground">Amount</span>
             <div className="grid grid-cols-[5.5rem_minmax(0,1fr)]">
               <WorkbenchCurrencyField
                 value={inputs.currency}
@@ -2652,11 +2636,11 @@ function CommodityCategorySimulator({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-doc-support font-medium text-muted-foreground">Document type</span>
+            <span className="text-xs font-medium text-muted-foreground">Document type</span>
             <select
               value={inputs.documentType}
               onChange={(event) => updateInput("documentType", event.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-doc-subtitle outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="h-9 rounded-md border border-input bg-background px-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               {["Vendor invoice", "Purchase order", "Expense claim"].map((docType) => (
                 <option key={docType} value={docType}>{docType}</option>
@@ -2664,7 +2648,7 @@ function CommodityCategorySimulator({
             </select>
           </label>
 
-          <div className="flex flex-wrap items-center gap-3 pt-1 text-doc-support text-foreground">
+          <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-foreground">
             <label className="inline-flex items-center gap-2">
               <input
                 type="checkbox"
@@ -2696,7 +2680,7 @@ function CommodityCategorySimulator({
         )}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="mb-1 flex items-center gap-2 text-doc-label font-semibold uppercase text-muted-foreground">
+              <div className="mb-1 flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 {simulation.steps.some((step) => step.status === "review") ? (
                   <CircleAlert className="size-4 text-warning" aria-hidden="true" />
                 ) : (
@@ -2704,11 +2688,11 @@ function CommodityCategorySimulator({
                 )}
                 Resolution preview
               </div>
-              <p className="text-doc-subtitle font-semibold text-foreground">{simulation.sentence}</p>
+              <p className="text-xs font-medium text-foreground">{simulation.sentence}</p>
               {simulation.inputsLine && (
-                <p className="mt-1 text-doc-support font-medium text-muted-foreground">Inputs used: {simulation.inputsLine}</p>
+                <p className="mt-1 text-xs font-medium text-muted-foreground">Inputs used: {simulation.inputsLine}</p>
               )}
-              <p className="mt-1 max-w-3xl text-doc-support text-muted-foreground">{simulation.caption}</p>
+              <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{simulation.caption}</p>
             </div>
             <Button type="button" variant="outline" size="sm" className="h-8" onClick={pinScenario} disabled={!selected}>
               <Pin className="size-3.5" aria-hidden="true" />
@@ -2718,15 +2702,15 @@ function CommodityCategorySimulator({
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-3 pb-3">
-          <div className="mb-2 text-doc-label font-semibold uppercase text-muted-foreground">
+          <div className="mb-2 text-sm font-medium text-muted-foreground">
             Resolution chain
           </div>
           <div className="grid gap-2 xl:grid-cols-4">
             {simulation.steps.map((step, index) => (
               <div key={step.key} className={cn("rounded-lg border p-3", stepTone(step.status))}>
-                <div className="text-doc-support font-semibold text-muted-foreground">{step.label}</div>
-                <div className="mt-2 text-doc-subtitle font-semibold text-foreground">{step.value}</div>
-                <div className="mt-1 text-doc-support text-muted-foreground">{step.detail}</div>
+                <div className="text-xs font-medium text-muted-foreground">{step.label}</div>
+                <div className="mt-2 text-xs font-medium text-foreground">{step.value}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{step.detail}</div>
                 {index < simulation.steps.length - 1 && (
                   <ChevronRight className="mt-3 hidden size-4 text-muted-foreground xl:block" aria-hidden="true" />
                 )}
@@ -2735,14 +2719,14 @@ function CommodityCategorySimulator({
           </div>
 
           <div className="mt-5">
-            <div className="mb-2 text-doc-label font-semibold uppercase text-muted-foreground">
+            <div className="mb-2 text-sm font-medium text-muted-foreground">
               Pinned scenarios
             </div>
             <div className="grid gap-2 lg:grid-cols-2">
               {pins.length === 0 ? (
                 <button
                   type="button"
-                  className="flex h-10 items-center justify-center rounded-md border border-dashed bg-muted/20 px-3 text-doc-support text-muted-foreground hover:bg-muted/40"
+                  className="flex h-10 items-center justify-center rounded-md border border-dashed bg-muted/20 px-3 text-xs text-muted-foreground hover:bg-muted/40"
                   onClick={pinScenario}
                   disabled={!selected}
                 >
@@ -2750,9 +2734,9 @@ function CommodityCategorySimulator({
                 </button>
               ) : pins.map((pin) => (
                 <div key={pin.id} className="rounded-lg border bg-background p-3">
-                  <div className="text-doc-subtitle font-semibold text-foreground">{pin.title}</div>
-                  <div className="mt-1 text-doc-support text-muted-foreground">{pin.result}</div>
-                  <div className="mt-2 text-doc-support text-muted-foreground">{pin.detail}</div>
+                  <div className="text-xs font-medium text-foreground">{pin.title}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{pin.result}</div>
+                  <div className="mt-2 text-xs text-muted-foreground">{pin.detail}</div>
                 </div>
               ))}
             </div>
@@ -2778,38 +2762,38 @@ function EditorSnapshot({ row }: { row: CommodityCategoryRow }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className={CATEGORY_CODE_TEXT_CLASS}>{row.code}</div>
-          <h2 className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{row.name}</h2>
-          <p className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">
+          <h2 className="mt-1 truncate text-xs font-medium text-foreground">{row.name}</h2>
+          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
             {row.description ?? "No description"}
           </p>
         </div>
       </div>
 
       {resolvesFromBase ? (
-        <div className="mt-3 rounded-md border border-dashed bg-muted/20 px-3 py-2 text-doc-support text-muted-foreground">
+        <div className="mt-3 rounded-md border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
           No overlays yet. This category resolves from the base seed and default intent.
         </div>
       ) : (
       <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-md border bg-muted/20 p-3">
-          <div className="text-doc-support font-medium text-muted-foreground">Default intent</div>
-          <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{row.defaultIntentCode ?? "Not linked"}</div>
-          <div className="mt-1 truncate text-doc-support text-muted-foreground">{row.defaultIntentDomain ?? row.defaultIntentName ?? "Classification required"}</div>
+          <div className="text-xs font-medium text-muted-foreground">Default intent</div>
+          <div className="mt-1 truncate text-xs font-medium text-foreground">{row.defaultIntentCode ?? "Not linked"}</div>
+          <div className="mt-1 truncate text-xs text-muted-foreground">{row.defaultIntentDomain ?? row.defaultIntentName ?? "Classification required"}</div>
         </div>
         <div className="rounded-md border bg-muted/20 p-3">
-          <div className="text-doc-support font-medium text-muted-foreground">Policy overlays</div>
-          <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{policyCount}</div>
-          <div className="mt-1 text-doc-support text-muted-foreground">{row.companyPolicyCount} company / {row.supplierPolicyCount} supplier</div>
+          <div className="text-xs font-medium text-muted-foreground">Policy overlays</div>
+          <div className="mt-1 text-xs font-medium text-foreground">{policyCount}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{row.companyPolicyCount} company / {row.supplierPolicyCount} supplier</div>
         </div>
         <div className={cn("rounded-md border p-3", reviewTone(blockerCount))}>
-          <div className="text-doc-support font-medium">Deny or block policies</div>
-          <div className="mt-1 text-doc-subtitle font-semibold">{blockerCount}</div>
-          <div className="mt-1 text-doc-support opacity-80">{row.companyDenyCount} company / {row.supplierBlockCount} supplier</div>
+          <div className="text-xs font-medium">Deny or block policies</div>
+          <div className="mt-1 text-xs font-medium">{blockerCount}</div>
+          <div className="mt-1 text-xs opacity-80">{row.companyDenyCount} company / {row.supplierBlockCount} supplier</div>
         </div>
         <div className="rounded-md border bg-muted/20 p-3">
-          <div className="text-doc-support font-medium text-muted-foreground">Guardrails</div>
-          <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{guardrailCount}</div>
-          <div className="mt-1 text-doc-support text-muted-foreground">{row.glDefaultCount} GL defaults</div>
+          <div className="text-xs font-medium text-muted-foreground">Guardrails</div>
+          <div className="mt-1 text-xs font-medium text-foreground">{guardrailCount}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{row.glDefaultCount} GL defaults</div>
         </div>
       </div>
       )}
@@ -2839,9 +2823,9 @@ function GovernanceLayer({
   return (
     <div className={cn("rounded-lg border p-3", toneClass)}>
       <div className="min-w-0">
-        <div className="text-doc-label font-semibold uppercase text-muted-foreground">{step}</div>
-        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{title}</div>
-        <div className="mt-1 text-doc-support text-muted-foreground">{detail}</div>
+        <div className="text-sm font-medium text-muted-foreground">{step}</div>
+        <div className="mt-1 text-xs font-medium text-foreground">{title}</div>
+        <div className="mt-1 text-xs text-muted-foreground">{detail}</div>
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {children}
@@ -2853,8 +2837,8 @@ function GovernanceLayer({
 function GovernanceFact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-md border bg-background px-3 py-2">
-      <div className="text-doc-support text-muted-foreground">{label}</div>
-      <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 truncate text-xs font-medium text-foreground">{value}</div>
     </div>
   );
 }
@@ -2865,7 +2849,7 @@ function GovernanceCascade({ row }: { row: CommodityCategoryRow }) {
 
   return (
     <div className="grid gap-3">
-      <div className="rounded-md border bg-muted/20 px-3 py-2 text-doc-support font-medium text-muted-foreground">
+      <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs font-medium text-muted-foreground">
         L4 wins first. L1 is the fallback when no more-specific rule exists.
       </div>
       <GovernanceLayer
@@ -2926,7 +2910,7 @@ function ConfigurePanel({ row }: { row: CommodityCategoryRow }) {
   return (
     <div className="grid gap-3 lg:grid-cols-2">
       <div className="rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-xs font-medium text-foreground">
           <Settings2 className="size-4 text-muted-foreground" aria-hidden="true" />
           Category definition
         </div>
@@ -2937,7 +2921,7 @@ function ConfigurePanel({ row }: { row: CommodityCategoryRow }) {
         </div>
       </div>
       <div className="rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-xs font-medium text-foreground">
           <ShieldCheck className="size-4 text-muted-foreground" aria-hidden="true" />
           Control flags
         </div>
@@ -2956,7 +2940,7 @@ function RoutePanel({ row }: { row: CommodityCategoryRow }) {
   return (
     <div className="grid gap-3">
       <div className="rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-xs font-medium text-foreground">
           <Route className="size-4 text-muted-foreground" aria-hidden="true" />
           Routing preview
         </div>
@@ -2966,7 +2950,7 @@ function RoutePanel({ row }: { row: CommodityCategoryRow }) {
           <GovernanceFact label="GL defaults" value={countText(row.glDefaultCount, "default")} />
         </div>
       </div>
-      <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-doc-support text-muted-foreground">
+      <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-xs text-muted-foreground">
         Edits are made in intent defaults, company policies, supplier overrides, and classification rules.
       </div>
     </div>
@@ -2983,7 +2967,7 @@ function LinkPanel({
   return (
     <div className="grid gap-3">
       <div className="rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-xs font-medium text-foreground">
           <Link2 className="size-4 text-muted-foreground" aria-hidden="true" />
           App links
         </div>
@@ -2996,9 +2980,9 @@ function LinkPanel({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate text-doc-subtitle font-semibold text-foreground">{app.label}</div>
+                  <div className="truncate text-xs font-medium text-foreground">{app.label}</div>
                   {app.description && (
-                    <div className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">{app.description}</div>
+                    <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{app.description}</div>
                   )}
                 </div>
                 <ExternalLink className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" aria-hidden="true" />
@@ -3015,19 +2999,19 @@ function AuditPanel({ row }: { row: CommodityCategoryRow }) {
   return (
     <div className="grid gap-3 lg:grid-cols-3">
       <div className="rounded-lg border bg-card p-3">
-        <div className="text-doc-support font-medium text-muted-foreground">Category source</div>
-        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">Primary category setup</div>
-        <div className="mt-2 text-doc-support text-muted-foreground">Primary category definition for {row.code}.</div>
+        <div className="text-xs font-medium text-muted-foreground">Category source</div>
+        <div className="mt-1 text-xs font-medium text-foreground">Primary category setup</div>
+        <div className="mt-2 text-xs text-muted-foreground">Primary category definition for {row.code}.</div>
       </div>
       <div className="rounded-lg border bg-card p-3">
-        <div className="text-doc-support font-medium text-muted-foreground">Policy coverage</div>
-        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">{row.companyPolicyCount + row.supplierPolicyCount}</div>
-        <div className="mt-2 text-doc-support text-muted-foreground">Company and supplier policies in the current view.</div>
+        <div className="text-xs font-medium text-muted-foreground">Policy coverage</div>
+        <div className="mt-1 text-xs font-medium text-foreground">{row.companyPolicyCount + row.supplierPolicyCount}</div>
+        <div className="mt-2 text-xs text-muted-foreground">Company and supplier policies in the current view.</div>
       </div>
       <div className="rounded-lg border bg-card p-3">
-        <div className="text-doc-support font-medium text-muted-foreground">View consistency</div>
-        <div className="mt-1 text-doc-subtitle font-semibold text-foreground">Shared workbench data</div>
-        <div className="mt-2 text-doc-support text-muted-foreground">Overlay reads the same service payload as Explorer and Simulator.</div>
+        <div className="text-xs font-medium text-muted-foreground">View consistency</div>
+        <div className="mt-1 text-xs font-medium text-foreground">Shared workbench data</div>
+        <div className="mt-2 text-xs text-muted-foreground">Overlay reads the same service payload as Explorer and Simulator.</div>
       </div>
     </div>
   );
@@ -3103,7 +3087,7 @@ function WorkbenchContractFooter({ mode }: { mode: TaxonomyWorkbenchMode }) {
   };
 
   return (
-    <section className="shrink-0 rounded-lg border bg-card px-3 py-2 text-doc-support text-muted-foreground">
+    <section className="shrink-0 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground">
       <div className="flex flex-wrap items-center gap-3">
         {notes[mode].map((note, index) => (
           <span key={note} className="inline-flex items-center gap-1.5">
@@ -3135,7 +3119,7 @@ function RelatedAppsUniverseSection({
   return (
     <section className="rounded-lg border bg-card p-3 shadow-sm">
       <div className="mb-3">
-        <div className="flex items-center gap-2 text-doc-label font-semibold uppercase text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <AppWindow className="size-3.5" aria-hidden="true" />
           Apps in the universe
         </div>
@@ -3149,8 +3133,8 @@ function RelatedAppsUniverseSection({
               className="group block rounded-md border bg-background px-3 py-2.5 transition-colors hover:bg-muted/40"
             >
               <div className="min-w-0">
-                <div className="truncate text-doc-subtitle font-semibold text-foreground">{app.label}</div>
-                <div className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">
+                <div className="truncate text-xs font-medium text-foreground">{app.label}</div>
+                <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                   {app.description ?? titleize(app.entityCode)}
                 </div>
               </div>
@@ -3231,7 +3215,7 @@ function EditorActionLink({
   return (
     <Link
       href={relatedAppHref(app, row, { returnTo: returnToHref })}
-      className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-doc-action font-semibold text-foreground transition-colors hover:bg-muted/60"
+      className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
     >
       {children}
     </Link>
@@ -3261,9 +3245,9 @@ function EditorPolicyCard({
     <div className={cn("rounded-lg border p-3", toneClass)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-doc-support font-medium text-muted-foreground">{title}</div>
-          <div className="mt-1 truncate text-doc-subtitle font-semibold text-foreground">{value}</div>
-          <div className="mt-1 text-doc-support text-muted-foreground">{detail}</div>
+          <div className="text-xs font-medium text-muted-foreground">{title}</div>
+          <div className="mt-1 truncate text-xs font-medium text-foreground">{value}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{detail}</div>
         </div>
         {action}
       </div>
@@ -3307,9 +3291,9 @@ function ScopeFirstEditorBody({
       <section className="rounded-lg border bg-card p-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-doc-label font-semibold uppercase text-muted-foreground">Apply to</div>
-            <h3 className="mt-1 text-doc-subtitle font-semibold text-foreground">{scopeTitle}</h3>
-            <p className="mt-1 text-doc-support text-muted-foreground">{scopeDetail}</p>
+            <div className="text-sm font-medium text-muted-foreground">Apply to</div>
+            <h3 className="mt-1 text-xs font-medium text-foreground">{scopeTitle}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{scopeDetail}</p>
           </div>
         </div>
       </section>
@@ -3439,13 +3423,13 @@ function CommodityCategoryEditor({
   return (
     <section className="grid min-h-0 flex-1 gap-3 overflow-hidden xl:grid-cols-[300px_minmax(0,1fr)]">
       <aside className="flex min-h-0 flex-col overflow-auto rounded-lg border bg-card p-3">
-        <div className="mb-3 flex items-center gap-2 text-doc-subtitle font-semibold text-foreground">
+        <div className="mb-3 flex items-center gap-2 text-xs font-medium text-foreground">
           <Settings2 className="size-4 text-muted-foreground" aria-hidden="true" />
           Overlay
         </div>
 
         <label className="grid gap-1.5">
-          <span className="text-doc-support font-medium text-muted-foreground">Category</span>
+          <span className="text-xs font-medium text-muted-foreground">Category</span>
           <WorkbenchCommodityCategoryField
             selected={selected}
             onSelectId={(id) => {
@@ -3456,7 +3440,7 @@ function CommodityCategoryEditor({
         </label>
 
         <div className="mt-4">
-          <div className="text-doc-support font-medium text-muted-foreground">Apply to</div>
+          <div className="text-xs font-medium text-muted-foreground">Apply to</div>
           <div className="mt-2 grid gap-2">
           {visibleScopes.map((item) => {
             const Icon = item.icon;
@@ -3472,11 +3456,11 @@ function CommodityCategoryEditor({
                 aria-pressed={active}
                 onClick={() => setScope(item.key)}
               >
-                <span className="flex items-center gap-2 text-doc-subtitle font-semibold">
+                <span className="flex items-center gap-2 text-xs font-medium">
                   <Icon className="size-4" aria-hidden="true" />
                   {isSingleCompanyTenant ? item.singleCompanyLabel : item.multiCompanyLabel}
                 </span>
-                <span className={cn("mt-1 block text-doc-support", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                <span className={cn("mt-1 block text-xs", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
                   {isSingleCompanyTenant ? item.singleCompanyDetail : item.multiCompanyDetail}
                 </span>
               </button>
@@ -3487,7 +3471,7 @@ function CommodityCategoryEditor({
 
         {(scope === "company" || scope === "supplier") && !isSingleCompanyTenant && (
           <label className="mt-4 grid gap-1.5">
-            <span className="text-doc-support font-medium text-muted-foreground">Company</span>
+            <span className="text-xs font-medium text-muted-foreground">Company</span>
             <WorkbenchCompanyCodeField
               selected={selectedCompany}
               companies={companies}
@@ -3498,7 +3482,7 @@ function CommodityCategoryEditor({
 
         {scope === "supplier" && (
           <label className="mt-4 grid gap-1.5">
-            <span className="text-doc-support font-medium text-muted-foreground">Supplier</span>
+            <span className="text-xs font-medium text-muted-foreground">Supplier</span>
             <SupplierPicker
               value={selectedSupplierId}
               displayLabel={selectedSupplierName}
@@ -3515,7 +3499,7 @@ function CommodityCategoryEditor({
           </label>
         )}
 
-        <div className="mt-4 rounded-md border border-dashed bg-muted/20 p-3 text-doc-support text-muted-foreground">
+        <div className="mt-4 rounded-md border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
           {isSingleCompanyTenant
             ? "Single-company tenant: company-specific setup is folded into the default. Add supplier exceptions only when vendor routing differs."
             : "Multi-company tenant: start with all companies, then add company or supplier exceptions only where behavior differs."}
@@ -3524,7 +3508,7 @@ function CommodityCategoryEditor({
 
       <section className="flex min-h-0 flex-col gap-3 overflow-auto">
         {!selected ? (
-          <div className="flex min-h-[320px] items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground">
+          <div className="flex min-h-[320px] items-center justify-center rounded-lg border bg-card text-xs text-muted-foreground">
             Select a commodity category.
           </div>
         ) : (
@@ -3559,11 +3543,11 @@ function MatrixSelect({
 }) {
   return (
     <label className="flex min-w-0 items-center gap-2">
-      <span className="shrink-0 text-doc-support font-semibold text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-56 min-w-0 rounded-md border border-input bg-background px-3 text-doc-subtitle font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="h-9 w-56 min-w-0 rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
         {children}
       </select>
@@ -3689,17 +3673,17 @@ function CommodityCategoryMatrix({
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-2">
       {scopeOptions.isLoading && (
-        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-doc-support text-muted-foreground">
+        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
           Loading company columns...
         </div>
       )}
       {!scopeOptions.isLoading && matrixCompanies.length === 0 && (
-        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-doc-support text-muted-foreground">
+        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
           No company codes are available for the spend matrix.
         </div>
       )}
       {matrixRows.length > 0 && matrixCompanies.length > 0 && matrixCells.length === 0 && (
-        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-doc-support text-muted-foreground">
+        <div className="shrink-0 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
           This view has no explicit rules yet. Empty cells inherit from the base category setup.
         </div>
       )}
@@ -3749,7 +3733,7 @@ function CommodityCategoryMatrix({
               <option key={option.key} value={option.key}>{option.label}</option>
             ))}
           </MatrixSelect>
-          <label className="inline-flex h-9 items-center gap-2 rounded-md border bg-background px-3 text-doc-subtitle font-medium text-foreground">
+          <label className="inline-flex h-9 items-center gap-2 rounded-md border bg-background px-3 text-xs font-medium text-foreground">
             <input
               type="checkbox"
               checked={hideEmptyRows}
@@ -3920,11 +3904,11 @@ export function CommodityCategoryWorkbench() {
         </>
       ) : activeMode === "simulator" ? (
         fullQuery.isLoading ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground animate-pulse">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-xs text-muted-foreground animate-pulse">
             Loading simulator inputs...
           </section>
         ) : fullQuery.isError ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-destructive">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-xs text-destructive">
             Spend taxonomy service is unavailable.
           </section>
         ) : (
@@ -3939,11 +3923,11 @@ export function CommodityCategoryWorkbench() {
         )
       ) : activeMode === "editor" ? (
         fullQuery.isLoading ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground animate-pulse">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-xs text-muted-foreground animate-pulse">
             Loading overlay context...
           </section>
         ) : fullQuery.isError ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-destructive">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-xs text-destructive">
             Spend taxonomy service is unavailable.
           </section>
         ) : (
@@ -3959,11 +3943,11 @@ export function CommodityCategoryWorkbench() {
         )
       ) : activeMode === "matrix" ? (
         fullQuery.isLoading ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground animate-pulse">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-xs text-muted-foreground animate-pulse">
             Loading spend matrix...
           </section>
         ) : fullQuery.isError ? (
-          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-destructive">
+          <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-xs text-destructive">
             Spend matrix service is unavailable.
           </section>
         ) : (
@@ -3995,11 +3979,11 @@ export function CommodityCategoryWorkbench() {
           <section className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
             <section className="min-h-0 flex-1 overflow-hidden">
               {hierarchy.isLoading ? (
-                <section className="flex h-full min-h-[360px] items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground animate-pulse">
+                <section className="flex h-full min-h-[360px] items-center justify-center rounded-lg border bg-card text-xs text-muted-foreground animate-pulse">
                   Loading spend taxonomy...
                 </section>
               ) : hierarchy.isError ? (
-                <section className="flex h-full min-h-[360px] items-center justify-center rounded-lg border bg-card text-doc-support text-destructive">
+                <section className="flex h-full min-h-[360px] items-center justify-center rounded-lg border bg-card text-xs text-destructive">
                   Spend taxonomy service is unavailable.
                 </section>
               ) : (

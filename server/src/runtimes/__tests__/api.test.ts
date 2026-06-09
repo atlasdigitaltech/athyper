@@ -37,42 +37,41 @@ vi.mock("@athyper/svc-platform", () => ({
 }));
 vi.mock("@athyper/svc-jobs", () => ({ registerJobsRoutes: vi.fn() }));
 
-vi.mock("../../../framework/runtime/services/collab/routes/collab-attachments.route.js", () => ({
+vi.mock("../../../packages/services/collab/routes/collab-attachments.route.js", () => ({
   registerCollabAttachmentRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/services/master/routes/contacts.route.js", () => ({
+vi.mock("@athyper/svc-master", () => ({
   registerMasterContactsRoutes: vi.fn(),
-}));
-vi.mock("../../../framework/runtime/services/master/routes/addresses.route.js", () => ({
   registerMasterAddressRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/services/jobs/routes/jobs.admin.route.js", () => ({
+vi.mock("../../../packages/services/jobs/routes/jobs.admin.route.js", () => ({
   registerJobsAdminRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/services/jobs/routes/jobs.board.route.js", () => ({
+vi.mock("../../../packages/services/jobs/routes/jobs.board.route.js", () => ({
   registerJobsBoardRoutes: vi.fn(),
 }));
 
 // Paths are relative to this test file (one level deeper than api.ts → need ../../../)
-vi.mock("../../../framework/runtime/services/workflow/routes/index.js", () => ({
+vi.mock("@athyper/svc-workflow", () => ({
   registerWorkflowRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/services/policy/routes/index.js", () => ({
+vi.mock("@athyper/svc-policy", () => ({
   registerPolicyRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/services/audit/routes/index.js", () => ({
+vi.mock("@athyper/svc-audit", () => ({
   registerAuditRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/services/content/routes/index.js", () => ({
+vi.mock("@athyper/svc-content", () => ({
+  ClamavScanner: vi.fn(),
   registerContentRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/services/integration/routes/index.js", () => ({
+vi.mock("@athyper/svc-integration", () => ({
   registerIntegrationRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/services/docservices/routes/index.js", () => ({
+vi.mock("@athyper/svc-docservices", () => ({
   registerDocServicesRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/services/ai/index.js", () => ({
+vi.mock("@athyper/svc-ai", () => ({
   createAiServiceBundle: vi.fn(async () => ({
     aiRuntime: {},
     autonomyResolver: {},
@@ -81,11 +80,15 @@ vi.mock("../../../framework/runtime/services/ai/index.js", () => ({
   })),
   registerAiRoutes: vi.fn(),
 }));
-vi.mock("../../../framework/runtime/openapi/openapi-generator.js", () => ({
+vi.mock("@athyper/server-foundation/openapi/openapi-generator", () => ({
   createOpenApiRouter: vi.fn(() => vi.fn()),
+}));
+vi.mock("@athyper/server-foundation/monitoring/platform-metrics", () => ({
+  createPlatformMetricCollector: vi.fn(() => vi.fn(async () => [])),
 }));
 
 vi.mock("../../metrics.js", () => ({
+  createAiLogMetrics: vi.fn(() => ({})),
   createCacheMetrics: vi.fn(() => ({})),
   metricsHandler: vi.fn(),
   observeHttpRequest: vi.fn(),

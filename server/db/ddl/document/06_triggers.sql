@@ -383,6 +383,20 @@ COMMENT ON TRIGGER trg_pi_status_guard ON document.purchase_invoice IS
     'Validates status transitions against snapshot.status_route compiled_json. '
     'Falls through to allow if no compiled snapshot exists (lifecycle not yet seeded).';
 
+-- L1: Lifecycle log — writes one row to log.entity_lifecycle_log per status transition.
+-- Runs AFTER the guard so the state is already committed to NEW.status.
+DROP TRIGGER IF EXISTS trg_pi_lifecycle_log ON document.purchase_invoice;
+CREATE TRIGGER trg_pi_lifecycle_log
+    AFTER UPDATE OF status ON document.purchase_invoice
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION document.trg_pi_lifecycle_log();
+
+COMMENT ON TRIGGER trg_pi_lifecycle_log ON document.purchase_invoice IS
+    'Appends a lifecycle checkpoint row to log.entity_lifecycle_log on every status change. '
+    'Carries a compact header snapshot in payload.snapshot for the Versions tab UI. '
+    'Increments revision_no each time status transitions to ''amending''.';
+
 
 -- =============================================================================
 -- §PIL  document.purchase_invoice_line

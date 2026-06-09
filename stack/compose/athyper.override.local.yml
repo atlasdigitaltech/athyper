@@ -32,7 +32,7 @@ services:
       internal: null
       edge: null
 
-  memorycache_jobs:
+  memorycache-jobs:
     user: "0:0"
     cap_add:
       - DAC_OVERRIDE
@@ -67,22 +67,23 @@ services:
     cap_add:
       - DAC_OVERRIDE
 
-  meilisearch:
+  searchcore:
+    image: getmeili/meilisearch:v1.13
+    profiles: ["search"]
     user: "0:0"
     cap_add:
       - DAC_OVERRIDE
 
-  # uptime-kuma and metabase do not use cap_drop: ALL — user override only.
-  uptime-kuma:
+  # statuswatch and analyticsboard do not use cap_drop: ALL — user override only.
+  statuswatch:
+    image: louislam/uptime-kuma:1
+    profiles: ["monitoring"]
     user: "0:0"
 
-  metabase:
+  analyticsboard:
+    image: metabase/metabase:v0.51.10
+    profiles: ["analytics"]
     user: "0:0"
-
-  iam:
-    depends_on:
-      mailhog:
-        condition: service_healthy
 
   db:
     ports:

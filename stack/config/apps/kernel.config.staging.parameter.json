@@ -10,7 +10,7 @@
   "logLevel": "info",
   "shutdownTimeoutMs": 30000,
 
-  "$comment_routing": "API routing: api-stg.athyper.com is routed via Traefik Docker-provider labels on athyper-api (APPS_ATHYPER_API_HOST env var), NOT via a file-provider route file. No gateway/dynamic/ route file is needed for the API hostname.",
+  "$comment_routing": "API routing: api-stg.athyper.com is routed via Traefik Docker-provider labels on api (APPS_ATHYPER_API_HOST env var), NOT via a file-provider route file. No gateway/dynamic/ route file is needed for the API hostname.",
   "$comment_urls": "MUST match PUBLIC_BASE_URL / PUBLIC_WEB_URL in stack/env/staging.env — validate-env.sh checks parity.",
   "publicBaseUrl": "https://api-stg.athyper.com",
   "publicWebUrl": "https://neon-stg.athyper.com",

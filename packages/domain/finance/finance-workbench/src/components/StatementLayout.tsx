@@ -221,7 +221,7 @@ function StatementIntelligencePanel({
       <div className="space-y-3 rounded-lg border bg-card p-3 lg:sticky lg:top-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="text-xs font-medium text-muted-foreground">
               {title}
             </div>
             {subtitle && (
@@ -257,7 +257,7 @@ function StatementIntelligencePanel({
           <div className={cn("rounded-lg border px-3 py-2", toneClass(insight.tone))}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-medium opacity-80">{insight.label}</span>
-              <span className="text-sm font-semibold tabular-nums">{insight.value}</span>
+              <span className="text-sm font-medium tabular-nums">{insight.value}</span>
             </div>
             {insight.description && (
               <div className="mt-1 text-xs opacity-80">{insight.description}</div>
@@ -287,7 +287,7 @@ function SummaryPrimaryMetric({
   return (
     <div className={cn("rounded-lg border px-3 py-3", toneClass(metric.tone))}>
       <div className="text-xs font-medium opacity-80">{metric.label}</div>
-      <div className="mt-1 text-2xl font-semibold leading-none tracking-tight tabular-nums">
+      <div className="mt-1 text-2xl font-medium leading-none tracking-tight tabular-nums">
         {metricDisplay(metric)}
       </div>
       {metric.description && (
@@ -304,7 +304,7 @@ function SummaryPrimaryMetric({
             <div className={cn("font-medium tabular-nums", varianceColor(delta.absolute, metric.positiveIsGood ?? true))}>
               {fmtCompact(delta.absolute)}
               {delta.pct !== null && (
-                <span className="ml-1 text-[11px] opacity-80">({delta.pct.toFixed(1)}%)</span>
+                <span className="ml-1 text-xs opacity-80">({delta.pct.toFixed(1)}%)</span>
               )}
             </div>
           </div>
@@ -350,7 +350,7 @@ function SummaryMetricRow({
           )}
         </div>
         <div className={cn(
-          "shrink-0 text-right text-sm font-semibold tabular-nums",
+          "shrink-0 text-right text-sm font-medium tabular-nums",
           metric.tone === "success" && "text-success",
           metric.tone === "danger" && "text-destructive",
           metric.tone === "warning" && "text-warning",
@@ -397,7 +397,7 @@ function SummarySeries({
   return (
     <div className={cn("mt-2 space-y-1.5", compact && "mt-1.5")}>
       {series.map((point) => (
-        <div key={point.label} className="grid grid-cols-[4rem_minmax(0,1fr)_4.5rem] items-center gap-2 text-[11px]">
+        <div key={point.label} className="grid grid-cols-[4rem_minmax(0,1fr)_4.5rem] items-center gap-2 text-xs">
           <span className="truncate text-muted-foreground">{point.label}</span>
           <span className="h-1.5 overflow-hidden rounded-full bg-muted">
             <span
@@ -437,7 +437,7 @@ export function StatementTotal({
       className={cn(
         "flex items-center bg-muted/30 px-3 py-2 text-sm",
         borderTop && "border-t",
-        bold && "font-semibold",
+        bold && "font-medium",
       )}
     >
       <span className="flex-1">{label}</span>

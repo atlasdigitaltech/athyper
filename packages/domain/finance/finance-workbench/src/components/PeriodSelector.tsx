@@ -24,8 +24,8 @@ export function PeriodSelector({
   showFullYear = true,
   size = "sm",
 }: PeriodSelectorProps) {
-  const triggerClass = size === "sm" ? "h-6 w-36 text-doc-support" : "h-7 w-44 text-xs";
-  const yearTriggerClass = size === "sm" ? "h-6 w-20 text-doc-support" : "h-7 w-24 text-xs";
+  const triggerClass = size === "sm" ? "h-6 w-36 text-xs" : "h-7 w-44 text-xs";
+  const yearTriggerClass = size === "sm" ? "h-6 w-20 text-xs" : "h-7 w-24 text-xs";
 
   const currentPeriodValue = period === null ? "all" : String(period);
 

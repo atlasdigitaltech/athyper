@@ -31,7 +31,7 @@ services:
       KC_DB_POOL_INITIAL_SIZE: 5
       KC_DB_POOL_MIN_SIZE: 5
       KC_DB_POOL_MAX_SIZE: 20
-      KC_SMTP_HOST: ${KC_SMTP_HOST:-mailhog}
+      KC_SMTP_HOST: ${KC_SMTP_HOST:-mailtrap}
       KC_SMTP_PORT: ${KC_SMTP_PORT:-1025}
       KC_SMTP_FROM: ${KC_SMTP_FROM:-noreply@athyper.local}
       KC_SMTP_FROM_DISPLAY_NAME: ${KC_SMTP_FROM_DISPLAY_NAME:-Athyper}
@@ -41,6 +41,7 @@ services:
       KC_SMTP_USERNAME: ${KC_SMTP_USERNAME:-}
       KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD:-}
       KC_WEBAUTHN_RP_ID: ${KC_WEBAUTHN_RP_ID:-athyper.local}
+      ADMIN_WEB_CLIENT_SECRET: ${ADMIN_WEB_CLIENT_SECRET:-}
       ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET: ${ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET:-}
       NEON_SVC_BFF_CLIENT_SECRET: ${NEON_SVC_BFF_CLIENT_SECRET:-}
       GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
@@ -51,8 +52,8 @@ services:
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
     volumes:
       - ${ATHYPER_CONFIG}/iam/themes/neon:/opt/keycloak/themes/neon:ro
-      - ${ATHYPER_CONFIG}/iam/realm-demosetup.json:/opt/keycloak/data/import/realm-demosetup.json:ro
-      - ${ATHYPER_CONFIG}/iam/realm-platform-control.json:/opt/keycloak/data/import/realm-platform-control.json:ro
+      - ${ATHYPER_CONFIG}/iam/realm-athyper.json:/opt/keycloak/data/import/${KEYCLOAK_REALM:-athyper}-realm.json:ro
+      - ${ATHYPER_CONFIG}/iam/realm-platform-control.json:/opt/keycloak/data/import/platform-control-realm.json:ro
     networks: [edge, internal]
     depends_on:
       gateway:

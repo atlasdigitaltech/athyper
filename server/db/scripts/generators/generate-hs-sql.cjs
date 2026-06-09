@@ -12,7 +12,7 @@ const fs = require("fs");
 const path = require("path");
 
 const csvPath = path.join(__dirname, "hs-codes.csv");
-const outPath = path.join(__dirname, "..", "..", "seed", "010_platform", "001_global_reference", "008b_commodity_code_hs.sql");
+const outPath = path.join(__dirname, "..", "..", "seed", "platform", "001_global_reference", "008b_commodity_code_hs.sql");
 
 const raw = fs.readFileSync(csvPath, "utf-8");
 const lines = raw.split("\n").filter((l) => l.trim());

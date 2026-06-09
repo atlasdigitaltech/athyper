@@ -54,7 +54,7 @@ export function StatementMatrix({
     <div className="min-w-0 overflow-x-auto">
       <div className="w-max min-w-full text-sm">
         <div
-          className="grid items-center border-b bg-muted/20 px-2 py-2 text-xs font-semibold text-muted-foreground"
+          className="grid items-center border-b bg-muted/20 px-2 py-2 text-xs font-medium text-muted-foreground"
           style={gridStyle}
         >
           <div className="sticky left-0 z-10 bg-card pr-3 shadow-[8px_0_10px_-12px_rgba(0,0,0,0.45)]">Account</div>
@@ -68,7 +68,7 @@ export function StatementMatrix({
         {groups.map((group) => (
           <div key={group.key} className="border-b last:border-b-0">
             <div className="bg-muted/10 px-2 py-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {group.title}
               </span>
             </div>
@@ -89,7 +89,7 @@ export function StatementMatrix({
             {totals.map((total) => (
               <div
                 key={total.key}
-                className="grid items-center border-b bg-muted/20 px-2 py-2 font-semibold last:border-b-0"
+                className="grid items-center border-b bg-muted/20 px-2 py-2 font-medium last:border-b-0"
                 style={gridStyle}
               >
                 <div className="sticky left-0 z-10 bg-card pr-3 shadow-[8px_0_10px_-12px_rgba(0,0,0,0.45)]">

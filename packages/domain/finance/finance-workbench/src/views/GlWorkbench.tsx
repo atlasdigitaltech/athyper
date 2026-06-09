@@ -436,7 +436,7 @@ interface GlWorkbenchSwitcherProps {
 function GlWorkbenchSwitcher({ activeTab, onTabChange, tabs, onBack }: GlWorkbenchSwitcherProps) {
   return (
     <DropdownMenu>
-      <div className="inline-flex h-8 shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground text-sm font-semibold tracking-wide text-background">
+      <div className="inline-flex h-8 shrink-0 items-center overflow-hidden rounded-md border border-border bg-foreground text-sm font-medium text-background">
         <button
           type="button"
           onClick={onBack}
@@ -525,7 +525,7 @@ function GlFilterSelect({ label, value, placeholder, options, onChange, disabled
   return (
     <div className="px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <label className="text-xs font-mediumr text-muted-foreground">
           {label}
         </label>
         <div className="flex items-center gap-1">
@@ -565,7 +565,7 @@ function GlTextFilterField({ label, value, placeholder, onChange }: GlTextFilter
   return (
     <div className="px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <label className="text-xs font-mediumr text-muted-foreground">
           {label}
         </label>
         <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
@@ -622,7 +622,7 @@ function GlScopeFilterSection({
     <section className="rounded-lg border border-border bg-card">
       <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Scope</h3>
+          <h3 className="text-sm font-medium text-foreground">Scope</h3>
           <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
             Controls the legal boundary, ledger book, and currencies used by every GL Workbench tab.
           </p>
@@ -800,7 +800,7 @@ function GlFilterDrawer({
     >
       <div className="space-y-4 px-5 py-4">
         <section className="rounded-lg border border-border bg-muted/20 p-3">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs font-mediumr text-muted-foreground">
             <CalendarDays className="h-3.5 w-3.5" />
             Recommended starting filters
           </div>
@@ -828,7 +828,7 @@ function GlFilterDrawer({
           <section key={section.title} className="rounded-lg border border-border bg-card">
             <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
               <div>
-                <h3 className="text-sm font-semibold text-foreground">{section.title}</h3>
+                <h3 className="text-sm font-medium text-foreground">{section.title}</h3>
                 <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{section.description}</p>
               </div>
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
@@ -891,7 +891,7 @@ function GlFilterDrawer({
                 return (
                   <div key={field.label} className="px-4 py-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <label className="text-xs font-mediumr text-muted-foreground">
                         {field.label}
                       </label>
                       <div className="flex items-center gap-1">
@@ -1249,7 +1249,7 @@ export function GlWorkbench({ defaultScope, defaultTab = "trial-balance" }: GlWo
             >
               <FilterIcon className="h-3.5 w-3.5" />
               {activeScopeFilterCount > 0 && (
-                <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
+                <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-xs font-medium leading-none text-primary-foreground">
                   {activeScopeFilterCount}
                 </span>
               )}

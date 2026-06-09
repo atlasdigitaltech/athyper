@@ -77,7 +77,7 @@ collide with any human account:
 | Grafana | `svc-grafana` | `9102` | `svc-grafana` | `9102` |
 | Loki / Tempo | `svc-loki` | `9103` | `svc-loki` | `9103` |
 | Prometheus | `svc-prometheus` | `9104` | `svc-prometheus` | `9104` |
-| Meilisearch / Metabase / Uptime Kuma | `svc-meili` | `9105` | `svc-meili` | `9105` |
+| searchcore / analyticsboard / statuswatch | `svc-meili` | `9105` | `svc-meili` | `9105` |
 
 Any service that binds a **host directory** (not a named Docker volume) must declare the
 matching identity in compose:
@@ -129,17 +129,30 @@ to the same class of silent misconfiguration that caused the v12 incident.
 **EXECUTE ON:** WORKSTATION  
 **AS:** DNS admin/operator
 
-Create all DNS records **before** starting the gateway. Traefik's ACME challenge will fail
-silently if DNS does not resolve when the gateway first starts.
+Create DNS records **before** starting the gateway or the profile that owns the route.
+Traefik's ACME challenge will fail silently if DNS does not resolve when the router starts.
 
 | Hostname | Points to |
 |---|---|
 | `api-stg.athyper.com` | server public IP |
 | `neon-stg.athyper.com` | server public IP |
+| `mesh-stg.athyper.com` | server public IP |
+| `admin-stg.athyper.com` | server public IP |
 | `iam-stg.athyper.com` | server public IP |
 | `gateway-stg.athyper.com` | server public IP |
 | `objectstorage-stg.athyper.com` | server public IP |
 | `objectstorage.console-stg.athyper.com` | server public IP |
+| `telemetry-stg.athyper.com` | server public IP |
+| `metrics-stg.athyper.com` | server public IP |
+| `alerts-stg.athyper.com` | server public IP |
+| `traces-stg.athyper.com` | server public IP |
+| `logs-stg.athyper.com` | server public IP |
+| `uptime-stg.athyper.com` | server public IP |
+| `healthchecks-stg.athyper.com` | server public IP |
+| `errors-stg.athyper.com` | server public IP |
+| `meilisearch-stg.athyper.com` | server public IP |
+| `metabase-stg.athyper.com` | server public IP, only if `analytics` will be enabled |
+| `infisical-stg.athyper.com` | server public IP, only if `security-infisical` will be enabled |
 
 Verify from workstation before proceeding:
 
@@ -147,10 +160,21 @@ Verify from workstation before proceeding:
 for host in \
   api-stg.athyper.com \
   neon-stg.athyper.com \
+  mesh-stg.athyper.com \
+  admin-stg.athyper.com \
   iam-stg.athyper.com \
   gateway-stg.athyper.com \
   objectstorage-stg.athyper.com \
-  objectstorage.console-stg.athyper.com; do
+  objectstorage.console-stg.athyper.com \
+  telemetry-stg.athyper.com \
+  metrics-stg.athyper.com \
+  alerts-stg.athyper.com \
+  traces-stg.athyper.com \
+  logs-stg.athyper.com \
+  uptime-stg.athyper.com \
+  healthchecks-stg.athyper.com \
+  errors-stg.athyper.com \
+  meilisearch-stg.athyper.com; do
   echo "=== $host ==="
   dig +short "$host" @1.1.1.1   # Cloudflare resolver
   dig +short "$host" @8.8.8.8   # Google resolver
@@ -459,7 +483,7 @@ mkdir -p /opt/stack/athyper/config/telemetry/provisioning.env
 mkdir -p /opt/stack/athyper/secrets/gateway/certs
 
 # Data subdirs — leaf ownership is set by Phase 11, not here
-mkdir -p /opt/stack/athyper/data/{memorycache,memorycache-jobs,objectstorage,meilisearch,metabase,uptime-kuma}
+mkdir -p /opt/stack/athyper/data/{memorycache,memorycache-jobs,objectstorage,searchcore,analyticsboard,statuswatch}
 mkdir -p /opt/stack/athyper/data/telemetry/{logging,metrics,observability,tracing}
 
 # --- Product root permissions ---
@@ -742,7 +766,7 @@ grep -R "user:.*9101:9101" stack/compose || echo "WARN: MinIO user mapping not f
 grep -R "user:.*9102:9102" stack/compose || echo "WARN: Grafana user mapping not found"
 grep -R "user:.*9103:9103" stack/compose || echo "WARN: Loki/Tempo user mapping not found"
 grep -R "user:.*9104:9104" stack/compose || echo "WARN: Prometheus user mapping not found"
-grep -R "user:.*9105:9105" stack/compose || echo "WARN: Meili/Metabase/Uptime user mapping not found"
+grep -R "user:.*9105:9105" stack/compose || echo "WARN: searchcore/analyticsboard/statuswatch user mapping not found"
 ```
 
 All 6 lines must produce matches. If any mapping is missing, patch the relevant compose file before proceeding.
@@ -753,9 +777,9 @@ Expected service-to-identity mappings:
 memorycache:       user: "9100:9100"   # svc-redis
 memorycache-jobs:  user: "9100:9100"   # svc-redis
 objectstorage:     user: "9101:9101"   # svc-minio
-meilisearch:       user: "9105:9105"   # svc-meili
-metabase:          user: "9105:9105"   # svc-meili
-uptime-kuma:       user: "9105:9105"   # svc-meili
+searchcore:        user: "9105:9105"   # svc-meili
+analyticsboard:    user: "9105:9105"   # svc-meili
+statuswatch:       user: "9105:9105"   # svc-meili
 telemetry:         user: "9102:9102"   # svc-grafana
 logging:           user: "9103:9103"   # svc-loki
 tracing:           user: "9103:9103"   # svc-loki
@@ -782,7 +806,7 @@ set -euo pipefail
 cd /opt/products/athyper
 
 # Deploy env-specific config from the git source into the runtime config root.
-# setup-config.sh copies db/staging/, gateway/, iam/, memorycache/, telemetry/
+# setup-config.sh copies db/staging/, gateway/, iam/, memorycache/, render/, telemetry/
 # and sets ownership (root:athyper-config 755/644) automatically.
 # redis-acl.conf exception: set to athyper:svc-redis 0640 by setup-config.sh so
 # validate-env.sh (athyper) can write it and the Redis container (svc-redis) can read it.
@@ -840,7 +864,7 @@ grep "^SERVICE_VERSION=" /opt/products/athyper/stack/env/.env
 **EXECUTE ON:** SERVER  
 **AS:** root
 
-> One script does everything: generates all 22 secrets, builds the htpasswd,
+> One script does everything: generates the current staging secret inventory, builds the htpasswd,
 > saves a backup to `~/secrets-staging-values.txt`, writes the secrets-only
 > `/opt/stack/athyper/secrets/.env`, and restores ownership. No manual
 > copy-paste required.
@@ -861,7 +885,7 @@ Expected output:
 ```
 === Athyper Staging — Secret Generation + .env Write ===
 
-Step 1/4  Generating 22 secrets...
+Step 1/4  Generating 24 secrets...
 Step 2/4  Generating gateway htpasswd (pulling httpd:alpine if needed)...
 Step 3/4  Writing secrets backup to /home/athyper/secrets-staging-values.txt...
 Step 4/4  Writing /opt/stack/athyper/secrets/.env...
@@ -909,7 +933,7 @@ wc -l /opt/stack/athyper/secrets/.env
 
 When a new secret variable is added to `write-env-staging.sh` in a later commit, an
 already-provisioned server will not have it in its `secrets/.env`. **Do not re-run
-`write-env-staging.sh`** — that rotates all 22 secrets and breaks every downstream
+`write-env-staging.sh`** — that rotates the full secret inventory and breaks every downstream
 service that uses them.
 
 Instead, run the targeted patch script. It adds only the missing variables and
@@ -944,6 +968,7 @@ bash /opt/products/athyper/stack/scripts/setup/validate-env.sh \
 
 # Confirm no template tokens remain in the rendered ACL file.
 # Unrendered tokens indicate that sha256sum failed or a Redis password variable is unset.
+# GLITCHTIP / INFISICAL are legacy Redis ACL token names; the services are errorcollect / secretstore.
 grep -E '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' \
   /opt/stack/athyper/config/memorycache/redis-acl.conf && {
     echo "Redis ACL still has template tokens — abort"
@@ -994,9 +1019,9 @@ mkdir -p \
   "$DATA_ROOT/memorycache" \
   "$DATA_ROOT/memorycache-jobs" \
   "$DATA_ROOT/objectstorage" \
-  "$DATA_ROOT/meilisearch" \
-  "$DATA_ROOT/metabase" \
-  "$DATA_ROOT/uptime-kuma" \
+  "$DATA_ROOT/searchcore" \
+  "$DATA_ROOT/analyticsboard" \
+  "$DATA_ROOT/statuswatch" \
   "$DATA_ROOT/telemetry/logging" \
   "$DATA_ROOT/telemetry/metrics" \
   "$DATA_ROOT/telemetry/observability" \
@@ -1011,9 +1036,9 @@ chmod g-s "$DATA_ROOT"   # remove setgid if it was ever set
 chown svc-redis:svc-redis       "$DATA_ROOT/memorycache"
 chown svc-redis:svc-redis       "$DATA_ROOT/memorycache-jobs"
 chown svc-minio:svc-minio       "$DATA_ROOT/objectstorage"
-chown svc-meili:svc-meili       "$DATA_ROOT/meilisearch"
-chown svc-meili:svc-meili       "$DATA_ROOT/metabase"
-chown svc-meili:svc-meili       "$DATA_ROOT/uptime-kuma"
+chown svc-meili:svc-meili       "$DATA_ROOT/searchcore"
+chown svc-meili:svc-meili       "$DATA_ROOT/analyticsboard"
+chown svc-meili:svc-meili       "$DATA_ROOT/statuswatch"
 # telemetry/ parent — intermediate dir; all four svc-* identities need +x to traverse
 chown athyper:athyper           "$DATA_ROOT/telemetry"
 chmod 0755                      "$DATA_ROOT/telemetry"
@@ -1031,9 +1056,9 @@ chmod 0750 \
   "$DATA_ROOT/memorycache" \
   "$DATA_ROOT/memorycache-jobs" \
   "$DATA_ROOT/objectstorage" \
-  "$DATA_ROOT/meilisearch" \
-  "$DATA_ROOT/metabase" \
-  "$DATA_ROOT/uptime-kuma" \
+  "$DATA_ROOT/searchcore" \
+  "$DATA_ROOT/analyticsboard" \
+  "$DATA_ROOT/statuswatch" \
   "$DATA_ROOT/telemetry/logging" \
   "$DATA_ROOT/telemetry/metrics" \
   "$DATA_ROOT/telemetry/observability" \
@@ -1045,9 +1070,9 @@ chmod g-s \
   "$DATA_ROOT/memorycache" \
   "$DATA_ROOT/memorycache-jobs" \
   "$DATA_ROOT/objectstorage" \
-  "$DATA_ROOT/meilisearch" \
-  "$DATA_ROOT/metabase" \
-  "$DATA_ROOT/uptime-kuma" \
+  "$DATA_ROOT/searchcore" \
+  "$DATA_ROOT/analyticsboard" \
+  "$DATA_ROOT/statuswatch" \
   "$DATA_ROOT/telemetry/logging" \
   "$DATA_ROOT/telemetry/metrics" \
   "$DATA_ROOT/telemetry/observability" \
@@ -1059,9 +1084,9 @@ stat -c '%A %U:%G %a %n' \
   "$DATA_ROOT/memorycache" \
   "$DATA_ROOT/memorycache-jobs" \
   "$DATA_ROOT/objectstorage" \
-  "$DATA_ROOT/meilisearch" \
-  "$DATA_ROOT/metabase" \
-  "$DATA_ROOT/uptime-kuma" \
+  "$DATA_ROOT/searchcore" \
+  "$DATA_ROOT/analyticsboard" \
+  "$DATA_ROOT/statuswatch" \
   "$DATA_ROOT/telemetry/logging" \
   "$DATA_ROOT/telemetry/metrics" \
   "$DATA_ROOT/telemetry/observability" \
@@ -1075,9 +1100,9 @@ Expected:
 memorycache                               svc-redis:svc-redis 750
 memorycache-jobs                          svc-redis:svc-redis 750
 objectstorage                             svc-minio:svc-minio 750
-meilisearch                               svc-meili:svc-meili 750
-metabase                                  svc-meili:svc-meili 750
-uptime-kuma                               svc-meili:svc-meili 750
+searchcore                                svc-meili:svc-meili 750
+analyticsboard                            svc-meili:svc-meili 750
+statuswatch                               svc-meili:svc-meili 750
 telemetry/logging                         svc-loki:svc-loki 750
 telemetry/metrics                         svc-prometheus:svc-prometheus 750
 telemetry/observability                   svc-grafana:svc-grafana 750
@@ -1102,9 +1127,9 @@ for spec in \
   "svc-redis:svc-redis:/opt/stack/athyper/data/memorycache" \
   "svc-redis:svc-redis:/opt/stack/athyper/data/memorycache-jobs" \
   "svc-minio:svc-minio:/opt/stack/athyper/data/objectstorage" \
-  "svc-meili:svc-meili:/opt/stack/athyper/data/meilisearch" \
-  "svc-meili:svc-meili:/opt/stack/athyper/data/metabase" \
-  "svc-meili:svc-meili:/opt/stack/athyper/data/uptime-kuma" \
+  "svc-meili:svc-meili:/opt/stack/athyper/data/searchcore" \
+  "svc-meili:svc-meili:/opt/stack/athyper/data/analyticsboard" \
+  "svc-meili:svc-meili:/opt/stack/athyper/data/statuswatch" \
   "svc-loki:svc-loki:/opt/stack/athyper/data/telemetry/logging" \
   "svc-prometheus:svc-prometheus:/opt/stack/athyper/data/telemetry/metrics" \
   "svc-grafana:svc-grafana:/opt/stack/athyper/data/telemetry/observability" \
@@ -1175,12 +1200,12 @@ docker run --rm \
   -c 'mkdir -p /data/.minio.sys/tmp && touch /data/.minio.sys/tmp/probe && rm -r /data/.minio.sys && echo OK'
 ```
 
-### 13.3 Meilisearch Canary
+### 13.3 searchcore Canary
 
 ```bash
 docker run --rm \
   --user 9105:9105 \
-  -v /opt/stack/athyper/data/meilisearch:/meili_data \
+  -v /opt/stack/athyper/data/searchcore:/meili_data \
   alpine:3.20 sh -c 'touch /meili_data/.write-test && rm /meili_data/.write-test && echo OK'
 ```
 
@@ -1217,27 +1242,21 @@ docker run --rm --user 9103:9103 -v /opt/stack/athyper/data/telemetry/tracing:/d
 sudo -iu athyper
 cd /opt/products/athyper
 
-# Start dry-run via up.sh to confirm the wrapper resolves paths correctly
-bash stack/scripts/stack-profile/up.sh core 2>&1 | head -40
-```
-
-Confirm output shows the expected root paths:
-
-```text
-ATHYPER_CONFIG  = /opt/stack/athyper/config
-ATHYPER_DATA    = /opt/stack/athyper/data
-ENV_FILE        = /opt/stack/athyper/secrets/.env
-```
-
-Full render validation — abort on any unresolved variable or blank bind mount:
-
-```bash
+# Resolve the wrapper environment without starting containers.
 SCRIPT_DIR=/opt/products/athyper/stack/scripts/stack-profile
 source "$SCRIPT_DIR/../lib/compose.sh"
 init_compose_env
 resolve_compose_override
 build_compose_file_list
 
+printf 'ATHYPER_CONFIG = %s\n' "$ATHYPER_CONFIG"
+printf 'ATHYPER_DATA   = %s\n' "$ATHYPER_DATA"
+printf 'ENV_FILE       = %s\n' "$ENV_FILE"
+```
+
+Full render validation — abort on any unresolved variable or blank bind mount:
+
+```bash
 ALL_COMPOSE_PROFILES="admin,analytics,apps,core,db,dev,emergency,gateway,iam,memorycache,memorycache-jobs,monitoring,objectstorage,render,search,security-infisical,telemetry"
 COMPOSE_PROFILES="$ALL_COMPOSE_PROFILES" docker compose \
   --project-directory "$COMPOSE_DIR" \
@@ -1287,7 +1306,7 @@ COMPOSE_PROFILES=core,apps docker compose \
   --project-directory "$COMPOSE_DIR" \
   "${ENV_FILE_ARGS[@]}" \
   "${COMPOSE_FILE_ARGS[@]}" \
-  build athyper-neon-web athyper-api athyper-worker athyper-scheduler
+  build neon-web mesh-web admin-web api worker scheduler
 ```
 
 Verify images were produced:
@@ -1484,7 +1503,7 @@ including `server/node_modules`:
 sudo -iu athyper
 cd /opt/products/athyper
 
-# Installs all workspace packages: apps/, packages/, server/, server/framework/...
+# Installs all workspace packages: apps/, packages/, server/, server/packages/...
 # This is the same command Phase 15 runs for the image build; if Phase 15 already
 # ran successfully, node_modules will be up to date and this will be a no-op.
 pnpm install --frozen-lockfile
@@ -1527,7 +1546,7 @@ DB_PASS_ENC=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys
 
 # Pre-export DATABASE_ADMIN_URL with the container IP so the seed script uses it directly.
 # IMPORTANT: postgres superuser is "postgres", NOT "athyperadmin".
-# "athyperadmin" is the pgweb HTTP login — it is not a database user.
+# "athyperadmin" is the local dbconsole HTTP login — it is not a staging database user.
 export DATABASE_ADMIN_URL="postgresql://postgres:${DB_PASS_ENC}@${DB_IP}:5432/athyper_neon"
 echo "Seed target: ${DB_IP}:5432/athyper_neon"
 
@@ -1569,17 +1588,26 @@ ss -tln | grep 5432 || true
 sudo -iu athyper
 cd /opt/products/athyper
 
-# Pre-flight: check for duplicate authenticatorConfig UUIDs in the realm JSON.
-# Duplicates cause a silent import failure that is hard to diagnose after the fact.
-jq '.authenticatorConfig[].id' /opt/stack/athyper/config/iam/realm-demosetup.json | sort | uniq -d || true
+# Pre-flight: validate all importable realms and fail on duplicate authenticatorConfig UUIDs.
+DUPES=$(
+  for file in /opt/stack/athyper/config/iam/realm-athyper.json \
+              /opt/stack/athyper/config/iam/realm-platform-control.json; do
+  jq empty "$file"
+  jq -r '.authenticatorConfig[]?.id // empty' "$file"
+  done | sort | uniq -d
+)
+test -z "$DUPES" || { echo "Duplicate authenticatorConfig IDs:"; echo "$DUPES"; exit 1; }
 
 bash /opt/products/athyper/stack/scripts/db/session/iam/reset-iam.sh
 
-# Verify the OIDC discovery endpoint is reachable (this is what the API uses to verify JWTs)
-curl -sf https://iam-stg.athyper.com/realms/athyper/.well-known/openid-configuration | jq .
+# Verify current realm discovery endpoints are reachable.
+for realm in neon mesh admin platform-control; do
+  curl -sf "https://iam-stg.athyper.com/realms/${realm}/.well-known/openid-configuration" | jq .issuer
+done
 ```
 
-Open the Keycloak admin UI, confirm the client secret matches `IAM_CLIENT_SECRET` in `.env`.
+Open the Keycloak admin UI, confirm the `athyper-api-runtime` client secret in the Neon
+realm matches `IAM_CLIENT_SECRET` in `.env`.
 If it differs, update `.env` and re-run:
 
 ```bash
@@ -1605,10 +1633,12 @@ bash stack/scripts/stack-profile/up.sh apps
 Verify containers and logs:
 
 ```bash
-docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'athyper-api|athyper-worker|athyper-scheduler|athyper-neon-web'
+docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'athyper-(api|worker|scheduler|neon-web|mesh-web|admin-web)'
 
 docker logs athyper-api-1 --tail 100
 docker logs athyper-neon-web-1 --tail 100
+docker logs athyper-mesh-web-1 --tail 100
+docker logs athyper-admin-web-1 --tail 100
 ```
 
 External smoke check:
@@ -1617,6 +1647,8 @@ External smoke check:
 curl -sf https://api-stg.athyper.com/livez
 curl -sf https://api-stg.athyper.com/readyz
 curl -sf https://neon-stg.athyper.com/livez
+curl -sf https://mesh-stg.athyper.com/livez
+curl -sf https://admin-stg.athyper.com/livez
 ```
 
 TLS issuer check:
@@ -1643,13 +1675,13 @@ bash stack/scripts/stack-profile/up.sh telemetry
 docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'telemetry|logging|metrics|tracing|logshipper'
 
 bash stack/scripts/stack-profile/up.sh monitoring
-docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'glitchtip|healthchecks|uptime'
+docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'errorcollect|cronwatch|statuswatch'
 
 bash stack/scripts/stack-profile/up.sh render
-docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'gotenberg|tika'
+docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'docrender|docparser'
 
 bash stack/scripts/stack-profile/up.sh search
-docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'meilisearch'
+docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'searchcore'
 ```
 
 Verify neither gateway nor logshipper has a direct Docker socket mount:
@@ -1824,8 +1856,8 @@ Verify at least one backup reaches the offsite bucket before declaring this phas
 **EXECUTE ON:** SERVER / Infisical UI  
 **AS:** athyper / operator
 
-Import all generated secrets from `~/secrets-staging.txt` into Infisical (or your chosen
-secrets manager). The on-disk `.env` is a materialized runtime cache — Infisical is the
+Import all generated secrets from `~/secrets-staging-values.txt` into secretstore / Infisical
+(or your chosen secrets manager). The on-disk `.env` is a materialized runtime cache — the secret manager is the
 source of truth.
 
 After confirming the import:
@@ -1834,8 +1866,8 @@ After confirming the import:
 sudo -iu athyper
 
 # Securely delete the plaintext staging secrets file (shred overwrites before unlinking)
-shred -u ~/secrets-staging.txt
-ls ~/secrets-staging.txt || true   # must show: No such file or directory
+shred -u ~/secrets-staging-values.txt
+ls ~/secrets-staging-values.txt || true   # must show: No such file or directory
 ```
 
 ---
@@ -2052,9 +2084,9 @@ stat -c '%A %U:%G %a %n' \
   /opt/stack/athyper/data/memorycache \
   /opt/stack/athyper/data/memorycache-jobs \
   /opt/stack/athyper/data/objectstorage \
-  /opt/stack/athyper/data/meilisearch \
-  /opt/stack/athyper/data/metabase \
-  /opt/stack/athyper/data/uptime-kuma \
+  /opt/stack/athyper/data/searchcore \
+  /opt/stack/athyper/data/analyticsboard \
+  /opt/stack/athyper/data/statuswatch \
   /opt/stack/athyper/data/telemetry/logging \
   /opt/stack/athyper/data/telemetry/metrics \
   /opt/stack/athyper/data/telemetry/observability \
@@ -2092,7 +2124,7 @@ docker inspect athyper-logshipper-1 \
 for c in \
   athyper-memorycache-1 \
   athyper-objectstorage-1 \
-  athyper-meilisearch-1 \
+  athyper-searchcore-1 \
   athyper-telemetry-1 \
   athyper-logging-1 \
   athyper-metrics-1 \
@@ -2358,7 +2390,7 @@ Do not declare staging ready until every item below is checked.
 [ ] No data leaf directory is owned by a human account (e.g. rmanoj-atlas, ops-admin).
 [ ] GID pre-check passed — GIDs 9100–9105 were not claimed by a non-svc-* group.
 [ ] Host write probe (Phase 12) passes for all bind-mounted data directories.
-[ ] Container canaries (Phase 13) pass for Redis, MinIO, Meilisearch, and all telemetry directories.
+[ ] Container canaries (Phase 13) pass for Redis, MinIO, searchcore, and all telemetry directories.
 [ ] stack/env/.env contains only non-secret bootstrap variables — no credentials.
 [ ] /opt/stack/athyper/secrets/.env is mode 0600 and not world-readable.
 [ ] redis-acl.conf is athyper:svc-redis mode 0640 — not world-readable (contains hashed passwords).

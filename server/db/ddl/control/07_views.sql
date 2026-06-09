@@ -153,7 +153,7 @@ COMMENT ON VIEW control.v_acct_profile_full IS
 -- ============================================================================
 -- §V3  control.v_blueprint_catalogue
 -- Active blueprint packs for tenant provisioning wizard and API.
--- R6: moved from 900_seed_data/020_universal/000_registry/000_blueprint_registry.sql
+-- R6: moved from 900_seed_data/blueprints/universal/000_registry/000_blueprint_registry.sql
 -- into the main view bundle so it is always present after 07_views.sql runs,
 -- regardless of whether blueprint seed files have executed.
 -- ============================================================================

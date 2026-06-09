@@ -176,7 +176,7 @@ function ProfitLossTrendGraph({
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b px-3 py-2">
         <div>
-          <div className="text-sm font-semibold">P&L movement</div>
+          <div className="text-sm font-medium">P&L movement</div>
           <div className="text-xs text-muted-foreground">
             Revenue, operating expenses, and net profit by {modeLabel.toLowerCase()}
           </div>
@@ -285,7 +285,7 @@ function ProfitLossTrendGraph({
                       x={x}
                       y={height - 10}
                       textAnchor="middle"
-                      className="fill-muted-foreground text-[10px]"
+                      className="fill-muted-foreground text-xs"
                     >
                       {point.label}
                     </text>
@@ -301,7 +301,7 @@ function ProfitLossTrendGraph({
           <ReportGraphMetric label="Gross Profit" value={latest.grossProfit} tone={latest.grossProfit >= 0 ? "success" : "danger"} />
           <ReportGraphMetric label="Operating Expenses" value={latest.operatingExpenses} tone="neutral" />
           <ReportGraphMetric label="Net Profit / Loss" value={latest.netProfit} tone={latest.netProfit >= 0 ? "success" : "danger"} />
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-success" /> Revenue</span>
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-warning" /> Expenses</span>
             <span className={cn("inline-flex items-center gap-1", netTone)}><span className="h-2 w-2 rounded-full bg-current" /> Net</span>
@@ -529,7 +529,7 @@ export function ProfitLossView({
       />
       <div className="border-b">
         <div className="px-2 py-1 bg-muted/10">
-          <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Revenue</span>
+          <span className="text-xs font-medium text-muted-foreground">Revenue</span>
         </div>
         {data.revenue.map((sec) => (
           <StatementSection
@@ -560,7 +560,7 @@ export function ProfitLossView({
       {data.operatingExpenses.length > 0 && (
         <div className="border-b">
           <div className="px-2 py-1 bg-muted/10">
-            <span className="text-doc-support font-semibold uppercase text-muted-foreground tracking-wide">Operating Expenses</span>
+            <span className="text-xs font-medium text-muted-foreground">Operating Expenses</span>
           </div>
           {data.operatingExpenses.map((sec) => (
             <StatementSection

@@ -1,0 +1,30 @@
+{
+  "name": "@athyper/print-templates",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./site": "./src/site/SitePrintTemplate.tsx",
+    "./warehouse": "./src/warehouse/WarehousePrintTemplate.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@athyper/entity-print": "workspace:*"
+  },
+  "peerDependencies": {
+    "@athyper/api-contracts": "workspace:*",
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/api-contracts": "workspace:*",
+    "@athyper/config": "workspace:*",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3"
+  }
+}

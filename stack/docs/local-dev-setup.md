@@ -34,7 +34,7 @@ stack\scripts\stack-profile\up.bat core
 :: Terminal 2
 stack\scripts\app\api-up.bat
 :: Terminal 3
-stack\scripts\app\web-up.bat
+stack\scripts\app\local-ui-up.bat
 ```
 
 ---
@@ -58,8 +58,8 @@ stack\scripts\app\web-up.bat
    - Step 11 — Smoke test
 4. [Running the Application](#4-running-the-application)
    - Option A: Full stack in Docker
-   - Option B: API on host, web in Docker
-   - Option C: API and web both on host *(recommended)*
+   - Option B: API on host, plane apps in Docker
+   - Option C: API and plane apps on host *(recommended)*
    - Running specific server modes (worker / scheduler)
    - VS Code integration (debugger, extensions)
 5. [Day-2 Operations](#5-day-2-operations)
@@ -80,7 +80,7 @@ minutes on a clean machine.
 |---|---|---|---|
 | Docker Desktop | ≥ 4.x | `winget install Docker.DockerDesktop` | Runs all infrastructure containers via WSL 2 |
 | Git for Windows | latest | `winget install Git.Git` | Includes Git Bash — needed to run `.sh` scripts |
-| Node.js | 24 LTS | `winget install OpenJS.NodeJS.LTS` or via `fnm` | Runs API and web app on the host |
+| Node.js | 24 LTS | `winget install OpenJS.NodeJS.LTS` or via `fnm` | Runs API and plane apps on the host |
 | pnpm | 10.33.0 | `corepack enable && corepack prepare pnpm@10.33.0 --activate` | Workspace package manager |
 | mkcert | latest | `winget install FiloSottile.mkcert` | Generates trusted TLS certs for `*.athyper.local` |
 | jq | 1.6+ | `winget install jqlang.jq` | Useful for inspecting API JSON responses |
@@ -162,7 +162,7 @@ D:\Stack\athyper\                  ← runtime state — survives git pull and b
     db\
     memorycache\
     objectstorage\
-    meilisearch\
+    searchcore\
     telemetry\{logging,metrics,observability,tracing}
     ...
   logs\
@@ -199,14 +199,18 @@ Open `C:\Windows\System32\drivers\etc\hosts` as **Administrator** and append:
 # athyper local development
 127.0.0.1  api.athyper.local
 127.0.0.1  neon.athyper.local
+127.0.0.1  mesh.athyper.local
+127.0.0.1  admin.athyper.local
 127.0.0.1  iam.athyper.local
 127.0.0.1  gateway.athyper.local
 127.0.0.1  objectstorage.athyper.local
-127.0.0.1  objectstorage.console.athyper.local
-127.0.0.1  pgweb.athyper.local
+127.0.0.1  objectstorageui.athyper.local
+127.0.0.1  mailtrap.athyper.local
+127.0.0.1  dbconsole.athyper.local
 127.0.0.1  meilisearch.athyper.local
 127.0.0.1  telemetry.athyper.local
 127.0.0.1  metrics.athyper.local
+127.0.0.1  alerts.athyper.local
 127.0.0.1  traces.athyper.local
 127.0.0.1  logs.athyper.local
 127.0.0.1  uptime.athyper.local
@@ -220,6 +224,8 @@ Verify the entries resolve:
 ```cmd
 ping -n 1 api.athyper.local
 ping -n 1 neon.athyper.local
+ping -n 1 mesh.athyper.local
+ping -n 1 admin.athyper.local
 ```
 
 Both must reply from `127.0.0.1`. If not, the file was saved from a non-elevated Notepad —
@@ -235,7 +241,8 @@ cd D:\Products\athyper
 pnpm install
 ```
 
-`pnpm install` installs all workspace packages (`server/`, `apps/web/`, shared packages).
+`pnpm install` installs all workspace packages (`server/`, `apps/neon/`, `apps/mesh/`,
+`apps/admin/`, and shared packages).
 It must complete without errors before any script will run. If it fails with an
 engine warning, check that Node.js satisfies `package.json#engines` and that
 Corepack has activated the pinned pnpm version.
@@ -249,14 +256,14 @@ stack\scripts\setup\setup-env.bat local all
 ```
 
 This copies `stack/env/.env.example` to `stack/env/.env` and sets
-`ENVIRONMENT=local`. For local development the runtime files (`server/.env` and
-`apps/web/.env.local`) are optional IDE conveniences; the wrapper scripts derive
+`ENVIRONMENT=local`. For local development `server/.env` and any manually created
+plane app `.env.local` files are optional IDE conveniences; the wrapper scripts derive
 the values they need from `stack/env/.env`.
 
 > **Why three env files?** The stack `.env` is the source of truth for the Docker Compose
-> services. `server/.env` and `apps/web/.env.local` are loaded by `pnpm dev` in each
+> services. `server/.env` and app `.env.local` files are loaded by manual `pnpm dev` in each
 > package — `pnpm` spawns a new shell per command and does not inherit environment
-> variables set in the calling `.bat` script. The `api-up.bat` and `web-up.bat` scripts
+> variables set in the calling `.bat` script. The `api-up.bat`, `web-up.bat`, and `planes-up.bat` scripts
 > translate Docker hostnames to `127.0.0.1` equivalents and inject them into the child
 > process, so you rarely need to hand-edit `server/.env` directly.
 
@@ -327,9 +334,9 @@ D:\Stack\athyper\data\
   memorycache\        ← Redis cache + session store
   memorycache-jobs\   ← Redis BullMQ isolation (opt-in profile)
   objectstorage\      ← MinIO data
-  meilisearch\
-  metabase\
-  uptime-kuma\
+  searchcore\
+  analyticsboard\
+  statuswatch\
   telemetry\
     logging\          ← Loki
     metrics\          ← Prometheus
@@ -443,7 +450,7 @@ The `core` profile starts the minimum services required to run the application:
 | `athyper-objectstorage-1` | MinIO | `9000` / `9001` (localhost) |
 | `athyper-gateway-1` | Traefik | `80` / `443` |
 | `athyper-iam-1` | Keycloak | via gateway: `iam.athyper.local` |
-| `athyper-mailhog-1` | Mailhog (local SMTP capture) | `8025` (UI) |
+| `athyper-mailtrap-1` | Mailtrap (local SMTP capture) | `8025` (UI) |
 | `athyper-socket-proxy-*` | Docker socket proxies | internal |
 
 Wait for all containers to show `Up` or `healthy`:
@@ -547,10 +554,10 @@ stack\scripts\db\session\iam\reset-iam.bat
 
 This wipes the Keycloak database and re-imports the committed realm JSON:
 
-1. Regenerates `realm-demosetup.json` from `tools/scripts/update-realm-demosetup.cjs`
+1. Validates the checked-in realm files (`realm-athyper.json`, `realm-platform-control.json`)
 2. Drops and recreates the Keycloak schema
 3. Restarts Keycloak — it bootstraps the master realm on a clean DB
-4. Imports the athyper realm JSON
+4. Auto-imports the plane realms and applies the `*-demosetup.json` fixtures
 5. Seeds demo user credentials via `kcadm.sh`
 
 After completion:
@@ -574,7 +581,7 @@ Demo user login:        <see seed output>
 stack\scripts\smoke-staging.bat
 ```
 
-Runs 8 health check groups. Groups 6 and 7 require the API and web app to be running
+Runs 8 health check groups. Groups 6 and 7 require the API and plane apps to be running
 (see Section 4), so run this test after starting the application.
 
 ```text
@@ -598,10 +605,15 @@ Three modes are available. Choose based on what you are actively working on.
 
 ### Option A — Full Stack in Docker
 
-All services including API and web run inside Docker containers. Useful for:
+All services including API and plane apps run inside Docker containers. Useful for:
 - Smoke testing a production-like configuration
 - Running all profiles (telemetry, monitoring, search) simultaneously
 - Verifying a Docker image build before pushing
+
+The local `.env` defaults to Option C host-dev upstreams. For a true local full-Docker
+smoke test, temporarily point the `APPS_ATHYPER_*_UPSTREAM_URL` values back to Docker
+service names (`neon-web:3000`, `mesh-web:3000`, `admin-web:3000`, `api:3000`) before
+starting the `apps` profile.
 
 ```cmd
 stack\scripts\stack-profile\up.bat all
@@ -609,28 +621,34 @@ stack\scripts\stack-profile\up.bat all
 
 | URL | Service |
 |---|---|
-| `https://neon.athyper.local` | Web app |
+| `https://neon.athyper.local` | Neon tenant user plane |
+| `https://mesh.athyper.local` | Mesh partner plane |
+| `https://admin.athyper.local` | Admin internal plane |
 | `https://api.athyper.local` | API |
 | `https://iam.athyper.local` | Keycloak |
-| `https://objectstorage.console.athyper.local` | MinIO console |
+| `https://objectstorageui.athyper.local` | MinIO console |
 | `https://gateway.athyper.local` | Traefik dashboard |
-| `http://127.0.0.1:8025` | Mailhog (email capture) |
+| `http://127.0.0.1:8025` | mailtrap (email capture) |
 
 > **Not ideal for active code development.** Rebuilding the Docker image for every code
 > change is slow. Use Option C for routine feature work.
 
 ---
 
-### Option B — API on Host, Web in Docker
+### Option B — API on Host, Plane Apps in Docker
 
-The API runs as a local `pnpm dev` process; Next.js web runs inside Docker. Useful when
-you are working only on the API and do not need to change the frontend.
+The API runs as a local `pnpm dev` process; the Next.js plane apps run inside Docker.
+Useful when you are working only on the API and do not need to change the frontends.
 
-**Terminal 1 — Core + web in Docker:**
+This option also needs Docker service upstreams for the plane apps. Keep Option C as the
+default when working on login pages, shared UI, or any TypeScript in `apps/neon`,
+`apps/mesh`, `apps/admin`, or `packages/product`.
+
+**Terminal 1 — Core + plane apps in Docker:**
 
 ```cmd
 stack\scripts\stack-profile\up.bat core
-stack\scripts\app\web-up.bat
+stack\scripts\app\web-up.bat all
 ```
 
 **Terminal 2 — API on the host:**
@@ -648,7 +666,7 @@ host Node.js process can reach the containerised services:
 | `db` | `127.0.0.1:5432` | Direct Postgres — published to localhost |
 | `memorycache` | `127.0.0.1:6379` | Redis — published to localhost |
 | `objectstorage` | `127.0.0.1:9000` | MinIO — published to localhost |
-| `meilisearch` | `127.0.0.1:7700` | Meilisearch — published to localhost |
+| `searchcore` | `127.0.0.1:7700` | Meilisearch — published to localhost |
 | `tracing` | `127.0.0.1:4317` | OTLP/gRPC endpoint (Tempo) |
 
 It also sets `PORT=4000` so the API listens on localhost:4000, which is where Traefik
@@ -656,13 +674,29 @@ It also sets `PORT=4000` so the API listens on localhost:4000, which is where Tr
 
 ---
 
-### Option C — API and Web Both on Host *(recommended for full-stack development)*
+### Option C — API and Plane Apps on Host *(recommended for full-stack development)*
 
-Both the API and the Next.js web app run as local `pnpm dev` processes. Docker runs only
+Both the API and the Next.js plane apps run as local `pnpm dev` processes. Docker runs only
 the infrastructure services (Postgres, Redis, MinIO, Keycloak, Traefik).
 
+`stack\env\.env` is configured for this local mode by default:
+
+| Route | Local upstream |
+|---|---|
+| `https://neon.athyper.local` | `http://host.docker.internal:3101` |
+| `https://mesh.athyper.local` | `http://host.docker.internal:3102` |
+| `https://admin.athyper.local` | `http://host.docker.internal:3103` |
+| `https://api.athyper.local` | `http://host.docker.internal:4000` |
+
+After changing any `APPS_ATHYPER_*_UPSTREAM_URL` value, restart the gateway once so
+Traefik receives the new environment:
+
+```cmd
+docker restart athyper-gateway-1
+```
+
 This gives you:
-- Instant hot reload for both API and web changes
+- Instant hot reload for both API and plane-app changes
 - Full debugger access (attach VS Code to port 9229 for the API)
 - No image rebuilds needed for code changes
 
@@ -678,28 +712,36 @@ stack\scripts\stack-profile\up.bat core
 stack\scripts\app\api-up.bat
 ```
 
-**Terminal 3 — Web app (Next.js dev server on port 3000):**
+**Terminal 3 - Plane apps (Next.js dev servers on ports 3101-3103):**
 
 ```cmd
-stack\scripts\app\web-up.bat
+stack\scripts\app\local-ui-up.bat
 ```
 
 | URL | Notes |
 |---|---|
-| `http://localhost:3000` | Direct to Next.js dev server (bypasses Traefik) |
-| `https://neon.athyper.local` | Via Traefik → localhost:3000 |
+| `http://localhost:3101` | Direct to Neon dev server (bypasses Traefik) |
+| `http://localhost:3102` | Direct to Mesh dev server (bypasses Traefik) |
+| `http://localhost:3103` | Direct to Admin dev server (bypasses Traefik) |
+| `https://neon.athyper.local` | Via Traefik to localhost:3101 |
+| `https://mesh.athyper.local` | Via Traefik to localhost:3102 |
+| `https://admin.athyper.local` | Via Traefik to localhost:3103 |
 | `http://localhost:4000` | Direct to API (bypasses Traefik) |
-| `https://api.athyper.local` | Via Traefik → localhost:4000 |
+| `https://api.athyper.local` | Via Traefik to localhost:4000 |
 | `https://iam.athyper.local` | Keycloak in Docker |
-| `http://127.0.0.1:8025` | Mailhog (email capture) |
+| `http://127.0.0.1:8025` | mailtrap (email capture) |
 
-> **`ALLOW_DIRECT_ACCESS=true`** — `web-up.bat` sets this flag, which bypasses the
-> host-guard middleware that would otherwise redirect bare `localhost:3000` to the branded
-> hostname. Both `localhost:3000` and `neon.athyper.local` land on the same process.
+> **`ALLOW_DIRECT_ACCESS=true`** - `planes-up.bat` sets this flag, which bypasses the
+> host-guard middleware for direct localhost access. Branded hostnames still enter through
+> Traefik and land on their matching plane process.
 
-> **`RUNTIME_API_URL=http://localhost:4000`** — `web-up.bat` sets this for the Next.js
+> **`RUNTIME_API_URL=http://localhost:4000`** - `planes-up.bat` sets this for the Next.js
 > BFF layer (server-side fetch). It must be `localhost:4000`, not `https://api.athyper.local`.
 > See [Critical Gotchas §1](#1-runtime_api_url-must-be-httplocalhost4000) for details.
+
+Staging and production do not use this host-dev routing. Their templates keep
+`APPS_ATHYPER_*_UPSTREAM_URL` on Docker service names such as `neon-web:3000`,
+`mesh-web:3000`, `admin-web:3000`, and `api:3000`.
 
 ---
 
@@ -775,7 +817,9 @@ Or scope to a single package:
 
 ```cmd
 cd server && pnpm tsc --noEmit
-cd apps/web && pnpm tsc --noEmit
+cd apps/neon && pnpm tsc --noEmit
+cd apps/mesh && pnpm tsc --noEmit
+cd apps/admin && pnpm tsc --noEmit
 ```
 
 Type errors here surface the same issues the CI build catches — run this before pushing.
@@ -905,14 +949,15 @@ running services.
 
 | Profile | Services started | When to use |
 |---|---|---|
-| `core` | DB, PgBouncer, Redis, MinIO, Traefik, Keycloak, Mailhog, socket-proxies | Always — minimum required to run the app |
+| `core` | DB, PgBouncer, Redis, MinIO, Traefik, Keycloak, mailtrap, socket-proxies | Always — minimum required to run the app |
 | `apps` | API, worker, scheduler, web (all in Docker) | Full Docker run (Option A) |
 | `telemetry` | Loki, Prometheus, Tempo, Grafana, logshipper | Working on observability, tracing, or metrics |
-| `monitoring` | GlitchTip (error tracking), Healthchecks, Uptime Kuma | Testing error capture or uptime workflows |
-| `render` | Gotenberg (PDF generation), Tika (document parsing) | Testing document generation or import pipelines |
-| `search` | Meilisearch | Testing full-text search |
-| `admin` | BullBoard (job queue UI), pgweb (DB browser) | Inspecting job queues or browsing the database |
-| `analytics` | Metabase | Analytics dashboards — requires governance approval in `.env` |
+| `monitoring` | errorcollect (error tracking), cronwatch, statuswatch | Testing error capture or uptime workflows |
+| `render` | docrender (PDF generation), docparser (document parsing) | Testing document generation or import pipelines |
+| `search` | searchcore (Meilisearch) | Testing full-text search |
+| `admin` | dbconsole (DB browser) | Browsing the database in local dev |
+| `emergency` | queueconsole (job queue UI) | Break-glass queue inspection when the API board is unavailable |
+| `analytics` | analyticsboard (Metabase) | Analytics dashboards — requires governance approval in `.env` |
 | `memorycache-jobs` | Dedicated Redis for BullMQ | Testing queue isolation or Redis HA patterns |
 | `security-infisical` | Infisical secret manager | Testing secrets management integration |
 | `all` | Everything above | Full environment smoke test |
@@ -986,8 +1031,8 @@ host, not inside Docker. The BFF calls `RUNTIME_API_URL` to reach the API server
 ```
 
 Routing through Traefik breaks SSE (Server-Sent Events) and session cookie forwarding
-because the gateway rewrites headers. `web-up.bat` sets `http://localhost:4000`
-automatically. If you start the web app with a manual `pnpm dev` without setting this
+because the gateway rewrites headers. `web-up.bat` and `planes-up.bat` set `http://localhost:4000`
+automatically. If you start a plane app with a manual `pnpm dev` without setting this
 variable, all BFF routes that call the API will return connection errors.
 
 ### 2. Next.js 16 blocks cross-origin `/api/` calls
@@ -996,7 +1041,7 @@ Next.js 16.x blocks all cross-origin dev API calls from non-localhost origins by
 When the browser accesses `https://neon.athyper.local` and makes a call to `/api/...`,
 Next.js treats it as cross-origin and returns 403.
 
-Fix — add to `apps/web/next.config.mjs`:
+Fix — add the relevant host to the active plane app's `next.config.mjs`:
 
 ```js
 allowedDevOrigins: ['neon.athyper.local'],
@@ -1019,9 +1064,9 @@ incorrect title and may silently fail entity lookups.
 
 ### 4. Session cookie name is `neon_sid`
 
-The API sets the cookie `neon_sid`. Middleware in `apps/web` reads `neon_sid`. The
-`@athyper/auth` package uses a different internal name internally — do not rely on it
-for cookie inspection or manual testing with `document.cookie`.
+The API sets the cookie `neon_sid`. Middleware in `apps/neon` reads `neon_sid`.
+Plane-specific cookie names are owned by `@athyper/session-plane`; do not add a
+parallel auth package or hardcoded cookie helper for manual testing.
 
 If you see a permanent login redirect loop after a code change, check that nothing
 changed the cookie name in either the API or the middleware.
@@ -1130,15 +1175,16 @@ docker logs athyper-gateway-1 --tail 50
 Traefik logs `level=error` entries for backend connection failures — the error message
 will name the service that is unreachable.
 
-### BFF routes return 403 when accessed from `neon.athyper.local`
+### BFF routes return 403 when accessed from a plane hostname
 
-This is the Next.js 16 cross-origin restriction. Add to `apps/web/next.config.mjs`:
+This is the Next.js 16 cross-origin restriction. Add the host to the active plane
+app's `next.config.mjs`:
 
 ```js
 allowedDevOrigins: ['neon.athyper.local'],
 ```
 
-Restart the web app process after the change.
+Restart the plane app process after the change.
 
 ### Keycloak login loop / "Invalid token"
 

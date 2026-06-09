@@ -31,8 +31,8 @@ function DimCell({ code, name }: { code: string | null; name: string | null }) {
   if (!code) return <span className="text-muted-foreground/50">—</span>;
   return (
     <span className="inline-flex flex-col leading-tight">
-      <span className="font-mono text-doc-support">{code}</span>
-      {name && <span className="text-doc-support text-muted-foreground">{name}</span>}
+      <span className="tabular-nums text-xs">{code}</span>
+      {name && <span className="text-xs text-muted-foreground">{name}</span>}
     </span>
   );
 }
@@ -45,7 +45,7 @@ function TraceRow({ line }: { line: PostingTraceLine }) {
       <td className="px-3 py-2 text-center text-xs text-muted-foreground tabular-nums">{line.lineNumber}</td>
       <td className="px-3 py-2">
         <span
-          className="cursor-context-menu font-mono text-xs font-medium underline-offset-2 hover:underline"
+          className="cursor-context-menu tabular-nums text-xs font-medium underline-offset-2 hover:underline"
           title="Right-click to open this GL account."
           onContextMenu={(event) => openAppRecordFromContextMenu(event, "gl_account", line.accountCode)}
         >
@@ -60,7 +60,7 @@ function TraceRow({ line }: { line: PostingTraceLine }) {
         </span>
       </td>
       <td className="px-3 py-2 text-center">
-        <Badge variant="outline" className="text-doc-support px-1.5 py-0">{line.accountClass}</Badge>
+        <Badge variant="outline" className="text-xs px-1.5 py-0">{line.accountClass}</Badge>
       </td>
       <td className="px-3 py-2"><DimCell code={line.costCenterCode}   name={line.costCenterName} /></td>
       <td className="px-3 py-2"><DimCell code={line.profitCenterCode} name={line.profitCenterName} /></td>
@@ -117,7 +117,7 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span
-                className="cursor-context-menu font-mono text-sm font-semibold underline-offset-2 hover:underline"
+                className="cursor-context-menu tabular-nums text-sm font-medium underline-offset-2 hover:underline"
                 title="Right-click to open this journal entry."
                 onContextMenu={(event) => openAppRecordFromContextMenu(event, "journal_entry", je.jeNumber)}
               >
@@ -125,7 +125,7 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
               </span>
               {statusBadge(je.status)}
               {je.reversalOf && (
-                <Badge variant="outline" className="text-doc-support">
+                <Badge variant="outline" className="text-xs">
                   <RefreshCw className="mr-1 h-3 w-3" />Reversal
                 </Badge>
               )}
@@ -144,7 +144,7 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
             </div>
             <div>FY {je.fiscalYear} / P{je.periodNumber}</div>
             {je.sourceDocType && (
-              <div className="font-mono">{je.sourceDocType}{je.sourceDocRef ? ` · ${je.sourceDocRef}` : ""}</div>
+              <div className="tabular-nums">{je.sourceDocType}{je.sourceDocRef ? ` · ${je.sourceDocRef}` : ""}</div>
             )}
           </div>
         </div>
@@ -152,13 +152,13 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
         <div className="mt-3 flex gap-6 border-t pt-3 text-sm">
           <div>
             <p className="text-xs text-muted-foreground">Total Debit</p>
-            <p className="tabular-nums font-semibold text-success">
+            <p className="tabular-nums font-medium text-success">
               {je.currencyCode} {fmtCurrency(je.totalDebit)}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Total Credit</p>
-            <p className="tabular-nums font-semibold text-destructive">
+            <p className="tabular-nums font-medium text-destructive">
               {je.currencyCode} {fmtCurrency(je.totalCredit)}
             </p>
           </div>
@@ -196,10 +196,10 @@ export function PostingTrace({ jeId }: PostingTraceProps) {
               <td colSpan={6} className="px-3 py-2.5 text-xs font-medium text-muted-foreground">
                 {lines.length} line{lines.length !== 1 ? "s" : ""}
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-xs font-semibold text-success">
+              <td className="px-3 py-2.5 text-right tabular-nums text-xs font-medium text-success">
                 {fmtCurrency(totalDebit)}
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-xs font-semibold text-destructive">
+              <td className="px-3 py-2.5 text-right tabular-nums text-xs font-medium text-destructive">
                 {fmtCurrency(totalCredit)}
               </td>
               <td />

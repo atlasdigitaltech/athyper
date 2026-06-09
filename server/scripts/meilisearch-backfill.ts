@@ -8,7 +8,7 @@
  * default mapper → optional per-entity override.
  *
  * Usage:
- *   DATABASE_URL=... MEILISEARCH_URL=... MEILISEARCH_MASTER_KEY=... \
+ *   DATABASE_URL=... SEARCHCORE_URL=... SEARCHCORE_MASTER_KEY=... \
  *     npx tsx server/scripts/meilisearch-backfill.ts [--entity=invoice,journal_entry] [--batch-size=500]
  *
  * Default entity set: invoice,journal_entry (the prototype scope).
@@ -40,15 +40,15 @@ import {
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const DATABASE_URL           = process.env["DATABASE_URL"];
-const MEILISEARCH_URL        = process.env["MEILISEARCH_URL"];
-const MEILISEARCH_MASTER_KEY = process.env["MEILISEARCH_MASTER_KEY"];
+const SEARCHCORE_URL        = process.env["SEARCHCORE_URL"];
+const SEARCHCORE_MASTER_KEY = process.env["SEARCHCORE_MASTER_KEY"];
 
 if (!DATABASE_URL) {
   console.error("ERROR: DATABASE_URL environment variable is required");
   process.exit(1);
 }
-if (!MEILISEARCH_URL || !MEILISEARCH_MASTER_KEY) {
-  console.error("ERROR: MEILISEARCH_URL and MEILISEARCH_MASTER_KEY environment variables are required");
+if (!SEARCHCORE_URL || !SEARCHCORE_MASTER_KEY) {
+  console.error("ERROR: SEARCHCORE_URL and SEARCHCORE_MASTER_KEY environment variables are required");
   process.exit(1);
 }
 
@@ -90,8 +90,8 @@ const db = new Kysely<any>({
 });
 
 const client = createMeilisearchClient({
-  host:   MEILISEARCH_URL,
-  apiKey: MEILISEARCH_MASTER_KEY,
+  host:   SEARCHCORE_URL,
+  apiKey: SEARCHCORE_MASTER_KEY,
 });
 if (!client) {
   console.error("ERROR: Meilisearch client could not be constructed");
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
 
   const reachable = await client!.isAvailable();
   if (!reachable) {
-    throw new Error(`Meilisearch unreachable at ${MEILISEARCH_URL}`);
+    throw new Error(`Meilisearch unreachable at ${SEARCHCORE_URL}`);
   }
   // warmUp() runs ensureIndex + scoped-key provisioning with retry. In the
   // script context we want a single-shot attempt with a tight retry cap —

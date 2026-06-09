@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="neon">
+  <circle cx="256" cy="256" r="256" fill="#FFFFFF"/>
+  <g transform="translate(102.4 114.3) scale(1.08169)" fill="#000000" fill-rule="nonzero">
+    <path d="M128 0 L163 70 L73 262 L0 262 Z M172 121 L234 121 L169 262 L103 262 Z M238 170 L284 262 L222 262 Z"/>
+  </g>
+</svg>

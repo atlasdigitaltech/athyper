@@ -48,10 +48,10 @@ function AccountSelector({
           )}
         >
           <div className="text-xs font-medium">{acct.name}</div>
-          <div className="text-doc-support text-muted-foreground font-mono">
+          <div className="text-xs text-muted-foreground tabular-nums">
             {acct.accountIdType ?? ""} ····{acct.accountLast4 ?? ""}
           </div>
-          <div className="text-doc-support text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {acct.currencyCode}{acct.isPrimary ? " · Primary" : ""}
             {acct.glAccountCode ? ` · GL ${acct.glAccountCode}` : ""}
           </div>
@@ -72,7 +72,7 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
 
   return (
     <div className="space-y-2">
-      <div className="text-doc-support text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         As at {data?.asAt ? fmtDate(data.asAt) : "—"} · {data?.items.length ?? 0} entries
       </div>
       <div className="rounded-xl border overflow-x-auto overflow-y-hidden">
@@ -100,22 +100,22 @@ function StatementTab({ scope, bankAccountId }: { scope: FinanceScope; bankAccou
               return (
                 <tr key={item.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(item.valueDate)}</td>
-                  <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">{item.paymentNumber}</td>
+                  <td className="py-1.5 px-3 tabular-nums text-muted-foreground text-xs">{item.paymentNumber}</td>
                   <td className="py-1.5 px-3">{item.counterpartyName ?? "—"}</td>
-                  <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">
+                  <td className="py-1.5 px-3 tabular-nums text-muted-foreground text-xs">
                     {item.bankReference ?? item.paymentReference ?? "—"}
                   </td>
-                  <td className="py-1.5 px-3 text-right font-mono">
+                  <td className="py-1.5 px-3 text-right tabular-nums">
                     {isInbound ? "—" : <span className="text-destructive">{fmtCurrency(item.paymentAmount)}</span>}
                   </td>
-                  <td className="py-1.5 px-3 text-right font-mono">
+                  <td className="py-1.5 px-3 text-right tabular-nums">
                     {isInbound ? <span className="text-success">{fmtCurrency(item.paymentAmount)}</span> : "—"}
                   </td>
-                  <td className={cn("py-1.5 px-3 text-right font-mono font-medium",
+                  <td className={cn("py-1.5 px-3 text-right tabular-nums font-medium",
                     item.runningBalance >= 0 ? "text-success" : "text-destructive")}>
                     {fmtCurrency(Math.abs(item.runningBalance))}{item.runningBalance < 0 ? " DR" : ""}
                   </td>
-                  <td className="py-1.5 px-3 text-muted-foreground text-doc-support">
+                  <td className="py-1.5 px-3 text-muted-foreground text-xs">
                     {isCleared ? fmtDate(item.clearedDate) : "—"}
                   </td>
                   <td className="py-1.5 px-3 capitalize text-muted-foreground">{item.status}</td>
@@ -170,11 +170,11 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-4">
-        <div className="text-doc-support text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {data?.count ?? 0} unreconciled item{data?.count !== 1 ? "s" : ""}
         </div>
         <div className={cn(
-          "text-xs font-mono font-medium",
+          "text-xs tabular-nums font-medium",
           unreconTotal >= 0 ? "text-warning" : "text-destructive",
         )}>
           Net: {fmtCurrency(Math.abs(unreconTotal))}{unreconTotal < 0 ? " DR" : ""}
@@ -190,7 +190,7 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
           </button>
         )}
         {reconcile.isSuccess && selected.size === 0 && (
-          <span className="ml-auto text-doc-support text-success">
+          <span className="ml-auto text-xs text-success">
             {reconcile.data?.cleared} payment{reconcile.data?.cleared !== 1 ? "s" : ""} cleared
           </span>
         )}
@@ -241,26 +241,26 @@ function UnreconciledTab({ scope, bankAccountId }: { scope: FinanceScope; bankAc
                   />
                 </td>
                 <td className="py-1.5 px-3 text-muted-foreground">{fmtDate(item.valueDate)}</td>
-                <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">{item.paymentNumber}</td>
+                <td className="py-1.5 px-3 tabular-nums text-muted-foreground text-xs">{item.paymentNumber}</td>
                 <td className="py-1.5 px-3">
                   <span className={cn(
-                    "px-1.5 py-0.5 rounded text-doc-support font-medium border",
+                    "px-1.5 py-0.5 rounded text-xs font-medium border",
                     resolveSemanticColors(paymentDirectionIntent(item.paymentDirection)).subtleBadge,
                   )}>
                     {item.paymentDirection}
                   </span>
                 </td>
                 <td className="py-1.5 px-3">{item.counterpartyName ?? "—"}</td>
-                <td className="py-1.5 px-3 text-right font-mono font-medium">
+                <td className="py-1.5 px-3 text-right tabular-nums font-medium">
                   {item.paymentDirection === "INBOUND"
                     ? <span className="text-success">{fmtCurrency(item.paymentAmount)}</span>
                     : <span>{fmtCurrency(item.paymentAmount)}</span>
                   }
                 </td>
-                <td className="py-1.5 px-3 font-mono text-muted-foreground text-doc-support">
+                <td className="py-1.5 px-3 tabular-nums text-muted-foreground text-xs">
                   {item.bankReference ?? "—"}
                 </td>
-                <td className="py-1.5 px-3 text-muted-foreground text-doc-support">
+                <td className="py-1.5 px-3 text-muted-foreground text-xs">
                   {item.clearedDate ? fmtDate(item.clearedDate) : "—"}
                 </td>
                 <td className="py-1.5 px-3 capitalize text-warning font-medium">{item.status}</td>
@@ -315,7 +315,7 @@ export function BankReconciliationView({ scope }: BankReconciliationViewProps) {
     <div className="space-y-3">
       {/* Account selector */}
       <div>
-        <div className="text-doc-label text-muted-foreground uppercase mb-1.5">House Bank Accounts</div>
+        <div className="text-sm font-medium text-muted-foreground mb-1.5">House Bank Accounts</div>
         {accountsLoading
           ? <div className="text-xs text-muted-foreground animate-pulse">Loading accounts…</div>
           : <AccountSelector

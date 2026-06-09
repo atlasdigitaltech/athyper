@@ -1,0 +1,50 @@
+{
+  "name": "@athyper/neon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@athyper/app-neon": "workspace:*",
+    "@athyper/api-client": "workspace:*",
+    "@athyper/api-contracts": "workspace:*",
+    "@athyper/auth-bff": "workspace:*",
+    "@athyper/brand": "workspace:*",
+    "@athyper/app-neon-command-hub": "workspace:*",
+    "@athyper/icons": "workspace:*",
+    "@athyper/query": "workspace:*",
+    "@athyper/i18n": "workspace:*",
+    "@athyper/identity-gate": "workspace:*",
+    "@athyper/runtime-contracts": "workspace:*",
+    "@athyper/app-neon-route-manifest": "workspace:*",
+    "@athyper/runtime-canvas": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*",
+    "@athyper/session-plane": "workspace:*",
+    "@athyper/shell": "workspace:*",
+    "@athyper/app-neon-shell": "workspace:*",
+    "@athyper/surface-kit": "workspace:*",
+    "@athyper/theme": "workspace:*",
+    "@athyper/ui": "workspace:*",
+    "@tanstack/react-query": "^5.99.0",
+    "geist": "^1.7.0",
+    "lucide-react": "^1.8.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^6.0.3"
+  }
+}

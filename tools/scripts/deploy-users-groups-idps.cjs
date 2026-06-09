@@ -15,11 +15,11 @@ const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
 
-const KC_BASE  = 'https://iam.mesh.athyper.local';
-const KC_REALM = 'athyper';
+const KC_BASE  = process.env.KEYCLOAK_BASE_URL || 'https://iam.athyper.local';
+const KC_REALM = process.env.NEON_KEYCLOAK_REALM || 'neon';
 const KC_ADMIN = 'athyperadmin';
 const KC_PASS  = 'athyperadmin';
-const REALM_FILE = path.join(__dirname, '../mesh/config/iam/realm-demosetup.json');
+const REALM_FILE = path.join(__dirname, '../../stack/config/iam/realm-neon.json');
 
 function requiredEnv(name) {
   const value = process.env[name];

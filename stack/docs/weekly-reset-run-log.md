@@ -21,8 +21,8 @@ The database provision path is healthy, but the full weekly gate is not Green ye
 | Pre-reset status | `Total: 655 | OK: 655 | Pending: 0 | Changed: 0` |
 | Reset and seed | Passed: phases `[1,2,3]`, `executed=655`, `totalMs=165006` |
 | Post-reset status | `Total: 655 | OK: 655 | Pending: 0 | Changed: 0` |
-| Web liveness | Passed: `athyper-athyper-neon-web-1` returned `/livez` |
-| API health | Failed: `athyper-athyper-api-1` refused health checks |
+| Web liveness | Passed: `athyper-neon-web-1` returned `/livez` |
+| API health | Failed: `athyper-api-1` refused health checks |
 | Restore compare | Passed restore; object counts matched |
 | Schema diff | Non-empty but appears to be pg_dump `\restrict` token and expression reserialization noise |
 | Official backup wrapper | Fixed and verified after the run using Docker `pg_dump` fallback |

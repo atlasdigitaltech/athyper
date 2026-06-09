@@ -5,10 +5,17 @@ REM ============================================================
 REM athyper - Web Frontend RESTART - Windows Batch
 REM Location: stack\scripts\app\web-restart.bat
 REM
+REM Usage:
+REM   web-restart.bat             : restart Neon
+REM   web-restart.bat mesh        : restart Mesh
+REM   web-restart.bat admin       : restart Admin
+REM   web-restart.bat all --build : rebuild and recreate all plane services
+REM   web-restart.bat all         : restart Neon, Mesh, and Admin
+REM
 REM Behaviour (auto-detected from ENVIRONMENT in .env):
-REM   local      -> prints guidance (HMR active; hard restart via Ctrl+C + web-up)
-REM   staging    -> docker compose restart athyper-neon-web
-REM   production -> docker compose restart athyper-neon-web
+REM   local      : prints target-aware guidance
+REM   staging    : restart selected services; with --build, build then recreate
+REM   production : restart selected services; with --build, build then recreate
 REM ============================================================
 REM
 REM LOCAL WINDOWS DEVELOPMENT ONLY.
@@ -17,9 +24,8 @@ REM The .bat scripts do not implement the two-file env model (bootstrap + secret
 REM required for staging/production and will silently drop secrets-file variables.
 REM ============================================================
 
-REM ----------------------------
-REM Resolve directories
-REM ----------------------------
+set "SCRIPT_EXIT=0"
+
 set "SCRIPT_DIR=%~dp0"
 if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
@@ -34,8 +40,41 @@ popd >nul
 set "COMPOSE_DIR=%STACK_DIR%\compose"
 set "ENV_DIR=%STACK_DIR%\env"
 set "ENV_FILE=%ENV_DIR%\.env"
-REM Ensure npm global bin and standalone pnpm installer are on PATH
 set "PATH=%APPDATA%\npm;%LOCALAPPDATA%\pnpm;%PATH%"
+
+set "PLANE_TARGET=neon"
+set "PLANE_TARGET_SEEN=0"
+set "BUILD_FLAG=0"
+
+:parse_args
+if "%~1"=="" goto :after_parse_args
+if /I "%~1"=="--build" goto :arg_build
+if /I "%~1"=="-h" goto :arg_help
+if /I "%~1"=="--help" goto :arg_help
+if "!PLANE_TARGET_SEEN!"=="1" goto :arg_duplicate
+set "PLANE_TARGET=%~1"
+set "PLANE_TARGET_SEEN=1"
+shift
+goto :parse_args
+
+:arg_build
+set "BUILD_FLAG=1"
+shift
+goto :parse_args
+
+:arg_help
+call :usage
+exit /b 0
+
+:arg_duplicate
+echo ERROR: only one target can be supplied.
+call :usage
+exit /b 1
+
+:after_parse_args
+
+call :resolve_targets
+if errorlevel 1 goto :error
 
 set "ENVIRONMENT=local"
 set "_CR_FROM_ENV=" & set "_DR_FROM_ENV="
@@ -49,111 +88,168 @@ if exist "%ENV_FILE%" (
       set "V=!V:"=!"
       for /f "tokens=1 delims=#" %%C in ("!V!") do set "V=%%C"
       for /f "tokens=* delims= " %%V in ("!V!") do set "V=%%V"
-      if /I "!K!"=="ENVIRONMENT"          set "ENVIRONMENT=!V!"
-      if /I "!K!"=="ATHYPER_CONFIG_ROOT"  if "!_CR_FROM_ENV!"=="" set "_CR_FROM_ENV=!V!"
-      if /I "!K!"=="ATHYPER_DATA_ROOT"    if "!_DR_FROM_ENV!"=="" set "_DR_FROM_ENV=!V!"
+      if /I "!K!"=="ENVIRONMENT" set "ENVIRONMENT=!V!"
+      if /I "!K!"=="ATHYPER_CONFIG_ROOT" if "!_CR_FROM_ENV!"=="" set "_CR_FROM_ENV=!V!"
+      if /I "!K!"=="ATHYPER_DATA_ROOT" if "!_DR_FROM_ENV!"=="" set "_DR_FROM_ENV=!V!"
     )
   )
 ) else (
-  echo WARNING: .env not found: "%ENV_FILE%" — defaulting to local mode.
+  echo WARNING: .env not found: "%ENV_FILE%" -- defaulting to local mode.
 )
 
 if not "!ATHYPER_CONFIG_ROOT!"=="" goto :app_skip_cr
-if not "!_CR_FROM_ENV!"==""        (set "ATHYPER_CONFIG_ROOT=!_CR_FROM_ENV!" & goto :app_skip_cr)
+if not "!_CR_FROM_ENV!"=="" (set "ATHYPER_CONFIG_ROOT=!_CR_FROM_ENV!" & goto :app_skip_cr)
 set "ATHYPER_CONFIG_ROOT=%STACK_DIR%\config"
 :app_skip_cr
-if not "!ATHYPER_DATA_ROOT!"==""   goto :app_skip_dr
-if not "!_DR_FROM_ENV!"==""        (set "ATHYPER_DATA_ROOT=!_DR_FROM_ENV!" & goto :app_skip_dr)
+if not "!ATHYPER_DATA_ROOT!"=="" goto :app_skip_dr
+if not "!_DR_FROM_ENV!"=="" (set "ATHYPER_DATA_ROOT=!_DR_FROM_ENV!" & goto :app_skip_dr)
 set "ATHYPER_DATA_ROOT=%STACK_DIR%\data"
 :app_skip_dr
 
 set "_TMP=!ATHYPER_CONFIG_ROOT:\=/!" & set "ATHYPER_CONFIG=!_TMP!"
-set "_TMP=!ATHYPER_DATA_ROOT:\=/!"   & set "ATHYPER_DATA=!_TMP!"
+set "_TMP=!ATHYPER_DATA_ROOT:\=/!" & set "ATHYPER_DATA=!_TMP!"
 
 echo.
 echo ==========================
 echo ENVIRONMENT = "!ENVIRONMENT!"
-echo SERVICE     = athyper-neon-web ^(@athyper/web^)
+echo TARGET      = "!PLANE_TARGET!"
+echo SERVICES    = !SERVICES!
 echo ==========================
 echo.
 
-REM ----------------------------
-REM Local: guidance only
-REM ----------------------------
 if /I "!ENVIRONMENT!"=="local" (
+  if "!BUILD_FLAG!"=="1" (
+    echo Local mode: --build is ignored; Next.js handles incremental rebuilds.
+  )
   echo Local mode: Next.js HMR handles hot reloads automatically.
-  echo For a hard restart: Ctrl+C in the dev terminal, then run web-up.bat.
-  echo.
+  echo For a hard restart: Ctrl+C in the target dev terminal, then run web-up.bat !PLANE_TARGET!.
   goto :end
 )
 
-REM ----------------------------
-REM Staging / Production: compose restart
-REM ----------------------------
 docker version >nul 2>&1
 if errorlevel 1 (
   echo ERROR: Docker is not running. Start Docker Desktop and re-run.
-  pause & exit /b 1
+  set "SCRIPT_EXIT=1"
+  goto :end
 )
 
-REM Pick override file
+call :resolve_compose_override
+call :build_compose_files
+
+if "!BUILD_FLAG!"=="1" (
+  echo Running: docker compose ... build !SERVICES!
+  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
+    !COMPOSE_FILES! build !SERVICES!
+  if errorlevel 1 (
+    echo ERROR: docker compose build failed.
+    set "SCRIPT_EXIT=1"
+    goto :end
+  )
+  echo.
+
+  echo Running: docker compose ... up -d --no-deps --force-recreate !SERVICES!
+  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
+    !COMPOSE_FILES! up -d --no-deps --force-recreate !SERVICES!
+) else (
+  echo Running: docker compose ... restart !SERVICES!
+  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
+    !COMPOSE_FILES! restart !SERVICES!
+)
+
+if errorlevel 1 (
+  echo ERROR: docker compose operation failed.
+  set "SCRIPT_EXIT=1"
+  goto :end
+)
+
+echo.
+echo Web service^(s^) restarted ^(env=!ENVIRONMENT!^)
+docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
+  !COMPOSE_FILES! ps !SERVICES!
+
+goto :end
+
+:usage
+echo Usage:
+echo   web-restart.bat [neon^|mesh^|admin^|all] [--build]
+echo.
+echo Defaults to: neon
+exit /b 0
+
+:resolve_targets
+if /I "!PLANE_TARGET!"=="neon" (
+  set "SERVICES=neon-web"
+  exit /b 0
+)
+if /I "!PLANE_TARGET!"=="mesh" (
+  set "SERVICES=mesh-web"
+  exit /b 0
+)
+if /I "!PLANE_TARGET!"=="admin" (
+  set "SERVICES=admin-web"
+  exit /b 0
+)
+if /I "!PLANE_TARGET!"=="all" (
+  set "SERVICES=neon-web mesh-web admin-web"
+  exit /b 0
+)
+echo ERROR: unsupported target "!PLANE_TARGET!".
+call :usage
+exit /b 1
+
+:resolve_compose_override
 set "OVERRIDE="
-if /I "!ENVIRONMENT!"=="staging"    set "OVERRIDE=%COMPOSE_DIR%\athyper.override.staging.yml"
+if /I "!ENVIRONMENT!"=="staging" set "OVERRIDE=%COMPOSE_DIR%\athyper.override.staging.yml"
 if /I "!ENVIRONMENT!"=="production" set "OVERRIDE=%COMPOSE_DIR%\athyper.override.production.yml"
 if "!OVERRIDE!"=="" set "OVERRIDE=%COMPOSE_DIR%\athyper.override.yml"
 if not exist "!OVERRIDE!" (
-  if exist "%COMPOSE_DIR%\athyper.dev.yml" ( set "OVERRIDE=%COMPOSE_DIR%\athyper.dev.yml"
-  ) else ( set "OVERRIDE=%COMPOSE_DIR%\athyper.prod.yml" )
+  if exist "%COMPOSE_DIR%\athyper.dev.yml" (set "OVERRIDE=%COMPOSE_DIR%\athyper.dev.yml") else (set "OVERRIDE=%COMPOSE_DIR%\athyper.prod.yml")
 )
+exit /b 0
 
-REM Build compose file list
+:build_compose_files
 set "COMPOSE_FILES="
-if exist "%COMPOSE_DIR%\athyper.base.yml"                              set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\athyper.base.yml""
-if exist "%COMPOSE_DIR%\db\athyper-db.yml"                            set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-db.yml""
-if exist "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml"                   set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml""
-if exist "%COMPOSE_DIR%\db\athyper-dbpool-session.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\db\athyper-dbpool-session.yml""
-if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml"    set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml""
-if exist "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml""
-if exist "%COMPOSE_DIR%\gateway\athyper-gateway.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\gateway\athyper-gateway.yml""
-if exist "%COMPOSE_DIR%\mail\athyper-mailhog.yml"                     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\mail\athyper-mailhog.yml""
-if exist "%COMPOSE_DIR%\iam\athyper-iam.yml"                          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\iam\athyper-iam.yml""
-if exist "%COMPOSE_DIR%\objectstorage\athyper-objectstorage.yml"      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\objectstorage\athyper-objectstorage.yml""
-if exist "%COMPOSE_DIR%\security\athyper-clamav.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-clamav.yml""
-if exist "%COMPOSE_DIR%\memorycache\athyper-memorycache.yml"          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\memorycache\athyper-memorycache.yml""
-if exist "%COMPOSE_DIR%\memorycache\athyper-memorycache-exporter.yml" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\memorycache\athyper-memorycache-exporter.yml""
-if exist "%COMPOSE_DIR%\telemetry\athyper-metrics.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-metrics.yml""
-if exist "%COMPOSE_DIR%\telemetry\athyper-tracing.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-tracing.yml""
-if exist "%COMPOSE_DIR%\telemetry\athyper-logging.yml"                set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-logging.yml""
-if exist "%COMPOSE_DIR%\telemetry\athyper-logshipper.yml"             set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-logshipper.yml""
-if exist "%COMPOSE_DIR%\telemetry\athyper-telemetry.yml"              set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\telemetry\athyper-telemetry.yml""
-if exist "%COMPOSE_DIR%\apps\athyper-apps.yml"                        set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\apps\athyper-apps.yml""
-if exist "%COMPOSE_DIR%\render\athyper-gotenberg.yml"                 set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\render\athyper-gotenberg.yml""
-if exist "%COMPOSE_DIR%\render\athyper-tika.yml"                      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\render\athyper-tika.yml""
-if exist "%COMPOSE_DIR%\search\athyper-meilisearch.yml"               set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\search\athyper-meilisearch.yml""
-if exist "%COMPOSE_DIR%\monitoring\athyper-glitchtip.yml"             set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\monitoring\athyper-glitchtip.yml""
-if exist "%COMPOSE_DIR%\monitoring\athyper-healthchecks.yml"          set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\monitoring\athyper-healthchecks.yml""
-if exist "%COMPOSE_DIR%\monitoring\athyper-uptime-kuma.yml"           set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\monitoring\athyper-uptime-kuma.yml""
-if exist "%COMPOSE_DIR%\analytics\athyper-metabase.yml"               set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\analytics\athyper-metabase.yml""
-if exist "%COMPOSE_DIR%\security\athyper-infisical.yml"               set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\security\athyper-infisical.yml""
-if exist "%COMPOSE_DIR%\admin\athyper-bullboard.yml"                  set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\admin\athyper-bullboard.yml""
-if exist "%COMPOSE_DIR%\admin\athyper-pgweb.yml"                      set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\admin\athyper-pgweb.yml""
-if exist "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml"     set "COMPOSE_FILES=!COMPOSE_FILES! -f "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml""
-if exist "!OVERRIDE!" set "COMPOSE_FILES=!COMPOSE_FILES! -f "!OVERRIDE!""
+call :add_compose_file "%COMPOSE_DIR%\athyper.base.yml"
+call :add_compose_file "%COMPOSE_DIR%\db\athyper-db.yml"
+call :add_compose_file "%COMPOSE_DIR%\db\athyper-dbpool-apps.yml"
+call :add_compose_file "%COMPOSE_DIR%\db\athyper-dbpool-session.yml"
+call :add_compose_file "%COMPOSE_DIR%\security\athyper-socket-proxy-gateway.yml"
+call :add_compose_file "%COMPOSE_DIR%\security\athyper-socket-proxy-logshipper.yml"
+call :add_compose_file "%COMPOSE_DIR%\gateway\athyper-gateway.yml"
+call :add_compose_file "%COMPOSE_DIR%\mail\athyper-mailtrap.yml"
+call :add_compose_file "%COMPOSE_DIR%\iam\athyper-iam.yml"
+call :add_compose_file "%COMPOSE_DIR%\objectstorage\athyper-objectstorage.yml"
+call :add_compose_file "%COMPOSE_DIR%\security\athyper-virusscan.yml"
+call :add_compose_file "%COMPOSE_DIR%\memorycache\athyper-memorycache.yml"
+call :add_compose_file "%COMPOSE_DIR%\memorycache\athyper-memorycache-exporter.yml"
+call :add_compose_file "%COMPOSE_DIR%\telemetry\athyper-alertmanager.yml"
+call :add_compose_file "%COMPOSE_DIR%\telemetry\athyper-metrics.yml"
+call :add_compose_file "%COMPOSE_DIR%\telemetry\athyper-tracing.yml"
+call :add_compose_file "%COMPOSE_DIR%\telemetry\athyper-logging.yml"
+call :add_compose_file "%COMPOSE_DIR%\telemetry\athyper-logshipper.yml"
+call :add_compose_file "%COMPOSE_DIR%\telemetry\athyper-telemetry.yml"
+call :add_compose_file "%COMPOSE_DIR%\apps\athyper-apps.yml"
+call :add_compose_file "%COMPOSE_DIR%\render\athyper-docrender.yml"
+call :add_compose_file "%COMPOSE_DIR%\render\athyper-docparser.yml"
+call :add_compose_file "%COMPOSE_DIR%\search\athyper-searchcore.yml"
+call :add_compose_file "%COMPOSE_DIR%\monitoring\athyper-errorcollect.yml"
+call :add_compose_file "%COMPOSE_DIR%\monitoring\athyper-cronwatch.yml"
+call :add_compose_file "%COMPOSE_DIR%\monitoring\athyper-statuswatch.yml"
+call :add_compose_file "%COMPOSE_DIR%\analytics\athyper-analyticsboard.yml"
+call :add_compose_file "%COMPOSE_DIR%\security\athyper-secretstore.yml"
+call :add_compose_file "%COMPOSE_DIR%\admin\athyper-queueconsole.yml"
+call :add_compose_file "%COMPOSE_DIR%\admin\athyper-dbconsole.yml"
+call :add_compose_file "%COMPOSE_DIR%\memorycache\athyper-memorycache-jobs.yml"
+call :add_compose_file "!OVERRIDE!"
+exit /b 0
 
-echo Running: docker compose ... restart athyper-neon-web
-docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
-  !COMPOSE_FILES! restart athyper-neon-web
+:add_compose_file
+if exist "%~1" set "COMPOSE_FILES=!COMPOSE_FILES! -f "%~1""
+exit /b 0
 
-if errorlevel 1 (
-  echo ERROR: docker compose restart failed.
-  pause & exit /b 1
-)
-
-echo.
-echo Web service restarted (env=!ENVIRONMENT!)
-docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" ^
-  !COMPOSE_FILES! ps athyper-neon-web
+:error
+set "SCRIPT_EXIT=1"
 
 :end
 echo.
-endlocal
+endlocal & exit /b %SCRIPT_EXIT%

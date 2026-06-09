@@ -36,19 +36,18 @@ import {
   CircuitBreaker,
   DB_RETRY_POLICY,
   REDIS_RETRY_POLICY,
-} from "../foundation/resilience/index.js";
-import { pingSuccess, pingFail } from "../foundation/monitoring/healthchecks.js";
-import { Sentry } from "../foundation/monitoring/sentry.js";
-import { createCredentialEncryptionService } from "../foundation/crypto/credential-encryption.service.js";
-import { ServiceRegistry, type HealthCheck, type HealthContribution } from "../foundation/registry/service-registry.js";
-import { createFeatureFlagService } from "../foundation/features/feature-flag.service.js";
-import { createMetadataApprovalBridge } from "../foundation/metadata/metadata-approval-bridge.js";
-import { createEntityCompilerService } from "../foundation/metadata/entity-compiler.service.js";
-import { invalidateDescriptorCache } from "../../framework/runtime/services/metadata/index.js";
-import { WorkflowEngine } from "../../framework/runtime/services/workflow/engine.js";
-import { ApproverResolverService } from "../../framework/runtime/services/workflow/approver-resolver.service.js";
-import { createPdfRendererClient } from "../foundation/render/pdf-renderer-client.js";
-import { createGotenbergClient } from "../foundation/render/gotenberg-client.js";
+} from "@athyper/server-foundation/resilience";
+import { pingSuccess, pingFail } from "@athyper/server-foundation/monitoring/healthchecks";
+import { Sentry } from "@athyper/server-foundation/monitoring/sentry";
+import { createCredentialEncryptionService } from "@athyper/server-foundation/crypto/credential-encryption.service";
+import { ServiceRegistry, type HealthCheck, type HealthContribution } from "@athyper/server-foundation/registry/service-registry";
+import { createFeatureFlagService } from "../../packages/services/platform/feature-flag.service.js";
+import { createMetadataApprovalBridge } from "../../packages/services/metadata/src/metadata-approval-bridge.js";
+import { createEntityCompilerService } from "../../packages/services/metadata/src/entity-compiler.service.js";
+import { invalidateDescriptorCache } from "../../packages/services/metadata/index.js";
+import { WorkflowEngine, ApproverResolverService } from "@athyper/svc-workflow";
+import { createPdfRendererClient } from "@athyper/server-foundation/render/pdf-renderer-client";
+import { createGotenbergClient } from "@athyper/server-foundation/render/gotenberg-client";
 import {
   createMeilisearchClient,
   createSearchService,
@@ -60,21 +59,21 @@ import {
   type EntityDocumentOverride,
   type SearchService,
 } from "@athyper/svc-search";
-import { createRenderService } from "../foundation/render/render.service.js";
-import { createHttpConnectorClient, createOAuth2TokenCache } from "../foundation/integration/http-connector-client.js";
-import { createPersonaRegistryService } from "../foundation/iam/persona-registry.service.js";
-import { createCompanyCodeScopeService } from "../foundation/iam/company-code-scope.service.js";
-import { createMentionService } from "../foundation/collab/mention.service.js";
-import { createNotificationOrchestrator } from "../foundation/notifications/notification-orchestrator.js";
+import { createRenderService } from "@athyper/server-foundation/render/render.service";
+import { createHttpConnectorClient, createOAuth2TokenCache } from "@athyper/svc-integration";
+import { createPersonaRegistryService } from "../../packages/services/iam/persona-registry.service.js";
+import { createCompanyCodeScopeService } from "../../packages/services/iam/permission/company-code-scope.service.js";
+import { createMentionService } from "../../packages/services/collab/mention.service.js";
+import { createNotificationOrchestrator } from "../../packages/services/platform/notification-orchestrator.js";
 
-import { createEmailAdapter } from "../../framework/runtime/services/jobs/adapters/email.adapter.js";
-import { createWebhookAdapter } from "../../framework/runtime/services/jobs/adapters/webhook.adapter.js";
-import { createSmsAdapter } from "../../framework/runtime/services/jobs/adapters/sms.adapter.js";
-import { createPushAdapter } from "../../framework/runtime/services/jobs/adapters/push.adapter.js";
+import { createEmailAdapter } from "../../packages/services/jobs/adapters/email.adapter.js";
+import { createWebhookAdapter } from "../../packages/services/jobs/adapters/webhook.adapter.js";
+import { createSmsAdapter } from "../../packages/services/jobs/adapters/sms.adapter.js";
+import { createPushAdapter } from "../../packages/services/jobs/adapters/push.adapter.js";
 import {
   createWebhookDeliveryWorker,
   type WebhookDeliveryWorkerResult,
-} from "../../framework/runtime/services/jobs/workers/webhook-delivery.worker.js";
+} from "../../packages/services/jobs/workers/webhook-delivery.worker.js";
 
 import type { ServerConfig } from "../config.js";
 import type { ResolvedKernelConfig } from "../kernel-config.js";
@@ -109,6 +108,37 @@ function parseRedisUrl(url: string) {
     // TCP keepalive: send probe after 60 s idle — prevents Docker NAT from
     // silently dropping connections at the ~300 s conntrack timeout.
     keepAlive: 60_000,
+  };
+}
+
+function createObjectStorageRefAdapter(
+  objectStorageRef: { current: ObjectStorageAdapter | null },
+): ObjectStorageAdapter {
+  const current = (): ObjectStorageAdapter => {
+    const adapter = objectStorageRef.current;
+    if (!adapter) {
+      throw new Error("object_storage_unavailable");
+    }
+    return adapter;
+  };
+
+  return {
+    put: (key, body, opts) => current().put(key, body, opts),
+    putStream: (key, stream, opts) => current().putStream(key, stream, opts),
+    get: (key) => current().get(key),
+    getStream: (key) => current().getStream(key),
+    delete: (key) => current().delete(key),
+    exists: (key) => current().exists(key),
+    list: (prefix) => current().list(prefix),
+    getPresignedUrl: (key, expirySeconds) => current().getPresignedUrl(key, expirySeconds),
+    putPresignedUrl: (key, expirySeconds) => current().putPresignedUrl(key, expirySeconds),
+    getMetadata: (key) => current().getMetadata(key),
+    deleteMany: (keys) => current().deleteMany(keys),
+    copyObject: (sourceKey, destKey) => current().copyObject(sourceKey, destKey),
+    healthCheck: () => objectStorageRef.current
+      ? objectStorageRef.current.healthCheck()
+      : Promise.resolve({ healthy: false, message: "object_storage_unavailable" }),
+    validateBucketAccess: () => current().validateBucketAccess(),
   };
 }
 
@@ -230,6 +260,15 @@ export async function bootstrap(
     ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
   });
   lifecycle.onShutdown(() => db.close());
+
+  const meshDb = config.meshDb?.url
+    ? createDbAdapter({
+        connectionString: config.meshDb.url,
+        poolMax: config.meshDb.poolMax ?? 2,
+        ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
+      })
+    : null;
+  if (meshDb) lifecycle.onShutdown(() => meshDb.close());
 
   // ─── Redis ──────────────────────────────────────────────────────────────────
   //
@@ -353,6 +392,10 @@ export async function bootstrap(
   // ─── Audit ──────────────────────────────────────────────────────────────────
   // Console writer in local dev — switched to DB writer in staging/production
   // now that dbAdapter is ready. Route handlers use writeRouteAudit() directly.
+  const objectStorage = config.objectStorage
+    ? createObjectStorageRefAdapter(objectStorageRef)
+    : null;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const _db = db.kysely as unknown as import("kysely").Kysely<Record<string, any>>;
   const runtimeMode = (process.env["MODE"] ?? "api").trim().toLowerCase();
@@ -386,6 +429,7 @@ export async function bootstrap(
               user:         config.email.user,
               pass:         config.email.pass,
               from_address: config.email.from_address,
+              logger,
             }),
           ],
         ] as [string, NotificationChannelHandler][])
@@ -424,8 +468,8 @@ export async function bootstrap(
 
   // ─── Cross-entity search — Track B2 ─────────────────────────────────────────
   // Created BEFORE createJobsService so the search outbox handler can be
-  // wired into topicHandlers at construction. Null when MEILISEARCH_URL +
-  // MEILISEARCH_MASTER_KEY are unset — /api/search returns 503 and the
+  // wired into topicHandlers at construction. Null when SEARCHCORE_URL +
+  // SEARCHCORE_MASTER_KEY are unset — /api/search returns 503 and the
   // search outbox topic handler is not registered.
   //
   // Warm-up (ensureIndex + scoped-key provisioning) runs inside
@@ -477,28 +521,28 @@ export async function bootstrap(
   // ─── PDF Renderer client — Gotenberg first, legacy fallback ─────────────────
   // Constructed before createJobsService so the render-document worker can be
   // injected with the same client used by the synchronous RenderService.
-  // Null when GOTENBERG_BASE_URL is unset; in that state the worker writes
+  // Null when DOCRENDER_BASE_URL is unset; in that state the worker writes
   // a permanent MISSING_RENDERER DLQ row per job and emits an ops_alert
   // event — surface-loud rather than silently dropping renders.
   const gotenberg = createGotenbergClient({ logger });
   const pdfRenderer = gotenberg ?? createPdfRendererClient({ logger });
   if (gotenberg) {
     logger.info("gotenberg_renderer_configured", {
-      baseUrl: process.env["GOTENBERG_BASE_URL"],
+      baseUrl: process.env["DOCRENDER_BASE_URL"],
     });
   } else if (!pdfRenderer) {
     const log = config.env === "local" ? logger.info.bind(logger) : logger.warn.bind(logger);
     log("pdf_renderer_not_configured", {
-      message: "Neither GOTENBERG_BASE_URL nor RENDERER_BASE_URL+RENDERER_INTERNAL_TOKEN set — PDF rendering disabled",
+      message: "Neither DOCRENDER_BASE_URL nor RENDERER_BASE_URL+RENDERER_INTERNAL_TOKEN set - PDF rendering disabled",
     });
   }
 
   // ─── Tika text extraction — Track B2.2 ──────────────────────────────────────
   // Worker runtime creates the Tika consumer when BOTH tikaUrl and an object
   // storage adapter are present. API/scheduler receive queue handles only.
-  const tikaUrl = process.env["TIKA_URL"]?.trim() || undefined;
-  const attachmentStorage = objectStorageRef.current
-    ? { get: (key: string) => objectStorageRef.current!.get(key) }
+  const tikaUrl = process.env["DOCPARSER_URL"]?.trim() || undefined;
+  const attachmentStorage = objectStorage
+    ? { get: (key: string) => objectStorage.get(key) }
     : undefined;
 
   // ─── Backup object storage (I-07, I-11) ─────────────────────────────────────
@@ -531,14 +575,23 @@ export async function bootstrap(
     });
   }
 
+  const emailFromMap: Map<string, string> | undefined = config.email
+    ? new Map([
+        ["neon",  config.email.from_neon  ?? config.email.from_address],
+        ["mesh",  config.email.from_mesh  ?? config.email.from_address],
+        ["admin", config.email.from_admin ?? config.email.from_address],
+      ])
+    : undefined;
+
   const jobs = createJobsService({
     db: _db,
     connection: bullmqConnection,
     logger,
     topicHandlers,
     channelHandlers,
+    emailFromMap,
     gotenberg,
-    renderStorage: objectStorageRef.current ?? undefined,
+    renderStorage: objectStorage ?? undefined,
     tikaUrl,
     attachmentStorage,
     backupStorage,
@@ -565,7 +618,7 @@ export async function bootstrap(
         } catch { /* swallow — Sentry transport must never block the worker */ }
       },
       // B.9: boot-time queue health alerts (e.g. Tika queue has pending jobs
-      // but TIKA_URL is unset, so no consumer will drain them). Warning-level
+      // but DOCPARSER_URL is unset, so no consumer will drain them). Warning-level
       // message since the service still boots; the condition is operational.
       onQueueAlert: (queue, reason, details) => {
         try {
@@ -669,7 +722,7 @@ export async function bootstrap(
   // ─── Sync RenderService ─────────────────────────────────────────────────────
   // Uses the same Gotenberg client as the BullMQ render-document worker
   // (constructed above before createJobsService).
-  const renderService = createRenderService(_db, pdfRenderer, objectStorageRef.current);
+  const renderService = createRenderService(_db, pdfRenderer, objectStorage);
 
   // ─── Phase 6.2 — Persona Registry ───────────────────────────────────────────
   const personaRegistry = createPersonaRegistryService(_db);
@@ -727,6 +780,7 @@ export async function bootstrap(
     logger,
     lifecycle,
     db,
+    meshDb,
     redis,
     auth,
     objectStorageRef,

@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
     "outDir": "dist",
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -18,25 +18,40 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "paths": {
-      "@athyper/svc-shared":    ["./framework/runtime/services/shared/index.ts"],
-      "@athyper/svc-iam":       ["./framework/runtime/services/iam/index.ts"],
-      "@athyper/svc-metadata":  ["./framework/runtime/services/metadata/index.ts"],
-      "@athyper/svc-records":   ["./framework/runtime/services/records/index.ts"],
-      "@athyper/svc-documents": ["./framework/runtime/services/documents/index.ts"],
-      "@athyper/svc-collab":    ["./framework/runtime/services/collab/index.ts"],
-      "@athyper/svc-jobs":      ["./framework/runtime/services/jobs/index.ts"],
-      "@athyper/svc-finance":   ["./framework/runtime/services/finance/index.ts"],
-      "@athyper/svc-platform":  ["./framework/runtime/services/platform/index.ts"]
+      "@athyper/server-foundation": ["./packages/foundation/index.ts"],
+      "@athyper/server-foundation/resilience": ["./packages/foundation/resilience/index.ts"],
+      "@athyper/server-foundation/*": ["./packages/foundation/*.ts"],
+      "@athyper/svc-shared":    ["./packages/services/shared/index.ts"],
+      "@athyper/svc-iam":       ["./packages/services/iam/index.ts"],
+      "@athyper/svc-metadata":  ["./packages/services/metadata/index.ts"],
+      "@athyper/svc-records":   ["./packages/services/records/index.ts"],
+      "@athyper/svc-documents": ["./packages/services/documents/index.ts"],
+      "@athyper/svc-collab":    ["./packages/services/collab/index.ts"],
+      "@athyper/svc-jobs":      ["./packages/services/jobs/index.ts"],
+      "@athyper/svc-finance":   ["./packages/services/finance/index.ts"],
+      "@athyper/svc-platform":  ["./packages/services/platform/index.ts"],
+      "@athyper/svc-search":    ["./packages/services/search/index.ts"],
+      "@athyper/svc-ai":        ["./packages/services/ai/index.ts"],
+      "@athyper/svc-audit":     ["./packages/services/audit/index.ts"],
+      "@athyper/svc-business":  ["./packages/services/business/index.ts"],
+      "@athyper/svc-content":   ["./packages/services/content/index.ts"],
+      "@athyper/svc-docservices": ["./packages/services/docservices/index.ts"],
+      "@athyper/svc-integration": ["./packages/services/integration/index.ts"],
+      "@athyper/svc-master":    ["./packages/services/master/index.ts"],
+      "@athyper/svc-policy":    ["./packages/services/policy/index.ts"],
+      "@athyper/svc-workflow":  ["./packages/services/workflow/index.ts"]
     }
   },
   "include": [
     "src/**/*",
-    "framework/runtime/services/**/*"
+    "packages/services/**/*",
+    "packages/foundation/**/*",
+    "packages/runtime/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "framework/adapters",
+    "packages/adapters",
     "**/__tests__/**",
     "**/*.test.ts",
     "**/*.spec.ts"

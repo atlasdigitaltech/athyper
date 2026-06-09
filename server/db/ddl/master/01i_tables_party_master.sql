@@ -287,7 +287,7 @@ COMMENT ON TABLE master.business_partner_network_link IS
 COMMENT ON COLUMN master.business_partner_network_link.provider_code IS
     'Network provider: athyper_network | ariba | peppol | tradeshift | custom.';
 COMMENT ON COLUMN master.business_partner_network_link.remote_tenant_id IS
-    'Same-platform peer tenant. Populated only when provider_code=athyper_network.';
+    'Legacy same-platform peer tenant. For Mesh exchange connections, this is a projection concern and Mesh owns peer validation.';
 COMMENT ON COLUMN master.business_partner_network_link.connection_status IS
     'Header state: not_linked | invited | connected | suspended. '
     'This is what the UI badge shows. Full sync details are in Network tab.';
@@ -376,3 +376,75 @@ COMMENT ON COLUMN master.legal_entity_identity_binding.org_alias IS
 COMMENT ON COLUMN master.legal_entity_identity_binding.sync_status IS
     'IdP sync health: pending | synced | drift | error | disabled. '
     'Not a business lifecycle — master.legal_entity.status governs business state.';
+-- ============================================================================
+-- §PQ5  master.legal_entity_network_account - local LE to network account map
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS master.legal_entity_network_account (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    legal_entity_id     uuid        NOT NULL,
+
+    provider_code       text        NOT NULL,
+    account_code        text        NOT NULL,
+    account_role        text        NOT NULL,
+
+    is_default          boolean     NOT NULL DEFAULT false,
+    valid_from          timestamptz NOT NULL DEFAULT now(),
+    valid_until         timestamptz,
+
+    sync_status         text        NOT NULL DEFAULT 'pending',
+    last_synced_at      timestamptz,
+    mesh_account_ref    text,
+    provider_snapshot   jsonb,
+    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+
+    status              text        NOT NULL DEFAULT 'active',
+    is_active           boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+
+    CONSTRAINT lena_pkey                   PRIMARY KEY (id),
+    CONSTRAINT lena_tenant_id_uq           UNIQUE (tenant_id, id),
+    CONSTRAINT lena_le_provider_account_uq UNIQUE (
+                                            tenant_id, legal_entity_id,
+                                            provider_code, account_code, account_role
+                                          ),
+    CONSTRAINT lena_provider_code_chk      CHECK (provider_code IN (
+                                            'athyper_mesh', 'peppol', 'ariba',
+                                            'tradeshift', 'custom')),
+    CONSTRAINT lena_account_code_nonempty  CHECK (btrim(account_code) <> ''),
+    CONSTRAINT lena_account_role_chk       CHECK (account_role IN ('buyer', 'supplier', 'both')),
+    CONSTRAINT lena_sync_status_chk        CHECK (sync_status IN (
+                                            'pending', 'synced', 'drift', 'error', 'disabled')),
+    CONSTRAINT lena_status_chk             CHECK (status IN ('active', 'inactive', 'suspended', 'retired')),
+    CONSTRAINT lena_valid_range_chk        CHECK (valid_until IS NULL OR valid_until > valid_from),
+    CONSTRAINT lena_metadata_obj_chk       CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT lena_audit_pair_chk         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE INDEX IF NOT EXISTS lena_legal_entity_idx
+    ON master.legal_entity_network_account (tenant_id, legal_entity_id);
+CREATE INDEX IF NOT EXISTS lena_account_idx
+    ON master.legal_entity_network_account (provider_code, account_code);
+CREATE INDEX IF NOT EXISTS lena_sync_pidx
+    ON master.legal_entity_network_account (tenant_id, sync_status)
+    WHERE sync_status IN ('pending', 'drift', 'error');
+CREATE UNIQUE INDEX IF NOT EXISTS lena_default_buyer_uq
+    ON master.legal_entity_network_account (tenant_id, legal_entity_id, provider_code)
+    WHERE is_default = true AND is_active = true AND account_role IN ('buyer', 'both');
+CREATE UNIQUE INDEX IF NOT EXISTS lena_default_supplier_uq
+    ON master.legal_entity_network_account (tenant_id, legal_entity_id, provider_code)
+    WHERE is_default = true AND is_active = true AND account_role IN ('supplier', 'both');
+
+COMMENT ON TABLE master.legal_entity_network_account IS
+    'ARCHETYPE=B;SCOPE=T. Local mapping from legal entity to external business network account. '
+    'Neon stores the business meaning of the account code; Mesh stores network_account, '
+    'network_connection, document envelope, and exchange events.';
+COMMENT ON COLUMN master.legal_entity_network_account.account_code IS
+    'External account/address code. For Athyper Mesh use BNA-*; do not encode this directly on master.legal_entity.';
+COMMENT ON COLUMN master.legal_entity_network_account.is_default IS
+    'Default account for a provider and role. Partial unique indexes enforce one default buyer and one default supplier per LE/provider.';

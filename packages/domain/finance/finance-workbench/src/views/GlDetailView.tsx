@@ -52,7 +52,7 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
           {data.accountCode}
         </span>
         <span
-          className="cursor-context-menu text-sm font-semibold underline-offset-2 hover:underline"
+          className="cursor-context-menu text-sm font-medium underline-offset-2 hover:underline"
           title="Right-click to open this GL account."
           onContextMenu={(event) => openAppRecordFromContextMenu(event, "gl_account", data.accountCode)}
         >
@@ -94,12 +94,12 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50 text-muted-foreground">
-                <th className="px-3 py-2 text-left text-xs font-semibold">Date</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold">Ref</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold">Description</th>
-                <th className="w-24 px-3 py-2 text-right text-xs font-semibold">Debit</th>
-                <th className="w-24 px-3 py-2 text-right text-xs font-semibold">Credit</th>
-                <th className="w-28 px-3 py-2 text-right text-xs font-semibold">Balance</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Date</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Ref</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
+                <th className="w-24 px-3 py-2 text-right text-xs font-medium">Debit</th>
+                <th className="w-24 px-3 py-2 text-right text-xs font-medium">Credit</th>
+                <th className="w-28 px-3 py-2 text-right text-xs font-medium">Balance</th>
               </tr>
             </thead>
             <tbody>
@@ -159,7 +159,7 @@ export function GlDetailView({ scope, accountCode }: GlDetailViewProps) {
               ))}
 
               {/* Closing row */}
-              <tr className="border-t bg-muted/30 text-sm font-semibold">
+              <tr className="border-t bg-muted/30 text-sm font-medium">
                 <td className="py-1.5 px-2 text-muted-foreground">—</td>
                 <td className="py-1.5 px-2 italic text-muted-foreground" colSpan={2}>Closing balance</td>
                 <td className="py-1.5 px-2" />

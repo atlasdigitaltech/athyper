@@ -1,43 +1,93 @@
 #!/usr/bin/env tsx
 /**
- * scripts/brand/verify-brand-sync.ts
+ * Verify generated brand targets are current.
  *
- * CI guard: fails if the Keycloak theme's generated brand assets are stale
- * or missing relative to the canonical source in packages/shared/foundation/brand/.
- *
- * Run: pnpm brand:verify
+ * Run:
+ *   pnpm brand:verify
  */
 
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
-const brandSrc = path.join(repoRoot, "packages/shared/foundation/brand/src/products/neon");
+const brandSrc = path.join(repoRoot, "packages/apps/neon/brand/src/products/neon");
+const brandDist = path.join(repoRoot, "packages/shared/brand/dist");
 const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
 const kcImg = path.join(kcLogin, "resources/img");
+
+const APP_TARGETS = {
+  neon: "apps/neon/public/brand",
+  mesh: "apps/mesh/public/brand",
+  admin: "apps/admin/public/brand",
+} as const;
+
+const PUBLIC_OUTPUT_FILES = {
+  wordmarkBlack: "wordmark-black.svg",
+  wordmarkWhite: "wordmark-white.svg",
+  wordmarkOnBlack: "wordmark-on-black.svg",
+  wordmarkOnWhite: "wordmark-on-white.svg",
+  icon: "icon.svg",
+  appIcon: "appicon.svg",
+  favicon: "favicon.svg",
+} as const;
+
+type ProductCode = keyof typeof APP_TARGETS;
+type PublicAssetKey = keyof typeof PUBLIC_OUTPUT_FILES;
+
+const PRODUCT_SOURCES: Record<ProductCode, string> = {
+  neon:  "packages/apps/neon/brand/src/products/neon",
+  mesh:  "packages/apps/mesh/brand/src/products/mesh",
+  admin: "packages/apps/admin/brand/src/products/admin",
+};
+
+interface KeycloakBrandManifest {
+  logoFiles: {
+    primary: string;
+    icon: string;
+    [key: string]: string;
+  };
+}
+
+interface AppBrandManifest {
+  productCode: ProductCode;
+  productName: string;
+  descriptor: string;
+  publicAssets: Record<PublicAssetKey, string>;
+}
 
 async function sha256(file: string): Promise<string> {
   const buf = await fs.readFile(file);
   return crypto.createHash("sha256").update(buf).digest("hex");
 }
 
-async function exists(p: string): Promise<boolean> {
-  try { await fs.access(p); return true; } catch { return false; }
+function hashString(value: string): string {
+  return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-/** Re-generate expected FTL content without writing to disk, for comparison. */
-async function expectedBrandLogoFtl(): Promise<string> {
-  const svg = await fs.readFile(path.join(brandSrc, "logo-primary.svg"), "utf8");
+async function exists(p: string): Promise<boolean> {
+  try {
+    await fs.access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function generatedHeader(): string[] {
   return [
-    `<#-- ═══════════════════════════════════════════════════════════════════ -->`,
-    `<#-- Generated from packages/shared/foundation/brand/src/products/neon/ -->`,
-    `<#-- DO NOT EDIT DIRECTLY — run: pnpm brand:refresh                     -->`,
-    `<#-- ═══════════════════════════════════════════════════════════════════ -->`,
+    `<#-- Generated from packages/apps/neon/brand/src/products/neon/ -->`,
+    `<#-- DO NOT EDIT DIRECTLY - run: pnpm brand:refresh -->`,
+  ];
+}
+
+async function expectedBrandLogoFtl(manifest: KeycloakBrandManifest): Promise<string> {
+  const svg = await fs.readFile(path.join(brandSrc, manifest.logoFiles.primary), "utf8");
+  return [
+    ...generatedHeader(),
     `<div class="kc-brand-logo">`,
     svg.trimEnd(),
     `</div>`,
@@ -45,14 +95,11 @@ async function expectedBrandLogoFtl(): Promise<string> {
   ].join("\n");
 }
 
-async function expectedMobileLogoFtl(): Promise<string> {
-  const icon = await fs.readFile(path.join(brandSrc, "icon.svg"), "utf8");
+async function expectedMobileLogoFtl(manifest: KeycloakBrandManifest): Promise<string> {
+  const icon = await fs.readFile(path.join(brandSrc, manifest.logoFiles.icon), "utf8");
   const iconWithAttrs = icon.replace(/<svg /, `<svg width="24" height="24" aria-hidden="true" `);
   return [
-    `<#-- ═══════════════════════════════════════════════════════════════════ -->`,
-    `<#-- Generated from packages/shared/foundation/brand/src/products/neon/ -->`,
-    `<#-- DO NOT EDIT DIRECTLY — run: pnpm brand:refresh                     -->`,
-    `<#-- ═══════════════════════════════════════════════════════════════════ -->`,
+    ...generatedHeader(),
     `<div class="kc-mobile-logo">`,
     iconWithAttrs.trimEnd(),
     `  <span>Neon</span>`,
@@ -61,61 +108,125 @@ async function expectedMobileLogoFtl(): Promise<string> {
   ].join("\n");
 }
 
-function hashString(s: string): string {
-  return crypto.createHash("sha256").update(s).digest("hex");
+function publicUrl(file: string): string {
+  return `/brand/${file}`;
 }
 
-async function main() {
-  const failures: string[] = [];
+async function verifyKeycloak(failures: string[]): Promise<void> {
   const manifest = JSON.parse(
     await fs.readFile(path.join(brandSrc, "manifest.json"), "utf8"),
-  ) as { logoFiles: Record<string, string> };
+  ) as KeycloakBrandManifest;
 
-  // 1. Verify static SVG copies in KC img/
   for (const file of Object.values(manifest.logoFiles)) {
     const src = path.join(brandSrc, file);
     const dest = path.join(kcImg, `neon-${file}`);
     if (!(await exists(dest))) {
-      failures.push(`Missing KC img file: resources/img/neon-${file} — run: pnpm brand:refresh`);
+      failures.push(`Missing Keycloak image: resources/img/neon-${file}`);
       continue;
     }
-    const [s, d] = await Promise.all([sha256(src), sha256(dest)]);
-    if (s !== d) failures.push(`Stale KC img file: resources/img/neon-${file} — run: pnpm brand:refresh`);
+
+    const [sourceHash, destHash] = await Promise.all([sha256(src), sha256(dest)]);
+    if (sourceHash !== destHash) {
+      failures.push(`Stale Keycloak image: resources/img/neon-${file}`);
+    }
   }
 
-  // 2. Verify FTL includes
-  const checks: Array<{ label: string; actual: string; expected: string }> = [
+  const ftlChecks = [
     {
       label: "_neon-brand-logo.ftl",
       actual: path.join(kcLogin, "_neon-brand-logo.ftl"),
-      expected: await expectedBrandLogoFtl(),
+      expected: await expectedBrandLogoFtl(manifest),
     },
     {
       label: "_neon-brand-mobile.ftl",
       actual: path.join(kcLogin, "_neon-brand-mobile.ftl"),
-      expected: await expectedMobileLogoFtl(),
+      expected: await expectedMobileLogoFtl(manifest),
     },
   ];
 
-  for (const { label, actual, expected } of checks) {
+  for (const { label, actual, expected } of ftlChecks) {
     if (!(await exists(actual))) {
-      failures.push(`Missing KC FTL include: ${label} — run: pnpm brand:refresh`);
+      failures.push(`Missing Keycloak include: ${label}`);
       continue;
     }
+
     const actualContent = await fs.readFile(actual, "utf8");
     if (hashString(actualContent) !== hashString(expected)) {
-      failures.push(`Stale KC FTL include: ${label} — run: pnpm brand:refresh`);
+      failures.push(`Stale Keycloak include: ${label}`);
     }
   }
+}
+
+async function verifyApps(failures: string[]): Promise<void> {
+  for (const product of Object.keys(APP_TARGETS) as ProductCode[]) {
+    const manifestPath = path.join(brandDist, product, "manifest.json");
+    if (!(await exists(manifestPath))) {
+      failures.push(`Missing brand dist manifest for ${product}; run pnpm brand:build`);
+      continue;
+    }
+
+    const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as AppBrandManifest;
+    const targetDir = path.join(repoRoot, APP_TARGETS[product]);
+
+    const expectedPublicManifest = {
+      productCode: product,
+      productName: manifest.productName,
+      descriptor: manifest.descriptor,
+      generatedFrom: PRODUCT_SOURCES[product],
+      assets: Object.fromEntries(
+        Object.entries(PUBLIC_OUTPUT_FILES).map(([key, outputFile]) => [key, publicUrl(outputFile)]),
+      ),
+    };
+
+    for (const [key, outputFile] of Object.entries(PUBLIC_OUTPUT_FILES) as Array<[PublicAssetKey, string]>) {
+      const sourceFile = manifest.publicAssets[key];
+      const sourcePath = path.join(brandDist, product, sourceFile);
+      const targetPath = path.join(targetDir, outputFile);
+
+      if (!(await exists(targetPath))) {
+        failures.push(`Missing app brand asset: ${APP_TARGETS[product]}/${outputFile}`);
+        continue;
+      }
+
+      const [sourceHash, targetHash] = await Promise.all([sha256(sourcePath), sha256(targetPath)]);
+      if (sourceHash !== targetHash) {
+        failures.push(`Stale app brand asset: ${APP_TARGETS[product]}/${outputFile}`);
+      }
+    }
+
+    const appManifestPath = path.join(targetDir, "brand-manifest.json");
+    if (!(await exists(appManifestPath))) {
+      failures.push(`Missing app brand manifest: ${APP_TARGETS[product]}/brand-manifest.json`);
+      continue;
+    }
+
+    const expectedContent = `${JSON.stringify(expectedPublicManifest, null, 2)}\n`;
+    const actualContent = await fs.readFile(appManifestPath, "utf8");
+    if (hashString(actualContent) !== hashString(expectedContent)) {
+      failures.push(`Stale app brand manifest: ${APP_TARGETS[product]}/brand-manifest.json`);
+    }
+  }
+}
+
+async function main(): Promise<void> {
+  const failures: string[] = [];
+
+  await verifyKeycloak(failures);
+  await verifyApps(failures);
 
   if (failures.length > 0) {
-    console.error("\n  ✖  Brand sync verification FAILED:\n");
-    failures.forEach((f) => console.error(`     • ${f}`));
-    console.error("");
+    console.error("\nBrand sync verification FAILED:\n");
+    for (const failure of failures) {
+      console.error(`  - ${failure}`);
+    }
+    console.error("\nRun: pnpm brand:refresh\n");
     process.exit(1);
   }
 
-  console.log("  ✓  Brand sync verified — KC theme is up to date.");
+  console.log("Brand sync verified.");
 }
 
-main().catch((err) => { console.error(err.message); process.exit(1); });
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+});

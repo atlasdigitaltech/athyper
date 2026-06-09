@@ -1,0 +1,44 @@
+{
+  "name": "@athyper/svc-docservices",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsup index.ts --format esm --dts --outDir dist --external express --external kysely",
+    "dev": "tsup index.ts --format esm --dts --outDir dist --external express --external kysely --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@athyper/api-contracts": "workspace:*",
+    "@athyper/entity-print": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
+    "@athyper/svc-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@athyper/tsconfig": "workspace:*",
+    "@types/express": "^5.0.1",
+    "@types/node": "^25.6.0",
+    "express": "^5.0.0",
+    "kysely": "^0.28.16",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

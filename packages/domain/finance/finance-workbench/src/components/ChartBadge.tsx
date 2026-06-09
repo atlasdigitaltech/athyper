@@ -15,7 +15,7 @@ const CLASS_LABEL: Record<string, string> = {
 export function AccountClassBadge({ cls, className }: { cls: AccountClass; className?: string }) {
   const { subtleBadge } = resolveSemanticColors(accountClassIntent(cls));
   return (
-    <Badge variant="outline" className={cn("text-doc-support py-0", subtleBadge, className)}>
+    <Badge variant="outline" className={cn("text-xs py-0", subtleBadge, className)}>
       {CLASS_LABEL[cls] ?? cls}
     </Badge>
   );
@@ -31,7 +31,7 @@ export function AccountClassDot({ cls }: { cls: AccountClass }) {
 export function TierBadge({ tier, className }: { tier: ChartTier; className?: string }) {
   const { subtleBadge } = resolveSemanticColors(chartTierIntent(tier));
   return (
-    <Badge variant="outline" className={cn("text-doc-support py-0", subtleBadge, className)}>
+    <Badge variant="outline" className={cn("text-xs py-0", subtleBadge, className)}>
       {tier}
     </Badge>
   );
@@ -42,7 +42,7 @@ export function TierBadge({ tier, className }: { tier: ChartTier; className?: st
 export function ConsolBadge({ method, className }: { method: ConsolidationMethod; className?: string }) {
   const { subtleBadge } = resolveSemanticColors(consolMethodIntent(method));
   return (
-    <Badge variant="outline" className={cn("text-doc-support py-0", subtleBadge, className)}>
+    <Badge variant="outline" className={cn("text-xs py-0", subtleBadge, className)}>
       {method}
     </Badge>
   );
@@ -53,7 +53,7 @@ export function ConsolBadge({ method, className }: { method: ConsolidationMethod
 export function OwnerBadge({ owner, className }: { owner: OwnerType; className?: string }) {
   const { subtleBadge } = resolveSemanticColors(ownerTypeIntent(owner));
   return (
-    <Badge variant="outline" className={cn("text-doc-support py-0", subtleBadge, className)}>
+    <Badge variant="outline" className={cn("text-xs py-0", subtleBadge, className)}>
       {owner}
     </Badge>
   );
@@ -64,7 +64,7 @@ export function OwnerBadge({ owner, className }: { owner: OwnerType; className?:
 export function NodeTypeBadge({ type }: { type: "header" | "posting" }) {
   const { subtleBadge } = resolveSemanticColors(type === "posting" ? "success" : "neutral");
   return (
-    <Badge variant="outline" className={cn("text-doc-support py-0", subtleBadge)}>
+    <Badge variant="outline" className={cn("text-xs py-0", subtleBadge)}>
       {type}
     </Badge>
   );
@@ -75,7 +75,7 @@ export function NodeTypeBadge({ type }: { type: "header" | "posting" }) {
 export function ReconBadge({ value }: { value: string }) {
   const { subtleBadge } = resolveSemanticColors(reconTypeIntent(value));
   return (
-    <Badge variant="outline" className={cn("text-doc-support py-0", subtleBadge)}>
+    <Badge variant="outline" className={cn("text-xs py-0", subtleBadge)}>
       {value}
     </Badge>
   );

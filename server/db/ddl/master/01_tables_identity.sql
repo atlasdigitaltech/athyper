@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS master.tenant (
 
     -- Table-specific
     display_name    text              NOT NULL,
-    realm_key       text              NOT NULL DEFAULT 'athyper',
+    realm_key       text              NOT NULL DEFAULT 'neon',
     tenant_type     text              NOT NULL DEFAULT 'customer',
     region          text,
     subscription    text              NOT NULL DEFAULT 'base',
@@ -48,8 +48,8 @@ ALTER TABLE master.tenant
 
 COMMENT ON TABLE master.tenant IS
   'ARCHETYPE=B;SCOPE=N. Multi-tenant root entity. PK: uuidv7 id. '
-  'Natural key: (realm_key, code) — code is unique per realm only. '
-  'Different realms may share the same code.';
+  'realm_key is the home/onboarding identity realm. Plane-specific access is '
+  'authorised by identity bindings, auth groups, network memberships, and admin grants.';
 
 COMMENT ON COLUMN master.tenant.tenant_type IS
   'Plane-aware tenant classification. Examples: platform_internal, platform_owner, customer, partner, partner_prospect, supplier_prospect.';
@@ -318,7 +318,7 @@ COMMENT ON COLUMN master.principal_identity_binding.provider_code IS
     'Identity provider code. Sealed enum (inline CHECK). Adding a new IdP '
     'requires code changes in the sync adapter — not business-extensible.';
 COMMENT ON COLUMN master.principal_identity_binding.realm_key IS
-    'Realm that issued this identity subject. Distinguishes neon, mesh, admin, and platform-control principals.';
+    'IAM realm that issued this identity subject. Native product-plane users use the unified athyper realm; platform-control is reserved for support/admin realm access.';
 COMMENT ON COLUMN master.principal_identity_binding.subject_id IS
     'IdP-specific principal identifier (Keycloak UUID, Azure OID, etc.).';
 COMMENT ON COLUMN master.principal_identity_binding.issuer IS
@@ -1209,20 +1209,21 @@ CREATE TABLE IF NOT EXISTS master.auth_group_role (
     -- Visibility scope: row-level filtering
     CONSTRAINT agr_visibility_scope_chk CHECK (visibility_scope IN ('all', 'own', 'team')),
 
-    -- Assignment scope: organizational boundary
+    -- Assignment scope: organizational or Mesh network boundary
     CONSTRAINT agr_assignment_scope_chk CHECK (
-        assignment_scope_type IN ('tenant', 'company_code', 'legal_entity')
+        assignment_scope_type IN ('tenant', 'company_code', 'legal_entity', 'network_membership')
     ),
 
-    -- Ref consistency: tenant → NULL, company_code/legal_entity → NOT NULL
+    -- Ref consistency: tenant -> NULL, scoped assignments -> NOT NULL
     CONSTRAINT agr_assignment_ref_chk CHECK (
         (assignment_scope_type = 'tenant'        AND assignment_scope_ref_id IS NULL)
      OR (assignment_scope_type = 'company_code'  AND assignment_scope_ref_id IS NOT NULL)
      OR (assignment_scope_type = 'legal_entity'  AND assignment_scope_ref_id IS NOT NULL)
+     OR (assignment_scope_type = 'network_membership' AND assignment_scope_ref_id IS NOT NULL)
     ),
 
     -- include_descendants only meaningful for legal_entity;
-    -- must be true for tenant and company_code (irrelevant but enforced)
+    -- must be true for tenant/company_code/network_membership (irrelevant but enforced)
     CONSTRAINT agr_descendants_chk CHECK (
         assignment_scope_type = 'legal_entity'
         OR include_descendants = true
@@ -1235,21 +1236,23 @@ COMMENT ON TABLE master.auth_group_role IS
     'ARCHETYPE=B_LITE;SCOPE=T. Links roles to groups with two orthogonal scope dimensions: '
     'visibility_scope (all/own/team) controls row-level data filtering. '
     'assignment_scope_type + assignment_scope_ref_id controls the organizational '
-    'boundary (tenant/company_code/legal_entity) in which the role applies. '
+    'boundary (tenant/company_code/legal_entity/network_membership) in which the role applies. '
     'include_descendants controls legal_entity subtree traversal.';
 COMMENT ON COLUMN master.auth_group_role.visibility_scope IS
     'Row-level data visibility: all (every record), own (created_by = principal), '
     'team (created_by in principal''s team).';
 COMMENT ON COLUMN master.auth_group_role.assignment_scope_type IS
     'Organizational boundary: tenant (all CCs), company_code (single CC), '
-    'legal_entity (CCs under an LE, subtree per include_descendants).';
+    'legal_entity (CCs under an LE, subtree per include_descendants), '
+    'network_membership (Mesh business-network membership).';
 COMMENT ON COLUMN master.auth_group_role.assignment_scope_ref_id IS
-    'FK to master.company_code.id or master.legal_entity.id depending on '
+    'FK to master.company_code.id, master.legal_entity.id, or '
+    'master.business_network_membership.id depending on '
     'assignment_scope_type. NULL when assignment_scope_type = tenant. '
     'Validated by trg_validate_assignment_scope trigger (tenant-safe).';
 COMMENT ON COLUMN master.auth_group_role.include_descendants IS
     'Only meaningful for legal_entity scope. true = full descendant subtree, '
-    'false = direct LE companies only. Must be true for tenant and company_code.';
+    'false = direct LE companies only. Must be true for tenant, company_code, and network_membership.';
 
 
 -- ============================================================================
@@ -1458,13 +1461,14 @@ CREATE TABLE IF NOT EXISTS master.access_grant (
     ),
     CONSTRAINT ag_assignment_scope_chk CHECK (
         assignment_scope_type IS NULL
-     OR assignment_scope_type IN ('tenant', 'company_code', 'legal_entity')
+     OR assignment_scope_type IN ('tenant', 'company_code', 'legal_entity', 'network_membership')
     ),
     CONSTRAINT ag_assignment_ref_chk CHECK (
-        assignment_scope_type IS NULL
+        (assignment_scope_type IS NULL AND assignment_scope_ref_id IS NULL)
      OR (assignment_scope_type = 'tenant'        AND assignment_scope_ref_id IS NULL)
      OR (assignment_scope_type = 'company_code'  AND assignment_scope_ref_id IS NOT NULL)
      OR (assignment_scope_type = 'legal_entity'  AND assignment_scope_ref_id IS NOT NULL)
+     OR (assignment_scope_type = 'network_membership' AND assignment_scope_ref_id IS NOT NULL)
     ),
     CONSTRAINT ag_status_chk     CHECK (status IN ('active', 'revoked', 'expired')),
     -- Exactly one subject
@@ -1478,7 +1482,7 @@ CREATE TABLE IF NOT EXISTS master.access_grant (
 COMMENT ON TABLE master.access_grant IS
     'ARCHETYPE=B;SCOPE=T. Runtime allow/deny overrides. Deny always beats allow (SoD enforcement). '
     'visibility_scope: optional row-level filter for allow grants. '
-    'assignment_scope_type: optional org boundary. NULL = unscoped (applies regardless of CC). '
+    'assignment_scope_type: optional org or Mesh network boundary. NULL = unscoped (applies regardless of CC). '
     'legal_entity scope on access_grant always means full descendant subtree '
     '(no include_descendants column — keeps override table simpler). '
     'updated_at/by stamped by trg_access_grant_updated_at; '

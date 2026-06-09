@@ -1,0 +1,15 @@
+{
+  "productCode": "neon",
+  "productName": "neon",
+  "descriptor": "Business Operating Platform",
+  "generatedFrom": "packages/apps/neon/brand/src/products/neon",
+  "assets": {
+    "wordmarkBlack": "/brand/wordmark-black.svg",
+    "wordmarkWhite": "/brand/wordmark-white.svg",
+    "wordmarkOnBlack": "/brand/wordmark-on-black.svg",
+    "wordmarkOnWhite": "/brand/wordmark-on-white.svg",
+    "icon": "/brand/icon.svg",
+    "appIcon": "/brand/appicon.svg",
+    "favicon": "/brand/favicon.svg"
+  }
+}

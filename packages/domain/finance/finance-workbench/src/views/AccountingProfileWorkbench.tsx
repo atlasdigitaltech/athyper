@@ -108,15 +108,9 @@ const DEFAULT_SIMULATOR_INPUTS: SimulatorInputs = {
 };
 
 const WORKBENCH_TYPOGRAPHY_SCOPE = [
-  "text-[13px] leading-5",
-  "[--doc-subtitle-size:0.8125rem]",
-  "[--doc-subtitle-line-height:1.45]",
-  "[--doc-support-size:0.75rem]",
-  "[--doc-support-line-height:1.45]",
-  "[--doc-badge-size:0.75rem]",
-  "[--doc-badge-line-height:1]",
-  "[&_input]:text-[13px]",
-  "[&_select]:text-[13px]",
+  "text-sm leading-5",
+  "[&_input]:text-sm",
+  "[&_select]:text-sm",
 ].join(" ");
 
 function modeFromParam(value: string | null): AccountingProfileMode | null {
@@ -323,11 +317,11 @@ function OptionSelect({
 }) {
   return (
     <label className="flex min-w-0 flex-col gap-1">
-      <span className="text-doc-support font-semibold text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 min-w-0 rounded-md border border-input bg-background px-3 text-doc-subtitle font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="h-9 min-w-0 rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
         {children}
       </select>
@@ -348,12 +342,12 @@ function TextInput({
 }) {
   return (
     <label className="flex min-w-0 flex-col gap-1">
-      <span className="text-doc-support font-semibold text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="h-9 min-w-0 rounded-md border border-input bg-background px-3 text-doc-subtitle font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="h-9 min-w-0 rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       />
     </label>
   );
@@ -377,8 +371,8 @@ function AccountingProfileOverview({
           <div className="flex items-start gap-3">
             <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              <div className="font-semibold">Accounting profile identity table is not installed.</div>
-              <div className="mt-1 text-doc-support">
+              <div className="font-medium">Accounting profile identity table is not installed.</div>
+              <div className="mt-1 text-xs">
                 Install the AP Non-PO accounting profile module or move `master.accounting_profile` into the base DDL before using this workbench.
               </div>
             </div>
@@ -397,7 +391,7 @@ function AccountingProfileOverview({
       </section>
 
       <section className="rounded-lg border bg-card p-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Route className="h-4 w-4 text-muted-foreground" />
           Resolution Contract
         </div>
@@ -413,9 +407,9 @@ function AccountingProfileOverview({
               <div key={step.label} className="relative rounded-lg border bg-background p-3">
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4 text-muted-foreground" />
-                  <div className="font-semibold text-foreground">{step.label}</div>
+                  <div className="font-medium text-foreground">{step.label}</div>
                 </div>
-                <div className="mt-1 text-doc-support text-muted-foreground">{step.detail}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{step.detail}</div>
                 {index < 3 && <ArrowRight className="absolute -right-5 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-muted-foreground md:block" />}
               </div>
             );
@@ -424,7 +418,7 @@ function AccountingProfileOverview({
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Database className="h-4 w-4 text-muted-foreground" />
           Apps in the universe
         </div>
@@ -435,8 +429,8 @@ function AccountingProfileOverview({
               href={app.href}
               className="rounded-lg border bg-card p-3 text-left transition-colors hover:bg-muted/40"
             >
-              <div className="font-semibold text-foreground">{app.label}</div>
-              {app.description && <div className="mt-1 line-clamp-2 text-doc-support text-muted-foreground">{app.description}</div>}
+              <div className="font-medium text-foreground">{app.label}</div>
+              {app.description && <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{app.description}</div>}
             </Link>
           ))}
         </div>
@@ -472,7 +466,7 @@ function ProfileRail({
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search profiles..."
-            className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-doc-subtitle outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           />
         </div>
         <div className="mt-2 grid grid-cols-3 gap-1 rounded-md bg-muted p-1">
@@ -482,7 +476,7 @@ function ProfileRail({
               type="button"
               onClick={() => onDirectionChange(value)}
               className={cn(
-                "h-8 rounded-md px-2 text-doc-support font-semibold transition-colors",
+                "h-8 rounded-md px-2 text-xs font-medium transition-colors",
                 direction === value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/60",
               )}
             >
@@ -508,9 +502,9 @@ function ProfileRail({
             >
               <span className={cn("mt-1 h-2 w-2 shrink-0 rounded-full", row.isActive ? "bg-success" : "bg-muted-foreground", active && "bg-primary-foreground")} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-mono text-doc-support font-semibold">{row.code}</span>
+                <span className="block truncate tabular-nums text-xs font-medium">{row.code}</span>
                 <span className="block truncate text-sm font-medium">{row.name}</span>
-                <span className={cn("block truncate text-doc-support", active ? "text-primary-foreground/75" : "text-muted-foreground")}>
+                <span className={cn("block truncate text-xs", active ? "text-primary-foreground/75" : "text-muted-foreground")}>
                   {row.subledgerType} / {row.activeProfileType ?? "no config"} / {row.intentRuleCount} rules
                 </span>
               </span>
@@ -550,9 +544,9 @@ function ProfileDetail({
       <section className="rounded-lg border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-mono text-doc-support text-muted-foreground">{selected.code}</div>
-            <h2 className="mt-1 truncate text-lg font-semibold text-foreground">{selected.name}</h2>
-            <p className="mt-1 max-w-3xl text-doc-subtitle text-muted-foreground">{selected.description ?? "No description"}</p>
+            <div className="tabular-nums text-xs text-muted-foreground">{selected.code}</div>
+            <h2 className="mt-1 truncate text-lg font-medium text-foreground">{selected.name}</h2>
+            <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{selected.description ?? "No description"}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className={directionTone(selected.direction)}>{selected.direction}</Badge>
@@ -574,7 +568,7 @@ function ProfileDetail({
       <section className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
         <section className="rounded-lg border bg-card">
           <div className="flex items-center justify-between border-b px-4 py-3">
-            <div className="font-semibold text-foreground">Runtime Configuration</div>
+            <div className="font-medium text-foreground">Runtime Configuration</div>
             {activeConfig && <Badge variant={activeConfig.isActive ? "success" : "muted"}>{activeConfig.status}</Badge>}
           </div>
           {activeConfig ? (
@@ -590,7 +584,7 @@ function ProfileDetail({
         </section>
 
         <section className="rounded-lg border bg-card">
-          <div className="border-b px-4 py-3 font-semibold text-foreground">Related Tables</div>
+          <div className="border-b px-4 py-3 font-medium text-foreground">Related Tables</div>
           <div className="divide-y">
             {apps.map((app) => (
               <Link
@@ -600,7 +594,7 @@ function ProfileDetail({
               >
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-foreground">{app.label}</span>
-                  {app.description && <span className="block truncate text-doc-support text-muted-foreground">{app.description}</span>}
+                  {app.description && <span className="block truncate text-xs text-muted-foreground">{app.description}</span>}
                 </span>
                 <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
               </Link>
@@ -620,9 +614,9 @@ function ProfileDetail({
 function ProfileFact({ icon, label, value, detail, href }: { icon: ReactNode; label: string; value: string; detail: string; href: string }) {
   return (
     <Link href={href} className="rounded-lg border bg-card p-3 transition-colors hover:bg-muted/40">
-      <div className="flex items-center gap-2 text-muted-foreground">{icon}<span className="text-doc-support font-semibold">{label}</span></div>
-      <div className="mt-2 text-xl font-semibold text-foreground">{value}</div>
-      <div className="mt-1 truncate text-doc-support text-muted-foreground">{detail}</div>
+      <div className="flex items-center gap-2 text-muted-foreground">{icon}<span className="text-xs font-medium">{label}</span></div>
+      <div className="mt-2 text-xl font-medium text-foreground">{value}</div>
+      <div className="mt-1 truncate text-xs text-muted-foreground">{detail}</div>
     </Link>
   );
 }
@@ -630,10 +624,10 @@ function ProfileFact({ icon, label, value, detail, href }: { icon: ReactNode; la
 function ConfigLine({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div className="grid gap-3 px-4 py-3 sm:grid-cols-[180px_minmax(0,1fr)]">
-      <div className="text-doc-support font-semibold text-muted-foreground">{label}</div>
+      <div className="text-xs font-medium text-muted-foreground">{label}</div>
       <div className="min-w-0">
         <div className="truncate font-medium text-foreground">{value}</div>
-        <div className="truncate text-doc-support text-muted-foreground">{detail}</div>
+        <div className="truncate text-xs text-muted-foreground">{detail}</div>
       </div>
     </div>
   );
@@ -642,7 +636,7 @@ function ConfigLine({ label, value, detail }: { label: string; value: string; de
 function RuleList({ rules }: { rules: AccountingProfileRuleRow[] }) {
   return (
     <section className="rounded-lg border bg-card">
-      <div className="border-b px-4 py-3 font-semibold text-foreground">Intent Routing Rules</div>
+      <div className="border-b px-4 py-3 font-medium text-foreground">Intent Routing Rules</div>
       <div className="max-h-[360px] overflow-auto">
         {rules.length === 0 ? (
           <div className="px-4 py-10 text-center text-sm text-muted-foreground">No intent rules resolve to this config.</div>
@@ -651,7 +645,7 @@ function RuleList({ rules }: { rules: AccountingProfileRuleRow[] }) {
             <Badge variant="outline">P{rule.priority}</Badge>
             <span className="min-w-0">
               <span className="block truncate font-medium text-foreground">{rule.intentCode ?? rule.intentDomain ?? "Wildcard intent"}</span>
-              <span className="block truncate text-doc-support text-muted-foreground">
+              <span className="block truncate text-xs text-muted-foreground">
                 {labelize(rule.direction)} / {labelize(rule.flowCode)} / {labelize(rule.docType)}
               </span>
             </span>
@@ -672,7 +666,7 @@ function EventTemplateList({
 }) {
   return (
     <section className="rounded-lg border bg-card">
-      <div className="border-b px-4 py-3 font-semibold text-foreground">Events and Templates</div>
+      <div className="border-b px-4 py-3 font-medium text-foreground">Events and Templates</div>
       <div className="max-h-[360px] overflow-auto">
         {events.length === 0 ? (
           <div className="px-4 py-10 text-center text-sm text-muted-foreground">No posting events are configured.</div>
@@ -686,13 +680,13 @@ function EventTemplateList({
                 </Link>
                 <Badge variant={event.createsJe ? "success" : "muted"}>{eventTemplates.length} lines</Badge>
               </div>
-              <div className="mt-1 text-doc-support text-muted-foreground">{event.eventName}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{event.eventName}</div>
               {eventTemplates.length > 0 && (
                 <div className="mt-2 grid gap-1">
                   {eventTemplates.slice(0, 4).map((template) => (
-                    <div key={template.id} className="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-2 py-1 text-doc-support">
+                    <div key={template.id} className="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-2 py-1 text-xs">
                       <span className="truncate">{template.lineSeq}. {template.description}</span>
-                      <span className="shrink-0 font-mono">{template.postingSide}</span>
+                      <span className="shrink-0 tabular-nums">{template.postingSide}</span>
                     </div>
                   ))}
                 </div>
@@ -726,7 +720,7 @@ function AccountingProfileSimulator({ payload }: { payload: AccountingProfilePay
   return (
     <section className="grid min-h-0 flex-1 gap-3 overflow-hidden xl:grid-cols-[420px_minmax(0,1fr)]">
       <section className="min-h-0 overflow-auto rounded-lg border bg-card p-4">
-        <div className="flex items-center gap-2 font-semibold text-foreground">
+        <div className="flex items-center gap-2 font-medium text-foreground">
           <FlaskConical className="h-4 w-4 text-muted-foreground" />
           Resolution Inputs
         </div>
@@ -752,12 +746,12 @@ function AccountingProfileSimulator({ payload }: { payload: AccountingProfilePay
             <TextInput label="Currency" value={inputs.currencyCode} onChange={(currencyCode) => setInputs((current) => ({ ...current, currencyCode: currencyCode.toUpperCase() }))} />
           </div>
           <label className="flex min-w-0 flex-col gap-1">
-            <span className="text-doc-support font-semibold text-muted-foreground">Amount</span>
+            <span className="text-xs font-medium text-muted-foreground">Amount</span>
             <input
               type="number"
               value={inputs.amount ?? ""}
               onChange={(event) => setInputs((current) => ({ ...current, amount: event.target.value === "" ? null : Number(event.target.value) }))}
-              className="h-9 min-w-0 rounded-md border border-input bg-background px-3 text-doc-subtitle font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="h-9 min-w-0 rounded-md border border-input bg-background px-3 text-xs font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -768,11 +762,11 @@ function AccountingProfileSimulator({ payload }: { payload: AccountingProfilePay
             <TextInput label="Counterparty tier" value={inputs.counterpartyTier} onChange={(counterpartyTier) => setInputs((current) => ({ ...current, counterpartyTier: counterpartyTier.toUpperCase() }))} placeholder="Any" />
             <TextInput label="Revenue type" value={inputs.revenueType} onChange={(revenueType) => setInputs((current) => ({ ...current, revenueType: revenueType.toUpperCase() }))} placeholder="Any" />
           </div>
-          <label className="inline-flex h-9 items-center gap-2 rounded-md border bg-background px-3 text-doc-subtitle font-medium text-foreground">
+          <label className="inline-flex h-9 items-center gap-2 rounded-md border bg-background px-3 text-xs font-medium text-foreground">
             <input type="checkbox" checked={inputs.isCrossBorder} onChange={(event) => setInputs((current) => ({ ...current, isCrossBorder: event.target.checked }))} className="size-4" />
             Cross-border
           </label>
-          <label className="inline-flex h-9 items-center gap-2 rounded-md border bg-background px-3 text-doc-subtitle font-medium text-foreground">
+          <label className="inline-flex h-9 items-center gap-2 rounded-md border bg-background px-3 text-xs font-medium text-foreground">
             <input type="checkbox" checked={inputs.isIntercompany} onChange={(event) => setInputs((current) => ({ ...current, isIntercompany: event.target.checked }))} className="size-4" />
             Intercompany
           </label>
@@ -782,8 +776,8 @@ function AccountingProfileSimulator({ payload }: { payload: AccountingProfilePay
       <section className="min-h-0 overflow-auto rounded-lg border bg-card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
           <div>
-            <div className="font-semibold text-foreground">Resolution Trace</div>
-            <div className="text-doc-support text-muted-foreground">Priority rules, config applicability, event, and template preview.</div>
+            <div className="font-medium text-foreground">Resolution Trace</div>
+            <div className="text-xs text-muted-foreground">Priority rules, config applicability, event, and template preview.</div>
           </div>
           <Badge variant={result.profile ? "success" : "warning"}>{result.profile ? "Resolved" : "No match"}</Badge>
         </div>
@@ -822,14 +816,14 @@ function AccountingProfileSimulator({ payload }: { payload: AccountingProfilePay
           />
         </div>
         <div className="border-t px-4 py-3">
-          <div className="mb-2 font-semibold text-foreground">Entry Template Preview</div>
+          <div className="mb-2 font-medium text-foreground">Entry Template Preview</div>
           {result.templates.length === 0 ? (
             <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-8 text-center text-sm text-muted-foreground">
               No template lines resolved for this context.
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border">
-              <div className="grid min-w-[760px] grid-cols-[60px_90px_1.5fr_1fr_1fr] border-b bg-muted/30 px-3 py-2 text-doc-support font-semibold text-muted-foreground">
+              <div className="grid min-w-[760px] grid-cols-[60px_90px_1.5fr_1fr_1fr] border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
                 <span>Seq</span>
                 <span>Side</span>
                 <span>Description</span>
@@ -839,7 +833,7 @@ function AccountingProfileSimulator({ payload }: { payload: AccountingProfilePay
               <div className="max-h-[300px] min-w-[760px] overflow-auto">
                 {result.templates.map((template) => (
                   <Link key={template.id} href={templateHref(template)} className="grid grid-cols-[60px_90px_1.5fr_1fr_1fr] gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/40">
-                    <span className="font-mono text-muted-foreground">{template.lineSeq}</span>
+                    <span className="tabular-nums text-muted-foreground">{template.lineSeq}</span>
                     <span><Badge variant={template.postingSide === "DEBIT" ? "info" : "secondary"}>{template.postingSide}</Badge></span>
                     <span className="truncate font-medium text-foreground">{template.description}</span>
                     <span className="truncate text-muted-foreground">{template.accountCode ?? template.accountLookupKey ?? template.accountSource}</span>
@@ -875,11 +869,11 @@ function TraceStep({
       <div className={cn("mt-0.5", ok ? "text-success" : "text-warning")}>{icon}</div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-doc-support font-semibold uppercase text-muted-foreground">{label}</span>
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
           {ok ? <CheckCircle2 className="h-3.5 w-3.5 text-success" /> : <CircleAlert className="h-3.5 w-3.5 text-warning" />}
         </div>
-        <div className="mt-1 truncate font-semibold text-foreground">{value}</div>
-        <div className="truncate text-doc-support text-muted-foreground">{detail}</div>
+        <div className="mt-1 truncate font-medium text-foreground">{value}</div>
+        <div className="truncate text-xs text-muted-foreground">{detail}</div>
       </div>
       <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
     </Link>
@@ -959,11 +953,11 @@ export function AccountingProfileWorkbench() {
       />
 
       {isLoading ? (
-        <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-muted-foreground animate-pulse">
+        <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-xs text-muted-foreground animate-pulse">
           Loading accounting profile workbench...
         </section>
       ) : isError ? (
-        <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-doc-support text-destructive">
+        <section className="flex min-h-[360px] flex-1 items-center justify-center rounded-lg border bg-card text-xs text-destructive">
           Accounting profile service is unavailable.
         </section>
       ) : activeMode === "overview" ? (
@@ -985,7 +979,7 @@ export function AccountingProfileWorkbench() {
         </section>
       )}
 
-      <section className="shrink-0 rounded-lg border bg-card px-3 py-2 text-doc-support text-muted-foreground">
+      <section className="shrink-0 rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground">
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center gap-1.5"><Database className="h-3.5 w-3.5" /> {payload.hasIdentityTable ? "identity table installed" : "identity table missing"}</span>
           <span className="inline-flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5" /> {payload.summary.activeIntentRules} active routing rules</span>

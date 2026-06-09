@@ -58,7 +58,7 @@ jobs:
         run: pnpm --filter @athyper/adapter-db run prisma:generate
 
       - name: Check generated Kysely types are current
-        run: git diff --exit-code -- server/framework/adapters/db/src/generated/kysely/types.ts
+        run: git diff --exit-code -- server/packages/adapters/db/src/generated/kysely/types.ts
 
       - name: Format check
         run: pnpm run format:check

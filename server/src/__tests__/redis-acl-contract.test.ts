@@ -34,6 +34,7 @@ describe("Redis ACL contract", () => {
       "~oauth2:token:*",
       "~ai:*",
       "~desc:v2:*",
+      "~desc:v3:*",
       "~kc_admin_token",
       "~__health_probe__",
     ];

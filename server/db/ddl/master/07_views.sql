@@ -939,7 +939,7 @@ SELECT
 
     -- Appearance (principal-level only — no tenant defaults for these columns)
     COALESCE(pui.appearance_mode, 'system')                    AS appearance_mode,
-    COALESCE(pui.density_code,    'comfortable')               AS density_code,
+    COALESCE(pui.density_code,    'compact')                   AS density_code,
 
     -- Navigation defaults
     pui.home_workspace_code,
@@ -959,7 +959,7 @@ WHERE p.status = 'active';
 COMMENT ON VIEW master.v_effective_principal_ui IS
     'Effective UI settings for active principals. Applies resolution cascade: '
     'platform default → tenant_profile → principal_ui_profile. '
-    'Appearance (appearance_mode, density_code) defaults are system/comfortable '
+    'Appearance (appearance_mode, density_code) defaults are system/compact '
     '— no tenant-level column for these. '
     'Working-context defaults fall back to principal_profile (HR/operational defaults). '
     'SECURITY INVOKER — RLS on base tables applies to the calling session.';

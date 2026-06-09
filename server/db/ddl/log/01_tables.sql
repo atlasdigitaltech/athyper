@@ -335,6 +335,16 @@ CREATE TABLE IF NOT EXISTS log.entity_lifecycle_log (
 );
 COMMENT ON TABLE log.entity_lifecycle_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Entity state-machine transition audit. Distinct from audit_log (column mutations). Feeds state compliance reporting.';
 
+-- Amendment cycle columns — added to support the Versions tab UI without a separate snapshot table.
+-- revision_no: 0 = original creation flow; incremented each time a record enters 'amending' status.
+-- revision_label: human display group label e.g. 'Original', 'Amendment 1'.
+ALTER TABLE log.entity_lifecycle_log
+    ADD COLUMN IF NOT EXISTS revision_no    smallint  NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS revision_label text;
+
+COMMENT ON COLUMN log.entity_lifecycle_log.revision_no    IS 'Amendment cycle counter. 0 = original. Incremented when status transitions to ''amending''.';
+COMMENT ON COLUMN log.entity_lifecycle_log.revision_label IS 'Human label for the revision group, e.g. ''Original'', ''Amendment 1''.';
+
 
 -- ============================================================================
 -- §9  workflow_event_log  (absorbs log.workflow_transition)
@@ -1265,7 +1275,7 @@ COMMENT ON TABLE log.notification_dlq IS
 -- was a copy of audit_dlq + notification_dlq; it never actually ran because
 -- §28 wins under CREATE TABLE IF NOT EXISTS. Removed to eliminate the schema
 -- mismatch that caused insertDlq() writes to silently fail against the live
--- table. The render worker now uses framework/runtime/services/jobs/render-dlq.ts
+-- table. The render worker now uses server/packages/services/jobs/render-dlq.ts
 -- which targets the §28 column set directly.
 
 

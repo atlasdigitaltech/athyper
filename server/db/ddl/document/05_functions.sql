@@ -2275,6 +2275,161 @@ BEGIN
 END;
 $$;
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- purchase_invoice lifecycle log trigger function
+-- Fires AFTER UPDATE OF status on document.purchase_invoice.
+-- Writes one row to log.entity_lifecycle_log per status transition, carrying a
+-- compact header snapshot in payload so the Versions tab can render without
+-- joining back to the live invoice row.
+-- Dual-writes to log.audit_log using the same event id (= correlation_id).
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_pi_lifecycle_log()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, log, control, pg_catalog
+AS $$
+DECLARE
+    v_event_id      uuid     := shared.uuidv7();
+    v_lc_id         uuid;
+    v_from_state    uuid;
+    v_to_state      uuid;
+    v_operation     text;
+    v_actor         uuid;
+    v_created_by    uuid;
+    v_prev_revision smallint;
+    v_revision_no   smallint;
+    v_revision_lbl  text;
+    v_change_type   text;
+    v_payload       jsonb;
+BEGIN
+    -- Only fire when status actually changes
+    IF OLD.status IS NOT DISTINCT FROM NEW.status THEN RETURN NULL; END IF;
+
+    v_actor := COALESCE(
+        nullif(current_setting('app.current_principal_id', true), '')::uuid,
+        NEW.status_changed_by,
+        NEW.updated_by,
+        OLD.updated_by,
+        NEW.created_by
+    );
+    v_created_by := COALESCE(v_actor, NEW.created_by, OLD.created_by);
+
+    -- Resolve lifecycle + state ids for FK integrity
+    SELECT lc.id INTO v_lc_id
+      FROM control.lifecycle lc
+     WHERE lc.code = 'purchase_invoice'
+       AND lc.tenant_id IS NULL
+     LIMIT 1;
+
+    IF v_lc_id IS NOT NULL THEN
+        SELECT ls.id INTO v_from_state
+          FROM control.lifecycle_state ls
+         WHERE ls.lifecycle_id = v_lc_id AND ls.code = OLD.status LIMIT 1;
+
+        SELECT ls.id INTO v_to_state
+          FROM control.lifecycle_state ls
+         WHERE ls.lifecycle_id = v_lc_id AND ls.code = NEW.status LIMIT 1;
+
+        SELECT lt.operation_code INTO v_operation
+          FROM control.lifecycle_transition lt
+         WHERE lt.lifecycle_id = v_lc_id
+           AND lt.from_state_id IS NOT DISTINCT FROM v_from_state
+           AND lt.to_state_id   IS NOT DISTINCT FROM v_to_state
+         LIMIT 1;
+    END IF;
+
+    v_operation := COALESCE(v_operation, CASE NEW.status
+        WHEN 'pending_approval' THEN 'submit'
+        WHEN 'approved'         THEN 'approve'
+        WHEN 'rejected'         THEN 'deny'
+        WHEN 'posted'           THEN 'post'
+        WHEN 'reversed'         THEN 'reverse'
+        WHEN 'cancelled'        THEN 'cancel'
+        WHEN 'amending'         THEN 'amend'
+        WHEN 'on_hold'          THEN 'hold'
+        WHEN 'draft'            THEN 'reopen'
+        ELSE                         'status_change'
+    END);
+
+    -- Revision counter: 0 = original creation flow.
+    -- Increments only when entering 'amending' (each new amendment cycle).
+    SELECT COALESCE(MAX(ell.revision_no), 0) INTO v_prev_revision
+      FROM log.entity_lifecycle_log ell
+     WHERE ell.entity_type = 'purchase_invoice'
+       AND ell.entity_id   = NEW.id;
+
+    v_revision_no  := CASE WHEN NEW.status = 'amending'
+                           THEN v_prev_revision + 1
+                           ELSE v_prev_revision
+                      END;
+    v_revision_lbl := CASE WHEN v_revision_no = 0 THEN 'Original'
+                           ELSE 'Amendment ' || v_revision_no
+                      END;
+
+    -- change_type: amendment cycle rows = 'amendment', reversal terminal = 'reversal', else 'original'
+    v_change_type := CASE
+        WHEN v_revision_no > 0                THEN 'amendment'
+        WHEN NEW.status = 'reversed'          THEN 'reversal'
+        ELSE                                       'original'
+    END;
+
+    v_payload := jsonb_build_object(
+        'snapshot', jsonb_build_object(
+            'invoice_number',  NEW.invoice_number,
+            'status',          NEW.status,
+            'total_amount',    NEW.total_amount,
+            'currency_code',   NEW.currency_code,
+            'company_code_id', NEW.company_code_id
+        ),
+        'change_summary',  format('Status changed from %s to %s',
+                               replace(OLD.status, '_', ' '),
+                               replace(NEW.status, '_', ' ')),
+        'changed_fields',  jsonb_build_array('status'),
+        'change_type',     v_change_type,
+        'before',          jsonb_build_object('status', OLD.status),
+        'after',           jsonb_build_object('status', NEW.status)
+    );
+
+    INSERT INTO log.entity_lifecycle_log (
+        id, tenant_id, entity_type, entity_id,
+        lifecycle_id, operation_code,
+        from_status, to_status, from_state_id, to_state_id,
+        actor_id, actor_type, company_code_id,
+        remarks, payload,
+        revision_no, revision_label,
+        log_type, created_by
+    ) VALUES (
+        v_event_id, NEW.tenant_id, 'purchase_invoice', NEW.id,
+        v_lc_id, v_operation,
+        OLD.status, NEW.status, v_from_state, v_to_state,
+        v_actor, 'principal', NEW.company_code_id,
+        format('Invoice %s status changed from %s to %s',
+               COALESCE(NEW.invoice_number, NEW.id::text), OLD.status, NEW.status),
+        v_payload,
+        v_revision_no, v_revision_lbl,
+        'business', v_created_by
+    );
+
+    -- Dual-write: same event id used as correlation_id in audit_log
+    INSERT INTO log.audit_log (
+        id, tenant_id, entity_type, entity_id,
+        operation, actor_id, actor_type, company_code_id,
+        old_values, new_values, changed_fields,
+        log_type, created_by
+    ) VALUES (
+        v_event_id, NEW.tenant_id, 'purchase_invoice', NEW.id,
+        'status_change', v_actor, 'principal', NEW.company_code_id,
+        jsonb_build_object('status', OLD.status),
+        jsonb_build_object('status', NEW.status),
+        ARRAY['status'],
+        'business', v_created_by
+    );
+
+    RETURN NULL;
+END;
+$$;
+
+
 CREATE OR REPLACE FUNCTION document.trg_je_field_audit_log()
 RETURNS trigger
 LANGUAGE plpgsql

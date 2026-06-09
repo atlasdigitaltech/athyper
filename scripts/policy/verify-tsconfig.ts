@@ -10,7 +10,7 @@
  *
  * Notes on intentional divergences (not flagged):
  *   - server/tsconfig.json uses NodeNext directly (sub-monorepo, separate resolution).
- *   - packages/shared/foundation/config/* are the shared bases themselves.
+ *   - packages/shared/config/* are the shared bases themselves.
  *   - Casing on `module` / `target` is left to the TS schema's mixed-case
  *     conventions ("ESNext", "ES2022") — both are canonical.
  */
@@ -77,7 +77,7 @@ function isSharedBaseOrIndependent(rel: string): boolean {
   return (
     norm === "tsconfig.json" ||
     norm.startsWith("tooling/tsconfig/") ||
-    norm.startsWith("packages/shared/foundation/config/") ||
+    norm.startsWith("packages/shared/config/") ||
     norm === "server/tsconfig.json"
   );
 }

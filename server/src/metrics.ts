@@ -15,8 +15,8 @@
  * Prometheus scrape: job_name=athyper_api, target=athyper-api:3000
  */
 
-import type { CacheMetrics } from "../framework/runtime/services/iam/session/session.service.js";
-import type { AiLogKind, AiLogMetrics } from "../framework/runtime/services/ai/ai-runtime.types.js";
+import type { CacheMetrics } from "../packages/services/iam/session/session.service.js";
+import type { AiLogKind, AiLogMetrics } from "@athyper/svc-ai";
 import type { Request, Response } from "express";
 
 // ─── Queue depth state ────────────────────────────────────────────────────────

@@ -178,4 +178,7 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
       meta: { env: config.env, pid: process.pid },
     }),
   );
+
+  // Fire bootstrap onReady hooks once queues and the probe server are live.
+  void lifecycle.signalReady();
 }

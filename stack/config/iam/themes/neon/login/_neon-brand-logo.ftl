@@ -1,7 +1,5 @@
-<#-- ═══════════════════════════════════════════════════════════════════ -->
-<#-- Generated from packages/shared/foundation/brand/src/products/neon/ -->
-<#-- DO NOT EDIT DIRECTLY — run: pnpm brand:refresh                     -->
-<#-- ═══════════════════════════════════════════════════════════════════ -->
+<#-- Generated from packages/product/design/brand/src/products/neon/ -->
+<#-- DO NOT EDIT DIRECTLY - run: pnpm brand:refresh -->
 <div class="kc-brand-logo">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 230"
      role="img" aria-label="neon — Business Operating Platform">

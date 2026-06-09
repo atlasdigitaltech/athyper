@@ -16,10 +16,12 @@
 #   gateway | traefik          -> Traefik ingress   (athyper-gateway-1)
 #   redis | cache | memorycache -> Redis cache      (athyper-memorycache-1)
 #   minio | storage            -> MinIO object store (athyper-objectstorage-1)
-#   mail | mailhog             -> Mailhog           (athyper-mailhog-1)
-#   web | frontend             -> Next.js frontend  (athyper-athyper-neon-web-1)
-#   api | backend              -> Backend API       (athyper-athyper-api-1)
-#   search | meilisearch       -> Meilisearch       (athyper-meilisearch-1)
+#   mail | mailtrap            -> mailtrap          (athyper-mailtrap-1)
+#   web | frontend | neon      -> Neon frontend     (${COMPOSE_PROJECT_NAME}-neon-web-1)
+#   mesh                       -> Mesh frontend     (${COMPOSE_PROJECT_NAME}-mesh-web-1)
+#   admin                      -> Admin frontend    (${COMPOSE_PROJECT_NAME}-admin-web-1)
+#   api | backend              -> Backend API       (${COMPOSE_PROJECT_NAME}-api-1)
+#   search | searchcore        -> searchcore        (athyper-searchcore-1)
 #
 # Container name prefix is derived from COMPOSE_PROJECT_NAME in stack/env/.env
 # (defaults to athyper). Override per-container via DOCKER_CONTAINER_* env vars.
@@ -36,13 +38,15 @@ _resolve() {
     db)                      echo "${CONTAINER_DB}" ;;
     dbpool-session)          echo "${CONTAINER_DBPOOL_SESSION}" ;;
     dbpool-apps)             echo "${CONTAINER_DBPOOL_APPS}" ;;
-    gateway|traefik)         echo "${DOCKER_CONTAINER_GATEWAY:-athyper-gateway-1}" ;;
-    redis|cache|memorycache) echo "${DOCKER_CONTAINER_REDIS:-athyper-memorycache-1}" ;;
-    minio|storage)           echo "${DOCKER_CONTAINER_MINIO:-athyper-objectstorage-1}" ;;
-    mail|mailhog)            echo "${DOCKER_CONTAINER_MAIL:-athyper-mailhog-1}" ;;
-    web|frontend)            echo "${DOCKER_CONTAINER_WEB:-athyper-athyper-neon-web-1}" ;;
-    api|backend)             echo "${DOCKER_CONTAINER_API:-athyper-athyper-api-1}" ;;
-    search|meilisearch)      echo "${DOCKER_CONTAINER_SEARCH:-athyper-meilisearch-1}" ;;
+    gateway|traefik)         echo "${CONTAINER_GATEWAY}" ;;
+    redis|cache|memorycache) echo "${CONTAINER_MEMORYCACHE}" ;;
+    minio|storage)           echo "${CONTAINER_OBJECTSTORAGE}" ;;
+    mail|mailtrap)           echo "${CONTAINER_MAILTRAP}" ;;
+    web|frontend|neon)       echo "${CONTAINER_NEON_WEB}" ;;
+    mesh)                    echo "${CONTAINER_MESH_WEB}" ;;
+    admin)                   echo "${CONTAINER_ADMIN_WEB}" ;;
+    api|backend)             echo "${CONTAINER_API}" ;;
+    search|searchcore)       echo "${CONTAINER_SEARCHCORE}" ;;
     *)                       echo "$1" ;;
   esac
 }
@@ -59,7 +63,7 @@ done
 
 if [[ ${#TARGETS[@]} -eq 0 ]]; then
   echo "Usage: $(basename "$0") [--time N] <alias|name> [alias|name ...]"
-  echo "Aliases: iam  db  dbpool-session  dbpool-apps  gateway  redis  minio  mail  web  api  search"
+  echo "Aliases: iam  db  dbpool-session  dbpool-apps  gateway  redis  minio  mail  web  neon  mesh  admin  api  search"
   exit 1
 fi
 

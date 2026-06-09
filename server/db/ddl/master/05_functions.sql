@@ -2429,7 +2429,8 @@ DROP FUNCTION IF EXISTS master.get_ou_subtree(uuid, uuid);
 
 -- ── trg_validate_assignment_scope ───────────────────────────
 -- Shared trigger function: validates assignment_scope_ref_id exists in the
--- correct target table (company_code or legal_entity) for the same tenant.
+-- correct target table (company_code, legal_entity, or network membership)
+-- for the same tenant.
 -- Attached to both auth_group_role and access_grant (TG_ARGV[0] = table name for error msgs).
 
 CREATE OR REPLACE FUNCTION master.trg_validate_assignment_scope()
@@ -2472,6 +2473,23 @@ BEGIN
                     USING ERRCODE = 'foreign_key_violation';
             END IF;
 
+        WHEN 'network_membership' THEN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM master.business_network_membership bnm
+                JOIN master.business_network bn
+                  ON bn.id = bnm.network_id
+                WHERE bnm.id = NEW.assignment_scope_ref_id
+                  AND (
+                      bnm.participant_tenant_id = NEW.tenant_id
+                      OR bn.owner_tenant_id = NEW.tenant_id
+                  )
+            ) THEN
+                RAISE EXCEPTION '%: ref_id % not found in business_network_membership for tenant %',
+                    v_source, NEW.assignment_scope_ref_id, NEW.tenant_id
+                    USING ERRCODE = 'foreign_key_violation';
+            END IF;
+
         ELSE
             RAISE EXCEPTION '%: unknown assignment_scope_type %',
                 v_source, NEW.assignment_scope_type
@@ -2484,8 +2502,79 @@ $$;
 
 COMMENT ON FUNCTION master.trg_validate_assignment_scope IS
     'Validates assignment_scope_ref_id exists in the target table (company_code '
-    'or legal_entity) and belongs to the same tenant. Shared by auth_group_role and '
+    'legal_entity, or business_network_membership) and belongs to the same tenant. Shared by auth_group_role and '
     'access_grant. TG_ARGV[0] = source table name for error messages.';
+
+
+CREATE OR REPLACE FUNCTION master.trg_validate_business_network_membership()
+RETURNS trigger LANGUAGE plpgsql STABLE
+SET search_path = master, pg_temp
+AS $$
+DECLARE
+    v_owner_tenant_id uuid;
+    v_provider_code text;
+BEGIN
+    SELECT owner_tenant_id, provider_code
+      INTO v_owner_tenant_id, v_provider_code
+    FROM master.business_network
+    WHERE id = NEW.network_id;
+
+    IF v_owner_tenant_id IS NULL THEN
+        RAISE EXCEPTION 'business_network_membership.network_id % not found',
+            NEW.network_id USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF NEW.owner_business_partner_id IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+           FROM master.business_partner bp
+           WHERE bp.id = NEW.owner_business_partner_id
+             AND bp.tenant_id = v_owner_tenant_id
+       ) THEN
+        RAISE EXCEPTION 'owner_business_partner_id % must belong to business network owner tenant %',
+            NEW.owner_business_partner_id, v_owner_tenant_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF NEW.tenant_relationship_id IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+           FROM master.tenant_relationship tr
+           WHERE tr.id = NEW.tenant_relationship_id
+             AND (
+                 (tr.from_tenant_id = v_owner_tenant_id AND tr.to_tenant_id = NEW.participant_tenant_id)
+                 OR
+                 (tr.from_tenant_id = NEW.participant_tenant_id AND tr.to_tenant_id = v_owner_tenant_id)
+             )
+       ) THEN
+        RAISE EXCEPTION 'tenant_relationship_id % must connect network owner tenant % and participant tenant %',
+            NEW.tenant_relationship_id, v_owner_tenant_id, NEW.participant_tenant_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF NEW.network_link_id IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+           FROM master.business_partner_network_link bpnl
+           WHERE bpnl.id = NEW.network_link_id
+             AND bpnl.tenant_id = v_owner_tenant_id
+             AND bpnl.provider_code = v_provider_code
+             AND (
+                 NEW.owner_business_partner_id IS NULL
+                 OR bpnl.business_partner_id = NEW.owner_business_partner_id
+             )
+       ) THEN
+        RAISE EXCEPTION 'network_link_id % must belong to owner tenant %, provider %, and owner BP when provided',
+            NEW.network_link_id, v_owner_tenant_id, v_provider_code
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_validate_business_network_membership IS
+    'Validates owner-side BP, optional tenant_relationship, and optional network_link consistency for business network memberships.';
 
 
 -- ============================================================================
@@ -4597,7 +4686,7 @@ BEGIN
 
             -- Appearance
             'appearance_mode',         COALESCE(pui.appearance_mode, 'system'),
-            'density_code',            COALESCE(pui.density_code,    'comfortable'),
+            'density_code',            COALESCE(pui.density_code,    'compact'),
 
             -- Navigation
             'home_workspace_code',     pui.home_workspace_code,

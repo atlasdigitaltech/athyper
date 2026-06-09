@@ -35,7 +35,7 @@ v13 uses named service identities in a reserved range (9100–9105):
 | Grafana | `svc-grafana` | `9102` | `svc-grafana` | `9102` |
 | Loki / Tempo | `svc-loki` | `9103` | `svc-loki` | `9103` |
 | Prometheus | `svc-prometheus` | `9104` | `svc-prometheus` | `9104` |
-| Meilisearch / Metabase / Uptime Kuma | `svc-meili` | `9105` | `svc-meili` | `9105` |
+| searchcore / analyticsboard / statuswatch | `svc-meili` | `9105` | `svc-meili` | `9105` |
 
 Every service with a host bind-mounted writable data directory must declare a matching
 `user: "<uid>:<gid>"` in compose and pass a container canary before first startup.
@@ -71,16 +71,31 @@ Every service with a host bind-mounted writable data directory must declare a ma
 **EXECUTE ON:** WORKSTATION
 **AS:** DNS admin/operator
 
-Create these records before starting gateway/ACME:
+Create these records before starting gateway/ACME. Core and app-plane hosts are
+required for the first deploy; secondary-profile hosts are required before those
+profiles are started in the staging runbook.
 
 | Hostname | Points to |
 |---|---|
 | `api-stg.athyper.com` | server public IP |
 | `neon-stg.athyper.com` | server public IP |
+| `mesh-stg.athyper.com` | server public IP |
+| `admin-stg.athyper.com` | server public IP |
 | `iam-stg.athyper.com` | server public IP |
 | `gateway-stg.athyper.com` | server public IP |
 | `objectstorage-stg.athyper.com` | server public IP |
 | `objectstorage.console-stg.athyper.com` | server public IP |
+| `telemetry-stg.athyper.com` | server public IP |
+| `metrics-stg.athyper.com` | server public IP |
+| `alerts-stg.athyper.com` | server public IP |
+| `traces-stg.athyper.com` | server public IP |
+| `logs-stg.athyper.com` | server public IP |
+| `uptime-stg.athyper.com` | server public IP |
+| `healthchecks-stg.athyper.com` | server public IP |
+| `errors-stg.athyper.com` | server public IP |
+| `meilisearch-stg.athyper.com` | server public IP |
+| `metabase-stg.athyper.com` | server public IP, only if `analytics` will be enabled |
+| `infisical-stg.athyper.com` | server public IP, only if `security-infisical` will be enabled |
 
 Verify from workstation:
 
@@ -88,10 +103,21 @@ Verify from workstation:
 for host in \
   api-stg.athyper.com \
   neon-stg.athyper.com \
+  mesh-stg.athyper.com \
+  admin-stg.athyper.com \
   iam-stg.athyper.com \
   gateway-stg.athyper.com \
   objectstorage-stg.athyper.com \
-  objectstorage.console-stg.athyper.com; do
+  objectstorage.console-stg.athyper.com \
+  telemetry-stg.athyper.com \
+  metrics-stg.athyper.com \
+  alerts-stg.athyper.com \
+  traces-stg.athyper.com \
+  logs-stg.athyper.com \
+  uptime-stg.athyper.com \
+  healthchecks-stg.athyper.com \
+  errors-stg.athyper.com \
+  meilisearch-stg.athyper.com; do
   echo "=== $host ==="
   dig +short "$host" @1.1.1.1
   dig +short "$host" @8.8.8.8

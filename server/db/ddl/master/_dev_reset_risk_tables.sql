@@ -41,4 +41,4 @@ DROP TABLE IF EXISTS master.risk_dimension               CASCADE;
 -- the risk domain; clearing the whole set ensures nothing is silently skipped.
 DELETE FROM public.schema_provisions
 WHERE file_name LIKE 'master/01%'
-   OR file_name = '900_seed_data/010_platform/003_master/002_party_risk_registry';
+   OR file_name = '900_seed_data/platform/003_master/002_party_risk_registry';

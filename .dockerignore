@@ -3,15 +3,25 @@
 # Docker installs dependencies fresh via pnpm install in the Dockerfile.
 **/node_modules
 
-# Other files not needed in the build context
+# Git metadata not needed in image
 .git
 .github
+
+# Environment files — .example files are safe to include (no real secrets)
 **/.env
 **/.env.*
 !**/.env.example
+
+# Build artefacts — rebuilt inside the image from source
 **/dist
 **/build
 **/.turbo
 **/.next
-mesh/
+
+# Stack ops directory — contains redis-acl.conf (SHA-256 hashes),
+# pgbouncer userlist.txt (hashed credentials), and other ops-only files.
+# None of these are needed by Next.js or the server build.
+stack/
+
+# Documentation
 docs/

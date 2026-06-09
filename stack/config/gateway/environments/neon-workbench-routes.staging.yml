@@ -1,67 +1,38 @@
 # =======================================================================
-# Stack       : athyper Stack - Workbench Routes (Phase 1)
-# Environment : STAGING (default: neon-stg.athyper.com, via APPS_ATHYPER_WEB_HOST env var)
-# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Stack       : athyper Stack - Plane Routes
+# Environment : STAGING
 #
 # Deploy: copy this file to stack/config/gateway/dynamic/athyper.workbench.yml
-#         on the staging host, replacing the local variant.
+# on the staging host.
 #
-# Prerequisites:
-#   - Traefik certificatesResolvers.letsencrypt-staging must be configured
-#     in the static config (athyper-gateway.yml command args).
-#   - The `athyper-neon-web` upstream below resolves to the containerised
-#     Next.js service defined in stack/compose/apps/athyper-apps.yml (profile
-#     `apps`, F8 Phase 3, landed 2026-04-18). Bring the stack up with the
-#     `apps` profile before the first gateway hit — otherwise Traefik returns
-#     502 because the upstream is absent.
+# The admin-plane allowlist intentionally starts with TEST-NET-2 and blocks
+# all real traffic until replaced with the staging VPN or office CIDR.
 # =======================================================================
 
 http:
   middlewares:
-    workbench-strip-user:
-      stripPrefix:
-        prefixes: ["/user"]
-
-    workbench-strip-admin:
-      stripPrefix:
-        prefixes: ["/admin"]
-
-    workbench-strip-ops:
-      stripPrefix:
-        prefixes: ["/ops"]
-
-    workbench-headers-user:
+    plane-neon-headers:
       headers:
         customRequestHeaders:
-          X-Workbench-Context: "user"
+          X-Athyper-Plane: "neon"
+          X-Athyper-Trust-Level: "tenant"
 
-    workbench-headers-admin:
+    plane-mesh-headers:
       headers:
         customRequestHeaders:
-          X-Workbench-Context: "admin"
+          X-Athyper-Plane: "mesh"
+          X-Athyper-Trust-Level: "partner"
 
-    workbench-headers-ops:
+    plane-admin-headers:
       headers:
         customRequestHeaders:
-          X-Workbench-Context: "ops"
+          X-Athyper-Plane: "admin"
+          X-Athyper-Trust-Level: "internal"
 
-    # !! DEPLOY-BLOCKER !! — replace before ANY staging deployment.
-    # The default 198.51.100.0/24 is TEST-NET-2 (RFC 5737) and will block ALL
-    # real traffic to /admin and /ops routes. This is an intentional fail-safe.
-    #
-    # Replace with your VPN CIDR(s):
-    #   Tailscale example: "100.64.0.0/10"
-    #   WireGuard example: "10.8.0.0/24"
-    # To temporarily allow all RFC 1918 ranges during initial bring-up:
-    #   - "10.0.0.0/8"
-    #   - "172.16.0.0/12"
-    #   - "192.168.0.0/16"
-    workbench-ip-restrict:
+    admin-ip-restrict:
       ipAllowList:
         sourceRange:
-          - "198.51.100.0/24"  # !! REPLACE — TEST-NET-2 (RFC 5737) fail-safe
-
-    # ── Production-grade reliability + security ────────────────────────────────
+          - "198.51.100.0/24"  # Replace before deployment; TEST-NET-2 fail-safe.
 
     athyper-ratelimit:
       rateLimit:
@@ -82,14 +53,6 @@ http:
         fallbackDuration: 10s
         recoveryDuration: 10s
 
-    # Do not attach retry to the workbench routers below: they carry both page
-    # loads and mutating BFF/API calls, so automatic retries can duplicate writes.
-    # Keep this middleware only for future method-scoped idempotent routers.
-    athyper-retry:
-      retry:
-        attempts: 2
-        initialInterval: 50ms
-
     athyper-security-headers:
       headers:
         frameDeny: true
@@ -105,10 +68,10 @@ http:
         encodings: ["br", "gzip"]
 
   routers:
-    neon-workbench-admin:
-      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/admin`)"
+    neon-plane-api:
+      rule: "Host(`{{ env "APPS_ATHYPER_NEON_HOST" }}`) && PathPrefix(`/api`)"
       entryPoints: [websecure]
-      service: athyper-neon-web@docker
+      service: neon-web@docker
       priority: 110
       tls:
         certResolver: letsencrypt-staging
@@ -116,17 +79,30 @@ http:
       middlewares:
         - athyper-ratelimit
         - athyper-inflight
-        - workbench-ip-restrict
-        - workbench-strip-admin
-        - workbench-headers-admin
+        - plane-neon-headers
         - athyper-security-headers
         - athyper-compress
         - athyper-circuit-breaker
 
-    neon-workbench-ops:
-      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/ops`)"
+    neon-plane:
+      rule: "Host(`{{ env "APPS_ATHYPER_NEON_HOST" }}`)"
       entryPoints: [websecure]
-      service: athyper-neon-web@docker
+      service: neon-web-failover
+      priority: 10
+      tls:
+        certResolver: letsencrypt-staging
+        options: athyper-tls-default@file
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - plane-neon-headers
+        - athyper-security-headers
+        - athyper-compress
+
+    mesh-plane-api:
+      rule: "Host(`{{ env "APPS_ATHYPER_MESH_HOST" }}`) && PathPrefix(`/api`)"
+      entryPoints: [websecure]
+      service: mesh-web@docker
       priority: 110
       tls:
         certResolver: letsencrypt-staging
@@ -134,47 +110,103 @@ http:
       middlewares:
         - athyper-ratelimit
         - athyper-inflight
-        - workbench-ip-restrict
-        - workbench-strip-ops
-        - workbench-headers-ops
+        - plane-mesh-headers
         - athyper-security-headers
         - athyper-compress
         - athyper-circuit-breaker
 
-    neon-workbench-user:
-      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`) && PathPrefix(`/user`)"
+    mesh-plane:
+      rule: "Host(`{{ env "APPS_ATHYPER_MESH_HOST" }}`)"
       entryPoints: [websecure]
-      service: athyper-neon-web@docker
-      priority: 100
+      service: mesh-web-failover
+      priority: 10
       tls:
         certResolver: letsencrypt-staging
         options: athyper-tls-default@file
       middlewares:
         - athyper-ratelimit
         - athyper-inflight
-        - workbench-strip-user
-        - workbench-headers-user
+        - plane-mesh-headers
         - athyper-security-headers
         - athyper-compress
-        - athyper-circuit-breaker
 
-    neon-default:
-      rule: "Host(`{{ env "APPS_ATHYPER_WEB_HOST" }}`)"
+    admin-plane-api:
+      rule: "Host(`{{ env "APPS_ATHYPER_ADMIN_HOST" }}`) && PathPrefix(`/api`)"
       entryPoints: [websecure]
-      service: athyper-neon-web@docker
-      priority: 1
+      service: admin-web@docker
+      priority: 120
       tls:
         certResolver: letsencrypt-staging
         options: athyper-tls-default@file
       middlewares:
         - athyper-ratelimit
         - athyper-inflight
-        - workbench-headers-user
+        - admin-ip-restrict
+        - plane-admin-headers
         - athyper-security-headers
         - athyper-compress
         - athyper-circuit-breaker
 
-  # No file-provider service definition: athyper-neon-web@docker is auto-discovered
-  # from the container's Traefik labels (traefik.http.services.athyper-neon-web.
-  # loadbalancer.server.port=3000 in athyper-apps.yml). APPS_ATHYPER_WEB_UPSTREAM_URL
-  # is not used in staging/prod — the Docker provider resolves the container IP:port.
+    admin-plane:
+      rule: "Host(`{{ env "APPS_ATHYPER_ADMIN_HOST" }}`)"
+      entryPoints: [websecure]
+      service: admin-web-failover
+      priority: 20
+      tls:
+        certResolver: letsencrypt-staging
+        options: athyper-tls-default@file
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - admin-ip-restrict
+        - plane-admin-headers
+        - athyper-security-headers
+        - athyper-compress
+
+  services:
+    neon-web-failover:
+      failover:
+        service: neon-web
+        fallback: athyper-outage-page
+
+    mesh-web-failover:
+      failover:
+        service: mesh-web
+        fallback: athyper-outage-page
+
+    admin-web-failover:
+      failover:
+        service: admin-web
+        fallback: athyper-outage-page
+
+    athyper-outage-page:
+      loadBalancer:
+        servers:
+          - url: "http://gateway-outage:8080"
+
+    neon-web:
+      loadBalancer:
+        healthCheck:
+          path: /livez
+          interval: 15s
+          timeout: 5s
+        servers:
+          - url: "http://neon-web:3000"
+
+    mesh-web:
+      loadBalancer:
+        healthCheck:
+          path: /livez
+          interval: 15s
+          timeout: 5s
+        servers:
+          - url: "http://mesh-web:3000"
+
+    admin-web:
+      loadBalancer:
+        healthCheck:
+          path: /livez
+          interval: 15s
+          timeout: 5s
+        servers:
+          - url: "http://admin-web:3000"

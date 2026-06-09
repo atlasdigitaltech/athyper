@@ -1,0 +1,10 @@
+-- ============================================================================
+-- FILE: blueprints/modules/ap_non_po/010_posting_roles.sql
+-- STATUS: Consolidated — values moved to canonical location.
+--
+-- All 5 AP Non-PO posting role values (ap_trade_payable, input_tax_recoverable,
+-- wht_payable, ap_retention_payable, ap_advance_recovery) are now seeded in:
+--   server/db/seed/platform/000_lookups/LookupDomain/control/payment_settlement_posting_role.sql
+--
+-- This file is intentionally a no-op.
+-- ============================================================================
