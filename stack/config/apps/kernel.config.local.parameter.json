@@ -58,6 +58,8 @@
           "allowedAzp": [
             "neon-web",
             "neon-svc-bff",
+            "admin-web",
+            "mesh-web",
             "athyper-svc-runtime-worker"
           ],
           "clientSecretRef": "IAM_ATHYPER_CLIENT_SECRET"

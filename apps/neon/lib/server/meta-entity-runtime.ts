@@ -9,8 +9,10 @@ import {
 } from "@athyper/api-contracts/metadata";
 import {
   compileMetaEntityRuntimeDescriptor,
+  MetaEntityLifecycleStateMaskSchema,
   type EntityRelationInput,
   type MetaEntityField,
+  type MetaEntityLifecycleStateMask,
   type MetaEntityRuntimeDescriptor,
 } from "@athyper/runtime-contracts";
 import type { RuntimeCanvasFlags } from "@athyper/runtime-canvas/surfaces";
@@ -35,8 +37,9 @@ const warnedRuntimeMetadata = new Set<string>();
  *                            (requires fieldGroups in the compiled descriptor)
  */
 const CANVAS_FLAGS_REGISTRY: Record<string, RuntimeCanvasFlags> = {
-  site:      { descriptorSurfaceShell: true, groupedForms: true },
-  warehouse: { descriptorSurfaceShell: true, groupedForms: true },
+  site:             { descriptorSurfaceShell: true, groupedForms: true },
+  warehouse:        { descriptorSurfaceShell: true, groupedForms: true },
+  purchase_invoice: { descriptorSurfaceShell: true, groupedForms: true, operationDispatch: true },
 };
 
 type PrototypeReferenceExpectation = {
@@ -174,9 +177,18 @@ export const getMetaEntityRuntimeDescriptor = cache(
     const compiled = await fetchCompiledEntity(entityCode, headers);
     if (!compiled) return undefined;
 
-    const [operations, entityPolicy] = await Promise.all([
+    // Phase 4: in addition to the legacy three fetches we now pull
+    //   - control.entity_lifecycle_state_mask rows for this entity (per-status
+    //     capability masks that the compiler embeds into the descriptor)
+    //   - control.permission_alias map (allows entity_operation rows that still
+    //     reference legacy codes like `edit` to resolve to canonical `update`)
+    // Both are best-effort; on failure the compiler degrades gracefully to its
+    // pre-Phase-4 behaviour.
+    const [operations, entityPolicy, lifecycleStateMasks, permissionAliasMap] = await Promise.all([
       fetchEntityOperations(entityCode, headers),
       fetchEntityPolicy(entityCode, headers),
+      fetchLifecycleStateMasks(entityCode, headers),
+      fetchPermissionAliasMap(headers),
     ]);
 
     try {
@@ -185,6 +197,8 @@ export const getMetaEntityRuntimeDescriptor = cache(
         operations,
         relations: inferRuntimeRelations(compiled),
         entityPolicy,
+        lifecycleStateMasks,
+        permissionAliasMap,
         compiledAt: compiled.compiled_at,
         extensions: {
           displayConfig: compiled.display_config,
@@ -247,17 +261,55 @@ async function fetchEntityPolicy(
   headers: Record<string, string>,
 ): Promise<RuntimeEntityPolicy> {
   const response = await fetchMetadata(`/api/metadata/entities/${encodeURIComponent(entityCode)}/policy`, headers);
-  if (!response) return { access_mode: "default_deny", audit_mode: "enabled" };
+  // A missing policy row (404) means the entity is unconfigured — treat as open.
+  // Actual security enforcement happens in the records API; this only affects capability
+  // flags (canCreate, canEdit, etc.) in the compiled descriptor.
+  if (!response) return { audit_mode: "enabled" };
 
   const json = await readJson(response);
-  if (!isRecord(json)) return { access_mode: "default_deny", audit_mode: "enabled" };
+  if (!isRecord(json)) return { audit_mode: "enabled" };
 
   return {
-    access_mode: stringValue(json["access_mode"]) ?? "default_deny",
+    access_mode: stringValue(json["access_mode"]),
     company_scope_mode: stringValue(json["company_scope_mode"]),
     audit_mode: stringValue(json["audit_mode"]) ?? "enabled",
     field_scope_eval_order: stringValue(json["field_scope_eval_order"]),
   };
+}
+
+async function fetchLifecycleStateMasks(
+  entityCode: string,
+  headers: Record<string, string>,
+): Promise<MetaEntityLifecycleStateMask[]> {
+  const response = await fetchMetadata(
+    `/api/metadata/entities/${encodeURIComponent(entityCode)}/lifecycle-masks`,
+    headers,
+  );
+  if (!response) return [];
+
+  const json = await readJson(response);
+  if (!Array.isArray(json)) return [];
+
+  const parsed = MetaEntityLifecycleStateMaskSchema.array().safeParse(json);
+  return parsed.success ? parsed.data : [];
+}
+
+async function fetchPermissionAliasMap(
+  headers: Record<string, string>,
+): Promise<Record<string, string>> {
+  const response = await fetchMetadata(`/api/metadata/permission-aliases`, headers);
+  if (!response) return {};
+
+  const json = await readJson(response);
+  if (!isRecord(json)) return {};
+
+  // Drop any non-string values defensively — the alias table only carries
+  // alias_code → canonical_code text mappings.
+  const out: Record<string, string> = {};
+  for (const [alias, canonical] of Object.entries(json)) {
+    if (typeof alias === "string" && typeof canonical === "string") out[alias] = canonical;
+  }
+  return out;
 }
 
 async function fetchMetadata(

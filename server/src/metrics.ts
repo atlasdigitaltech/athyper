@@ -104,6 +104,12 @@ const httpDurationBuckets = new Map<string, number>();
 const httpDurationSum = new Map<string, number>();
 const httpDurationCount = new Map<string, number>();
 const aiLogWriteFailures = new Map<AiLogKind, number>();
+const authContextMismatches = new Map<string, number>();
+const tenantStampSkipped = new Map<string, number>();
+const requiredActionBlocked = new Map<string, number>();
+const authFlagPostureWarnings = new Map<string, number>();
+const authContextMismatchSuppressed = new Map<string, number>();
+const tokenClaimsInvalid = new Map<string, number>();
 
 function key(labels: LabelSet): string {
   return `${labels.tenant}\0${labels.operation}\0${labels.service}`;
@@ -172,6 +178,84 @@ export function createCacheMetrics(service: string): CacheMetrics {
   };
 }
 
+/**
+ * Record a claim-vs-context mismatch detected by the API entry guard.
+ * `check` is one of `realm | plane | tenant | azp` and labels the specific
+ * cross-check that failed; `mode` is `shadow | enforced` so dashboards can
+ * separate observation-only drift from real rejections.
+ */
+export function recordAuthContextMismatch(
+  check: "realm" | "plane" | "tenant" | "azp",
+  mode: "shadow" | "enforced",
+): void {
+  const k = `${check}\0${mode}`;
+  authContextMismatches.set(k, (authContextMismatches.get(k) ?? 0) + 1);
+}
+
+/**
+ * Record a tenant-stamp skip event from TenantStampDriver.
+ * `reason` is `no-tenant` (request context absent) or `invalid-uuid`
+ * (provider returned a malformed value — programming error).
+ */
+export function recordTenantStampSkipped(
+  reason: "no-tenant" | "invalid-uuid",
+): void {
+  tenantStampSkipped.set(reason, (tenantStampSkipped.get(reason) ?? 0) + 1);
+}
+
+/**
+ * Record a required-action block applied by the platform-context middleware.
+ * `action` is the KC required-action code (e.g. `UPDATE_PASSWORD`).
+ */
+export function recordRequiredActionBlocked(action: string): void {
+  requiredActionBlocked.set(action, (requiredActionBlocked.get(action) ?? 0) + 1);
+}
+
+/**
+ * Record an auth-flag posture violation detected at bootstrap. `rule` is the
+ * stable rule id (e.g. `R1_GATE_REQUIRES_CROSSCHECK`); `severity` is `warning`
+ * or `error`. Errors are still emitted as a counter increment before the
+ * bootstrap throw so dashboards can spot the failed deploy.
+ */
+export function recordAuthFlagPostureWarning(
+  rule: string,
+  severity: "warning" | "error",
+): void {
+  const k = `${rule}\0${severity}`;
+  authFlagPostureWarnings.set(k, (authFlagPostureWarnings.get(k) ?? 0) + 1);
+}
+
+/**
+ * Increment the count of auth_context_mismatch log lines suppressed by the
+ * Phase F log sampler. The matching `auth_context_mismatch_total` counter
+ * stays UNSAMPLED — dashboards show suppressed / total to gauge log spam
+ * pressure without losing the underlying event count.
+ */
+export function recordAuthContextMismatchSuppressed(
+  check: "realm" | "plane" | "tenant" | "azp",
+  amount = 1,
+): void {
+  if (amount <= 0) return;
+  authContextMismatchSuppressed.set(
+    check,
+    (authContextMismatchSuppressed.get(check) ?? 0) + amount,
+  );
+}
+
+/**
+ * Phase H/F5 — record a token-claim schema parse failure. `fieldPath` is the
+ * first failing field (e.g. `tenant_id`, `iss`) so dashboards show which
+ * mapper / shape is non-conformant; `mode` is `shadow` (observation only) or
+ * `enforced` (caller rejected the token).
+ */
+export function recordTokenClaimsInvalid(
+  fieldPath: string,
+  mode: "shadow" | "enforced",
+): void {
+  const k = `${fieldPath}\0${mode}`;
+  tokenClaimsInvalid.set(k, (tokenClaimsInvalid.get(k) ?? 0) + 1);
+}
+
 export function createAiLogMetrics(): AiLogMetrics {
   return {
     writeFailed(kind: AiLogKind) {
@@ -216,6 +300,24 @@ const HELP = [
   "# TYPE athyper_metric_collector_last_success_timestamp_seconds gauge",
   "# HELP athyper_metric_collector_last_failure_timestamp_seconds Unix timestamp of latest failed live metric collector scrape",
   "# TYPE athyper_metric_collector_last_failure_timestamp_seconds gauge",
+  "",
+  "# HELP auth_context_mismatch_total Claim-vs-header context mismatches detected at the API entry guard",
+  "# TYPE auth_context_mismatch_total counter",
+  "",
+  "# HELP db_tenant_stamp_skipped_total Tenant-stamp driver skips (no request context or invalid tenant id)",
+  "# TYPE db_tenant_stamp_skipped_total counter",
+  "",
+  "# HELP auth_required_action_blocked_total Sensitive route blocked because Keycloak required action is pending",
+  "# TYPE auth_required_action_blocked_total counter",
+  "",
+  "# HELP auth_flag_posture_warning_total Auth flag posture violations detected at bootstrap",
+  "# TYPE auth_flag_posture_warning_total counter",
+  "",
+  "# HELP auth_context_mismatch_suppressed_total Mismatch log lines suppressed by the Phase F log sampler (counter for the original event remains unsampled)",
+  "# TYPE auth_context_mismatch_suppressed_total counter",
+  "",
+  "# HELP token_claims_invalid_total Token-claim schema parse failures by field path and enforcement mode",
+  "# TYPE token_claims_invalid_total counter",
 ].join("\n");
 
 function escape(v: string): string {
@@ -347,6 +449,50 @@ export function metricsHandler(_req: Request, res: Response): void {
       );
     }
     lines.push("");
+
+    for (const [k, count] of authContextMismatches) {
+      const parts = k.split("\0");
+      const check = parts[0] ?? ""; const mode = parts[1] ?? "";
+      lines.push(
+        `auth_context_mismatch_total{check="${escape(check)}",mode="${escape(mode)}"} ${count}`,
+      );
+    }
+    if (authContextMismatches.size > 0) lines.push("");
+
+    for (const [reason, count] of tenantStampSkipped) {
+      lines.push(`db_tenant_stamp_skipped_total{reason="${escape(reason)}"} ${count}`);
+    }
+    if (tenantStampSkipped.size > 0) lines.push("");
+
+    for (const [action, count] of requiredActionBlocked) {
+      lines.push(`auth_required_action_blocked_total{action="${escape(action)}"} ${count}`);
+    }
+    if (requiredActionBlocked.size > 0) lines.push("");
+
+    for (const [k, count] of authFlagPostureWarnings) {
+      const parts = k.split("\0");
+      const rule = parts[0] ?? ""; const severity = parts[1] ?? "";
+      lines.push(
+        `auth_flag_posture_warning_total{rule="${escape(rule)}",severity="${escape(severity)}"} ${count}`,
+      );
+    }
+    if (authFlagPostureWarnings.size > 0) lines.push("");
+
+    for (const [check, count] of authContextMismatchSuppressed) {
+      lines.push(
+        `auth_context_mismatch_suppressed_total{check="${escape(check)}"} ${count}`,
+      );
+    }
+    if (authContextMismatchSuppressed.size > 0) lines.push("");
+
+    for (const [k, count] of tokenClaimsInvalid) {
+      const parts = k.split("\0");
+      const fieldPath = parts[0] ?? ""; const mode = parts[1] ?? "";
+      lines.push(
+        `token_claims_invalid_total{field_path="${escape(fieldPath)}",mode="${escape(mode)}"} ${count}`,
+      );
+    }
+    if (tokenClaimsInvalid.size > 0) lines.push("");
 
     for (const collector of metricCollectors) {
       const collectStartedAt = process.hrtime.bigint();

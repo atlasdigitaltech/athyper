@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   AttachmentsPanel,
@@ -41,6 +41,9 @@ interface RuntimeRecordWorkspaceProps {
   executeOperation?: (input: RuntimeOperationExecutionInput) => Promise<RuntimeOperationExecutionResult>;
   children: ReactNode;
 }
+
+const ActiveTabContext = createContext<string | undefined>(undefined);
+export function useActiveTab(): string | undefined { return useContext(ActiveTabContext); }
 
 interface CommentsCountResponse {
   data?: unknown[];
@@ -206,6 +209,7 @@ export function RuntimeRecordWorkspace({
   );
 
   const content = (
+    <ActiveTabContext.Provider value={activeTab}>
     <RuntimeEditFormActionProvider>
       <div className="flex flex-col gap-2.5">
         <RuntimeRecordChrome
@@ -304,6 +308,7 @@ export function RuntimeRecordWorkspace({
         />
       ) : null}
     </RuntimeEditFormActionProvider>
+    </ActiveTabContext.Provider>
   );
 
   return editState ? (

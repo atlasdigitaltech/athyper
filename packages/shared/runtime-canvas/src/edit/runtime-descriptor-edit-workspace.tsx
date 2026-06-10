@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { WorkPanel } from "@athyper/surface-kit";
-import type { MetaEntityField, MetaEntityRuntimeDescriptor, ProcessRuntimeState } from "@athyper/runtime-contracts";
+import type { MetaEntityField, MetaEntityLineItemsSurface, MetaEntityRuntimeDescriptor, ProcessRuntimeState } from "@athyper/runtime-contracts";
 import type { EntityEditableField } from "@athyper/runtime-shared/edit";
+import { LineItemsSurface } from "@athyper/line-item-runtime/surface";
+import { useActiveTab } from "../record/runtime-record-workspace";
 import {
   useEntityEditState,
   type EntityEditState,
@@ -184,6 +186,13 @@ function RuntimeDescriptorEditForm({
   stateResult: EntityEditStateResult;
   record?: RuntimeRecordRow;
 }) {
+  const activeTab = useActiveTab();
+  const activeLineItemsSurface = useMemo<MetaEntityLineItemsSurface | null>(() => {
+    if (!activeTab) return null;
+    const surface = contract.surfaces.find((s) => s.key === activeTab && s.kind === "line_items");
+    return surface ? (surface as MetaEntityLineItemsSurface) : null;
+  }, [activeTab, contract.surfaces]);
+
   const formId = useMemo(
     () => runtimeEditFormDomId(contract.routeSlug, recordId, "edit"),
     [contract.routeSlug, recordId],
@@ -254,6 +263,22 @@ function RuntimeDescriptorEditForm({
       : {};
     return { ...record, ...data } as Record<string, unknown>;
   }, [record]);
+
+  if (activeLineItemsSurface) {
+    const currencyCode = typeof recordData["currency_code"] === "string" ? recordData["currency_code"] : undefined;
+    const companyCodeId = typeof recordData["company_code_id"] === "string" ? recordData["company_code_id"] : undefined;
+    return (
+      <LineItemsSurface
+        surface={activeLineItemsSurface}
+        entityCode={contract.entityCode}
+        recordId={recordId}
+        record={recordData}
+        currencyCode={currencyCode}
+        companyCodeId={companyCodeId}
+        editMode
+      />
+    );
+  }
 
   if (fieldGroups.length === 0) {
     return <RuntimeEditState title="No editable fields" message="This entity does not expose editable fields." />;

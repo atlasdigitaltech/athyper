@@ -43,6 +43,7 @@ export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
   requestHeaders.set("x-plane", plane.key);
+  requestHeaders.set("x-search", request.nextUrl.search);
 
   const guard = decideHostGuard({
     host: request.headers.get("host"),

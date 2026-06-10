@@ -47,24 +47,68 @@ export interface CompiledEntityRoutesDeps {
 // ─── Cache helpers ─────────────────────────────────────────────────────────────
 
 const DESCRIPTOR_CACHE_TTL_S = 300; // 5 min
-const DESCRIPTOR_CACHE_NAMESPACE = "desc:v3";
+// v4 (Phase 3): adds plane segment so plane-filtered descriptors don't collide,
+// and schemaHash so runtime-contract bumps invalidate caches without manual ops.
+// Format: desc:v4:{plane}:{tenantId}:{schemaHash}:{entityCode}:{compiledHash}
+// Old v3 keys age out naturally via TTL; the new namespace prevents reads of
+// stale payloads with a stripped capability shape.
+const DESCRIPTOR_CACHE_NAMESPACE = "desc:v4";
 
 /**
- * Content-addressed payload key.
- * Format: desc:v3:{tenantId}:{entityCode}:{compiledHash}
- * Different hashes create different keys → stale entries expire naturally (no explicit DEL needed).
+ * Compose a stable schemaHash that goes into the descriptor cache key. Mirrors
+ * the iam computeSchemaHash() output but lives here to avoid a dependency from
+ * the metadata route back into svc-iam (which would create a cycle).
  */
-function descriptorCacheKey(tenantId: string, entityCode: string, compiledHash: string): string {
-  return `${DESCRIPTOR_CACHE_NAMESPACE}:${tenantId}:${entityCode}:${compiledHash}`;
+function computeDescriptorSchemaHash(): string {
+  const material = [
+    process.env["NODE_ENV"] ?? "unknown",
+    process.env["ATHYPER_FEATURE_FLAGS"] ?? "",
+    process.env["ATHYPER_RUNTIME_CONTRACTS_VERSION"] ?? "0",
+    process.env["ATHYPER_COMPILER_VERSION"] ?? "0",
+  ].join("|");
+  // Truncated 12-hex hash, matches the iam helper.
+  let h = 5381;
+  for (let i = 0; i < material.length; i++) h = ((h << 5) + h + material.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(16).padStart(8, "0").slice(0, 12);
 }
 
 /**
- * Pointer key — stores the current compiledHash for a tenant+entity pair.
- * Short-lived (same TTL as payload). Deleting this key invalidates the cache
- * without having to know the current hash.
+ * Content-addressed payload key.
+ * Format: desc:v4:{plane}:{tenantId}:{schemaHash}:{entityCode}:{compiledHash}
+ * Different hashes create different keys → stale entries expire naturally (no explicit DEL needed).
  */
-function descriptorCachePointerKey(tenantId: string, entityCode: string): string {
-  return `${DESCRIPTOR_CACHE_NAMESPACE}:${tenantId}:${entityCode}:ptr`;
+function descriptorCacheKey(
+  plane: string,
+  tenantId: string,
+  entityCode: string,
+  schemaHash: string,
+  compiledHash: string,
+): string {
+  return `${DESCRIPTOR_CACHE_NAMESPACE}:${plane}:${tenantId}:${schemaHash}:${entityCode}:${compiledHash}`;
+}
+
+/**
+ * Pointer key — stores the current compiledHash for a (plane, tenant, entity)
+ * tuple. Short-lived (same TTL as payload). Deleting this key invalidates the
+ * cache without having to know the current hash.
+ */
+function descriptorCachePointerKey(
+  plane: string,
+  tenantId: string,
+  entityCode: string,
+  schemaHash: string,
+): string {
+  return `${DESCRIPTOR_CACHE_NAMESPACE}:${plane}:${tenantId}:${schemaHash}:${entityCode}:ptr`;
+}
+
+/**
+ * Resolve the effective plane for cache scoping. Falls back to 'neon' when the
+ * caller is not plane-aware (legacy callers / sysadmin tooling).
+ */
+function resolvePlaneSegment(value: unknown): "neon" | "mesh" | "admin" {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (raw === "neon" || raw === "mesh" || raw === "admin") return raw;
+  return "neon";
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -655,6 +699,10 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       const { xOrg, xRealm } = extractOrgHeaders(req);
       const tenantId = xOrg ? await resolveTenantId(db, xOrg, xRealm) : null;
 
+      // Plane + schemaHash scoping for the v4 cache key.
+      const plane = resolvePlaneSegment(req.headers["x-plane"]);
+      const schemaHash = computeDescriptorSchemaHash();
+
       // ── Server-side cache check ───────────────────────────────────────────
       // Only use cache when tenantId is known — prevents v1-style cross-tenant leakage.
       // Two-level lookup: pointer ({namespace}:{tenantId}:{entityCode}:ptr) -> JSON fingerprint
@@ -667,7 +715,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // stale pointer and fall through to the full compile path.
       if (cache && tenantId) {
         try {
-          const ptrRaw = await cache.get(descriptorCachePointerKey(tenantId, entityCode));
+          const ptrRaw = await cache.get(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash));
           if (ptrRaw) {
             // Parse fingerprint — old-format pointer (plain hash string) always fails JSON.parse
             // and is treated as a cache miss, causing a fresh compile + write.
@@ -726,7 +774,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
                   && currentDPH === fingerprint.dataPolicyHash;
 
                 if (fpValid) {
-                  const cached = await cache.get(descriptorCacheKey(tenantId, entityCode, fingerprint.compiledHash));
+                  const cached = await cache.get(descriptorCacheKey(plane, tenantId, entityCode, schemaHash, fingerprint.compiledHash));
                   if (cached) {
                     const payload = JSON.parse(cached) as Record<string, unknown>;
                     const etagValue = `"ced-${payload["compiled_hash"]}"`;
@@ -740,7 +788,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
                 } else {
                   // Fingerprint mismatch — display_config or version changed since last cache write.
                   // Delete the stale pointer so the next request re-populates cleanly.
-                  await cache.del(descriptorCachePointerKey(tenantId, entityCode));
+                  await cache.del(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash));
                 }
               }
             }
@@ -946,9 +994,9 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       if (cache && tenantId) {
         const pointerFingerprint = JSON.stringify({ compiledHash, versionHash, displayConfigHash, identityConfigHash, searchConfigHash, dataPolicyHash });
         Promise.all([
-          cache.set(descriptorCacheKey(tenantId, entityCode, compiledHash), JSON.stringify(payload), DESCRIPTOR_CACHE_TTL_S),
-          cache.set(descriptorCachePointerKey(tenantId, entityCode), pointerFingerprint, DESCRIPTOR_CACHE_TTL_S),
-        ]).catch((err) => logger?.warn("compiled_entity_cache_write_failed", { entityCode, tenantId, err: String(err) }));
+          cache.set(descriptorCacheKey(plane, tenantId, entityCode, schemaHash, compiledHash), JSON.stringify(payload), DESCRIPTOR_CACHE_TTL_S),
+          cache.set(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash), pointerFingerprint, DESCRIPTOR_CACHE_TTL_S),
+        ]).catch((err) => logger?.warn("compiled_entity_cache_write_failed", { entityCode, tenantId, plane, schemaHash, err: String(err) }));
       }
 
       res.json(payload);
@@ -973,9 +1021,14 @@ export async function invalidateDescriptorCache(
   tenantId:   string,
   entityCode: string,
 ): Promise<void> {
-  try {
-    await cache.del(descriptorCachePointerKey(tenantId, entityCode));
-  } catch {
-    // best-effort
-  }
+  const schemaHash = computeDescriptorSchemaHash();
+  // Invalidate across all three planes; a satellite write or version publish
+  // can affect any plane's descriptor for this tenant + entity.
+  const planes: Array<"neon" | "mesh" | "admin"> = ["neon", "mesh", "admin"];
+  await Promise.all(
+    planes.map((plane) =>
+      cache.del(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash))
+        .catch(() => { /* best-effort */ }),
+    ),
+  );
 }

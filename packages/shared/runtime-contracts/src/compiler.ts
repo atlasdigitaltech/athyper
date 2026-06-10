@@ -18,6 +18,7 @@
 import {
   META_ENTITY_RUNTIME_CONTRACT_VERSION,
   MetaEntityRuntimeDescriptorSchema,
+  type DisabledReason,
   type MetaEntityCapabilities,
   type MetaEntityConcurrencySummary,
   type MetaEntityExtensions,
@@ -25,6 +26,7 @@ import {
   type MetaEntityFieldDisplay,
   type MetaEntityFieldEditor,
   type MetaEntityFieldGroup,
+  type MetaEntityLifecycleStateMask,
   type MetaEntityLifecycleSummary,
   type MetaEntityNumberingSummary,
   type MetaEntityOperation,
@@ -237,6 +239,12 @@ export interface MetaEntityCompileOptions {
   entityPolicy?: EntityPolicyInput | null;
   fieldSecurityPolicies?: unknown[];
   lifecycle?: MetaEntityLifecycleSummary | null;
+  /**
+   * Per-status capability masks fetched from control.entity_lifecycle_state_mask.
+   * Tenant-scoped masks override platform defaults; the caller resolves which
+   * masks apply before passing them here.
+   */
+  lifecycleStateMasks?: MetaEntityLifecycleStateMask[];
   workflow?: MetaEntityWorkflowSummary | null;
   numbering?: MetaEntityNumberingSummary | EntityNumberingConfigInput | null;
   concurrencyPolicy?: unknown;
@@ -244,6 +252,13 @@ export interface MetaEntityCompileOptions {
   extensions?: MetaEntityExtensions;
   compiledAt?: string;
   descriptorHash?: string;
+  /**
+   * Optional permission-code alias map (alias_code → canonical_code) from
+   * control.permission_alias. When provided, hasOperation() treats alias
+   * codes on entity_operation rows as equivalent to their canonical form.
+   * Empty/missing map falls back to the legacy token-matching heuristic.
+   */
+  permissionAliasMap?: Record<string, string>;
 }
 
 export interface EntityNumberingConfigInput {
@@ -287,6 +302,8 @@ interface ResolutionContext {
   concurrency?: MetaEntityConcurrencySummary;
   flows: EntityFlowInput[];
   renderer: MetaEntityRenderer;
+  lifecycleStateMasks: MetaEntityLifecycleStateMask[];
+  permissionAliasMap: Record<string, string>;
 }
 
 export function compileMetaEntityRuntimeDescriptor(
@@ -335,6 +352,8 @@ export function compileMetaEntityRuntimeDescriptor(
     concurrency,
     flows: options.flows ?? [],
     renderer,
+    lifecycleStateMasks: options.lifecycleStateMasks ?? [],
+    permissionAliasMap: options.permissionAliasMap ?? {},
   };
 
   const capabilities = resolveCapabilities(context);
@@ -360,6 +379,7 @@ export function compileMetaEntityRuntimeDescriptor(
     source: resolveSource(entity),
     policy,
     lifecycle,
+    lifecycleStateMasks: context.lifecycleStateMasks,
     workflow,
     numbering,
     concurrency,
@@ -447,8 +467,8 @@ function resolveCapabilities(context: ResolutionContext): MetaEntityCapabilities
     policy,
     lifecycle,
     workflow,
-    numbering,
     renderer,
+    permissionAliasMap,
   } = context;
 
   const recordsDisabled = readBoolean(featureFlags, "records_api_disabled")
@@ -464,9 +484,24 @@ function resolveCapabilities(context: ResolutionContext): MetaEntityCapabilities
     || normalizeToken(entity.mutability) === "LOCKED";
 
   const canRead = !recordsDisabled && !hidden && policy.accessMode !== "default_deny";
-  const canCreate = canRead && !readOnly && hasOperation(operations, "create");
-  const canEdit = canRead && !readOnly && hasOperation(operations, "edit");
-  const canDelete = canRead && !readOnly && hardDeleteEnabled && hasOperation(operations, "delete");
+
+  // Resolve each CRUD capability via the cascading gate:
+  //   records_api_disabled → entity hidden → default_deny → entity_readonly
+  //   → (delete only: hard_delete_enabled) → operation present
+  // Each gate carries a stable DisabledReason so the UI can surface it.
+  const { allow: canCreate, reason: canCreateReason } = resolveCrudCapability({
+    canRead, readOnly, recordsDisabled, hidden, accessMode: policy.accessMode,
+    operations, permissionAliasMap, action: "create",
+  });
+  const { allow: canEdit, reason: canEditReason } = resolveCrudCapability({
+    canRead, readOnly, recordsDisabled, hidden, accessMode: policy.accessMode,
+    operations, permissionAliasMap, action: "edit",
+  });
+  const { allow: canDelete, reason: canDeleteReason } = resolveCrudCapability({
+    canRead, readOnly, recordsDisabled, hidden, accessMode: policy.accessMode,
+    operations, permissionAliasMap, action: "delete",
+    extraGate: hardDeleteEnabled ? null : { reason: "hard_delete_disabled" },
+  });
 
   const hasWorkflow = readBoolean(featureFlags, "has_workflow")
     || readBoolean(featureFlags, "is_approvable")
@@ -483,6 +518,9 @@ function resolveCapabilities(context: ResolutionContext): MetaEntityCapabilities
     canCreate,
     canEdit,
     canDelete,
+    canCreateReason,
+    canEditReason,
+    canDeleteReason,
     hasLineItems: lineRelations.length > 0,
     hasChildRecords: childRelations.length > 0,
     hasDistributions: readBoolean(featureFlags, "has_accounting_distribution"),
@@ -499,6 +537,35 @@ function resolveCapabilities(context: ResolutionContext): MetaEntityCapabilities
     hasBulk: readBoolean(featureFlags, "is_bulk_editable"),
     isReadOnly: readOnly,
   };
+}
+
+interface CrudCapabilityInput {
+  canRead: boolean;
+  readOnly: boolean;
+  recordsDisabled: boolean;
+  hidden: boolean;
+  accessMode: MetaEntityPolicySummary["accessMode"];
+  operations: MetaEntityOperation[];
+  permissionAliasMap: Record<string, string>;
+  action: "create" | "edit" | "delete";
+  /** Extra gate for capability-specific guards (e.g. delete needs hardDelete). */
+  extraGate?: { reason: DisabledReason } | null;
+}
+
+function resolveCrudCapability(input: CrudCapabilityInput): {
+  allow: boolean;
+  reason: DisabledReason | null;
+} {
+  if (input.recordsDisabled) return { allow: false, reason: "records_api_disabled" };
+  if (input.hidden) return { allow: false, reason: "entity_hidden" };
+  if (input.accessMode === "default_deny") return { allow: false, reason: "default_deny_policy" };
+  if (!input.canRead) return { allow: false, reason: "default_deny_policy" };
+  if (input.readOnly) return { allow: false, reason: "entity_readonly" };
+  if (input.extraGate) return { allow: false, reason: input.extraGate.reason };
+  if (!hasOperation(input.operations, input.action, input.permissionAliasMap)) {
+    return { allow: false, reason: "missing_permission" };
+  }
+  return { allow: true, reason: null };
 }
 
 function resolveSurfaces(
@@ -1479,20 +1546,49 @@ function resolveRouteSlug(entity: CompiledMetaEntityInput): string {
   return resolveEntityCode(entity).replace(/_/g, "-");
 }
 
-function hasOperation(operations: MetaEntityOperation[], action: "read" | "create" | "edit" | "delete"): boolean {
+// Canonical permission codes per action. The alias map (loaded from
+// control.permission_alias) lets entity_operation rows that reference legacy
+// codes (e.g. 'edit') resolve to the canonical form ('update').
+const CANONICAL_ACTION_CODES: Record<"read" | "create" | "edit" | "delete", readonly string[]> = {
+  read:   ["read"],
+  create: ["create"],
+  edit:   ["update"],
+  delete: ["delete"],
+};
+
+function hasOperation(
+  operations: MetaEntityOperation[],
+  action: "read" | "create" | "edit" | "delete",
+  aliasMap: Record<string, string>,
+): boolean {
   return operations.some((operation) => {
     if (!operation.enabled || operation.surface === "HIDDEN") return false;
-    return permissionMatchesAction(operation.permissionCode, action);
+    return permissionMatchesAction(operation.permissionCode, action, aliasMap);
   });
 }
 
-function permissionMatchesAction(permissionCode: string, action: "read" | "create" | "edit" | "delete"): boolean {
-  const normalized = permissionCode.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+function permissionMatchesAction(
+  permissionCode: string,
+  action: "read" | "create" | "edit" | "delete",
+  aliasMap: Record<string, string>,
+): boolean {
+  // Resolve aliases first: 'edit' → 'update' when the DB carries that mapping.
+  const canonicalCode = aliasMap[permissionCode] ?? permissionCode;
+
+  // Match canonical codes directly. CANONICAL_ACTION_CODES enumerates the
+  // exact codes a runtime descriptor must reference for each action.
+  if (CANONICAL_ACTION_CODES[action].includes(canonicalCode)) return true;
+
+  // Tolerant fallback for namespaced/legacy codes that have not yet been
+  // collapsed via permission_alias. We keep the token-bag heuristic from the
+  // pre-Phase-3 implementation here so the compiler stays drift-tolerant
+  // until the alias seed migrates the remaining one-off codes.
+  const normalized = canonicalCode.toLowerCase().replace(/[^a-z0-9]+/g, "_");
   const tokens = new Set(normalized.split("_").filter(Boolean));
 
-  if (action === "read") return tokens.has("read") || tokens.has("view") || tokens.has("open") || tokens.has("list");
-  if (action === "create") return tokens.has("create") || tokens.has("new") || tokens.has("insert") || tokens.has("add");
-  if (action === "edit") return tokens.has("edit") || tokens.has("update") || tokens.has("write") || tokens.has("save") || tokens.has("patch");
+  if (action === "read")   return tokens.has("read")   || tokens.has("view")   || tokens.has("open")   || tokens.has("list");
+  if (action === "create") return tokens.has("create") || tokens.has("new")    || tokens.has("insert") || tokens.has("add");
+  if (action === "edit")   return tokens.has("edit")   || tokens.has("update") || tokens.has("write")  || tokens.has("save") || tokens.has("patch");
   return tokens.has("delete") || tokens.has("remove") || tokens.has("archive") || tokens.has("destroy");
 }
 

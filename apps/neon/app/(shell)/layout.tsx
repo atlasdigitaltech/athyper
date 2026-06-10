@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { validatePlaneServerSession } from "@athyper/auth-bff";
 import { getPlaneConfig, isSupportSession } from "@athyper/session-plane";
 import { AppShellClient } from "./AppShellClient";
+import { RequiredActionBannerSlot } from "./RequiredActionBannerSlot";
 import { PLANE_KEY } from "@/lib/plane";
 
 export default async function ShellLayout({ children }: { children: ReactNode }) {
@@ -27,8 +28,15 @@ export default async function ShellLayout({ children }: { children: ReactNode })
     redirect(contextSelectPath(returnUrl));
   }
 
+  // Phase I — surface KC required-actions inline at the top of the shell so
+  // users see the pending action before the BFF starts blocking mutating routes.
+  // validatePlaneServerSession already blocks fully when actions are pending.
+  // allow-raw-verify: read-only for banner; gate already applied by validatePlaneServerSession.
+  const requiredActions = validation.session.requiredActions ?? [];
+
   return (
     <AppShellClient supportMode={isSupportSession(PLANE_KEY, validation.session.realmKey)}>
+      <RequiredActionBannerSlot actions={requiredActions} />
       {children}
     </AppShellClient>
   );

@@ -251,6 +251,19 @@ jobs:
       - name: Verify SECURITY DEFINER hardening (F9)
         run: pnpm --filter @athyper/runtime-server run secdef:verify
 
+      # ─── Three-Plane Permission Stack — Phase 6 guardrails ────────────────
+      # Locks the invariants that Phases 1-5 spent significant effort fixing:
+      #   - entity_operation FK + handler-shape integrity
+      #   - permission_code alias usage (D6: `update` canonical, `edit` legacy)
+      #   - plane_eligibility cardinality + subset rules
+      #   - control.entity_version EFFECTIVE-row immutability (D14)
+      # These scripts run against the same DDL+system seed the rest of this
+      # job has already provisioned. The composite script wires them
+      # together with one exit code so the PR check is unambiguous.
+      # See docs/local/architecture/three-plane-permission-stack-phase6-exit.md
+      - name: Verify three-plane permission stack invariants
+        run: pnpm --filter @athyper/db run db:verify:three-plane
+
       # PgBouncer sidecar — the TenantStampDriver's implicit-transaction
       # behavior is specifically tested against transaction-pool mode here,
       # because that's the pool mode the athyper apps use in every environment.
@@ -305,23 +318,102 @@ jobs:
           DATABASE_URL: ${{ env.DATABASE_URL_PGBOUNCER }}
         run: pnpm --filter @athyper/runtime-server run tenant-stamp:verify -- --bench
 
+  # ─── Three-Plane Permission Stack Gate ───────────────────────────
+  # Phase 8 — promoted from advisory to blocking.
+  #
+  # Spins up its own Postgres (separate from rls-verify so it doesn't
+  # inherit that job's continue-on-error policy) and runs:
+  #   - db:verify:three-plane (entity-operations, permission-aliases,
+  #     plane-eligibility, version-locks) — Phase 6 invariants
+  #   - db:verify:effective-lock — Phase 8 matrix Tier 2 (S8, S9)
+  #
+  # PRs that touch entity_operation seeds, control.permission_alias,
+  # plane_eligibility, or entity_version DDL must pass this gate.
+  # ─────────────────────────────────────────────────────────────────
+  three-plane-verify:
+    name: Three-Plane Permission Stack Verify
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER:     athyperadmin
+          POSTGRES_PASSWORD: athyperadmin
+          POSTGRES_DB:       athyper_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd="pg_isready -U athyperadmin -d athyper_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_ADMIN_URL: postgresql://athyperadmin:athyperadmin@127.0.0.1:5433/athyper_test
+      DATABASE_URL:       postgresql://athyperadmin:athyperadmin@127.0.0.1:5433/athyper_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h 127.0.0.1 -p 5433 -U athyperadmin -d athyper_test; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Postgres did not become ready in time"
+          exit 1
+
+      - name: Run DDL migrations (phase 1)
+        run: pnpm --filter @athyper/db run db:setup:ddl
+
+      - name: Run system seed (phase 2)
+        run: pnpm --filter @athyper/db run db:setup:system
+
+      - name: Verify three-plane invariants (Phase 6)
+        run: pnpm --filter @athyper/db run db:verify:three-plane
+
+      - name: Verify EFFECTIVE lock scenarios (Phase 8 matrix Tier 2)
+        run: pnpm --filter @athyper/db run db:verify:effective-lock
+
   # ─── CI Status Gate ──────────────────────────────────────────────
-  # Single required check — PRs must pass this to be mergeable.
+  # Required check — PRs must pass this to be mergeable.
   # rls-verify is intentionally NOT required yet (see job comment).
+  # three-plane-verify is blocking as of Phase 8.
   # ─────────────────────────────────────────────────────────────────
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [quality, build]
+    needs: [quality, build, three-plane-verify]
     if: always()
     steps:
       - name: Evaluate results
         run: |
           quality="${{ needs.quality.result }}"
           build="${{ needs.build.result }}"
+          threeplane="${{ needs.three-plane-verify.result }}"
 
-          echo "quality : $quality"
-          echo "build   : $build"
+          echo "quality           : $quality"
+          echo "build             : $build"
+          echo "three-plane-verify: $threeplane"
 
           if [[ "$quality" != "success" ]]; then
             echo "Quality gate failed — lint, typecheck, test, or format check did not pass."
@@ -330,6 +422,11 @@ jobs:
 
           if [[ "$build" != "success" ]]; then
             echo "Build failed — package compilation did not succeed."
+            exit 1
+          fi
+
+          if [[ "$threeplane" != "success" ]]; then
+            echo "Three-plane permission stack verify failed — see Phase 6 + Phase 8 contracts."
             exit 1
           fi
 

@@ -1,7 +1,31 @@
 "use client";
 
+import { authFailurePresentation, isAuthFailureCode } from "@athyper/auth-bff/error-codes";
+import { AuthFailurePage } from "@athyper/identity-gate";
+
 export default function ErrorPage({ error, reset }: { error: Error; reset: () => void }) {
   const digest = "digest" in error && typeof error.digest === "string" ? error.digest : null;
+
+  // Phase A/H/F7 — surface fatal auth-failure codes via the shared page.
+  // The code may be carried as ApiError.code or thrown into error.message
+  // (when the BFF re-throws a structured 401/403 from /api/* relay).
+  const codeCandidate =
+    typeof (error as unknown as { code?: unknown }).code === "string"
+      ? ((error as unknown as { code: string }).code)
+      : error.message;
+  if (isAuthFailureCode(codeCandidate)) {
+    const presentation = authFailurePresentation(codeCandidate);
+    if (presentation && presentation.severity === "fatal") {
+      return (
+        <AuthFailurePage
+          code={codeCandidate}
+          planeRoot=""
+          {...(digest ? { requestId: digest } : {})}
+        />
+      );
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background p-6 text-foreground">
       <div className="rounded-lg border bg-card p-4">

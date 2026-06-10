@@ -8,6 +8,7 @@ export default defineConfig({
       "src/**/__tests__/**/*.test.ts",
       "packages/runtime/**/__tests__/**/*.test.ts",
       "packages/adapters/db/src/**/__tests__/**/*.test.ts",
+      "packages/services/**/__tests__/**/*.test.ts",
     ],
   },
 });

@@ -1,7 +1,17 @@
 import type { ReactNode } from "react";
 import type { PlaneKey } from "@athyper/session-plane";
 import { getPlaneConfig } from "@athyper/session-plane";
-import { PageFrame, ToolbarButton, WorkPanel } from "@athyper/surface-kit";
+import { ToolbarButton, WorkPanel } from "@athyper/surface-kit";
+import { ArrowLeft } from "lucide-react";
+import {
+  entityHeaderShellClass,
+  headerIdentityPaddingClass,
+  headerSecondaryActionClass,
+  headerTabBarClass,
+  typeChipBackButtonClass,
+  typeChipClass,
+  typeChipStaticLabelClass,
+} from "./header/header-chrome";
 import {
   compileMetaEntityRuntimeDescriptor,
   resolveRuntimeOperations,
@@ -113,31 +123,83 @@ export function RuntimeNewPage({ plane, entity, descriptor, copyRecord, initialR
   const editableFields = resolveEditableFields(contract, "create");
   const disabled = !contract.capabilities.canCreate || config.mutationMode === "read-only";
   const formRecord = mergeInitialRecord(copyRecord, initialRecord);
+  const listHref = currentModeHref(contract, "list");
+  const typeLabel = contract.entityName;
 
   return (
-    <PageFrame
-      eyebrow={runtimeEyebrow(config.appName, contract)}
-      title={`New ${contract.entityName}`}
-      description={sourceLabel(contract)}
-      actions={<RuntimeActions contract={contract} mode="new" />}
-    >
-      <RuntimeContractSummary contract={contract} planePolicy={config.mutationPolicy} />
-      {disabled ? (
-        <WorkPanel title="Create">
-          <RuntimeEditState title="Create unavailable" message={config.mutationPolicy} />
-        </WorkPanel>
-      ) : (
-        <RuntimeEditForm
-          fields={editableFields}
-          descriptor={contract}
-          record={formRecord}
-          entitySlug={contract.routeSlug}
-          listHref={currentModeHref(contract, "list")}
-          csrfCookieName={config.csrfCookieName}
-          mode="create"
-        />
-      )}
-    </PageFrame>
+    <div className="flex h-full flex-col gap-2.5">
+      {/* Header shell — matches the detail/edit page card chrome */}
+      <div className={entityHeaderShellClass}>
+        {/* Identity bar */}
+        <div className={headerIdentityPaddingClass}>
+          {/* Desktop */}
+          <div className="hidden sm:grid sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-4">
+            <div className={typeChipClass}>
+              <a href={listHref} aria-label={`Back to ${typeLabel} list`} className={typeChipBackButtonClass}>
+                <ArrowLeft aria-hidden className="size-4" />
+              </a>
+              <span className={typeChipStaticLabelClass}>{typeLabel}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex flex-1 items-center gap-3">
+                <span className="text-sm font-medium text-foreground">New</span>
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-sm font-medium leading-none text-muted-foreground">
+                  <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" aria-hidden />
+                  New
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <a href={listHref} className={headerSecondaryActionClass}>Cancel</a>
+              </div>
+            </div>
+          </div>
+          {/* Mobile */}
+          <div className="flex flex-col gap-1.5 sm:hidden">
+            <div className="flex items-center gap-2">
+              <div className={typeChipClass}>
+                <a href={listHref} aria-label={`Back to ${typeLabel} list`} className={typeChipBackButtonClass}>
+                  <ArrowLeft aria-hidden className="size-4" />
+                </a>
+                <span className={typeChipStaticLabelClass}>{typeLabel}</span>
+              </div>
+              <div className="flex-1" />
+              <a href={listHref} className={headerSecondaryActionClass}>Cancel</a>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 px-0.5">
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-sm font-medium leading-none text-muted-foreground">
+                <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground" aria-hidden />
+                New
+              </span>
+            </div>
+          </div>
+        </div>
+        {/* Tab bar — single Details tab, always active */}
+        <div className={headerTabBarClass}>
+          <span className="relative flex h-11 shrink-0 items-center whitespace-nowrap text-sm font-medium text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-foreground">
+            Details
+          </span>
+        </div>
+      </div>
+
+      {/* Form body */}
+      <div className="min-h-0 flex-1 overflow-auto px-0.5 py-1">
+        {disabled ? (
+          <WorkPanel title="Create">
+            <RuntimeEditState title="Create unavailable" message={config.mutationPolicy} />
+          </WorkPanel>
+        ) : (
+          <RuntimeEditForm
+            fields={editableFields}
+            descriptor={contract}
+            record={formRecord}
+            entitySlug={contract.routeSlug}
+            listHref={listHref}
+            csrfCookieName={config.csrfCookieName}
+            mode="create"
+          />
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -363,7 +425,7 @@ function RuntimeActions({
     );
   }
 
-  const overflow = resolveRuntimeOperations({
+  const overflow = mode === "new" ? [] : resolveRuntimeOperations({
     descriptor: contract,
     mode,
     record: recordId ? { id: recordId } : undefined,

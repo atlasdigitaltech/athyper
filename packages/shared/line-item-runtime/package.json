@@ -1,0 +1,51 @@
+{
+  "name": "@athyper/line-item-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./meta": "./src/meta/index.ts",
+    "./panels": "./src/panels/index.ts",
+    "./registry": "./src/registry.ts",
+    "./surface": "./src/surface/index.ts",
+    "./types": "./src/types.ts",
+    "./variants/procure": "./src/variants/procure.ts",
+    "./variants/sales": "./src/variants/sales.ts",
+    "./variants/generic": "./src/variants/generic.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@athyper/api-contracts": "workspace:*",
+    "@athyper/domain-widgets": "workspace:*",
+    "@athyper/metadata-client": "workspace:*",
+    "@athyper/runtime-contracts": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*",
+    "@athyper/surface-kit": "workspace:*",
+    "@athyper/theme": "workspace:*"
+  },
+  "peerDependencies": {
+    "@athyper/icons": "workspace:*",
+    "@athyper/ui": "workspace:*",
+    "@tanstack/react-query": ">=5 <6",
+    "lucide-react": "^1.8.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@athyper/icons": "workspace:*",
+    "@athyper/ui": "workspace:*",
+    "@tanstack/react-query": "^5.99.0",
+    "@types/react": "^19.2.14",
+    "lucide-react": "^1.8.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3"
+  }
+}

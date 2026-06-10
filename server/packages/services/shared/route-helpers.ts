@@ -42,12 +42,27 @@ export function isUuid(s: string): boolean { return UUID_RE.test(s); }
 
 export const SYSTEM_PRINCIPAL_UUID = "00000000-0000-0000-0000-000000000000";
 
+// ── Default realm key (bootstrap-configured) ──────────────────────────────────
+//
+// Phase D — the setter + state moved to realm-default.ts and is exposed only
+// via the `@athyper/svc-shared/bootstrap` subpath. Routes read through
+// getDefaultRealmKey() but cannot mutate the value. See realm-default.ts for
+// the set-once invariants.
+import { getDefaultRealmKey } from "./realm-default.js";
+
+function defaultRealmKey(): string {
+  return getDefaultRealmKey();
+}
+
 // ── Header extraction ─────────────────────────────────────────────────────────
 
 export function extractOrgHeaders(req: Parameters<RequestHandler>[0]): { xOrg: string; xRealm: string } {
   return {
     xOrg:   (req.headers["x-org"]   as string) ?? "",
-    xRealm: (req.headers["x-realm"] as string) ?? "athyper",
+    xRealm:
+      (req.headers["x-realm-key"] as string | undefined)
+      ?? (req.headers["x-realm"] as string | undefined)
+      ?? defaultRealmKey(),
   };
 }
 
@@ -62,7 +77,7 @@ export async function resolveTenantId(db: Kysely<any>, xOrg: string, xRealm: str
     .selectFrom("master.tenant as t")
     .select("t.id")
     .where("t.code", "=", tenantCode)
-    .where("t.realm_key", "=", xRealm || "athyper")
+    .where("t.realm_key", "=", xRealm || defaultRealmKey())
     .executeTakeFirst();
   return row ? (row.id as string) : null;
 }
@@ -74,13 +89,14 @@ export async function resolveTenantId(db: Kysely<any>, xOrg: string, xRealm: str
  * Returns null if no binding exists (no JIT provisioning).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function resolvePrincipalIdOrNull(db: Kysely<any>, sub: string, tenantId: string, realmKey = "athyper"): Promise<string | null> {
+export async function resolvePrincipalIdOrNull(db: Kysely<any>, sub: string, tenantId: string, realmKey?: string): Promise<string | null> {
+  const realm = realmKey ?? defaultRealmKey();
   if (!sub) return null;
   const row = await db
     .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
-    .where("pab.realm_key", "=", realmKey)
+    .where("pab.realm_key", "=", realm)
     .where("pab.tenant_id", "=", tenantId)
     .executeTakeFirst();
   return row ? (row.principal_id as string) : null;
@@ -97,16 +113,41 @@ export async function resolvePrincipalIdWithJit(
   sub: string,
   tenantId: string,
   claims?: Record<string, unknown>,
-  realmKey = "athyper",
+  realmKey?: string,
 ): Promise<string> {
+  const realm = realmKey ?? defaultRealmKey();
   const existing = await db
     .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
-    .where("pab.realm_key", "=", realmKey)
+    .where("pab.realm_key", "=", realm)
     .where("pab.tenant_id", "=", tenantId)
     .executeTakeFirst();
-  if (existing) return existing.principal_id as string;
+  if (existing) {
+    const principalId = existing.principal_id as string;
+    // Backfill persona for principals provisioned before this fix was in place.
+    try {
+      const hasPersona = await db
+        .selectFrom("master.principal_persona as pp")
+        .select("pp.id")
+        .where("pp.principal_id", "=", principalId)
+        .where("pp.tenant_id", "=", tenantId)
+        .executeTakeFirst();
+      if (!hasPersona) {
+        const persona = await db
+          .selectFrom("shared.persona" as never)
+          .select("id" as never)
+          .where("code" as never, "=", "owner" as never)
+          .executeTakeFirst() as Record<string, unknown> | undefined;
+        if (persona) {
+          await db.insertInto("master.principal_persona" as never)
+            .values({ tenant_id: tenantId, principal_id: principalId, persona_id: persona["id"], assigned_by: SYSTEM_PRINCIPAL_UUID, created_by: SYSTEM_PRINCIPAL_UUID } as never)
+            .execute();
+        }
+      }
+    } catch { /* best-effort — principal already usable */ }
+    return principalId;
+  }
 
   try {
     const username =
@@ -122,8 +163,21 @@ export async function resolvePrincipalIdWithJit(
         .returning("id" as never).executeTakeFirstOrThrow();
       const newId = (p as Record<string, unknown>).id as string;
       await trx.insertInto("master.principal_identity_binding" as never)
-        .values({ tenant_id: tenantId, principal_id: newId, realm_key: realmKey, provider_code: "keycloak", subject_id: sub, username, sync_status: "synced", idp_enabled: true, idp_email_verified: true, synced_at: new Date(), created_by: SYSTEM_PRINCIPAL_UUID } as never)
+        .values({ tenant_id: tenantId, principal_id: newId, realm_key: realm, provider_code: "keycloak", subject_id: sub, username, sync_status: "synced", idp_enabled: true, idp_email_verified: true, synced_at: new Date(), created_by: SYSTEM_PRINCIPAL_UUID } as never)
         .execute();
+      // Assign the default 'owner' persona so the JIT user has full operational access.
+      // Without this, checkPermissionBatch falls back to ZERO_UUID → returns not_found for
+      // every permission and entity operations (including 'create') are hidden.
+      const persona = await trx
+        .selectFrom("shared.persona" as never)
+        .select("id" as never)
+        .where("code" as never, "=", "owner" as never)
+        .executeTakeFirst() as Record<string, unknown> | undefined;
+      if (persona) {
+        await trx.insertInto("master.principal_persona" as never)
+          .values({ tenant_id: tenantId, principal_id: newId, persona_id: persona["id"], assigned_by: SYSTEM_PRINCIPAL_UUID, created_by: SYSTEM_PRINCIPAL_UUID } as never)
+          .execute();
+      }
       return newId;
     });
     return principalId;

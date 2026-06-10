@@ -17,7 +17,13 @@ import { Router } from "express";
 import { trace } from "@opentelemetry/api";
 import { randomUUID } from "node:crypto";
 
-import { registerIamRoutes, checkPermissionBatch } from "@athyper/svc-iam";
+import {
+  registerIamRoutes,
+  checkPermissionBatch,
+  createPermissionResolverRegistry,
+  createPermissionContextMiddleware,
+  isPlaneKey,
+} from "@athyper/svc-iam";
 import { registerMetadataRoutes } from "@athyper/svc-metadata";
 import { registerRecordsRoutes } from "@athyper/svc-records";
 import { registerSearchRoutes } from "@athyper/svc-search";
@@ -57,6 +63,9 @@ import {
   createCacheMetrics,
   metricsHandler,
   observeHttpRequest,
+  recordAuthContextMismatch,
+  recordAuthContextMismatchSuppressed,
+  recordTokenClaimsInvalid,
   registerJobQueues,
   registerMetricCollectors,
 } from "../metrics.js";
@@ -64,7 +73,26 @@ import { makeAuditEvent } from "../audit.js";
 import { runComplianceSuiteIfDev } from "../../packages/services/metadata/src/entity-compliance.js";
 import { createEntityCompilerService } from "../../packages/services/metadata/src/entity-compiler.service.js";
 import { createPlatformMetricCollector } from "@athyper/server-foundation/monitoring/platform-metrics";
-import { normalizePlaneKey, parseOrgHeader, runWithContext, tryGetContext } from "../kernel/request-context.js";
+import {
+  normalizePlaneKey,
+  parseOrgHeader,
+  runWithContext,
+  tryGetContext,
+} from "../kernel/request-context.js";
+import { createRequirePlatformContext } from "./require-platform-context.js";
+import {
+  crossCheckClaimsAgainstContext,
+  enforceAuthPipeline,
+  loadRequiredActionMatrix,
+  type AuthPipelineMode,
+  type CrossCheckReporter,
+} from "../auth/auth-pipeline.js";
+import { LogSampler } from "../auth/log-sampler.js";
+import { parseTokenClaims } from "@athyper/runtime-contracts";
+import {
+  resolveRequiredActionsEnforcement,
+  resolveTokenSchemaMode,
+} from "@athyper/auth-common";
 import type { ServerDeps } from "../kernel/bootstrap.js";
 import { livenessHandler } from "./liveness.js";
 
@@ -186,6 +214,79 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const _db = db.kysely as unknown as import("kysely").Kysely<Record<string, any>>;
 
+  // ─── Claim-first context guard mode ───────────────────────────────────────
+  // Phase B (refactor): the claim-vs-context cross-checks now live in
+  // server/src/auth/auth-pipeline.ts → crossCheckClaimsAgainstContext so the
+  // same algorithm is exercised by verifyTokenForCurrentContext, the
+  // requirePlatformContext middleware, /api/auth/verify, and the auth-bff
+  // session pipeline. This wrapper only resolves the mode, builds the
+  // reporter, and short-circuits on rejection.
+  //   off     — no checks, no logs (default; baseline behavior preserved).
+  //   shadow  — checks run, mismatches logged + counted, request proceeds.
+  //   on      — checks run, mismatches throw + counted, request rejected.
+  // Toggled via AUTH_CLAIM_FIRST_CONTEXT env var.
+  const claimFirstModeRaw = (process.env.AUTH_CLAIM_FIRST_CONTEXT ?? "off").toLowerCase();
+  const claimFirstMode: AuthPipelineMode =
+    claimFirstModeRaw === "shadow" || claimFirstModeRaw === "on"
+      ? (claimFirstModeRaw as AuthPipelineMode)
+      : "off";
+  if (claimFirstMode !== "off") {
+    logger.info("auth_claim_first_context_enabled", { mode: claimFirstMode });
+  }
+
+  // Phase F — Log sampler in front of mismatch warn-logs. Counter metrics
+  // stay UNSAMPLED so dashboards see the true mismatch count; only the log
+  // line cardinality is throttled to keep a misconfig storm from drowning
+  // structured logging. Sampling state is process-local; coordinated
+  // across replicas via the Prometheus suppressed counter.
+  //
+  // Tuning notes (env-overridable):
+  //   AUTH_MISMATCH_LOG_BURST       first N events/min log unconditionally (default 10)
+  //   AUTH_MISMATCH_LOG_SAMPLE_RATE thereafter log every K-th event       (default 100)
+  //   AUTH_MISMATCH_LOG_WINDOW_MS   window length                          (default 60_000)
+  const burst = Number(process.env.AUTH_MISMATCH_LOG_BURST ?? 10);
+  const sampleRate = Number(process.env.AUTH_MISMATCH_LOG_SAMPLE_RATE ?? 100);
+  const windowMs = Number(process.env.AUTH_MISMATCH_LOG_WINDOW_MS ?? 60_000);
+  const mismatchLogSampler = new LogSampler({
+    burst: Number.isFinite(burst) && burst >= 0 ? Math.floor(burst) : 10,
+    sampleRate: Number.isFinite(sampleRate) && sampleRate >= 1 ? Math.floor(sampleRate) : 100,
+    windowMs: Number.isFinite(windowMs) && windowMs > 0 ? Math.floor(windowMs) : 60_000,
+  });
+
+  const pipelineReporter: CrossCheckReporter = {
+    recordMismatch: (check, mode) => recordAuthContextMismatch(check, mode),
+    log: (event, fields) => {
+      // Bucket by (check, realm, source). Phase H/F4: realm is now included
+      // so two realms under the same tenant don't merge in forensic logs.
+      // issHash is the fallback when realm isn't yet known (e.g. mismatch
+      // detected before realm cross-check), keyed off the validated iss.
+      const check = typeof fields["check"] === "string" ? (fields["check"] as string) : "unknown";
+      const realm = typeof fields["ctxRealmKey"] === "string"
+        ? (fields["ctxRealmKey"] as string)
+        : typeof fields["issHash"] === "string"
+          ? `iss:${fields["issHash"] as string}`
+          : "_";
+      const tenant = typeof fields["ctxTenantId"] === "string" ? (fields["ctxTenantId"] as string) : "_";
+      const plane = typeof fields["ctxPlaneKey"] === "string" ? (fields["ctxPlaneKey"] as string) : "_";
+      const verdict = mismatchLogSampler.decide(`${check}|${realm}|${tenant}|${plane}`);
+      if (verdict.shouldLog) {
+        logger.warn(event, {
+          ...fields,
+          ...(verdict.suppressedRun > 0
+            ? { suppressedSinceLastLog: verdict.suppressedRun }
+            : {}),
+          ...(verdict.windowCount > 1 ? { windowCount: verdict.windowCount } : {}),
+        });
+      } else {
+        recordAuthContextMismatchSuppressed(
+          check === "realm" || check === "plane" || check === "tenant" || check === "azp"
+            ? check
+            : "azp",
+        );
+      }
+    },
+  };
+
   const verifyTokenForCurrentContext = async (token: string): Promise<Record<string, unknown>> => {
     const ctx = tryGetContext();
     const requestedRealmKey = ctx?.realmKey ?? ctx?.realm;
@@ -198,9 +299,40 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       throw new Error(`Unknown realm: ${kernelRealmKey}`);
     }
 
-    const claims = kernelConfig && kernelRealmKey && kernelRealmKey !== kernelConfig.iam.defaultRealmKey
+    const rawClaims = kernelConfig && kernelRealmKey && kernelRealmKey !== kernelConfig.iam.defaultRealmKey
       ? (await (await auth.getVerifier(kernelRealmKey)).verifyJwt(token)).claims
       : await auth.verifyToken(token);
+
+    // Phase E + Phase H/F5 — Validate claim shape at the parse boundary.
+    // Mode resolved via the shared env-gate helper:
+    //   local      → warn   (developer ergonomics)
+    //   staging    → reject (AUTH_TOKEN_SCHEMA_MODE=warn opens a 7-day burn-in window)
+    //   production → reject (always; warn is refused with a structured log)
+    const claimSchemaMode = resolveTokenSchemaMode(
+      config.env,
+      (fields) => logger.error("auth_token_schema_mode_warn_in_prod_refused", fields),
+    );
+    const parsed = parseTokenClaims(rawClaims);
+    let claims: Record<string, unknown> = rawClaims as Record<string, unknown>;
+    if (!parsed.ok) {
+      const enforcedNow = claimSchemaMode === "reject";
+      recordTokenClaimsInvalid(
+        parsed.error.fieldPath,
+        enforcedNow ? "enforced" : "shadow",
+      );
+      logger.warn("token_claims_invalid", {
+        requestId: ctx?.requestId,
+        realmKey: kernelRealmKey,
+        fieldPath: parsed.error.fieldPath,
+        mode: claimSchemaMode,
+        // Log issues at debug-detail; do not include them in the thrown error.
+        issues: parsed.error.issues,
+      });
+      if (enforcedNow) throw new Error("malformed_token");
+      // warn mode: continue with the raw claims (typed-loose)
+    } else {
+      claims = parsed.claims as unknown as Record<string, unknown>;
+    }
 
     const allowedAzp = kernelRealm?.iam.allowedAzp ?? [];
     if (allowedAzp.length > 0) {
@@ -208,6 +340,18 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       if (typeof azp !== "string" || !allowedAzp.includes(azp)) {
         throw new Error(`Token azp is not allowed for realm "${kernelRealmKey}"`);
       }
+    }
+
+    // Pipeline step 1 — claim-first cross-checks. Throws on enforced mismatch
+    // so the existing routeAuth callers' try/catch maps to 401/403 as before.
+    const crossCheck = crossCheckClaimsAgainstContext(
+      { claims, ctx, allowedAzp },
+      claimFirstMode,
+      pipelineReporter,
+    );
+    if (!crossCheck.ok) {
+      const first = crossCheck.mismatches[0];
+      throw new Error(`auth_context_mismatch:${first?.check ?? "unknown"}`);
     }
 
     return claims;
@@ -454,9 +598,33 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   app.get("/healthz", readinessHandler);
   app.get("/health", readinessHandler);
 
-  // Optional bearer-token verifier for gateway/service integrations. Browser
-  // workbench routers do not attach this as Traefik forward-auth because the
-  // web session is cookie-based and enforced by the Next.js BFF/session layer.
+  // Bearer-token verifier for gateway / service integrations and Traefik
+  // forward-auth. Browser workbench routers do NOT consume this — the BFF
+  // session layer enforces auth via cookie.
+  //
+  // Phase B refactor: every check (claim cross-checks, tenant resolution,
+  // optional required-actions) goes through the shared auth-pipeline so the
+  // behaviour stays identical across this endpoint, the platform middleware,
+  // and verifyTokenForCurrentContext. Pipeline errors carry the canonical
+  // HTTP status + code; this handler only adapts them to the gateway
+  // response shape (headers + scoped role headers on success).
+  //
+  // Env flags consumed:
+  //   AUTH_VERIFY_REQUIRE_PLANE             — when "on", reject calls missing x-plane (400)
+  //   AUTH_REQUIRED_ACTIONS_ENFORCE         — shared with the platform gate. Default
+  //                                           per env (local off, staging/prod on);
+  //                                           explicit `off` outside local logs a
+  //                                           visible deprecation event.
+  const verifyRequirePlane =
+    (process.env.AUTH_VERIFY_REQUIRE_PLANE ?? "off").toLowerCase() === "on";
+  const verifyEnforceRequiredActions = resolveRequiredActionsEnforcement(
+    config.env,
+    (fields) => logger.warn(String(fields["event"] ?? "auth_required_actions_compat_mode_engaged"), fields),
+  );
+  logger.info("auth_verify_required_actions_resolved", {
+    env: config.env,
+    enforced: verifyEnforceRequiredActions,
+  });
   app.get("/api/auth/verify", (req: Request, res: Response): void => {
     void (async () => {
       const authHeader = req.headers["authorization"] ?? "";
@@ -465,35 +633,122 @@ export async function startApi(deps: ServerDeps): Promise<void> {
         res.status(401).end();
         return;
       }
-      try {
-        const claims = await verifyTokenForCurrentContext(match[1]!);
-        const sub      = typeof claims["sub"]       === "string" ? claims["sub"]       : "";
-        const tenantId = typeof claims["tenant_id"] === "string" ? claims["tenant_id"] : "";
 
-        const roles: string[] = [];
-        const realmAccess = claims["realm_access"] as Record<string, unknown> | undefined;
-        if (Array.isArray(realmAccess?.["roles"])) {
-          roles.push(...(realmAccess["roles"] as string[]));
-        }
-        const resourceAccess = claims["resource_access"] as Record<string, Record<string, unknown>> | undefined;
-        if (resourceAccess && typeof resourceAccess === "object") {
-          for (const client of Object.values(resourceAccess)) {
-            if (Array.isArray(client?.["roles"])) {
-              roles.push(...(client["roles"] as string[]));
-            }
-          }
-        }
-        if (Array.isArray(claims["groups"])) {
-          roles.push(...(claims["groups"] as string[]));
-        }
-
-        res.setHeader("X-User-Id",    sub);
-        res.setHeader("X-User-Roles", [...new Set(roles)].join(","));
-        res.setHeader("X-Tenant-Id",  tenantId);
-        res.status(200).end();
-      } catch {
-        res.status(401).end();
+      const xPlane = normalizePlaneKey(req.headers["x-plane-key"] ?? req.headers["x-plane"]);
+      if (verifyRequirePlane && !xPlane) {
+        res.status(400).json({
+          error: "MISSING_PLANE",
+          message: "x-plane header is required for /api/auth/verify.",
+        });
+        return;
       }
+      if (!xPlane) {
+        logger.warn("auth_verify_missing_plane_legacy", {
+          message: "x-plane absent; legacy caller — flip AUTH_VERIFY_REQUIRE_PLANE=on to enforce.",
+        });
+      }
+
+      let claims: Record<string, unknown>;
+      try {
+        claims = await verifyTokenForCurrentContext(match[1]!);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Token verification failed.";
+        const isContextMismatch = message.startsWith("auth_context_mismatch:");
+        res.status(isContextMismatch ? 403 : 401).end();
+        return;
+      }
+
+      // Synthesize a PipelineCtx from the request headers — /api/auth/verify is
+      // mounted on `app`, so the apiRouter tenant-stamp middleware doesn't run
+      // here and the ALS ctx will not carry tenantId/planeKey. The pipeline
+      // resolves them via headers + claims directly.
+      const xOrg = (req.headers["x-org"] as string | undefined) ?? "";
+      const xRealm =
+        (req.headers["x-realm-key"] as string | undefined)
+        ?? (req.headers["x-realm"] as string | undefined);
+
+      const result = await enforceAuthPipeline(
+        {
+          claims,
+          ctx: {
+            ...(xPlane ? { planeKey: xPlane } : {}),
+            ...(xRealm ? { realmKey: xRealm } : {}),
+          },
+          headers: {
+            ...(xOrg ? { xOrg } : {}),
+            ...(xRealm ? { xRealm } : {}),
+          },
+          // No downstream route info — required-actions enforcement, if
+          // enabled, blocks on ANY pending action (most conservative).
+        },
+        {
+          mode: claimFirstMode,
+          resolveTenant: true,
+          // Gateway integrations rely on this endpoint with service tokens
+          // that lack AUTHORIZED — leave the role gate to the gateway. The
+          // platform-context middleware enforces AUTHORIZED on the tenant API.
+          enforceAuthorized: false,
+          enforceRequiredActions: verifyEnforceRequiredActions,
+        },
+        {
+          db: _db,
+          defaultRealmKey: effectiveDefaultRealm,
+          logger,
+          reporter: pipelineReporter,
+        },
+      );
+
+      if (!result.ok && result.error) {
+        logger.warn("auth_verify_pipeline_blocked", {
+          code: result.error.code,
+          ...(result.error.check ? { check: result.error.check } : {}),
+          ...(result.error.blockingAction ? { blockingAction: result.error.blockingAction } : {}),
+          ...result.error.detail,
+        });
+        // Auth context / tenant errors keep their canonical statuses; the
+        // gateway-facing endpoint historically returned empty bodies for
+        // 401/403 but now returns a structured body so callers can decide
+        // whether to retry with different headers.
+        res.status(result.error.status).json({
+          error: result.error.code,
+          message: result.error.message,
+          ...(result.error.blockingAction
+            ? { requiredAction: result.error.blockingAction }
+            : {}),
+        });
+        return;
+      }
+
+      // Success — emit scoped role headers for the forward-auth consumer.
+      const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
+      const tenantIdHeader = typeof claims["tenant_id"] === "string"
+        ? (claims["tenant_id"] as string)
+        : (result.canonical?.tenantId ?? "");
+      const realmAccess = claims["realm_access"] as Record<string, unknown> | undefined;
+      const realmRoles = Array.isArray(realmAccess?.["roles"])
+        ? (realmAccess!["roles"] as unknown[]).filter((r): r is string => typeof r === "string")
+        : [];
+      const resolvedPlane = result.canonical?.planeKey ?? xPlane ?? null;
+      const planeClientId = resolvedPlane ? `${resolvedPlane}-web` : null;
+      const resourceAccess = claims["resource_access"] as Record<string, Record<string, unknown>> | undefined;
+      const planeClientRoles = planeClientId && resourceAccess?.[planeClientId]
+        ? (Array.isArray(resourceAccess[planeClientId]?.["roles"])
+            ? (resourceAccess[planeClientId]!["roles"] as unknown[]).filter(
+                (r): r is string => typeof r === "string",
+              )
+            : [])
+        : [];
+
+      res.setHeader("X-User-Id", sub);
+      res.setHeader("X-Tenant-Id", tenantIdHeader);
+      if (resolvedPlane) res.setHeader("X-Verify-Plane", resolvedPlane);
+      res.setHeader("X-Realm-Roles", realmRoles.join(","));
+      if (planeClientId) {
+        res.setHeader(`X-Client-Roles-${planeClientId}`, planeClientRoles.join(","));
+      }
+      // Deprecated legacy header — scoped to realm + plane-client only.
+      res.setHeader("X-User-Roles", [...new Set([...realmRoles, ...planeClientRoles])].join(","));
+      res.status(200).end();
     })();
   });
 
@@ -507,12 +762,22 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // set app.current_tenant_id on every downstream DB query.
   // Without this, FORCE ROW LEVEL SECURITY tables (legal_entity, company_code,
   // supplier, etc.) return 0 rows even when WHERE tenant_id = ? is applied.
+  //
+  // F1 hardening:
+  //   - Defaults the realm to kernelConfig.iam.defaultRealmKey instead of the
+  //     hardcoded "athyper" string so multi-realm deployments don't silently
+  //     bind to the wrong tenant universe.
+  //   - Replaces the previous `catch {}` swallow with a structured log so a
+  //     DB error during tenant resolution is observable rather than mute.
+  //   - The actual claim-vs-context cross-check happens inside
+  //     verifyTokenForCurrentContext once the token is verified.
+  const effectiveDefaultRealm = kernelConfig?.iam.defaultRealmKey ?? config.iam.realm;
   apiRouter.use(async (req: Request, _res: Response, next: NextFunction) => {
     const xOrg   = (req.headers["x-org"]   as string) ?? "";
     const xRealm =
       (req.headers["x-realm-key"] as string | undefined) ??
       (req.headers["x-realm"] as string | undefined) ??
-      "athyper";
+      effectiveDefaultRealm;
     const ctx = tryGetContext();
     if (ctx) {
       const planeKey = normalizePlaneKey(
@@ -531,16 +796,58 @@ export async function startApi(deps: ServerDeps): Promise<void> {
             .selectFrom("master.tenant as t")
             .select("t.id")
             .where("t.code",      "=", tenantCode)
-            .where("t.realm_key", "=", xRealm || "athyper")
+            .where("t.realm_key", "=", xRealm)
             .executeTakeFirst();
           if (row) {
             if (ctx) ctx.tenantId = row.id as string;
+          } else {
+            logger.warn("tenant_resolution_not_found", {
+              requestId: ctx?.requestId,
+              tenantCode,
+              realmKey: xRealm,
+              orgKey: ctx?.orgKey,
+            });
           }
-        } catch { /* swallow — route handlers will 401/404 appropriately */ }
+        } catch (err) {
+          // Surface DB errors as structured logs instead of swallowing — the
+          // downstream route still handles missing tenant via 401/404, but
+          // ops needs to see DB-layer failures during tenant resolution.
+          logger.error("tenant_resolution_failed", {
+            requestId: ctx?.requestId,
+            tenantCode,
+            realmKey: xRealm,
+            err: err instanceof Error ? err.message : String(err),
+          });
+        }
       }
     }
     next();
   });
+
+  // ── Unified platform-context gate (Phase 1 proper + Phase 7) ──────────────
+  // Off by default; flip to "on" once the shadow-mode metrics from
+  // AUTH_CLAIM_FIRST_CONTEXT have been clean for one rollout window. The gate:
+  //   - rejects missing/invalid bearer (401)
+  //   - rejects claim-vs-context mismatches surfaced by verifyTokenForCurrentContext
+  //     under AUTH_CLAIM_FIRST_CONTEXT=on (403)
+  //   - re-asserts AUTHORIZED on `${plane}-web` (403)
+  //   - applies the required_actions blocking matrix (403)
+  //   - caches verified claims on req.athyperClaims so downstream handlers can
+  //     skip a second verifyToken call
+  //
+  // Routes that legitimately accept anonymous traffic must match a prefix in
+  // DEFAULT_PUBLIC_ROUTES inside require-platform-context.ts.
+  if ((process.env.AUTH_PLATFORM_CONTEXT_GATE ?? "off").toLowerCase() === "on") {
+    logger.info("auth_platform_context_gate_enabled");
+    apiRouter.use(createRequirePlatformContext({
+      verifyToken: verifyTokenForCurrentContext,
+      logger,
+      db: _db,
+      defaultRealmKey: effectiveDefaultRealm,
+      reporter: pipelineReporter,
+      env: config.env,
+    }));
+  }
 
   // ── KC admin token factory ────────────────────────────────────────────────
   // Derives the KC base URL from the issuer URL by stripping /realms/{realm}.
@@ -589,6 +896,48 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     return data.access_token;
   };
 
+  // ─── Permission-context middleware (Phase 5) ────────────────────────────────
+  // Build the EffectivePermissionContext for each authenticated request and
+  // stash it on res.locals so downstream routes (entity-operations, runtime-
+  // records, etc.) can read the resolved {allowed, denied} sets without
+  // re-running the persona / grant SQL. Falls back gracefully when:
+  //   - no Bearer token  → readContextInput returns null
+  //   - no tenant scope  → readContextInput returns null
+  //   - resolver throws  → middleware catches and converts mesh "no binding"
+  //                        errors to 403; other errors propagate to the
+  //                        existing express error handler.
+  // The legacy route paths that call checkPermissionBatch inline keep
+  // working — the middleware is additive; consumers opt in by reading
+  // res.locals.effectivePermissionContext.
+  // The resolver registry only consumes the kysely client as an opaque
+  // executor — the concrete DB schema is irrelevant. `as never` strips the
+  // generated DB$1 typing without compromising the SQL the resolvers run
+  // (they all use the kysely sql tag which doesn't typecheck the schema).
+  const permissionResolverRegistry = createPermissionResolverRegistry({
+    neon:  { db: db.kysely as unknown as never },
+    admin: { db: db.kysely as unknown as never },
+    mesh:  { db: db.kysely as unknown as never, meshDb: meshDb?.kysely as unknown as never },
+  });
+  apiRouter.use(createPermissionContextMiddleware({
+    registry: permissionResolverRegistry,
+    onError: (err) => logger.warn("permission_context_middleware_failed", { err: String(err) }),
+    readContextInput: (req): { planeKey: "neon" | "admin" | "mesh"; tenantId: string; principalId: string } | null => {
+      const planeRaw = req.headers["x-plane"];
+      const plane    = Array.isArray(planeRaw) ? planeRaw[0] : planeRaw;
+      if (!isPlaneKey(plane)) return null;
+
+      // The tenant-stamp middleware (above) populated AsyncLocalStorage; pull
+      // the resolved tenantId without re-doing the master.tenant lookup.
+      // tryGetContext is the safe variant (returns undefined off-request).
+      const ctx = tryGetContext();
+      const tenantId = ctx?.tenantId;
+      const principalId = ctx?.principalId;
+      if (!tenantId || !principalId) return null;
+
+      return { planeKey: plane, tenantId, principalId };
+    },
+  }));
+
   registerIamRoutes(apiRouter, {
     db: db.kysely,
     meshDb: meshDb?.kysely,
@@ -608,6 +957,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   registerMetadataRoutes(apiRouter, {
     db: db.kysely,
+    meshDb: meshDb?.kysely,
     auth: routeAuth,
     logger,
     cache: descriptorCache,

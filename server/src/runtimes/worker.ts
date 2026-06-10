@@ -25,7 +25,47 @@
 import { createIamOutboxWorker } from "@athyper/svc-iam";
 import { makeAuditEvent } from "../audit.js";
 import { startProbeServer } from "./probe.js";
+import { createDescriptorCacheListener } from "../services/cache-invalidation/index.js";
 import type { ServerDeps } from "../kernel/bootstrap.js";
+
+/**
+ * Phase 8 — Prometheus text-format renderer for the cache-invalidation
+ * listener's internal counters. Counter names follow the existing
+ * athyper_* convention from server/src/metrics.ts. The `instance` label
+ * carries host:pid:uuid so multiple worker replicas don't collide in the
+ * Prometheus storage.
+ */
+function renderListenerMetrics(stats: Readonly<{
+  notifications: number;
+  pollerRuns: number;
+  keysDeleted: number;
+  errors: number;
+  reconnects: number;
+  instanceId: string;
+}>): string[] {
+  const label = `instance="${stats.instanceId.replace(/"/g, '\\"')}"`;
+  return [
+    "# HELP athyper_cache_listener_notifications_total LISTEN notifications processed",
+    "# TYPE athyper_cache_listener_notifications_total counter",
+    `athyper_cache_listener_notifications_total{${label}} ${stats.notifications}`,
+    "",
+    "# HELP athyper_cache_listener_poller_runs_total Poller cycles executed",
+    "# TYPE athyper_cache_listener_poller_runs_total counter",
+    `athyper_cache_listener_poller_runs_total{${label}} ${stats.pollerRuns}`,
+    "",
+    "# HELP athyper_cache_listener_keys_deleted_total Redis keys removed via UNLINK/DEL",
+    "# TYPE athyper_cache_listener_keys_deleted_total counter",
+    `athyper_cache_listener_keys_deleted_total{${label}} ${stats.keysDeleted}`,
+    "",
+    "# HELP athyper_cache_listener_errors_total Listener-side errors (purge failures, NOTIFY parse errors, etc.)",
+    "# TYPE athyper_cache_listener_errors_total counter",
+    `athyper_cache_listener_errors_total{${label}} ${stats.errors}`,
+    "",
+    "# HELP athyper_cache_listener_reconnects_total LISTEN reconnect cycles (broken pg.Client)",
+    "# TYPE athyper_cache_listener_reconnects_total counter",
+    `athyper_cache_listener_reconnects_total{${label}} ${stats.reconnects}`,
+  ];
+}
 
 async function checkBullmqQueue(queues: unknown): Promise<void> {
   const queue = (queues as { lifecycleTimers?: { getJobCounts?: (...states: string[]) => Promise<unknown> } })
@@ -106,6 +146,29 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
     outboxWorker.stop();
   });
 
+  // ─── Descriptor cache invalidation listener ────────────────────────────────
+  // Subscribes to `desc_invalidate` and `grant_revoke` pg_notify channels via
+  // a dedicated session-mode pg.Client (PgBouncer transaction mode disallows
+  // LISTEN). Purges matching Redis keys and marks log.descriptor_cache_
+  // invalidation rows processed. A 30s poller drains rows missed during
+  // listener restarts. See server/src/services/cache-invalidation/listener.ts.
+  const cacheListener = createDescriptorCacheListener({
+    redis: iamCache,
+    logDb: {
+      // Pool.query returns QueryResult<QueryResultRow>; the listener only reads
+      // .rows / .rowCount so an unchecked cast is safe here.
+      query: async (text, values) => {
+        const result = await db.getPool().query(text, values as never);
+        return { rows: result.rows as never[], rowCount: result.rowCount };
+      },
+    },
+    logger,
+  });
+  await cacheListener.start();
+  lifecycle.onShutdown(async () => {
+    await cacheListener.stop();
+  });
+
   // ─── BullMQ jobs ──────────────────────────────────────────────────────────
   // start() registers all repeatable schedulers. Worker consumers are created
   // during bootstrap only for MODE=worker.
@@ -126,6 +189,12 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
       redis: () => redis.ping(),
       bullmq: () => checkBullmqQueue(jobs.queues),
     },
+    // Phase 8: expose cache-invalidation listener counters via /metrics.
+    // The listener owns the only mutable counter set in the worker process;
+    // outbox + jobs metrics roll up into the api side's /metrics endpoint
+    // via DB-resident counters. Mode label distinguishes worker-side metrics
+    // when both api and worker scrape into the same Prometheus instance.
+    metricsProvider: () => renderListenerMetrics(cacheListener.stats()),
   });
   lifecycle.onShutdown(
     () => new Promise<void>((resolve) => probe.close(() => resolve())),

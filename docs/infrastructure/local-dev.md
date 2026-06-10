@@ -123,6 +123,12 @@ KC_ADMIN_CLIENT_SECRET=
 
 # Credential encryption (for notification provider creds in DB)
 CREDENTIAL_MASTER_KEY=<random-32-bytes-base64>
+
+# VAPID Web Push — generate once with: pnpm dlx web-push generate-vapid-keys
+# All three must be set together, or all three must be absent.
+VAPID_SUBJECT=mailto:dev@atlasdigitaltech.com
+VAPID_PUBLIC_KEY=<publicKey from output>
+VAPID_PRIVATE_KEY=<privateKey from output>
 ```
 
 **Important:** `RUNTIME_API_URL` must be `http://localhost:4000` when the API runs on the host. Using `https://api.athyper.local` routes through Traefik, which cannot reach the host process, causing 404s on session/stream/relay BFF routes.
@@ -368,6 +374,25 @@ Seed SQL files must be saved as UTF-8 WITHOUT BOM. Check in VS Code: bottom-righ
 
 ### "ClamAV not ready / scan timeout"
 ClamAV takes ~2 minutes on first start (signature DB download). Check `docker compose logs virusscan`. The API retries virus scans with a 3-second backoff for up to 30 seconds.
+
+### "Server config invalid — VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY required"
+
+The API validates VAPID config on startup. If any one of the three `VAPID_*` variables is
+present, all three must be set. Generate them with:
+
+```powershell
+pnpm dlx web-push generate-vapid-keys
+```
+
+Add the output to `server/.env` (or `stack/env/.env` if using the scripts):
+
+```env
+VAPID_SUBJECT=mailto:dev@atlasdigitaltech.com
+VAPID_PUBLIC_KEY=<publicKey>
+VAPID_PRIVATE_KEY=<privateKey>
+```
+
+If you don't need push notifications locally, remove all three `VAPID_*` lines entirely.
 
 ### "Zod validation errors in records API"
 If you see `Expected record<string, ...> but got record(key, value)`, you're hitting the Zod 4 breaking change. Use `z.record(z.string(), valueSchema)` — never `z.record(singleArg)`.

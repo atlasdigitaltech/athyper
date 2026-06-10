@@ -872,6 +872,12 @@ async function runPhases(
       `SET app.current_tenant_id = '00000000-0000-0000-0000-000000000000'`,
     );
 
+    // Bypass control.entity_version EFFECTIVE-mutation lock during provisioning.
+    // The trigger fn_block_effective_version_mutation respects this GUC so the
+    // seed can precompute version_hash, normalize labels, etc. on EFFECTIVE rows.
+    // Runtime sessions never set this GUC; the lock remains enforced for users.
+    await client.query(`SET app.bypass_version_lock = 'true'`);
+
     if (opts.rebuildEntityMetadata) {
       await client.query(`SET app.rebuild_entity_metadata = 'true'`);
       log({ msg: "migrate_rebuild_entity_metadata_enabled" });

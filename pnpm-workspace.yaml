@@ -2,6 +2,7 @@ packages:
   - "apps/*"
   - "!apps/web"
   - "packages/domain/*/*"
+  - "packages/product/*/*"
   - "packages/shared/*"
   - "packages/apps/*"
   - "packages/apps/*/*"

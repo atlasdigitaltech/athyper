@@ -28,6 +28,8 @@
     "@athyper/adapter-db": "workspace:*",
     "@athyper/adapter-memorycache": "workspace:*",
     "@athyper/adapter-objectstorage": "workspace:*",
+    "@athyper/auth-common": "workspace:*",
+    "@athyper/runtime-contracts": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/svc-ai": "workspace:*",
     "@athyper/svc-audit": "workspace:*",

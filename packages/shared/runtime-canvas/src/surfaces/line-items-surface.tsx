@@ -2,108 +2,67 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { WorkPanel } from "@athyper/surface-kit";
-import type { MetaEntitySurface } from "@athyper/runtime-contracts";
+import type {
+  MetaEntityLifecycleStateMask,
+  MetaEntityLineItemsSurface,
+  MetaEntityRuntimeDescriptor,
+  MetaEntitySurface,
+} from "@athyper/runtime-contracts";
+import { LineItemsSurface } from "@athyper/line-item-runtime/surface";
 import type { RuntimeSurfaceRendererProps } from "./types";
 
-type LineItemsSurface = Extract<MetaEntitySurface, { kind: "line_items" }>;
+// Fallback statuses used when the descriptor carries no lifecycle masks (legacy
+// platform entities or freshly-registered tenants). Removed once every
+// approvable document seeds its mask in control.entity_lifecycle_state_mask.
+const LEGACY_EDITABLE_STATUSES = new Set(["draft", "proforma"]);
 
-const OMIT_COLUMNS = new Set([
-  "tenant_id",
-  "is_deleted",
-  "deleted_at",
-  "deleted_by",
-  "metadata",
-  "row_version",
-]);
+function resolveStatusMask(
+  contract: MetaEntityRuntimeDescriptor,
+  status: string | null,
+): MetaEntityLifecycleStateMask | null {
+  if (!status) return null;
+  return (contract.lifecycleStateMasks ?? []).find((mask) => mask.recordStatus === status) ?? null;
+}
 
 export function LineItemsSurfaceRenderer({
   surface,
   record,
   recordId,
+  contract,
 }: RuntimeSurfaceRendererProps) {
   if (surface.kind !== "line_items") return null;
-  const lineItemsSurface = surface as LineItemsSurface;
-  const { entityCode, parentField, parentIdField, affectsTotals, canCreate, canDelete, canEdit } = lineItemsSurface;
+  const lineItemsSurface = surface as MetaEntityLineItemsSurface;
 
-  const linkField = parentIdField ?? parentField ?? deriveLinkField(entityCode);
-  const queryKey = ["line-items", entityCode, linkField, recordId] as const;
-  const queryClient = useQueryClient();
-  const deleteMutation = useMutation({
-    mutationFn: (lineItemId: string) => deleteRelatedRecord(entityCode, lineItemId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey });
-    },
-  });
+  const currencyCode = typeof record?.["currency_code"] === "string" ? record["currency_code"] : undefined;
+  const companyCodeId = typeof record?.["company_code_id"] === "string" ? record["company_code_id"] : undefined;
 
-  const { data, isLoading, isError } = useQuery<RelatedRecord[]>({
-    queryKey,
-    queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ [linkField]: recordId });
-      const res = await fetch(
-        `/api/runtime-records/${encodeURIComponent(entityCode)}?${params}`,
-        { signal, cache: "no-store" },
-      );
-      if (!res.ok) throw new Error(`Failed to load line items (${res.status})`);
-      const body = await res.json() as unknown;
-      const records = isApiListResponse(body) ? body.records : [];
-      return records.map(flattenRecord);
-    },
-    staleTime: 30_000,
-    enabled: !!recordId,
-  });
-
-  const columns = deriveColumns(data);
-
-  const totals = affectsTotals && data ? computeTotals(data, columns) : null;
-  const createHref = canCreate ? buildCreateHref(entityCode, linkField, recordId) : null;
+  // Gate editing on document status. Prefer the descriptor's lifecycle masks
+  // (control.entity_lifecycle_state_mask) when present; fall back to the
+  // legacy draft/proforma allowlist for entities that have not yet been
+  // migrated to the mask table.
+  const docStatus = typeof record?.["status"] === "string" ? record["status"] : null;
+  const statusMask = resolveStatusMask(contract, docStatus);
+  const statusAllowsEdit = statusMask
+    ? statusMask.canEdit
+    : docStatus === null || LEGACY_EDITABLE_STATUSES.has(docStatus);
+  const editMode = lineItemsSurface.canEdit && statusAllowsEdit;
 
   return (
-    <WorkPanel title={lineItemsSurface.label ?? "Line Items"}>
-      <div className="flex flex-col gap-3">
-        {createHref || deleteMutation.error ? (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {createHref ? (
-              <a
-                href={createHref}
-                className="inline-flex h-8 items-center rounded-md border bg-foreground px-3 text-xs font-medium text-background hover:opacity-90"
-              >
-                New line
-              </a>
-            ) : <span />}
-            {deleteMutation.error ? (
-              <p role="alert" className="text-xs font-medium text-destructive">
-                {deleteMutation.error instanceof Error ? deleteMutation.error.message : "Unable to delete line item."}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {isLoading ? (
-          <LoadingState />
-        ) : isError ? (
-          <ErrorState />
-        ) : !data || data.length === 0 ? (
-          <EmptyState label={lineItemsSurface.label ?? "line items"} />
-        ) : (
-          <RelatedRecordsTable
-            columns={columns}
-            rows={data}
-            totals={totals}
-            actions={{
-              canEdit,
-              canDelete,
-              entityCode,
-              deleteDisabled: deleteMutation.isPending,
-              onDelete: (row) => {
-                const id = readRowId(row);
-                if (!id || !window.confirm("Delete this line item?")) return;
-                deleteMutation.mutate(id);
-              },
-            }}
-          />
-        )}
-      </div>
-    </WorkPanel>
+    // `entity` (CompiledEntity) isn't available at this layer — `contract`
+    // is the runtime descriptor (camelCase MetaEntityRuntimeDescriptor), not
+    // the snake_case CompiledEntity the downstream column-catalog resolver
+    // expects. Omitting falls back to the entity-code heuristic in
+    // LinesGrid.resolveColumnCatalog, which is the correct degradation
+    // until the descriptor → CompiledEntity adapter lands.
+    <LineItemsSurface
+      surface={lineItemsSurface}
+      entityCode={contract.entityCode}
+      recordId={recordId}
+      currencyCode={currencyCode}
+      companyCodeId={companyCodeId}
+      record={record}
+      editMode={editMode}
+    />
   );
 }
 
@@ -199,6 +158,15 @@ function ChildRecordsTable({
 export { ChildRecordsTable as ChildRecordsSurfaceRenderer };
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
+
+const OMIT_COLUMNS = new Set([
+  "tenant_id",
+  "is_deleted",
+  "deleted_at",
+  "deleted_by",
+  "metadata",
+  "row_version",
+]);
 
 type RelatedRecord = Record<string, unknown>;
 

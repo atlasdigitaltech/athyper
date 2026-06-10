@@ -76,6 +76,24 @@ export interface V4Session {
   csrfRotatedAt?: number;
   createdAt: number;
   lastSeenAt: number;
+  /**
+   * Unix seconds of the last successful AUTHORIZED-role check against the
+   * cached access token. Populated on login, on refresh, and on each periodic
+   * revalidation tick. Optional for backward compatibility with sessions
+   * created before this field existed — those are treated as never-checked
+   * and force an immediate revalidation on the next request.
+   */
+  lastRoleCheckAt?: number;
+  /**
+   * Pending Keycloak required actions on the user (VERIFY_EMAIL,
+   * UPDATE_PASSWORD, CONFIGURE_TOTP, ...). Captured from the access token at
+   * login and overwritten on every refresh / periodic check. The platform-
+   * context gate consults this list against AUTH_REQUIRED_ACTIONS_MATRIX to
+   * block sensitive routes; here on the BFF, validatePlaneServerSession can
+   * surface a structured REQUIRED_ACTION_PENDING failure so cookie-based
+   * traffic is gated symmetrically with bearer-API traffic.
+   */
+  requiredActions?: readonly string[];
   mfaRequired: boolean;
   mfaVerified: boolean;
   mfaVerifiedAt?: number;
@@ -102,12 +120,93 @@ export interface PublicSession {
 
 export type ServerPlaneSessionFailureReason =
   | "MFA_REQUIRED"
+  | "REQUIRED_ACTION_PENDING"
   | "SESSION_BINDING_MISMATCH"
   | "SESSION_IDLE_EXPIRED"
   | "SESSION_NOT_FOUND"
   | "SESSION_REFRESH_EXPIRED"
   | "SESSION_REFRESH_FAILED"
+  | "SESSION_REFRESH_REVOKED"
+  | "SESSION_ROLE_REVOKED"
   | "SESSION_STORE_UNAVAILABLE";
+
+// Re-export Phase B pipeline so callers (BFF route handlers) can opt into
+// per-route required-actions enforcement without importing from a sub-path.
+export {
+  enforceRequiredActions as enforceBffRequiredActions,
+  enforceSessionAuthorizedRole,
+  enforceSessionPipeline,
+  loadBffRequiredActionMatrix,
+  type EnforceSessionPipelineInput,
+  type EnforceSessionPipelineOptions,
+  type EnforceSessionPipelineResult,
+  type SessionPipelineError,
+  type SessionPipelineErrorCode,
+} from "./auth-pipeline";
+
+// Phase A — auth failure presentation contract (pure data, no UI dep).
+// UI components in @athyper/identity-gate consume this; apps consume it via
+// the fetch interceptor.
+export {
+  authFailurePresentation,
+  authSeverityToToastIntent,
+  extractAuthFailureCode,
+  isAuthFailureCode,
+  listAuthFailureCodes,
+  resolveAuthFailureHref,
+  type AuthFailureAction,
+  type AuthFailureCode,
+  type AuthFailurePresentation,
+  type AuthFailureSeverity,
+} from "./error-codes";
+
+// Phase E — re-export the token-claims schema + parser so BFF routes can
+// reuse the same shape contract enforced by the server runtime.
+export {
+  TokenClaimsSchema,
+  parseTokenClaims,
+  parseTokenClaimsOrThrow,
+  requiredActionsFromTokenClaims,
+  type TokenClaims,
+  type TokenClaimsParseError,
+  type TokenClaimsParseResult,
+} from "@athyper/runtime-contracts";
+
+/**
+ * How often we re-verify the AUTHORIZED role on the cached access token while
+ * the session is still inside its refresh window. Defaults to 10 minutes;
+ * tunable via AUTH_ROLE_RECHECK_INTERVAL_S. Setting to 0 disables periodic
+ * revalidation entirely (refresh-time check still runs).
+ */
+import { enforceSessionPipeline } from "./auth-pipeline";
+
+function getRoleRecheckIntervalSeconds(): number {
+  const raw = Number(process.env.AUTH_ROLE_RECHECK_INTERVAL_S);
+  if (!Number.isFinite(raw) || raw < 0) return 600;
+  return Math.floor(raw);
+}
+
+/**
+ * Extract the KC required_actions claim from a decoded access token. Returns
+ * an empty array when the claim is absent or shaped unexpectedly. Used at
+ * login, refresh, and periodic revalidation to keep V4Session.requiredActions
+ * in sync with KC's view of pending user actions.
+ */
+function extractRequiredActions(claims: Record<string, unknown>): readonly string[] {
+  const raw = claims["required_actions"] ?? claims["requiredActions"];
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((v): v is string => typeof v === "string");
+}
+
+/**
+ * Returns true when the BFF should block the session because the user has at
+ * least one pending KC required action. AUTH_BFF_REQUIRED_ACTIONS_BLOCK
+ * defaults to `on` so that staging/production fail closed by default; local
+ * dev can flip to `off` to avoid friction during admin-issued action testing.
+ */
+function shouldBlockOnRequiredActions(): boolean {
+  return (process.env.AUTH_BFF_REQUIRED_ACTIONS_BLOCK ?? "on").toLowerCase() === "on";
+}
 
 export type ServerPlaneSessionValidation =
   | { ok: true; sid: string; session: V4Session; publicSession: PublicSession; sessionPolicy: SessionPolicyDefaults }
@@ -486,12 +585,15 @@ type AuthErrorCode =
   | "MISSING_CONTEXT"
   | "NO_ACCESS_CONTEXT"
   | "NO_PLATFORM_ACCESS"
+  | "REQUIRED_ACTION_PENDING"
   | "SESSION_BINDING_MISMATCH"
   | "SESSION_EXPIRED"
   | "SESSION_IDLE_EXPIRED"
   | "SESSION_NOT_FOUND"
   | "SESSION_REFRESH_FAILED"
   | "SESSION_REFRESH_EXPIRED"
+  | "SESSION_REFRESH_REVOKED"
+  | "SESSION_ROLE_REVOKED"
   | "SESSION_STORE_UNAVAILABLE";
 
 const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
@@ -510,12 +612,15 @@ const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   MISSING_CONTEXT: "Choose a valid access context before continuing.",
   NO_ACCESS_CONTEXT: "No active access context was found for this app.",
   NO_PLATFORM_ACCESS: "Your account is not authorized for this app.",
+  REQUIRED_ACTION_PENDING: "Complete the pending account action before continuing.",
   SESSION_BINDING_MISMATCH: "For your security, this session was closed because the browser context changed.",
   SESSION_EXPIRED: "Your session expired. Please sign in again.",
   SESSION_IDLE_EXPIRED: "Your session was closed after being idle. Please sign in again.",
   SESSION_NOT_FOUND: "No active session was found. Please sign in again.",
   SESSION_REFRESH_FAILED: "We could not refresh your session. Please try again shortly.",
   SESSION_REFRESH_EXPIRED: "Your sign-in expired. Please sign in again.",
+  SESSION_REFRESH_REVOKED: "Your access was revoked. Please sign in again.",
+  SESSION_ROLE_REVOKED: "Your access to this app was revoked. Please sign in again.",
   SESSION_STORE_UNAVAILABLE: "Session services are temporarily unavailable.",
 };
 
@@ -734,6 +839,93 @@ export async function validatePlaneServerSession(
     return { ok: false, reason: "MFA_REQUIRED", requestId, status: 403 };
   }
 
+  // F3 — Periodic plane-role revalidation. Login enforces hasAccessRole once;
+  // without this check a revoked AUTHORIZED role keeps a long-lived session
+  // alive until refresh. We re-decode the cached access token (no network
+  // call) and re-check on a configurable cadence. Sessions older than this
+  // implementation (no lastRoleCheckAt) are treated as never-checked.
+  const roleRecheckIntervalSeconds = getRoleRecheckIntervalSeconds();
+  const lastRoleCheckAt = session.lastRoleCheckAt ?? 0;
+  const roleCheckDue =
+    roleRecheckIntervalSeconds > 0
+    && session.accessExpiresAt > now
+    && (lastRoleCheckAt === 0 || now - lastRoleCheckAt >= roleRecheckIntervalSeconds);
+  if (roleCheckDue) {
+    const planeRuntime = resolveKeycloakRuntime(plane, session.realmKey, process.env);
+    const cachedClaims = decodeJwtPayload(session.accessToken);
+    if (!hasAccessRole(cachedClaims.resource_access, cachedClaims.groups, planeRuntime.clientId)) {
+      await destroySession(redis, session.sessionNamespace, effectiveSid, session);
+      await recordAuthAudit({
+        eventType: "session_role_revoked",
+        outcome: "blocked",
+        planeKey: plane,
+        realmKey: session.realmKey,
+        sessionNamespace: session.sessionNamespace,
+        requestId,
+        userId: session.userId,
+        username: session.username,
+        sidHash: hashValue(effectiveSid),
+        activeOrg: session.activeOrg,
+        activeWorkbench: session.activeWorkbench,
+        reasonCode: "SESSION_ROLE_REVOKED",
+        detail: { trigger: "periodic", clientId: planeRuntime.clientId, lastRoleCheckAt },
+      });
+      return { ok: false, reason: "SESSION_ROLE_REVOKED", requestId, status: 401 };
+    }
+    // Refresh requiredActions from the cached token at the same cadence as
+    // the role check. KC updates that mutate user.required_actions show up in
+    // the next access-token issue, so the periodic decode is the cheapest
+    // way to detect them without forcing a full refresh round-trip.
+    session = {
+      ...session,
+      lastRoleCheckAt: now,
+      requiredActions: extractRequiredActions(cachedClaims),
+    };
+    await saveSessionPreservingTtl(redis, session, session.sid);
+  }
+
+  // F6 — BFF required-actions gate. Phase B refactor: the matching algorithm
+  // now lives in auth-pipeline.ts so the same logic is exercised by route
+  // handlers that want per-route matrix enforcement. validatePlaneServerSession
+  // doesn't know the downstream route, so it calls the pipeline without
+  // `route` — semantically "any pending action blocks" — which matches the
+  // pre-refactor behaviour. AUTH_BFF_REQUIRED_ACTIONS_BLOCK=off bypasses.
+  const pendingActions = session.requiredActions ?? [];
+  if (shouldBlockOnRequiredActions()) {
+    const pipelineResult = enforceSessionPipeline(
+      { requiredActions: pendingActions },
+      { enforceAuthorized: false, enforceRequiredActions: true },
+    );
+    if (!pipelineResult.ok && pipelineResult.error) {
+      await recordAuthAudit({
+        eventType: "session_required_action_blocked",
+        outcome: "blocked",
+        planeKey: plane,
+        realmKey: session.realmKey,
+        sessionNamespace: session.sessionNamespace,
+        requestId,
+        userId: session.userId,
+        username: session.username,
+        sidHash: hashValue(effectiveSid),
+        activeOrg: session.activeOrg,
+        activeWorkbench: session.activeWorkbench,
+        reasonCode: pipelineResult.error.code,
+        detail: {
+          actions: pendingActions,
+          ...(pipelineResult.error.blockingAction
+            ? { blockingAction: pipelineResult.error.blockingAction }
+            : {}),
+        },
+      });
+      return {
+        ok: false,
+        reason: pipelineResult.error.code,
+        requestId,
+        status: pipelineResult.error.status,
+      };
+    }
+  }
+
   const refresh = await refreshServerSessionForValidation({
     plane,
     redis,
@@ -830,6 +1022,33 @@ async function refreshServerSessionForValidation(args: {
       clientSecret: resolveKeycloakClientSecret(plane, session.realmKey, runtime.clientId, process.env),
       refreshToken: session.refreshToken,
     });
+
+    // F3 — Re-check AUTHORIZED on the refreshed access token. KC may have
+    // revoked the plane role since login or the user's required actions may
+    // have changed; the prior implementation trusted the refresh-token
+    // exchange and never re-inspected claims. Use the new claims to decide
+    // whether the session should continue.
+    const refreshedClaims = decodeJwtPayload(tokens.access_token);
+    if (!hasAccessRole(refreshedClaims.resource_access, refreshedClaims.groups, runtime.clientId)) {
+      await destroySession(redis, session.sessionNamespace, sid, session);
+      await recordAuthAudit({
+        eventType: "session_role_revoked",
+        outcome: "blocked",
+        planeKey: plane,
+        realmKey: session.realmKey,
+        sessionNamespace: session.sessionNamespace,
+        requestId,
+        userId: session.userId,
+        username: session.username,
+        sidHash: hashValue(sid),
+        activeOrg: session.activeOrg,
+        activeWorkbench: session.activeWorkbench,
+        reasonCode: "SESSION_REFRESH_REVOKED",
+        detail: { trigger: "refresh", clientId: runtime.clientId },
+      });
+      return { status: "expired" };
+    }
+
     const updated: V4Session = {
       ...session,
       accessToken: tokens.access_token,
@@ -838,6 +1057,11 @@ async function refreshServerSessionForValidation(args: {
       refreshExpiresAt: tokens.refresh_expires_in ? now + tokens.refresh_expires_in : session.refreshExpiresAt,
       idToken: tokens.id_token ?? session.idToken,
       lastSeenAt: now,
+      lastRoleCheckAt: now,
+      // Overwrite — never merge with the pre-refresh list. KC's refreshed
+      // claims are authoritative; any actions added or cleared in KC since
+      // the previous token must propagate through immediately.
+      requiredActions: extractRequiredActions(refreshedClaims),
     };
     await saveSessionPreservingTtl(redis, updated, sid);
     await recordAuthAudit({
@@ -1623,6 +1847,8 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
       csrfToken,
       createdAt: now,
       lastSeenAt: now,
+      lastRoleCheckAt: now,
+      requiredActions: extractRequiredActions(claims),
       mfaRequired,
       mfaVerified: !mfaRequired,
       mfaVerifiedAt: keycloakMfaSatisfied ? now : undefined,
@@ -1931,6 +2157,34 @@ export async function handleRefresh(plane: PlaneKey, request: NextRequest): Prom
       clientSecret: resolveKeycloakClientSecret(plane, session.realmKey, runtime.clientId, process.env),
       refreshToken: session.refreshToken,
     });
+
+    // F3 — Re-check AUTHORIZED on the refreshed access token (browser-driven
+    // refresh path). Mirrors the server-side check in
+    // refreshServerSessionForValidation so revoked roles cannot be paved over
+    // by a successful refresh-token exchange.
+    const refreshedClaims = decodeJwtPayload(tokens.access_token);
+    if (!hasAccessRole(refreshedClaims.resource_access, refreshedClaims.groups, runtime.clientId)) {
+      await destroySession(redis, session.sessionNamespace, sid, session);
+      await recordAuthAudit({
+        eventType: "session_role_revoked",
+        outcome: "blocked",
+        planeKey: plane,
+        realmKey: session.realmKey,
+        sessionNamespace: session.sessionNamespace,
+        requestId,
+        userId: session.userId,
+        username: session.username,
+        sidHash: hashValue(sid),
+        activeOrg: session.activeOrg,
+        activeWorkbench: session.activeWorkbench,
+        reasonCode: "SESSION_REFRESH_REVOKED",
+        detail: { trigger: "client-refresh", clientId: runtime.clientId },
+      });
+      const response = jsonAuthError("SESSION_REFRESH_EXPIRED", requestId, 401, { redirect: "/api/auth/login" });
+      clearPlaneCookies(response, plane);
+      return response;
+    }
+
     const newSid = generateSid();
     const newCsrfToken = randomUUID();
     const updated: V4Session = {
@@ -1945,6 +2199,8 @@ export async function handleRefresh(plane: PlaneKey, request: NextRequest): Prom
       previousCsrfToken: session.csrfToken,
       csrfRotatedAt: now,
       lastSeenAt: now,
+      lastRoleCheckAt: now,
+      requiredActions: extractRequiredActions(refreshedClaims),
     };
     const ttl = await redis.ttl(sessKey(session.sessionNamespace, sid));
     const sessionTtl = ttl > 0 ? ttl : sessionPolicy.absoluteTtlSeconds;
@@ -3915,7 +4171,7 @@ function setMfaPendingCookie(response: NextResponse, plane: PlaneKey, maxAge: nu
   const config = getPlaneConfig(plane);
   const env = process.env.ENVIRONMENT ?? "local";
   response.cookies.set(effectiveCookieName(config.mfaPendingCookieName), "1", {
-    httpOnly: false,
+    httpOnly: true,
     secure: env !== "local",
     sameSite: "lax",
     path: "/",
@@ -4003,6 +4259,16 @@ async function handleBackchannelLogout(plane: PlaneKey, request: NextRequest): P
 
   if (!iss || typeof iss !== "string") return new Response("missing iss", { status: 400 });
 
+  // Reject issuers not originating from a known KC base URL. Without this an
+  // attacker can supply a self-controlled iss, serve arbitrary JWKS keys, and
+  // force-logout any session (session-invalidation DoS). Both the native
+  // athyper realm and the platform-control realm share the same KC host, so a
+  // single KEYCLOAK_BASE_URL prefix covers all expected issuers.
+  const kcBase = (process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local").replace(/\/+$/, "");
+  if (!iss.startsWith(`${kcBase}/realms/`)) {
+    return new Response("untrusted issuer", { status: 400 });
+  }
+
   // Fetch JWKS with Redis cache (1 hour TTL).
   const redis = await getSessionRedis().catch(() => null);
   if (!redis) return new Response("service unavailable", { status: 503 });
@@ -4044,10 +4310,16 @@ async function handleBackchannelLogout(plane: PlaneKey, request: NextRequest): P
     return new Response("signature verification failed", { status: 400 });
   }
 
-  // Validate audience against the plane's expected client ID.
-  const expectedClientId = resolveKeycloakRuntime(plane, "athyper", process.env).clientId;
+  // Validate audience against both the native plane client and the
+  // platform-control (support) client. Platform staff authenticate via the
+  // platform-control realm whose logout tokens carry aud = "athyper-admin",
+  // not the per-plane client ID (e.g. "admin-web"). Accepting only the native
+  // client ID would cause audience mismatch for every platform-control logout,
+  // leaving support staff Redis sessions alive after KC session termination.
+  const nativeClientId  = resolveKeycloakRuntime(plane, "athyper", process.env).clientId;
+  const supportClientId = resolveKeycloakRuntime(plane, "platform-control", process.env).clientId;
   const audList = Array.isArray(aud) ? aud : [aud].filter(Boolean);
-  if (!audList.includes(expectedClientId)) {
+  if (!audList.includes(nativeClientId) && !audList.includes(supportClientId)) {
     return new Response("audience mismatch", { status: 400 });
   }
 

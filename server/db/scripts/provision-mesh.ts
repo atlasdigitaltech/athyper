@@ -180,6 +180,7 @@ function discoverMeshSqlFiles(): MeshSqlFile[] {
     "ddl/mesh/01c_content_collaboration_tables.sql",
     "ddl/mesh/01d_utility_tables.sql",
     "ddl/mesh/01e_commerce_tables.sql",
+    "ddl/mesh/01z_account_grant_fingerprint.sql",
     "ddl/mesh_log/01_tables.sql",
     "ddl/mesh_control/01_tables.sql",
     "ddl/mesh/03_constraints.sql",

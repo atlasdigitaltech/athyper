@@ -18,7 +18,7 @@ DROP POLICY IF EXISTS admin_read     ON snapshot.template_version;
 DROP POLICY IF EXISTS admin_write    ON snapshot.template_version;
 -- Tenants may only read their own versions
 CREATE POLICY tenant_read ON snapshot.template_version
-    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 -- Admin full access (publishing pipeline runs as athyperadmin)
 CREATE POLICY admin_read  ON snapshot.template_version FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write ON snapshot.template_version FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

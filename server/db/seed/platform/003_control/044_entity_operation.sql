@@ -7293,6 +7293,34 @@ JOIN (VALUES
 ) AS v(code, name, cat, st, rl, so) ON pc.code = v.cat
 ON CONFLICT (code) DO NOTHING;
 
+-- Grant the new permissions above to the relevant personas.
+-- These permissions were added after 018_persona_permission.sql ran, so they must
+-- be granted here, co-located with the INSERT above.
+INSERT INTO shared.persona_permission (persona_id, permission_id, is_granted, created_by)
+SELECT p.id, pm.id, true, '00000000-0000-0000-0000-000000000000'::uuid
+FROM shared.persona p
+JOIN (VALUES
+    ('requester', 'hold'),
+    ('requester', 'release_hold'),
+    ('agent',     'hold'),
+    ('agent',     'release_hold'),
+    ('agent',     'view_match'),
+    ('agent',     'ap.run_matching'),
+    ('agent',     'ap.promote_proforma'),
+    ('manager',   'hold'),
+    ('manager',   'release_hold'),
+    ('manager',   'view_match'),
+    ('manager',   'ap.run_matching'),
+    ('manager',   'ap.promote_proforma'),
+    ('owner',     'hold'),
+    ('owner',     'release_hold'),
+    ('owner',     'view_match'),
+    ('owner',     'ap.run_matching'),
+    ('owner',     'ap.promote_proforma')
+) AS v(pcode, pmcode) ON p.code = v.pcode
+JOIN shared.permission pm ON pm.code = v.pmcode
+ON CONFLICT ON CONSTRAINT persona_permission_uq DO NOTHING;
+
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Purchase Invoice operations
@@ -8051,6 +8079,46 @@ VALUES
     ('reactivate_supplier', 'Reactivate Supplier', v_wfl, 'record', 'medium', false, 204, v_su),
     ('archive_supplier',    'Archive Supplier',    v_wfl, 'record', 'high',   false, 205, v_su)
 ON CONFLICT (code) DO NOTHING;
+
+-- Grant renamed document lifecycle permissions to the relevant personas.
+-- 018_persona_permission.sql granted cancel/deny/reverse (old codes); the renamed
+-- codes get new permission UUIDs so the old grants don't cover them.
+INSERT INTO shared.persona_permission (persona_id, permission_id, is_granted, created_by)
+SELECT p.id, pm.id, true, v_su
+FROM shared.persona p
+JOIN (VALUES
+    -- cancel_document: requester/agent/manager/owner can cancel documents
+    ('requester', 'cancel_document'),
+    ('agent',     'cancel_document'),
+    ('manager',   'cancel_document'),
+    ('owner',     'cancel_document'),
+    -- reject: reporter/agent/manager/owner can reject
+    ('reporter',  'reject'),
+    ('agent',     'reject'),
+    ('manager',   'reject'),
+    ('owner',     'reject'),
+    -- reverse_document: manager/owner only (same as legacy reverse)
+    ('manager',   'reverse_document'),
+    ('owner',     'reverse_document'),
+    -- void_document: manager/owner only
+    ('manager',   'void_document'),
+    ('owner',     'void_document'),
+    -- supplier lifecycle ops: agent/manager/owner
+    ('agent',     'deactivate_supplier'),
+    ('agent',     'reactivate_supplier'),
+    ('manager',   'block_supplier'),
+    ('manager',   'unblock_supplier'),
+    ('manager',   'deactivate_supplier'),
+    ('manager',   'reactivate_supplier'),
+    ('manager',   'archive_supplier'),
+    ('owner',     'block_supplier'),
+    ('owner',     'unblock_supplier'),
+    ('owner',     'deactivate_supplier'),
+    ('owner',     'reactivate_supplier'),
+    ('owner',     'archive_supplier')
+) AS v(pcode, pmcode) ON p.code = v.pcode
+JOIN shared.permission pm ON pm.code = v.pmcode
+ON CONFLICT ON CONSTRAINT persona_permission_uq DO NOTHING;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- 2a. Edit-mode: rename update → edit across all platform entity operations

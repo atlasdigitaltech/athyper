@@ -11,6 +11,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./bootstrap": {
+      "types": "./dist/bootstrap.d.ts",
+      "import": "./dist/bootstrap.js",
+      "default": "./dist/bootstrap.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -18,8 +23,8 @@
   ],
   "scripts": {
     "clean": "rimraf dist",
-    "build": "tsup index.ts --format esm --dts --outDir dist --external express --external kysely",
-    "dev": "tsup index.ts --format esm --dts --outDir dist --external express --external kysely --watch",
+    "build": "tsup index.ts bootstrap.ts --format esm --dts --outDir dist --external express --external kysely",
+    "dev": "tsup index.ts bootstrap.ts --format esm --dts --outDir dist --external express --external kysely --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest",
     "lint": "eslint ."

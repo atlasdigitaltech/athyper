@@ -1,7 +1,28 @@
 "use client";
 
+import { authFailurePresentation, isAuthFailureCode } from "@athyper/auth-bff/error-codes";
+import { AuthFailurePage } from "@athyper/identity-gate";
+
 export default function ErrorPage({ error, reset }: { error: Error; reset: () => void }) {
   const digest = "digest" in error && typeof error.digest === "string" ? error.digest : null;
+
+  const codeCandidate =
+    typeof (error as unknown as { code?: unknown }).code === "string"
+      ? ((error as unknown as { code: string }).code)
+      : error.message;
+  if (isAuthFailureCode(codeCandidate)) {
+    const presentation = authFailurePresentation(codeCandidate);
+    if (presentation && presentation.severity === "fatal") {
+      return (
+        <AuthFailurePage
+          code={codeCandidate}
+          planeRoot=""
+          {...(digest ? { requestId: digest } : {})}
+        />
+      );
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background p-6 text-foreground">
       <div className="rounded-lg border bg-card p-4">

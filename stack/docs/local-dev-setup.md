@@ -292,6 +292,26 @@ S3_SECRET_KEY=athyperadmin
 IAM_ADMIN_PASSWORD=athyperadmin
 ```
 
+**VAPID Web Push keys** — required for the API to start. Generate once and add to `.env`:
+
+```cmd
+pnpm dlx web-push generate-vapid-keys
+```
+
+Copy the three output values into `stack\env\.env`:
+
+```env
+VAPID_SUBJECT=mailto:dev@atlasdigitaltech.com
+VAPID_PUBLIC_KEY=<publicKey from output>
+VAPID_PRIVATE_KEY=<privateKey from output>
+```
+
+> **All three values must be present together.** The config validator only activates the
+> VAPID check when any one of the three is set — setting `VAPID_SUBJECT` alone (or any
+> partial combination) causes an immediate startup error:
+> `Server config invalid — VAPID_PUBLIC_KEY is required when VAPID Web Push is configured`.
+> If you do not need push notifications locally, omit all three. Never leave a partial set.
+
 ---
 
 ### Step 3 — Validate Environment
@@ -1211,6 +1231,34 @@ net stop postgresql-x64-16
 :: ports: ["15432:5432"]  -- then use 127.0.0.1:15432 for direct connections
 ```
 
+### "Server config invalid — VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY required"
+
+```text
+Error: Server config invalid — check env vars:
+  push.vapidPublicKey: VAPID_PUBLIC_KEY is required when VAPID Web Push is configured
+  push.vapidPrivateKey: VAPID_PRIVATE_KEY is required when VAPID Web Push is configured
+```
+
+The config validator triggers as soon as any one of the three VAPID variables is present.
+The most common cause on a fresh clone is `VAPID_SUBJECT` being set in `.env` without the
+matching keys — or the keys being missing entirely after copying `.env.example`.
+
+Fix — generate the keys and add all three to `stack\env\.env`:
+
+```cmd
+pnpm dlx web-push generate-vapid-keys
+```
+
+```env
+VAPID_SUBJECT=mailto:dev@atlasdigitaltech.com
+VAPID_PUBLIC_KEY=<publicKey from output>
+VAPID_PRIVATE_KEY=<privateKey from output>
+```
+
+If you don't need Web Push locally, comment out or remove all three `VAPID_*` lines.
+
+---
+
 ### `validate-env.bat` warns about `publicBaseUrl` mismatch
 
 Open the kernel config JSON at the path in `ATHYPER_KERNEL_CONFIG_PATH` and verify the
@@ -1259,6 +1307,9 @@ Key variables in `stack/env/.env` for local development. Full list with descript
 | `STACK_PROFILE` | `core` | Default profile used when `up.bat` is called without arguments |
 | `MEMORYCACHE_PASSWORD` | `athyperadmin` | Redis password — `api-up.bat` injects this into the host process |
 | `S3_ACCESS_KEY` | `athyperadmin` | MinIO root access key |
+| `VAPID_SUBJECT` | `mailto:dev@...` | VAPID sender identity — generate with `pnpm dlx web-push generate-vapid-keys` |
+| `VAPID_PUBLIC_KEY` | *(generated)* | VAPID public key — must be set together with `VAPID_SUBJECT` and `VAPID_PRIVATE_KEY` |
+| `VAPID_PRIVATE_KEY` | *(generated)* | VAPID private key — all three VAPID vars must be present or all absent |
 
 ---
 

@@ -102,14 +102,15 @@ BEGIN
         tenant_id, principal_id, persona_key, all_legal_entities, status, created_by
     ) VALUES
         (v_tid, 'ff001000-0000-0000-0000-000000000001', 'owner', true, 'active', v_su),
-        (v_tid, 'ff001000-0000-0000-0000-000000000002', 'admin', true, 'active', v_su)
+        (v_tid, 'ff001000-0000-0000-0000-000000000002', 'admin', true, 'active', v_su),
+        (v_tid, 'ff001000-0000-0000-0000-000000000003', 'admin', true, 'active', v_su)
     ON CONFLICT (tenant_id, principal_id, persona_key) DO UPDATE SET
         all_legal_entities = EXCLUDED.all_legal_entities,
         status             = EXCLUDED.status,
         updated_at         = now(),
         updated_by         = v_su;
 
-    RAISE NOTICE '[000_platform_staff] Stage C: 3 admin realm identity bindings seeded';
+    RAISE NOTICE '[000_platform_staff] Stage C: 3 admin realm identity bindings + 3 tenant_admin_grants seeded';
 
     -- ── Stage D: Platform staff auth groups ───────────────────────────────────
     -- Dedicated groups separate from tenant OWNER/ADMIN groups so platform

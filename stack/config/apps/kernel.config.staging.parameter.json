@@ -24,7 +24,10 @@
 
   "redis": {
     "$comment": "LOCKED — stripped at load time. Set REDIS_URL via staging .env or SUPERSTAR env vars.",
-    "url": "LOCKED_USE_ENV_VAR"
+    "url": "LOCKED_USE_ENV_VAR",
+    "connectTimeoutMs": "LOCKED_USE_ENV_VAR: REDIS_CONNECT_TIMEOUT_MS (default 5000)",
+    "maxRetries": "LOCKED_USE_ENV_VAR: REDIS_MAX_RETRIES (default 2)",
+    "errorLogCooldownMs": "LOCKED_USE_ENV_VAR: REDIS_ERROR_LOG_COOLDOWN_MS (default 10000)"
   },
 
   "s3": {
@@ -32,9 +35,9 @@
     "endpoint": "LOCKED_USE_ENV_VAR",
     "accessKey": "LOCKED_USE_ENV_VAR",
     "secretKey": "LOCKED_USE_ENV_VAR",
-    "region": "us-east-1",
-    "bucket": "athyper-staging",
-    "useSSL": true
+    "region": "LOCKED_USE_ENV_VAR: S3_REGION (staging: us-east-1)",
+    "bucket": "LOCKED_USE_ENV_VAR: S3_BUCKET (staging: athyper-staging)",
+    "useSSL": "LOCKED_USE_ENV_VAR: S3_USE_SSL (staging: true)"
   },
 
   "iam": {
@@ -52,6 +55,8 @@
           "allowedAzp": [
             "neon-web",
             "neon-svc-bff",
+            "admin-web",
+            "mesh-web",
             "athyper-svc-runtime-worker"
           ],
           "clientSecretRef": "IAM_ATHYPER_CLIENT_SECRET"

@@ -82,6 +82,18 @@ const DANGER_LEAVES = new Set(["cancel", "delete", "delete_draft", "deny", "reje
 const SUCCESS_LEAVES = new Set(["activate", "post", "publish", "reopen", "restore", "submit"]);
 const RECORD_CATEGORY_CODES = new Set(["entity", "utility", "bulk", "delegation"]);
 
+// Phase 4 helper: project an EffectivePermissionContext (Phase 2 DTO) into
+// the per-code decision map this route already uses. Anything not in `allowed`
+// and not in `denied` is treated as a missing grant (not_found).
+function decisionsFromContext(
+  ctx: { allowed: ReadonlySet<string>; denied: ReadonlySet<string> },
+): Record<string, { decision: string } | undefined> {
+  const out: Record<string, { decision: string }> = {};
+  for (const code of ctx.allowed) out[code] = { decision: "allow" };
+  for (const code of ctx.denied)  out[code] = { decision: "deny"  };
+  return out;
+}
+
 export function createEntityOperationsRoute(router: Router, deps: EntityOperationsRoutesDeps): Router {
   const { db, auth, logger, checkPermissionBatch } = deps;
 
@@ -99,25 +111,50 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
       }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      if (!sub || !checkPermissionBatch) {
+      const upstreamCtxAvailable = Boolean(
+        (res.locals as Record<string, unknown>)["effectivePermissionContext"],
+      );
+      // When the Phase 2 middleware has run, we don't need a sub or the
+      // legacy checkPermissionBatch — the context already encodes the
+      // resolved permission matrix. Fall back to inline resolution otherwise.
+      if (!upstreamCtxAvailable && (!sub || !checkPermissionBatch)) {
         res.json([]);
         return;
       }
 
-      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
-      const personaRow = await db
-        .selectFrom("master.principal_persona as pp" as never)
-        .select(["pp.persona_id"] as never[])
-        .where("pp.tenant_id" as never, "=" as never, tenantId as never)
-        .where("pp.principal_id" as never, "=" as never, principalId as never)
-        .executeTakeFirst() as { persona_id: string } | undefined;
+      // Phase 4: prefer the EffectivePermissionContext built upstream by the
+      // permission-context middleware (Phase 2). When the middleware has run,
+      // res.locals.effectivePermissionContext carries the allowed set already,
+      // so we skip the inline persona query + checkPermissionBatch round-trip.
+      // When the middleware is NOT wired (legacy route consumers, sysadmin
+      // tooling) we fall back to the inline resolution that has shipped since
+      // Phase 1.
+      const upstreamCtx = (res.locals as Record<string, unknown>)["effectivePermissionContext"] as
+        | { allowed: ReadonlySet<string>; denied: ReadonlySet<string> }
+        | undefined;
 
-      const permissionDecisions = await checkPermissionBatch(
-        db,
-        tenantId,
-        principalId,
-        personaRow?.persona_id ?? ZERO_UUID,
-      );
+      let permissionDecisions: Record<string, { decision: string } | undefined>;
+      if (upstreamCtx) {
+        permissionDecisions = decisionsFromContext(upstreamCtx);
+      } else {
+        // Guaranteed by the early-return guard above, but TypeScript can't
+        // narrow `checkPermissionBatch` across that branch.
+        if (!checkPermissionBatch) { res.json([]); return; }
+        const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+        const personaRow = await db
+          .selectFrom("master.principal_persona as pp" as never)
+          .select(["pp.persona_id"] as never[])
+          .where("pp.tenant_id" as never, "=" as never, tenantId as never)
+          .where("pp.principal_id" as never, "=" as never, principalId as never)
+          .executeTakeFirst() as { persona_id: string } | undefined;
+
+        permissionDecisions = await checkPermissionBatch(
+          db,
+          tenantId,
+          principalId,
+          personaRow?.persona_id ?? ZERO_UUID,
+        );
+      }
 
       const rows = await loadOperationRows(db, entityCode, tenantId);
       const lifecycleTransitions = await loadLifecycleTransitions(db, entityCode, tenantId);

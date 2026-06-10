@@ -32,6 +32,20 @@ export type DbClientConfig = {
    * stamp is derived from the authenticated session, not service arguments.
    */
   tenantIdProvider?: TenantIdProvider;
+
+  /**
+   * Called when the TenantStampDriver would have stamped but the provider
+   * returned a missing or malformed value. Wire this to a Prometheus counter
+   * + structured logger so silent fail-closed reads are observable.
+   */
+  onSkippedStamp?: (reason: "no-tenant" | "invalid-uuid", value: unknown) => void;
+
+  /**
+   * Called when the implicit-transaction rollback fails after a query error.
+   * Wire to logger.error + Sentry so a potentially dirty connection state is
+   * surfaced for incident triage.
+   */
+  onRollbackFailure?: (error: unknown, originalError: unknown) => void;
 };
 
 export interface DbPoolStats {
@@ -70,6 +84,8 @@ export class DbClient {
         ? new TenantStampDialect({
             base: baseDialect,
             tenantIdProvider: config.tenantIdProvider,
+            ...(config.onSkippedStamp ? { onSkippedStamp: config.onSkippedStamp } : {}),
+            ...(config.onRollbackFailure ? { onRollbackFailure: config.onRollbackFailure } : {}),
           })
         : baseDialect;
     this.kysely = new Kysely<DB>({

@@ -31,10 +31,22 @@ import { createEntityOperationsRoute } from "./entity-operations.route.js";
 import { createEntityPolicyRoute } from "./entity-policy.route.js";
 import { createStatusRouteRoute } from "./status-route.route.js";
 import { createMetadataAdminRoutes } from "./metadata-admin.route.js";
+import { createLifecycleMaskRoute } from "./lifecycle-mask.route.js";
+import { createPermissionAliasRoute } from "./permission-alias.route.js";
+import { createStudioVersionRoutes } from "./studio-version.route.js";
+import { createMeshInboxRoutes } from "./mesh-inbox.route.js";
+import { createAdminPartnerBindingsRoutes } from "./admin-partner-bindings.route.js";
 
 export interface MetadataRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: Kysely<any>;
+  /**
+   * Phase 5.5: optional mesh DB client for cross-DB routes (mesh inbox,
+   * admin partner-bindings CRUD). When unset, mesh routes fall back to `db`
+   * which works in single-DB local dev.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  meshDb?: Kysely<any>;
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
@@ -55,5 +67,12 @@ export function registerMetadataRoutes(router: Router, deps: MetadataRoutesDeps)
   createEntityPolicyRoute(router, deps);
   createStatusRouteRoute(router, deps);
   createMetadataAdminRoutes(router, deps);
+  // Phase 4 — three-plane permission stack
+  createLifecycleMaskRoute(router, deps);
+  createPermissionAliasRoute(router, deps);
+  createStudioVersionRoutes(router, deps);
+  // Phase 5.5 — three-plane permission stack: mesh inbox + admin binding CRUD
+  createMeshInboxRoutes(router, { db: deps.db, meshDb: deps.meshDb, auth: deps.auth, logger: deps.logger });
+  createAdminPartnerBindingsRoutes(router, { db: deps.db, meshDb: deps.meshDb, auth: deps.auth, logger: deps.logger });
   return router;
 }

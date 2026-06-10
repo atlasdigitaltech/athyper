@@ -48,7 +48,7 @@ DROP POLICY IF EXISTS admin_write  ON master.tenant_admin_grant;
 
 CREATE POLICY tenant_read ON master.tenant_admin_grant
     FOR SELECT
-    USING (tenant_id = shared.current_tenant_id_soft());
+    USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_read ON master.tenant_admin_grant
     FOR SELECT TO athyperadmin
     USING (true);
@@ -76,7 +76,7 @@ DROP POLICY IF EXISTS tenant_read  ON master.principal;
 DROP POLICY IF EXISTS admin_read   ON master.principal;
 DROP POLICY IF EXISTS admin_write  ON master.principal;
 
-CREATE POLICY tenant_read ON master.principal FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read ON master.principal FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_read  ON master.principal FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write ON master.principal FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
@@ -87,7 +87,7 @@ DROP POLICY IF EXISTS tenant_read  ON master.principal_profile;
 DROP POLICY IF EXISTS admin_read   ON master.principal_profile;
 DROP POLICY IF EXISTS admin_write  ON master.principal_profile;
 
-CREATE POLICY tenant_read ON master.principal_profile FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read ON master.principal_profile FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_read  ON master.principal_profile FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write ON master.principal_profile FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
@@ -100,7 +100,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.contact_link;
 DROP POLICY IF EXISTS admin_read    ON master.contact_link;
 DROP POLICY IF EXISTS admin_write   ON master.contact_link;
 
-CREATE POLICY tenant_read   ON master.contact_link FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.contact_link FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.contact_link FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.contact_link FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.contact_link FOR DELETE USING (tenant_id = shared.current_tenant_id());
@@ -116,7 +116,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.contact_email;
 DROP POLICY IF EXISTS admin_read    ON master.contact_email;
 DROP POLICY IF EXISTS admin_write   ON master.contact_email;
 
-CREATE POLICY tenant_read   ON master.contact_email FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.contact_email FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.contact_email FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.contact_email FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.contact_email FOR DELETE USING (tenant_id = shared.current_tenant_id());
@@ -132,7 +132,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.contact_phone;
 DROP POLICY IF EXISTS admin_read    ON master.contact_phone;
 DROP POLICY IF EXISTS admin_write   ON master.contact_phone;
 
-CREATE POLICY tenant_read   ON master.contact_phone FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.contact_phone FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.contact_phone FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.contact_phone FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.contact_phone FOR DELETE USING (tenant_id = shared.current_tenant_id());
@@ -150,7 +150,7 @@ DROP POLICY IF EXISTS tenant_update ON master.label;
 DROP POLICY IF EXISTS admin_read    ON master.label;
 DROP POLICY IF EXISTS admin_write   ON master.label;
 
-CREATE POLICY tenant_read ON master.label FOR SELECT USING (tenant_id IS NULL OR tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read ON master.label FOR SELECT USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 
 -- Tenant write: own tenant labels only (global labels are admin-only)
 CREATE POLICY tenant_insert ON master.label
@@ -191,7 +191,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.owner_type;
 DROP POLICY IF EXISTS admin_read    ON master.owner_type;
 DROP POLICY IF EXISTS admin_write   ON master.owner_type;
 
-CREATE POLICY tenant_read ON master.owner_type FOR SELECT USING (tenant_id IS NULL OR tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read ON master.owner_type FOR SELECT USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 
 -- Tenant self-service: INSERT custom (non-system) owner types scoped to own tenant
 CREATE POLICY tenant_write ON master.owner_type
@@ -229,7 +229,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.address;
 DROP POLICY IF EXISTS admin_read    ON master.address;
 DROP POLICY IF EXISTS admin_write   ON master.address;
 
-CREATE POLICY tenant_read   ON master.address FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.address FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.address FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.address FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.address FOR DELETE USING (tenant_id = shared.current_tenant_id());
@@ -249,7 +249,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.address_link;
 DROP POLICY IF EXISTS admin_read    ON master.address_link;
 DROP POLICY IF EXISTS admin_write   ON master.address_link;
 
-CREATE POLICY tenant_read   ON master.address_link FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.address_link FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.address_link FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.address_link FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.address_link FOR DELETE USING (tenant_id = shared.current_tenant_id());
@@ -273,7 +273,7 @@ DROP POLICY IF EXISTS tenant_update ON master.tenant_module_subscription;
 DROP POLICY IF EXISTS admin_read    ON master.tenant_module_subscription;
 DROP POLICY IF EXISTS admin_write   ON master.tenant_module_subscription;
 
-CREATE POLICY tenant_read   ON master.tenant_module_subscription FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.tenant_module_subscription FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.tenant_module_subscription FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.tenant_module_subscription FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.tenant_module_subscription FOR SELECT TO athyperadmin USING (true);
@@ -287,7 +287,7 @@ DROP POLICY IF EXISTS tenant_read  ON master.tenant_feature_entitlement;
 DROP POLICY IF EXISTS admin_read   ON master.tenant_feature_entitlement;
 DROP POLICY IF EXISTS admin_write  ON master.tenant_feature_entitlement;
 
-CREATE POLICY tenant_read  ON master.tenant_feature_entitlement FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read  ON master.tenant_feature_entitlement FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_read   ON master.tenant_feature_entitlement FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write  ON master.tenant_feature_entitlement FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
@@ -299,7 +299,7 @@ DROP POLICY IF EXISTS tenant_read  ON master.tenant_permission_override;
 DROP POLICY IF EXISTS admin_read   ON master.tenant_permission_override;
 DROP POLICY IF EXISTS admin_write  ON master.tenant_permission_override;
 
-CREATE POLICY tenant_read  ON master.tenant_permission_override FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read  ON master.tenant_permission_override FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_read   ON master.tenant_permission_override FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write  ON master.tenant_permission_override FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
@@ -314,7 +314,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.company_code_access;
 DROP POLICY IF EXISTS admin_read    ON master.company_code_access;
 DROP POLICY IF EXISTS admin_write   ON master.company_code_access;
 
-CREATE POLICY tenant_read   ON master.company_code_access FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.company_code_access FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.company_code_access FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.company_code_access FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.company_code_access FOR DELETE USING (tenant_id = shared.current_tenant_id());
@@ -344,7 +344,7 @@ DROP POLICY IF EXISTS tenant_update ON master.auth_group;
 DROP POLICY IF EXISTS admin_read    ON master.auth_group;
 DROP POLICY IF EXISTS admin_write   ON master.auth_group;
 
-CREATE POLICY tenant_read   ON master.auth_group FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.auth_group FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.auth_group FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.auth_group FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.auth_group FOR SELECT TO athyperadmin USING (true);
@@ -361,7 +361,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.auth_group_role;
 DROP POLICY IF EXISTS admin_read    ON master.auth_group_role;
 DROP POLICY IF EXISTS admin_write   ON master.auth_group_role;
 
-CREATE POLICY tenant_read   ON master.auth_group_role FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.auth_group_role FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.auth_group_role FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.auth_group_role FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.auth_group_role FOR DELETE USING (tenant_id = shared.current_tenant_id());
@@ -378,7 +378,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.auth_group_member;
 DROP POLICY IF EXISTS admin_read    ON master.auth_group_member;
 DROP POLICY IF EXISTS admin_write   ON master.auth_group_member;
 
-CREATE POLICY tenant_read   ON master.auth_group_member FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.auth_group_member FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.auth_group_member FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.auth_group_member FOR DELETE USING (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.auth_group_member FOR SELECT TO athyperadmin USING (true);
@@ -394,7 +394,7 @@ DROP POLICY IF EXISTS tenant_update ON master.principal_persona;
 DROP POLICY IF EXISTS admin_read    ON master.principal_persona;
 DROP POLICY IF EXISTS admin_write   ON master.principal_persona;
 
-CREATE POLICY tenant_read   ON master.principal_persona FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.principal_persona FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.principal_persona FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.principal_persona FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.principal_persona FOR SELECT TO athyperadmin USING (true);
@@ -410,7 +410,7 @@ DROP POLICY IF EXISTS tenant_update ON master.team;
 DROP POLICY IF EXISTS admin_read    ON master.team;
 DROP POLICY IF EXISTS admin_write   ON master.team;
 
-CREATE POLICY tenant_read   ON master.team FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.team FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.team FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.team FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.team FOR SELECT TO athyperadmin USING (true);
@@ -426,7 +426,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.team_member;
 DROP POLICY IF EXISTS admin_read    ON master.team_member;
 DROP POLICY IF EXISTS admin_write   ON master.team_member;
 
-CREATE POLICY tenant_read   ON master.team_member FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.team_member FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.team_member FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.team_member FOR DELETE USING (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.team_member FOR SELECT TO athyperadmin USING (true);
@@ -442,7 +442,7 @@ DROP POLICY IF EXISTS tenant_update ON master.access_grant;
 DROP POLICY IF EXISTS admin_read    ON master.access_grant;
 DROP POLICY IF EXISTS admin_write   ON master.access_grant;
 
-CREATE POLICY tenant_read   ON master.access_grant FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.access_grant FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.access_grant FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.access_grant FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.access_grant FOR SELECT TO athyperadmin USING (true);
@@ -458,7 +458,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.group_feature_grant;
 DROP POLICY IF EXISTS admin_read    ON master.group_feature_grant;
 DROP POLICY IF EXISTS admin_write   ON master.group_feature_grant;
 
-CREATE POLICY tenant_read   ON master.group_feature_grant FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.group_feature_grant FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.group_feature_grant FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.group_feature_grant FOR DELETE USING (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.group_feature_grant FOR SELECT TO athyperadmin USING (true);
@@ -474,7 +474,7 @@ DROP POLICY IF EXISTS tenant_delete ON master.principal_feature_grant;
 DROP POLICY IF EXISTS admin_read    ON master.principal_feature_grant;
 DROP POLICY IF EXISTS admin_write   ON master.principal_feature_grant;
 
-CREATE POLICY tenant_read   ON master.principal_feature_grant FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.principal_feature_grant FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.principal_feature_grant FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.principal_feature_grant FOR DELETE USING (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.principal_feature_grant FOR SELECT TO athyperadmin USING (true);
@@ -493,7 +493,7 @@ DROP POLICY IF EXISTS admin_read    ON master.notification;
 DROP POLICY IF EXISTS admin_write   ON master.notification;
 
 CREATE POLICY tenant_read   ON master.notification
-    FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.notification
     FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- Patch 001 Fix 4: add recipient ownership check to USING.
@@ -533,7 +533,7 @@ DROP POLICY IF EXISTS admin_read    ON master.tenant_profile;
 DROP POLICY IF EXISTS admin_write   ON master.tenant_profile;
 
 CREATE POLICY tenant_read   ON master.tenant_profile
-    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 
 CREATE POLICY tenant_insert ON master.tenant_profile
     FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
@@ -565,7 +565,7 @@ DROP POLICY IF EXISTS admin_write   ON master.delegation_grant;
 
 -- Both parties in the same tenant can read the grant
 CREATE POLICY tenant_read   ON master.delegation_grant
-    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 
 -- Approval worker inserts the grant in tenant context
 CREATE POLICY tenant_insert ON master.delegation_grant
@@ -615,7 +615,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.attachment;
 DROP POLICY IF EXISTS tenant_update ON master.attachment;
 DROP POLICY IF EXISTS admin_read    ON master.attachment;
 DROP POLICY IF EXISTS admin_write   ON master.attachment;
-CREATE POLICY tenant_read   ON master.attachment FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.attachment FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.attachment FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.attachment FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.attachment FOR SELECT TO athyperadmin USING (true);
@@ -631,7 +631,7 @@ DROP POLICY IF EXISTS tenant_update ON master.multipart_upload;
 DROP POLICY IF EXISTS tenant_delete ON master.multipart_upload;
 DROP POLICY IF EXISTS admin_read    ON master.multipart_upload;
 DROP POLICY IF EXISTS admin_write   ON master.multipart_upload;
-CREATE POLICY tenant_read   ON master.multipart_upload FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.multipart_upload FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.multipart_upload FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.multipart_upload FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 -- Tenant can abort their own uploads (DELETE)
@@ -648,7 +648,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.attachment_acl;
 DROP POLICY IF EXISTS tenant_delete ON master.attachment_acl;
 DROP POLICY IF EXISTS admin_read    ON master.attachment_acl;
 DROP POLICY IF EXISTS admin_write   ON master.attachment_acl;
-CREATE POLICY tenant_read   ON master.attachment_acl FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.attachment_acl FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.attachment_acl FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- ACL grants are revoked by deletion (not soft-delete)
 CREATE POLICY tenant_delete ON master.attachment_acl FOR DELETE USING (tenant_id = shared.current_tenant_id());
@@ -666,7 +666,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.comment;
 DROP POLICY IF EXISTS tenant_update ON master.comment;
 DROP POLICY IF EXISTS admin_read    ON master.comment;
 DROP POLICY IF EXISTS admin_write   ON master.comment;
-CREATE POLICY tenant_read   ON master.comment FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.comment FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.comment FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- Patch 002 Fix 4a: add commenter_id ownership check — tenant_id alone allowed any tenant
 -- user to UPDATE any comment row. Commenter can edit/soft-delete their own comment only.
@@ -697,7 +697,7 @@ DROP POLICY IF EXISTS admin_read    ON master.comment_draft;
 DROP POLICY IF EXISTS admin_write   ON master.comment_draft;
 -- Only the author sees their own draft
 CREATE POLICY tenant_read   ON master.comment_draft FOR SELECT USING (
-    tenant_id = shared.current_tenant_id_soft()
+    shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
     AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
 );
 -- Patch 002 Fix 4b: add principal_id ownership check to all mutation policies.
@@ -738,7 +738,7 @@ DROP POLICY IF EXISTS tenant_read   ON master.comment_mention;
 DROP POLICY IF EXISTS tenant_insert ON master.comment_mention;
 DROP POLICY IF EXISTS admin_read    ON master.comment_mention;
 DROP POLICY IF EXISTS admin_write   ON master.comment_mention;
-CREATE POLICY tenant_read   ON master.comment_mention FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.comment_mention FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.comment_mention FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- NO tenant_update, NO tenant_delete — append-only
 CREATE POLICY admin_read    ON master.comment_mention FOR SELECT TO athyperadmin USING (true);
@@ -754,7 +754,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.comment_reaction;
 DROP POLICY IF EXISTS tenant_delete ON master.comment_reaction;
 DROP POLICY IF EXISTS admin_read    ON master.comment_reaction;
 DROP POLICY IF EXISTS admin_write   ON master.comment_reaction;
-CREATE POLICY tenant_read   ON master.comment_reaction FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.comment_reaction FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.comment_reaction FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- Principals can remove their own reactions (DELETE = toggle off)
 CREATE POLICY tenant_delete ON master.comment_reaction FOR DELETE USING (
@@ -773,7 +773,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.conversation;
 DROP POLICY IF EXISTS tenant_update ON master.conversation;
 DROP POLICY IF EXISTS admin_read    ON master.conversation;
 DROP POLICY IF EXISTS admin_write   ON master.conversation;
-CREATE POLICY tenant_read   ON master.conversation FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.conversation FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.conversation FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.conversation FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.conversation FOR SELECT TO athyperadmin USING (true);
@@ -788,7 +788,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.conversation_participant;
 DROP POLICY IF EXISTS tenant_update ON master.conversation_participant;
 DROP POLICY IF EXISTS admin_read    ON master.conversation_participant;
 DROP POLICY IF EXISTS admin_write   ON master.conversation_participant;
-CREATE POLICY tenant_read   ON master.conversation_participant FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.conversation_participant FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.conversation_participant FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- Participant can update their own read cursor (last_read_message_id / last_read_at)
 CREATE POLICY tenant_update ON master.conversation_participant FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
@@ -805,7 +805,7 @@ DROP POLICY IF EXISTS tenant_read   ON event.comment_flag;
 DROP POLICY IF EXISTS tenant_insert ON event.comment_flag;
 DROP POLICY IF EXISTS admin_read    ON event.comment_flag;
 DROP POLICY IF EXISTS admin_write   ON event.comment_flag;
-CREATE POLICY tenant_read   ON event.comment_flag FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON event.comment_flag FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON event.comment_flag FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- No tenant_update — moderation decisions (status change) are admin-only
 CREATE POLICY admin_read    ON event.comment_flag FOR SELECT TO athyperadmin USING (true);
@@ -821,7 +821,7 @@ DROP POLICY IF EXISTS tenant_read   ON governance.comment_moderation;
 DROP POLICY IF EXISTS admin_read    ON governance.comment_moderation;
 DROP POLICY IF EXISTS admin_write   ON governance.comment_moderation;
 -- Tenants read moderation state to determine if a comment should be hidden
-CREATE POLICY tenant_read   ON governance.comment_moderation FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON governance.comment_moderation FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 -- No tenant INSERT/UPDATE — trigger-managed only
 CREATE POLICY admin_read    ON governance.comment_moderation FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON governance.comment_moderation FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
@@ -839,7 +839,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.document;
 DROP POLICY IF EXISTS tenant_update ON master.document;
 DROP POLICY IF EXISTS admin_read    ON master.document;
 DROP POLICY IF EXISTS admin_write   ON master.document;
-CREATE POLICY tenant_read   ON master.document FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.document FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.document FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.document FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.document FOR SELECT TO athyperadmin USING (true);
@@ -853,7 +853,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.brand_profile;
 DROP POLICY IF EXISTS tenant_update ON master.brand_profile;
 DROP POLICY IF EXISTS admin_read    ON master.brand_profile;
 DROP POLICY IF EXISTS admin_write   ON master.brand_profile;
-CREATE POLICY tenant_read   ON master.brand_profile FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.brand_profile FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.brand_profile FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.brand_profile FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.brand_profile FOR SELECT TO athyperadmin USING (true);
@@ -867,7 +867,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.letterhead;
 DROP POLICY IF EXISTS tenant_update ON master.letterhead;
 DROP POLICY IF EXISTS admin_read    ON master.letterhead;
 DROP POLICY IF EXISTS admin_write   ON master.letterhead;
-CREATE POLICY tenant_read   ON master.letterhead FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.letterhead FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.letterhead FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.letterhead FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.letterhead FOR SELECT TO athyperadmin USING (true);
@@ -881,7 +881,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.template;
 DROP POLICY IF EXISTS tenant_update ON master.template;
 DROP POLICY IF EXISTS admin_read    ON master.template;
 DROP POLICY IF EXISTS admin_write   ON master.template;
-CREATE POLICY tenant_read   ON master.template FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.template FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.template FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.template FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.template FOR SELECT TO athyperadmin USING (true);
@@ -895,7 +895,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.attachment_comment;
 DROP POLICY IF EXISTS tenant_update ON master.attachment_comment;
 DROP POLICY IF EXISTS admin_read    ON master.attachment_comment;
 DROP POLICY IF EXISTS admin_write   ON master.attachment_comment;
-CREATE POLICY tenant_read   ON master.attachment_comment FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.attachment_comment FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.attachment_comment FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- Authors can update their own non-deleted comments
 CREATE POLICY tenant_update ON master.attachment_comment FOR UPDATE
@@ -912,7 +912,7 @@ DROP POLICY IF EXISTS tenant_read   ON master.template_binding;
 DROP POLICY IF EXISTS tenant_insert ON master.template_binding;
 DROP POLICY IF EXISTS admin_read    ON master.template_binding;
 DROP POLICY IF EXISTS admin_write   ON master.template_binding;
-CREATE POLICY tenant_read   ON master.template_binding FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.template_binding FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.template_binding FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.template_binding FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.template_binding FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
@@ -926,7 +926,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.entity_document_link;
 DROP POLICY IF EXISTS tenant_delete ON master.entity_document_link;
 DROP POLICY IF EXISTS admin_read    ON master.entity_document_link;
 DROP POLICY IF EXISTS admin_write   ON master.entity_document_link;
-CREATE POLICY tenant_read   ON master.entity_document_link FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.entity_document_link FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.entity_document_link FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.entity_document_link FOR DELETE USING     (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.entity_document_link FOR SELECT TO athyperadmin USING (true);
@@ -954,7 +954,7 @@ DROP POLICY IF EXISTS tenant_update ON master.legal_entity;
 DROP POLICY IF EXISTS tenant_delete ON master.legal_entity;
 DROP POLICY IF EXISTS admin_read    ON master.legal_entity;
 DROP POLICY IF EXISTS admin_write   ON master.legal_entity;
-CREATE POLICY tenant_read   ON master.legal_entity FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.legal_entity FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.legal_entity FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.legal_entity FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.legal_entity FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -970,7 +970,7 @@ DROP POLICY IF EXISTS tenant_update ON master.company_code;
 DROP POLICY IF EXISTS tenant_delete ON master.company_code;
 DROP POLICY IF EXISTS admin_read    ON master.company_code;
 DROP POLICY IF EXISTS admin_write   ON master.company_code;
-CREATE POLICY tenant_read   ON master.company_code FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.company_code FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.company_code FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.company_code FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.company_code FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -986,7 +986,7 @@ DROP POLICY IF EXISTS tenant_update ON master.cost_center;
 DROP POLICY IF EXISTS tenant_delete ON master.cost_center;
 DROP POLICY IF EXISTS admin_read    ON master.cost_center;
 DROP POLICY IF EXISTS admin_write   ON master.cost_center;
-CREATE POLICY tenant_read   ON master.cost_center FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.cost_center FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.cost_center FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.cost_center FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.cost_center FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1002,7 +1002,7 @@ DROP POLICY IF EXISTS tenant_update ON master.profit_center;
 DROP POLICY IF EXISTS tenant_delete ON master.profit_center;
 DROP POLICY IF EXISTS admin_read    ON master.profit_center;
 DROP POLICY IF EXISTS admin_write   ON master.profit_center;
-CREATE POLICY tenant_read   ON master.profit_center FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.profit_center FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.profit_center FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.profit_center FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.profit_center FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1018,7 +1018,7 @@ DROP POLICY IF EXISTS tenant_update ON master.site;
 DROP POLICY IF EXISTS tenant_delete ON master.site;
 DROP POLICY IF EXISTS admin_read    ON master.site;
 DROP POLICY IF EXISTS admin_write   ON master.site;
-CREATE POLICY tenant_read   ON master.site FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.site FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.site FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.site FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.site FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1034,7 +1034,7 @@ DROP POLICY IF EXISTS tenant_update ON master.warehouse;
 DROP POLICY IF EXISTS tenant_delete ON master.warehouse;
 DROP POLICY IF EXISTS admin_read    ON master.warehouse;
 DROP POLICY IF EXISTS admin_write   ON master.warehouse;
-CREATE POLICY tenant_read   ON master.warehouse FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.warehouse FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.warehouse FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.warehouse FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.warehouse FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1050,7 +1050,7 @@ DROP POLICY IF EXISTS tenant_update ON master.chart_of_account;
 DROP POLICY IF EXISTS tenant_delete ON master.chart_of_account;
 DROP POLICY IF EXISTS admin_read    ON master.chart_of_account;
 DROP POLICY IF EXISTS admin_write   ON master.chart_of_account;
-CREATE POLICY tenant_read   ON master.chart_of_account FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.chart_of_account FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.chart_of_account FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.chart_of_account FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.chart_of_account FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1066,7 +1066,7 @@ DROP POLICY IF EXISTS tenant_update ON master.gl_account;
 DROP POLICY IF EXISTS tenant_delete ON master.gl_account;
 DROP POLICY IF EXISTS admin_read    ON master.gl_account;
 DROP POLICY IF EXISTS admin_write   ON master.gl_account;
-CREATE POLICY tenant_read   ON master.gl_account FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.gl_account FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.gl_account FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.gl_account FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.gl_account FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1082,7 +1082,7 @@ DROP POLICY IF EXISTS tenant_update ON master.company_code_chart_assignment;
 DROP POLICY IF EXISTS tenant_delete ON master.company_code_chart_assignment;
 DROP POLICY IF EXISTS admin_read    ON master.company_code_chart_assignment;
 DROP POLICY IF EXISTS admin_write   ON master.company_code_chart_assignment;
-CREATE POLICY tenant_read   ON master.company_code_chart_assignment FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.company_code_chart_assignment FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.company_code_chart_assignment FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.company_code_chart_assignment FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.company_code_chart_assignment FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1098,7 +1098,7 @@ DROP POLICY IF EXISTS tenant_update ON master.company_code_gl_account;
 DROP POLICY IF EXISTS tenant_delete ON master.company_code_gl_account;
 DROP POLICY IF EXISTS admin_read    ON master.company_code_gl_account;
 DROP POLICY IF EXISTS admin_write   ON master.company_code_gl_account;
-CREATE POLICY tenant_read   ON master.company_code_gl_account FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.company_code_gl_account FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.company_code_gl_account FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.company_code_gl_account FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.company_code_gl_account FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1114,7 +1114,7 @@ DROP POLICY IF EXISTS tenant_update ON master.project;
 DROP POLICY IF EXISTS tenant_delete ON master.project;
 DROP POLICY IF EXISTS admin_read    ON master.project;
 DROP POLICY IF EXISTS admin_write   ON master.project;
-CREATE POLICY tenant_read   ON master.project FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.project FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.project FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.project FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.project FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1130,7 +1130,7 @@ DROP POLICY IF EXISTS tenant_update ON master.project_item;
 DROP POLICY IF EXISTS tenant_delete ON master.project_item;
 DROP POLICY IF EXISTS admin_read    ON master.project_item;
 DROP POLICY IF EXISTS admin_write   ON master.project_item;
-CREATE POLICY tenant_read   ON master.project_item FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.project_item FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.project_item FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.project_item FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.project_item FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1150,7 +1150,7 @@ DROP POLICY IF EXISTS tenant_update ON master.dimension_set;
 DROP POLICY IF EXISTS tenant_delete ON master.dimension_set;
 DROP POLICY IF EXISTS admin_read    ON master.dimension_set;
 DROP POLICY IF EXISTS admin_write   ON master.dimension_set;
-CREATE POLICY tenant_read   ON master.dimension_set FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.dimension_set FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.dimension_set FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.dimension_set FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.dimension_set FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1166,7 +1166,7 @@ DROP POLICY IF EXISTS tenant_update ON master.fiscal_period;
 DROP POLICY IF EXISTS tenant_delete ON master.fiscal_period;
 DROP POLICY IF EXISTS admin_read    ON master.fiscal_period;
 DROP POLICY IF EXISTS admin_write   ON master.fiscal_period;
-CREATE POLICY tenant_read   ON master.fiscal_period FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.fiscal_period FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.fiscal_period FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.fiscal_period FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.fiscal_period FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1182,7 +1182,7 @@ DROP POLICY IF EXISTS tenant_update ON master.ledger_book;
 DROP POLICY IF EXISTS tenant_delete ON master.ledger_book;
 DROP POLICY IF EXISTS admin_read    ON master.ledger_book;
 DROP POLICY IF EXISTS admin_write   ON master.ledger_book;
-CREATE POLICY tenant_read   ON master.ledger_book FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.ledger_book FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.ledger_book FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.ledger_book FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.ledger_book FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1198,7 +1198,7 @@ DROP POLICY IF EXISTS tenant_update ON master.company_code_book_assignment;
 DROP POLICY IF EXISTS tenant_delete ON master.company_code_book_assignment;
 DROP POLICY IF EXISTS admin_read    ON master.company_code_book_assignment;
 DROP POLICY IF EXISTS admin_write   ON master.company_code_book_assignment;
-CREATE POLICY tenant_read   ON master.company_code_book_assignment FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.company_code_book_assignment FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.company_code_book_assignment FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.company_code_book_assignment FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.company_code_book_assignment FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1220,7 +1220,7 @@ DROP POLICY IF EXISTS tenant_update ON master.business_partner;
 DROP POLICY IF EXISTS tenant_delete ON master.business_partner;
 DROP POLICY IF EXISTS admin_read    ON master.business_partner;
 DROP POLICY IF EXISTS admin_write   ON master.business_partner;
-CREATE POLICY tenant_read   ON master.business_partner FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.business_partner FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.business_partner FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.business_partner FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.business_partner FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1236,7 +1236,7 @@ DROP POLICY IF EXISTS tenant_update ON master.customer;
 DROP POLICY IF EXISTS tenant_delete ON master.customer;
 DROP POLICY IF EXISTS admin_read    ON master.customer;
 DROP POLICY IF EXISTS admin_write   ON master.customer;
-CREATE POLICY tenant_read   ON master.customer FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.customer FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.customer FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.customer FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.customer FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1252,7 +1252,7 @@ DROP POLICY IF EXISTS tenant_update ON master.supplier;
 DROP POLICY IF EXISTS tenant_delete ON master.supplier;
 DROP POLICY IF EXISTS admin_read    ON master.supplier;
 DROP POLICY IF EXISTS admin_write   ON master.supplier;
-CREATE POLICY tenant_read   ON master.supplier FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.supplier FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.supplier FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.supplier FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.supplier FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1268,7 +1268,7 @@ DROP POLICY IF EXISTS tenant_update ON master.employee;
 DROP POLICY IF EXISTS tenant_delete ON master.employee;
 DROP POLICY IF EXISTS admin_read    ON master.employee;
 DROP POLICY IF EXISTS admin_write   ON master.employee;
-CREATE POLICY tenant_read   ON master.employee FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.employee FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.employee FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.employee FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.employee FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1284,7 +1284,7 @@ DROP POLICY IF EXISTS tenant_update ON master.commodity_category;
 DROP POLICY IF EXISTS tenant_delete ON master.commodity_category;
 DROP POLICY IF EXISTS admin_read    ON master.commodity_category;
 DROP POLICY IF EXISTS admin_write   ON master.commodity_category;
-CREATE POLICY tenant_read   ON master.commodity_category FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.commodity_category FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.commodity_category FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.commodity_category FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.commodity_category FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1300,7 +1300,7 @@ DROP POLICY IF EXISTS tenant_update ON master.product;
 DROP POLICY IF EXISTS tenant_delete ON master.product;
 DROP POLICY IF EXISTS admin_read    ON master.product;
 DROP POLICY IF EXISTS admin_write   ON master.product;
-CREATE POLICY tenant_read   ON master.product FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.product FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.product FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.product FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.product FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1316,7 +1316,7 @@ DROP POLICY IF EXISTS tenant_update ON master.item;
 DROP POLICY IF EXISTS tenant_delete ON master.item;
 DROP POLICY IF EXISTS admin_read    ON master.item;
 DROP POLICY IF EXISTS admin_write   ON master.item;
-CREATE POLICY tenant_read   ON master.item FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.item FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.item FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.item FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.item FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1334,7 +1334,7 @@ DROP POLICY IF EXISTS tenant_update ON master.commodity_classification;
 DROP POLICY IF EXISTS tenant_delete ON master.commodity_classification;
 DROP POLICY IF EXISTS admin_read    ON master.commodity_classification;
 DROP POLICY IF EXISTS admin_write   ON master.commodity_classification;
-CREATE POLICY tenant_read   ON master.commodity_classification FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.commodity_classification FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.commodity_classification FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.commodity_classification FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.commodity_classification FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1350,7 +1350,7 @@ DROP POLICY IF EXISTS tenant_update ON master.company_code_customer_profile;
 DROP POLICY IF EXISTS tenant_delete ON master.company_code_customer_profile;
 DROP POLICY IF EXISTS admin_read    ON master.company_code_customer_profile;
 DROP POLICY IF EXISTS admin_write   ON master.company_code_customer_profile;
-CREATE POLICY tenant_read   ON master.company_code_customer_profile FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.company_code_customer_profile FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.company_code_customer_profile FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.company_code_customer_profile FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.company_code_customer_profile FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1366,7 +1366,7 @@ DROP POLICY IF EXISTS tenant_update ON master.company_code_supplier_profile;
 DROP POLICY IF EXISTS tenant_delete ON master.company_code_supplier_profile;
 DROP POLICY IF EXISTS admin_read    ON master.company_code_supplier_profile;
 DROP POLICY IF EXISTS admin_write   ON master.company_code_supplier_profile;
-CREATE POLICY tenant_read   ON master.company_code_supplier_profile FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.company_code_supplier_profile FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.company_code_supplier_profile FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.company_code_supplier_profile FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.company_code_supplier_profile FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1387,7 +1387,7 @@ DROP POLICY IF EXISTS tenant_update ON master.asset_class;
 DROP POLICY IF EXISTS tenant_delete ON master.asset_class;
 DROP POLICY IF EXISTS admin_read    ON master.asset_class;
 DROP POLICY IF EXISTS admin_write   ON master.asset_class;
-CREATE POLICY tenant_read   ON master.asset_class FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.asset_class FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.asset_class FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.asset_class FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.asset_class FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1403,7 +1403,7 @@ DROP POLICY IF EXISTS tenant_update ON master.asset;
 DROP POLICY IF EXISTS tenant_delete ON master.asset;
 DROP POLICY IF EXISTS admin_read    ON master.asset;
 DROP POLICY IF EXISTS admin_write   ON master.asset;
-CREATE POLICY tenant_read   ON master.asset FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.asset FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.asset FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.asset FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.asset FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1419,7 +1419,7 @@ DROP POLICY IF EXISTS tenant_update ON master.asset_book;
 DROP POLICY IF EXISTS tenant_delete ON master.asset_book;
 DROP POLICY IF EXISTS admin_read    ON master.asset_book;
 DROP POLICY IF EXISTS admin_write   ON master.asset_book;
-CREATE POLICY tenant_read   ON master.asset_book FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.asset_book FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.asset_book FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.asset_book FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.asset_book FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1435,7 +1435,7 @@ DROP POLICY IF EXISTS tenant_update ON master.asset_component;
 DROP POLICY IF EXISTS tenant_delete ON master.asset_component;
 DROP POLICY IF EXISTS admin_read    ON master.asset_component;
 DROP POLICY IF EXISTS admin_write   ON master.asset_component;
-CREATE POLICY tenant_read   ON master.asset_component FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.asset_component FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.asset_component FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.asset_component FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.asset_component FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1451,7 +1451,7 @@ DROP POLICY IF EXISTS tenant_update ON master.asset_assignment_history;
 DROP POLICY IF EXISTS tenant_delete ON master.asset_assignment_history;
 DROP POLICY IF EXISTS admin_read    ON master.asset_assignment_history;
 DROP POLICY IF EXISTS admin_write   ON master.asset_assignment_history;
-CREATE POLICY tenant_read   ON master.asset_assignment_history FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.asset_assignment_history FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.asset_assignment_history FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.asset_assignment_history FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.asset_assignment_history FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1468,7 +1468,7 @@ DROP POLICY IF EXISTS tenant_update ON master.bank_party;
 DROP POLICY IF EXISTS tenant_delete ON master.bank_party;
 DROP POLICY IF EXISTS admin_read ON master.bank_party;
 DROP POLICY IF EXISTS admin_write ON master.bank_party;
-CREATE POLICY tenant_read   ON master.bank_party FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.bank_party FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.bank_party FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.bank_party FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.bank_party FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1484,7 +1484,7 @@ DROP POLICY IF EXISTS tenant_update ON master.bank_account;
 DROP POLICY IF EXISTS tenant_delete ON master.bank_account;
 DROP POLICY IF EXISTS admin_read ON master.bank_account;
 DROP POLICY IF EXISTS admin_write ON master.bank_account;
-CREATE POLICY tenant_read   ON master.bank_account FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.bank_account FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.bank_account FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.bank_account FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.bank_account FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1500,7 +1500,7 @@ DROP POLICY IF EXISTS tenant_update ON master.bank_account_link;
 DROP POLICY IF EXISTS tenant_delete ON master.bank_account_link;
 DROP POLICY IF EXISTS admin_read ON master.bank_account_link;
 DROP POLICY IF EXISTS admin_write ON master.bank_account_link;
-CREATE POLICY tenant_read   ON master.bank_account_link FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.bank_account_link FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.bank_account_link FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.bank_account_link FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.bank_account_link FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1516,7 +1516,7 @@ DROP POLICY IF EXISTS tenant_update ON master.bank_account_house_config;
 DROP POLICY IF EXISTS tenant_delete ON master.bank_account_house_config;
 DROP POLICY IF EXISTS admin_read ON master.bank_account_house_config;
 DROP POLICY IF EXISTS admin_write ON master.bank_account_house_config;
-CREATE POLICY tenant_read   ON master.bank_account_house_config FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.bank_account_house_config FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.bank_account_house_config FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.bank_account_house_config FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.bank_account_house_config FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1533,7 +1533,7 @@ DROP POLICY IF EXISTS tenant_update ON master.payment_method;
 DROP POLICY IF EXISTS tenant_delete ON master.payment_method;
 DROP POLICY IF EXISTS admin_read    ON master.payment_method;
 DROP POLICY IF EXISTS admin_write   ON master.payment_method;
-CREATE POLICY tenant_read   ON master.payment_method FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.payment_method FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.payment_method FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.payment_method FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.payment_method FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -1548,7 +1548,7 @@ DROP POLICY IF EXISTS tenant_read  ON master.principal_identity_binding;
 DROP POLICY IF EXISTS admin_read   ON master.principal_identity_binding;
 DROP POLICY IF EXISTS admin_write  ON master.principal_identity_binding;
 CREATE POLICY tenant_read ON master.principal_identity_binding
-    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_read ON master.principal_identity_binding
     FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write ON master.principal_identity_binding
@@ -1802,7 +1802,7 @@ DROP POLICY IF EXISTS admin_write   ON master.principal_ui_profile;
 -- Principal sees only their own UI profile row
 CREATE POLICY tenant_read ON master.principal_ui_profile
     FOR SELECT USING (
-        tenant_id    = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
     );
 
@@ -1846,7 +1846,7 @@ DROP POLICY IF EXISTS admin_write   ON master.principal_ui_preference;
 
 CREATE POLICY tenant_read ON master.principal_ui_preference
     FOR SELECT USING (
-        tenant_id    = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
     );
 
@@ -1897,7 +1897,7 @@ DROP POLICY IF EXISTS admin_write            ON master.saved_view;
 -- Personal views: only the owner can read
 CREATE POLICY tenant_read_personal ON master.saved_view
     FOR SELECT USING (
-        tenant_id = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND scope = 'personal'
         AND owner_principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
     );
@@ -1905,7 +1905,7 @@ CREATE POLICY tenant_read_personal ON master.saved_view
 -- Shared and system views: all principals in the tenant can read
 CREATE POLICY tenant_read_nonpersonal ON master.saved_view
     FOR SELECT USING (
-        tenant_id = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND scope IN ('shared', 'system')
     );
 
@@ -1972,14 +1972,14 @@ DROP POLICY IF EXISTS admin_write             ON master.dashboard;
 
 CREATE POLICY tenant_read_personal ON master.dashboard
     FOR SELECT USING (
-        tenant_id = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND scope = 'personal'
         AND owner_principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
     );
 
 CREATE POLICY tenant_read_nonpersonal ON master.dashboard
     FOR SELECT USING (
-        tenant_id = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND scope IN ('shared', 'system')
     );
 
@@ -2043,7 +2043,7 @@ DROP POLICY IF EXISTS admin_write   ON master.dashboard_widget;
 -- Read: widget is readable if the session can see the parent dashboard
 CREATE POLICY tenant_read ON master.dashboard_widget
     FOR SELECT USING (
-        tenant_id = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND EXISTS (
             SELECT 1 FROM master.dashboard d
             WHERE d.id = dashboard_id
@@ -2141,7 +2141,7 @@ DROP POLICY IF EXISTS admin_write   ON master.record_bookmark;
 
 CREATE POLICY tenant_read ON master.record_bookmark
     FOR SELECT USING (
-        tenant_id    = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
     );
 
@@ -2180,14 +2180,14 @@ DROP POLICY IF EXISTS admin_write        ON master.filter_preset;
 -- Own presets: always visible to the creator
 CREATE POLICY tenant_read_own ON master.filter_preset
     FOR SELECT USING (
-        tenant_id    = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND principal_id = nullif(current_setting('app.current_principal_id', true), '')::uuid
     );
 
 -- Shared presets: visible to all principals in the tenant
 CREATE POLICY tenant_read_shared ON master.filter_preset
     FOR SELECT USING (
-        tenant_id = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND is_shared = true
     );
 
@@ -2233,7 +2233,7 @@ DROP POLICY IF EXISTS tenant_update ON master.supplier_qualification;
 DROP POLICY IF EXISTS tenant_delete ON master.supplier_qualification;
 DROP POLICY IF EXISTS admin_read    ON master.supplier_qualification;
 DROP POLICY IF EXISTS admin_write   ON master.supplier_qualification;
-CREATE POLICY tenant_read   ON master.supplier_qualification FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.supplier_qualification FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.supplier_qualification FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.supplier_qualification FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.supplier_qualification FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -2249,7 +2249,7 @@ DROP POLICY IF EXISTS tenant_update ON master.customer_qualification;
 DROP POLICY IF EXISTS tenant_delete ON master.customer_qualification;
 DROP POLICY IF EXISTS admin_read    ON master.customer_qualification;
 DROP POLICY IF EXISTS admin_write   ON master.customer_qualification;
-CREATE POLICY tenant_read   ON master.customer_qualification FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.customer_qualification FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.customer_qualification FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.customer_qualification FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.customer_qualification FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -2265,7 +2265,7 @@ DROP POLICY IF EXISTS tenant_update ON master.business_partner_network_link;
 DROP POLICY IF EXISTS tenant_delete ON master.business_partner_network_link;
 DROP POLICY IF EXISTS admin_read    ON master.business_partner_network_link;
 DROP POLICY IF EXISTS admin_write   ON master.business_partner_network_link;
-CREATE POLICY tenant_read   ON master.business_partner_network_link FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.business_partner_network_link FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.business_partner_network_link FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.business_partner_network_link FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.business_partner_network_link FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -2283,7 +2283,7 @@ DROP POLICY IF EXISTS tenant_update ON master.legal_entity_identity_binding;
 DROP POLICY IF EXISTS tenant_delete ON master.legal_entity_identity_binding;
 DROP POLICY IF EXISTS admin_read    ON master.legal_entity_identity_binding;
 DROP POLICY IF EXISTS admin_write   ON master.legal_entity_identity_binding;
-CREATE POLICY tenant_read   ON master.legal_entity_identity_binding FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.legal_entity_identity_binding FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_read    ON master.legal_entity_identity_binding FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.legal_entity_identity_binding FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
@@ -2296,7 +2296,7 @@ DROP POLICY IF EXISTS tenant_update ON master.legal_entity_network_account;
 DROP POLICY IF EXISTS tenant_delete ON master.legal_entity_network_account;
 DROP POLICY IF EXISTS admin_read    ON master.legal_entity_network_account;
 DROP POLICY IF EXISTS admin_write   ON master.legal_entity_network_account;
-CREATE POLICY tenant_read   ON master.legal_entity_network_account FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.legal_entity_network_account FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.legal_entity_network_account FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.legal_entity_network_account FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.legal_entity_network_account FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -2319,7 +2319,7 @@ DROP POLICY IF EXISTS tenant_update ON master.legal_entity_business_partner_link
 DROP POLICY IF EXISTS tenant_delete ON master.legal_entity_business_partner_link;
 DROP POLICY IF EXISTS admin_read    ON master.legal_entity_business_partner_link;
 DROP POLICY IF EXISTS admin_write   ON master.legal_entity_business_partner_link;
-CREATE POLICY tenant_read   ON master.legal_entity_business_partner_link FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.legal_entity_business_partner_link FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.legal_entity_business_partner_link FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.legal_entity_business_partner_link FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.legal_entity_business_partner_link FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -2335,7 +2335,7 @@ DROP POLICY IF EXISTS tenant_update ON master.intercompany_trading_pair;
 DROP POLICY IF EXISTS tenant_delete ON master.intercompany_trading_pair;
 DROP POLICY IF EXISTS admin_read    ON master.intercompany_trading_pair;
 DROP POLICY IF EXISTS admin_write   ON master.intercompany_trading_pair;
-CREATE POLICY tenant_read   ON master.intercompany_trading_pair FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.intercompany_trading_pair FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.intercompany_trading_pair FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.intercompany_trading_pair FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.intercompany_trading_pair FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -2363,7 +2363,7 @@ DROP POLICY IF EXISTS tenant_update ON master.tenant_risk_source_config;
 DROP POLICY IF EXISTS tenant_delete ON master.tenant_risk_source_config;
 DROP POLICY IF EXISTS admin_read    ON master.tenant_risk_source_config;
 DROP POLICY IF EXISTS admin_write   ON master.tenant_risk_source_config;
-CREATE POLICY tenant_read   ON master.tenant_risk_source_config FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.tenant_risk_source_config FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.tenant_risk_source_config FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.tenant_risk_source_config FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.tenant_risk_source_config FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -2380,7 +2380,7 @@ DROP POLICY IF EXISTS tenant_update ON master.party_risk_evidence;
 DROP POLICY IF EXISTS tenant_delete ON master.party_risk_evidence;
 DROP POLICY IF EXISTS admin_read    ON master.party_risk_evidence;
 DROP POLICY IF EXISTS admin_write   ON master.party_risk_evidence;
-CREATE POLICY tenant_read   ON master.party_risk_evidence FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.party_risk_evidence FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.party_risk_evidence FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.party_risk_evidence FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.party_risk_evidence FOR SELECT TO athyperadmin USING (true);
@@ -2396,7 +2396,7 @@ DROP POLICY IF EXISTS tenant_update ON master.party_risk_assessment;
 DROP POLICY IF EXISTS tenant_delete ON master.party_risk_assessment;
 DROP POLICY IF EXISTS admin_read    ON master.party_risk_assessment;
 DROP POLICY IF EXISTS admin_write   ON master.party_risk_assessment;
-CREATE POLICY tenant_read   ON master.party_risk_assessment FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.party_risk_assessment FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.party_risk_assessment FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.party_risk_assessment FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.party_risk_assessment FOR SELECT TO athyperadmin USING (true);
@@ -2412,7 +2412,7 @@ DROP POLICY IF EXISTS tenant_update ON master.party_risk_dimension_score;
 DROP POLICY IF EXISTS tenant_delete ON master.party_risk_dimension_score;
 DROP POLICY IF EXISTS admin_read    ON master.party_risk_dimension_score;
 DROP POLICY IF EXISTS admin_write   ON master.party_risk_dimension_score;
-CREATE POLICY tenant_read   ON master.party_risk_dimension_score FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.party_risk_dimension_score FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.party_risk_dimension_score FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.party_risk_dimension_score FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.party_risk_dimension_score FOR SELECT TO athyperadmin USING (true);
@@ -2427,7 +2427,7 @@ DROP POLICY IF EXISTS tenant_insert ON master.party_risk_driver;
 DROP POLICY IF EXISTS tenant_delete ON master.party_risk_driver;
 DROP POLICY IF EXISTS admin_read    ON master.party_risk_driver;
 DROP POLICY IF EXISTS admin_write   ON master.party_risk_driver;
-CREATE POLICY tenant_read   ON master.party_risk_driver FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.party_risk_driver FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.party_risk_driver FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.party_risk_driver FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.party_risk_driver FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
@@ -2441,7 +2441,7 @@ DROP POLICY IF EXISTS tenant_update ON master.party_risk_mitigation;
 DROP POLICY IF EXISTS tenant_delete ON master.party_risk_mitigation;
 DROP POLICY IF EXISTS admin_read    ON master.party_risk_mitigation;
 DROP POLICY IF EXISTS admin_write   ON master.party_risk_mitigation;
-CREATE POLICY tenant_read   ON master.party_risk_mitigation FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.party_risk_mitigation FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.party_risk_mitigation FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.party_risk_mitigation FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_delete ON master.party_risk_mitigation FOR DELETE USING     (tenant_id = shared.current_tenant_id());
@@ -2458,7 +2458,7 @@ DROP POLICY IF EXISTS tenant_read   ON master.party_risk_review_event;
 DROP POLICY IF EXISTS tenant_insert ON master.party_risk_review_event;
 DROP POLICY IF EXISTS admin_read    ON master.party_risk_review_event;
 DROP POLICY IF EXISTS admin_write   ON master.party_risk_review_event;
-CREATE POLICY tenant_read   ON master.party_risk_review_event FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON master.party_risk_review_event FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.party_risk_review_event FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.party_risk_review_event FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.party_risk_review_event FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

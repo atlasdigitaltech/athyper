@@ -167,6 +167,7 @@ export const MetaEntityLineItemsSurfaceSchema = MetaEntitySurfaceBaseSchema.exte
   affectsTotals: z.boolean().default(false),
   requiredForSubmit: z.boolean().default(false),
 }).catchall(z.unknown());
+export type MetaEntityLineItemsSurface = z.infer<typeof MetaEntityLineItemsSurfaceSchema>;
 
 export const MetaEntityChildRecordsSurfaceSchema = MetaEntitySurfaceBaseSchema.extend({
   kind: z.literal("child_records"),
@@ -213,11 +214,37 @@ export const MetaEntitySurfaceSchema = z.discriminatedUnion("kind", [
 ]);
 export type MetaEntitySurface = z.infer<typeof MetaEntitySurfaceSchema>;
 
+// Canonical disabled-reason codes carried in the descriptor. UI consumers
+// render these as tooltips; downstream rule engines key off them.
+export const DisabledReasonSchema = z.enum([
+  "missing_permission",
+  "denied_by_grant",
+  "plan_locked",
+  "module_disabled",
+  "feature_disabled",
+  "plane_excluded",
+  "entity_readonly",
+  "record_status_blocked",
+  "lifecycle_locked",
+  "binding_expired",
+  "handler_invalid",
+  "deprecated_alias",
+  "hard_delete_disabled",
+  "records_api_disabled",
+  "default_deny_policy",
+  "entity_hidden",
+]);
+export type DisabledReason = z.infer<typeof DisabledReasonSchema>;
+
 export const MetaEntityCapabilitiesSchema = z.object({
   canRead: z.boolean(),
   canCreate: z.boolean(),
   canEdit: z.boolean(),
   canDelete: z.boolean(),
+  // Reason codes; null when the corresponding flag is true.
+  canCreateReason: DisabledReasonSchema.nullable().default(null),
+  canEditReason: DisabledReasonSchema.nullable().default(null),
+  canDeleteReason: DisabledReasonSchema.nullable().default(null),
   hasLineItems: z.boolean(),
   hasChildRecords: z.boolean(),
   hasDistributions: z.boolean(),
@@ -235,6 +262,23 @@ export const MetaEntityCapabilitiesSchema = z.object({
   isReadOnly: z.boolean(),
 });
 export type MetaEntityCapabilities = z.infer<typeof MetaEntityCapabilitiesSchema>;
+
+// Lifecycle state mask carried per (entity, record_status). Populated from
+// control.entity_lifecycle_state_mask. UI uses this to disable edit/delete
+// actions when the current record's status is gated.
+//
+// `disabledReason` here is intentionally an open string (not the enum) because
+// the mask table stores domain-specific reasons (posted_locked, period_closed,
+// matched_lock, ...) that the UI renders as-is and the schema cannot fully
+// enumerate ahead of time.
+export const MetaEntityLifecycleStateMaskSchema = z.object({
+  recordStatus: z.string().min(1),
+  canEdit: z.boolean(),
+  canDelete: z.boolean(),
+  canTransitionTo: z.array(z.string()).optional(),
+  disabledReason: z.string().nullable().default(null),
+});
+export type MetaEntityLifecycleStateMask = z.infer<typeof MetaEntityLifecycleStateMaskSchema>;
 
 export const MetaEntityFieldSchema = z.object({
   key: z.string().min(1),
@@ -542,6 +586,13 @@ export const MetaEntityRuntimeDescriptorSchema = z.object({
   source: MetaEntitySourceSchema,
   policy: MetaEntityPolicySummarySchema,
   lifecycle: MetaEntityLifecycleSummarySchema.optional(),
+  /**
+   * Per-status capability masks resolved from control.entity_lifecycle_state_mask.
+   * UI consumers consult these to disable edit/delete actions when the active
+   * record is in a locked status (posted journal, archived supplier, etc).
+   * Empty array means no mask is applied for this entity.
+   */
+  lifecycleStateMasks: z.array(MetaEntityLifecycleStateMaskSchema).default([]),
   workflow: MetaEntityWorkflowSummarySchema.optional(),
   numbering: MetaEntityNumberingSummarySchema.optional(),
   concurrency: MetaEntityConcurrencySummarySchema.optional(),

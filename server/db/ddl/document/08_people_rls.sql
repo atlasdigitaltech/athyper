@@ -37,7 +37,7 @@ BEGIN
         EXECUTE format('DROP POLICY IF EXISTS tenant_delete ON document.%I', v_table);
         EXECUTE format('DROP POLICY IF EXISTS admin_read ON document.%I', v_table);
         EXECUTE format('DROP POLICY IF EXISTS admin_write ON document.%I', v_table);
-        EXECUTE format('CREATE POLICY tenant_read ON document.%I FOR SELECT USING (tenant_id = shared.current_tenant_id_soft())', v_table);
+        EXECUTE format('CREATE POLICY tenant_read ON document.%I FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())', v_table);
         EXECUTE format('CREATE POLICY tenant_insert ON document.%I FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id())', v_table);
         EXECUTE format('CREATE POLICY tenant_update ON document.%I FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id())', v_table);
         EXECUTE format('CREATE POLICY tenant_delete ON document.%I FOR DELETE USING (tenant_id = shared.current_tenant_id())', v_table);

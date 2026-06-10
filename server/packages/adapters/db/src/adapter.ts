@@ -5,6 +5,7 @@ import {
   type DbClientConfig,
   type DbPoolStats,
 } from "./kysely/db.js";
+import type pg from "pg";
 import {
   setTenantIdProvider,
   withTenantTx,
@@ -105,6 +106,13 @@ export interface DbAdapter {
    * Pool statistics for health monitoring
    */
   getPoolStats(): DbPoolStats;
+
+  /**
+   * Underlying pg.Pool. Used by descriptor-cache LISTEN/NOTIFY consumers
+   * that need session-mode connections (PgBouncer transaction-mode pools
+   * disallow LISTEN). Avoid for query work — use kysely + withTenantTx.
+   */
+  getPool(): pg.Pool;
 }
 
 /**
@@ -141,5 +149,6 @@ export function createDbAdapter(config: DbAdapterConfig): DbAdapter {
     close: () => client.close(),
     health: () => client.health(),
     getPoolStats: () => client.getPoolStats(),
+    getPool: () => client.getPool(),
   };
 }

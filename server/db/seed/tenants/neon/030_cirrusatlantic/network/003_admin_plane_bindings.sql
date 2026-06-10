@@ -5,15 +5,11 @@
 -- Purpose:  Add realm_key='admin' principal_identity_binding rows for the
 --           cirrusatlantic tenant admins who can log in via the ADMIN plane.
 --
--- ADMIN realm KC UUIDs (stable — must match admin-realm.json KC import):
---   dd003000-0000-0000-0000-000000000001  catl.owner  (admin realm)
---   dd003000-0000-0000-0000-000000000002  catl.admin  (admin realm)
---
--- Existing NEON principal UUIDs (from 900_principals/001_principals.sql):
+-- Single athyper realm KC UUIDs (subject_id = KC user UUID, same as principal UUID):
 --   aa003000-0000-0000-0000-000000000002  catl.owner
 --   aa003000-0000-0000-0000-000000000001  catl.admin
 --
--- Login flow: ADMIN realm KC → subject_id lookup → cirrusatlantic principal →
+-- Login flow: athyper realm KC → subject_id lookup → cirrusatlantic principal →
 --             cirrusatlantic tenant admin console (auto-login: 1 tenant context).
 --
 -- Depends:  900_principals/001_principals.sql (principals must exist)

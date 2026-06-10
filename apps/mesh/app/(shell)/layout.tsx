@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { validatePlaneServerSession } from "@athyper/auth-bff";
 import { getPlaneConfig, isSupportSession } from "@athyper/session-plane";
 import { AppShellClient } from "./AppShellClient";
+import { RequiredActionBannerSlot } from "./RequiredActionBannerSlot";
 import { PLANE_KEY } from "@/lib/plane";
 
 export default async function ShellLayout({ children }: { children: ReactNode }) {
@@ -23,8 +24,13 @@ export default async function ShellLayout({ children }: { children: ReactNode })
     redirect(`${plane.loginPath}?returnUrl=${encodeURIComponent(returnUrl)}`);
   }
 
+  // Phase I — surface pending KC required-actions inline above the shell.
+  // allow-raw-verify: read-only for banner; gate already applied above.
+  const requiredActions = validation.session.requiredActions ?? [];
+
   return (
     <AppShellClient supportMode={isSupportSession(PLANE_KEY, validation.session.realmKey)}>
+      <RequiredActionBannerSlot actions={requiredActions} />
       {children}
     </AppShellClient>
   );

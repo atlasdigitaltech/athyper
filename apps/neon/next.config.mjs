@@ -27,6 +27,7 @@ const nextConfig = {
     "@athyper/identity-gate",
     "@athyper/entity-print",
     "@athyper/icons",
+    "@athyper/line-item-runtime",
     "@athyper/navigation-core",
     "@athyper/route-manifest-core",
     "@athyper/runtime-contracts",

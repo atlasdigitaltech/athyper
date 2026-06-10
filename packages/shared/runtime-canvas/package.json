@@ -22,6 +22,7 @@
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
     "@athyper/collaboration-ui": "workspace:*",
+    "@athyper/line-item-runtime": "workspace:*",
     "@athyper/query": "workspace:*",
     "@athyper/entity-print": "workspace:*",
     "@athyper/icons": "workspace:*",

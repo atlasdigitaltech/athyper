@@ -1,8 +1,8 @@
 {
   "id": "2aa65d95-3994-4eb0-9614-429590c1b11d",
   "realm": "athyper",
-  "displayName": "athyper Identity and Access Management",
-  "displayNameHtml": "athyper Identity and Access Management",
+  "displayName": "athyper",
+  "displayNameHtml": "athyper",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": true,

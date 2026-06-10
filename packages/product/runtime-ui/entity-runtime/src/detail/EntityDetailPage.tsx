@@ -48,23 +48,33 @@ export function EntityDetailPage({
   const { data: record,     isLoading: recordLoading } = useEntityDetail(entityCode, recordId);
   const { data: operations }                            = useEntityOperations(entityCode);
 
-  // canEdit is explicit: missing operation metadata means view-only.
+  // Phase 3: canEdit is read straight from the compiled descriptor's
+  // capabilities (which now carries canEditReason for tooltip rendering).
+  // The compiler resolves canEdit from readonly flags + access policy +
+  // operation presence, so we no longer recompute it from raw operations.
+  // The operations-level handler_type check remains as a fallback for legacy
+  // entities whose compiled snapshot predates the Phase 1 lifecycle masks.
   const isEntityReadOnly = entity?.feature_flags?.is_readonly === true;
-  const canEdit = !isEntityReadOnly && operations?.some((op) => {
-    const code = op.permission_code.includes(".")
-      ? op.permission_code.split(".").pop()!
-      : op.permission_code;
-    return op.is_enabled && (
-      ["edit", "update"].includes(code) ||
-      (
-        op.handler_type === "NAVIGATE" &&
-        (
-          (op.handler_target ?? "").includes("mode=edit") ||
-          (op.handler_target ?? "").includes("/edit")
-        )
-      )
-    );
-  }) === true;
+  const capabilitiesCanEdit = (entity as unknown as {
+    capabilities?: { canEdit?: boolean };
+  } | undefined)?.capabilities?.canEdit;
+  const canEdit = capabilitiesCanEdit !== undefined
+    ? capabilitiesCanEdit
+    : !isEntityReadOnly && operations?.some((op) => {
+        const code = op.permission_code.includes(".")
+          ? op.permission_code.split(".").pop()!
+          : op.permission_code;
+        return op.is_enabled && (
+          ["edit", "update"].includes(code) ||
+          (
+            op.handler_type === "NAVIGATE" &&
+            (
+              (op.handler_target ?? "").includes("mode=edit") ||
+              (op.handler_target ?? "").includes("/edit")
+            )
+          )
+        );
+      }) === true;
   const effectiveEditMode = editMode && canEdit;
 
   if (metaLoading || recordLoading || !entity) {

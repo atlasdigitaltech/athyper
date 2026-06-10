@@ -16,7 +16,7 @@ DROP POLICY IF EXISTS admin_read    ON event.outbox;
 DROP POLICY IF EXISTS admin_write   ON event.outbox;
 
 -- Tenant sessions can read own outbox events (observability)
-CREATE POLICY tenant_read   ON event.outbox FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_read   ON event.outbox FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 
 -- Tenant sessions can insert (triggers fire in tenant context)
 CREATE POLICY tenant_insert ON event.outbox FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
@@ -42,7 +42,7 @@ DROP POLICY IF EXISTS admin_read    ON event.notification_message;
 DROP POLICY IF EXISTS admin_write   ON event.notification_message;
 
 CREATE POLICY tenant_read   ON event.notification_message
-    FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON event.notification_message
     FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- Delivery worker (running as tenant session) updates counters and status
@@ -65,7 +65,7 @@ DROP POLICY IF EXISTS admin_read    ON event.notification_delivery;
 DROP POLICY IF EXISTS admin_write   ON event.notification_delivery;
 
 CREATE POLICY tenant_read   ON event.notification_delivery
-    FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON event.notification_delivery
     FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- Delivery worker updates status, attempt_count, timestamps
@@ -89,7 +89,7 @@ DROP POLICY IF EXISTS admin_read    ON event.notification_delivery_claim;
 DROP POLICY IF EXISTS admin_write   ON event.notification_delivery_claim;
 
 CREATE POLICY tenant_read   ON event.notification_delivery_claim
-    FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON event.notification_delivery_claim
     FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON event.notification_delivery_claim
@@ -112,7 +112,7 @@ DROP POLICY IF EXISTS admin_read    ON event.digest_staging;
 DROP POLICY IF EXISTS admin_write   ON event.digest_staging;
 
 CREATE POLICY tenant_read   ON event.digest_staging
-    FOR SELECT USING     (tenant_id = shared.current_tenant_id_soft());
+    FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON event.digest_staging
     FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 -- Digest worker stamps delivered_at when batch is assembled

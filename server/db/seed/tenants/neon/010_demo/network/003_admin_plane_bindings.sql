@@ -7,15 +7,11 @@
 --           The existing principal (NEON plane) gets a second identity binding
 --           for the ADMIN realm — same DB principal, different KC realm.
 --
--- ADMIN realm KC UUIDs (stable — must match admin-realm.json KC import):
---   dd001000-0000-0000-0000-000000000001  athq.owner  (admin realm)
---   dd001000-0000-0000-0000-000000000002  athq.admin  (admin realm)
---
--- Existing NEON principal UUIDs (from 001_demo_principals.sql):
+-- Single athyper realm KC UUIDs (subject_id = KC user UUID, same as principal UUID):
 --   aa001000-0000-0000-0000-000000000006  athq.owner
 --   aa001000-0000-0000-0000-000000000007  athq.admin
 --
--- Login flow: ADMIN realm KC → subject_id lookup → NEON principal → athyper
+-- Login flow: athyper realm KC → subject_id lookup → NEON principal → athyper
 --             tenant admin console (auto-login: 1 tenant context).
 --
 -- Depends:  900_principals/001_demo_principals.sql (principals must exist)
@@ -41,8 +37,7 @@ BEGIN
         RAISE EXCEPTION '[003_admin_plane_bindings] athq.admin principal not found';
     END IF;
 
-    -- ── ADMIN realm identity bindings ─────────────────────────────────────────
-    -- subject_id = KC user UUID in the ADMIN realm (different from NEON KC UUID)
+    -- ── athyper realm identity bindings ──────────────────────────────────────
     INSERT INTO master.principal_identity_binding (
         tenant_id, principal_id,
         realm_key, provider_code, subject_id, username,

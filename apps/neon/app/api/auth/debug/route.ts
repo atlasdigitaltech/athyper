@@ -5,6 +5,10 @@ import { getNeonServerSession } from "@/lib/server/session";
 import { RUNTIME_API_URL } from "@/lib/server/runtime-headers";
 
 export async function GET(): Promise<NextResponse> {
+  if ((process.env.ENVIRONMENT ?? "local") !== "local") {
+    return NextResponse.json({ error: "Not Found" }, { status: 404 });
+  }
+
   const session = await getNeonServerSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

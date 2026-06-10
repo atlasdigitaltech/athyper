@@ -34,12 +34,62 @@ export interface RequestContext {
   orgKey?: string;
   /** Company code key from X-Org when present as {tenant}--{companyCode}. */
   companyCodeKey?: string;
+  /**
+   * Active persona for neon/admin contexts. Mesh requests leave this undefined
+   * (mesh authorization flows through account_grant, not persona_permission).
+   * Populated by the permission-context middleware after token verification.
+   */
+  personaId?: string;
+  /**
+   * Active mesh.account_grant id when planeKey === 'mesh'. Pairs with the
+   * fingerprint stored on the grant row; used in the descriptor cache key.
+   */
+  accountGrantId?: string;
+  /**
+   * Stable fingerprint of the persona (neon/admin) or binding (mesh) that
+   * identifies *this* principal scope. Goes into the descriptor cache key
+   * so persona switches and binding revocations invalidate the cache.
+   */
+  principalFingerprint?: string;
+  /**
+   * Composite hash of (principalFingerprint, allowed permission codes,
+   * planVersionId). The descriptor cache key v4 includes this so plan
+   * upgrades and grant changes bust the cache automatically.
+   */
+  profileHash?: string;
 }
 
 export function normalizePlaneKey(value: unknown): PlaneKey | undefined {
   const key = Array.isArray(value) ? value[0] : value;
   if (key === "neon" || key === "mesh" || key === "admin") return key;
   return undefined;
+}
+
+/**
+ * Derive the plane key from a Keycloak token's `azp` claim.
+ * Maps the per-plane web client ids (`neon-web`, `mesh-web`, `admin-web`) to
+ * their plane. Returns null for service tokens or unknown `azp` so callers can
+ * skip plane cross-checks instead of mis-rejecting them.
+ */
+export function derivePlaneFromAzp(value: unknown): PlaneKey | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") return null;
+  if (raw === "neon-web") return "neon";
+  if (raw === "mesh-web") return "mesh";
+  if (raw === "admin-web") return "admin";
+  return null;
+}
+
+/**
+ * Derive the realm key from a Keycloak token's `iss` claim.
+ * Pulls the last path segment after `/realms/`. Used to cross-check
+ * header-derived `x-realm` against the actual token issuer so a header cannot
+ * pick a different verifier than the one that issued the token.
+ */
+export function deriveRealmFromIss(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const match = /\/realms\/([^/]+)\/?$/.exec(value);
+  return match?.[1] ?? null;
 }
 
 export function parseOrgHeader(value: unknown): Pick<RequestContext, "orgKey" | "companyCodeKey"> {
@@ -108,6 +158,10 @@ export async function runWithJobContext<T>(
     tenantId: payloadCtx.tenantId,
     orgKey: payloadCtx.orgKey,
     companyCodeKey: payloadCtx.companyCodeKey,
+    personaId: payloadCtx.personaId,
+    accountGrantId: payloadCtx.accountGrantId,
+    principalFingerprint: payloadCtx.principalFingerprint,
+    profileHash: payloadCtx.profileHash,
   };
   return store.run(ctx, () => Promise.resolve(fn()));
 }

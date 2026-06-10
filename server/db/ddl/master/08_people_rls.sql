@@ -43,7 +43,7 @@ BEGIN
         EXECUTE format('DROP POLICY IF EXISTS tenant_delete ON master.%I', v_table);
         EXECUTE format('DROP POLICY IF EXISTS admin_read ON master.%I', v_table);
         EXECUTE format('DROP POLICY IF EXISTS admin_write ON master.%I', v_table);
-        EXECUTE format('CREATE POLICY tenant_read ON master.%I FOR SELECT USING (tenant_id = shared.current_tenant_id_soft())', v_table);
+        EXECUTE format('CREATE POLICY tenant_read ON master.%I FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())', v_table);
         EXECUTE format('CREATE POLICY tenant_insert ON master.%I FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id())', v_table);
         EXECUTE format('CREATE POLICY tenant_update ON master.%I FOR UPDATE USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id())', v_table);
         EXECUTE format('CREATE POLICY tenant_delete ON master.%I FOR DELETE USING (tenant_id = shared.current_tenant_id())', v_table);
@@ -67,7 +67,7 @@ DROP POLICY IF EXISTS admin_write ON master.person_sensitive_profile;
 
 CREATE POLICY hr_pii_read ON master.person_sensitive_profile
     FOR SELECT USING (
-        tenant_id = shared.current_tenant_id_soft()
+        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
         AND (
             'PPL.PII.VIEW' = ANY(string_to_array(coalesce(current_setting('app.permissions', true), ''), ','))
             OR 'PPL.PII.EDIT' = ANY(string_to_array(coalesce(current_setting('app.permissions', true), ''), ','))

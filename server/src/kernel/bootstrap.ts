@@ -18,6 +18,13 @@
 
 import { createDbAdapter } from "@athyper/adapter-db";
 
+// Phase D — the realm-default setter is exposed only through the bootstrap
+// subpath. Route packages resolve `@athyper/svc-shared` and never see it, so
+// route handlers cannot retarget the realm at runtime.
+import { setDefaultRealmKey } from "@athyper/svc-shared/bootstrap";
+
+import { recordAuthFlagPostureWarning, recordTenantStampSkipped } from "../metrics.js";
+import { applyAuthFlagPostureValidation } from "./auth-flag-validator.js";
 import { tryGetContext } from "./request-context.js";
 import { createRedisClient, type RedisClientOptions } from "@athyper/adapter-memorycache";
 import { createAuthAdapter } from "@athyper/adapter-auth";
@@ -200,6 +207,23 @@ export async function bootstrap(
     });
   }
 
+  // Configure the shared route-helper default realm BEFORE any route registers
+  // with the runtime. Without this, extractOrgHeaders / resolveTenantId /
+  // resolvePrincipalIdOrNull fall back to the legacy "athyper" literal even on
+  // multi-realm deployments where the configured default differs.
+  setDefaultRealmKey(kernelConfig?.iam.defaultRealmKey ?? config.iam.realm);
+
+  // Phase C — Auth flag posture validation. Reads every AUTH_* flag, cross-
+  // checks the invariants, and refuses to boot in production when the
+  // configuration is silently unsafe (e.g. AUTH_PLATFORM_CONTEXT_GATE=on with
+  // AUTH_CLAIM_FIRST_CONTEXT=off). Warnings are logged + counted; errors
+  // throw and abort bootstrap so the orchestrator surfaces the bad deploy
+  // (K8s CrashLoopBackOff, Compose restart loop, etc.).
+  applyAuthFlagPostureValidation(config.env, kernelConfig, {
+    logger,
+    recordWarning: (rule, severity) => recordAuthFlagPostureWarning(rule, severity),
+  });
+
   // ─── Fatal process handlers ──────────────────────────────────────────────────
   // Installed before adapter creation so async bootstrap failures are captured
   // rather than crashing silently with no structured log.
@@ -252,10 +276,43 @@ export async function bootstrap(
   // tenantIdProvider binds withTenantTx to the request-context ALS. The id is
   // read from the authenticated session, not from service-code arguments, so a
   // service bug cannot stamp the wrong tenant on a transaction.
+  //
+  // onSkippedStamp / onRollbackFailure are wired to the Prometheus counters in
+  // metrics.ts and structured logs so silent fail-closed reads (no tenant in
+  // ALS) and dirty-connection rollback failures are observable in production.
+  const onTenantStampSkipped = (
+    reason: "no-tenant" | "invalid-uuid",
+    value: unknown,
+  ): void => {
+    recordTenantStampSkipped(reason);
+    if (reason === "invalid-uuid") {
+      // invalid-uuid means a provider returned something — surface loudly,
+      // it's a programming error somewhere upstream.
+      logger.error("tenant_stamp_skipped_invalid_uuid", {
+        requestId: tryGetContext()?.requestId,
+        tenantIdValue: typeof value === "string" ? value : String(value),
+      });
+    }
+    // no-tenant is the steady-state path for bootstrap/health/migrations and
+    // happens many times per second — the counter is enough; no per-call log.
+  };
+  const onTenantStampRollbackFailure = (
+    error: unknown,
+    originalError: unknown,
+  ): void => {
+    logger.error("tenant_stamp_rollback_failed", {
+      requestId: tryGetContext()?.requestId,
+      err: error instanceof Error ? error.message : String(error),
+      originalErr: originalError instanceof Error ? originalError.message : String(originalError),
+    });
+  };
+
   const db = createDbAdapter({
     connectionString: config.db.url,
     poolMax: config.db.poolMax,
     tenantIdProvider: () => tryGetContext()?.tenantId,
+    onSkippedStamp: onTenantStampSkipped,
+    onRollbackFailure: onTenantStampRollbackFailure,
     // Phase 1.5: wrap pool with retry policy (connection-level errors only)
     ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
   });

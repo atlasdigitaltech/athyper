@@ -13,11 +13,20 @@ import { createServer, type Server, type ServerResponse } from "node:http";
 
 export type ProbeCheck = () => Promise<unknown> | unknown;
 
+/**
+ * Phase 8: optional Prometheus text-format provider. When supplied, the probe
+ * server responds to GET /metrics with the lines joined by "\n". This lets
+ * non-API runtimes (worker, scheduler) surface their internal counters
+ * without bringing the full api.ts metrics module into the worker process.
+ */
+export type MetricsProvider = () => Promise<string[]> | string[];
+
 export interface ProbeServerOptions {
   port: number;
   mode: string;
   checks?: Record<string, ProbeCheck>;
   readinessTimeoutMs?: number;
+  metricsProvider?: MetricsProvider;
 }
 
 interface ProbeCheckResult {
@@ -60,9 +69,23 @@ export function startProbeServer({
   mode,
   checks = {},
   readinessTimeoutMs = 2_000,
+  metricsProvider,
 }: ProbeServerOptions): Server {
   const server = createServer((req, res) => {
     const path = req.url?.split("?", 1)[0] ?? "/";
+    if (path === "/metrics" && metricsProvider) {
+      void (async () => {
+        try {
+          const lines = await metricsProvider();
+          res.writeHead(200, { "Content-Type": "text/plain; version=0.0.4; charset=utf-8" });
+          res.end(lines.join("\n") + "\n");
+        } catch (err) {
+          res.writeHead(500, { "Content-Type": "text/plain" });
+          res.end(`# metrics provider failed: ${err instanceof Error ? err.message : String(err)}\n`);
+        }
+      })();
+      return;
+    }
     if (path === "/readyz" || path === "/healthz" || path === "/health") {
       void (async () => {
         const results = Object.fromEntries(

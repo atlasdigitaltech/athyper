@@ -1,4 +1,4 @@
-<#-- Generated from packages/product/design/brand/src/products/neon/ -->
+<#-- Generated from packages/apps/neon/brand/src/products/neon/ -->
 <#-- DO NOT EDIT DIRECTLY - run: pnpm brand:refresh -->
 <div class="kc-mobile-logo">
 <svg width="24" height="24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 278 257"

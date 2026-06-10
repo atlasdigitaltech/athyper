@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   createMetadataClient,
   createRecordsClient,
@@ -10,6 +11,8 @@ import {
 } from "@athyper/api-client";
 import { setClients } from "@athyper/query";
 import { registerDefaultFieldRenderers } from "@athyper/runtime-canvas/fields";
+import { ToastProvider, useToast } from "@athyper/ui/composites";
+import { AuthFailureBridge } from "@athyper/identity-gate";
 import { applyThemePreferences } from "@/lib/preferences/theme-dom";
 
 // Relay-based fetch — no access token needed client-side; the relay BFF at
@@ -49,10 +52,46 @@ export function NeonProviders({ children }: { children: ReactNode }) {
   }));
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <PreferencesDomHydrator />
-      {children}
-    </QueryClientProvider>
+    <ToastProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthFailureBridgeWired />
+        <PreferencesDomHydrator />
+        {children}
+      </QueryClientProvider>
+    </ToastProvider>
+  );
+}
+
+// Adapts the @athyper/ui useToast + Next router into the AuthFailureBridge
+// dispatcher contract. Lives inside both providers so it can read the toast
+// + react-query contexts. Telemetry is wired to a console beacon in dev; CI
+// can swap it for a real beacon by editing this file (kept here so the wiring
+// is visible during code review).
+function AuthFailureBridgeWired() {
+  const { toast } = useToast();
+  const router = useRouter();
+  return (
+    <AuthFailureBridge
+      planeRoot=""
+      emitToast={(input) => {
+        toast({
+          title: input.title,
+          ...(input.description ? { description: input.description } : {}),
+          intent: input.intent,
+          ...(input.action ? { action: input.action } : {}),
+        });
+      }}
+      navigate={(href) => router.push(href)}
+      recordTelemetry={(input) => {
+        if (typeof window === "undefined") return;
+        if (process.env.NODE_ENV !== "production") {
+          // eslint-disable-next-line no-console
+          console.info("[telemetry]", input.event, input);
+        }
+        // Beacon hook — replace with your real sink (posthog, plausible, etc.)
+        window.dispatchEvent(new CustomEvent("athyper:auth-failure", { detail: input }));
+      }}
+    />
   );
 }
 
