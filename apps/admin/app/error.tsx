@@ -1,6 +1,6 @@
 "use client";
 
-import { authFailurePresentation, isAuthFailureCode } from "@athyper/auth-bff/error-codes";
+import { authFailurePresentation, isAuthFailureCode } from "@athyper/auth-bff";
 import { AuthFailurePage } from "@athyper/identity-gate";
 
 export default function ErrorPage({ error, reset }: { error: Error; reset: () => void }) {
