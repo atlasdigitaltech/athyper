@@ -7,7 +7,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./error-codes": "./src/error-codes.ts"
+    "./*": "./src/*"
   },
   "scripts": {
     "test": "vitest run",
