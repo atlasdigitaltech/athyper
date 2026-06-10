@@ -17,7 +17,7 @@ import {
   authFailurePresentation,
   resolveAuthFailureHref,
   type AuthFailureCode,
-} from "@athyper/auth-bff";
+} from "@athyper/auth-bff/error-codes";
 
 export interface AuthFailurePageProps {
   readonly code: AuthFailureCode;

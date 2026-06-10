@@ -20,7 +20,7 @@ import {
   type AuthFailureCode,
   type AuthFailurePresentation,
   type AuthFailureSeverity,
-} from "@athyper/auth-bff";
+} from "@athyper/auth-bff/error-codes";
 
 export type { AuthFailureCode, AuthFailureSeverity };
 
