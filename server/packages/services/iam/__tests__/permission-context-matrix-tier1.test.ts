@@ -56,8 +56,8 @@ const NEON_PLANE = new Map([
 ]);
 
 const MESH_PLANE = new Map([
-  ["mesh.document.view",    { code: "mesh.document.view",    is_plan_restricted: false }],
-  ["mesh.document.respond", { code: "mesh.document.respond", is_plan_restricted: false }],
+  ["MESH.BUYER.VIEW",    { code: "MESH.BUYER.VIEW",    is_plan_restricted: false }],
+  ["MESH.BUYER.RESPOND", { code: "MESH.BUYER.RESPOND", is_plan_restricted: false }],
 ]);
 
 const ADMIN_PLANE = new Map([
@@ -163,25 +163,25 @@ describe("S4 — cross-plane permission isolation", () => {
   it("places mesh.* codes outside the neon plane catalog into planeExcluded", () => {
     const decisions: PermissionBatchResult = {
       read: decision("allow"),
-      "mesh.document.respond": decision("allow"),
+      "MESH.BUYER.RESPOND": decision("allow"),
       "PLATFORM.STUDIO.EDIT": decision("allow"),
     };
     const { allowed, planeExcluded, entries } = partitionDecisions(decisions, NEON_PLANE);
 
     expect([...allowed]).toEqual(["read"]);
-    expect(planeExcluded.has("mesh.document.respond")).toBe(true);
+    expect(planeExcluded.has("MESH.BUYER.RESPOND")).toBe(true);
     expect(planeExcluded.has("PLATFORM.STUDIO.EDIT")).toBe(true);
-    expect(entries.get("mesh.document.respond")?.reason).toEqual("plane_excluded");
+    expect(entries.get("MESH.BUYER.RESPOND")?.reason).toEqual("plane_excluded");
   });
 
   it("places neon CRUD codes outside the mesh catalog into planeExcluded", () => {
     const decisions: PermissionBatchResult = {
       read:   decision("allow"),
       update: decision("allow"),
-      "mesh.document.view": decision("allow"),
+      "MESH.BUYER.VIEW": decision("allow"),
     };
     const { allowed, planeExcluded } = partitionDecisions(decisions, MESH_PLANE);
-    expect([...allowed]).toEqual(["mesh.document.view"]);
+    expect([...allowed]).toEqual(["MESH.BUYER.VIEW"]);
     expect(planeExcluded.has("read")).toBe(true);
     expect(planeExcluded.has("update")).toBe(true);
   });
@@ -190,12 +190,12 @@ describe("S4 — cross-plane permission isolation", () => {
     const decisions: PermissionBatchResult = {
       read: decision("allow"),
       "PLATFORM.STUDIO.EDIT": decision("allow"),
-      "mesh.document.view": decision("allow"),
+      "MESH.BUYER.VIEW": decision("allow"),
     };
     const { allowed, planeExcluded } = partitionDecisions(decisions, ADMIN_PLANE);
     expect([...allowed]).toEqual(["PLATFORM.STUDIO.EDIT"]);
     expect(planeExcluded.has("read")).toBe(true);
-    expect(planeExcluded.has("mesh.document.view")).toBe(true);
+    expect(planeExcluded.has("MESH.BUYER.VIEW")).toBe(true);
   });
 
   it("preserves plan-locked codes inside the plane (not excluded)", () => {
@@ -233,18 +233,18 @@ describe("S5 — multi-tenant mesh partner uses distinct fingerprints", () => {
 
   it("partitions T1's mesh grants without contaminating T2's allowed set", () => {
     const t1Decisions: PermissionBatchResult = {
-      "mesh.document.view":    decision("allow"),
-      "mesh.document.respond": decision("not_found"),
+      "MESH.BUYER.VIEW":    decision("allow"),
+      "MESH.BUYER.RESPOND": decision("not_found"),
     };
     const t2Decisions: PermissionBatchResult = {
-      "mesh.document.view":    decision("allow"),
-      "mesh.document.respond": decision("allow"),
+      "MESH.BUYER.VIEW":    decision("allow"),
+      "MESH.BUYER.RESPOND": decision("allow"),
     };
     const t1 = partitionDecisions(t1Decisions, MESH_PLANE);
     const t2 = partitionDecisions(t2Decisions, MESH_PLANE);
 
-    expect([...t1.allowed].sort()).toEqual(["mesh.document.view"]);
-    expect([...t2.allowed].sort()).toEqual(["mesh.document.respond", "mesh.document.view"]);
+    expect([...t1.allowed].sort()).toEqual(["MESH.BUYER.VIEW"]);
+    expect([...t2.allowed].sort()).toEqual(["MESH.BUYER.RESPOND", "MESH.BUYER.VIEW"]);
   });
 
   it("composes cache-purge patterns per-tenant on mesh", () => {

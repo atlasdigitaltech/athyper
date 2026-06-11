@@ -516,7 +516,6 @@ BEGIN
       is_posted,
       is_reversal,
       is_credit_note,
-      is_on_hold,
       hold_reason,
       metadata,
       created_by,
@@ -559,7 +558,6 @@ BEGIN
       false,
       r.is_reversal,
       r.is_reversal,
-      r.status = 'on_hold',
       CASE WHEN r.status = 'on_hold' THEN 'Awaiting procurement exception review.' ELSE NULL END,
       jsonb_build_object(
         'seed', 'TestInvoice.sql',

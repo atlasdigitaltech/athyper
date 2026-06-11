@@ -99,6 +99,28 @@ if [[ "$ENVIRONMENT" == "local" ]]; then
     *)         PNPM_SCRIPT="dev" ;;
   esac
 
+  # Shadow-detection: if the containerized counterpart is running, host edits
+  # will silently NOT take effect because the bundle inside the container is
+  # stale. Stop the container before starting host dev.
+  SHADOW_NAME="${COMPOSE_PROJECT_NAME:-athyper}-${MODE}-1"
+  if docker ps --format '{{.Names}}' --filter "name=^${SHADOW_NAME}$" 2>/dev/null | grep -qx "$SHADOW_NAME"; then
+    cat >&2 <<EOF
+
+============================================================
+ WARNING: containerized $MODE is running while ENVIRONMENT=local.
+          Host source edits will NOT take effect.
+          Stop it first:  docker stop $SHADOW_NAME
+          Or run:         stack/scripts/dev-local.sh --stop-only
+============================================================
+
+EOF
+    read -r -p "Continue anyway? [y/N] " _resp
+    case "${_resp,,}" in
+      y|yes) ;;
+      *) echo "Aborted."; exit 1 ;;
+    esac
+  fi
+
   if [[ "$BUILD_FLAG" == "1" ]]; then
     echo "Local mode: --build is ignored; tsx handles incremental reloads."
     echo ""

@@ -18,6 +18,7 @@
 import type { RequestHandler, Router } from "express";
 import { sql } from "kysely";
 import { z } from "zod";
+import { checkPermission, requireAllow } from "@athyper/svc-iam";
 import {
   verifyBearer,
   resolveTenantId,
@@ -61,14 +62,8 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
 
         const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId) ?? "";
 
-        // Permission gate — ai.use_extraction
-        const permCheck = await sql<{ decision: string }>`
-          SELECT master.check_permission(
-            ${tenantId}::uuid, ${principalId}::uuid, 'ai.use_extraction', NULL
-          ) AS decision
-        `.execute(db);
-        if (permCheck.rows[0]?.decision !== "allow") {
-          res.status(403).json({ error: "forbidden", required: "ai.use_extraction" });
+        const permCheck = await checkPermission(db, tenantId, principalId, "ai.use_extraction");
+        if (!requireAllow(permCheck, res)) {
           return;
         }
 
@@ -102,15 +97,8 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
 
         const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId) ?? "";
 
-        const permCheck = await sql<{ decision: string }>`
-          SELECT master.check_permission(
-            ${tenantId}::uuid, ${principalId}::uuid, 'ai.use_extraction', NULL
-          ) AS decision
-        `.execute(db);
-        if (permCheck.rows[0]?.decision !== "allow") {
-          res.status(403).json({ error: "forbidden", required: "ai.use_extraction" });
-          return;
-        }
+        const permCheck = await checkPermission(db, tenantId, principalId, "ai.use_extraction");
+        if (!requireAllow(permCheck, res)) return;
 
         const parsed = ActionRequestSchema.safeParse(req.body);
         if (!parsed.success) {
@@ -160,15 +148,8 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
 
         const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId) ?? "";
 
-        const permCheck = await sql<{ decision: string }>`
-          SELECT master.check_permission(
-            ${tenantId}::uuid, ${principalId}::uuid, 'ai.review_ai_output', NULL
-          ) AS decision
-        `.execute(db);
-        if (permCheck.rows[0]?.decision !== "allow") {
-          res.status(403).json({ error: "forbidden", required: "ai.review_ai_output" });
-          return;
-        }
+        const permCheck = await checkPermission(db, tenantId, principalId, "ai.review_ai_output");
+        if (!requireAllow(permCheck, res)) return;
 
         const parsed = FeedbackSchema.safeParse(req.body);
         if (!parsed.success) {
@@ -272,13 +253,8 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
     const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId);
     if (!principalId) { res.status(403).json({ error: "forbidden", reason: "principal_not_found" }); return null; }
 
-    const permCheck = await sql<{ decision: string }>`
-      SELECT master.check_permission(
-        ${tenantId}::uuid, ${principalId}::uuid, 'ai.calibrate_thresholds', NULL
-      ) AS decision
-    `.execute(db);
-    if (permCheck.rows[0]?.decision !== "allow") {
-      res.status(403).json({ error: "forbidden", required: "ai.calibrate_thresholds" });
+    const permCheck = await checkPermission(db, tenantId, principalId, "ai.calibrate_thresholds");
+    if (!requireAllow(permCheck, res)) {
       return null;
     }
 

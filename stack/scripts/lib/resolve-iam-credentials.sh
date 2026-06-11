@@ -33,8 +33,12 @@ init_stack_env() {
   _STACK_ENV_DIR="${stack_dir}"
   if [[ -f "${stack_dir}/env/.env" ]]; then
     _STACK_ENV_FILE="${stack_dir}/env/.env"
-  else
+  elif [[ "${ALLOW_ENV_EXAMPLE:-0}" == "1" ]]; then
     _STACK_ENV_FILE="${stack_dir}/env/.env.example"
+  else
+    echo "ERROR: Missing stack env file: ${stack_dir}/env/.env" >&2
+    echo "Set ALLOW_ENV_EXAMPLE=1 if you intentionally want to use .env.example in CI smoke tests." >&2
+    return 1
   fi
 }
 
@@ -49,8 +53,7 @@ init_stack_env() {
 # ---------------------------------------------------------------------------
 env_val() {
   local key="${1:?env_val: KEY argument required}"
-  { grep -E "^${key}=" "$_STACK_ENV_FILE" 2>/dev/null || true; } \
-    | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'"
+  read_env_value "$_STACK_ENV_FILE" "$key"
 }
 
 # ---------------------------------------------------------------------------
@@ -70,11 +73,15 @@ resolve_iam_credentials() {
   IAM_RESOLVED_PASS="${IAM_DB_PASSWORD:-}"
 
   # Step 1: Try reading from running KC container (preferred — always fresh)
-  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "$CONTAINER_IAM"; then
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx -- "$CONTAINER_IAM"; then
     local c_url c_user c_pass
-    c_url=$(docker exec "$CONTAINER_IAM" printenv KC_DB_URL 2>/dev/null || echo "")
-    c_user=$(docker exec "$CONTAINER_IAM" printenv KC_DB_USERNAME 2>/dev/null || echo "")
-    c_pass=$(docker exec "$CONTAINER_IAM" printenv KC_DB_PASSWORD 2>/dev/null || echo "")
+    if read -r c_url c_user c_pass < <(docker exec "$CONTAINER_IAM" sh -c 'printf "%s\t%s\t%s" "$KC_DB_URL" "$KC_DB_USERNAME" "$KC_DB_PASSWORD"' 2>/dev/null); then
+      :
+    else
+      c_url=""
+      c_user=""
+      c_pass=""
+    fi
     [[ -n "$c_url" ]]  && IAM_RESOLVED_URL="$c_url"
     [[ -n "$c_user" ]] && IAM_RESOLVED_USER="$c_user"
     [[ -n "$c_pass" ]] && IAM_RESOLVED_PASS="$c_pass"
@@ -89,14 +96,14 @@ resolve_iam_credentials() {
   if [[ -z "$IAM_RESOLVED_PASS" ]]; then
     local secrets_file="${ATHYPER_SECRETS_ROOT:-/opt/stack/athyper/secrets}/.env"
     if [[ -f "$secrets_file" ]]; then
-      IAM_RESOLVED_PASS="$(grep -E "^IAM_DB_PASSWORD=" "$secrets_file" 2>/dev/null | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")"
+      IAM_RESOLVED_PASS="$(read_env_value "$secrets_file" IAM_DB_PASSWORD 2>/dev/null || true)"
     fi
   fi
 
   # Step 3: Fail if password is still empty
   if [[ -z "$IAM_RESOLVED_PASS" ]]; then
-    echo -e "\033[0;31mError: Cannot determine IAM database password\033[0m"
-    echo -e "\033[1;33mSet IAM_DB_PASSWORD in stack/env/.env, secrets/.env, or as an environment variable\033[0m"
+    echo -e "${CLR_RED}Error: Cannot determine IAM database password${CLR_NC}" >&2
+    echo -e "${CLR_YELLOW}Set IAM_DB_PASSWORD in stack/env/.env, secrets/.env, or as an environment variable${CLR_NC}" >&2
     return 1
   fi
 

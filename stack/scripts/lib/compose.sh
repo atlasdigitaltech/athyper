@@ -36,6 +36,12 @@ STACK_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_DIR="$STACK_DIR/compose"
 ENV_DIR="$STACK_DIR/env"
 
+# env-parse.sh lives next to this file — resolve relative to BASH_SOURCE,
+# not the caller's SCRIPT_DIR (which points at the caller's script dir).
+if [[ -z "${_ATHYPER_ENV_PARSE_LOADED:-}" ]]; then
+  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env-parse.sh"
+fi
+
 # Pre-read stack/env/.env for ATHYPER_*_ROOT overrides BEFORE applying fallbacks.
 # Local dev: .env sets paths like D:/Stack/athyper/config so the six-var model
 #   works on Windows without changing this lib file.
@@ -43,14 +49,8 @@ ENV_DIR="$STACK_DIR/env"
 #   ${VAR:-} is non-empty → pre-read is a no-op, systemd values win.
 _prereq_read_root_var() {
   local _var="$1" _line _val
-  _line="$(grep -m1 "^${_var}=" "$ENV_DIR/.env" 2>/dev/null || true)"
-  [[ -z "$_line" ]] && return 0
-  _val="${_line#*=}"
-  _val="${_val%%#*}"         # strip inline comment
-  _val="${_val//\"/}"        # strip double-quotes
-  _val="${_val//\'/}"        # strip single-quotes
-  _val="${_val#"${_val%%[![:space:]]*}"}"  # ltrim
-  _val="${_val%"${_val##*[![:space:]]}"}"  # rtrim
+  _val="$(read_env_value "$ENV_DIR/.env" "$_var" || true)"
+  [[ -z "$_val" ]] && return 0
   [[ -z "${!_var:-}" && -n "$_val" ]] && export "$_var=$_val"
 }
 if [[ -f "$ENV_DIR/.env" ]]; then
@@ -95,7 +95,7 @@ fi
 ENV_FILE_ARGS+=( --env-file "$ENV_FILE" )
 
 if [[ ! -d "$COMPOSE_DIR" ]]; then
-  echo "ERROR: COMPOSE_DIR not found: $COMPOSE_DIR"
+  echo "ERROR: COMPOSE_DIR not found: $COMPOSE_DIR" >&2
   exit 1
 fi
 
@@ -108,10 +108,10 @@ ENVIRONMENT=""
 STACK_PROFILE=""
 
 init_compose_env() {
-  # In staging/prod, ENV_FILE is the secrets-only file which does NOT contain
-  # ENVIRONMENT or STACK_PROFILE — those live in the bootstrap (ENV_DIR/.env).
-  # Read bootstrap first, then overlay secrets (mirrors ENV_FILE_ARGS order so
-  # the result matches what docker compose sees for these two keys).
+  # ENVIRONMENT and STACK_PROFILE live in the bootstrap (ENV_DIR/.env). In
+  # staging/prod the secrets file (ENV_FILE) is consulted only as a fallback —
+  # it should not normally carry these keys, but reading it costs nothing and
+  # avoids a confusing failure if someone duplicated them there.
   local _files=()
   [[ -f "$ENV_DIR/.env" ]] && _files+=( "$ENV_DIR/.env" )
   [[ "$ENV_FILE" != "$ENV_DIR/.env" && -f "$ENV_FILE" ]] && _files+=( "$ENV_FILE" )
@@ -120,20 +120,12 @@ init_compose_env() {
     return 1
   fi
 
-  local _f
-  for _f in "${_files[@]}"; do
-    while IFS='=' read -r key value; do
-      [[ "$key" =~ ^[[:space:]]*# ]] && continue
-      [[ -z "$key" ]] && continue
-      key=$(echo "$key" | xargs)
-      [[ -z "$key" ]] && continue
-      value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
-      case "$key" in
-        ENVIRONMENT)   ENVIRONMENT="$value" ;;
-        STACK_PROFILE) STACK_PROFILE="$value" ;;
-      esac
-    done < <(tr -d '\r' < "$_f")
-  done
+  ENVIRONMENT="$(read_env_value "${_files[0]}" ENVIRONMENT || true)"
+  STACK_PROFILE="$(read_env_value "${_files[0]}" STACK_PROFILE || true)"
+  if [[ ${#_files[@]} -gt 1 ]]; then
+    ENVIRONMENT="${ENVIRONMENT:-$(read_env_value "${_files[1]}" ENVIRONMENT || true)}"
+    STACK_PROFILE="${STACK_PROFILE:-$(read_env_value "${_files[1]}" STACK_PROFILE || true)}"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -146,15 +138,15 @@ resolve_compose_override() {
     local)      OVERRIDE="$COMPOSE_DIR/athyper.override.local.yml" ;;
     staging)    OVERRIDE="$COMPOSE_DIR/athyper.override.staging.yml" ;;
     production) OVERRIDE="$COMPOSE_DIR/athyper.override.production.yml" ;;
-    *)          OVERRIDE="$COMPOSE_DIR/athyper.override.yml" ;;
+    *)
+      echo "ERROR: Unrecognized ENVIRONMENT='$ENVIRONMENT'. Expected local|staging|production." >&2
+      return 1
+      ;;
   esac
 
   if [[ ! -f "$OVERRIDE" ]]; then
-    if [[ -f "$COMPOSE_DIR/athyper.dev.yml" ]]; then
-      OVERRIDE="$COMPOSE_DIR/athyper.dev.yml"
-    else
-      OVERRIDE="$COMPOSE_DIR/athyper.prod.yml"
-    fi
+    echo "ERROR: Missing compose override file for ENVIRONMENT='$ENVIRONMENT': $OVERRIDE" >&2
+    return 1
   fi
 }
 
@@ -174,6 +166,7 @@ COMPOSE_FILE_ARGS=()
 
 build_compose_file_list() {
   COMPOSE_FILE_ARGS=()
+  local _expected_non_override_count=0
 
   # Activate all profiles so every service is reachable for depends_on
   # validation. The caller is responsible for using --no-deps when it only
@@ -183,8 +176,15 @@ build_compose_file_list() {
   _add_file() {
     if [[ -f "$1" ]]; then
       COMPOSE_FILE_ARGS+=( -f "$1" )
+      # Track only non-override files for the drift check. The active OVERRIDE
+      # is one of several override files on disk, so counting it here would
+      # cause spurious drift warnings.
+      case "$(basename "$1")" in
+        athyper.override*.yml) ;;
+        *) _expected_non_override_count=$(( _expected_non_override_count + 1 )) ;;
+      esac
     else
-      echo "WARNING: compose file missing, skipping: $1"
+      echo "WARNING: compose file missing, skipping: $1" >&2
     fi
   }
 
@@ -221,6 +221,15 @@ build_compose_file_list() {
   _add_file "$COMPOSE_DIR/memorycache/athyper-memorycache-jobs.yml"
   _add_file "$OVERRIDE"
 
+  # Drift check: compare non-override files on disk vs the explicit list.
+  # Overrides are excluded on both sides (multiple variants live on disk, but
+  # only the active one is in the list — see _add_file above).
+  local _actual_non_override_count
+  _actual_non_override_count="$(find "$COMPOSE_DIR" -type f -name 'athyper*.yml' ! -name 'athyper.override*.yml' | wc -l | tr -d '[:space:]')"
+  if [[ "$_actual_non_override_count" -ne "$_expected_non_override_count" ]]; then
+    echo "WARNING: compose file drift detected in $COMPOSE_DIR. Expected $_expected_non_override_count tracked non-override files, found $_actual_non_override_count on disk." >&2
+  fi
+
   unset -f _add_file
 }
 
@@ -229,8 +238,12 @@ build_compose_file_list() {
 # ---------------------------------------------------------------------------
 docker_preflight() {
   if ! docker version &>/dev/null; then
-    echo "ERROR: Docker does not seem to be running or accessible."
-    echo "Start Docker and re-run."
+    echo "ERROR: Docker does not seem to be running or accessible." >&2
+    echo "Start Docker and re-run." >&2
+    exit 1
+  fi
+  if ! docker compose version &>/dev/null; then
+    echo "ERROR: docker compose command is unavailable. Install or enable Docker Compose V2." >&2
     exit 1
   fi
 }

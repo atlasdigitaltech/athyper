@@ -134,6 +134,25 @@ REM ----------------------------
 if /I "!ENVIRONMENT!"=="local" (
   set "PNPM_SCRIPT=dev"
 
+  REM Shadow-detection: if the containerized counterpart is running, host edits
+  REM will silently NOT take effect because the bundle inside the container is
+  REM stale. Stop the container before starting host dev.
+  if not defined COMPOSE_PROJECT_NAME set "COMPOSE_PROJECT_NAME=athyper"
+  set "_SHADOW_NAME=!COMPOSE_PROJECT_NAME!-!MODE!-1"
+  for /f %%R in ('docker ps --format "{{.Names}}" --filter "name=^!_SHADOW_NAME!$" 2^>nul') do (
+    if "%%R"=="!_SHADOW_NAME!" (
+      echo.
+      echo ============================================================
+      echo  WARNING: containerized !MODE! is running while ENVIRONMENT=local.
+      echo           Host source edits will NOT take effect.
+      echo           Stop it first:  docker stop !_SHADOW_NAME!
+      echo           Or run:         stack\scripts\dev-local.bat --stop-only
+      echo ============================================================
+      echo.
+      pause
+    )
+  )
+
   if "!BUILD_FLAG!"=="1" (
     echo Local mode: --build is ignored; tsx handles incremental reloads.
     echo.

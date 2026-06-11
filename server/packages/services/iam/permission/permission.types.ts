@@ -47,6 +47,7 @@ export type PermissionDecisionReason =
   | "no_grant_found"       // Fallthrough: no persona/group/grant covers this permission
   | "explicit_deny"        // Step 5: access_grant deny won (always wins rule)
   | "persona_granted"      // Step 3: persona base permission granted this
+  | "role_granted"         // Step 3b: group->role->persona path granted this
   | "grant_granted"        // Step 4: access_grant allow granted this
   | "delegation_granted";  // Extended: merged from an active delegation grant
 

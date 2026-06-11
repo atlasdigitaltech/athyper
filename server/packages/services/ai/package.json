@@ -25,6 +25,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-shared": "workspace:*",
     "zod": "^4.3.6"
   },

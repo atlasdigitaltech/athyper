@@ -451,18 +451,20 @@ services:
   # Build: server/Dockerfile.dev (context = monorepo root)
   # Rebuild: docker compose --project-directory stack/compose build api
   #
-  # Profiles: gateway | apps — NOT core.
+  # Profiles: apps — NOT core, NOT gateway.
   # Local dev runs the server on the host via api-up.bat (PORT=4000).
   # Traefik's static file provider (stack/config/gateway/dynamic/athyper.api.yml,
   # priority=1) routes api.athyper.local → host.docker.internal:4000.
-  # When this container IS running (gateway/apps profile), Docker-label router
-  # fires at auto-priority ~30 and overrides the static file automatically.
+  # When this container IS running (apps profile), Docker-label router fires at
+  # auto-priority ~30 and overrides the static file automatically.
+  # Note: api was previously in the gateway profile too — that caused stale
+  # containers to silently shadow host api-up.bat sessions. Removed 2026-06.
   # -------------------------------------------------------------------------
   api:
     build:
       context: ../..
       dockerfile: server/Dockerfile.dev
-    profiles: ["gateway", "apps"]
+    profiles: ["apps"]
     deploy:
       resources:
         limits:

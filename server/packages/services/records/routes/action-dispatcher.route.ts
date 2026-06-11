@@ -49,6 +49,12 @@ import { handlePostInvoice }      from "@athyper/svc-business";
 import { handleReverseInvoice }   from "@athyper/svc-business";
 import { matchInvoice }           from "@athyper/svc-business";
 import {
+  placeInvoiceOnHold,
+  releaseInvoiceHold,
+  HoldNotAllowedError,
+  ReleaseNotAllowedError,
+} from "@athyper/svc-business";
+import {
   handlePostPayment,
   handleSubmitPayment,
   handleVoidPayment,
@@ -677,6 +683,59 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           res.status(status).json(respBody);
           return;
         }
+      }
+
+      // ── Dispatch: purchase_invoice hold / release_hold (Model A) ──────────────
+      // status='on_hold' is the authoritative hold flag; the previous status is
+      // captured into metadata.hold so release can restore it. We bypass the
+      // generic transition path so the metadata write happens atomically with
+      // the status flip.
+      if (entityCode === "purchase_invoice" && target === "hold") {
+        if (!principalId) {
+          res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "No principal bound to this session." });
+          return;
+        }
+        const holdReason = (typeof body["hold_reason"] === "string" ? body["hold_reason"] : "")
+          || (remarks ?? "");
+        if (!holdReason.trim()) {
+          res.status(400).json({ error: "HOLD_REASON_REQUIRED", message: "A hold reason is required." });
+          return;
+        }
+        try {
+          const result = await placeInvoiceOnHold(db, tenantId, recordId, principalId, holdReason);
+          logger?.info("action_dispatch_hold_invoice", {
+            tenantId, recordId, from: result.previous_status, to: result.status,
+          });
+          res.json({ ok: true, status: result.status, previous_status: result.previous_status });
+        } catch (err) {
+          if (err instanceof HoldNotAllowedError) {
+            res.status(422).json({ error: err.code, message: err.message });
+            return;
+          }
+          throw err;
+        }
+        return;
+      }
+
+      if (entityCode === "purchase_invoice" && target === "release_hold") {
+        if (!principalId) {
+          res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "No principal bound to this session." });
+          return;
+        }
+        try {
+          const result = await releaseInvoiceHold(db, tenantId, recordId, principalId);
+          logger?.info("action_dispatch_release_hold_invoice", {
+            tenantId, recordId, to: result.status,
+          });
+          res.json({ ok: true, status: result.status });
+        } catch (err) {
+          if (err instanceof ReleaseNotAllowedError) {
+            res.status(422).json({ error: err.code, message: err.message });
+            return;
+          }
+          throw err;
+        }
+        return;
       }
 
       // ── Dispatch: journal_entry reverse (full accounting reversal) ────────────

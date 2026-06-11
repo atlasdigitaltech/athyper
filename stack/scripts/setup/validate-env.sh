@@ -40,14 +40,48 @@ fi
 # ----------------------------
 declare -A ENV_MAP
 
-while IFS='=' read -r key value; do
-  [[ "$key" =~ ^[[:space:]]*# ]] && continue
-  [[ -z "$key" ]] && continue
-  key=$(echo "$key" | xargs)
-  [[ -z "$key" ]] && continue
-  value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
+_parse_env_line() {
+  local line="$1"
+  line="${line%$'\r'}"
+  [[ -z "$line" ]] && return
+  [[ "$line" =~ ^[[:space:]]*# ]] && return
+  [[ "$line" != *=* ]] && return
+
+  local key="$line"
+  local value="$line"
+
+  key="${key%%=*}"
+  value="${value#*=}"
+
+  key="${key#"${key%%[![:space:]]*}"}"
+  key="${key%"${key##*[![:space:]]}"}"
+  [[ -z "$key" ]] && return
+
+  if [[ "$value" == \"* ]]; then
+    value="${value#\"}"
+    value="${value%\"}"
+  elif [[ "$value" == "'"* ]]; then
+    value="${value#\'}"
+    value="${value%\'}"
+  else
+    value="${value%%#*}"
+  fi
+
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+
   ENV_MAP["$key"]="$value"
-done < <(tr -d '\r' < "$ENV_FILE")
+}
+
+_parse_env_file() {
+  local file="$1"
+  local line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    _parse_env_line "$line"
+  done < <(cat "$file")
+}
+
+_parse_env_file "$ENV_FILE"
 
 # Merge second env file if provided (secrets win on duplicates — mirrors docker compose --env-file order)
 if [[ -n "$ENV_FILE_2" ]]; then
@@ -55,14 +89,7 @@ if [[ -n "$ENV_FILE_2" ]]; then
     echo "FATAL: second env file not found: $ENV_FILE_2"
     exit 1
   fi
-  while IFS='=' read -r key value; do
-    [[ "$key" =~ ^[[:space:]]*# ]] && continue
-    [[ -z "$key" ]] && continue
-    key=$(echo "$key" | xargs)
-    [[ -z "$key" ]] && continue
-    value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
-    ENV_MAP["$key"]="$value"
-  done < <(tr -d '\r' < "$ENV_FILE_2")
+  _parse_env_file "$ENV_FILE_2"
 fi
 
 ENVIRONMENT="${ENV_MAP[ENVIRONMENT]:-}"
@@ -183,6 +210,7 @@ require_var IAM_ISSUER_URL
 require_var ATHYPER_KERNEL_CONFIG_PATH
 
 ATHYPER_CONFIG_VAL="${ENV_MAP[ATHYPER_CONFIG]:-${ENV_MAP[ATHYPER_CONFIG_ROOT]:-}}"
+ATHYPER_SECRETS_ROOT="${ENV_MAP[ATHYPER_SECRETS_ROOT]:-${STACK_DIR}/secrets}"
 if [[ -z "$ATHYPER_CONFIG_VAL" ]]; then
   ATHYPER_CONFIG_VAL="$STACK_DIR/config"
 fi
@@ -253,44 +281,59 @@ else
 fi
 
 # ----------------------------
-# ACL Render: pre-compute Redis password hashes before container start.
-# Reads ATHYPER_CONFIG from .env, renders redis-acl.conf.tpl into the
-# config dir so the memorycache container mounts a hash-ready file —
-# no sed/sha256sum at container startup, no substitution race window.
+# Redis ACL check: render to a temporary config root and compare with deployed file.
+# validate-env.sh stays read-only; setup-config.sh performs final rendering.
 # ----------------------------
 ACL_TPL="$STACK_DIR/config/memorycache/redis-acl.conf.tpl"
-if [[ -z "$ATHYPER_CONFIG_VAL" ]]; then
-  echo "  FAIL  ATHYPER_CONFIG not set — Redis ACL cannot be rendered (memorycache will refuse to start)"
-  ERRORS=$((ERRORS + 1))
-elif [[ ! -f "$ACL_TPL" ]]; then
+ACL_REQUIRED_KEYS=(MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD)
+ACL_OUT="$ATHYPER_CONFIG_VAL/memorycache/redis-acl.conf"
+
+if [[ ! -f "$ACL_TPL" ]]; then
   echo "  FAIL  redis-acl.conf.tpl not found: $ACL_TPL"
   ERRORS=$((ERRORS + 1))
+elif [[ ! -f "$ACL_OUT" ]]; then
+  echo "  FAIL  Deployed Redis ACL not found: $ACL_OUT"
+  ERRORS=$((ERRORS + 1))
 else
-  ACL_OUT="$ATHYPER_CONFIG_VAL/memorycache/redis-acl.conf"
-  APP_HASH=$(printf '%s' "${ENV_MAP[MEMORYCACHE_PASSWORD]:-}" | sha256sum | awk '{print $1}')
-  EXP_HASH=$(printf '%s' "${ENV_MAP[REDIS_EXPORTER_PASSWORD]:-}" | sha256sum | awk '{print $1}')
-  GT_HASH=$(printf '%s'  "${ENV_MAP[REDIS_GLITCHTIP_PASSWORD]:-}" | sha256sum | awk '{print $1}')
-  INF_HASH=$(printf '%s' "${ENV_MAP[REDIS_INFISICAL_PASSWORD]:-}" | sha256sum | awk '{print $1}')
-  ADM_HASH=$(printf '%s' "${ENV_MAP[REDIS_ADMIN_PASSWORD]:-}" | sha256sum | awk '{print $1}')
-  mkdir -p "$(dirname "$ACL_OUT")"
-  sed -e "s/__APP_HASH__/$APP_HASH/g" \
-      -e "s/__EXPORTER_HASH__/$EXP_HASH/g" \
-      -e "s/__GLITCHTIP_HASH__/$GT_HASH/g" \
-      -e "s/__INFISICAL_HASH__/$INF_HASH/g" \
-      -e "s/__ADMIN_HASH__/$ADM_HASH/g" \
-      "$ACL_TPL" > "$ACL_OUT"
-  # 640: athyper (owner) writes; svc-redis group reads via :ro bind mount.
-  # No world-read — file contains SHA-256 password hashes.
-  chmod 640 "$ACL_OUT"
-  # Verify no tokens remain — catches silent sha256sum failures or missing variables.
-  if grep -qE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' "$ACL_OUT"; then
-    LEFTOVER=$(grep -oE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' "$ACL_OUT" | sort -u | tr '\n' ' ')
-    echo "  FAIL  Redis ACL still contains unrendered tokens after render: $LEFTOVER"
-    echo "        Check that sha256sum is available and all Redis password vars are set."
+  ACL_TMP_DIR="$(mktemp -d)"
+  ACL_TMP_CFG="${ACL_TMP_DIR}/config"
+  ACL_TMP_ENV="$ACL_TMP_DIR/merged.env"
+
+  MISSING_KEYS=()
+  for _k in "${ACL_REQUIRED_KEYS[@]}"; do
+    if [[ -z "${ENV_MAP[$_k]:-}" ]]; then
+      MISSING_KEYS+=("$_k")
+    fi
+  done
+  if [[ ${#MISSING_KEYS[@]} -gt 0 ]]; then
+    echo "  FAIL  Redis ACL required secrets missing/empty: ${MISSING_KEYS[*]}"
     ERRORS=$((ERRORS + 1))
   else
-    echo "  [ACL] Redis ACL rendered → $ACL_OUT"
+    {
+      for _k in "${!ENV_MAP[@]}"; do
+        printf '%s=%s\n' "$_k" "${ENV_MAP[$_k]:-}"
+      done
+    } > "$ACL_TMP_ENV"
+    if ATHYPER_CONFIG_ROOT="$ACL_TMP_CFG" node "$STACK_DIR/../tools/scripts/render-redis-acl.cjs" \
+      --env-file "$ACL_TMP_ENV" \
+      --stack-dir "$STACK_DIR" >/dev/null 2>&1; then
+      ACL_RENDERED="$ACL_TMP_CFG/memorycache/redis-acl.conf"
+      if diff -q "$ACL_RENDERED" "$ACL_OUT" &>/dev/null; then
+        echo "  OK    Redis ACL matches deployed file: $ACL_OUT"
+      else
+        echo "  FAIL  Redis ACL mismatch for live deployment"
+        echo "        Expected: $ACL_RENDERED"
+        echo "        Actual:   $ACL_OUT"
+        echo "        Run setup-config.sh $ENVIRONMENT --update to regenerate."
+        ERRORS=$((ERRORS + 1))
+      fi
+    else
+      echo "  FAIL  Redis ACL render verification failed in validate-env"
+      echo "        Resolve missing/unresolved variables and rerun."
+      ERRORS=$((ERRORS + 1))
+    fi
   fi
+  rm -rf "$ACL_TMP_DIR"
 fi
 
 # ----------------------------
@@ -303,10 +346,25 @@ KERNEL_CFG_ROOT="${ATHYPER_CONFIG_VAL:-$STACK_DIR/config}"
 KERNEL_FILE="$KERNEL_CFG_ROOT/$KERNEL_CONFIG_PATH"
 
 if [[ -f "$KERNEL_FILE" ]]; then
-  # Extract publicBaseUrl from JSON (simple grep, no jq dependency)
-  KC_BASE_URL=$(grep -oP '"publicBaseUrl"\s*:\s*"\K[^"]+' "$KERNEL_FILE" 2>/dev/null || true)
-  KC_WEB_URL=$(grep -oP '"publicWebUrl"\s*:\s*"\K[^"]+' "$KERNEL_FILE" 2>/dev/null || true)
-  KC_ISSUER_URL=$(grep -oP '"issuerUrl"\s*:\s*"\K[^"]+' "$KERNEL_FILE" 2>/dev/null || true)
+  # Extract URLs from JSON via node (already a hard dep — render-redis-acl.cjs
+  # needs it). Previous implementation used `grep -oP` which silently returns
+  # empty on BSD grep (macOS), masking real mismatches.
+  if command -v node &>/dev/null; then
+    _kc_json=$(node -e '
+      try {
+        const f = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+        process.stdout.write([f.publicBaseUrl||"", f.publicWebUrl||"", f.issuerUrl||""].join("\n"));
+      } catch (e) { process.exit(2); }
+    ' "$KERNEL_FILE" 2>/dev/null || true)
+    KC_BASE_URL="$(printf '%s' "$_kc_json" | sed -n '1p')"
+    KC_WEB_URL="$(printf '%s' "$_kc_json" | sed -n '2p')"
+    KC_ISSUER_URL="$(printf '%s' "$_kc_json" | sed -n '3p')"
+    unset _kc_json
+  else
+    echo "  WARN  node not found — skipping kernel hostname parity check"
+    WARNINGS=$((WARNINGS + 1))
+    KC_BASE_URL=""; KC_WEB_URL=""; KC_ISSUER_URL=""
+  fi
 
   ENV_BASE_URL="${ENV_MAP[PUBLIC_BASE_URL]:-}"
   ENV_WEB_URL="${ENV_MAP[PUBLIC_WEB_URL]:-}"
@@ -408,7 +466,7 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   # committed plane templates. If they survive into the deployed dynamic
   # file for a non-local environment, the admin plane rejects all traffic.
   # Refuse to start the stack until the allowlist is replaced with real CIDRs.
-  WB_FILE="$STACK_DIR/config/gateway/dynamic/athyper.workbench.yml"
+  WB_FILE="$ATHYPER_CONFIG_VAL/gateway/dynamic/athyper.workbench.yml"
   if [[ -f "$WB_FILE" ]]; then
     if grep -qE '"(192\.0\.2|198\.51\.100|203\.0\.113)\.0/24"' "$WB_FILE"; then
       echo "  FAIL  $WB_FILE contains RFC 5737 TEST-NET CIDR in $ENVIRONMENT"
@@ -662,7 +720,7 @@ if [[ -f "$ALLOY_CONFIG_PATH" ]] && command -v docker &>/dev/null; then
 fi
 
 # Certificate expiry check (all environments)
-CERT_FILE="$STACK_DIR/config/gateway/certs/athyper.tls.local.crt"
+CERT_FILE="$ATHYPER_SECRETS_ROOT/gateway/certs/athyper.tls.local.crt"
 if [[ -f "$CERT_FILE" ]] && command -v openssl &>/dev/null; then
   if ! openssl x509 -checkend 2592000 -noout -in "$CERT_FILE" 2>/dev/null; then
     echo "  WARN  TLS certificate expires within 30 days — regenerate with generate-certs.sh"

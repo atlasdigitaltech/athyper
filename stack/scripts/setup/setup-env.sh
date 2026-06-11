@@ -117,8 +117,10 @@ backup_and_copy() {
   local label="$3"
 
   if [[ -f "$dst" ]]; then
-    echo "  Backing up $label → ${dst}.bak"
-    cp "$dst" "${dst}.bak"
+    local ts
+    ts="$(date +%Y%m%d-%H%M%S)"
+    cp "$dst" "${dst}.bak.$ts"
+    echo "  Backing up $label → ${dst}.bak.$ts"
   fi
   cp "$src" "$dst"
   echo "  [$label]"
@@ -131,12 +133,7 @@ backup_and_copy() {
 # ----------------------------
 setup_stack() {
   local template
-  # Stack uses .env.example as the local fallback (no local.env.example)
-  if [[ "$ENV_NAME" == "local" ]]; then
-    template="$(resolve_template "$ENV_DIR" "local" ".env.example" "stack")"
-  else
-    template="$(resolve_template "$ENV_DIR" "$ENV_NAME" ".env.example" "stack")"
-  fi
+  template="$(resolve_template "$ENV_DIR" "$ENV_NAME" ".env.example" "stack")"
   backup_and_copy "$template" "$ENV_DIR/.env" "stack"
 }
 

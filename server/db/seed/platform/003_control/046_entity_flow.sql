@@ -457,7 +457,7 @@ BEGIN
          help_text, sort_order)
      ON ef.name = v.field_name AND ef.entity_version_id = v_ev_id;
 
-  -- ── 7. Step 3: Review (13 field bindings) ─────────────────────────────────
+  -- ── 7. Step 3: Review (12 field bindings) ─────────────────────────────────
   -- payment_method_id relocated here from Step 2.
   INSERT INTO control.entity_flow_field (
     tenant_id, flow_step_id, entity_field_id,
@@ -490,11 +490,9 @@ BEGIN
       NULL, NULL, NULL,
       'supplier.default_payment_method(supplier_id)', 'ap.override_payment_method',
       NULL, 'inline_search', 1, NULL, 80),
-    ('is_on_hold',           'editable',  'manual',
-      NULL, NULL, 'const:false', NULL, NULL, NULL, NULL, 1, NULL, 100),
     ('hold_reason',          'editable',  'manual',
-      '{"==":[{"var":"is_on_hold"},true]}',
-      '{"==":[{"var":"is_on_hold"},true]}',
+      '{"==":[{"var":"status"},"on_hold"]}',
+      '{"==":[{"var":"status"},"on_hold"]}',
       NULL, NULL, NULL, NULL, NULL, 3,
       'Required when the invoice is placed on hold.', 110),
     ('notes',                'editable',  'manual',

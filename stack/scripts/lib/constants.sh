@@ -17,6 +17,7 @@
 # Guard: only load once per shell session
 [[ -n "${_ATHYPER_CONSTANTS_LOADED:-}" ]] && return 0
 _ATHYPER_CONSTANTS_LOADED=1
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env-parse.sh"
 
 # ---------------------------------------------------------------------------
 # Resolve COMPOSE_PROJECT_NAME from .env if not already in the environment.
@@ -26,7 +27,7 @@ if [[ -z "${COMPOSE_PROJECT_NAME:-}" ]]; then
   _CONST_STACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
   _CONST_ENV="${_CONST_STACK_DIR}/env/.env"
   if [[ -f "${_CONST_ENV}" ]]; then
-    COMPOSE_PROJECT_NAME="$(grep -E '^COMPOSE_PROJECT_NAME=' "${_CONST_ENV}" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")"
+    COMPOSE_PROJECT_NAME="$(read_env_value "${_CONST_ENV}" COMPOSE_PROJECT_NAME || true)"
   fi
   unset _CONST_STACK_DIR _CONST_ENV
 fi
@@ -37,56 +38,56 @@ COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-athyper}"
 # Derived from COMPOSE_PROJECT_NAME + service name.
 # Each can be overridden individually via DOCKER_CONTAINER_* env vars.
 # ---------------------------------------------------------------------------
-readonly CONTAINER_IAM="${DOCKER_CONTAINER_IAM:-${COMPOSE_PROJECT_NAME}-iam-1}"
-readonly CONTAINER_DB="${DOCKER_CONTAINER_DB:-${COMPOSE_PROJECT_NAME}-db-1}"
-readonly CONTAINER_DBPOOL_SESSION="${DOCKER_CONTAINER_DBPOOL_SESSION:-${COMPOSE_PROJECT_NAME}-dbpool-session-1}"
-readonly CONTAINER_DBPOOL_APPS="${DOCKER_CONTAINER_DBPOOL_APPS:-${COMPOSE_PROJECT_NAME}-dbpool-apps-1}"
-readonly CONTAINER_GATEWAY="${DOCKER_CONTAINER_GATEWAY:-${COMPOSE_PROJECT_NAME}-gateway-1}"
-readonly CONTAINER_MEMORYCACHE="${DOCKER_CONTAINER_REDIS:-${COMPOSE_PROJECT_NAME}-memorycache-1}"
-readonly CONTAINER_OBJECTSTORAGE="${DOCKER_CONTAINER_MINIO:-${COMPOSE_PROJECT_NAME}-objectstorage-1}"
-readonly CONTAINER_MAILTRAP="${DOCKER_CONTAINER_MAIL:-${COMPOSE_PROJECT_NAME}-mailtrap-1}"
-readonly CONTAINER_NEON_WEB="${DOCKER_CONTAINER_WEB:-${COMPOSE_PROJECT_NAME}-neon-web-1}"
-readonly CONTAINER_MESH_WEB="${DOCKER_CONTAINER_MESH_WEB:-${COMPOSE_PROJECT_NAME}-mesh-web-1}"
-readonly CONTAINER_ADMIN_WEB="${DOCKER_CONTAINER_ADMIN_WEB:-${COMPOSE_PROJECT_NAME}-admin-web-1}"
-readonly CONTAINER_API="${DOCKER_CONTAINER_API:-${COMPOSE_PROJECT_NAME}-api-1}"
-readonly CONTAINER_SEARCHCORE="${DOCKER_CONTAINER_SEARCH:-${COMPOSE_PROJECT_NAME}-searchcore-1}"
+CONTAINER_IAM="${DOCKER_CONTAINER_IAM:-${COMPOSE_PROJECT_NAME}-iam-1}"
+CONTAINER_DB="${DOCKER_CONTAINER_DB:-${COMPOSE_PROJECT_NAME}-db-1}"
+CONTAINER_DBPOOL_SESSION="${DOCKER_CONTAINER_DBPOOL_SESSION:-${COMPOSE_PROJECT_NAME}-dbpool-session-1}"
+CONTAINER_DBPOOL_APPS="${DOCKER_CONTAINER_DBPOOL_APPS:-${COMPOSE_PROJECT_NAME}-dbpool-apps-1}"
+CONTAINER_GATEWAY="${DOCKER_CONTAINER_GATEWAY:-${COMPOSE_PROJECT_NAME}-gateway-1}"
+CONTAINER_MEMORYCACHE="${DOCKER_CONTAINER_MEMORYCACHE:-${DOCKER_CONTAINER_REDIS:-${COMPOSE_PROJECT_NAME}-memorycache-1}}"
+CONTAINER_OBJECTSTORAGE="${DOCKER_CONTAINER_OBJECTSTORAGE:-${DOCKER_CONTAINER_MINIO:-${COMPOSE_PROJECT_NAME}-objectstorage-1}}"
+CONTAINER_MAILTRAP="${DOCKER_CONTAINER_MAILTRAP:-${DOCKER_CONTAINER_MAIL:-${COMPOSE_PROJECT_NAME}-mailtrap-1}}"
+CONTAINER_NEON_WEB="${DOCKER_CONTAINER_NEON_WEB:-${DOCKER_CONTAINER_WEB:-${COMPOSE_PROJECT_NAME}-neon-web-1}}"
+CONTAINER_MESH_WEB="${DOCKER_CONTAINER_MESH_WEB:-${COMPOSE_PROJECT_NAME}-mesh-web-1}"
+CONTAINER_ADMIN_WEB="${DOCKER_CONTAINER_ADMIN_WEB:-${COMPOSE_PROJECT_NAME}-admin-web-1}"
+CONTAINER_API="${DOCKER_CONTAINER_API:-${COMPOSE_PROJECT_NAME}-api-1}"
+CONTAINER_SEARCHCORE="${DOCKER_CONTAINER_SEARCHCORE:-${DOCKER_CONTAINER_SEARCH:-${COMPOSE_PROJECT_NAME}-searchcore-1}}"
 
 # ---------------------------------------------------------------------------
 # Docker network
 # ---------------------------------------------------------------------------
-readonly NETWORK_NAME="${DOCKER_NETWORK:-athyper-internal}"
+NETWORK_NAME="${DOCKER_NETWORK:-athyper-internal}"
 
 # ---------------------------------------------------------------------------
 # Database names
 # ---------------------------------------------------------------------------
-readonly DB_NAME_APPS="${DB_NAME_APPS:-athyper_dev1}"
-readonly DB_NAME_AUTH="${DB_NAME_AUTH:-athyper_iam}"
+DB_NAME_APPS="${DB_NAME_APPS:-athyper_dev1}"
+DB_NAME_AUTH="${DB_NAME_AUTH:-athyper_iam}"
 
 # ---------------------------------------------------------------------------
 # Default IAM database connection (fallback when container is not running)
 # ---------------------------------------------------------------------------
-readonly IAM_DB_DEFAULT_URL="${IAM_DB_DEFAULT_URL:-jdbc:postgresql://dbpool-session:6433/${DB_NAME_AUTH}}"
-readonly IAM_DB_DEFAULT_USER="${IAM_DB_DEFAULT_USER:-athyperadmin}"
+IAM_DB_DEFAULT_URL="${IAM_DB_DEFAULT_URL:-jdbc:postgresql://dbpool-session:6433/${DB_NAME_AUTH}}"
+IAM_DB_DEFAULT_USER="${IAM_DB_DEFAULT_USER:-athyperadmin}"
 
 # ---------------------------------------------------------------------------
 # Default app database connection parts (host-side, for seed-db.sh)
 # ---------------------------------------------------------------------------
-readonly APP_DB_DEFAULT_HOST="${APP_DB_DEFAULT_HOST:-localhost}"
-readonly APP_DB_DEFAULT_PORT="${APP_DB_DEFAULT_PORT:-5432}"
+APP_DB_DEFAULT_HOST="${APP_DB_DEFAULT_HOST:-localhost}"
+APP_DB_DEFAULT_PORT="${APP_DB_DEFAULT_PORT:-5432}"
 
 # ---------------------------------------------------------------------------
 # Terminal colours (safe no-ops when piped)
 # ---------------------------------------------------------------------------
 if [[ -t 1 ]]; then
-  readonly CLR_GREEN='\033[0;32m'
-  readonly CLR_YELLOW='\033[1;33m'
-  readonly CLR_RED='\033[0;31m'
-  readonly CLR_CYAN='\033[0;36m'
-  readonly CLR_NC='\033[0m'
+  CLR_GREEN='\033[0;32m'
+  CLR_YELLOW='\033[1;33m'
+  CLR_RED='\033[0;31m'
+  CLR_CYAN='\033[0;36m'
+  CLR_NC='\033[0m'
 else
-  readonly CLR_GREEN=''
-  readonly CLR_YELLOW=''
-  readonly CLR_RED=''
-  readonly CLR_CYAN=''
-  readonly CLR_NC=''
+  CLR_GREEN=''
+  CLR_YELLOW=''
+  CLR_RED=''
+  CLR_CYAN=''
+  CLR_NC=''
 fi

@@ -895,6 +895,7 @@
         "use.refresh.tokens": "true",
         "realm_client": "false",
         "oidc.ciba.grant.enabled": "false",
+        "client.use.lightweight.access.token.enabled": "false",
         "backchannel.logout.session.required": "true",
         "require.pushed.authorization.requests": "false",
         "tls.client.certificate.bound.access.tokens": "false",
@@ -922,7 +923,8 @@
         "roles",
         "basic",
         "email",
-        "organization"
+        "organization",
+        "athyper-admin-plane"
       ],
       "optionalClientScopes": [
         "address",
@@ -1052,6 +1054,7 @@
         "use.refresh.tokens": "true",
         "realm_client": "false",
         "oidc.ciba.grant.enabled": "false",
+        "client.use.lightweight.access.token.enabled": "false",
         "backchannel.logout.session.required": "true",
         "require.pushed.authorization.requests": "false",
         "tls.client.certificate.bound.access.tokens": "false",
@@ -1073,7 +1076,8 @@
         "roles",
         "basic",
         "email",
-        "organization"
+        "organization",
+        "athyper-mesh-plane"
       ],
       "optionalClientScopes": [
         "address",
@@ -2482,6 +2486,370 @@
         },
         {
           "id": "68250dee-57c2-4116-9206-71970f2f11b9",
+          "name": "admin_plane_access",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "admin_plane_access",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.admin_plane_access",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "id": "a0e1f3f4-f586-4a7c-bee1-5bebb1dc7b21",
+      "name": "athyper-admin-plane",
+      "description": "Admin plane, tenant, persona, and delegation claims consumed by the BFF.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "id": "a05078a1-5484-4a52-8750-2bd02aedaf50",
+          "name": "realm_key",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "realm_key",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.realm_key",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "a0529e81-6749-455e-b497-b9cc72ec1d7b",
+          "name": "plane_access",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "plane_access",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.plane_access",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "a0416770-1299-46e1-8cee-9399c236dcc2",
+          "name": "tenant_code",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "tenant_code",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.tenant_code",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "a07b5e96-c568-4979-8663-637a649b6a04",
+          "name": "tenant_type",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "tenant_type",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.tenant_type",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "a04b9544-f515-475c-8410-9b899b7bedd7",
+          "name": "principal_type",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "principal_type",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.principal_type",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "a0a86041-b45c-4011-91e6-939c48833603",
+          "name": "persona",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "persona",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.persona",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "a07fdf45-4758-47ed-a820-f3858a25978c",
+          "name": "tenant_admin_surface",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "tenant_admin_surface",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.tenant_admin_surface",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "a080e8ea-fd69-45c1-a244-5b6f474278aa",
+          "name": "partner_access",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "partner_access",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.partner_access",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "a0315aed-1146-4aad-aa6a-291a63abc476",
+          "name": "mesh_access_model",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "mesh_access_model",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.mesh_access_model",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "a0250dee-57c2-4116-9206-71970f2f11b9",
+          "name": "admin_plane_access",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "admin_plane_access",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.admin_plane_access",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b0e1f3f4-f586-4a7c-bee1-5bebb1dc7b21",
+      "name": "athyper-mesh-plane",
+      "description": "Mesh plane, tenant, persona, and delegation claims consumed by the BFF.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "id": "b05078a1-5484-4a52-8750-2bd02aedaf50",
+          "name": "realm_key",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "realm_key",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.realm_key",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "b0529e81-6749-455e-b497-b9cc72ec1d7b",
+          "name": "plane_access",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "plane_access",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.plane_access",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "b0416770-1299-46e1-8cee-9399c236dcc2",
+          "name": "tenant_code",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "tenant_code",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.tenant_code",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "b07b5e96-c568-4979-8663-637a649b6a04",
+          "name": "tenant_type",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "tenant_type",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.tenant_type",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "b04b9544-f515-475c-8410-9b899b7bedd7",
+          "name": "principal_type",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "principal_type",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.principal_type",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "b0a86041-b45c-4011-91e6-939c48833603",
+          "name": "persona",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "persona",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.persona",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "b07fdf45-4758-47ed-a820-f3858a25978c",
+          "name": "tenant_admin_surface",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "tenant_admin_surface",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.tenant_admin_surface",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "b080e8ea-fd69-45c1-a244-5b6f474278aa",
+          "name": "partner_access",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "partner_access",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.partner_access",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "b0315aed-1146-4aad-aa6a-291a63abc476",
+          "name": "mesh_access_model",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "aggregate.attrs": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true",
+            "user.attribute": "mesh_access_model",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "athyper.mesh_access_model",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "id": "b0250dee-57c2-4116-9206-71970f2f11b9",
           "name": "admin_plane_access",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-attribute-mapper",

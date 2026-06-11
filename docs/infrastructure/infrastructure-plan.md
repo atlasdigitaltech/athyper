@@ -13,7 +13,8 @@
 
 | Guide | Scope |
 |---|---|
-| [staging-setup.md](staging-setup.md) | Ubuntu 22.04/24.04 server — full 26-phase installation runbook |
+| [environments.md](environments.md) | Cross-env comparison — local vs staging vs production matrix, script behavior, profile defaults |
+| [staging-setup.md](staging-setup.md) | Ubuntu 22.04/24.04 server — full 26-phase installation runbook (covers staging and production) |
 | [local-dev-setup.md](local-dev-setup.md) | Windows workstation — Docker Desktop local development |
 | [secrets-management.md](secrets-management.md) | Secrets rotation, backup credentials, key management |
 | [weekly-reset-reseed-export.md](weekly-reset-reseed-export.md) | Weekly DB reset, re-seed, export, and restore validation until base completion |

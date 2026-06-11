@@ -1528,10 +1528,32 @@ export function DocumentDetailPage({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Snapshot-aware party display for purchase_invoice. Pre-submit returns the
+  // live BP; post-submit returns the immutable snapshot. Other entities fall
+  // through to the generic partyRecord above.
+  const isPurchaseInvoice = entity.entity_code === "purchase_invoice";
+  const { data: apPartyEndpoint } = useQuery<{ source: "live" | "snapshot"; party: Record<string, unknown> | null } | null>({
+    queryKey: ["ap-party", subResourceRecordId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(
+        `/api/relay/api/finance/ap/invoices/${encodeURIComponent(subResourceRecordId)}/party`,
+        { signal },
+      );
+      if (!res.ok) return null;
+      return res.json() as Promise<{ source: "live" | "snapshot"; party: Record<string, unknown> | null }>;
+    },
+    enabled: isPurchaseInvoice && UUID_RE.test(subResourceRecordId),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const resolvedPartyName = useMemo<string | null>(() => {
+    if (isPurchaseInvoice) {
+      const name = apPartyEndpoint?.party?.["name"];
+      return typeof name === "string" && name ? name : null;
+    }
     if (!partyRecord?.data) return null;
     return entityRowToPickerOption(partyRecord.data, partyRefEntity, partyOptionConfig).label || null;
-  }, [partyRecord, partyRefEntity, partyOptionConfig]);
+  }, [isPurchaseInvoice, apPartyEndpoint, partyRecord, partyRefEntity, partyOptionConfig]);
 
   const companyCodeFieldName = documentHeaderField(entity, "company_code_field");
   const companyCodeId = companyCodeFieldName ? String(data[companyCodeFieldName] ?? "") : "";
@@ -1572,9 +1594,11 @@ export function DocumentDetailPage({
     };
   }, [companyCodeRecord, companyCodeRefEntity, companyCodeOptionConfig]);
 
-  const partyCode = partyRecord?.data && partyOptionConfig?.codeField
-    ? partyRecord.data[partyOptionConfig.codeField]
-    : undefined;
+  const partyCode = isPurchaseInvoice
+    ? (typeof apPartyEndpoint?.party?.["code"] === "string" ? apPartyEndpoint.party["code"] : undefined)
+    : (partyRecord?.data && partyOptionConfig?.codeField
+        ? partyRecord.data[partyOptionConfig.codeField]
+        : undefined);
 
   const resolvedRefs = useMemo(() => {
     const m = new Map<string, string>();

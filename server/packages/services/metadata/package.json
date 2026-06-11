@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
+    "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-shared": "workspace:*"
   },
   "devDependencies": {

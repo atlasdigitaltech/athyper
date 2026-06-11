@@ -45,7 +45,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   if [[ "$ENV_FILE" != "$ENV_DIR/.env" ]]; then
     # Staging / production: ENV_FILE is the secrets file, not the bootstrap.
     # Auto-creating it would overwrite generated secrets with template values.
-    echo "ERROR: Secrets env file not found: $ENV_FILE"
+    echo "ERROR: Secrets env file not found: $ENV_FILE" >&2
     echo ""
     echo "  ATHYPER_SECRETS_ROOT = ${ATHYPER_SECRETS_ROOT:-<unset>}"
     echo "  Expected secrets at  : $ENV_FILE"
@@ -57,7 +57,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
     exit 1
   fi
 
-  echo "WARNING: .env not found: $ENV_FILE"
+  echo "WARNING: .env not found: $ENV_FILE" >&2
   echo ""
 
   read -rp "Select env template [local | staging | production] (blank=local): " PROFILE
@@ -81,7 +81,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo ""
 
   if [[ ! -f "$TEMPLATE_FILE" ]]; then
-    echo "ERROR: Template env file not found: $TEMPLATE_FILE"
+    echo "ERROR: Template env file not found: $TEMPLATE_FILE" >&2
     echo "Available env templates in $ENV_DIR:"
     ls -1 "$ENV_DIR"/*.example 2>/dev/null || echo "(none found)"
     exit 1
@@ -105,7 +105,6 @@ fi
 
 # Special: allow "all" to activate every profile
 USE_PROFILE=1
-ALL_COMPOSE_PROFILES="admin,analytics,apps,core,db,dev,emergency,gateway,iam,memorycache,memorycache-jobs,monitoring,objectstorage,render,search,security-infisical,telemetry"
 if [[ "$ACTIVE_PROFILE" == "all" ]]; then
   USE_PROFILE=0
 fi

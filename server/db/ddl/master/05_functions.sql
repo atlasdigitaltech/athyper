@@ -2015,7 +2015,7 @@ BEGIN
     FROM master.auth_group_member
     WHERE tenant_id = p_tenant_id AND principal_id = p_principal_id;
 
-    -- Step 3: Check persona_permission (base RBAC)
+    -- Step 3: Check persona_permission (base RBAC) via direct principal persona
     SELECT pp.is_granted INTO v_has_allow
     FROM master.principal_persona pp_a
     JOIN shared.persona_permission pp ON pp.persona_id = pp_a.persona_id
@@ -2026,6 +2026,28 @@ BEGIN
 
     IF v_has_allow IS NULL THEN
         v_has_allow := false;
+    END IF;
+
+    -- Step 3b: Inherit persona grants via auth_group_role -> role -> persona_permission
+    IF NOT v_has_allow THEN
+        SELECT EXISTS (
+            SELECT 1
+            FROM master.auth_group_member pgm
+            JOIN master.auth_group_role gr
+              ON gr.group_id  = pgm.group_id
+             AND gr.tenant_id = pgm.tenant_id
+             AND gr.status    = 'active'
+             AND (gr.expires_at IS NULL OR gr.expires_at > now())
+            JOIN shared.role r
+              ON r.id = gr.role_id
+             AND r.status = 'active'
+            JOIN shared.persona_permission pp
+              ON pp.persona_id = r.persona_id
+             AND pp.permission_id = p_permission_id
+             AND pp.is_granted = true
+            WHERE pgm.tenant_id    = p_tenant_id
+              AND pgm.principal_id = p_principal_id
+        ) INTO v_has_allow;
     END IF;
 
     -- Step 4: Check access_grant allow (if persona didn't grant)
@@ -2066,7 +2088,7 @@ COMMENT ON FUNCTION master.check_permission IS
     'Main RBAC auth evaluation. 5-step process: '
     '1) Plan gate check for restricted permissions, '
     '2) Derive groups/roles, '
-    '3) Check persona base permissions, '
+    '3) Check persona base permissions (direct principal + role-persona inheritance), '
     '4) Check access_grant allows, '
     '5) Check access_grant denies (always wins). '
     'Returns: allow | deny | not_found | not_in_plan.';

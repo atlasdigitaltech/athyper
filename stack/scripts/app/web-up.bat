@@ -122,6 +122,9 @@ if /I "!ENVIRONMENT!"=="local" (
     set "SCRIPT_EXIT=1"
     goto :end
   )
+  REM Shadow-detection: stale <plane>-web container shadows host Next.js dev.
+  if not defined COMPOSE_PROJECT_NAME set "COMPOSE_PROJECT_NAME=athyper"
+  for %%P in (!PLANE_LIST!) do call :shadow_check "%%P"
   echo Local mode: starting Next.js dev server^(s^)
   if /I "!PLANE_TARGET!"=="all" (
     for %%P in (!PLANE_LIST!) do call :start_plane_window "%%P"
@@ -230,6 +233,23 @@ where pnpm.cmd >nul 2>&1
 if errorlevel 1 (
   echo ERROR: pnpm.cmd was not found. Install pnpm or add it to PATH.
   exit /b 1
+)
+exit /b 0
+
+:shadow_check
+set "_SHADOW_NAME=!COMPOSE_PROJECT_NAME!-%~1-web-1"
+for /f %%R in ('docker ps --format "{{.Names}}" --filter "name=^!_SHADOW_NAME!$" 2^>nul') do (
+  if "%%R"=="!_SHADOW_NAME!" (
+    echo.
+    echo ============================================================
+    echo  WARNING: containerized %~1-web is running while ENVIRONMENT=local.
+    echo           Host source edits will NOT take effect.
+    echo           Stop it first:  docker stop !_SHADOW_NAME!
+    echo           Or run:         stack\scripts\dev-local.bat --stop-only
+    echo ============================================================
+    echo.
+    pause
+  )
 )
 exit /b 0
 

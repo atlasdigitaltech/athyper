@@ -19,6 +19,7 @@ import type { Kysely } from "kysely";
 
 import { jitProvisionPrincipal } from "../jit/jit.service.js";
 import { resolveParameterSnapshot } from "../parameters/parameter-resolver.service.js";
+import { getEffectiveModuleAccess } from "../permission/module-access.service.js";
 import { addTrackedKey } from "@athyper/svc-shared";
 import type {
   SessionQuery,
@@ -520,22 +521,21 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
       permissions[row.code] = row.is_granted === true;
     }
 
-    // ── Step 8: Active modules for tenant ─────────────────────────────────────
-    const moduleRows = await db
-      .selectFrom("master.tenant_module_subscription as tms")
-      .innerJoin("shared.module as m", "m.id", "tms.module_id")
-      .select(["m.code", "m.name"])
-      .where("tms.tenant_id", "=", tenantId)
-      .where("tms.status", "=", "active")
-      .execute();
-
-    const modules: SessionModule[] = moduleRows.map(
-      (r: { code: string; name: string }) => ({
-        code: r.code,
-        name: r.name,
-        level: "user" as const, // shared.module has no level column; default "user"
-      }),
+    // ── Step 8: Active modules for principal (role + plan intersect) ──────────
+    const effectiveModules = await getEffectiveModuleAccess(
+      db,
+      tenantId,
+      principalId,
+      {
+        cache,
+        authEpoch: currentAuthEpoch,
+      },
     );
+    const modules: SessionModule[] = effectiveModules.moduleCodes.map((code) => ({
+      code,
+      name: code,
+      level: "user" as const,
+    }));
 
     // ── Step 9: Scope from auth_group_role (two-dimension model) ──────────────
     // assignment_scope_type: 'tenant' (all CCs) | 'company_code' | 'legal_entity'

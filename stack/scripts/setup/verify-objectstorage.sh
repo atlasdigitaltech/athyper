@@ -47,16 +47,43 @@ fi
 # ----------------------------
 declare -A ENV_MAP
 
+_parse_env_line() {
+  local _line="$1"
+  local _key _value
+
+  _line="${_line%$'\r'}"
+  [[ -z "$_line" ]] && return
+  [[ "$_line" =~ ^[[:space:]]*# ]] && return
+  [[ "$_line" != *=* ]] && return
+
+  _key="${_line%%=*}"
+  _value="${_line#*=}"
+
+  _key="${_key#"${_key%%[![:space:]]*}"}"
+  _key="${_key%"${_key##*[![:space:]]}"}"
+  [[ -z "$_key" ]] && return
+
+  if [[ "$_value" == \"* ]]; then
+    _value="${_value#\"}"
+    _value="${_value%\"}"
+  elif [[ "$_value" == "'"* ]]; then
+    _value="${_value#\'}"
+    _value="${_value%\'}"
+  else
+    _value="${_value%%#*}"
+  fi
+
+  _value="${_value#"${_value%%[![:space:]]*}"}"
+  _value="${_value%"${_value##*[![:space:]]}"}"
+  ENV_MAP["$_key"]="$_value"
+}
+
 _parse_env_file() {
   local _file="$1"
-  while IFS='=' read -r key value; do
-    [[ "$key" =~ ^[[:space:]]*# ]] && continue
-    [[ -z "$key" ]] && continue
-    key=$(echo "$key" | xargs)
-    [[ -z "$key" ]] && continue
-    value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
-    ENV_MAP["$key"]="$value"
-  done < <(tr -d '\r' < "$_file")
+  local _line
+  while IFS='' read -r _line || [[ -n "$_line" ]]; do
+    _parse_env_line "$_line"
+  done < <(cat "$_file")
 }
 
 _parse_env_file "$ENV_FILE"
@@ -84,7 +111,7 @@ LOKI_S3_ACCESS_KEY="${ENV_MAP[LOKI_S3_ACCESS_KEY]:-}"
 # ----------------------------
 HOST_ENDPOINT="http://127.0.0.1:9000"
 MC_ENDPOINT="http://objectstorage:9000"
-MC_IMAGE="minio/mc:RELEASE.2025-08-13T08-35-41Z"
+MC_IMAGE="${MC_IMAGE:-${ENV_MAP[MC_IMAGE]:-minio/mc:RELEASE.2025-08-13T08-35-41Z}}"
 MC_NETWORK="athyper-edge"
 
 ERRORS=0
@@ -119,6 +146,7 @@ trap 'rm -rf "$_MC_CFG"' EXIT INT TERM
 # ----------------------------
 mc_run() {
   MSYS_NO_PATHCONV=1 docker run --rm \
+    -i \
     --network "$MC_NETWORK" \
     -v "${_MC_CFG_MOUNT}:/tmp/.mc" \
     -e MC_CONFIG_DIR=/tmp/.mc \
@@ -219,7 +247,7 @@ else
 
   if [[ "$RW_OK" == "true" ]]; then
     # Write test object
-    if echo "$TEST_CONTENT" | mc_run pipe "apptest/${S3_BUCKET}/${TEST_KEY}" >/dev/null 2>&1; then
+    if printf '%s' "$TEST_CONTENT" | mc_run pipe "apptest/${S3_BUCKET}/${TEST_KEY}" >/dev/null 2>&1; then
       pass "APP credentials: write OK"
 
       # Read test object back

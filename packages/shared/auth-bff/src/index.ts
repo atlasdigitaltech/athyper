@@ -3146,7 +3146,7 @@ async function resolveSessionOrganizations(opts: {
         sawEmptyResolverResult = true;
         console.warn(`[auth-bff/${opts.plane}/contexts/${opts.requestId}] empty context resolver result from ${resolverUrl}`);
       } else {
-        lastResolverFailure = `Context resolver returned ${res.status} for ${resolverUrl}`;
+        lastResolverFailure = `Context resolver returned ${res.status} for ${resolverUrl}: ${JSON.stringify(data)}`;
         console.warn(`[auth-bff/${opts.plane}/contexts/${opts.requestId}] ${lastResolverFailure}`);
       }
     } catch (err) {

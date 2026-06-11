@@ -97,7 +97,8 @@ if exist "%TMPSCRIPT%" del "%TMPSCRIPT%"
 >> "%TMPSCRIPT%" echo $backupKey       = if ($envMap['BACKUP_S3_ACCESS_KEY']) { $envMap['BACKUP_S3_ACCESS_KEY'] } else { '' }
 >> "%TMPSCRIPT%" echo $tempoKey        = if ($envMap['TEMPO_S3_ACCESS_KEY'])  { $envMap['TEMPO_S3_ACCESS_KEY'] }  else { '' }
 >> "%TMPSCRIPT%" echo $lokiKey         = if ($envMap['LOKI_S3_ACCESS_KEY'])   { $envMap['LOKI_S3_ACCESS_KEY'] }   else { '' }
->> "%TMPSCRIPT%" echo $mcImage         = 'minio/mc:RELEASE.2025-08-13T08-35-41Z'
+>> "%TMPSCRIPT%" echo $mcImageEnv      = [Environment]::GetEnvironmentVariable('MC_IMAGE', 'Process')
+>> "%TMPSCRIPT%" echo $mcImage         = if ($mcImageEnv) { $mcImageEnv } else { 'minio/mc:RELEASE.2025-08-13T08-35-41Z' }
 >> "%TMPSCRIPT%" echo $mcNetwork       = 'athyper-edge'
 >> "%TMPSCRIPT%" echo $hostEndpoint    = 'http://127.0.0.1:9000'
 >> "%TMPSCRIPT%" echo $mcEndpoint      = 'http://objectstorage:9000'

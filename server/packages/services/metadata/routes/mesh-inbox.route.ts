@@ -17,7 +17,7 @@
  *
  * Steps 1-2 are condensed into a single check via res.locals.effectivePermissionContext
  * which the Phase 5 middleware already populated. We just need to confirm
- * planeKey === 'mesh' and the partner has `mesh.document.view` in allowed.
+ * planeKey === 'mesh' and the partner has `MESH.BUYER.VIEW` in allowed.
  *
  * Routes:
  *   GET /api/mesh/inbox                        list shared documents (multi-entity)
@@ -154,8 +154,8 @@ export function createMeshInboxRoutes(router: Router, deps: MeshInboxRoutesDeps)
 
       const partner = resolveMeshPartner(res);
       if (!partner) return forbidden(res, "Mesh plane context required", "MESH_CONTEXT_REQUIRED");
-      if (!partner.allowed.has("mesh.document.view")) {
-        return forbidden(res, "Partner lacks mesh.document.view");
+      if (!partner.allowed.has("MESH.BUYER.VIEW")) {
+        return forbidden(res, "Partner lacks MESH.BUYER.VIEW");
       }
 
       // ?entity=purchase_invoice narrows the scan; ?limit=N caps response size.
@@ -275,8 +275,8 @@ export function createMeshInboxRoutes(router: Router, deps: MeshInboxRoutesDeps)
 
       const partner = resolveMeshPartner(res);
       if (!partner) return forbidden(res, "Mesh plane context required", "MESH_CONTEXT_REQUIRED");
-      if (!partner.allowed.has("mesh.document.view")) {
-        return forbidden(res, "Partner lacks mesh.document.view");
+      if (!partner.allowed.has("MESH.BUYER.VIEW")) {
+        return forbidden(res, "Partner lacks MESH.BUYER.VIEW");
       }
 
       const entity = (req.params["entity"] as string ?? "").replace(/-/g, "_");

@@ -30,6 +30,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 REPO_CFG="$STACK_DIR/config"
+ENV_FILE="$STACK_DIR/env/.env"
 
 # Target: server overrides ATHYPER_CONFIG_ROOT (or legacy ATHYPER_CONFIG) via
 # systemd Environment= lines. Local dev falls back to the repo config dir.
@@ -101,7 +102,8 @@ case "$ENV_NAME" in
 esac
 
 # ── FILE_MAP: source (relative to REPO_CFG) → dest (relative to LIVE_CFG) ────
-# Declare separately to avoid bash 3 associative-array issues (macOS ships bash 3).
+# Keep this map-based layout for compatibility with environments that still ship
+# legacy Bash versions where available tooling expects a stable map shape.
 declare -A FILE_MAP
 
 # apps — kernel config (env-specific template → canonical runtime file)
@@ -136,11 +138,11 @@ FILE_MAP["iam/realm-athyper-demosetup.json"]="iam/realm-athyper-demosetup.json"
 FILE_MAP["iam/realm-platform-control.json"]="iam/realm-platform-control.json"
 FILE_MAP["iam/realm-platform-control-demosetup.json"]="iam/realm-platform-control-demosetup.json"
 
-# memorycache — env-variant selects staging/production conf
-# redis-acl.conf is seeded from the .tpl (tokens intact) so that
-# validate-env.sh can render the password hashes in-place before stack start.
+# memorycache — env-variant selects staging/production conf.
+# redis-acl.conf is a derived artifact — rendered below via render-redis-acl.cjs,
+# not copied through FILE_MAP. This keeps the runtime file authoritative (hashes
+# always fresh) and prevents the default mode from silently skipping .tpl edits.
 FILE_MAP["$MEMORYCACHE_SRC"]="memorycache/cache.conf"
-FILE_MAP["memorycache/redis-acl.conf.tpl"]="memorycache/redis-acl.conf"
 
 # telemetry — repo-managed (safe to auto-update)
 FILE_MAP["telemetry/logging/config.yml"]="telemetry/logging/config.yml"
@@ -212,6 +214,9 @@ show_diff() {
     echo "  MISSING  $key"
   elif ! diff -q "$src" "$dst" &>/dev/null; then
     echo "  DRIFTED  $key"
+    if [[ "$MODE" == "--diff" ]] && is_operator_managed "$key"; then
+      echo "           operator-managed file drifted; --update will prompt before overwrite."
+    fi
     [[ -n "${VERBOSE:-}" ]] && diff "$src" "$dst" || true
   else
     echo "  OK       $key"
@@ -268,7 +273,7 @@ for src_rel in "${!FILE_MAP[@]}"; do
       ;;
     --update)
       if is_operator_managed "$dst_rel"; then
-        if [[ "$src" != "$dst" ]] && ! diff -q "$src" "$dst" &>/dev/null 2>&1; then
+    if [[ "$src" != "$dst" ]] && ! diff -q "$src" "$dst" &>/dev/null; then
           read -p "  OPERATOR-MANAGED $dst_rel differs from template. Overwrite? [y/N] " ans
           [[ "${ans,,}" == "y" ]] && backup_and_replace "$src" "$dst" || echo "  SKIPPED $dst_rel"
         else
@@ -326,6 +331,15 @@ for dir_rel in "${DIR_COPIES[@]}"; do
 done
 
 if [[ "$MODE" != "--diff" ]]; then
+  echo ""
+  echo "Rendering Redis ACL..."
+  node "$STACK_DIR/../tools/scripts/render-redis-acl.cjs" \
+    --env-file "$ENV_FILE" \
+    --stack-dir "$STACK_DIR" || {
+    echo "  FAIL  Redis ACL render failed"
+    exit 1
+  }
+
   echo ""
   echo "Applying IAM realm policy for $ENV_NAME..."
   node "$STACK_DIR/../tools/scripts/apply-iam-realm-policy.cjs" \

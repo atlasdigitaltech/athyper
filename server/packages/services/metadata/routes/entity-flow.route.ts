@@ -21,10 +21,17 @@ import {
   resolveTenantId,
   resolvePrincipalIdWithJit,
 } from "@athyper/svc-shared";
+import { hasModuleAccess, type ModuleAccessResolverOptions } from "./module-visibility.guard.js";
+import { getEffectiveModuleAccess } from "@athyper/svc-iam";
 
 export interface EntityFlowRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: Kysely<any>;
+  cache?: {
+    get(key: string): Promise<string | null>;
+    set(key: string, value: string, ttlSeconds: number): Promise<void>;
+    del(key: string): Promise<void>;
+  };
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
@@ -34,6 +41,7 @@ export interface EntityFlowRoutesDeps {
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string, personaId: string) => Promise<Record<string, { decision: string } | undefined>>;
+  getEffectiveModuleAccess?: typeof getEffectiveModuleAccess;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -231,7 +239,28 @@ function mergeProfileMaps(
 }
 
 export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps): Router {
-  const { db, auth, logger, checkPermissionBatch } = deps;
+  const { db, auth, logger, checkPermissionBatch, getEffectiveModuleAccess, cache } = deps;
+  const moduleAccessCache = cache
+    ? {
+      get: cache.get,
+      set: (key: string, value: string, _ex: "EX", ttl: number): Promise<void> => cache.set(key, value, ttl),
+      del: cache.del,
+    }
+    : undefined;
+
+  const moduleResolver = getEffectiveModuleAccess
+    ? (
+      _db: unknown,
+      tenantId: string,
+      principalId: string,
+      options?: ModuleAccessResolverOptions,
+    ) =>
+      getEffectiveModuleAccess(db, tenantId, principalId, {
+        cache: moduleAccessCache,
+        authEpoch: options?.authEpoch,
+        planVersionId: options?.planVersionId,
+      })
+    : undefined;
 
   const handler: RequestHandler = async (req, res, next) => {
     try {
@@ -256,6 +285,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
         .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
         .select([
           sql<string>`COALESCE(e.entity_code, e.name)`.as("entity_code"),
+          sql<string | null>`e.module_id`.as("module_id"),
           sql<string>`ev.id`.as("version_id"),
         ])
         .where(sql`COALESCE(e.entity_code, e.name)`, "=", entityCode)
@@ -275,6 +305,36 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
         return;
+      }
+
+      if (tenantId && entityRow.module_id) {
+        const sub = typeof claims.sub === "string" ? claims.sub : "";
+        try {
+          const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+          const authEpochRow = await db
+            .selectFrom("master.principal as p")
+            .select("p.auth_epoch")
+            .where("p.id", "=", principalId)
+            .where("p.tenant_id", "=", tenantId)
+            .executeTakeFirst();
+          const authEpoch = (authEpochRow?.auth_epoch as number | undefined) ?? undefined;
+          const hasAccess = await hasModuleAccess(
+            db,
+            tenantId,
+            principalId,
+            entityRow.module_id as string,
+            moduleResolver,
+            logger,
+            { authEpoch },
+          );
+          if (!hasAccess) {
+            res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+            return;
+          }
+        } catch (modErr) {
+          logger?.warn("entity_flow_module_access_failed", { entityCode, tenantId, err: String(modErr) });
+          // Fail-open: render flow even if module access lookup is unavailable.
+        }
       }
 
       // ── Active flow for this entity version ───────────────────────────────

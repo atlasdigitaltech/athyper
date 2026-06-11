@@ -14,7 +14,14 @@
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
-import { extractOrgHeaders, resolveTenantId } from "@athyper/svc-shared";
+import {
+  extractOrgHeaders,
+  resolveTenantId,
+  resolvePrincipalIdWithJit,
+  verifyBearer,
+} from "@athyper/svc-shared";
+import { hasModuleAccess, type ModuleAccessResolverOptions } from "./module-visibility.guard.js";
+import { getEffectiveModuleAccess } from "@athyper/svc-iam";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +49,7 @@ export interface CompiledEntityRoutesDeps {
    * (detected by ETag mismatch on the cached payload vs recomputed hash).
    */
   cache?: DescriptorCache;
+  getEffectiveModuleAccess?: typeof getEffectiveModuleAccess;
 }
 
 // ─── Cache helpers ─────────────────────────────────────────────────────────────
@@ -672,23 +680,35 @@ async function loadReferencePickerProfiles(
 }
 
 export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRoutesDeps): Router {
-  const { db, auth, logger, cache } = deps;
+  const { db, auth, logger, cache, getEffectiveModuleAccess } = deps;
+  const moduleAccessCache = cache
+    ? {
+      get: cache.get,
+      set: (key: string, value: string, _ex: "EX", ttl: number): Promise<void> =>
+        cache.set(key, value, ttl),
+      del: cache.del,
+    }
+    : undefined;
+  const moduleResolver = getEffectiveModuleAccess
+    ? (
+      _db: unknown,
+      tenantId: string,
+      principalId: string,
+      options?: ModuleAccessResolverOptions,
+    ) =>
+      getEffectiveModuleAccess(db, tenantId, principalId, {
+        cache: moduleAccessCache,
+        authEpoch: options?.authEpoch,
+        planVersionId: options?.planVersionId,
+      })
+    : undefined;
 
   const handler: RequestHandler = async (req, res, next) => {
     try {
       // ── Auth ──────────────────────────────────────────────────────────────
-      const authHeader = req.headers.authorization ?? "";
-      const match = /^Bearer\s+(.+)$/i.exec(authHeader);
-      if (!match) {
-        res.status(401).json({ error: "MISSING_TOKEN", message: "Authorization: Bearer <token> required" });
-        return;
-      }
-      try {
-        await auth.verifyToken(match[1]!);
-      } catch {
-        res.status(401).json({ error: "INVALID_TOKEN", message: "Token verification failed" });
-        return;
-      }
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
 
       // ── Resolve entity + effective version ────────────────────────────────
       // Normalise URL slug → DB name (journal-entry → journal_entry)
@@ -803,23 +823,24 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // When tenantId is known:  prefer tenant-specific row over platform row
       //   (ORDER BY tenant_id NULLS LAST → non-null tenant wins, NULL platform fallback)
       // When tenantId is null:   platform entities only (tenant_id IS NULL)
-      let entityQuery = db
-        .selectFrom("control.entity as e")
-        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
-        .select([
-          "e.id",
-          "e.name",
-          "e.slug",
-          sql<string>`COALESCE(e.entity_code, e.name)`.as("entity_code"),
+    let entityQuery = db
+      .selectFrom("control.entity as e")
+      .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+      .select([
+        "e.id",
+        "e.name",
+        "e.slug",
+        sql<string>`COALESCE(e.entity_code, e.name)`.as("entity_code"),
           "e.label_singular",
           "e.entity_class",
-          "e.table_schema",
-          "e.table_name",
-          "e.display_config",
-          "e.identity_config",
-          "e.search_config",
-          "e.data_policy",
-          "e.feature_flags",
+        "e.table_schema",
+        "e.table_name",
+        sql<string | null>`e.module_id`.as("module_id"),
+        "e.display_config",
+        "e.identity_config",
+        "e.search_config",
+        "e.data_policy",
+        "e.feature_flags",
           "e.governance_level",
           "e.security_tier",
           "e.icon_key",
@@ -849,6 +870,35 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
         return;
+      }
+
+      if (tenantId && entityRow.module_id) {
+        try {
+          const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+          const authEpochRow = await db
+            .selectFrom("master.principal as p")
+            .select("p.auth_epoch")
+            .where("p.id", "=", principalId)
+            .where("p.tenant_id", "=", tenantId)
+            .executeTakeFirst();
+          const authEpoch = (authEpochRow?.auth_epoch as number | undefined) ?? undefined;
+          const hasAccess = await hasModuleAccess(
+            db,
+            tenantId,
+            principalId,
+            entityRow.module_id as string,
+            moduleResolver,
+            logger,
+            { authEpoch },
+          );
+          if (!hasAccess) {
+            res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+            return;
+          }
+        } catch (err) {
+          logger?.warn("compiled_entity_module_access_failed", { entityCode, tenantId, err: String(err) });
+          // Fail-open: keep existing descriptor behavior if module checks are unavailable.
+        }
       }
 
       // ── Fields ────────────────────────────────────────────────────────────

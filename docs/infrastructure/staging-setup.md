@@ -2,7 +2,8 @@
 
 **Document version:** v13 — permission-safe  
 **Scope:** Fresh Ubuntu 22.04/24.04 server (Contabo VM) → `ENVIRONMENT=staging`  
-**Not for:** Windows local development — see `infrastructure-plan.md` Part G  
+**Also applies to:** production servers, with the three deltas described in [`environments.md`](environments.md#production--same-shape-as-staging-three-deltas).  
+**Not for:** Windows local development — see [`local-dev-setup.md`](local-dev-setup.md) and [`environments.md`](environments.md) for the cross-env comparison.  
 **Two-root rule:** Source code and runtime state must live on separate filesystem paths.
 
 ```text
@@ -2433,3 +2434,16 @@ Do not declare staging ready until every item below is checked.
 > Phase 26 items are gated on a fully running, reboot-verified stack.
 > Execute Phase 26 only after the reboot drill passes. Keep an active root session open
 > while applying the config — do not close it until Step E key-login verification succeeds.
+
+---
+
+## Related Documentation
+
+| Document | Purpose |
+|---|---|
+| [`environments.md`](environments.md) | Cross-env comparison — local vs staging vs production matrix, script behavior, profile defaults, production deltas |
+| [`local-dev-setup.md`](local-dev-setup.md) | Windows local development — host-mode apps, infra-in-Docker, Options A/B/C |
+| [`infrastructure-plan.md`](infrastructure-plan.md) | Architecture overview, v13 permission decision, pre-deployment code gates |
+| [`secrets-management.md`](secrets-management.md) | Secret inventory, generation, rotation, per-environment injection model |
+| [`weekly-reset-reseed-export.md`](weekly-reset-reseed-export.md) | Weekly DB reset, re-seed, export, restore validation |
+

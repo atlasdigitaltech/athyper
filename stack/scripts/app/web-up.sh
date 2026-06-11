@@ -211,11 +211,36 @@ echo "SERVICES    = ${PLANE_SERVICES[*]}"
 echo "=========================="
 echo ""
 
+shadow_check() {
+  local plane="$1"
+  local name="${COMPOSE_PROJECT_NAME:-athyper}-${plane}-web-1"
+  if docker ps --format '{{.Names}}' --filter "name=^${name}$" 2>/dev/null | grep -qx "$name"; then
+    cat >&2 <<EOF
+
+============================================================
+ WARNING: containerized ${plane}-web is running while ENVIRONMENT=local.
+          Host source edits will NOT take effect.
+          Stop it first:  docker stop $name
+          Or run:         stack/scripts/dev-local.sh --stop-only
+============================================================
+
+EOF
+    read -r -p "Continue anyway for ${plane}? [y/N] " _resp
+    case "${_resp,,}" in
+      y|yes) ;;
+      *) echo "Aborted."; exit 1 ;;
+    esac
+  fi
+}
+
 if [[ "$ENVIRONMENT" == "local" ]]; then
   load_stack_env
   export_common_local_env
 
   cd "$REPO_ROOT"
+  for plane in "${PLANE_NAMES[@]}"; do
+    shadow_check "$plane"
+  done
   echo "Local mode: starting Next.js dev server(s)"
 
   if [[ ${#PLANE_NAMES[@]} -eq 1 ]]; then

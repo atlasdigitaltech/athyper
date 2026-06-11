@@ -1319,7 +1319,7 @@ export function FlowFieldBinding({
           <CountryAwarePhoneInput value={value} onChange={handleValueChange} disabled={isDisabled} error={error} draftCtx={draftCtx} />
         ) : isEmailField(field_name, ui_variant) ? (
           <BaseInput value={value} onChange={handleValueChange} type="email" disabled={isDisabled} placeholder={placeholder} error={error} />
-        ) : data_type === "boolean" || field_name === "is_on_hold" ? (
+        ) : data_type === "boolean" ? (
           <div className="flex items-center gap-2">
             <input
               id={`field-${field_name}`}

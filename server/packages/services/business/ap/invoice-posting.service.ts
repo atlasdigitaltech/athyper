@@ -25,6 +25,7 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { matchInvoice } from "./invoice-match.service.js";
+import { validatePurchaseInvoiceInvariants } from "./invoice-invariants.service.js";
 import { updatePartyBalanceOnPosting } from "./advance-balance.service.js";
 import { postInvoiceTaxCalculations, reverseInvoiceTaxCalculations } from "./tax-calculation.service.js";
 import { deriveApInvoiceProfile } from "./acct-profile-derivation.service.js";
@@ -253,6 +254,19 @@ async function handlePostInvoiceInner(
     const lineCount = Number(invoice["line_count"] ?? 0);
     if (lineCount === 0) {
       return { status: 422, body: { error: "NO_LINES", message: "Invoice has no lines to post" } };
+    }
+
+    // Cross-entity invariants — re-validate at post time (final safety net).
+    const invariants = await validatePurchaseInvoiceInvariants(trx, tenantId, invoiceId, { phase: "post" });
+    if (!invariants.ok) {
+      return {
+        status: 422,
+        body: {
+          error:      "INVOICE_INVARIANT_VIOLATION",
+          message:    `${invariants.violations.length} invariant violation(s) prevent posting.`,
+          violations: invariants.violations,
+        },
+      };
     }
 
     const companyId       = String(invoice["company_code_id"] ?? "");

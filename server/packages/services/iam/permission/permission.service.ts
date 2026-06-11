@@ -100,6 +100,7 @@ export async function checkPermission(
 
   // Map DB outcome to typed decision
   const decision = mapDecision(rawDecision);
+  let match_source: string | undefined;
 
   // ── Scope resolution (allow only) ─────────────────────────────────────
   let scope: ResolvedScope = { visibility: "own", company_code_ids: [] };
@@ -108,6 +109,19 @@ export async function checkPermission(
   let matched_group_id: string | undefined;
 
   if (decision === "allow") {
+    const source = await resolvePermissionMatchSource(
+      db,
+      tenantId,
+      principalId,
+      permissionId,
+    );
+    if (source) {
+      match_source = source.source;
+      matched_grant_id = source.matched_grant_id;
+      matched_role_id = source.matched_role_id;
+      matched_group_id = source.matched_group_id;
+    }
+
     // Visibility scope (widest row-level filter)
     const visResult = await sql<{ visibility_scope: string }>`
       SELECT master.get_effective_visibility_scope(
@@ -140,7 +154,7 @@ export async function checkPermission(
     // session layer already merged delegation permissions before calling here.)
   }
 
-  const reason = mapReason(rawDecision, decision);
+  const reason = mapReason(rawDecision, decision, match_source);
 
   // ── Audit: write to log.permission_decision_log ───────────────────────
   // Fire-and-forget — never let audit failure fail the permission check.
@@ -204,6 +218,7 @@ export async function checkPermissionBatch(
     decision: string;
     visibility_scope: string | null;
     company_code_ids: string[] | null;
+    match_source: string | null;
   }>`
     WITH all_perms AS (
       SELECT id, code, is_plan_restricted
@@ -227,6 +242,16 @@ export async function checkPermissionBatch(
       FROM shared.persona_permission pp
       WHERE pp.persona_id  = ${personaId}::uuid
         AND pp.is_granted  = true
+    ),
+    -- Step 3b: inherited persona grants via group -> role -> persona
+    role_persona_allows AS (
+      SELECT pp.permission_id
+      FROM principal_group_roles pgr
+      JOIN shared.role r ON r.id = pgr.role_id AND r.status = 'active'
+      JOIN shared.persona_permission pp
+        ON pp.persona_id = r.persona_id
+       AND pp.is_granted = true
+       AND pp.permission_id IS NOT NULL
     ),
     -- Step 4: access_grant allows (direct principal + via group/role)
     grant_allows AS (
@@ -289,14 +314,24 @@ export async function checkPermissionBatch(
           WHEN ap.id IN (SELECT permission_id FROM grant_denies)  THEN 'deny'
           WHEN ap.id IN (SELECT permission_id FROM plan_denies)   THEN 'not_in_plan'
           WHEN ap.id IN (SELECT permission_id FROM persona_allows) THEN 'allow'
+          WHEN ap.id IN (SELECT permission_id FROM role_persona_allows) THEN 'allow'
           WHEN ap.id IN (SELECT permission_id FROM grant_allows)  THEN 'allow'
           ELSE 'not_found'
-        END AS decision
+        END AS decision,
+        CASE
+          WHEN ap.id IN (SELECT permission_id FROM grant_denies)  THEN 'deny'
+          WHEN ap.id IN (SELECT permission_id FROM plan_denies)   THEN 'plan'
+          WHEN ap.id IN (SELECT permission_id FROM persona_allows) THEN 'persona'
+          WHEN ap.id IN (SELECT permission_id FROM role_persona_allows) THEN 'role_persona'
+          WHEN ap.id IN (SELECT permission_id FROM grant_allows)  THEN 'grant'
+          ELSE NULL
+        END AS match_source
       FROM all_perms ap
     )
     SELECT
       e.permission_code,
       e.decision,
+      e.match_source,
       -- Only compute scope for allowed permissions
       CASE WHEN e.decision = 'allow' THEN
         master.get_effective_visibility_scope(${tenantId}::uuid, ${principalId}::uuid, e.permission_id)
@@ -314,7 +349,7 @@ export async function checkPermissionBatch(
 
   for (const row of rows.rows) {
     const decision = mapDecision(row.decision);
-    const reason = mapReason(row.decision, decision);
+    const reason = mapReason(row.decision, decision, row.match_source ?? undefined);
     result[row.permission_code] = {
       decision,
       reason,
@@ -327,6 +362,103 @@ export async function checkPermissionBatch(
   }
 
   return result;
+}
+
+type PermissionMatchSource = {
+  source: "persona" | "role_persona" | "grant" | "deny" | "plan";
+  matched_grant_id?: string;
+  matched_role_id?: string;
+  matched_group_id?: string;
+};
+
+async function resolvePermissionMatchSource(
+  db: Kysely<AnyDb>,
+  tenantId: string,
+  principalId: string,
+  permissionId: string,
+): Promise<PermissionMatchSource | null> {
+  const row = await sql<{
+    source: "persona" | "role_persona" | "grant" | "deny" | "plan" | null;
+    matched_grant_id: string | null;
+    matched_role_id: string | null;
+    matched_group_id: string | null;
+  }>`
+    WITH active_group_roles AS (
+      SELECT DISTINCT gr.role_id, gr.group_id
+      FROM master.auth_group_member gm
+      JOIN master.auth_group_role gr
+        ON gr.group_id = gm.group_id
+       AND gr.tenant_id = gm.tenant_id
+       AND gr.status = 'active'
+       AND (gr.expires_at IS NULL OR gr.expires_at > now())
+      WHERE gm.tenant_id = ${tenantId}
+        AND gm.principal_id = ${principalId}
+        AND (gm.expires_at IS NULL OR gm.expires_at > now())
+    ),
+    direct_persona_allow AS (
+      SELECT TRUE AS is_match
+      FROM master.principal_persona pp_a
+      JOIN shared.persona_permission pp
+        ON pp.persona_id = pp_a.persona_id
+      WHERE pp_a.tenant_id = ${tenantId}
+        AND pp_a.principal_id = ${principalId}
+        AND (pp_a.expires_at IS NULL OR pp_a.expires_at > now())
+        AND pp.permission_id = ${permissionId}::uuid
+        AND pp.is_granted = true
+    ),
+    role_persona_allow AS (
+      SELECT DISTINCT
+        pgr.role_id,
+        pgr.group_id
+      FROM active_group_roles pgr
+      JOIN shared.role r
+        ON r.id = pgr.role_id
+       AND r.status = 'active'
+      JOIN shared.persona_permission pp
+        ON pp.persona_id = r.persona_id
+       AND pp.permission_id = ${permissionId}::uuid
+       AND pp.is_granted = true
+    ),
+    grant_allow AS (
+      SELECT
+        ag.id,
+        ag.role_id,
+        ag.group_id
+      FROM master.access_grant ag
+      WHERE ag.tenant_id = ${tenantId}
+        AND ag.effect = 'allow'
+        AND ag.status = 'active'
+        AND (ag.expires_at IS NULL OR ag.expires_at > now())
+        AND ag.permission_id = ${permissionId}::uuid
+        AND (
+          ag.principal_id = ${principalId}
+          OR ag.role_id IN (SELECT role_id FROM active_group_roles)
+          OR ag.group_id IN (SELECT group_id FROM active_group_roles)
+        )
+    )
+    SELECT
+      CASE
+        WHEN EXISTS (SELECT 1 FROM direct_persona_allow) THEN 'persona'
+        WHEN EXISTS (SELECT 1 FROM role_persona_allow) THEN 'role_persona'
+        WHEN EXISTS (SELECT 1 FROM grant_allow) THEN 'grant'
+        ELSE NULL
+      END AS source,
+      (SELECT ag.id::text FROM grant_allow ag LIMIT 1) AS matched_grant_id,
+      (SELECT rp.role_id::text FROM role_persona_allow rp LIMIT 1) AS matched_role_id,
+      (SELECT rp.group_id::text FROM role_persona_allow rp LIMIT 1) AS matched_group_id
+  `.execute(db);
+
+  const match = row.rows[0];
+  if (!match || !match.source) {
+    return null;
+  }
+
+  return {
+    source: match.source,
+    matched_grant_id: match.matched_grant_id ?? undefined,
+    matched_role_id: match.matched_role_id ?? undefined,
+    matched_group_id: match.matched_group_id ?? undefined,
+  };
 }
 
 // ─── requireAllow ─────────────────────────────────────────────────────────────
@@ -371,10 +503,18 @@ function mapDecision(raw: string): PermissionDecisionOutcome {
   }
 }
 
-function mapReason(raw: string, decision: PermissionDecisionOutcome): PermissionDecisionReason {
+function mapReason(
+  raw: string,
+  decision: PermissionDecisionOutcome,
+  source?: string,
+): PermissionDecisionReason {
   if (raw === "not_in_plan" || raw === "addon_required") return "plan_gate_denied";
   if (decision === "deny") return "explicit_deny";
-  if (decision === "allow") return "persona_granted"; // conservative default; grant_granted possible too
+  if (decision === "allow") {
+    if (source === "role_persona") return "role_granted";
+    if (source === "grant") return "grant_granted";
+    return "persona_granted";
+  }
   return "no_grant_found";
 }
 

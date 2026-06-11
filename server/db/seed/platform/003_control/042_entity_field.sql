@@ -3183,9 +3183,8 @@ CROSS JOIN (VALUES
     ('tax_mode_source',          'tax_mode_source',         'Tax Mode Source',    'lookup',         'zero_or_one', 'document.purchase_invoice_tax_mode_source'::text, false, true, NULL::jsonb,                       86),
     ('tax_amount',               'tax_amount',              'Tax Amount',         'decimal',        'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                     90),
     ('withholding_tax_amount',   'withholding_tax_amount',  'WHT Amount',         'decimal',        'one',         NULL::text,                                   false, false, '{"min":0}'::jsonb,                     95),
-    ('net_amount',               'subtotal_amount',         'Net Amount',         'decimal',        'one',         NULL::text,                                   true,  false, '{"min":0}'::jsonb,                    100),
+    ('net_amount',               'net_amount',              'Net Amount',         'decimal',        'one',         NULL::text,                                   true,  false, '{"min":0}'::jsonb,                    100),
     ('paid_amount',              'paid_amount',             'Paid Amount',        'decimal',        'one',         NULL::text,                                   false, false, '{"min":0}'::jsonb,                    102),
-    ('outstanding_amount',       'outstanding_amount',      'Outstanding',        'decimal',        'one',         NULL::text,                                   false, true,  '{"min":0}'::jsonb,                    104),
     -- â”€â”€ D: Source, References & Terms â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ('invoice_source',           'invoice_source',          'Invoice Source',     'enum',           'one',         'document.purchase_invoice_source'::text,     true,  true,  NULL::jsonb,                           110),
     ('supplier_invoice_number',   'supplier_invoice_number', 'Supplier Invoice No.', 'text',           'zero_or_one', NULL::text,                                   false, false, '{"max_length":100}'::jsonb,            120),
@@ -3402,6 +3401,7 @@ CROSS JOIN (VALUES
     ('freight_amount',         'freight_amount',          'Freight',            'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                   84),
     ('misc_charges_amount',    'misc_charges_amount',     'Misc. Charges',      'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                   86),
     ('payable_amount',         'payable_amount',          'Payable Amount',     'decimal',   'one',         NULL::text,                                   false, true,  '{"computed":true}'::jsonb,          103),
+    ('outstanding_amount',     'outstanding_amount',      'Outstanding',         'decimal',   'one',         NULL::text,                                   false, true,  '{"computed":true}'::jsonb,          104),
     ('advance_deduction_amount','advance_deduction_amount','Advance Deduction', 'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                  105),
     ('retention_amount',       'retention_amount',        'Retention Amount',   'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0}'::jsonb,                  107),
     ('retention_pct',          'retention_pct',           'Retention %',        'decimal',   'zero_or_one', NULL::text,                                   false, false, '{"min":0,"max":100}'::jsonb,        109),
@@ -3459,6 +3459,118 @@ UPDATE control.entity_field ef
    AND ef.name IN ('supplier_invoice_number', 'vendor_invoice_ref')
    AND ef.tenant_id IS NULL;
 
+
+-- Mark generated purchase invoice monetary totals as computed/read-only for UI/validators.
+-- payable_amount and outstanding_amount are PostgreSQL GENERATED ALWAYS AS STORED
+-- columns (see document/01e_tables_invoice.sql §9). compute_mode='generated'
+-- satisfies ef_computed_chk (CHECK: NOT is_computed OR compute_mode IS NOT NULL).
+UPDATE control.entity_field ef
+   SET is_read_only = true,
+       is_computed = true,
+       compute_mode = 'generated',
+       validation = CASE
+           WHEN ef.validation ? 'computed' THEN ef.validation
+           ELSE COALESCE(ef.validation, '{}'::jsonb) || '{"computed":true}'::jsonb
+       END
+  FROM control.entity_version ev
+  JOIN control.entity e ON e.id = ev.entity_id
+ WHERE ef.entity_version_id = ev.id
+   AND e.table_schema = 'document'
+   AND e.table_name = 'purchase_invoice'
+   AND e.tenant_id IS NULL
+   AND ev.version_no = 1
+  AND ef.tenant_id IS NULL
+  AND ef.name IN ('payable_amount', 'outstanding_amount');
+
+
+-- Add missing header fields added by DDL/runtime.
+INSERT INTO control.entity_field (
+    entity_version_id,
+    name, column_name, label, data_type,
+    cardinality, origin, enum_domain_code,
+    is_required, is_filterable, validation, sort_order, created_by)
+SELECT
+    ev.id,
+    f.name, f.column_name, f.label, f.data_type,
+    f.cardinality, 'standard', f.enum_domain_code,
+    f.is_required, f.is_filterable,
+    f.validation, f.sort_order,
+    '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+CROSS JOIN (VALUES
+    ('subtotal_amount', 'subtotal_amount', 'Subtotal Amount', 'decimal', 'one', NULL::text, false, true,  '{"computed":true}'::jsonb,     78),
+    ('row_version',    'row_version',    'Row Version',    'bigint',  'one', NULL::text, false, false, NULL::jsonb,                             990)
+) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
+       is_required, is_filterable, validation, sort_order)
+WHERE e.table_schema = 'document'
+  AND e.table_name = 'purchase_invoice'
+  AND e.tenant_id IS NULL
+  AND ev.version_no = 1
+ON CONFLICT (entity_version_id, name) WHERE entity_version_id IS NOT NULL DO UPDATE
+SET
+    column_name = EXCLUDED.column_name,
+    label = EXCLUDED.label,
+    data_type = EXCLUDED.data_type,
+    cardinality = EXCLUDED.cardinality,
+    origin = EXCLUDED.origin,
+    enum_domain_code = EXCLUDED.enum_domain_code,
+    enum_config = CASE
+        WHEN EXCLUDED.enum_domain_code IS NOT NULL OR EXCLUDED.data_type <> 'enum' THEN NULL
+        ELSE entity_field.enum_config
+    END,
+    is_required = EXCLUDED.is_required,
+    is_filterable = EXCLUDED.is_filterable,
+    validation = EXCLUDED.validation,
+    sort_order = EXCLUDED.sort_order,
+    updated_at = now(),
+    updated_by = EXCLUDED.created_by;
+
+-- subtotal_amount: trigger-maintained by trg_pil_sync_header (rolls up line.net_amount).
+-- payable_amount, outstanding_amount: PG GENERATED ALWAYS AS STORED.
+-- compute_mode must be non-null when is_computed=true (ef_computed_chk).
+UPDATE control.entity_field ef
+   SET is_read_only = true,
+       is_computed = (ef.name IN ('subtotal_amount', 'payable_amount', 'outstanding_amount')),
+       compute_mode = CASE ef.name
+           WHEN 'subtotal_amount'    THEN 'trigger'
+           WHEN 'payable_amount'     THEN 'generated'
+           WHEN 'outstanding_amount' THEN 'generated'
+           ELSE ef.compute_mode
+       END,
+       validation = CASE
+           WHEN ef.validation ? 'computed' THEN ef.validation
+           ELSE COALESCE(ef.validation, '{}'::jsonb) || '{"computed":true}'::jsonb
+       END
+  FROM control.entity_version ev
+  JOIN control.entity e ON e.id = ev.entity_id
+ WHERE ef.entity_version_id = ev.id
+   AND e.table_schema = 'document'
+   AND e.table_name = 'purchase_invoice'
+   AND e.tenant_id IS NULL
+   AND ev.version_no = 1
+   AND ef.tenant_id IS NULL
+   AND ef.name IN ('subtotal_amount', 'payable_amount', 'outstanding_amount');
+
+-- row_version is incremented by trg_pi_row_version on every UPDATE
+-- (see document/01z_row_version.sql). compute_mode='trigger' satisfies ef_computed_chk.
+UPDATE control.entity_field ef
+   SET is_read_only = true,
+       is_computed = true,
+       compute_mode = 'trigger',
+       validation = CASE
+           WHEN ef.validation ? 'computed' THEN ef.validation
+           ELSE COALESCE(ef.validation, '{}'::jsonb) || '{"computed":true}'::jsonb
+       END
+  FROM control.entity_version ev
+  JOIN control.entity e ON e.id = ev.entity_id
+ WHERE ef.entity_version_id = ev.id
+   AND e.table_schema = 'document'
+   AND e.table_name = 'purchase_invoice'
+   AND e.tenant_id IS NULL
+   AND ev.version_no = 1
+   AND ef.tenant_id IS NULL
+   AND ef.name = 'row_version';
 
 
 -- === SOURCE: 004_purchase_order.sql ===
@@ -3822,7 +3934,7 @@ WITH line_fields(
     ('unit_price', 'unit_price', 'Unit Price', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, true, false, false, 70, 'item'),
     ('price_unit', 'price_unit', 'Price Per', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 72, 'item'),
     ('discount_pct', 'discount_pct', 'Discount %', 'decimal', 'zero_or_one', NULL::text, NULL::jsonb, '{"min":0,"max":100}'::jsonb, false, false, false, 75, 'discount'),
-    ('net_amount', 'net_amount', 'Net Amount', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 80, 'financial'),
+    ('net_amount', 'net_amount', 'Net Amount', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, true, 80, 'financial'),
     ('discount_amount', 'discount_amount', 'Discount Amount', 'decimal', 'zero_or_one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 82, 'discount'),
     ('tax_amount', 'tax_amount', 'Tax Amount', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 90, 'tax'),
     ('withholding_tax_amount', 'withholding_tax_amount', 'WHT Amount', 'decimal', 'one', NULL::text, NULL::jsonb, '{"min":0}'::jsonb, false, false, false, 95, 'tax'),
@@ -3842,7 +3954,7 @@ WITH line_fields(
     ('ses_line_id', 'ses_line_id', 'SES Line', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"service_entry_sheet_line"}'::jsonb, '{"ref_entity":"service_entry_sheet_line"}'::jsonb, false, false, true, 152, 'matching')
 )
 UPDATE control.entity_field ef
-   SET column_name = lf.column_name,
+  SET column_name = lf.column_name,
        label = lf.label,
        data_type = lf.data_type,
        ui_type = NULL,
@@ -3855,7 +3967,10 @@ UPDATE control.entity_field ef
        is_required = lf.is_required,
        is_filterable = lf.is_filterable,
        is_read_only = lf.is_read_only,
-       is_computed = false,
+       is_computed = CASE WHEN lf.name = 'net_amount' THEN true ELSE false END,
+       -- net_amount on purchase_invoice_line is DDL-GENERATED ALWAYS AS STORED.
+       -- compute_mode must be set when is_computed=true (ef_computed_chk).
+       compute_mode = CASE WHEN lf.name = 'net_amount' THEN 'generated' ELSE ef.compute_mode END,
        is_active = true,
        ui_hint = CASE
            WHEN lf.group_key IS NULL THEN COALESCE(ef.ui_hint, '{}'::jsonb) - 'group_key'
@@ -4137,6 +4252,8 @@ WITH distribution_fields(
     ('posting_role_code', 'posting_role_code', 'Posting Role', 'text', 'zero_or_one', NULL::text, NULL::jsonb, NULL::jsonb, false, false, true, 45, 'matching'),
     ('gl_account_id', 'gl_account_id', 'Resolved GL Account', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"gl_account","target_field":"id","display_field":"name","picker":{"code_field":"code","show_code":true}}'::jsonb, '{"ref_entity":"gl_account"}'::jsonb, false, true, false, 50, 'matching'),
     ('account_code', 'account_code', 'Account Code', 'text', 'zero_or_one', NULL::text, NULL::jsonb, '{"max_length":50}'::jsonb, false, false, true, 52, 'matching'),
+    ('account_lookup_key', 'account_lookup_key', 'Account Lookup Key', 'text', 'zero_or_one', NULL::text, NULL::jsonb, '{"max_length":255}'::jsonb, false, false, true, 53, 'matching'),
+    ('account_fallback', 'account_fallback', 'Account Fallback', 'text', 'zero_or_one', NULL::text, NULL::jsonb, '{"max_length":255}'::jsonb, false, false, true, 54, 'matching'),
     ('business_intent_id', 'business_intent_id', 'Business Intent', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"business_intent","target_field":"id","display_field":"name"}'::jsonb, '{"ref_entity":"business_intent"}'::jsonb, false, false, false, 55, 'classification'),
     ('commodity_category_id', 'commodity_category_id', 'Commodity Category', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"commodity_category","target_field":"id","display_field":"name"}'::jsonb, '{"ref_entity":"commodity_category"}'::jsonb, false, true, false, 60, 'classification'),
     ('cost_center_id', 'cost_center_id', 'Cost Centre', 'reference', 'zero_or_one', NULL::text, '{"target_entity":"cost_center","target_field":"id","display_field":"name"}'::jsonb, '{"ref_entity":"cost_center"}'::jsonb, false, true, false, 70, 'dimensions'),

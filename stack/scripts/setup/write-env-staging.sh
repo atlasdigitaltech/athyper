@@ -153,6 +153,7 @@ ERRORCOLLECT_SECRET_KEY=$ERRORCOLLECT_SECRET_KEY
 ACME_EMAIL=$ACME_EMAIL
 SECRETS
 chmod 0600 "$SECRETS_FILE"
+chown athyper:athyper "$SECRETS_FILE"
 
 # ── Write secrets-only .env ───────────────────────────────────────────────────
 # Non-secret config (ENVIRONMENT, NODE_ENV, hostnames, paths, IAM endpoints,

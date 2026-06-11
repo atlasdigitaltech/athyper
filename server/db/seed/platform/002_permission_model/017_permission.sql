@@ -18,8 +18,21 @@
 --   through the normal persona → group → role → permission chain.
 
 INSERT INTO shared.permission
-    (code, name, category_id, scope_type, risk_level, is_plan_restricted, sort_order, created_by)
-SELECT v.code, v.name, c.id, v.st, v.rl, v.pr, v.so,
+    (code, name, category_id, scope_type, risk_level, is_plan_restricted, plane_eligibility, sort_order, created_by)
+SELECT v.code, v.name, c.id, v.st, v.rl, v.pr,
+       CASE
+         WHEN v.code LIKE 'MESH.%' THEN ARRAY['mesh']::text[]
+         WHEN v.code IN ('IAM.PARAMETER.MANAGE', 'PLATFORM.REFERENCE.VIEW', 'PLATFORM.REFERENCE.IMPORT',
+                         'PLATFORM.TAXONOMY.VIEW', 'PLATFORM.TAXONOMY.IMPORT',
+                         'PLATFORM.CATALOG.VIEW', 'PLATFORM.CATALOG.MANAGE',
+                         'PLATFORM.SUBSCRIPTIONS.VIEW', 'PLATFORM.SUBSCRIPTIONS.MANAGE',
+                         'JOBS.BOARD.VIEW', 'JOBS.QUEUE.MANAGE')
+           OR v.code LIKE 'PLATFORM.%'
+           THEN ARRAY['admin']::text[]
+         WHEN v.code = 'IAM.SESSION.VIEW' THEN ARRAY['neon', 'admin']::text[]
+         ELSE ARRAY['neon']::text[]
+       END AS plane_eligibility,
+       v.so,
        '00000000-0000-0000-0000-000000000000'::uuid
 FROM   shared.permission_category c
 JOIN  (VALUES
@@ -79,6 +92,7 @@ JOIN  (VALUES
     ('del_others_attach',           'Delete Others Attachment',          'collaboration', 'record',  'medium',   false,  40),
     ('follow',                      'Follow',                            'collaboration', 'record',  'low',      false,  50),
     ('tag',                         'Tag',                               'collaboration', 'record',  'low',      false,  60),
+    ('records.lock.force_release',   'Force Release Record Lock',          'utility',       'tenant',  'high',     false,  70),
     -- ── special ──────────────────────────────────────────────────────────────
     ('feature_diagnostic',          'Self Diagnostic Tool',              'special',       'special', 'critical', false,  10),
     ('feature_theme',               'Theme Change',                      'special',       'special', 'low',      false,  20),
@@ -107,7 +121,15 @@ JOIN  (VALUES
     ('PLATFORM.SUBSCRIPTIONS.MANAGE','Manage Subscription Plans',        'platform_admin', 'tenant',  'critical', false,  80)
 
 ) AS v(code, name, cat, st, rl, pr, so) ON c.code = v.cat
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT (code) DO UPDATE SET
+  name               = EXCLUDED.name,
+  scope_type         = EXCLUDED.scope_type,
+  risk_level         = EXCLUDED.risk_level,
+  is_plan_restricted = EXCLUDED.is_plan_restricted,
+  plane_eligibility  = EXCLUDED.plane_eligibility,
+  sort_order         = EXCLUDED.sort_order,
+  updated_at         = now(),
+  updated_by         = EXCLUDED.created_by;
 
 DO $$ DECLARE cnt int; BEGIN
   SELECT count(*) INTO cnt FROM shared.permission;

@@ -117,8 +117,8 @@ scan_file() {
     }
 
     # Flags inside a service
-    svc != "" && /^    ports:\s*$/           { has_ports = 1 }
-    svc != "" && /traefik\./                 { has_traefik = 1 }
+    svc != "" && /^    ports:\s*$/                                     { has_ports = 1 }
+    svc != "" && /^[[:space:]]*-[[:space:]]*traefik\./                 { has_traefik = 1 }
 
     END {
       if (svc != "") {

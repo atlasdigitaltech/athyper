@@ -35,7 +35,7 @@ describe("partitionDecisions", () => {
       "read":                  decision("allow"),
       "update":                decision("deny"),
       "JOBS.QUEUE.MANAGE":     decision("not_in_plan"),
-      "mesh.document.respond": decision("allow"),
+      "MESH.BUYER.RESPOND":    decision("allow"),
       "delete":                decision("not_found"),
     };
     const planeEligible = new Map([
@@ -50,7 +50,7 @@ describe("partitionDecisions", () => {
     expect([...out.allowed]).toEqual(["read"]);
     expect([...out.denied]).toEqual(["update"]);
     expect([...out.planLocked]).toEqual(["JOBS.QUEUE.MANAGE"]);
-    expect(out.planeExcluded.has("mesh.document.respond")).toBe(true);
+    expect(out.planeExcluded.has("MESH.BUYER.RESPOND")).toBe(true);
     expect(out.entries.get("delete")?.reason).toEqual("missing_permission");
   });
 

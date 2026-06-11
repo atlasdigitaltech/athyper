@@ -19,8 +19,8 @@
 --   (draft | pending_approval | approved | closed | cancelled pass through)
 --
 -- Hold signal for the orchestrator is po_status = 'on_hold' (NOT a boolean
--- column). commitment does not carry is_on_hold/hold_reason columns; that
--- pattern exists only on purchase_invoice.
+-- column). Same Model A applies to purchase_invoice: status='on_hold' is the
+-- sole source of truth, with hold_reason as the only co-located hold metadata.
 --
 -- Write operations route through PurchaseOrderFacade, which translates
 -- PO-facing status values back to physical commitment status and writes to

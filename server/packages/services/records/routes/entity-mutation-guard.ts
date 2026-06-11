@@ -206,23 +206,70 @@ export async function resolveEntityWriteFieldRules(
   return rules;
 }
 
+export type FieldNonWritableReason =
+  | "FIELD_NOT_REGISTERED"
+  | "FIELD_READ_ONLY"
+  | "FIELD_COMPUTED"
+  | "FIELD_WRITE_ONCE"
+  | "FIELD_SYSTEM_MANAGED"
+  | "FIELD_SYSTEM_ORIGIN"
+  | "FIELD_NOT_EDITABLE"
+  | "FIELD_LOCKED_BY_STATUS";
+
+export type FieldWritabilityResult =
+  | { writable: true }
+  | { writable: false; reason: FieldNonWritableReason };
+
+function deny(reason: FieldNonWritableReason): FieldWritabilityResult {
+  return { writable: false, reason };
+}
+
+/**
+ * Reads editable_in_status from editability JSON (with aliases).
+ * Returns null when no status gate is configured.
+ */
+function readEditableInStatus(editability: Record<string, unknown>): string[] | null {
+  const aliases = ["editable_in_status", "editableInStatus", "editable_in", "editableInStatuses"];
+  for (const key of aliases) {
+    const raw = editability[key];
+    if (Array.isArray(raw)) {
+      const out = raw.flatMap((x) => typeof x === "string" && x.trim() ? [x.trim()] : []);
+      if (out.length > 0) return out;
+    }
+  }
+  return null;
+}
+
 export function isEntityFieldWritable(
   rule: EntityWriteFieldRule | undefined,
   action: "create" | "update",
-): boolean {
-  if (!rule) return false;
-  if (rule.is_read_only || rule.is_computed) return false;
-  if (rule.is_write_once && action === "update") return false;
-  if (SYSTEM_WRITE_COLUMNS.has(storageColumnName(rule.column_name))) return false;
-  if (rule.origin === "system" && rule.name !== "status") return false;
+  recordStatus?: string | null,
+): FieldWritabilityResult {
+  if (!rule) return deny("FIELD_NOT_REGISTERED");
+  if (rule.is_read_only) return deny("FIELD_READ_ONLY");
+  if (rule.is_computed) return deny("FIELD_COMPUTED");
+  if (rule.is_write_once && action === "update") return deny("FIELD_WRITE_ONCE");
+  if (SYSTEM_WRITE_COLUMNS.has(storageColumnName(rule.column_name))) return deny("FIELD_SYSTEM_MANAGED");
+  if (rule.origin === "system" && rule.name !== "status") return deny("FIELD_SYSTEM_ORIGIN");
 
   const editability = rule.editability;
-  if (editability["editable"] === false) return false;
-  if (editability["readonly"] === true || editability["read_only"] === true) return false;
-  if (editability["mode"] === "readonly" || editability["mode"] === "read_only") return false;
-  if (Array.isArray(editability["editable_in"]) && editability["editable_in"].length === 0) return false;
+  if (editability["editable"] === false) return deny("FIELD_NOT_EDITABLE");
+  if (editability["readonly"] === true || editability["read_only"] === true) return deny("FIELD_READ_ONLY");
+  if (editability["mode"] === "readonly" || editability["mode"] === "read_only") return deny("FIELD_READ_ONLY");
+  if (Array.isArray(editability["editable_in"]) && editability["editable_in"].length === 0) return deny("FIELD_NOT_EDITABLE");
 
-  return true;
+  // Status-driven lock. Only enforced on UPDATE — CREATE has no record status yet.
+  if (action === "update") {
+    const allowed = readEditableInStatus(editability);
+    if (allowed && allowed.length > 0) {
+      const current = (recordStatus ?? "").toLowerCase().trim();
+      if (current && !allowed.map((s) => s.toLowerCase()).includes(current)) {
+        return deny("FIELD_LOCKED_BY_STATUS");
+      }
+    }
+  }
+
+  return { writable: true };
 }
 
 function mutationTableBlock(

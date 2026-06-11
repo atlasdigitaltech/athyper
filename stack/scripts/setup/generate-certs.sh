@@ -10,8 +10,8 @@
 # SANs covered:
 #   *.athyper.local, neon.athyper.local, gateway.athyper.local,
 #   api.athyper.local, iam.athyper.local, objectstorage.athyper.local
-# Output: ATHYPER_CONFIG_ROOT/gateway/certs/athyper.tls.local.{crt,key}
-#         (read from stack/env/.env; defaults to stack/config)
+# Output: ATHYPER_SECRETS_ROOT/gateway/certs/athyper.tls.local.{crt,key}
+#         (read from stack/env/.env; defaults to stack/secrets)
 #
 # Requires: mkcert (https://github.com/FiloSottile/mkcert)
 #   macOS:  brew install mkcert
@@ -27,12 +27,13 @@ echo " athyper Stack - mkcert TLS Generator"
 echo "=========================================="
 echo ""
 
-# Resolve directories
+# Resolve directories. Precedence: process env > stack/env/.env value > default.
+# Defaults are applied AFTER the .env loop so that an env-file value can win
+# when the variable is unset in the calling shell.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_FILE="$STACK_DIR/env/.env"
 
-# Read ATHYPER_CONFIG_ROOT from stack/env/.env
 if [[ -f "$ENV_FILE" ]]; then
   while IFS= read -r _l || [[ -n "$_l" ]]; do
     [[ "$_l" =~ ^[[:space:]]*# ]] && continue
@@ -40,13 +41,17 @@ if [[ -f "$ENV_FILE" ]]; then
     _k="${_l%%=*}"; _k="${_k//[[:space:]]/}"
     _v="${_l#*=}"; _v="${_v%%#*}"; _v="${_v%"${_v##*[![:space:]]}"}"
     [[ "$_v" =~ ^\"(.*)\"$ ]] && _v="${BASH_REMATCH[1]}"
+    if [[ "$_k" == "ATHYPER_SECRETS_ROOT" && -z "${ATHYPER_SECRETS_ROOT:-}" ]]; then
+      ATHYPER_SECRETS_ROOT="$_v"
+    fi
     if [[ "$_k" == "ATHYPER_CONFIG_ROOT" && -z "${ATHYPER_CONFIG_ROOT:-}" ]]; then
-      export ATHYPER_CONFIG_ROOT="$_v"
+      ATHYPER_CONFIG_ROOT="$_v"
     fi
   done < "$ENV_FILE"
 fi
 ATHYPER_CONFIG_ROOT="${ATHYPER_CONFIG_ROOT:-$STACK_DIR/config}"
-CERT_DIR="$ATHYPER_CONFIG_ROOT/gateway/certs"
+ATHYPER_SECRETS_ROOT="${ATHYPER_SECRETS_ROOT:-$STACK_DIR/secrets}"
+CERT_DIR="$ATHYPER_SECRETS_ROOT/gateway/certs"
 
 # Ensure mkcert exists
 if ! command -v mkcert &>/dev/null; then

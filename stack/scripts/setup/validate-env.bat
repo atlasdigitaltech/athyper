@@ -118,7 +118,12 @@ call :parse_env "%ENV_FILE%"
 set "ENVIRONMENT=!ENV_ENVIRONMENT!"
 REM Strip trailing spaces from ENVIRONMENT (for /f trims leading only)
 :env_trim_loop
-if not "!ENVIRONMENT!"=="" if "!ENVIRONMENT:~-1!"==" " set "ENVIRONMENT=!ENVIRONMENT:~0,-1!" & goto :env_trim_loop
+if "!ENVIRONMENT!"=="" goto :env_trim_done
+if "!ENVIRONMENT:~-1!"==" " (
+  set "ENVIRONMENT=!ENVIRONMENT:~0,-1!"
+  goto :env_trim_loop
+)
+:env_trim_done
 
 echo.
 echo ==========================================
@@ -224,17 +229,50 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
 :sec3_done
 
 REM ----------------------------
-REM Redis ACL render
+REM Redis ACL render verification
 REM ----------------------------
-echo [3b/6] Redis ACL render...
-where node >nul 2>&1
-if errorlevel 1 (
-  echo   FAIL  node is required to render Redis ACL hashes
+echo [3b/6] Redis ACL parity check...
+set "ACL_TPL=%STACK_DIR%\config\memorycache\redis-acl.conf.tpl"
+set "ACL_LIVE=%LIVE_CONFIG_ROOT%\memorycache\redis-acl.conf"
+if not exist "%ACL_TPL%" (
+  echo   FAIL  redis-acl.conf.tpl not found: %ACL_TPL%
+  set /a ERRORS+=1
+) else if not exist "%ACL_LIVE%" (
+  echo   FAIL  deployed Redis ACL not found: %ACL_LIVE%
   set /a ERRORS+=1
 ) else (
-  node "%STACK_DIR%\..\tools\scripts\render-redis-acl.cjs" --env-file "%ENV_FILE%" --stack-dir "%STACK_DIR%"
+  where node >nul 2>&1
   if errorlevel 1 (
+    echo   FAIL  node is required to verify Redis ACL parity
     set /a ERRORS+=1
+  ) else (
+    set "_ACL_TMP=%TEMP%\validate-redis-acl-%RANDOM%"
+    set "_ACL_TMP_CFG=!_ACL_TMP!\config"
+    set "_ACL_TMP_ENV=!_ACL_TMP!\merged.env"
+    mkdir "!_ACL_TMP_CFG!\memorycache" >nul 2>&1
+    set "ACL_RENDER_SUCCESS=1"
+    copy /Y "%ENV_FILE%" "!_ACL_TMP_ENV!" >nul
+    set "ATHYPER_CONFIG_ROOT_BAK=!ATHYPER_CONFIG_ROOT!"
+    set "ATHYPER_CONFIG_ROOT=!_ACL_TMP_CFG!"
+    node "%STACK_DIR%\..\tools\scripts\render-redis-acl.cjs" --env-file "!_ACL_TMP_ENV!" --stack-dir "%STACK_DIR%" >nul 2>&1
+    if errorlevel 1 set "ACL_RENDER_SUCCESS=0"
+    set "ATHYPER_CONFIG_ROOT=!ATHYPER_CONFIG_ROOT_BAK!"
+    if "!ACL_RENDER_SUCCESS!"=="0" (
+      echo   FAIL  Redis ACL render verification failed ^(missing/unresolved Redis secrets in env^)
+      set /a ERRORS+=1
+    ) else (
+      fc /b "!_ACL_TMP_CFG!\memorycache\redis-acl.conf" "%ACL_LIVE%" >nul 2>&1
+      if errorlevel 1 (
+        echo   FAIL  Redis ACL mismatch for live deployment
+        echo         Expected: !_ACL_TMP_CFG!\memorycache\redis-acl.conf
+        echo         Actual:   %ACL_LIVE%
+        echo         Run stack\scripts\setup\setup-config.bat !ENVIRONMENT! --update
+        set /a ERRORS+=1
+      ) else (
+        echo   OK    Redis ACL matches deployed file: %ACL_LIVE%
+      )
+    )
+    rd /s /q "!_ACL_TMP!" >nul 2>&1
   )
 )
 

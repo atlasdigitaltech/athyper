@@ -31,6 +31,8 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { matchInvoice } from "./invoice-match.service.js";
+import { validatePurchaseInvoiceInvariants } from "./invoice-invariants.service.js";
+import { captureInvoiceSnapshots } from "./invoice-snapshot.service.js";
 import { syncBusinessLifecycle, type BusinessLifecycleSyncHook } from "./lifecycle-sync-hook.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -243,6 +245,29 @@ export async function handleSubmitForApproval(
     if (invoiceSource === "non_po" || invoiceSource === "one_time_supplier") {
       await matchInvoice(trx, tenantId, invoiceId, principalId, logger);
     }
+
+    // Validate cross-entity invariants BEFORE any status change. Aggregates
+    // ALL violations into a single 422 so the user can fix everything in one
+    // pass rather than chasing repeated submit failures.
+    const invariants = await validatePurchaseInvoiceInvariants(trx, tenantId, invoiceId, { phase: "submit" });
+    if (!invariants.ok) {
+      return {
+        status: 422,
+        body: {
+          error:      "INVOICE_INVARIANT_VIOLATION",
+          message:    `${invariants.violations.length} invariant violation(s) prevent submit.`,
+          violations: invariants.violations,
+        },
+      };
+    }
+
+    // Capture party / address / bank snapshots BEFORE any status change. This
+    // covers the workflow path (status → pending_approval), self-approve
+    // (status → approved), and auto-approve (no workflow_definition →
+    // status → approved) uniformly. Idempotent on (purchase_invoice_id) UNIQUE.
+    const supplierIdForSnap = (invoice["supplier_id"] as string | null) ?? null;
+    const snapActor = principalId ?? V_NIL;
+    await captureInvoiceSnapshots(trx, tenantId, invoiceId, supplierIdForSnap, snapActor, logger);
 
     const now = new Date();
 

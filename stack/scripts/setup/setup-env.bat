@@ -171,8 +171,9 @@ REM ============================================================
   )
 
   if exist "!ENV_DIR!\.env" (
-    echo   Backing up stack .env ^-^> .env.bak
-    copy /Y "!ENV_DIR!\.env" "!ENV_DIR!\.env.bak" >nul
+    for /f "tokens=*" %%T in ('powershell -NoProfile -Command "[datetime]::UtcNow.ToString(\"yyyyMMdd-HHmmss\")"') do set "_TS=%%T"
+    copy /Y "!ENV_DIR!\.env" "!ENV_DIR!\.env.bak.!_TS!" >nul
+    echo   Backing up stack .env ^-^> .env.bak.!_TS!
   )
   copy /Y "!STK_TPL!" "!ENV_DIR!\.env" >nul
   REM *.env* files are stored as LF in git (gitattributes: eol=lf).
@@ -206,8 +207,9 @@ REM ============================================================
   )
 
   if exist "!SERVER_DIR!\.env" (
-    echo   Backing up server .env ^-^> .env.bak
-    copy /Y "!SERVER_DIR!\.env" "!SERVER_DIR!\.env.bak" >nul
+    for /f "tokens=*" %%T in ('powershell -NoProfile -Command "[datetime]::UtcNow.ToString(\"yyyyMMdd-HHmmss\")"') do set "_TS=%%T"
+    copy /Y "!SERVER_DIR!\.env" "!SERVER_DIR!\.env.bak.!_TS!" >nul
+    echo   Backing up server .env ^-^> .env.bak.!_TS!
   )
   copy /Y "!SRV_TPL!" "!SERVER_DIR!\.env" >nul
   echo   [server]
@@ -234,8 +236,9 @@ REM ============================================================
   )
 
   if exist "!WEB_DIR!\.env.local" (
-    echo   Backing up apps/web .env.local ^-^> .env.local.bak
-    copy /Y "!WEB_DIR!\.env.local" "!WEB_DIR!\.env.local.bak" >nul
+    for /f "tokens=*" %%T in ('powershell -NoProfile -Command "[datetime]::UtcNow.ToString(\"yyyyMMdd-HHmmss\")"') do set "_TS=%%T"
+    copy /Y "!WEB_DIR!\.env.local" "!WEB_DIR!\.env.local.bak.!_TS!" >nul
+    echo   Backing up apps/web .env.local ^-^> .env.local.bak.!_TS!
   )
   copy /Y "!WEB_TPL!" "!WEB_DIR!\.env.local" >nul
   echo   [apps/web]

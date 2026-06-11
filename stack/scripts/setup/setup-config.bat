@@ -162,11 +162,12 @@ call :pf "iam\realm-athyper-demosetup.json" "iam\realm-athyper-demosetup.json" 0
 call :pf "iam\realm-platform-control.json" "iam\realm-platform-control.json" 0
 call :pf "iam\realm-platform-control-demosetup.json" "iam\realm-platform-control-demosetup.json" 0
 
-REM memorycache (env-variant source)
+REM memorycache (env-variant source).
+REM redis-acl.conf is a derived artifact — rendered from the .tpl with SHA-256
+REM password hashes AFTER the directory copies complete (see render block below).
+REM Mirrors the .sh ordering so a later file/dir copy failure doesn't leave a
+REM freshly-rendered ACL pointing at a half-deployed config tree.
 call :pf "!MEMORYCACHE_SRC!" "memorycache\cache.conf" 0
-REM redis-acl.conf is seeded from the .tpl (tokens intact) so that validate-env
-REM can render password hashes in-place before stack start.
-call :pf "memorycache\redis-acl.conf.tpl" "memorycache\redis-acl.conf" 0
 
 REM telemetry
 call :pf "telemetry\logging\config.yml" "telemetry\logging\config.yml" 0
@@ -191,6 +192,14 @@ call :pd "iam\themes\neon"
 call :pd "telemetry\provisioning"
 
 if /I "!MODE!" NEQ "--diff" (
+  echo.
+  echo Rendering Redis ACL...
+  node "%STACK_DIR%\..\tools\scripts\render-redis-acl.cjs" --env-file "%ENV_FILE%" --stack-dir "%STACK_DIR%"
+  if errorlevel 1 (
+    echo   FAIL  Redis ACL render failed
+    exit /b 1
+  )
+
   echo.
   echo Applying IAM realm policy for !ENV_NAME!...
   node "%STACK_DIR%\..\tools\scripts\apply-iam-realm-policy.cjs" --environment "!ENV_NAME!" --root "!LIVE_CFG!\iam" --write
@@ -285,6 +294,7 @@ if /I "!MODE!"=="--diff" (
     fc /b "!SRC!" "!DST!" >nul 2>&1
     if errorlevel 1 (
       echo   DRIFTED  !DST_REL!
+      if "!OM!"=="1" echo   operator-managed file drifted; use --update to review this file.
     ) else (
       echo   OK       !DST_REL!
     )

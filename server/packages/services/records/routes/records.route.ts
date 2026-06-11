@@ -35,7 +35,7 @@ import {
   mapPostgresBusinessError,
 } from "@athyper/svc-shared";
 import { applyFieldSecurityMask } from "@athyper/svc-policy";
-import { createCompanyCodeScopeService } from "@athyper/svc-iam";
+import { checkPermission, createCompanyCodeScopeService, requireAllow } from "@athyper/svc-iam";
 import {
   acquireLock,
   verifyLock,
@@ -57,6 +57,7 @@ import {
   isEntityFieldWritable,
   resolveEntityWriteFieldRules,
   type EntityMutationTableInfo,
+  type EntityWriteFieldRule,
 } from "./entity-mutation-guard.js";
 import {
   buildEntityListCountCacheKey,
@@ -248,6 +249,110 @@ function toMutationTableInfo(table: EntityTableInfo): EntityMutationTableInfo {
     mutability: table.mutability,
     feature_flags: table.feature_flags,
   };
+}
+
+/**
+ * Fetches the current status of a record for field-level gate evaluation.
+ *
+ * For child entities whose editability is governed by a parent document's
+ * lifecycle (e.g. `purchase_invoice_line` follows `purchase_invoice.status`),
+ * this resolves the parent's status instead of the child's own status column
+ * (which represents a different concept like 'open'/'closed' on line rows).
+ *
+ * Returns null when the entity has no status column or the record is missing —
+ * isEntityFieldWritable interprets null as "no status gate enforced."
+ */
+async function fetchRecordStatus(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  fullTable: `${string}.${string}`,
+  recordId: string,
+  tenantId: string,
+): Promise<string | null> {
+  const tableName = fullTable.split(".")[1];
+
+  // ── purchase_invoice_line → parent purchase_invoice.status ─────────────────
+  if (tableName === "purchase_invoice_line") {
+    try {
+      const row = await sql<{ status: string }>`
+        SELECT pi.status
+          FROM document.purchase_invoice pi
+          JOIN document.purchase_invoice_line pil
+            ON pil.purchase_invoice_id = pi.id
+           AND pil.tenant_id           = pi.tenant_id
+         WHERE pil.id        = ${recordId}::uuid
+           AND pil.tenant_id = ${tenantId}::uuid
+         LIMIT 1
+      `.execute(db);
+      return row.rows[0]?.status ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ── accounting_distribution → polymorphic parent doc status ────────────────
+  // source_doc_type identifies the parent table; source_doc_id is the parent
+  // HEADER id (verified via invoice-posting.service.ts insert pattern).
+  // Sprint 1 covers PURCHASE_INVOICE_LINE only; other source types fall
+  // through to the own-status path (which returns null → no gate enforced).
+  if (tableName === "accounting_distribution") {
+    try {
+      const row = await sql<{ status: string }>`
+        SELECT pi.status
+          FROM document.accounting_distribution ad
+          JOIN document.purchase_invoice pi
+            ON pi.id        = ad.source_doc_id
+           AND pi.tenant_id = ad.tenant_id
+         WHERE ad.id              = ${recordId}::uuid
+           AND ad.tenant_id       = ${tenantId}::uuid
+           AND ad.source_doc_type = 'PURCHASE_INVOICE_LINE'
+         LIMIT 1
+      `.execute(db);
+      if (row.rows[0]?.status) return row.rows[0].status;
+      // Fall through: other source_doc_type values not yet wired
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ── Default: read own status column ────────────────────────────────────────
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = await (db.selectFrom(fullTable) as any)
+      .select(["status"])
+      .where("id", "=", recordId)
+      .where("tenant_id", "=", tenantId)
+      .executeTakeFirst() as { status?: string } | undefined;
+    if (!row) return null;
+    return typeof row.status === "string" ? row.status : null;
+  } catch {
+    // Entity has no `status` column — return null so the guard skips the check.
+    return null;
+  }
+}
+
+/**
+ * Collects field-level status-lock violations across the inbound payload.
+ * Only FIELD_LOCKED_BY_STATUS results in a hard 400; other non-writable reasons
+ * (read-only, computed, not-registered, system-managed) continue to be silently
+ * dropped to preserve back-compat with forms that send unknown/system fields.
+ */
+function collectStatusLockedFields(
+  inputData: Record<string, unknown>,
+  writeRules: Map<string, EntityWriteFieldRule>,
+  recordStatus: string | null,
+): Array<{ field: string; reason: string }> {
+  const locked: Array<{ field: string; reason: string }> = [];
+  for (const fieldName of Object.keys(inputData)) {
+    const rule = writeRules.get(fieldName);
+    if (!rule) continue;
+    const w = isEntityFieldWritable(rule, "update", recordStatus);
+    if (!w.writable && w.reason === "FIELD_LOCKED_BY_STATUS") {
+      locked.push({ field: fieldName, reason: w.reason });
+    }
+  }
+  return locked;
 }
 
 function parseJsonPathColumn(columnName: string): { root: string; path: string[] } | null {
@@ -2002,7 +2107,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const mappedData: Record<string, unknown> = {};
       for (const [fieldName, value] of Object.entries(inputData)) {
         const fieldRule = writeRules.get(fieldName);
-        if (!isEntityFieldWritable(fieldRule, "create")) continue;
+        if (!isEntityFieldWritable(fieldRule, "create").writable) continue;
         const columnName = fieldMap.get(fieldName);
         // Skip undefined/null values so DB column defaults can apply
         if (columnName && value !== undefined && value !== null) {
@@ -2435,18 +2540,6 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // lock_token and expected_row_version are top-level concurrency fields alongside data
       const body = req.body as { data?: Record<string, unknown>; lock_token?: string; expected_row_version?: number };
       const inputData = body.data ?? {};
-      const mappedData: Record<string, unknown> = {};
-      for (const [fieldName, value] of Object.entries(inputData)) {
-        const fieldRule = writeRules.get(fieldName);
-        if (!isEntityFieldWritable(fieldRule, "update")) continue;
-        const columnName = fieldMap.get(fieldName);
-        if (columnName && !IMMUTABLE_COLS.has(storageColumnName(columnName))) {
-          assignMappedValue(mappedData, columnName, value);
-        }
-      }
-      coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
-      const jsonColumns = await resolveJsonColumns(db, entityCode);
-      includeMappedJsonObjects(mappedData, jsonColumns);
 
       // Resolve UUID from business key when caller passes a canonical key
       const physicalId = UUID_RE.test(id)
@@ -2456,6 +2549,33 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
         return;
       }
+
+      // Status-aware field locks (editable_in_status). Only FIELD_LOCKED_BY_STATUS
+      // raises a 400; other non-writable reasons (read-only, computed, unknown)
+      // continue to be silently dropped during the mapping loop below.
+      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId);
+      const lockedFields = collectStatusLockedFields(inputData, writeRules, recordStatus);
+      if (lockedFields.length > 0) {
+        res.status(400).json({
+          error:   "FIELD_NOT_EDITABLE",
+          message: `${lockedFields.length} field(s) cannot be edited in status '${recordStatus ?? "unknown"}'.`,
+          fields:  lockedFields,
+        });
+        return;
+      }
+
+      const mappedData: Record<string, unknown> = {};
+      for (const [fieldName, value] of Object.entries(inputData)) {
+        const fieldRule = writeRules.get(fieldName);
+        if (!isEntityFieldWritable(fieldRule, "update", recordStatus).writable) continue;
+        const columnName = fieldMap.get(fieldName);
+        if (columnName && !IMMUTABLE_COLS.has(storageColumnName(columnName))) {
+          assignMappedValue(mappedData, columnName, value);
+        }
+      }
+      coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
+      const jsonColumns = await resolveJsonColumns(db, entityCode);
+      includeMappedJsonObjects(mappedData, jsonColumns);
 
       const sub = requireJwtSubject(claims, res);
       if (!sub) return;
@@ -2640,21 +2760,6 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Map logical field names → physical column names
       const fieldMap = await resolveFieldMap(db, entityCode);
       const writeRules = await resolveEntityWriteFieldRules(db, entityCode);
-      const mappedData: Record<string, unknown> = {};
-      for (const [fieldName, value] of Object.entries(inputData)) {
-        const fieldRule = writeRules.get(fieldName);
-        if (!isEntityFieldWritable(fieldRule, "update")) continue;
-        const columnName = fieldMap.get(fieldName);
-        if (!columnName) continue;
-        if (["id", "tenant_id", "created_by", "created_at", "row_version"].includes(storageColumnName(columnName))) continue;
-        assignMappedValue(mappedData, columnName, value);
-      }
-      coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
-      const jsonColumns = await resolveJsonColumns(db, entityCode);
-      includeMappedJsonObjects(mappedData, jsonColumns);
-
-      mappedData.updated_by = principalId ?? undefined;
-      mappedData.updated_at = new Date().toISOString();
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
 
@@ -2666,6 +2771,35 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
         return;
       }
+
+      // Status-aware field locks (editable_in_status). Only FIELD_LOCKED_BY_STATUS
+      // raises a 400; other non-writable reasons continue to be silently dropped.
+      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId);
+      const lockedFields = collectStatusLockedFields(inputData, writeRules, recordStatus);
+      if (lockedFields.length > 0) {
+        res.status(400).json({
+          error:   "FIELD_NOT_EDITABLE",
+          message: `${lockedFields.length} field(s) cannot be edited in status '${recordStatus ?? "unknown"}'.`,
+          fields:  lockedFields,
+        });
+        return;
+      }
+
+      const mappedData: Record<string, unknown> = {};
+      for (const [fieldName, value] of Object.entries(inputData)) {
+        const fieldRule = writeRules.get(fieldName);
+        if (!isEntityFieldWritable(fieldRule, "update", recordStatus).writable) continue;
+        const columnName = fieldMap.get(fieldName);
+        if (!columnName) continue;
+        if (["id", "tenant_id", "created_by", "created_at", "row_version"].includes(storageColumnName(columnName))) continue;
+        assignMappedValue(mappedData, columnName, value);
+      }
+      coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
+      const jsonColumns = await resolveJsonColumns(db, entityCode);
+      includeMappedJsonObjects(mappedData, jsonColumns);
+
+      mappedData.updated_by = principalId ?? undefined;
+      mappedData.updated_at = new Date().toISOString();
 
       // ── Concurrency guard (lease_plus_version) ──────────────────────────────
       if (!await authorizeEntityMutation({
@@ -4559,19 +4693,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Permission gate — caller must have records.lock.force_release
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
-      const hasPerm = await db
-        .selectFrom("master.principal_permission as pp" as never)
-        .select("pp.id" as never)
-        .where("pp.principal_id" as never, "=", principalId as never)
-        .where("pp.permission_code" as never, "=", "records.lock.force_release" as never)
-        .where("pp.tenant_id" as never, "=", tenantId as never)
-        .executeTakeFirst()
-        .catch(() => null);
-
-      if (!hasPerm) {
-        res.status(403).json({ error: "FORBIDDEN", message: "records.lock.force_release permission required" });
+      if (!principalId) {
+        res.status(403).json({ error: "FORBIDDEN", message: "principal_not_found" });
         return;
       }
+
+      const permissionCheck = await checkPermission(db, tenantId, principalId, "records.lock.force_release");
+      if (!requireAllow(permissionCheck, res)) return;
 
       await forceReleaseLock(db, { tenantId, entityName: entityCode, recordId });
       res.status(204).end();

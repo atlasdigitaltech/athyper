@@ -193,7 +193,9 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
           "pi.paid_amount as paidAmount",
           "pi.outstanding_amount as outstandingAmount",
           "pi.status", "pi.match_status as matchStatus",
-          "pi.is_posted as isPosted", "pi.is_on_hold as isOnHold",
+          "pi.is_posted as isPosted",
+          // is_on_hold column was dropped (Hold Model A); status='on_hold' is authoritative.
+          sql<boolean>`(pi.status = 'on_hold')`.as("isOnHold"),
           "pi.is_credit_note as isCreditNote", "pi.is_reversal as isReversal",
           "pi.line_count as lineCount",
           "pi.company_code_id as companyCodeId",
@@ -283,6 +285,80 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
 
       res.json({ ...invoice, lines, allocations });
     } catch (err) { logger?.error("finance_ap_invoice_detail_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // ── GET /api/finance/ap/invoices/:id/party ────────────────────────────────
+  // Snapshot-aware party display. Pre-submit (draft, rejected) returns live
+  // master.business_partner data; post-submit returns the immutable snapshot.
+  // 409 SNAPSHOT_MISSING when status is past draft but no snapshot exists
+  // (legal/compliance signal — invoice must be remediated).
+  router.get("/finance/ap/invoices/:id/party", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg = (req.headers["x-org"] as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+
+      const invoiceId = req.params["id"] as string;
+      if (!isUuid(invoiceId)) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+
+      const piRow = await sql<{ status: string; supplier_id: string | null }>`
+        SELECT status, supplier_id
+          FROM document.purchase_invoice
+         WHERE id = ${invoiceId}::uuid AND tenant_id = ${tenantId}::uuid
+         LIMIT 1
+      `.execute(db);
+      const pi = piRow.rows[0];
+      if (!pi) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+
+      const isPreSubmit = ["draft", "rejected"].includes((pi.status ?? "").toLowerCase());
+      if (isPreSubmit) {
+        if (!pi.supplier_id) { res.json({ source: "live", party: null }); return; }
+        const live = await sql<Record<string, unknown>>`
+          SELECT s.id                                    AS supplier_id,
+                 s.supplier_code                         AS code,
+                 COALESCE(bp.legal_name, bp.display_name, bp.name) AS name,
+                 bp.registration_no                      AS tax_registration_no,
+                 COALESCE(bp.registration_country_code, bp.tax_residence_country_code) AS country_code,
+                 bp.legal_name                           AS legal_entity_name
+            FROM master.supplier s
+            JOIN master.business_partner bp
+              ON bp.id = s.business_partner_id AND bp.tenant_id = s.tenant_id
+           WHERE s.id        = ${pi.supplier_id}::uuid
+             AND s.tenant_id = ${tenantId}::uuid
+           LIMIT 1
+        `.execute(db);
+        res.json({ source: "live", party: live.rows[0] ?? null });
+        return;
+      }
+
+      const snap = await sql<Record<string, unknown>>`
+        SELECT supplier_id,
+               party_name        AS name,
+               tax_registration_no,
+               country_code,
+               legal_entity_name,
+               captured_at,
+               captured_by
+          FROM document.invoice_party_snapshot
+         WHERE purchase_invoice_id = ${invoiceId}::uuid
+           AND tenant_id           = ${tenantId}::uuid
+         LIMIT 1
+      `.execute(db);
+      if (!snap.rows[0]) {
+        res.status(409).json({
+          error:   "SNAPSHOT_MISSING",
+          message: "Invoice past draft but no party snapshot exists. Backfill required.",
+        });
+        return;
+      }
+      res.json({ source: "snapshot", party: snap.rows[0] });
+    } catch (err) {
+      logger?.error("finance_ap_invoice_party_error", { err: String(err) });
+      next(err);
+    }
   }) as RequestHandler);
 
   // ── GET /api/finance/ap/payments ─────────────────────────────────────────

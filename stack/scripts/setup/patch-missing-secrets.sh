@@ -138,11 +138,7 @@ for pool_key in DBPOOL_APPS_PASSWORD DBPOOL_SESSION_PASSWORD; do
   if has_key "$pool_key"; then
     skip_key "$pool_key"
   else
-    if has_key "DB_ADMIN_PASSWORD"; then
-      add_key "$pool_key" "$(get_key DB_ADMIN_PASSWORD)" "set to match DB_ADMIN_PASSWORD"
-    else
-      add_key "$pool_key" "$(get_key DB_ADMIN_PASSWORD 2>/dev/null || openssl rand -hex 32)"
-    fi
+    add_key "$pool_key" "$(get_key DB_ADMIN_PASSWORD)" "set to match DB_ADMIN_PASSWORD"
   fi
 done
 

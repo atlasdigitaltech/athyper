@@ -20,6 +20,7 @@ import { randomUUID } from "node:crypto";
 import {
   registerIamRoutes,
   checkPermissionBatch,
+  getEffectiveModuleAccess,
   createPermissionResolverRegistry,
   createPermissionContextMiddleware,
   isPlaneKey,
@@ -962,6 +963,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
     cache: descriptorCache,
     checkPermissionBatch,
+    getEffectiveModuleAccess,
   });
 
   registerRecordsRoutes(apiRouter, {

@@ -11,11 +11,10 @@
  *   - Auth failures: wrong org, wrong workbench, inactive principal
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import {
   createSessionService,
-  SessionError,
   type CacheClient,
 } from "../session/session.service.js";
 import type { SessionQuery } from "../session/session.types.js";
@@ -30,37 +29,20 @@ function makeMockCache(cached: string | null = null): CacheClient {
   };
 }
 
+function makeExecuteQuery(rowsByCall: Array<{ rows: unknown[] }>): ReturnType<typeof vi.fn> {
+  let call = 0;
+  return vi.fn().mockImplementation(() => {
+    const next = rowsByCall[call] ?? { rows: [] };
+    call += 1;
+    return Promise.resolve(next);
+  });
+}
+
 /**
  * Build a minimal Kysely-compatible mock that maps table names to result rows.
  * Each call to selectFrom() starts a builder chain; executeTakeFirst() and
  * execute() return the resolved rows for that table.
  */
-function makeMockDb(rows: Record<string, unknown[] | unknown>): Record<string, unknown> {
-  function builder(table: string): Record<string, unknown> {
-    const b: Record<string, (...args: unknown[]) => unknown> = {
-      selectFrom: () => makeMockDb(rows).selectFrom(table) as Record<string, unknown>,
-      select: () => b,
-      innerJoin: () => b,
-      leftJoin: () => b,
-      where: () => b,
-      on: () => b,
-      onRef: () => b,
-      orderBy: () => b,
-      executeTakeFirst: vi.fn().mockResolvedValue(
-        Array.isArray(rows[table]) ? (rows[table] as unknown[])[0] ?? null : rows[table] ?? null,
-      ),
-      execute: vi.fn().mockResolvedValue(
-        Array.isArray(rows[table]) ? rows[table] : rows[table] != null ? [rows[table]] : [],
-      ),
-    };
-    return b;
-  }
-
-  return {
-    selectFrom: (table: string) => builder(table),
-  };
-}
-
 // ─── Shared fixtures ──────────────────────────────────────────────────────────
 
 const KUMAR_SUB = "aa000001-0000-0000-0000-000000000001";
@@ -73,8 +55,20 @@ describe("SessionService.resolve", () => {
   // ── Cache hit ───────────────────────────────────────────────────────────────
 
   it("returns cached response without hitting DB", async () => {
-    const cachedPayload = JSON.stringify({ persona: "manager", workbench: "user" });
-    const cache = makeMockCache(cachedPayload);
+    const cachedPayload = JSON.stringify({
+      response: { persona: "manager", workbench: "user" },
+      principal_id: KUMAR_SUB,
+      auth_epoch: 1,
+    });
+    const cache = {
+      get: vi.fn().mockImplementation(async (key: string) => {
+        if (key === `session:${KUMAR_SUB}:athyper:ATHQ:user`) return cachedPayload;
+        if (key === `session:auth_epoch:${KUMAR_SUB}`) return "1";
+        return null;
+      }),
+      set: vi.fn().mockResolvedValue("OK"),
+      del: vi.fn().mockResolvedValue(1),
+    };
     const db = { selectFrom: vi.fn() };
 
     const svc = createSessionService({ db: db as never, cache });
@@ -154,10 +148,6 @@ describe("SessionService.resolve", () => {
             { code: "invoice.approve", is_granted: false },
             { code: "report.view", is_granted: true },
           ],
-          "master.tenant_module_subscription as tms": [
-            { code: "ACC", name: "Accounts" },
-            { code: "PAY", name: "Payments" },
-          ],
           "master.delegation_grant as dg":   [],
         };
 
@@ -179,10 +169,17 @@ describe("SessionService.resolve", () => {
         };
         return b;
       },
-      // Step 9: raw SQL scope CTE — Kumar has tenant-wide access with 'all' visibility
-      executeQuery: vi.fn().mockResolvedValue({
-        rows: [{ has_tenant_scope: true, widest_visibility: "all", cc_codes: null }],
-      }),
+      // Step 8: effective modules, then Step 9: raw SQL scope CTE (Kumar has tenant-wide access)
+      executeQuery: makeExecuteQuery([
+        { rows: [{ plan_version_id: "pv-basic" }] },
+        {
+          rows: [
+            { module_id: "m-acc", module_code: "ACC", workspace_id: "w-core" },
+            { module_id: "m-pay", module_code: "PAY", workspace_id: "w-core" },
+          ],
+        },
+        { rows: [{ has_tenant_scope: true, widest_visibility: "all", cc_codes: null }] },
+      ]),
     };
 
     const cache = makeMockCache();
@@ -196,6 +193,10 @@ describe("SessionService.resolve", () => {
     expect(result.permissions["invoice.approve"]).toBe(false);
     expect(result.permissions["report.view"]).toBe(true);
     expect(result.modules).toHaveLength(2);
+    expect(result.modules).toEqual([
+      { code: "ACC", name: "ACC", level: "user" },
+      { code: "PAY", name: "PAY", level: "user" },
+    ]);
     expect(result.scope).toEqual({ all: true, company_codes: [], visibility: "all" });
     expect(result.delegations_available).toHaveLength(0);
     // Response must be cached
@@ -222,9 +223,6 @@ describe("SessionService.resolve", () => {
           "shared.permission as p":          [
             { code: "report.view", is_granted: true },
           ],
-          "master.tenant_module_subscription as tms": [
-            { code: "ACC", name: "Accounts" },
-          ],
           "master.delegation_grant as dg": [],
         };
 
@@ -246,10 +244,12 @@ describe("SessionService.resolve", () => {
         };
         return b;
       },
-      // Step 9: raw SQL scope CTE — Rama has company_code scope for ATHQ only
-      executeQuery: vi.fn().mockResolvedValue({
-        rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["ATHQ"] }],
-      }),
+      // Step 8: effective modules, then Step 9: scope CTE (Rama has company_code scope for ATHQ)
+      executeQuery: makeExecuteQuery([
+        { rows: [{ plan_version_id: "pv-basic" }] },
+        { rows: [{ module_id: "m-acc", module_code: "ACC", workspace_id: "w-core" }] },
+        { rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["ATHQ"] }] },
+      ]),
     };
 
     const svc = createSessionService({ db: db as never, cache: makeMockCache() });
@@ -297,7 +297,6 @@ describe("SessionService.resolve", () => {
           "master.principal_identity_binding as pab": { principal_id: PRIYA_SUB, is_active: true, is_locked: false },
           "master.principal_persona as pp":  { persona_id: "ps-agent", persona_code: "agent" },
           "shared.permission as p":          [{ code: "invoice.view", is_granted: true }],
-          "master.tenant_module_subscription as tms": [{ code: "ACC", name: "Accounts" }],
           "master.delegation_grant as dg":   [],
         };
 
@@ -319,10 +318,12 @@ describe("SessionService.resolve", () => {
         };
         return b;
       },
-      // Step 9: raw SQL scope CTE — Priya has company_code scope for DEMOIN
-      executeQuery: vi.fn().mockResolvedValue({
-        rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["DEMOIN"] }],
-      }),
+      // Step 8: effective modules, then Step 9: scope CTE (Priya has company_code scope for DEMOIN)
+      executeQuery: makeExecuteQuery([
+        { rows: [{ plan_version_id: "pv-basic" }] },
+        { rows: [{ module_id: "m-acc", module_code: "ACC", workspace_id: "w-core" }] },
+        { rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["DEMOIN"] }] },
+      ]),
     };
 
     const svc = createSessionService({ db: db as never, cache: makeMockCache() });

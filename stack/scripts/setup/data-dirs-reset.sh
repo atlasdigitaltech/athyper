@@ -29,13 +29,22 @@ fi
 # ----------------------------
 ENVIRONMENT=""
 
-while IFS='=' read -r key value; do
-  [[ "$key" =~ ^[[:space:]]*# ]] && continue
+while IFS= read -r line || [[ -n "$line" ]]; do
+  line="${line%$'\r'}"
+  [[ -z "$line" ]] && continue
+  [[ "$line" =~ ^[[:space:]]*# ]] && continue
+  [[ "$line" != *=* ]] && continue
+
+  key="${line%%=*}"
+  value="${line#*=}"
+  key="${key#"${key%%[![:space:]]*}"}"
+  key="${key%"${key##*[![:space:]]}"}"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
   [[ -z "$key" ]] && continue
-  key=$(echo "$key" | xargs)
-  [[ -z "$key" ]] && continue
-  value=$(echo "$value" | sed 's/#.*//' | xargs | tr -d '"')
-  [[ "$key" == "ENVIRONMENT" ]] && ENVIRONMENT="$value"
+  if [[ "$key" == "ENVIRONMENT" ]]; then
+    ENVIRONMENT="$value"
+  fi
 done < <(tr -d '\r' < "$ENV_FILE")
 
 if [[ -z "$ENVIRONMENT" ]]; then
@@ -54,6 +63,20 @@ elif [[ "${ATHYPER_DATA:-}" == /* ]]; then
   : # keep the absolute path already in the environment
 else
   ATHYPER_DATA="$STACK_DIR/data"
+fi
+
+if [[ "$STACK_DIR" == /opt/* ]] && [[ -z "${ATHYPER_DATA_ROOT:-}" ]]; then
+  echo ""
+  echo "ERROR: Detected server path (STACK_DIR=$STACK_DIR) but ATHYPER_DATA_ROOT is not set."
+  echo ""
+  echo "  Without it this script falls back to \$STACK_DIR/data, which can delete"
+  echo "  directories in the git checkout on staging/production servers."
+  echo ""
+  echo "  Export ATHYPER_DATA_ROOT explicitly and rerun:"
+  echo "    export ATHYPER_DATA_ROOT=/opt/stack/athyper/data"
+  echo "    sudo bash $0"
+  echo ""
+  exit 1
 fi
 
 echo ""

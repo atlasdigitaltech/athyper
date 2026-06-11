@@ -54,10 +54,30 @@ if "!ENVIRONMENT!"=="" (
   pause & exit /b 1
 )
 
+set "_DR_FROM_FALLBACK=0"
 if not "!ATHYPER_DATA_ROOT!"=="" goto :dr_skip_dr
 if not "!_DR_FROM_ENV!"==""      (set "ATHYPER_DATA_ROOT=!_DR_FROM_ENV!" & goto :dr_skip_dr)
 set "ATHYPER_DATA_ROOT=%STACK_DIR%\data"
+set "_DR_FROM_FALLBACK=1"
 :dr_skip_dr
+
+REM Server-path guard: refuse the destructive operation when ATHYPER_DATA_ROOT
+REM was never set explicitly (neither in the process env nor in .env). The
+REM fallback (%STACK_DIR%\data) lands inside the git checkout — wrong target
+REM on any server, and almost never what the operator intended.
+if "!_DR_FROM_FALLBACK!"=="1" (
+  echo.
+  echo ERROR: ATHYPER_DATA_ROOT is not set in process env or in %ENV_FILE%.
+  echo.
+  echo   Without it this script falls back to %STACK_DIR%\data, which can delete
+  echo   directories inside the git checkout. Set it explicitly first:
+  echo.
+  echo     set ATHYPER_DATA_ROOT=D:\Stack\athyper\data
+  echo     data-dirs-reset.bat
+  echo.
+  echo   Or add ATHYPER_DATA_ROOT to %ENV_FILE%.
+  exit /b 1
+)
 
 set "ATHYPER_DATA=!ATHYPER_DATA_ROOT!"
 

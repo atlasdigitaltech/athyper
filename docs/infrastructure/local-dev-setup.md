@@ -2,6 +2,7 @@
 
 **Scope:** Windows workstation with Docker Desktop → `ENVIRONMENT=local`
 **Not for:** Ubuntu staging/production server — see [`staging-setup.md`](staging-setup.md)
+**Cross-env comparison:** see [`environments.md`](environments.md) for the local / staging / production matrix.
 **Two-root rule:** Source code and runtime state live on separate paths, mirroring the server layout.
 
 ```text
@@ -28,7 +29,12 @@ pnpm install --frozen-lockfile
 stack\scripts\setup\setup-config.bat local --diff    :: preview template changes
 stack\scripts\setup\setup-config.bat local --update  :: apply if diff shows changes
 
-:: Start the application (three terminals)
+:: Start the application — one command (recommended)
+:: Stops stale app containers, brings up core infra, opens api + 3 web windows.
+:: Add --with-jobs if you also need worker + scheduler windows.
+stack\scripts\dev-local.bat
+
+:: Or the explicit three-terminal form:
 :: Terminal 1
 stack\scripts\stack-profile\up.bat core
 :: Terminal 2
@@ -36,6 +42,14 @@ stack\scripts\app\api-up.bat
 :: Terminal 3
 stack\scripts\app\local-ui-up.bat
 ```
+
+> **Why dev-local.bat?** Local app code only runs on the host. If a stale
+> `athyper-api-1` / `athyper-neon-web-1` / etc. container is left over from a
+> previous `stack-profile/up.bat apps` run, it silently shadows your host dev
+> servers — source edits then appear to "work" but actually hit an old bundle.
+> `dev-local.bat` pre-stops those containers every time, so the failure mode
+> can't recur. The shadow-detection guard in `api-up.bat` / `web-up.bat` is the
+> second line of defence.
 
 ---
 
@@ -1317,6 +1331,7 @@ Key variables in `stack/env/.env` for local development. Full list with descript
 
 | Document | Purpose |
 |---|---|
+| [`environments.md`](environments.md) | Cross-env comparison — local vs staging vs production matrix, script behavior, profile defaults |
 | [`staging-setup.md`](staging-setup.md) | Ubuntu server installation, v13 permission model, full Phase 0–26 runbook |
 | [`infrastructure-plan.md`](infrastructure-plan.md) | Architecture overview, v13 permission decision, pre-deployment code gates |
 | [`secrets-management.md`](secrets-management.md) | Secret inventory, generation commands, rotation runbook |

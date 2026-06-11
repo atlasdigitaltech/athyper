@@ -24,6 +24,7 @@
 
 import type { Router } from "express";
 import type { Kysely } from "kysely";
+import { getEffectiveModuleAccess } from "@athyper/svc-iam";
 import { createCompiledEntityRoute, type DescriptorCache } from "./compiled-entity.route.js";
 import { createEntityFlowRoute } from "./entity-flow.route.js";
 import { createLookupRoute } from "./lookup.route.js";
@@ -57,6 +58,7 @@ export interface MetadataRoutesDeps {
   cache?: DescriptorCache;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string, personaId: string) => Promise<Record<string, { decision: string } | undefined>>;
+  getEffectiveModuleAccess?: typeof getEffectiveModuleAccess;
 }
 
 export function registerMetadataRoutes(router: Router, deps: MetadataRoutesDeps): Router {

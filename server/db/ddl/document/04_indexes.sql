@@ -231,9 +231,6 @@ CREATE INDEX IF NOT EXISTS pi_match_status_idx
 CREATE INDEX IF NOT EXISTS pi_pending_approval_idx
     ON document.purchase_invoice (tenant_id, company_code_id)
     WHERE status = 'pending_approval';
-CREATE INDEX IF NOT EXISTS pi_on_hold_idx
-    ON document.purchase_invoice (tenant_id)
-    WHERE is_on_hold = true;
 -- Duplicate invoice detection: supplier + supplier_invoice_number + date
 CREATE INDEX IF NOT EXISTS pi_supplier_invoice_dedup_idx
     ON document.purchase_invoice (tenant_id, supplier_id, supplier_invoice_number, supplier_invoice_date)
