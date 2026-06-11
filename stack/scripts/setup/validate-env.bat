@@ -286,6 +286,19 @@ set "KERNEL_CONFIG_PATH=!ENV_ATHYPER_KERNEL_CONFIG_PATH!"
 if not "!KERNEL_CONFIG_PATH!"=="" (
   set "KERNEL_FILE=!LIVE_CONFIG_ROOT!\!KERNEL_CONFIG_PATH!"
   if exist "!KERNEL_FILE!" (
+    REM Stale-orphan sibling check — WARN when a kernel.config*.parameter.json
+    REM next to the active file is newer. Catches the case where setup-config
+    REM refreshed one filename but $ATHYPER_KERNEL_CONFIG_PATH points elsewhere.
+    for %%K in ("!KERNEL_FILE!") do set "KERNEL_DIR=%%~dpK"
+    set "_NEWER_SIBLING="
+    for /f "usebackq tokens=*" %%S in (`powershell -NoProfile -Command "Get-ChildItem -Path '!KERNEL_DIR!' -Filter 'kernel.config*.parameter.json' -File ^| Where-Object { $_.FullName -ne '!KERNEL_FILE!' -and $_.LastWriteTime -gt (Get-Item '!KERNEL_FILE!').LastWriteTime } ^| Select-Object -ExpandProperty FullName" 2^>nul`) do (
+      set "_NEWER_SIBLING=%%S"
+      echo   WARN  Newer sibling kernel config found in !KERNEL_DIR!
+      echo         Active : !KERNEL_FILE!
+      echo         Newer  : %%S
+      echo         ATHYPER_KERNEL_CONFIG_PATH may be pointing at a stale orphan.
+      set /a WARNINGS+=1
+    )
     set "ENV_BASE_URL=!ENV_PUBLIC_BASE_URL!"
     set "ENV_ISSUER_URL=!ENV_IAM_ISSUER_URL!"
     REM Extract publicBaseUrl value from JSON (simple findstr — matches if value appears anywhere on the line)

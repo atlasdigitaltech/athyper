@@ -106,8 +106,10 @@ esac
 # legacy Bash versions where available tooling expects a stable map shape.
 declare -A FILE_MAP
 
-# apps — kernel config (env-specific template → canonical runtime file)
-FILE_MAP["apps/kernel.config.${ENV_NAME}.parameter.json"]="apps/kernel.config.parameter.json"
+# apps — kernel config. Keep env-specific filename at the runtime location so
+# $ATHYPER_KERNEL_CONFIG_PATH in stack/env/.env points to the same file this
+# script just wrote; otherwise the runtime reads a stale orphan.
+FILE_MAP["apps/kernel.config.${ENV_NAME}.parameter.json"]="apps/kernel.config.${ENV_NAME}.parameter.json"
 
 # gateway — operator-managed; deployed once, then operator edits live copy
 FILE_MAP["$GATEWAY_TLS_SRC"]="gateway/dynamic/athyper.tls.yml"

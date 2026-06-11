@@ -125,8 +125,10 @@ echo.
 REM ── File map: CALL :pf "src_rel" "dst_rel" operator_managed ──────────────────
 REM   operator_managed: 1 = prompt before overwrite in --update; 0 = auto-update
 
-REM apps (env-specific template → canonical runtime file)
-call :pf "apps\kernel.config.!ENV_NAME!.parameter.json" "apps\kernel.config.parameter.json" 0
+REM apps — kernel config (keep env-specific filename at the runtime location
+REM so $ATHYPER_KERNEL_CONFIG_PATH in stack/env/.env points to the same file
+REM this script just wrote; otherwise the runtime reads a stale orphan).
+call :pf "apps\kernel.config.!ENV_NAME!.parameter.json" "apps\kernel.config.!ENV_NAME!.parameter.json" 0
 
 REM gateway (operator-managed — deployed once, then operator edits live copy)
 call :pf "!GATEWAY_TLS_SRC!" "gateway\dynamic\athyper.tls.yml" 1
@@ -331,6 +333,7 @@ if /I "!MODE!"=="--update" (
   for %%D in ("!DST!") do if not exist "%%~dpD" mkdir "%%~dpD"
   copy /Y "!SRC!" "!DST!" >nul
   echo   UPDATED !DST_REL!
+  echo           -^> !DST!
   endlocal & exit /b 0
 )
 
@@ -341,6 +344,7 @@ if exist "!DST!\*" (
   for %%D in ("!DST!") do if not exist "%%~dpD" mkdir "%%~dpD"
   copy /Y "!SRC!" "!DST!" >nul
   echo   COPIED  !DST_REL!
+  echo           -^> !DST!
 ) else (
   echo   EXISTS  !DST_REL!  (skipped^)
 )

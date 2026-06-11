@@ -601,9 +601,70 @@ function resolveDetailFields(contract: MetaEntityRuntimeDescriptor): MetaEntityF
   return contract.fields;
 }
 
-function resolveEditableFields(contract: MetaEntityRuntimeDescriptor, _mode: "create" | "edit" = "edit"): MetaEntityField[] {
-  return contract.fields
-    .filter((fieldItem) => !fieldItem.isReadOnly && !fieldItem.isComputed);
+// Origins that are never editable from the create/edit form. system fields
+// (id, tenant_id, audit timestamps, etc.) and server-derived values must not
+// surface as input controls. Matches HARD_EXCLUDED_ORIGINS in field-editability.ts.
+const FORM_HARD_EXCLUDED_ORIGINS = new Set(["system", "server"]);
+
+function asEditabilityRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function readEditabilityBool(record: Record<string, unknown> | null, ...keys: string[]): boolean | undefined {
+  if (!record) return undefined;
+  for (const key of keys) {
+    if (typeof record[key] === "boolean") return record[key] as boolean;
+  }
+  return undefined;
+}
+
+function asVisibilityRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function visibilityHidesSurface(field: MetaEntityField, surface: "create" | "edit"): boolean {
+  const vis = asVisibilityRecord(field.visibility);
+  if (!vis) return false;
+  if (vis["hidden"] === true) return true;
+  const hideRaw = vis["hideIn"] ?? vis["hide_in"];
+  if (Array.isArray(hideRaw)) {
+    for (const entry of hideRaw) {
+      if (typeof entry === "string" && entry.trim().toLowerCase() === surface) return true;
+    }
+  }
+  return false;
+}
+
+function resolveEditableFields(contract: MetaEntityRuntimeDescriptor, mode: "create" | "edit" = "edit"): MetaEntityField[] {
+  return contract.fields.filter((field) => {
+    // Structural exclusions — cannot be edited under any condition
+    if (field.isReadOnly) return false;
+    if (field.isComputed) return false;
+    if (mode === "edit" && field.isWriteOnce) return false;
+
+    // Origin gate — system-managed columns never surface as form inputs.
+    // This is what hides `status`, audit timestamps, row_version, etc.
+    const origin = field.origin?.toLowerCase();
+    if (origin && FORM_HARD_EXCLUDED_ORIGINS.has(origin)) return false;
+
+    // editability.* explicit opt-outs (control.entity_field.editability JSONB)
+    const editability = asEditabilityRecord(field.editability);
+    if (editability) {
+      if (readEditabilityBool(editability, "disabled") === true) return false;
+      if (readEditabilityBool(editability, "editable") === false) return false;
+      if (mode === "create" && readEditabilityBool(editability, "editableOnCreate") === false) return false;
+      if (mode === "edit"   && readEditabilityBool(editability, "editableOnEdit")   === false) return false;
+    }
+
+    // visibility.hidden / visibility.hide_in for create / edit surface
+    if (visibilityHidesSurface(field, mode)) return false;
+
+    return true;
+  });
 }
 
 function runtimeEyebrow(appName: string, contract: MetaEntityRuntimeDescriptor): string {

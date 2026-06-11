@@ -55,7 +55,10 @@ export function buildMetaEntityFieldGroups(
   descriptor: MetaEntityRuntimeDescriptor,
   surface: FieldSurface,
 ): RuntimeFieldGroupModel[] {
-  const surfaceGroups = descriptor.fieldGroups.filter((g) => groupSurfaceMatches(g, surface));
+  const surfaceGroups = dedupeSurfaceGroups(
+    descriptor.fieldGroups.filter((g) => groupSurfaceMatches(g, surface)),
+    surface,
+  );
   const groupByKey = new Map(surfaceGroups.map((g) => [g.key, g]));
 
   const fieldsByGroup = new Map<string, MetaEntityField[]>();
@@ -84,19 +87,7 @@ export function buildMetaEntityFieldGroups(
     const fields = fieldsByGroup.get(group.key) ?? [];
     if (fields.length === 0) continue;
 
-    const effectiveColumns = isLongTextGroup(fields) ? 1 : group.columns;
-
-    result.push({
-      key: group.key,
-      label: group.label,
-      description: group.description,
-      order: group.order,
-      columns: effectiveColumns,
-      pageSpan: group.pageSpan,
-      role: group.role,
-      initiallyCollapsed: group.initiallyCollapsed,
-      fields: [...fields].sort((a, b) => a.order - b.order),
-    });
+    result.push(groupModel(group, fields));
   }
 
   const fallbackOrder = surfaceGroups.length > 0
@@ -115,24 +106,72 @@ export function buildMetaEntityFieldGroups(
       columns: isLongTextGroup(fields) ? 1 : 3,
       pageSpan: "full",
       initiallyCollapsed: false,
-      fields: [...fields].sort((a, b) => a.order - b.order),
+      fields: sortFields(fields),
     });
     fallbackOffset += 10;
   }
 
   if (ungrouped.length > 0) {
-    result.push({
-      key: "general",
-      label: "General",
-      order: fallbackOrder + fallbackOffset,
-      columns: isLongTextGroup(ungrouped) ? 1 : 3,
-      pageSpan: "full",
-      initiallyCollapsed: false,
-      fields: [...ungrouped].sort((a, b) => a.order - b.order),
-    });
+    const existingGeneral = result.find((group) => group.key === "general");
+    if (existingGeneral) {
+      const fields = sortFields([...existingGeneral.fields, ...ungrouped]);
+      existingGeneral.fields = fields;
+      existingGeneral.columns = isLongTextGroup(fields) ? 1 : existingGeneral.columns;
+    } else {
+      const definedGeneral = groupByKey.get("general");
+      const generalGroup: RuntimeFieldGroupModel = definedGeneral
+        ? groupModel(definedGeneral, ungrouped)
+        : {
+          key: "general",
+          label: "General",
+          order: fallbackOrder + fallbackOffset,
+          columns: isLongTextGroup(ungrouped) ? 1 : 3,
+          pageSpan: "full",
+          initiallyCollapsed: false,
+          fields: sortFields(ungrouped),
+        };
+      result.push(generalGroup);
+    }
   }
 
   return result.sort((a, b) => a.order - b.order);
+}
+
+function dedupeSurfaceGroups(
+  groups: MetaEntityFieldGroup[],
+  surface: FieldSurface,
+): MetaEntityFieldGroup[] {
+  const byKey = new Map<string, MetaEntityFieldGroup>();
+  for (const group of groups) {
+    const existing = byKey.get(group.key);
+    if (!existing || groupSpecificity(group, surface) > groupSpecificity(existing, surface)) {
+      byKey.set(group.key, group);
+    }
+  }
+  return [...byKey.values()].sort((a, b) => a.order - b.order);
+}
+
+function groupSpecificity(group: MetaEntityFieldGroup, surface: FieldSurface): number {
+  return group.surface === surface ? 2 : group.surface === "all" ? 1 : 0;
+}
+
+function groupModel(group: MetaEntityFieldGroup, fields: MetaEntityField[]): RuntimeFieldGroupModel {
+  const orderedFields = sortFields(fields);
+  return {
+    key: group.key,
+    label: group.label,
+    description: group.description,
+    order: group.order,
+    columns: isLongTextGroup(orderedFields) ? 1 : group.columns,
+    pageSpan: group.pageSpan,
+    role: group.role,
+    initiallyCollapsed: group.initiallyCollapsed,
+    fields: orderedFields,
+  };
+}
+
+function sortFields(fields: MetaEntityField[]): MetaEntityField[] {
+  return [...fields].sort((a, b) => a.order - b.order);
 }
 
 function toTitleLabel(key: string): string {

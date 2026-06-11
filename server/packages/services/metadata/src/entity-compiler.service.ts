@@ -466,6 +466,18 @@ function referenceTargetEntity(row: Pick<EntityFieldRow, "reference_config" | "v
     ?? stringValue(validation?.["ref_hint"]);
 }
 
+/**
+ * Reads the group_key for an entity_field row. Prefers the top-level
+ * group_key column (per the field-contract-registry phase-4 plan); falls back
+ * to legacy ui_hint.group_key for back-compat with older seeds.
+ */
+function readFieldGroupKey(row: EntityFieldRow): string | null {
+  const direct = stringValue(row.group_key);
+  if (direct) return direct;
+  const uiHint = coerceRecord(row.ui_hint);
+  return stringValue(uiHint?.["group_key"]) ?? null;
+}
+
 function mergeReferencePickerProfile(
   referenceConfig: Record<string, unknown>,
   referencePickerProfile?: Record<string, unknown> | null,
@@ -831,6 +843,7 @@ export class EntityCompilerService {
     const classProfile = await this.loadClassProfile(entityRow.entity_class);
     const referencePickerProfiles = await this.loadReferencePickerProfiles(fieldRows);
     const fields = fieldRows.map((row) => mapField(row, referencePickerProfiles));
+    const fieldGroups = await this.loadFieldGroups(entityRow.entity_class, fieldRows);
     const displayConfig = normalizeDisplayConfig(
       coerceRecord(entityRow.display_config) ?? {},
       entityRow.icon_key,
@@ -854,7 +867,7 @@ export class EntityCompilerService {
       version_no: Number(versionRow.version_no),
       version_hash: versionHash,
       fields,
-      field_groups: [],
+      field_groups: fieldGroups,
       display_config: displayConfig,
       identity_config: identityConfig,
       search_config: searchConfig,
@@ -909,6 +922,76 @@ export class EntityCompilerService {
       security_tiers: coerceJson(row.security_tiers),
       compliance_profile: coerceJson(row.compliance_profile),
     };
+  }
+
+  /**
+   * Compiles field_groups for the entity by:
+   *   1. Loading control.field_group rows whose applies_to_classes contains
+   *      the entity's class (e.g. 'DOCUMENT').
+   *   2. Grouping the entity's field rows by entity_field.group_key (falling
+   *      back to ui_hint.group_key for legacy back-compat).
+   *   3. Emitting only groups that have at least one field assigned.
+   * Fields with a group_key that doesn't match any field_group row are
+   * collected into an "ungrouped" entry so they remain renderable.
+   */
+  private async loadFieldGroups(
+    entityClass: string,
+    fieldRows: EntityFieldRow[],
+  ): Promise<CompiledEntity["field_groups"]> {
+    if (fieldRows.length === 0) return [];
+
+    // Bucket field names by their assigned group_key
+    const fieldsByGroup = new Map<string, string[]>();
+    for (const field of fieldRows) {
+      const groupKey = readFieldGroupKey(field);
+      if (!groupKey) continue;
+      const bucket = fieldsByGroup.get(groupKey);
+      if (bucket) bucket.push(field.name);
+      else fieldsByGroup.set(groupKey, [field.name]);
+    }
+    if (fieldsByGroup.size === 0) return [];
+
+    const groupKeys = [...fieldsByGroup.keys()];
+    const groupRows = await this.db
+      .selectFrom("control.field_group as fg" as never)
+      .select(["fg.group_key", "fg.label", "fg.description", "fg.sort_order", "fg.applies_to_classes"] as never[])
+      .where("fg.group_key" as never, "in" as never, groupKeys as never)
+      .execute() as Array<{
+        group_key: string;
+        label: string;
+        description: string | null;
+        sort_order: number;
+        applies_to_classes: string[];
+      }>;
+
+    const byKey = new Map(groupRows.map((row) => [row.group_key, row]));
+    const result: CompiledEntity["field_groups"] = [];
+    for (const [groupKey, fieldNames] of fieldsByGroup) {
+      const groupRow = byKey.get(groupKey);
+      if (groupRow) {
+        // Only emit groups whose applies_to_classes covers this entity's class
+        if (!groupRow.applies_to_classes.includes(entityClass)) continue;
+        result.push({
+          group_key: groupRow.group_key,
+          label: groupRow.label,
+          description: groupRow.description,
+          sort_order: Number(groupRow.sort_order),
+          fields: fieldNames,
+        });
+      } else {
+        // Orphan group_key — emit fallback so fields still render somewhere
+        result.push({
+          group_key: groupKey,
+          label: groupKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+          description: null,
+          sort_order: 9999,
+          fields: fieldNames,
+        });
+      }
+    }
+
+    result.sort((a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label));
+    return result;
   }
 
   private async loadReferencePickerProfiles(

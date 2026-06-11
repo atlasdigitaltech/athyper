@@ -346,6 +346,25 @@ KERNEL_CFG_ROOT="${ATHYPER_CONFIG_VAL:-$STACK_DIR/config}"
 KERNEL_FILE="$KERNEL_CFG_ROOT/$KERNEL_CONFIG_PATH"
 
 if [[ -f "$KERNEL_FILE" ]]; then
+  # Stale-orphan sibling check — warns when a kernel.config*.parameter.json next
+  # to the active file is newer. Catches the case where setup-config refreshed
+  # one filename but $ATHYPER_KERNEL_CONFIG_PATH points at a different one.
+  _kernel_dir="$(dirname "$KERNEL_FILE")"
+  if [[ -d "$_kernel_dir" ]]; then
+    while IFS= read -r _sibling; do
+      [[ "$_sibling" == "$KERNEL_FILE" ]] && continue
+      [[ -f "$_sibling" ]] || continue
+      if [[ "$_sibling" -nt "$KERNEL_FILE" ]]; then
+        echo "  WARN  Newer sibling kernel config found in $_kernel_dir/"
+        echo "        Active : $KERNEL_FILE"
+        echo "        Newer  : $_sibling"
+        echo "        \$ATHYPER_KERNEL_CONFIG_PATH may be pointing at a stale orphan."
+        WARNINGS=$((WARNINGS + 1))
+      fi
+    done < <(find "$_kernel_dir" -maxdepth 1 -name 'kernel.config*.parameter.json' -type f 2>/dev/null)
+  fi
+  unset _kernel_dir _sibling
+
   # Extract URLs from JSON via node (already a hard dep — render-redis-acl.cjs
   # needs it). Previous implementation used `grep -oP` which silently returns
   # empty on BSD grep (macOS), masking real mismatches.

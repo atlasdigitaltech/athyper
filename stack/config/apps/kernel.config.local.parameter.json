@@ -56,11 +56,14 @@
           "issuerUrl": "https://iam.athyper.local/realms/athyper",
           "clientId": "athyper-api-runtime",
           "allowedAzp": [
-            "neon-web",
-            "neon-svc-bff",
+            "athyper-api-runtime",
+            "athyper-svc-runtime-worker",
+            "admin-svc-bff",
             "admin-web",
+            "mesh-svc-bff",
             "mesh-web",
-            "athyper-svc-runtime-worker"
+            "neon-svc-bff",
+            "neon-web"
           ],
           "clientSecretRef": "IAM_ATHYPER_CLIENT_SECRET"
         },

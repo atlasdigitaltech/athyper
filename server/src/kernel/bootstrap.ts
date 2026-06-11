@@ -194,11 +194,19 @@ export async function bootstrap(
   const logger = createLogger({ level: config.logLevel, env: config.env });
 
   if (kernelConfig) {
+    // Log the resolved source path so operators can immediately tell which file
+    // the runtime actually loaded — the common drift mode is $ATHYPER_KERNEL_CONFIG_PATH
+    // pointing at a stale orphan after setup-config writes a different name.
+    const kernelConfigRoot = process.env.ATHYPER_CONFIG ?? "/config";
+    const kernelConfigPath = process.env.ATHYPER_KERNEL_CONFIG_PATH ?? "";
     logger.info("kernel_config_loaded", {
       env: kernelConfig.env,
       strategy: kernelConfig.iam.strategy,
       defaultRealmKey: kernelConfig.iam.defaultRealmKey,
       realms: Object.keys(kernelConfig.iam.realms),
+      configRoot: kernelConfigRoot,
+      configPath: kernelConfigPath,
+      sourceFile: kernelConfigPath ? `${kernelConfigRoot}/${kernelConfigPath}` : "(unknown)",
     });
   } else {
     logger.warn("kernel_config_absent", {

@@ -86,7 +86,10 @@
           "description": "Maximum connection pool size (NOT locked — read from file)"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "patternProperties": {
+        "^\\$comment": { "type": "string" }
+      }
     },
     "iam": {
       "type": "object",
@@ -133,7 +136,10 @@
           "default": {}
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "patternProperties": {
+        "^\\$comment": { "type": "string" }
+      }
     },
     "redis": {
       "type": "object",
@@ -165,7 +171,10 @@
           "default": 10000
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "patternProperties": {
+        "^\\$comment": { "type": "string" }
+      }
     },
     "s3": {
       "type": "object",
@@ -204,7 +213,10 @@
           "description": "LOCKED — S3 bucket name. Set via S3_BUCKET env var."
         },
         "useSSL": {
-          "type": "boolean",
+          "oneOf": [
+            { "type": "boolean" },
+            { "$ref": "#/definitions/LockedSentinel" }
+          ],
           "default": false,
           "description": "LOCKED — Use SSL/TLS for S3 connections. Set via S3_USE_SSL env var."
         },
@@ -229,7 +241,10 @@
           "default": 900
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "patternProperties": {
+        "^\\$comment": { "type": "string" }
+      }
     },
     "telemetry": {
       "type": "object",
@@ -245,7 +260,10 @@
           "description": "LOCKED — OpenTelemetry collector endpoint. Set via OTLP_ENDPOINT env var."
         },
         "enabled": {
-          "type": "boolean",
+          "oneOf": [
+            { "type": "boolean" },
+            { "$ref": "#/definitions/LockedSentinel" }
+          ],
           "default": true,
           "description": "LOCKED — Enable telemetry export. Set via TELEMETRY_ENABLED env var."
         },
@@ -262,7 +280,10 @@
           "description": "Service version for telemetry spans (NOT locked — read from file)"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "patternProperties": {
+        "^\\$comment": { "type": "string" }
+      }
     },
     "jobQueue": {
       "type": "object",
@@ -1135,7 +1156,15 @@
     }
   },
   "additionalProperties": false,
+  "patternProperties": {
+    "^\\$comment": { "type": "string" }
+  },
   "definitions": {
+    "LockedSentinel": {
+      "type": "string",
+      "pattern": "^LOCKED_USE_ENV_VAR",
+      "description": "Sentinel marker indicating the value is stripped at load time and supplied via an environment variable instead."
+    },
     "RealmConfig": {
       "type": "object",
       "required": ["iam"],
@@ -1171,7 +1200,10 @@
               "description": "Reference name for SUPERSTAR env secret resolution (ATHYPER_SUPER__IAM_SECRET__<ref>)"
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "patternProperties": {
+            "^\\$comment": { "type": "string" }
+          }
         },
         "redirectUriAllowlist": {
           "type": "array",

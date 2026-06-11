@@ -156,7 +156,7 @@ bash stack/scripts/setup/setup-config.sh local
 stack\scripts\setup\setup-config.bat local
 ```
 
-Copies `stack/config/apps/kernel.config.{env}.parameter.json` → `kernel.config.parameter.json`. Backs up any existing file.
+Copies `stack/config/apps/kernel.config.{env}.parameter.json` → `<ATHYPER_CONFIG_ROOT>/apps/kernel.config.{env}.parameter.json` (env-specific filename preserved). Backs up any existing file. `ATHYPER_KERNEL_CONFIG_PATH` in `stack/env/.env` must point at the same filename or the runtime will read a stale orphan.
 
 ### Step 3 — Validate the environment
 

@@ -30,6 +30,63 @@ describe("buildMetaEntityFieldGroups", () => {
       ["general", "General"],
     ]);
   });
+
+  it("merges ungrouped fields into an existing general group", () => {
+    const descriptor = descriptorWithFields([
+      field("document_no", "Document No", "general", { order: 10 }),
+      field("description", "Description", undefined, { order: 20 }),
+    ], [
+      {
+        key: "general",
+        label: "General",
+        order: 10,
+        columns: 2,
+        pageSpan: "full",
+        surface: "all",
+        initiallyCollapsed: false,
+      },
+    ]);
+
+    const groups = buildMetaEntityFieldGroups(descriptor, "create");
+
+    expect(groups.map((group) => group.key)).toEqual(["general"]);
+    expect(groups[0]?.fields.map((item) => item.name)).toEqual(["document_no", "description"]);
+  });
+
+  it("deduplicates matching group definitions by key", () => {
+    const descriptor = descriptorWithFields([
+      field("name", "Name", "general"),
+    ], [
+      {
+        key: "general",
+        label: "General",
+        order: 10,
+        columns: 2,
+        pageSpan: "full",
+        surface: "all",
+        initiallyCollapsed: false,
+      },
+      {
+        key: "general",
+        label: "Create General",
+        order: 5,
+        columns: 1,
+        pageSpan: "full",
+        surface: "create",
+        initiallyCollapsed: false,
+      },
+    ]);
+
+    const groups = buildMetaEntityFieldGroups(descriptor, "create");
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({
+      key: "general",
+      label: "Create General",
+      columns: 1,
+    });
+    expect(groups[0]?.fields.map((item) => item.name)).toEqual(["name"]);
+  });
 });
 
 function descriptorWithFields(

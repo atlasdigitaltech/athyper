@@ -37,7 +37,11 @@
     "secretKey": "LOCKED_USE_ENV_VAR",
     "region": "LOCKED_USE_ENV_VAR: S3_REGION (staging: us-east-1)",
     "bucket": "LOCKED_USE_ENV_VAR: S3_BUCKET (staging: athyper-staging)",
-    "useSSL": "LOCKED_USE_ENV_VAR: S3_USE_SSL (staging: true)"
+    "useSSL": "LOCKED_USE_ENV_VAR: S3_USE_SSL (staging: true)",
+    "multipartPartSizeMb": "LOCKED_USE_ENV_VAR: S3_MULTIPART_PART_SIZE_MB (default 5)",
+    "multipartQueueSize": "LOCKED_USE_ENV_VAR: S3_MULTIPART_QUEUE_SIZE (default 4)",
+    "maxUploadMb": "LOCKED_USE_ENV_VAR: S3_MAX_UPLOAD_MB (default 100)",
+    "presignedTtlSeconds": "LOCKED_USE_ENV_VAR: S3_PRESIGNED_TTL_SECONDS (default 900)"
   },
 
   "iam": {
@@ -53,11 +57,14 @@
           "issuerUrl": "https://iam-stg.athyper.com/realms/athyper",
           "clientId": "athyper-api-runtime",
           "allowedAzp": [
-            "neon-web",
-            "neon-svc-bff",
+            "athyper-api-runtime",
+            "athyper-svc-runtime-worker",
+            "admin-svc-bff",
             "admin-web",
+            "mesh-svc-bff",
             "mesh-web",
-            "athyper-svc-runtime-worker"
+            "neon-svc-bff",
+            "neon-web"
           ],
           "clientSecretRef": "IAM_ATHYPER_CLIENT_SECRET"
         },
