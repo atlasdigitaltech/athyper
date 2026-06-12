@@ -936,7 +936,7 @@ function useTenantAdminAccess(enabled: boolean) {
   return useQuery({
     queryKey: ["finance", "setup", "tenant-admin-access"],
     queryFn: async () => {
-      const res = await fetch("/api/user/tenant-admin");
+      const res = await fetch("/api/admin/tenant");
       return res.ok;
     },
     enabled,

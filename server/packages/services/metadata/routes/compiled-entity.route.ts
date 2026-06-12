@@ -874,7 +874,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
 
       if (tenantId && entityRow.module_id) {
         try {
-          const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+          const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
           const authEpochRow = await db
             .selectFrom("master.principal as p")
             .select("p.auth_epoch")

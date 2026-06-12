@@ -501,7 +501,7 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
       }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
       const body    = (req.body ?? {}) as Record<string, unknown>;
       const remarks = typeof body["remarks"] === "string" ? body["remarks"] : undefined;
 

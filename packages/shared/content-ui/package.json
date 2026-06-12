@@ -10,9 +10,13 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@athyper/api-contracts": "workspace:*",
     "@athyper/runtime-shared": "workspace:*"
   },
   "peerDependencies": {
@@ -24,9 +28,15 @@
   "devDependencies": {
     "@athyper/config": "workspace:*",
     "@athyper/theme": "workspace:*",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@vitest/coverage-v8": "4.1.4",
+    "jsdom": "^25.0.1",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

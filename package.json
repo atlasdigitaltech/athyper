@@ -11,6 +11,7 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "test:content-ui": "pnpm --filter @athyper/content-ui test",
     "storybook": "turbo dev --filter=@athyper/storybook",
     "contracts:check": "turbo contracts:check",
     "db:setup:rebuild-entity-metadata": "pnpm --dir server/db run db:setup:rebuild-entity-metadata",

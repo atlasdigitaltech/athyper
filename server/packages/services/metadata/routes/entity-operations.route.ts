@@ -140,7 +140,7 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
         // Guaranteed by the early-return guard above, but TypeScript can't
         // narrow `checkPermissionBatch` across that branch.
         if (!checkPermissionBatch) { res.json([]); return; }
-        const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+        const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
         const personaRow = await db
           .selectFrom("master.principal_persona as pp" as never)
           .select(["pp.persona_id"] as never[])

@@ -450,7 +450,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
         return;
       }
 
-      const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId, xRealm);
       if (!principalId) {
         res.json({ data: [] });
         return;
@@ -517,7 +517,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
         return;
       }
 
-      const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId, xRealm);
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "No principal bound to this session" });
         return;

@@ -25,6 +25,8 @@ const WATCHED = [
   "packages/shared/api-contracts/src/schemas/workflow.ts",
   "packages/shared/api-contracts/src/schemas/ledger.ts",
   "packages/shared/api-contracts/src/schemas/platform.ts",
+  "packages/shared/api-contracts/src/schemas/me.ts",
+  "packages/shared/api-contracts/src/schemas/iam.ts",
   "packages/shared/api-contracts/src/schemas/entity-list.ts",
   "packages/shared/api-contracts/src/enums.ts",
 ];

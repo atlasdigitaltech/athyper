@@ -890,7 +890,7 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
       const sub = String(claims["sub"] ?? "unknown");
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:journals:create:${tenantId}:${sub}`, 20, 60)) return;
 
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
       const body = req.body as Record<string, unknown>;
 
@@ -1076,7 +1076,7 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
       const sub = String(claims["sub"] ?? "unknown");
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:journals:submit:${tenantId}:${sub}`, 20, 60)) return;
 
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
 
       const jeRow = await db
@@ -1302,7 +1302,7 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
       const sub = String(claims["sub"] ?? "unknown");
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:journals:reverse:${tenantId}:${sub}`, 10, 60)) return;
 
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "no principal bound to this session" });
         return;
@@ -1516,7 +1516,7 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         return;
       }
 
-      const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, (claims["sub"] as string) ?? "", tenantId, xRealm);
       const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
       const body = (req.body ?? {}) as Record<string, unknown>;
 

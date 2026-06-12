@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
+import { useCallback, useState, useMemo, useRef, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueries, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeftRight, CheckCircle2, Clock,
-  FileClock, GitBranch, Info, MessageSquare, Paperclip, Pencil, RotateCcw, Search, SlidersHorizontal, XCircle,
+  FileClock, GitBranch, Info, Lock, MessageSquare, Paperclip, Pencil, RotateCcw, Search, SlidersHorizontal, XCircle,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
   Badge, Button, Card, CardContent,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   Skeleton, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@athyper/ui/primitives";
 import type { RecordVersionSummary } from "@athyper/api-contracts/records";
@@ -17,12 +18,32 @@ import type { DocumentLine, AccountingDistribution } from "@athyper/api-contract
 import { queryKeys } from "@athyper/api-contracts/query-keys";
 import { buildOrchestratorFromRecord } from "../orchestrator";
 import { buildDocumentHeaderModel } from "../header";
-import { AmountSummaryCard } from "../amounts";
+import { AmountSummaryCard, useAmountDelta } from "../amounts";
 import { AccountingReadinessPanel } from "../accounting";
 import { FlowModal, evaluateRule } from "../intake";
 import { ValidationBanner } from "../validation";
 import { EntityHeader, EntityProgressRow, useRailState } from "@athyper/entity-runtime/header";
 import type { HeaderAction, PlatformPanelIcon } from "@athyper/entity-runtime/header";
+import {
+  DocumentObjectPage,
+  DocumentSectionSkeleton,
+  EditSessionProvider,
+  composeRegisterSectionRef,
+  useDocumentChangeStream,
+  useDocumentDirtyMap,
+  useDocumentEditSession,
+  useDocumentPageController,
+  useLazyDocumentSections,
+  usePinOnScroll,
+  type DocumentChangeEvent,
+  type DocumentSectionDescriptor,
+} from "@athyper/content-ui";
+import type {
+  DocumentEditContext,
+  EditSessionPatchBody,
+  FieldMask,
+} from "@athyper/api-contracts/edit-session";
+import { readAutosaveConfig, readPendingDeltaMode } from "@athyper/api-contracts/edit-session";
 import { resolveLinesRenderer } from "@athyper/runtime-shared/renderer-registry";
 import {
   entityRowToPickerOption,
@@ -1172,22 +1193,57 @@ function DocumentFieldsPanel({
 
 // ── Inline title editor ───────────────────────────────────────────────────────
 
+const LOCKED_REASON_LABEL: Record<string, string> = {
+  status_locked:     "Locked in current status",
+  permission_locked: "Locked by permissions",
+  pii_masked:        "Masked PII",
+  readonly:          "Read-only field",
+  computed:          "Computed value",
+  system:            "System-managed",
+};
+
 function DocumentEditableFieldsPanel({
   entity,
   data,
   fieldErrors,
   onFieldChange,
+  fieldMask,
 }: {
   entity: CompiledEntity;
   data: Record<string, unknown>;
   fieldErrors: Record<string, string>;
   onFieldChange: (name: string, value: unknown) => void;
+  /**
+   * Phase 12 #1: server-truthed field mask from `useDocumentEditSession`.
+   * When provided, the mask drives BOTH which fields render AND whether
+   * each is editable. Fields present in the mask render; absent fields
+   * are filtered out. Locked entries (`mask[name].editable === false`)
+   * render the field in view mode with a Lock indicator + reason.
+   *
+   * When undefined (classic mode), the local `isDocumentEditableField()`
+   * filter selects rendered fields and all of them are editable. This
+   * preserves backward compat with classic-tabs pages that have no
+   * Edit Session backing.
+   */
+  fieldMask?: FieldMask;
 }) {
   const skipFields = documentEditSkipFields(entity);
+  // Phase 12 #1: when a server-truthed `fieldMask` is provided, it is the
+  // single source of truth for which fields appear in the editable panel.
+  // The mask is exhaustive (server emits an entry per visible-and-editable-
+  // OR-lockable field), so trusting it eliminates client/server drift —
+  // fields the server says exist must render, fields it omits must not.
+  // The local `isDocumentEditableField` filter remains the fallback for
+  // classic-mode renders where no mask is present.
+  const useMaskAsTruth = fieldMask !== undefined;
   const grouped = buildDocumentFieldGroups(
     entity,
     entity.fields
-      .filter((field) => isDocumentEditableField(field, skipFields))
+      .filter((field) =>
+        useMaskAsTruth
+          ? field.name in fieldMask
+          : isDocumentEditableField(field, skipFields),
+      )
       .filter((f) => {
         const rule = fieldDynamicVisibleWhen(f);
         if (!rule) return true;
@@ -1221,24 +1277,45 @@ function DocumentEditableFieldsPanel({
                 const effectiveUiType = field.ui_type ?? field.data_type;
                 const embedsLabel = BOOLEAN_UI_TYPES.has(effectiveUiType);
                 const isFullWidth = BOOLEAN_FULL_WIDTH_UI_TYPES.has(effectiveUiType);
+                // Phase 12 #1: server-truthed mask. When the mask is present
+                // (object-page mode), the field is guaranteed to have an
+                // entry — the outer filter only renders fields in mask. The
+                // optional chain handles the classic-mode fallback where
+                // no mask exists; missing entries default to editable.
+                const maskEntry = fieldMask?.[field.name];
+                const isLocked = maskEntry ? !maskEntry.editable : false;
+                const lockReason = isLocked && maskEntry?.reason
+                  ? (maskEntry.message ?? LOCKED_REASON_LABEL[maskEntry.reason] ?? "Locked")
+                  : undefined;
                 return (
                   <div key={field.name} className={isFullWidth ? "space-y-1.5 md:col-span-2 lg:col-span-3" : "space-y-1.5"}>
                     {!embedsLabel && (
-                      <DocumentFieldLabel
-                        field={field}
-                        required={field.is_required}
-                        className="text-xs font-medium text-muted-foreground leading-normal"
-                      />
+                      <div className="flex items-center gap-1.5">
+                        <DocumentFieldLabel
+                          field={field}
+                          required={field.is_required}
+                          className="text-xs font-medium text-muted-foreground leading-normal"
+                        />
+                        {isLocked && (
+                          <Lock
+                            className="size-3 shrink-0 text-muted-foreground/60"
+                            aria-label={lockReason ?? "Locked"}
+                          />
+                        )}
+                      </div>
                     )}
                     <Renderer
                       value={value}
                       field={field}
-                      mode="edit"
+                      mode={isLocked ? "view" : "edit"}
                       formData={data}
                       onChange={(v) => onFieldChange(field.name, v)}
                       error={error}
                     />
-                    {error && <p className="text-xs text-destructive">{error}</p>}
+                    {isLocked && lockReason && (
+                      <p className="text-xs italic text-muted-foreground/80">{lockReason}</p>
+                    )}
+                    {error && !isLocked && <p className="text-xs text-destructive">{error}</p>}
                   </div>
                 );
               })}
@@ -1356,6 +1433,226 @@ export function DocumentDetailPage({
   );
   const hasLinesSection = linesRenderer !== null;
 
+  // Object-page layout opt-in via metadata. Default remains classic tabs.
+  // Set display_config.document_layout = "object_page" per entity to enable.
+  const documentLayout =
+    (entity.display_config as Record<string, unknown>)["document_layout"] === "object_page"
+      ? "object_page"
+      : "tabs";
+  const isObjectPage = documentLayout === "object_page";
+
+  // ── Document sections + object-page wiring ────────────────────────────────
+  // Section IDs keep the `__` prefix for backwards-compatible EntityHeader
+  // activeTab wiring; `hash` is the clean URL fragment users see in
+  // object-page mode (e.g. `#accounting` not `#__distributions`).
+  // Declared early so the lazy loader can gate downstream queries.
+  type SectionKind =
+    | "overview" | "lines" | "distributions"
+    | "versions" | "tasks" | "watchers"
+    | "rules" | "integrations" | "quality" | "reports";
+
+  const sections: DocumentSectionDescriptor<SectionKind>[] = [
+    { id: "__overview", label: "Overview", kind: "overview", loadPolicy: "eager", hash: "overview" },
+    ...(hasLinesSection                        ? [{ id: "__lines",         label: "Items",        kind: "lines"         as SectionKind, loadPolicy: "nearViewport" as const, hash: "lines"         }] : []),
+    ...(resolvedTabs.includes("distributions") ? [{ id: "__distributions", label: "Accounting",   kind: "distributions" as SectionKind, loadPolicy: "nearViewport" as const, hash: "accounting"    }] : []),
+    ...(resolvedTabs.includes("versions")      ? [{ id: "__versions",      label: "Versions",     kind: "versions"      as SectionKind, loadPolicy: "onDemand"     as const, hash: "versions"      }] : []),
+    ...(resolvedTabs.includes("tasks")         ? [{ id: "__tasks",         label: "Tasks",        kind: "tasks"         as SectionKind, loadPolicy: "onDemand"     as const, hash: "tasks"         }] : []),
+    ...(resolvedTabs.includes("watchers")      ? [{ id: "__watchers",      label: "Watchers",     kind: "watchers"      as SectionKind, loadPolicy: "onDemand"     as const, hash: "watchers"      }] : []),
+    ...(resolvedTabs.includes("rules")         ? [{ id: "__rules",         label: "Rules",        kind: "rules"         as SectionKind, loadPolicy: "onDemand"     as const, hash: "rules"         }] : []),
+    ...(resolvedTabs.includes("integrations")  ? [{ id: "__integrations",  label: "Integrations", kind: "integrations"  as SectionKind, loadPolicy: "onDemand"     as const, hash: "integrations"  }] : []),
+    ...(resolvedTabs.includes("quality")       ? [{ id: "__quality",       label: "Quality",      kind: "quality"       as SectionKind, loadPolicy: "onDemand"     as const, hash: "quality"       }] : []),
+    ...(resolvedTabs.includes("reports")       ? [{ id: "__reports",       label: "Reports",      kind: "reports"       as SectionKind, loadPolicy: "onDemand"     as const, hash: "reports"       }] : []),
+  ];
+
+  const tabs = sections.map((s) => ({ id: s.id, label: s.label }));
+  const sectionIds = sections.map((s) => s.id);
+
+  // Hash mapping for object-page mode. The controller is invoked unconditionally
+  // (React hook rules); in classic-tabs mode it's a no-op (sectionIds: []).
+  const sectionsKey = sections.map((s) => `${s.id}|${s.hash ?? ""}`).join(",");
+  const sectionByHash = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of sections) m.set(s.hash ?? s.id, s.id);
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sectionsKey]);
+  const sectionById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of sections) m.set(s.id, s.hash ?? s.id);
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sectionsKey]);
+
+  const pageController = useDocumentPageController({
+    sectionIds: isObjectPage ? sectionIds : [],
+    hashFor: (id) => sectionById.get(id) ?? id,
+    idForHash: (hash) => sectionByHash.get(hash) ?? null,
+  });
+
+  // Pin the header once the shell's scroll container has been scrolled past
+  // a small threshold. Only relevant in object-page mode — classic-tabs mode
+  // doesn't need a sticky strip because the body re-renders per tab click.
+  // Threshold approximates the height of the expanded header chrome so the
+  // expanded → pinned transition lands as the chrome leaves the viewport.
+  const isHeaderPinnedByScroll = usePinOnScroll({ threshold: 96 });
+  const headerMode = isObjectPage && isHeaderPinnedByScroll ? "pinned" : "expanded";
+
+  // Lazy loader gates the lines/distributions/etc queries on section visibility
+  // in object-page mode. In classic-tabs mode shouldLoad always returns true.
+  const lazy = useLazyDocumentSections({
+    sections,
+    enabled: isObjectPage,
+    initialLoadedIds: isObjectPage && pageController.activeSectionId
+      ? [pageController.activeSectionId]
+      : [],
+  });
+
+  const [classicActiveTab, setClassicActiveTab] = useState(tabs[0]?.id ?? "");
+  const activeTab = isObjectPage ? pageController.activeSectionId : classicActiveTab;
+  const setActiveTab = (id: string) => {
+    if (isObjectPage) {
+      lazy.markLoaded(id);
+      pageController.scrollToSection(id, "tabClick");
+    } else {
+      setClassicActiveTab(id);
+    }
+  };
+
+  const registerSectionRef = useMemo(
+    () => composeRegisterSectionRef(pageController.registerSectionRef, lazy.register),
+    [pageController.registerSectionRef, lazy.register],
+  );
+
+  // Pending-jump trigger: set true when save fails with validation errors
+  // so the effect can scroll to the first error section once dirtyMap re-renders
+  // with the fresh errors. One-shot — cleared inside the effect.
+  const [pendingJumpToError, setPendingJumpToError] = useState(false);
+
+  // ── Edit Session (Phase 4a) ──────────────────────────────────────────────
+  // Server-truthed Edit Mode for object-page DOCUMENT pages. Routes to:
+  //   GET   /api/relay/api/records/:entity/:id/edit-context
+  //   PATCH /api/relay/api/records/:entity/:id/edit-session  (If-Match: etag)
+  //
+  // Phase 4a wires the hook with functional fetch callbacks but does NOT
+  // yet replace the existing `?mode=edit` URL flow. Phase 4b activates the
+  // hook via DocumentActionBar's Edit/Save/Discard actions and retires the
+  // URL-driven edit mode for object-page entities.
+  // Phase 10 #3: per-entity autosave config from display_config.autosave.
+  // When enabled, edits debounce-trigger a save() via the editSession's
+  // internal timer. Disabled (the default) preserves the explicit-Save UX.
+  const autosaveConfig = readAutosaveConfig(entity.display_config as Record<string, unknown>);
+
+  // Phase 10 #4: per-entity pending-delta preview mode from
+  // display_config.pending_delta. "off" by default (safe for AP).
+  const pendingDeltaMode = readPendingDeltaMode(entity.display_config as Record<string, unknown>);
+
+  const editSession = useDocumentEditSession({
+    enabled: isObjectPage,
+    autosave: isObjectPage ? autosaveConfig : undefined,
+    loadContext: async (): Promise<DocumentEditContext> => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/edit-context`,
+        { method: "GET" },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+        const message = typeof body["message"] === "string" ? body["message"] : `edit-context ${res.status}`;
+        throw new Error(message);
+      }
+      return res.json() as Promise<DocumentEditContext>;
+    },
+    saveChanges: async (body: EditSessionPatchBody, etag: string) => {
+      const res = await fetch(
+        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/edit-session`,
+        {
+          method:  "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "If-Match":     etag,
+            "X-CSRF-Token": getCsrfToken(),
+          },
+          body: JSON.stringify(body),
+        },
+      );
+
+      if (res.ok) {
+        const response = await res.json() as import("@athyper/api-contracts/edit-session").EditSessionPatchResponse;
+        return { type: "ok" as const, response };
+      }
+
+      if (res.status === 409) {
+        const errBody = await res.json().catch(() => ({})) as Record<string, unknown>;
+        return {
+          type: "conflict" as const,
+          currentEtag: typeof errBody["currentEtag"] === "string" ? errBody["currentEtag"] : undefined,
+          message: typeof errBody["message"] === "string" ? errBody["message"] : undefined,
+        };
+      }
+
+      if (res.status === 422 || res.status === 400) {
+        const errBody = await res.json().catch(() => ({})) as Record<string, unknown>;
+        const fieldErrors = fieldErrorsFromApiErrorBody(errBody);
+        if (Object.keys(fieldErrors).length > 0) {
+          return {
+            type: "validation" as const,
+            message: typeof errBody["message"] === "string" ? errBody["message"] : undefined,
+            fieldErrors,
+          };
+        }
+      }
+
+      const errBody = await res.json().catch(() => ({})) as Record<string, unknown>;
+      const message = typeof errBody["message"] === "string"
+        ? errBody["message"]
+        : `edit-session ${res.status}`;
+      return { type: "error" as const, message };
+    },
+  });
+  // ── Dirty / error map (Phase 5) ───────────────────────────────────────────
+  // Partitions editSession.pendingHeaderPatch + .fieldErrors by section so the
+  // tab strip can render per-section dirty dots / error badges and so save
+  // validation failures can jump-to-error via the scroll-intent arbiter.
+  //
+  // Phase 5 has header fields only; all default to __overview. When line-level
+  // editing lands (Phase 6), provide a fieldToSection callback that routes
+  // `lines.<lineId>.<field>` patches to __lines.
+  // Field-name → section ID. Phase 6 routes `line:<id>:<field>` errors to the
+  // Items tab so per-line validation failures badge the right tab. All other
+  // names default to the first section (typically __overview).
+  const dirtyMapFieldToSection = useCallback((fieldName: string): string | null => {
+    if (fieldName.startsWith("line:")) return "__lines";
+    return sections[0]?.id ?? null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections[0]?.id]);
+
+  const dirtyMap = useDocumentDirtyMap({
+    sections,
+    fieldToSection: dirtyMapFieldToSection,
+    pendingPatch: editSession.pendingHeaderPatch,
+    fieldErrors: editSession.fieldErrors,
+  });
+
+  // One-shot jump-to-first-error after a failed save. Runs once dirtyMap has
+  // re-rendered with the fresh fieldErrors.
+  useEffect(() => {
+    if (!pendingJumpToError) return;
+    setPendingJumpToError(false);
+    if (!isObjectPage) return;
+    if (!dirtyMap.firstErrorSectionId) return;
+    pageController.scrollToSection(dirtyMap.firstErrorSectionId, "jumpToError");
+  }, [pendingJumpToError, isObjectPage, dirtyMap.firstErrorSectionId, pageController]);
+
+  // editSession is now active in object-page mode. Activation map:
+  //   - DocumentActionBar Edit     → editSession.enterEdit()      (no URL navigation)
+  //   - DocumentActionBar Save     → editSession.save()           (uses /edit-session, If-Match etag)
+  //   - DocumentActionBar Discard  → editSession.discard() + editSession.exitEdit({ discardDirty: true })
+  //   - effectiveEditMode          → editSession.isEditing        (when isObjectPage)
+  //   - Header chip                → editSession.saveStatus       (saving / saved / saveFailed / conflict)
+  //   - DocumentEditableFieldsPanel uses editSession.fieldMask as the source
+  //     of truth for which fields render AND whether each is editable
+  //     (Phase 12 #1). The local `isDocumentEditableField` filter is the
+  //     classic-mode fallback only.
+
   const opDispatch = useOperationDispatch({
     entityCode: entity.entity_code,
     recordId,
@@ -1379,7 +1676,24 @@ export function DocumentDetailPage({
       );
     })
   );
-  const effectiveEditMode = editMode && canEditDraft;
+  // effectiveEditMode source: editSession in object-page mode, URL in classic.
+  // canEditDraft remains the client-side affordance gate (controls whether
+  // the Edit button appears at all). isObjectPage skips canEditDraft because
+  // the server's edit-context endpoint enforces canUpdate directly.
+  const effectiveEditMode = isObjectPage
+    ? editSession.isEditing
+    : (editMode && canEditDraft);
+
+  // Backward-compat: when a user lands on `?mode=edit` URL for an object-page
+  // entity (e.g. from an old bookmark or external link), auto-enter the
+  // editSession. The URL is accepted but no longer emitted by handleHeaderAction.
+  useEffect(() => {
+    if (!isObjectPage) return;
+    if (!editMode || !canEditDraft) return;
+    if (editSession.isEditing || editSession.isLoadingContext) return;
+    void editSession.enterEdit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isObjectPage, editMode, canEditDraft, editSession.isEditing, editSession.isLoadingContext]);
 
   const [editBaseline, setEditBaseline] = useState<Record<string, unknown>>(data);
   const [editFormData, setEditFormData] = useState<Record<string, unknown>>(data);
@@ -1389,11 +1703,14 @@ export function DocumentDetailPage({
   const [submittingDraft, setSubmittingDraft] = useState(false);
 
   useEffect(() => {
+    // Classic-mode edit buffer reset. In object-page mode the editSession
+    // owns the buffer; resetting editFormData would clobber pending edits.
+    if (isObjectPage) return;
     setEditBaseline(data);
     setEditFormData(data);
     setFieldErrors({});
     setSaveError(null);
-  }, [data]);
+  }, [data, isObjectPage]);
 
   const editableFieldNames = useMemo(
     () => {
@@ -1405,7 +1722,7 @@ export function DocumentDetailPage({
     [entity],
   );
 
-  const editPatch = useMemo(() => {
+  const classicEditPatch = useMemo(() => {
     const patch: Record<string, unknown> = {};
     for (const fieldName of editableFieldNames) {
       if (!valuesEqual(editFormData[fieldName], editBaseline[fieldName])) {
@@ -1415,10 +1732,22 @@ export function DocumentDetailPage({
     return patch;
   }, [editFormData, editBaseline, editableFieldNames]);
 
-  const isDirty = Object.keys(editPatch).length > 0;
-  const displayData = effectiveEditMode ? { ...data, ...editFormData } : data;
+  // In object-page mode, editSession owns dirty state, validation errors, and
+  // the pending-patch buffer. In classic mode, the local editFormData /
+  // classicEditPatch / fieldErrors maintain the existing behavior.
+  const editPatch = isObjectPage ? editSession.pendingHeaderPatch : classicEditPatch;
+  const isDirty = isObjectPage ? editSession.isDirty : Object.keys(classicEditPatch).length > 0;
+  const activeFieldErrors = isObjectPage ? editSession.fieldErrors : fieldErrors;
+  const activeSaveError = isObjectPage ? editSession.saveError : saveError;
+  const pendingHeaderValues = isObjectPage ? editSession.pendingHeaderPatch : editFormData;
+  const displayData = effectiveEditMode
+    ? (isObjectPage ? { ...data, ...editSession.pendingHeaderPatch } : { ...data, ...editFormData })
+    : data;
   const headerLineAggregates = useMemo(() => lineAggregateConfigs(entity), [entity]);
 
+  // In object-page mode, gate the lines fetch on the lines section being
+  // within prefetch range. Classic mode keeps the original eager behavior.
+  const linesShouldLoad = !isObjectPage || lazy.shouldLoad("__lines");
   const linesQuery = useQuery<{ data: DocumentLine[] }>({
     queryKey: ["record-lines", entity.entity_code, subResourceRecordId],
     queryFn: async ({ signal }) => {
@@ -1429,7 +1758,7 @@ export function DocumentDetailPage({
       if (!res.ok) throw new Error(`lines ${res.status}`);
       return res.json() as Promise<{ data: DocumentLine[] }>;
     },
-    enabled: hasLinesSection,
+    enabled: hasLinesSection && linesShouldLoad,
     staleTime: 60_000,
     retry: 3,
     retryDelay: 1000,
@@ -1460,6 +1789,51 @@ export function DocumentDetailPage({
   const currencyMinorUnits = currencyMeta?.minor_units ?? null;
 
   const orchestrator = buildOrchestratorFromRecord(entity, headerDisplayData, operations ?? [], statusNorm);
+
+  // Phase 10 #4: pending preview deltas for the amount summary card.
+  // Returns {} when mode === "off" (default) — the card renders unchanged.
+  // Declared here because orchestrator + linesQuery are now in scope.
+  const pendingDeltas = useAmountDelta({
+    amountBreakdown:     orchestrator.amountBreakdown,
+    lines:               linesQuery.data?.data ?? [],
+    pendingLineCreates:  editSession.pendingLineCreates,
+    pendingLineUpdates:  editSession.pendingLineUpdates,
+    pendingLineDeletes:  editSession.pendingLineDeletes,
+    mode:                pendingDeltaMode,
+  });
+
+  // Phase 11 #2: live recovery on status-changed-by-another-user. Opens
+  // an SSE stream while editing; on a `record.statusChanged` event whose
+  // etag differs from ours, sets `streamConflict` to trigger a banner.
+  // The banner offers Reload (re-enter edit with fresh context) or
+  // Discard (exit cleanly).
+  const [streamConflict, setStreamConflict] = useState<{
+    newStatus?: string;
+    serverEtag?: string;
+    actorId?:   string;
+  } | null>(null);
+  useDocumentChangeStream({
+    url:     `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/stream`,
+    enabled: isObjectPage && editSession.isEditing && !!editSession.etag,
+    onEvent: (event: DocumentChangeEvent) => {
+      if (event.type === "record.statusChanged" && event.data.etag) {
+        if (event.data.etag !== editSession.etag) {
+          // Phase 12 #2: park autosave for the duration of the recovery
+          // dialog so a queued save doesn't fire mid-resolution and race
+          // the user's button click into a reactive 409.
+          editSession.pauseAutosave();
+          setStreamConflict({
+            newStatus:  event.data.newStatus,
+            serverEtag: event.data.etag,
+            actorId:    event.data.actorId,
+          });
+        }
+      } else if (event.type === "record.deleted") {
+        editSession.pauseAutosave();
+        setStreamConflict({ actorId: event.data.actorId });
+      }
+    },
+  });
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -1616,18 +1990,6 @@ export function DocumentDetailPage({
   }, [refFields, refQueries, partyId, resolvedPartyName, companyCodeId, resolvedCompanyCode]);
 
   const hasAmountBreakdown = orchestrator.amountBreakdown.length > 0;
-  const tabs = [
-    { id: "__overview", label: "Overview" },
-    ...(hasLinesSection                         ? [{ id: "__lines",         label: "Items" }]         : []),
-    ...(resolvedTabs.includes("distributions") ? [{ id: "__distributions", label: "Accounting" }]    : []),
-    ...(resolvedTabs.includes("versions")      ? [{ id: "__versions",      label: "Versions" }]      : []),
-    ...(resolvedTabs.includes("tasks")         ? [{ id: "__tasks",         label: "Tasks" }]         : []),
-    ...(resolvedTabs.includes("watchers")      ? [{ id: "__watchers",      label: "Watchers" }]      : []),
-    ...(resolvedTabs.includes("rules")         ? [{ id: "__rules",         label: "Rules" }]         : []),
-    ...(resolvedTabs.includes("integrations")  ? [{ id: "__integrations",  label: "Integrations" }]  : []),
-    ...(resolvedTabs.includes("quality")       ? [{ id: "__quality",       label: "Quality" }]       : []),
-    ...(resolvedTabs.includes("reports")       ? [{ id: "__reports",       label: "Reports" }]       : []),
-  ];
 
   const headerModelBase = buildDocumentHeaderModel(entity, headerDisplayData, {
     statusDimensions:    orchestrator.statusDimensions ?? [],
@@ -1640,12 +2002,38 @@ export function DocumentDetailPage({
   });
 
   const headerModel = useMemo(() => {
-    const busy = savingDraft || submittingDraft || opDispatch.isSubmitting;
+    const sessionSaving = isObjectPage && editSession.saveStatus === "saving";
+    const busy = savingDraft || submittingDraft || opDispatch.isSubmitting || sessionSaving;
     const model = {
       ...headerModelBase,
       identity: { ...headerModelBase.identity },
       actions:  dedupeDocumentHeaderActions(headerModelBase.actions),
     };
+
+    // Phase 5/6 tab badges: dirty dot / error pill per section, only when in
+    // object-page edit mode. Classic-tabs tabs render without edit-state
+    // indicators (kept identical to pre-Phase-5 behavior).
+    //
+    // Phase 5 covers header-field dirty/errors via dirtyMap. Phase 6 adds
+    // line-bundle dirty signaling onto the Items tab (`__lines`) — any
+    // pending line create/update/delete shows as a dirty dot there. Per-line
+    // validation errors are reported via standard fieldErrors keyed
+    // `line:<id>:<field>` which dirtyMap routes through fieldToSection.
+    if (isObjectPage && editSession.isEditing && model.tabs) {
+      const linesDirty = editSession.linesDirtyCount > 0;
+      model.tabs = model.tabs.map((tab) => {
+        if (dirtyMap.errorSectionIds.has(tab.id)) {
+          return { ...tab, badge: { type: "error" as const, count: dirtyMap.errorCountBySection[tab.id] } };
+        }
+        if (dirtyMap.dirtySectionIds.has(tab.id)) {
+          return { ...tab, badge: { type: "dirty" as const } };
+        }
+        if (tab.id === "__lines" && linesDirty) {
+          return { ...tab, badge: { type: "dirty" as const } };
+        }
+        return tab;
+      });
+    }
 
     const hasEdit = model.actions.some((action) => documentHeaderActionKey(action) === "edit");
     if (!effectiveEditMode && canEditDraft && !hasEdit) {
@@ -1671,11 +2059,37 @@ export function DocumentDetailPage({
               }
             : undefined
         );
-      if (isDirty) {
-        model.identity.status = {
-          label:  "Unsaved changes",
-          intent: "warning" as const,
-        };
+      // Edit-mode chip. Object-page mode: editSession.saveStatus dominates
+      // (saving / saved / saveFailed / conflict / unsaved). Classic mode:
+      // dirty-only chip, identical to pre-Phase-4 behavior.
+      //
+      // Phase 10 #3: when autosave is enabled, chip labels signal the
+      // autosave loop so users understand changes commit on their own.
+      if (isObjectPage) {
+        const autosaveOn = Boolean(autosaveConfig.enabled);
+        switch (editSession.saveStatus) {
+          case "saving":
+            model.identity.status = { label: autosaveOn ? "Auto-saving…" : "Saving…", intent: "info" as const };
+            break;
+          case "saved":
+            model.identity.status = { label: "Saved",       intent: "success" as const };
+            break;
+          case "saveFailed":
+            model.identity.status = { label: "Save failed", intent: "error"   as const };
+            break;
+          case "conflict":
+            model.identity.status = { label: "Conflict",    intent: "error"   as const };
+            break;
+          default:
+            if (isDirty) {
+              model.identity.status = {
+                label: autosaveOn ? "Unsaved · auto-saving…" : "Unsaved changes",
+                intent: "warning" as const,
+              };
+            }
+        }
+      } else if (isDirty) {
+        model.identity.status = { label: "Unsaved changes", intent: "warning" as const };
       }
       model.actions = [
         ...(isDirty
@@ -1685,7 +2099,7 @@ export function DocumentDetailPage({
               placement: "primary" as const,
               order:     1,
               disabled:  busy,
-              pending:   savingDraft,
+              pending:   savingDraft || sessionSaving,
               icon:      "save",
             }]
           : []),
@@ -1714,6 +2128,12 @@ export function DocumentDetailPage({
     effectiveEditMode,
     canEditDraft,
     isDirty,
+    isObjectPage,
+    editSession.isEditing,
+    editSession.saveStatus,
+    editSession.linesDirtyCount,
+    autosaveConfig.enabled,
+    dirtyMap,
     savingDraft,
     submittingDraft,
     opDispatch.isSubmitting,
@@ -1734,7 +2154,6 @@ export function DocumentDetailPage({
 
   const overviewRail = useRailState(headerModel.progress);
 
-  const [activeTab,   setActiveTab]   = useState(tabs[0]?.id ?? "");
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [panelCount,  setPanelCount]  = useState<number | null>(null);
 
@@ -1788,6 +2207,12 @@ export function DocumentDetailPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasPlatformComments, hasPlatformAttachments, resolvedTabs.join(","), commentsCount, commentsCountQuery.isPending, attachmentsCount, attachmentsCountQuery.isPending]);
 
+  // Distributions are needed when the user reaches either the lines OR the
+  // accounting section. Classic mode keeps original eager behavior; object-page
+  // mode gates on whichever of the two becomes loaded first.
+  const distShouldLoad = !isObjectPage
+    || lazy.shouldLoad("__distributions")
+    || lazy.shouldLoad("__lines");
   const distQuery = useQuery<{ data: AccountingDistribution[] }>({
     queryKey: ["record-distributions", entity.entity_code, subResourceRecordId],
     queryFn: async ({ signal }) => {
@@ -1798,7 +2223,7 @@ export function DocumentDetailPage({
       if (!res.ok) throw new Error(`distributions ${res.status}`);
       return res.json() as Promise<{ data: AccountingDistribution[] }>;
     },
-    enabled: hasLinesSection || resolvedTabs.includes("distributions"),
+    enabled: (hasLinesSection || resolvedTabs.includes("distributions")) && distShouldLoad,
     staleTime: 60_000,
     retry: 3,
     retryDelay: 1000,
@@ -1812,6 +2237,16 @@ export function DocumentDetailPage({
   }
 
   function handleDocumentFieldChange(name: string, value: unknown) {
+    if (isObjectPage) {
+      // editSession internally clears its fieldErrors entry for this field
+      // and resets saveStatus to idle. We mirror the cascading-rules clear
+      // for fields affected by this change so the UX matches classic.
+      editSession.setHeaderField(name, value);
+      for (const fieldName of validationFieldsAffectedByChange(entity.fields, name)) {
+        if (fieldName !== name) editSession.resetHeaderField(fieldName);
+      }
+      return;
+    }
     setEditFormData((prev) => ({ ...prev, [name]: value }));
     setFieldErrors((prev) => {
       if (Object.keys(prev).length === 0) return prev;
@@ -1825,6 +2260,10 @@ export function DocumentDetailPage({
   }
 
   function resetDraftChanges() {
+    if (isObjectPage) {
+      editSession.discard();
+      return;
+    }
     setEditFormData(editBaseline);
     setFieldErrors({});
     setSaveError(null);
@@ -1884,7 +2323,21 @@ export function DocumentDetailPage({
   }
 
   async function saveDraftChanges(): Promise<boolean> {
-    if (!isDirty) return true;
+    if (isObjectPage) {
+      // Object-page mode routes through editSession.save(), which uses the
+      // transactional /edit-session endpoint with If-Match. Triggered from
+      // handleHeaderAction; this function stays classic-only.
+      const ok = await editSession.save();
+      if (ok) {
+        await refreshRecordState();
+        // Phase 6: if the save included a lines bundle, the lines + distributions
+        // caches are now stale. onLinesRefresh invalidates all the line-adjacent
+        // query keys. Cheap to call unconditionally.
+        onLinesRefresh();
+      }
+      return ok;
+    }
+    if (Object.keys(classicEditPatch).length === 0) return true;
     if (!validateDraftChanges()) return false;
 
     setSavingDraft(true);
@@ -1895,7 +2348,7 @@ export function DocumentDetailPage({
         {
           method:  "PATCH",
           headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-          body:    JSON.stringify({ data: editPatch }),
+          body:    JSON.stringify({ data: classicEditPatch }),
         },
       );
       if (!res.ok) {
@@ -1913,7 +2366,7 @@ export function DocumentDetailPage({
         return false;
       }
 
-      const savedData = { ...editBaseline, ...editPatch };
+      const savedData = { ...editBaseline, ...classicEditPatch };
       setEditBaseline(savedData);
       setEditFormData(savedData);
       if (titleField && typeof savedData[titleField] === "string") {
@@ -1987,6 +2440,12 @@ export function DocumentDetailPage({
     setActiveTab(tabId);
   }
 
+  // Cross-section navigation (e.g. AccountingReadinessPanel → Lines).
+  // In object-page mode this scrolls; in classic mode it switches tabs.
+  function navigateToSection(sectionId: string) {
+    setActiveTab(sectionId);
+  }
+
   function findOperation(action: string): EntityOperation | undefined {
     const candidates = action === "edit" ? ["edit", "update"] : [action];
     return (operations ?? []).find((op) => candidates.includes(op.permission_code));
@@ -1996,12 +2455,25 @@ export function DocumentDetailPage({
     if (effectiveEditMode) {
       if (action === "__document_save") {
         const saved = await saveDraftChanges();
-        if (saved) {
+        if (!saved) {
+          // Save failed — fire the one-shot jump-to-error effect once
+          // dirtyMap re-renders with the new validation errors.
+          if (isObjectPage) setPendingJumpToError(true);
+          return;
+        }
+        // Object-page: stay on the page so the user can continue editing
+        // (Saved chip flashes briefly). Classic: navigate back to view URL.
+        if (!isObjectPage) {
           router.push(appEntityDetailHref(entity.entity_code, recordId));
         }
         return;
       }
       if (action === "__document_discard" || action === "__document_exit") {
+        if (isObjectPage) {
+          editSession.discard();
+          editSession.exitEdit({ discardDirty: true });
+          return;
+        }
         resetDraftChanges();
         router.push(appEntityDetailHref(entity.entity_code, recordId));
         return;
@@ -2009,9 +2481,12 @@ export function DocumentDetailPage({
       if (action === "submit") {
         const saved = await saveDraftChanges();
         if (!saved) return;
+        // Object-page mode: exit edit before dispatching submit so the
+        // post-submit view (read-mode chrome) renders correctly.
+        if (isObjectPage) editSession.exitEdit({ discardDirty: false });
         const handled = await runConfiguredDocumentAction(action);
         if (handled !== null) {
-          if (handled) router.push(appEntityDetailHref(entity.entity_code, recordId));
+          if (handled && !isObjectPage) router.push(appEntityDetailHref(entity.entity_code, recordId));
           return;
         }
         await opDispatch.dispatch(action, operations ?? []);
@@ -2028,6 +2503,12 @@ export function DocumentDetailPage({
     }
 
     if (action === "edit" || action === "update") {
+      if (isObjectPage) {
+        // In-place enter Edit Mode — no URL navigation. editSession loads
+        // the server-truthed mask + etag before flipping isEditing.
+        await editSession.enterEdit();
+        return;
+      }
       router.push(appEntityDetailHref(entity.entity_code, recordId, undefined, "mode=edit"));
       return;
     }
@@ -2043,9 +2524,168 @@ export function DocumentDetailPage({
     await opDispatch.dispatch(action, operations ?? []);
   }
 
+  // Single-source section content renderer. Used by classic-tabs mode (one
+  // panel mounted per active tab) AND object-page mode (all panels mounted
+  // as section shells). Layout never changes content.
+  //
+  // In object-page mode, unloaded sections render a height-stable skeleton
+  // so scrollspy bands and section anchors stay aligned during lazy loading.
+  function renderForId(id: string): ReactNode {
+    if (isObjectPage && !lazy.shouldLoad(id)) {
+      return <DocumentSectionSkeleton />;
+    }
+    if (id === "__overview") {
+      return (
+        <div className="space-y-5">
+          {(headerModel.progress || (headerModel.statuses?.length ?? 0) > 0) && (
+            <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+              <EntityProgressRow
+                progress={headerModel.progress}
+                statuses={headerModel.statuses}
+                railExpanded={overviewRail.expanded}
+                onToggleRail={overviewRail.toggle}
+                className="border-t-0"
+              />
+            </div>
+          )}
+          {hasAmountBreakdown && (
+            <AmountSummaryCard
+              lines={orchestrator.amountBreakdown}
+              pendingDeltas={isObjectPage && editSession.isEditing ? pendingDeltas : undefined}
+            />
+          )}
+          {effectiveEditMode ? (
+            <>
+              {activeSaveError && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {activeSaveError}
+                </div>
+              )}
+              <DocumentEditableFieldsPanel
+                entity={entity}
+                data={isObjectPage ? { ...data, ...pendingHeaderValues } : editFormData}
+                fieldErrors={activeFieldErrors}
+                onFieldChange={handleDocumentFieldChange}
+                fieldMask={isObjectPage ? editSession.fieldMask : undefined}
+              />
+            </>
+          ) : (
+            <DocumentFieldsPanel entity={entity} data={data} resolvedRefs={resolvedRefs} />
+          )}
+        </div>
+      );
+    }
+    if (id === "__lines" && linesRenderer) {
+      return (
+        <Card className="overflow-hidden">
+          <LinesPanel
+            entity={entity}
+            entityCode={entity.entity_code}
+            recordId={subResourceRecordId}
+            recordUuid={record.id}
+            companyCodeId={companyCodeId}
+            record={displayData}
+            lines={linesQuery.data?.data ?? []}
+            distributions={distQuery.data?.data ?? []}
+            isLoading={linesQuery.isLoading}
+            onRefresh={onLinesRefresh}
+            linesRenderer={linesRenderer}
+            hasAiClassification={Boolean(entity.feature_flags?.["has_ai_classification"])}
+            hasLineComposer={Boolean(entity.feature_flags?.["has_line_composer"])}
+            editMode={effectiveEditMode}
+            currencyMinorUnits={currencyMinorUnits}
+          />
+        </Card>
+      );
+    }
+    if (id === "__distributions") {
+      return (
+        <Card>
+          <CardContent className="pt-5">
+            <AccountingReadinessPanel
+              entityCode={entity.entity_code}
+              recordId={recordId}
+              record={displayData}
+              lines={linesQuery.data?.data ?? []}
+              distributions={distQuery.data?.data ?? []}
+              isLoading={linesQuery.isLoading || distQuery.isLoading}
+              currencyCode={normaliseCurrencyCode(displayData[entity.display_config.document_header?.currency_field ?? "currency_code"]) ?? undefined}
+              onOpenLines={hasLinesSection ? () => navigateToSection("__lines") : undefined}
+            />
+          </CardContent>
+        </Card>
+      );
+    }
+    if (id === "__versions") {
+      return (
+        <Card>
+          <CardContent className="pt-5">
+            <VersionsPanel entity={entity} entityCode={entity.entity_code} recordId={recordId} />
+          </CardContent>
+        </Card>
+      );
+    }
+    if (id === "__tasks") {
+      return (
+        <Card>
+          <CardContent className="pt-5">
+            <TasksPanel entityCode={entity.entity_code} recordId={recordId} />
+          </CardContent>
+        </Card>
+      );
+    }
+    if (id === "__watchers") {
+      return (
+        <Card>
+          <CardContent className="pt-5">
+            <WatchersPanel entityCode={entity.entity_code} recordId={recordId} />
+          </CardContent>
+        </Card>
+      );
+    }
+    if (id === "__rules") {
+      return (
+        <Card>
+          <CardContent className="pt-5">
+            <RulesPanel entityCode={entity.entity_code} recordId={recordId} />
+          </CardContent>
+        </Card>
+      );
+    }
+    if (id === "__integrations") {
+      return (
+        <Card>
+          <CardContent className="pt-5">
+            <IntegrationsPanel entityCode={entity.entity_code} recordId={recordId} />
+          </CardContent>
+        </Card>
+      );
+    }
+    if (id === "__quality") {
+      return (
+        <Card>
+          <CardContent className="pt-5">
+            <QualityPanel entityCode={entity.entity_code} recordId={recordId} />
+          </CardContent>
+        </Card>
+      );
+    }
+    if (id === "__reports") {
+      return (
+        <Card>
+          <CardContent className="pt-5">
+            <ReportsPanel entityCode={entity.entity_code} recordId={recordId} />
+          </CardContent>
+        </Card>
+      );
+    }
+    return null;
+  }
+
   return (
     <>
       <EntityHeader
+        mode={headerMode}
         model={{ ...headerModel, statuses: undefined, progress: undefined, facts: headerModel.facts?.filter((f) => f.xl) }}
         onBack={() => router.back()}
         editMode={effectiveEditMode}
@@ -2056,144 +2696,23 @@ export function DocumentDetailPage({
         onPlatformIconClick={(id) => setActivePanel((prev) => (prev === id ? null : id))}
         activePlatformIcon={activePanel ?? undefined}
       />
-      <ValidationBanner notices={orchestrator.validationNotices ?? []} />
-      <div className="flex flex-col gap-2.5">
-        {activeTab === "__overview" && (
-          <div className="space-y-5">
-            {(headerModel.progress || (headerModel.statuses?.length ?? 0) > 0) && (
-              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-                <EntityProgressRow
-                  progress={headerModel.progress}
-                  statuses={headerModel.statuses}
-                  railExpanded={overviewRail.expanded}
-                  onToggleRail={overviewRail.toggle}
-                  className="border-t-0"
-                />
-              </div>
-            )}
-            {hasAmountBreakdown && (
-              <AmountSummaryCard lines={orchestrator.amountBreakdown} />
-            )}
-            {effectiveEditMode ? (
-              <>
-                {saveError && (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                    {saveError}
-                  </div>
-                )}
-                <DocumentEditableFieldsPanel
-                  entity={entity}
-                  data={editFormData}
-                  fieldErrors={fieldErrors}
-                  onFieldChange={handleDocumentFieldChange}
-                />
-              </>
-            ) : (
-              <DocumentFieldsPanel
-                entity={entity}
-                data={data}
-                resolvedRefs={resolvedRefs}
-              />
-            )}
+      {isObjectPage ? (
+        <EditSessionProvider value={editSession.isEditing ? editSession : null}>
+          <DocumentObjectPage
+            sections={sections}
+            registerSectionRef={registerSectionRef}
+            renderSection={(s) => renderForId(s.id)}
+            chromeSlot={<ValidationBanner notices={orchestrator.validationNotices ?? []} />}
+          />
+        </EditSessionProvider>
+      ) : (
+        <>
+          <ValidationBanner notices={orchestrator.validationNotices ?? []} />
+          <div className="flex flex-col gap-2.5">
+            {activeTab ? renderForId(activeTab) : null}
           </div>
-        )}
-
-        {activeTab === "__lines" && linesRenderer && (
-          <Card className="overflow-hidden">
-            <LinesPanel
-              entity={entity}
-              entityCode={entity.entity_code}
-              recordId={subResourceRecordId}
-              recordUuid={record.id}
-              companyCodeId={companyCodeId}
-              record={displayData}
-              lines={linesQuery.data?.data ?? []}
-              distributions={distQuery.data?.data ?? []}
-              isLoading={linesQuery.isLoading}
-              onRefresh={onLinesRefresh}
-              linesRenderer={linesRenderer}
-              hasAiClassification={Boolean(entity.feature_flags?.["has_ai_classification"])}
-              hasLineComposer={Boolean(entity.feature_flags?.["has_line_composer"])}
-              editMode={effectiveEditMode}
-              currencyMinorUnits={currencyMinorUnits}
-            />
-          </Card>
-        )}
-
-        {activeTab === "__distributions" && (
-          <Card>
-            <CardContent className="pt-5">
-              <AccountingReadinessPanel
-                entityCode={entity.entity_code}
-                recordId={recordId}
-                record={displayData}
-                lines={linesQuery.data?.data ?? []}
-                distributions={distQuery.data?.data ?? []}
-                isLoading={linesQuery.isLoading || distQuery.isLoading}
-                currencyCode={normaliseCurrencyCode(displayData[entity.display_config.document_header?.currency_field ?? "currency_code"]) ?? undefined}
-                onOpenLines={hasLinesSection ? () => setActiveTab("__lines") : undefined}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "__versions" && (
-          <Card>
-            <CardContent className="pt-5">
-              <VersionsPanel entity={entity} entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "__tasks" && (
-          <Card>
-            <CardContent className="pt-5">
-              <TasksPanel entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "__watchers" && (
-          <Card>
-            <CardContent className="pt-5">
-              <WatchersPanel entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "__rules" && (
-          <Card>
-            <CardContent className="pt-5">
-              <RulesPanel entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "__integrations" && (
-          <Card>
-            <CardContent className="pt-5">
-              <IntegrationsPanel entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "__quality" && (
-          <Card>
-            <CardContent className="pt-5">
-              <QualityPanel entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "__reports" && (
-          <Card>
-            <CardContent className="pt-5">
-              <ReportsPanel entityCode={entity.entity_code} recordId={recordId} />
-            </CardContent>
-          </Card>
-        )}
-
-      </div>
+        </>
+      )}
 
       {/* Platform context panels — resizable context drawer, same as master entity */}
       <EntityContextDrawer
@@ -2265,6 +2784,114 @@ export function DocumentDetailPage({
           submitting={opDispatch.isSubmitting}
         />
       )}
+
+      {/* Edit Session conflict (412/409) — Phase 4b. Triggered when another
+          user wrote to the document between enterEdit and save. Reload
+          refetches and re-enters the session with the fresh etag; Discard
+          drops local changes and exits Edit Mode.
+
+          Phase 12 #2: suppress when the proactive SSE recovery dialog is
+          already open. SSE arrived first, so it owns the resolution flow;
+          a piggy-back 409 from an in-flight save would otherwise stack on
+          top of it. */}
+      <Dialog
+        open={isObjectPage && editSession.saveStatus === "conflict" && streamConflict === null}
+        onOpenChange={(open) => { if (!open) editSession.discard(); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Document changed on the server</DialogTitle>
+            <DialogDescription>
+              {editSession.saveError ?? "Another user updated this document while you were editing."}
+              {" "}
+              Reload to merge their changes, or discard yours and exit.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                editSession.discard();
+                editSession.exitEdit({ discardDirty: true });
+                void refreshRecordState();
+              }}
+            >
+              Discard my changes
+            </Button>
+            <Button
+              onClick={async () => {
+                editSession.discard();
+                editSession.exitEdit({ discardDirty: true });
+                await refreshRecordState();
+                await editSession.enterEdit();
+              }}
+            >
+              Reload &amp; keep editing
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Phase 11 #2: live recovery on status-changed-by-another-user.
+          Fires PROACTIVELY (before the user tries to save) via the SSE
+          stream. Distinct from the 409 conflict dialog above which fires
+          REACTIVELY on save failure. Both can theoretically race; the
+          first dialog to open wins (the user resolves it, then state
+          resets and the other dialog won't have anything to fire on). */}
+      <Dialog
+        open={isObjectPage && streamConflict !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            // Phase 12 #2: dismissing the dialog (via X / overlay) resumes
+            // autosave so the user keeps a working session. Discard / Reload
+            // buttons exit edit mode entirely, which clears the pause via
+            // exitEdit's own resume; this path is the only one that needs it.
+            editSession.resumeAutosave();
+            setStreamConflict(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {streamConflict?.newStatus
+                ? "This document was just updated"
+                : "This document was just deleted"}
+            </DialogTitle>
+            <DialogDescription>
+              {streamConflict?.newStatus
+                ? `Another user moved this document to "${streamConflict.newStatus}" while you were editing. Your unsaved changes are preserved — reload to merge their version, or discard yours and exit.`
+                : "Another user deleted this document. Your unsaved changes cannot be saved."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                editSession.discard();
+                editSession.exitEdit({ discardDirty: true });
+                setStreamConflict(null);
+                void refreshRecordState();
+              }}
+            >
+              Discard my changes
+            </Button>
+            {streamConflict?.newStatus && (
+              <Button
+                onClick={async () => {
+                  editSession.discard();
+                  editSession.exitEdit({ discardDirty: true });
+                  setStreamConflict(null);
+                  await refreshRecordState();
+                  await editSession.enterEdit();
+                }}
+              >
+                Reload &amp; keep editing
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </>
   );

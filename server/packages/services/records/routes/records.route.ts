@@ -54,11 +54,14 @@ import {
 import { resolveLineClassification } from "@athyper/svc-business";
 import {
   authorizeEntityMutation,
+  checkEntityMutationAuthorization,
   isEntityFieldWritable,
   resolveEntityWriteFieldRules,
   type EntityMutationTableInfo,
   type EntityWriteFieldRule,
+  type FieldNonWritableReason,
 } from "./entity-mutation-guard.js";
+import type { RedisClient } from "@athyper/adapter-memorycache";
 import {
   buildEntityListCountCacheKey,
   buildEntityListPageCacheKey,
@@ -159,6 +162,13 @@ export interface RecordsRouteDeps {
     warn(event: string, fields?: Record<string, unknown>): void;
   };
   cache?: CacheClient;
+  /**
+   * Phase 11 #2: optional ioredis client for record-level pub/sub. When
+   * present, status changes during edit publish to `record:<tenant>:<entity>:<id>`
+   * channels and the SSE endpoint subscribes. When absent the SSE endpoint
+   * still serves keepalive comments; clients can fall back to polling.
+   */
+  redis?: RedisClient;
 }
 
 // ── Entity table resolver ─────────────────────────────────────────────────────
@@ -353,6 +363,79 @@ function collectStatusLockedFields(
     }
   }
   return locked;
+}
+
+/**
+ * Maps server FieldNonWritableReason → client-side LockedFieldReason string.
+ *
+ * Kept in sync with the LockedFieldReason enum in
+ * packages/shared/api-contracts/src/schemas/edit-session.ts.
+ *
+ * Returns null for FIELD_NOT_REGISTERED — those fields are simply omitted
+ * from the mask rather than reported as locked, since the entity does not
+ * acknowledge them at all.
+ */
+type EditSessionLockedReason =
+  | "status_locked"
+  | "permission_locked"
+  | "pii_masked"
+  | "readonly"
+  | "computed"
+  | "system";
+
+function mapNonWritableReasonToLockedReason(
+  reason: FieldNonWritableReason,
+): EditSessionLockedReason | null {
+  switch (reason) {
+    case "FIELD_NOT_REGISTERED":  return null;
+    case "FIELD_READ_ONLY":       return "readonly";
+    case "FIELD_COMPUTED":        return "computed";
+    case "FIELD_WRITE_ONCE":      return "readonly";
+    case "FIELD_SYSTEM_MANAGED":  return "system";
+    case "FIELD_SYSTEM_ORIGIN":   return "system";
+    case "FIELD_NOT_EDITABLE":    return "readonly";
+    case "FIELD_LOCKED_BY_STATUS": return "status_locked";
+    default:                      return "readonly";
+  }
+}
+
+/**
+ * Builds the edit-context field + section mask for an entity at a given status.
+ *
+ * The mask is server-truthed: every field rule is evaluated against the
+ * current record status, and the result is returned as a plain object so
+ * the client can render Read vs Edit variants per field without re-deriving
+ * the gate logic.
+ */
+function buildEditContextMask(
+  writeRules: Map<string, EntityWriteFieldRule>,
+  recordStatus: string | null,
+): {
+  fieldMask: Record<string, { editable: boolean; reason?: EditSessionLockedReason; message?: string }>;
+  sectionMask: Record<string, { hasEditableFields: boolean; editableFieldCount: number }>;
+} {
+  const fieldMask: Record<string, { editable: boolean; reason?: EditSessionLockedReason }> = {};
+  let editableCount = 0;
+  for (const [fieldName, rule] of writeRules) {
+    const writability = isEntityFieldWritable(rule, "update", recordStatus);
+    if (writability.writable) {
+      fieldMask[fieldName] = { editable: true };
+      editableCount++;
+    } else {
+      const reason = mapNonWritableReasonToLockedReason(writability.reason);
+      if (reason === null) continue;
+      fieldMask[fieldName] = { editable: false, reason };
+    }
+  }
+  return {
+    fieldMask,
+    sectionMask: {
+      __overview: {
+        hasEditableFields: editableCount > 0,
+        editableFieldCount: editableCount,
+      },
+    },
+  };
 }
 
 function parseJsonPathColumn(columnName: string): { root: string; path: string[] } | null {
@@ -1000,7 +1083,29 @@ function parseCachedCount(value: string | null): number | null {
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Router {
-  const { db, auth, logger, cache } = deps;
+  const { db, auth, logger, cache, redis } = deps;
+
+  // ── Phase 11 #2: record-level pub/sub for the edit-during-status-change
+  // recovery flow. Channel format mirrors the collab activity SSE so a
+  // single Redis instance can host both topics without collision.
+  const recordChannel = (tenantId: string, entityCode: string, recordId: string): string =>
+    `record:${tenantId}:${entityCode}:${recordId}`;
+
+  /** PUBLISH a record event to all SSE subscribers of this record. Fire-and-forget. */
+  const publishRecordEvent = (
+    tenantId: string,
+    entityCode: string,
+    recordId: string,
+    eventType: "record.statusChanged" | "record.deleted",
+    data: Record<string, unknown>,
+    createdAt: string,
+  ): void => {
+    if (!redis) return;
+    const ch = recordChannel(tenantId, entityCode, recordId);
+    redis.publish(ch, JSON.stringify({ eventType, createdAt, data })).catch((err: unknown) => {
+      logger?.error("records_pubsub_publish_error", { err: String(err), entity: entityCode, recordId });
+    });
+  };
 
   function normalizeDefaultProcurementLineUom(value: string): string {
     const trimmed = value.trim();
@@ -1009,9 +1114,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     return trimmed.toUpperCase();
   }
 
-  async function resolveDefaultProcurementLineUom(tenantId: string | null): Promise<string> {
+  async function resolveDefaultProcurementLineUom(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    kysely: Kysely<any>,
+    tenantId: string | null,
+  ): Promise<string> {
     const snapshot = tenantId && cache
-      ? await resolveParameterSnapshot(db, cache, tenantId, "finance.ap").catch(() => null)
+      ? await resolveParameterSnapshot(kysely, cache, tenantId, "finance.ap").catch(() => null)
       : null;
     return normalizeDefaultProcurementLineUom(
       getStringParam(snapshot, DEFAULT_PROCUREMENT_LINE_UOM_PARAMETER_CODE, DEFAULT_PROCUREMENT_LINE_UOM_FALLBACK),
@@ -2154,7 +2263,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Resolve principal UUID (FK to master.principal). JIT-provisions on first use.
       const sub = requireJwtSubject(claims, res);
       if (!sub) return;
-      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm);
+      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
       mappedData.created_by = principalId;
 
       if (!await authorizeEntityMutation({
@@ -2579,7 +2688,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const sub = requireJwtSubject(claims, res);
       if (!sub) return;
-      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm);
+      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
 
       // ── Concurrency guard (lease_plus_version) ──────────────────────────────
       if (!await authorizeEntityMutation({
@@ -2714,6 +2823,659 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     }
   };
 
+  // ── GET /records/:entity/:id/stream — Phase 11 #2 SSE ─────────────────────────
+  // Streams record-level events (currently `record.statusChanged`) to clients
+  // that are actively editing this record. Subscribes to a per-record Redis
+  // channel; in environments without Redis the endpoint still accepts the
+  // connection and emits keepalive comments — clients can fall back to
+  // periodic /edit-context polling.
+  //
+  // Auth: bearer required + tenant resolution (same as every other records
+  // endpoint). Read access is implicit — anyone who can read the record
+  // can observe its status events.
+  const KEEPALIVE_MS = 15_000;
+
+  const recordStreamHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = req.params["entity"] as string;
+      const id = req.params["id"] as string;
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      const fieldMap = await resolveFieldMap(db, entityCode);
+      const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+      const physicalId = UUID_RE.test(id)
+        ? id
+        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId))?.id ?? "");
+      if (!physicalId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      // Capture current etag + status so the client can compare incoming
+      // events against the version it saw at connection time. Also serves
+      // as the first event so reconnect logic gets a known-good baseline.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const initialRow = await (db.selectFrom(fullTable) as any)
+        .select(["status", "row_version"])
+        .where("id", "=", physicalId)
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst() as { status?: string; row_version?: number } | undefined;
+      const initialEtag = String(initialRow?.row_version ?? 0);
+      const initialStatus = typeof initialRow?.status === "string" ? initialRow.status : "unknown";
+
+      // ── Redis subscription with 2s timeout fallback ──────────────────────
+      // Mirrors the collab activity SSE pattern: race subscribe() against
+      // a short timeout so a down Redis degrades to keepalive-only mode.
+      const channel = recordChannel(tenantId, entityCode, physicalId);
+      let subscriber: RedisClient | undefined;
+      let feedMode: "pubsub" | "keepalive-only" = "keepalive-only";
+
+      if (redis) {
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        try {
+          subscriber = redis.duplicate();
+          await Promise.race([
+            subscriber.subscribe(channel),
+            new Promise<never>((_, reject) => {
+              timeoutId = setTimeout(() => reject(new Error("pubsub_timeout")), 2_000);
+            }),
+          ]);
+          if (timeoutId) clearTimeout(timeoutId);
+          feedMode = "pubsub";
+        } catch (err) {
+          if (timeoutId) clearTimeout(timeoutId);
+          logger?.error("records_stream_subscribe_error", { err: String(err), entity: entityCode, recordId: physicalId });
+          try { subscriber?.disconnect(); } catch { /* ignore */ }
+          subscriber = undefined;
+        }
+      }
+
+      // ── SSE headers ──────────────────────────────────────────────────────
+      res.setHeader("Content-Type",      "text/event-stream");
+      res.setHeader("Cache-Control",     "no-cache, no-transform");
+      res.setHeader("Connection",        "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      res.setHeader("X-Feed-Mode",       feedMode);
+      res.flushHeaders();
+
+      const sendEvent = (event: string, data: unknown): void => {
+        try {
+          res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+        } catch (err) {
+          logger?.warn("records_stream_write_error", { err: String(err) });
+        }
+      };
+      const sendKeepalive = (): void => {
+        try { res.write(`:keepalive ${Date.now()}\n\n`); } catch { /* socket closed */ }
+      };
+
+      // Initial baseline event — lets the client compare incoming etag
+      // against the one it observed at connection time without an extra
+      // GET /edit-context round-trip.
+      sendEvent("record.connected", {
+        etag:   initialEtag,
+        status: initialStatus,
+      });
+
+      // Forward published events to this client.
+      if (subscriber) {
+        subscriber.on("message", (_channel: string, payload: string) => {
+          try {
+            const parsed = JSON.parse(payload) as { eventType: string; data: unknown };
+            sendEvent(parsed.eventType, parsed.data);
+          } catch (err) {
+            logger?.warn("records_stream_payload_parse_error", { err: String(err) });
+          }
+        });
+      }
+
+      const keepalive = setInterval(sendKeepalive, KEEPALIVE_MS);
+
+      req.on("close", () => {
+        clearInterval(keepalive);
+        try { subscriber?.disconnect(); } catch { /* ignore */ }
+      });
+    } catch (err) {
+      logger?.error("records_stream_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET edit-context ──────────────────────────────────────────────────────────
+  // Returns the server-truthed envelope a client needs to enter Edit Mode:
+  //   { recordId, entityCode, status, etag, canUpdate, fieldMask, sectionMask }
+  //
+  // The `etag` aliases the existing `row_version` numeric column so the
+  // document-level Edit Session reuses the same optimistic concurrency
+  // primitive as record-level PATCH. Sent back as `If-Match` on save.
+  //
+  // Phase 4 sets `canUpdate` based on whether the table is mutable and the
+  // session has a principal. A more granular RBAC preflight would require
+  // refactoring authorizeEntityMutation to return without writing to res;
+  // the actual edit-session PATCH still enforces full authorization.
+  const editContextHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = req.params["entity"] as string;
+      const id = req.params["id"] as string;
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      const sub = requireJwtSubject(claims, res);
+      if (!sub) return;
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
+
+      const fieldMap = await resolveFieldMap(db, entityCode);
+      const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+      const physicalId = UUID_RE.test(id)
+        ? id
+        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId))?.id ?? "");
+      if (!physicalId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = (await (db.selectFrom(fullTable) as any)
+        .select(["status", "row_version"])
+        .where("id", "=", physicalId)
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst()) as { status?: string; row_version?: number } | undefined;
+      if (!row) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId);
+      const etag = String(row.row_version ?? 0);
+
+      const writeRules = await resolveEntityWriteFieldRules(db, entityCode);
+      const { fieldMask, sectionMask } = buildEditContextMask(writeRules, recordStatus);
+
+      // Phase 7 (#5): full RBAC preflight via the same gate that PATCH /edit-session
+      // will run on save. Replaces the prior lightweight "is principal + table mutable"
+      // check. Now `canUpdate=false` reliably means Save would 403 — Edit button gets
+      // hidden client-side and the user never enters a mode they can't commit from.
+      const authOutcome = await checkEntityMutationAuthorization({
+        db,
+        table: toMutationTableInfo(table),
+        entityCode,
+        tenantId,
+        principalId,
+        action: "update",
+        recordId: physicalId,
+        logger,
+      });
+      const canUpdate = authOutcome.allowed;
+      const disabledReason = authOutcome.allowed ? undefined : authOutcome.message;
+
+      res.json({
+        recordId: physicalId,
+        entityCode,
+        status: recordStatus ?? row.status ?? "unknown",
+        etag,
+        canUpdate,
+        disabledReason,
+        fieldMask,
+        sectionMask,
+      });
+    } catch (err) {
+      logger?.error("records_edit_context_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── PATCH edit-session ────────────────────────────────────────────────────────
+  // Single transactional save endpoint for document Edit Mode.
+  //   PATCH /records/:entity/:id/edit-session
+  //   If-Match: <etag>
+  //   Body: { header?: {...}, lines?: { create?, update?, delete? } }
+  //
+  // Phase 4 supports the `header` bundle. The `lines` bundle is forward-
+  // declared in the contract (api-contracts/edit-session.ts) and rejected
+  // here with 501; transactional line writes land in Phase 6 alongside
+  // virtual row editing.
+  //
+  // Response always includes a fresh etag + updated fieldMask + sectionMask
+  // so the client can recompute editability if the save triggered a status
+  // change. On etag mismatch returns 409 with { currentEtag } in the body.
+  const editSessionHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const entityCode = req.params["entity"] as string;
+      const id = req.params["id"] as string;
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+        return;
+      }
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      const sub = requireJwtSubject(claims, res);
+      if (!sub) return;
+      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
+
+      const ifMatch = req.headers["if-match"];
+      const ifMatchStr = typeof ifMatch === "string" ? ifMatch : Array.isArray(ifMatch) ? ifMatch[0] : null;
+      if (!ifMatchStr) {
+        res.status(428).json({
+          error: "PRECONDITION_REQUIRED",
+          message: "If-Match header is required for edit-session writes.",
+        });
+        return;
+      }
+      const expectedVersion = parseInt(ifMatchStr, 10);
+      if (Number.isNaN(expectedVersion)) {
+        res.status(400).json({ error: "BAD_ETAG", message: "If-Match must be a numeric etag." });
+        return;
+      }
+
+      const body = req.body as {
+        header?: Record<string, unknown>;
+        lines?: {
+          create?: Record<string, unknown>[];
+          update?: { id: string; data: Record<string, unknown> }[];
+          delete?: string[];
+        };
+      };
+      const headerPatch = body.header ?? {};
+      const linesBundle = body.lines;
+      const hasHeader = Object.keys(headerPatch).length > 0;
+      const hasLineCreates = (linesBundle?.create?.length ?? 0) > 0;
+      const hasLineUpdates = (linesBundle?.update?.length ?? 0) > 0;
+      const hasLineDeletes = (linesBundle?.delete?.length ?? 0) > 0;
+      const hasLines = hasLineCreates || hasLineUpdates || hasLineDeletes;
+      if (!hasHeader && !hasLines) {
+        res.status(400).json({
+          error: "EMPTY_PATCH",
+          message: "edit-session PATCH must contain at least one header field or line change.",
+        });
+        return;
+      }
+
+      const fieldMap = await resolveFieldMap(db, entityCode);
+      const writeRules = await resolveEntityWriteFieldRules(db, entityCode);
+      const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+
+      const physicalId = UUID_RE.test(id)
+        ? id
+        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId))?.id ?? "");
+      if (!physicalId) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId);
+      if (hasHeader) {
+        const lockedFields = collectStatusLockedFields(headerPatch, writeRules, recordStatus);
+        if (lockedFields.length > 0) {
+          res.status(400).json({
+            error: "FIELD_NOT_EDITABLE",
+            message: `${lockedFields.length} field(s) cannot be edited in status '${recordStatus ?? "unknown"}'.`,
+            fields: lockedFields,
+          });
+          return;
+        }
+      }
+
+      // Lines bundle guard: child-table convention must hold.
+      if (hasLines && rejectNonConventionalLineMutation(res, entityCode)) return;
+
+      const mappedData: Record<string, unknown> = {};
+      if (hasHeader) {
+        for (const [fieldName, value] of Object.entries(headerPatch)) {
+          const fieldRule = writeRules.get(fieldName);
+          if (!isEntityFieldWritable(fieldRule, "update", recordStatus).writable) continue;
+          const columnName = fieldMap.get(fieldName);
+          if (!columnName) continue;
+          if (["id", "tenant_id", "created_by", "created_at", "row_version"].includes(storageColumnName(columnName))) continue;
+          assignMappedValue(mappedData, columnName, value);
+        }
+        coerceArrayFields(mappedData, await resolveArrayColumns(db, entityCode));
+        const jsonColumnsForHeader = await resolveJsonColumns(db, entityCode);
+        includeMappedJsonObjects(mappedData, jsonColumnsForHeader);
+      }
+      // Always touch updated_at + updated_by so row_version bumps even on
+      // lines-only saves — keeps the etag fresh for the next save.
+      mappedData.updated_by = principalId ?? undefined;
+      mappedData.updated_at = new Date().toISOString();
+      const jsonColumns = await resolveJsonColumns(db, entityCode);
+
+      // Authorization (full RBAC + policy gate). Writes 4xx to res on denial.
+      if (!await authorizeEntityMutation({
+        db,
+        res,
+        table: toMutationTableInfo(table),
+        entityCode,
+        tenantId,
+        principalId,
+        action: "update",
+        recordId: physicalId,
+        logger,
+      })) return;
+
+      // Optimistic concurrency: If-Match → expected row_version.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const versionRow = await (db.selectFrom(fullTable) as any)
+        .select(["row_version"])
+        .where("id", "=", physicalId)
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst() as { row_version: number } | undefined;
+      if (!versionRow) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+      if (versionRow.row_version !== expectedVersion) {
+        res.status(409).json({
+          error: "VERSION_CONFLICT",
+          message: "Document was modified by another user.",
+          currentEtag: String(versionRow.row_version),
+        });
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const oldRow = (await (db.selectFrom(fullTable) as any)
+        .selectAll()
+        .where("id", "=", physicalId)
+        .where("tenant_id", "=", tenantId)
+        .executeTakeFirst()) as Record<string, unknown> | undefined;
+
+      if (hasHeader) {
+        mergeJsonColumnUpdates(mappedData, oldRow, jsonColumns);
+        normalizeCommodityCategoryDomainGuards(entityCode, mappedData, oldRow);
+        serializeJsonFields(mappedData, jsonColumns);
+      }
+
+      const linesTable = `${table.table_schema}.${table.table_name}_line` as `${string}.${string}`;
+      const fkCol      = `${table.table_name}_id`;
+
+      // Phase 8: capture lines that need post-commit classification. Per-line
+      // POST/PATCH endpoints classify inline after the row commits; the
+      // bundle handler matches that by collecting affected line IDs during
+      // the transaction and running classification after commit. Failures
+      // here are best-effort and do NOT roll back the bundle.
+      const isApBundleEntity = isPurchaseInvoiceLineMutation(table);
+      type ClassifyCandidate = {
+        lineId: string;
+        body?: Record<string, unknown>;
+      };
+      const classifyCandidates: ClassifyCandidate[] = [];
+
+      const row = await db.transaction().execute(async (trx) => {
+        if (principalId) {
+          await sql`select set_config('app.current_principal_id', ${principalId}, true)`.execute(trx);
+        }
+
+        // Header UPDATE — always runs so row_version bumps even on lines-only
+        // saves. mappedData carries at minimum updated_by + updated_at.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const updatedRow = await (trx.updateTable(fullTable) as any)
+          .set(mappedData)
+          .where("id", "=", physicalId)
+          .where("tenant_id", "=", tenantId)
+          .returningAll()
+          .executeTakeFirst();
+
+        if (!updatedRow) return undefined;
+
+        // Lines bundle inside the same transaction. Order: delete → update →
+        // create. Deletes first avoids constraint violations when a create
+        // reuses a line_no slot. Creates last so auto-numbering sees the
+        // post-delete state.
+        if (hasLineDeletes) {
+          for (const lineId of linesBundle!.delete!) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (trx.deleteFrom(linesTable) as any)
+              .where("id", "=", lineId)
+              .where(fkCol, "=", physicalId)
+              .where("tenant_id", "=", tenantId)
+              .execute();
+          }
+        }
+
+        if (hasLineUpdates) {
+          for (const { id: lineId, data } of linesBundle!.update!) {
+            const patchRow = lineBodyToDb(data, fkCol, physicalId, tenantId);
+            delete patchRow["tenant_id"];
+            delete patchRow[fkCol];
+            // Phase 8: apply purchase_invoice derived amounts + metadata merge
+            // inside the transaction so the final UPDATE writes both user
+            // fields and derived ones in a single round-trip. Helpers are
+            // tenant-aware and no-op on non-AP entities.
+            await applyDerivedPatchLineAmounts(trx, linesTable, fkCol, physicalId, lineId, tenantId, data, patchRow);
+            await mergePatchLineMetadata(trx, linesTable, fkCol, physicalId, lineId, tenantId, patchRow);
+            if (Object.keys(patchRow).length === 0) continue;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (trx.updateTable(linesTable) as any)
+              .set(patchRow)
+              .where("id", "=", lineId)
+              .where(fkCol, "=", physicalId)
+              .where("tenant_id", "=", tenantId)
+              .execute();
+
+            if (isApBundleEntity) {
+              classifyCandidates.push({ lineId, body: data });
+            }
+          }
+        }
+
+        if (hasLineCreates) {
+          // Phase 8: pre-resolve the "AP standalone line" UOM default and
+          // parent-source-doc flag once per bundle (rather than per line) since
+          // they're invariant across creates within the same save.
+          const parentHasSourceDocumentForBundle = isApBundleEntity
+            ? await purchaseInvoiceHasSourceDocument(trx, physicalId, tenantId)
+            : false;
+          let cachedStandaloneUom: string | null = null;
+          const resolveStandaloneUom = async (): Promise<string | null> => {
+            if (cachedStandaloneUom !== null) return cachedStandaloneUom;
+            cachedStandaloneUom = await resolveDefaultProcurementLineUom(trx, tenantId);
+            return cachedStandaloneUom;
+          };
+
+          let nextLineNo: number | null = null;
+          for (const lineData of linesBundle!.create!) {
+            const insertRow = lineBodyToDb(lineData, fkCol, physicalId, tenantId);
+            if (insertRow["line_no"] == null) {
+              if (nextLineNo == null) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const maxRow = await (trx.selectFrom(linesTable) as any)
+                  .select((eb: any) => eb.fn.max("line_no").as("max_no"))
+                  .where(fkCol, "=", physicalId)
+                  .where("tenant_id", "=", tenantId)
+                  .executeTakeFirst() as { max_no: number | null } | undefined;
+                nextLineNo = (maxRow?.max_no ?? 0) + 1;
+              }
+              insertRow["line_no"] = nextLineNo;
+              nextLineNo++;
+            }
+            // AP standalone line default UOM (matches per-line POST behavior).
+            if (
+              isApBundleEntity
+              && !isPresentLineValue(insertRow["item_id"])
+              && !requestHasLineSourceDocument(lineData, insertRow)
+              && !parentHasSourceDocumentForBundle
+            ) {
+              const uom = await resolveStandaloneUom();
+              if (uom && !insertRow["uom_code"]) insertRow["uom_code"] = uom;
+            }
+            if (!insertRow["item_description"]) insertRow["item_description"] = "";
+            if (insertRow["quantity"]   == null) insertRow["quantity"]   = 1;
+            if (insertRow["unit_price"] == null) insertRow["unit_price"] = 0;
+            // Phase 8: derived amount fields (gross_amount from qty*price etc.)
+            // computed inside the transaction so the INSERT writes them.
+            applyDerivedCreateLineAmounts(insertRow, lineData);
+            insertRow["created_by"] = principalId;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const inserted = await (trx.insertInto(linesTable) as any)
+              .values(insertRow)
+              .returning(["id"])
+              .executeTakeFirstOrThrow() as { id: string };
+
+            if (isApBundleEntity && inserted.id) {
+              classifyCandidates.push({ lineId: inserted.id, body: lineData });
+            }
+          }
+        }
+
+        return updatedRow;
+      });
+
+      if (!row) {
+        res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
+        return;
+      }
+
+      // Phase 8: post-commit classification pass for purchase_invoice bundle lines.
+      // Mirrors the per-line POST/PATCH semantics where classification runs
+      // inline after the row commits. Best-effort — individual failures are
+      // logged but do NOT roll back the bundle (which is already committed).
+      if (isApBundleEntity && classifyCandidates.length > 0) {
+        for (const candidate of classifyCandidates) {
+          try {
+            const refreshed = await refreshLineRow(db, linesTable, fkCol, physicalId, candidate.lineId, tenantId);
+            if (!refreshed) continue;
+            await maybeClassifyPurchaseInvoiceLine({
+              table,
+              linesTable,
+              fkCol,
+              tenantId,
+              principalId,
+              invoiceId:  physicalId,
+              lineId:     candidate.lineId,
+              lineRow:    refreshed,
+              body:       candidate.body,
+            });
+          } catch (err) {
+            logger?.warn("records_edit_session_bundle_classify_error", {
+              entity:  entityCode,
+              lineId:  candidate.lineId,
+              err:     err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+      }
+
+      // Status may have changed (e.g. workflow side-effect); recompute mask.
+      const newStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId);
+      const refreshedRules = await resolveEntityWriteFieldRules(db, entityCode);
+      const { fieldMask: newFieldMask, sectionMask: newSectionMask } = buildEditContextMask(refreshedRules, newStatus);
+
+      try {
+        await emitOutboxEvent(db, {
+          tenantId,
+          topic:      "search",
+          eventType:  `${entityCode}.updated`,
+          entityType: entityCode,
+          entityId:   id,
+          actorId:    principalId ?? SYSTEM_PRINCIPAL_UUID,
+        });
+      } catch (emitErr) {
+        logger?.warn("records_edit_session_emit_search_failed", {
+          entity: entityCode,
+          err:    emitErr instanceof Error ? emitErr.message : String(emitErr),
+        });
+      }
+
+      const diffBefore: Record<string, unknown> = {};
+      const diffAfter: Record<string, unknown>  = {};
+      for (const [fieldName, newValue] of Object.entries(headerPatch)) {
+        const colName  = fieldMap.get(fieldName) ?? fieldName;
+        const oldValue = oldRow ? readMappedValue(oldRow, colName) : null;
+        if (String(oldValue ?? "") !== String(newValue ?? "")) {
+          diffBefore[fieldName] = oldValue;
+          diffAfter[fieldName]  = newValue;
+        }
+      }
+      void logActivityRecord(tenantId, entityCode, physicalId, "document.updated", principalId ?? SYSTEM_PRINCIPAL_UUID, { before: diffBefore, after: diffAfter });
+
+      await invalidateListCachesForEntity(tenantId, entityCode, table);
+
+      const rowRecord = row as Record<string, unknown>;
+      const newEtag = String(rowRecord["row_version"] ?? expectedVersion + 1);
+      const finalStatus = typeof rowRecord["status"] === "string"
+        ? rowRecord["status"]
+        : (newStatus ?? "unknown");
+
+      // Phase 11 #2: notify any other clients editing this record that its
+      // state advanced. The actor's own client receives the event too via SSE,
+      // but its etag will match `newEtag` so the client filters it out.
+      // Fired AFTER the response payload is computed but before res.json so
+      // we don't block the HTTP response on the publish.
+      const oldStatus = typeof (oldRow ?? {})["status"] === "string"
+        ? (oldRow as Record<string, unknown>)["status"] as string
+        : null;
+      if (finalStatus !== oldStatus) {
+        publishRecordEvent(
+          tenantId,
+          entityCode,
+          physicalId,
+          "record.statusChanged",
+          {
+            etag:      newEtag,
+            newStatus: finalStatus,
+            oldStatus,
+            actorId:   principalId ?? SYSTEM_PRINCIPAL_UUID,
+          },
+          new Date().toISOString(),
+        );
+      }
+
+      res.json({
+        record: {
+          id: physicalId,
+          data: rowRecord,
+          status: finalStatus,
+        },
+        etag: newEtag,
+        status: finalStatus,
+        fieldMask: newFieldMask,
+        sectionMask: newSectionMask,
+      });
+    } catch (err) {
+      logger?.error("records_edit_session_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // ── PATCH ─────────────────────────────────────────────────────────────────────
   // Partial update. Accepts either:
   //   Flat body:   { fieldName: value, ... }          — used by KanbanView status transitions
@@ -2743,7 +3505,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const sub = requireJwtSubject(claims, res);
       if (!sub) return;
-      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm);
+      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
 
       // Unwrap body — support both flat and { data: {...} } forms
       const body = req.body as Record<string, unknown>;
@@ -2940,7 +3702,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Resolve UUID from business key so the delete is always by primary key
       const sub = requireJwtSubject(claims, res);
       if (!sub) return;
-      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm);
+      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
 
       const physicalId = UUID_RE.test(id)
         ? id
@@ -2988,6 +3750,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       await invalidateListCachesForEntity(tenantId, entityCode, table);
 
+      // Phase 11 #2: notify any other clients viewing this record so their
+      // SSE handler can route them to the list (or show an "Item removed"
+      // banner). Mirrors the statusChanged emit on save.
+      publishRecordEvent(tenantId, entityCode, physicalId, "record.deleted", {
+        actorId: principalId ?? null,
+      }, new Date().toISOString());
+
       res.status(204).end();
     } catch (err) {
       logger?.error("records_delete_error", { err: String(err) });
@@ -3019,7 +3788,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
 
       const sub = readJwtSubject(claims);
-      const principalId = sub && tenantId ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm) : null;
+      const principalId = sub && tenantId ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims) : null;
 
       res.json({
         entity: table,
@@ -3450,7 +4219,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     ].some(isPresentLineValue);
   }
 
-  async function purchaseInvoiceHasSourceDocument(invoiceId: string, tenantId: string | null): Promise<boolean> {
+  // Phase 8: helpers below accept an explicit `kysely` executor so the bundle
+  // handler in editSessionHandler can run them inside its transaction. Pass `db`
+  // from per-line handlers (they're not wrapped in tx) or `trx` from inside
+  // `db.transaction().execute(async (trx) => ...)` for bundle operations.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function purchaseInvoiceHasSourceDocument(kysely: Kysely<any>, invoiceId: string, tenantId: string | null): Promise<boolean> {
     if (!tenantId) return false;
     const row = await sql<{ commitment_id: string | null }>`
       SELECT commitment_id
@@ -3458,7 +4232,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       WHERE id = ${invoiceId}::uuid
         AND tenant_id = ${tenantId}::uuid
       LIMIT 1
-    `.execute(db);
+    `.execute(kysely);
     return Boolean(row.rows[0]?.commitment_id);
   }
 
@@ -3509,6 +4283,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   }
 
   async function applyDerivedPatchLineAmounts(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    kysely: Kysely<any>,
     linesTable: `${string}.${string}`,
     fkCol: string,
     parentId: string,
@@ -3534,7 +4310,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     if (!priceFieldChanged) return;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q: any = (db as any)
+    let q: any = (kysely as any)
       .selectFrom(linesTable)
       .select(["quantity", "unit_price", "price_unit"] as never[])
       .where("id" as never, "=", lineId as never)
@@ -3552,6 +4328,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   }
 
   async function mergePatchLineMetadata(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    kysely: Kysely<any>,
     linesTable: `${string}.${string}`,
     fkCol: string,
     parentId: string,
@@ -3563,7 +4341,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     if (!metadataPatch || typeof metadataPatch !== "object" || Array.isArray(metadataPatch)) return;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q: any = (db as any)
+    let q: any = (kysely as any)
       .selectFrom(linesTable)
       .select(["metadata"] as never[])
       .where("id" as never, "=", lineId as never)
@@ -3715,6 +4493,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   }
 
   async function refreshLineRow(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    kysely: Kysely<any>,
     linesTable: `${string}.${string}`,
     fkCol: string,
     parentId: string,
@@ -3722,7 +4502,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     tenantId: string | null,
   ): Promise<Record<string, unknown> | null> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q: any = (db as any)
+    let q: any = (kysely as any)
       .selectFrom(linesTable)
       .selectAll()
       .where("id" as never, "=", lineId as never)
@@ -3759,7 +4539,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           mode:        "save",
         },
       );
-      return await refreshLineRow(args.linesTable, args.fkCol, args.invoiceId, args.lineId, args.tenantId)
+      return await refreshLineRow(db, args.linesTable, args.fkCol, args.invoiceId, args.lineId, args.tenantId)
         ?? args.lineRow;
     } catch (err) {
       logger?.error("records_purchase_invoice_line_classify_error", {
@@ -3793,7 +4573,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         ? String((claims as { sub: string }).sub)
         : "";
       const principalId = sub && tenantId
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : sub;
 
       if (rejectNonConventionalLineMutation(res, entityCode)) return;
@@ -3822,7 +4602,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // which would violate the pil_qty_nonzero CHECK constraint.
       const isPurchaseInvoiceLine = isPurchaseInvoiceLineMutation(table);
       const parentHasSourceDocument = isPurchaseInvoiceLine
-        ? await purchaseInvoiceHasSourceDocument(id, tenantId)
+        ? await purchaseInvoiceHasSourceDocument(db, id, tenantId)
         : false;
       const shouldDefaultStandaloneUom =
         isPurchaseInvoiceLine
@@ -3830,7 +4610,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         && !requestHasLineSourceDocument(body, insertRow)
         && !parentHasSourceDocument;
       const defaultUomCode = shouldDefaultStandaloneUom
-        ? await resolveDefaultProcurementLineUom(tenantId)
+        ? await resolveDefaultProcurementLineUom(db, tenantId)
         : null;
       if (!insertRow["item_description"]) insertRow["item_description"] = "";
       if (!insertRow["uom_code"] && defaultUomCode) insertRow["uom_code"] = defaultUomCode;
@@ -3887,7 +4667,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         ? String((claims as { sub: string }).sub)
         : "";
       const principalId = sub && tenantId
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : sub;
 
       if (rejectNonConventionalLineMutation(res, entityCode)) return;
@@ -3900,8 +4680,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Remove identity columns from patch
       delete patchRow["tenant_id"];
       delete patchRow[fkCol];
-      await applyDerivedPatchLineAmounts(linesTable, fkCol, id, lineId, tenantId, body, patchRow);
-      await mergePatchLineMetadata(linesTable, fkCol, id, lineId, tenantId, patchRow);
+      await applyDerivedPatchLineAmounts(db, linesTable, fkCol, id, lineId, tenantId, body, patchRow);
+      await mergePatchLineMetadata(db, linesTable, fkCol, id, lineId, tenantId, patchRow);
 
       if (Object.keys(patchRow).length === 0) {
         res.status(400).json({ error: "EMPTY_PATCH", message: "No updatable fields supplied" });
@@ -4401,7 +5181,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       type PresetRow = {
@@ -4463,7 +5243,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       const now = new Date().toISOString();
@@ -4511,7 +5291,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims, xRealm)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       // Only the owner can delete (even if shared)
@@ -4741,6 +5521,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   router.put("/records/:entity/:id/lock/heartbeat",   renewLockHandler);
   router.delete("/records/:entity/:id/lock/force",    forceReleaseLockHandler);
   router.delete("/records/:entity/:id/lock",          releaseLockHandler);
+
+  router.get("/records/:entity/:id/edit-context",   editContextHandler);
+  router.patch("/records/:entity/:id/edit-session", editSessionHandler);
+  router.get("/records/:entity/:id/stream",         recordStreamHandler);
 
   router.get("/records/:entity/:id", getHandler);
   router.post("/records/:entity", createHandler);

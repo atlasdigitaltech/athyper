@@ -11,9 +11,15 @@ import {
 } from "@athyper/api-client";
 import { setClients } from "@athyper/query";
 import { registerDefaultFieldRenderers } from "@athyper/runtime-canvas/fields";
+import { setBffClientPlane } from "@athyper/runtime-shared/client";
 import { ToastProvider, useToast } from "@athyper/ui/composites";
 import { AuthFailureBridge } from "@athyper/identity-gate";
+import { PLANE_KEY } from "@/lib/plane";
 import { applyThemePreferences } from "@/lib/preferences/theme-dom";
+
+// Plane-specific csrf cookie (__csrf) — must run before any client component
+// reads the token. Idempotent: HMR-safe.
+setBffClientPlane(PLANE_KEY);
 
 // Relay-based fetch — no access token needed client-side; the relay BFF at
 // /api/relay/[...path] injects Authorization + all org-context headers server-side.
@@ -99,7 +105,7 @@ function PreferencesDomHydrator() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch("/api/user/preferences", {
+    fetch("/api/me/preferences", {
       cache: "no-store",
       credentials: "include",
       signal: controller.signal,

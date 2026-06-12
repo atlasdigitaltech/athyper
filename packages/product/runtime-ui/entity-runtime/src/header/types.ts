@@ -250,6 +250,21 @@ export interface HeaderProgress {
  * then patch via EntityHeaderController.patchTabCount() as queries resolve.
  * Never block tab rendering waiting for count queries.
  */
+/**
+ * Edit-state indicator on a tab.
+ *
+ * - `dirty` — section has unsaved local changes. Small primary dot.
+ * - `error` — section has at least one validation error. Error pill;
+ *             `count` (if set) shows the number of failing fields.
+ *
+ * Priority is single-indicator: error takes precedence over dirty
+ * (errors imply dirty anyway). Visual stacking would create noise on
+ * narrow tab labels.
+ */
+export type HeaderTabBadge =
+  | { type: "dirty" }
+  | { type: "error"; count?: number };
+
 export interface HeaderTab {
   id: string;
   label: string;
@@ -259,6 +274,8 @@ export interface HeaderTab {
   count?: number;
   /** True while the count query is in-flight. Renders a subtle loading indicator. */
   countPending?: boolean;
+  /** Edit-state indicator (dirty / error). Independent of `count`. */
+  badge?: HeaderTabBadge;
   disabled?: boolean;
 }
 

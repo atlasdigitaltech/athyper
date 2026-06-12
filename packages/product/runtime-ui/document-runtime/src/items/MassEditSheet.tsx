@@ -6,6 +6,7 @@ import { DrawerShell } from "@athyper/ui/primitives";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
+import { useEditSessionContext } from "@athyper/content-ui";
 import {
   type LineRecord,
   MetaFieldInput,
@@ -52,6 +53,12 @@ export function MassEditSheet({
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Phase 7 (#9): when mounted inside an active Edit Session, mass-edit
+  // applies the deltas to each selected line via `editSession.updateLine`
+  // — same payload, just queued into the bundle instead of dispatched as
+  // parallel per-line PATCHes. Action-bar Save commits all atomically.
+  const editSession = useEditSessionContext();
 
   useEffect(() => {
     if (!open) return;
@@ -105,6 +112,20 @@ export function MassEditSheet({
 
     if (onDraftPatch) {
       onDraftPatch(patch);
+      onOpenChange(false);
+      return;
+    }
+
+    // Edit Session route: queue the same patch into each selected line via
+    // updateLine. Each call merges deltas into pendingLineUpdates per line —
+    // a second mass-edit on the same selection accumulates field by field.
+    if (editSession?.isEditing) {
+      for (const line of lines) {
+        const id = recordId(line as LineRecord);
+        if (!id) continue;
+        editSession.updateLine(id, patch);
+      }
+      onMutated?.();
       onOpenChange(false);
       return;
     }

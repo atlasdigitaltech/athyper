@@ -26,6 +26,7 @@
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
     "@athyper/runtime-contracts": "workspace:*",
+    "@athyper/session-plane": "workspace:*",
     "@athyper/theme": "workspace:*"
   },
   "peerDependencies": {

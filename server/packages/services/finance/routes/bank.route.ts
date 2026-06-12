@@ -35,10 +35,10 @@ import { postReconAdjustment }   from "./bank-recon-posting.service.js";
 export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger } = deps;
 
-  async function resolveActorId(tenantId: string, claims: Record<string, unknown>): Promise<string> {
+  async function resolveActorId(tenantId: string, xRealm: string, claims: Record<string, unknown>): Promise<string> {
     const sub = String(claims["sub"] ?? "");
     if (!sub) return SYSTEM_PRINCIPAL_UUID;
-    return (await resolvePrincipalIdOrNull(db, sub, tenantId)) ?? SYSTEM_PRINCIPAL_UUID;
+    return (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm)) ?? SYSTEM_PRINCIPAL_UUID;
   }
 
   // ── GET /api/finance/bank/accounts ────────────────────────────────────────
@@ -324,7 +324,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
       const fileName = String((req as any)?.files?.file?.name ?? bodyAny?.file_name ?? "upload.csv");
       const format   = (bodyAny?.format as "csv" | "ofx" | "auto" | undefined) ?? "auto";
 
-      const actorId = await resolveActorId(tenantId, claims as Record<string, unknown>);
+      const actorId = await resolveActorId(tenantId, xRealm, claims as Record<string, unknown>);
 
       const result = await importBankStatement(db, {
         tenantId,
@@ -456,7 +456,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
         .where("tenant_id", "=", tenantId)
         .execute();
 
-      const actorId = await resolveActorId(tenantId, claims as Record<string, unknown>);
+      const actorId = await resolveActorId(tenantId, xRealm, claims as Record<string, unknown>);
       const result = await runAutoMatch(db, {
         tenantId,
         bankAccountId: stmt.bank_account_id,
@@ -493,7 +493,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
 
       const payId  = body.payment_entry_id!;
       const lineId = body.bank_statement_line_id!;
-      const userId = await resolveActorId(tenantId, claims as Record<string, unknown>);
+      const userId = await resolveActorId(tenantId, xRealm, claims as Record<string, unknown>);
 
       // Load both rows
       const pay = await db
@@ -584,7 +584,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
       if (!Array.isArray(body.splits) || body.splits.length < 2) { res.status(400).json({ error: "INVALID_VALUE", message: "splits must have at least 2 entries" }); return; }
 
       const lineId = body.bank_statement_line_id!;
-      const userId = await resolveActorId(tenantId, claims as Record<string, unknown>);
+      const userId = await resolveActorId(tenantId, xRealm, claims as Record<string, unknown>);
 
       const line = await db
         .selectFrom("document.bank_statement_line as bsl")
@@ -764,7 +764,7 @@ export function createBankRoutes(router: Router, deps: FinanceRouteDeps): Router
            AND bsl.bank_statement_id = ${body.statement_id!}::uuid
       `.execute(db);
 
-      const userId = await resolveActorId(tenantId, claims as Record<string, unknown>);
+      const userId = await resolveActorId(tenantId, xRealm, claims as Record<string, unknown>);
       const jeIds: string[] = [];
 
       for (const c of cases.rows) {

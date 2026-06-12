@@ -391,7 +391,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const tenantId    = await resolveTenantId(db, xOrg, xRealm);
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null) ?? SYSTEM_ACTOR;
       const body        = req.body as Record<string, unknown>;
 
       const { code, name, event_type, template_key, channels } = body;
@@ -454,7 +454,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const tenantId    = await resolveTenantId(db, xOrg, xRealm);
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null) ?? SYSTEM_ACTOR;
       const ruleId      = req.params["id"] as string ?? "";
       const body        = req.body as Record<string, unknown>;
 
@@ -528,7 +528,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const tenantId    = await resolveTenantId(db, xOrg, xRealm);
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null) ?? SYSTEM_ACTOR;
       const ruleId      = req.params["id"] as string ?? "";
 
       if (!isUuid(ruleId)) {
@@ -641,7 +641,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const tenantId    = await resolveTenantId(db, xOrg, xRealm);
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null) ?? SYSTEM_ACTOR;
       const body        = req.body as Record<string, unknown>;
 
       const { template_key, channel } = body;
@@ -715,7 +715,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const tenantId    = await resolveTenantId(db, xOrg, xRealm);
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null) ?? SYSTEM_ACTOR;
       const templateId  = req.params["id"] as string ?? "";
       const body        = req.body as Record<string, unknown>;
 
@@ -780,7 +780,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const tenantId    = await resolveTenantId(db, xOrg, xRealm);
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null) ?? SYSTEM_ACTOR;
       const templateId  = req.params["id"] as string ?? "";
 
       if (!isUuid(templateId)) {
@@ -952,7 +952,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
 
       const tenantId  = await resolveTenantId(db, xOrg, xRealm);
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.status(401).json({ error: "UNAUTHORIZED" }); return; }
 
       const rows = await db
@@ -990,7 +990,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
 
       const tenantId  = await resolveTenantId(db, xOrg, xRealm);
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.status(401).json({ error: "UNAUTHORIZED" }); return; }
 
       const body        = req.body as Record<string, unknown>;
@@ -1061,7 +1061,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const tenantId  = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(404).json({ error: "TENANT_NOT_FOUND" }); return; }
       const sub       = typeof claims.sub === "string" ? claims.sub : "";
-      const actorId   = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const actorId   = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
 
       const body         = req.body as Record<string, unknown>;
       const recipientId  = typeof body["recipient_id"] === "string" ? body["recipient_id"].trim() : "";
@@ -1136,7 +1136,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(404).json({ error: "TENANT_NOT_FOUND" }); return; }
       const sub      = typeof claims.sub === "string" ? claims.sub : "";
-      const actorId  = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const actorId  = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
 
       const body       = req.body as Record<string, unknown>;
       const eventCode  = typeof body["event_code"] === "string" ? body["event_code"].trim() : "";
@@ -1309,7 +1309,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const xRealm    = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId  = await resolveTenantId(db, xOrg, xRealm);
       const sub       = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.status(401).json({ error: "UNAUTHORIZED" }); return; }
 
       const body       = req.body as Record<string, unknown>;
@@ -1394,7 +1394,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const xRealm    = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId  = await resolveTenantId(db, xOrg, xRealm);
       const sub       = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.status(401).json({ error: "UNAUTHORIZED" }); return; }
 
       if (!isUuid(subscriptionId)) {
@@ -1435,7 +1435,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const xRealm    = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId  = await resolveTenantId(db, xOrg, xRealm);
       const sub       = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.status(401).json({ error: "UNAUTHORIZED" }); return; }
 
       const rows = await sql<{
@@ -1474,7 +1474,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const xRealm    = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId  = await resolveTenantId(db, xOrg, xRealm);
       const sub       = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.status(401).json({ error: "UNAUTHORIZED" }); return; }
 
       const body           = req.body as Record<string, unknown>;
@@ -1526,7 +1526,7 @@ export function registerNotificationRoutes(router: Router, deps: NotificationRou
       const xRealm     = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId   = await resolveTenantId(db, xOrg, xRealm);
       const sub        = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.status(401).json({ error: "UNAUTHORIZED" }); return; }
 
       if (!isUuid(consentId)) {

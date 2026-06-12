@@ -193,16 +193,17 @@ async function linkAttachmentsToComment(
   }
 }
 
-/** Resolve org headers → tenantId, 400 on failure. */
+/** Resolve org headers → { tenantId, xRealm }, returns null tenantId on failure. */
 async function resolveTenant(
   req: Parameters<RequestHandler>[0],
-  res: Parameters<RequestHandler>[1],
+  _res: Parameters<RequestHandler>[1],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: Kysely<any>,
-): Promise<string | null> {
+): Promise<{ tenantId: string | null; xRealm: string }> {
   const xOrg   = (req.headers["x-org"]   as string) ?? "";
   const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
-  return resolveTenantId(db, xOrg, xRealm);
+  const tenantId = await resolveTenantId(db, xOrg, xRealm);
+  return { tenantId, xRealm };
 }
 
 // ── Route factory ─────────────────────────────────────────────────────────────
@@ -269,7 +270,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.json({ ok: true, data: [], hasMore: false });
         return;
@@ -344,7 +345,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.json({ ok: true, count: 0 });
         return;
@@ -355,7 +356,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         res.json({ ok: true, count: 0 });
         return;
       }
-      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
 
       // Fetch cursor
       const cursor = await db
@@ -420,7 +421,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(400).json({ error: "Could not resolve tenant" });
         return;
@@ -428,7 +429,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       const now = new Date().toISOString();
@@ -485,7 +486,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(400).json({ error: "Could not resolve tenant" });
         return;
@@ -493,7 +494,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const commenterId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       let threadDepth = 0;
@@ -630,7 +631,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(400).json({ error: "Could not resolve tenant" });
         return;
@@ -650,7 +651,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const commenterId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       const trimmedText = replyText?.trim() || (replyAttachmentIds.length > 0 ? "[attachment]" : "[rich comment]");
@@ -758,7 +759,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.json({ ok: true, data: [] });
         return;
@@ -833,7 +834,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(400).json({ error: "Could not resolve tenant" });
         return;
@@ -885,7 +886,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         try {
           const sub = typeof claims.sub === "string" ? claims.sub : "";
           const authorId = sub
-            ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+            ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
             : (existing.commenter_id as string);
 
           const prevRaw = existing.mentions as unknown;
@@ -951,7 +952,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(400).json({ error: "Could not resolve tenant" });
         return;
@@ -959,7 +960,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const deletedBy = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       const row = await db
@@ -997,7 +998,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.json({ ok: true, data: [] });
         return;
@@ -1005,7 +1006,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       // Aggregate reaction counts
@@ -1077,7 +1078,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(400).json({ error: "Could not resolve tenant" });
         return;
@@ -1085,7 +1086,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       // Fetch comment for pub/sub channel routing (entity_type / entity_id)
@@ -1167,7 +1168,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(400).json({ error: "Could not resolve tenant" });
         return;
@@ -1175,7 +1176,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const flaggedBy = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       const row = await db
@@ -1216,7 +1217,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.json({ ok: true, draft: null });
         return;
@@ -1224,7 +1225,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       let query = db
@@ -1289,7 +1290,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(400).json({ error: "Could not resolve tenant" });
         return;
@@ -1297,7 +1298,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       const now = new Date().toISOString();
@@ -1353,7 +1354,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(204).end();
         return;
@@ -1361,7 +1362,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       let query = db
@@ -1401,7 +1402,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.json({ ok: true, data: [] });
         return;
@@ -1452,7 +1453,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const commentId = req.params["commentId"] as string;
       if (!isUuid(commentId)) { res.json({ ok: true, data: [] }); return; }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) { res.json({ ok: true, data: [] }); return; }
 
       const rows = await db
@@ -1521,12 +1522,12 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) return;
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       const existing = await (db
@@ -1572,7 +1573,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.json({ ok: true, groups: [] });
         return;
@@ -1580,7 +1581,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       type BookmarkRow = {
@@ -1668,12 +1669,12 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const recordIds = allBookmarkIds.filter(isUuid);
       if (recordIds.length === 0) { res.json({ bookmarked_ids: [] }); return; }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) { res.json({ bookmarked_ids: [] }); return; }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
 
       const rows = await (db
@@ -1711,7 +1712,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const recordIds = allIds.filter(isUuid);
       if (recordIds.length === 0) { res.json({ counts: {} }); return; }
 
-      const tenantId = await resolveTenant(req, res, db);
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) { res.json({ counts: {} }); return; }
 
       type CountRow = { record_id: string; total: unknown };

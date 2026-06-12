@@ -310,7 +310,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
       if (tenantId && entityRow.module_id) {
         const sub = typeof claims.sub === "string" ? claims.sub : "";
         try {
-          const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+          const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
           const authEpochRow = await db
             .selectFrom("master.principal as p")
             .select("p.auth_epoch")
@@ -519,7 +519,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
 
       if (sub && tenantId) {
         try {
-          const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+          const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
 
           const permissionCodes = [
             ...new Set(

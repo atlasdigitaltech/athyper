@@ -19,6 +19,7 @@ import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadat
 import { relayMutate } from "@athyper/runtime-shared/client";
 import { fmtAmount } from "@athyper/runtime-shared/core";
 import { cn } from "@athyper/theme/utils";
+import { useEditSessionContext } from "@athyper/content-ui";
 import {
   type LineRecord,
   MetaFieldInput,
@@ -1712,6 +1713,10 @@ export function ProcureLineComposerSheet({
   const fetchedEntity  = useCompiledEntityMetadata(lineEntity ? null : lineEntityCode);
   const resolvedEntity = lineEntity ?? fetchedEntity;
 
+  // Phase 6d: same fork as LineComposerSheet — when an Edit Session is active,
+  // Save queues the line into the bundle for atomic commit.
+  const editSession = useEditSessionContext();
+
   const sections = useMemo(
     () => resolveProcureComposerSections(resolvedEntity),
     [resolvedEntity],
@@ -1835,6 +1840,19 @@ export function ProcureLineComposerSheet({
       } finally {
         setSaving(false);
       }
+      return;
+    }
+
+    // Edit Session route: queue the change for atomic save. Same pattern as
+    // LineComposerSheet — onDraftSubmit takes precedence (intake wizard).
+    if (editSession?.isEditing) {
+      if (isNew) {
+        editSession.addLine(payload);
+      } else if (lineKey) {
+        editSession.updateLine(lineKey, payload as Record<string, unknown>);
+      }
+      onMutated?.();
+      onOpenChange(false);
       return;
     }
 

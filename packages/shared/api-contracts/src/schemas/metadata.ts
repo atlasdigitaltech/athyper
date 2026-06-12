@@ -778,6 +778,13 @@ export const CompiledEntitySchema = z.object({
     default_sort_field: z.string().optional(),
     default_sort_order: z.enum(["asc", "desc"]).optional(),
     list_columns: z.array(z.string()).optional(),
+    /**
+     * Phase 11 #8: priority column subset shown in line grids on narrow
+     * viewports (below the md breakpoint). When set, columns NOT in this
+     * list are hidden via `hidden md:table-cell`. When absent the grid
+     * shows all columns at every viewport size (existing behavior).
+     */
+    mobile_columns: z.array(z.string()).optional(),
     compact_card: z.object({
       bottom_fields: z.array(z.string()).optional(),
     }).optional(),

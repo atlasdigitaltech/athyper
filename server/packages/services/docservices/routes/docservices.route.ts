@@ -117,7 +117,7 @@ async function resolveCtx(
     return null;
   }
   const sub         = typeof claims.sub === "string" ? claims.sub : "";
-  const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : SYSTEM_PRINCIPAL_UUID;
+  const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : SYSTEM_PRINCIPAL_UUID;
   return { claims, tenantId, principalId };
 }
 

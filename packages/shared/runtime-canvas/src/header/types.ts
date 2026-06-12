@@ -86,12 +86,23 @@ export interface HeaderProgress {
   nextActionCopy?: string;
 }
 
+/**
+ * Compact edit-state indicator rendered alongside the tab label.
+ * Independent of `count` so tabs can show both a count (e.g. 12 line items)
+ * and an indicator (e.g. unsaved changes / validation error in section).
+ */
+export type HeaderTabBadge =
+  | { type: "dirty" }
+  | { type: "error"; count?: number };
+
 export interface HeaderTab {
   id: string;
   label: string;
   href?: string;
   count?: number;
   countPending?: boolean;
+  /** Edit-state indicator (dirty / error). Used by object-page sections. */
+  badge?: HeaderTabBadge;
   disabled?: boolean;
 }
 

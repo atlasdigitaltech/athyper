@@ -223,7 +223,7 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
       }
 
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
 
       const body = req.body as Record<string, unknown>;
       const action      = String(body["action"] ?? "");

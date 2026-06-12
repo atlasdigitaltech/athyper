@@ -412,6 +412,17 @@ export interface LinesGridProps {
   /** Intake-wizard draft mode (no server writes during creation) */
   draftMode?:      boolean;
   onDraftLinesChange?: (lines: LineRecord[]) => void;
+  /**
+   * Phase 11 #8 — narrow-viewport column visibility.
+   *
+   * When provided, columns whose `field.name` is NOT in this list render
+   * with `hidden md:table-cell` so they only appear at `md` (≥ 768px).
+   * When `undefined` (default), every column renders at all viewport sizes.
+   *
+   * Source: `entity.display_config.mobile_columns` from the runtime
+   * descriptor. Optional; absent metadata = show-all degradation.
+   */
+  mobileColumns?:  string[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -427,4 +438,6 @@ export interface LineItemsSurfaceProps {
   companyCodeId?: string;
   record?:      Record<string, unknown>;
   editMode?:    boolean;
+  /** Phase 11 #8 — see LinesGridProps.mobileColumns. Passed through unchanged. */
+  mobileColumns?: string[];
 }

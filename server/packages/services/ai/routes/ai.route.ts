@@ -60,7 +60,7 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
         const tenantId = await resolveTenantId(db, xOrg, xRealm);
         if (!tenantId) { res.status(400).json({ error: "tenant_not_found" }); return; }
 
-        const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId) ?? "";
+        const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId, xRealm) ?? "";
 
         const permCheck = await checkPermission(db, tenantId, principalId, "ai.use_extraction");
         if (!requireAllow(permCheck, res)) {
@@ -95,7 +95,7 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
         const tenantId = await resolveTenantId(db, xOrg, xRealm);
         if (!tenantId) { res.status(400).json({ error: "tenant_not_found" }); return; }
 
-        const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId) ?? "";
+        const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId, xRealm) ?? "";
 
         const permCheck = await checkPermission(db, tenantId, principalId, "ai.use_extraction");
         if (!requireAllow(permCheck, res)) return;
@@ -146,7 +146,7 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
         const tenantId = await resolveTenantId(db, xOrg, xRealm);
         if (!tenantId) { res.status(400).json({ error: "tenant_not_found" }); return; }
 
-        const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId) ?? "";
+        const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId, xRealm) ?? "";
 
         const permCheck = await checkPermission(db, tenantId, principalId, "ai.review_ai_output");
         if (!requireAllow(permCheck, res)) return;
@@ -250,7 +250,7 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
     const tenantId = await resolveTenantId(db, xOrg, xRealm);
     if (!tenantId) { res.status(400).json({ error: "tenant_not_found" }); return null; }
 
-    const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId);
+    const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId, xRealm);
     if (!principalId) { res.status(403).json({ error: "forbidden", reason: "principal_not_found" }); return null; }
 
     const permCheck = await checkPermission(db, tenantId, principalId, "ai.calibrate_thresholds");

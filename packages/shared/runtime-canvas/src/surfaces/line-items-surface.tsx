@@ -47,6 +47,14 @@ export function LineItemsSurfaceRenderer({
     : docStatus === null || LEGACY_EDITABLE_STATUSES.has(docStatus);
   const editMode = lineItemsSurface.canEdit && statusAllowsEdit;
 
+  // Phase 11 #8 — priority column list rides on the line-items surface
+  // descriptor itself (compiled from the line entity's
+  // `display_config.mobile_columns`). Absent / empty → grid renders all
+  // columns at every viewport (legacy behavior).
+  const mobileColumns = lineItemsSurface.mobileColumns?.length
+    ? lineItemsSurface.mobileColumns
+    : undefined;
+
   return (
     // `entity` (CompiledEntity) isn't available at this layer — `contract`
     // is the runtime descriptor (camelCase MetaEntityRuntimeDescriptor), not
@@ -62,6 +70,7 @@ export function LineItemsSurfaceRenderer({
       companyCodeId={companyCodeId}
       record={record}
       editMode={editMode}
+      mobileColumns={mobileColumns}
     />
   );
 }

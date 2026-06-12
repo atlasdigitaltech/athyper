@@ -54,6 +54,17 @@ export type { RuntimeListPagination, RuntimeListState, RuntimeRecordRow } from "
 export { RuntimeListPage };
 export { RuntimeEditState } from "./edit/runtime-edit-form";
 export {
+  DocumentObjectPageWorkspace,
+  type DocumentObjectPageWorkspaceProps,
+} from "./record/document-object-page-workspace";
+export { toEntityEditState } from "./record/document-edit-session-adapter";
+export {
+  buildRuntimeRecordChromeModel,
+  type RuntimeRecordChromeModel,
+} from "./record/runtime-header-model";
+export { getSurfaceRenderer } from "./surfaces/registry";
+export { readRuntimeCanvasFlags, type RuntimeCanvasFlags } from "./surfaces/types";
+export {
   useOperationDispatch,
   type UseOperationDispatchOptions,
   type UseOperationDispatchReturn,

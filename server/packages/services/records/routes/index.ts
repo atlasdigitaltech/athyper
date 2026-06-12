@@ -9,6 +9,7 @@
 import type { Router } from "express";
 import type { Kysely } from "kysely";
 import type { Queue } from "bullmq";
+import type { RedisClient } from "@athyper/adapter-memorycache";
 import { createRecordsRoute } from "./records.route.js";
 import { createImportRoutes } from "./import.route.js";
 import type { ImportObjectStorage } from "./import.route.js";
@@ -53,6 +54,12 @@ export interface RecordsRoutesDeps {
   featureFlags?: WorkflowRuntimeFeatureFlags;
   /** HMAC secret for export download tokens (falls back to EXPORT_TOKEN_SECRET env var). */
   tokenSecret?: string;
+  /**
+   * Phase 11 #2: optional ioredis client for record pub/sub. Passed through
+   * to createRecordsRoute. When absent the record SSE stream serves
+   * keepalive comments only; clients fall back to polling.
+   */
+  redis?: RedisClient;
 }
 
 export function registerRecordsRoutes(router: Router, deps: RecordsRoutesDeps): Router {

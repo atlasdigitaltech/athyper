@@ -73,6 +73,13 @@
     --scrim-command: rgb(0 0 0 / 0.40);
     --scrim-drawer: rgb(0 0 0 / 0.45);
     --scrim-context: rgb(0 0 0 / 0.20);
+
+    --field-row-h-compact: 2rem;
+    --field-row-h-default: 2.25rem;
+    --field-row-h-comfortable: 2.75rem;
+    --field-row-label-width: 10rem;
+
+    --entity-header-offset: 0px;
   }
 
   * {

@@ -443,7 +443,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
 
       const sub = claims["sub"] as string ?? "";
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:create:${tenantId}:${sub}`, 20, 60)) return;
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" });
         return;
@@ -983,7 +983,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       if (!tenantId) { res.status(400).json({ error: "TENANT_NOT_FOUND" }); return; }
 
       const sub = claims["sub"] as string ?? "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
 
       const body            = req.body as Record<string, unknown>;
@@ -1123,7 +1123,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
 
       const body = (req.body ?? {}) as Record<string, unknown>;
       const { status, body: respBody } = await handleCreateApInvoice(
@@ -1152,7 +1152,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
 
       // Verify invoice exists + is editable
       const invoice = await db
@@ -1244,7 +1244,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const invoiceId = String(req.params["id"] ?? "");
       if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
 
       const body = (req.body ?? {}) as Record<string, unknown>;
       const { status, body: respBody } = await handleAddInvoiceLine(
@@ -1293,7 +1293,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const lineId    = String(req.params["lid"] ?? "");
       if (!isUuid(invoiceId) || !isUuid(lineId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
 
       const body = (req.body ?? {}) as Record<string, unknown>;
       const { status, body: respBody } = await handleUpdateInvoiceLine(
@@ -1348,7 +1348,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const lineId    = String(req.params["lid"] ?? "");
       if (!isUuid(invoiceId) || !isUuid(lineId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
       const lockToken = typeof (req.body as Record<string, unknown>)?.["lock_token"] === "string"
         ? (req.body as Record<string, unknown>)["lock_token"] as string
         : undefined;
@@ -1379,7 +1379,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const lineId    = String(req.params["lid"] ?? "");
       if (!isUuid(invoiceId) || !isUuid(lineId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
 
       const modeParam = String(req.query["mode"] ?? "save");
@@ -1444,7 +1444,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
 
       const body = (req.body ?? {}) as Record<string, unknown>;
@@ -1528,7 +1528,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
       const sub = String(claims.sub ?? "unknown");
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:submit:${tenantId}:${sub}`, 20, 60)) return;
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       const id = String(req.params["id"] ?? "");
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const result = await handleSubmitPayment(db, tenantId, id, principalId, businessLogger, lifecycleSync);
@@ -1546,7 +1546,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
       const sub = String(claims.sub ?? "unknown");
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:post:${tenantId}:${sub}`, 10, 60)) return;
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       const id = String(req.params["id"] ?? "");
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const result = await handlePostPayment(db, tenantId, id, principalId, businessLogger, lifecycleSync);
@@ -1564,7 +1564,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
       const sub = String(claims.sub ?? "unknown");
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:void:${tenantId}:${sub}`, 10, 60)) return;
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       const id = String(req.params["id"] ?? "");
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const result = await handleVoidPayment(
@@ -1592,7 +1592,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const { xOrg, xRealm } = extractOrgHeaders(req);
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
-      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId) ?? "";
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId, xRealm) ?? "";
 
       const body = req.body as {
         attachment_id?:  string;

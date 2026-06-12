@@ -68,9 +68,28 @@ const MUTATION_PERMISSION_TOKENS: Record<EntityMutationAction, string[]> = {
   delete: ["delete", "remove", "destroy"],
 };
 
-export async function authorizeEntityMutation(args: {
+/**
+ * Pure-decision outcome of an entity mutation authorization check.
+ *
+ * Phase 7 (#5): split from {@link authorizeEntityMutation} so callers that
+ * need to *report* the decision without writing a response (e.g. the edit-
+ * context endpoint surfacing `canUpdate`) can do so without mocking `res`.
+ *
+ * The existing res-writing wrapper {@link authorizeEntityMutation} is now
+ * a thin shim around this function — all gate logic lives here.
+ */
+export type EntityMutationAuthorizeOutcome =
+  | { allowed: true }
+  | {
+      allowed: false;
+      status: number;
+      error: string;
+      message: string;
+      decision?: string;
+    };
+
+export interface CheckEntityMutationAuthorizationArgs {
   db: AnyDb;
-  res: Response;
   table: EntityMutationTableInfo;
   entityCode: string;
   tenantId: string;
@@ -78,58 +97,68 @@ export async function authorizeEntityMutation(args: {
   action: EntityMutationAction;
   recordId?: string | null;
   logger?: MutationGuardLogger;
-}): Promise<boolean> {
-  const { db, res, table, entityCode, tenantId, principalId, action, recordId, logger } = args;
+}
+
+export async function checkEntityMutationAuthorization(
+  args: CheckEntityMutationAuthorizationArgs,
+): Promise<EntityMutationAuthorizeOutcome> {
+  const { db, table, entityCode, tenantId, principalId, action, recordId, logger } = args;
 
   const tableBlock = mutationTableBlock(table, action);
   if (tableBlock) {
-    res.status(tableBlock.status).json({
+    return {
+      allowed: false,
+      status: tableBlock.status,
       error: tableBlock.error,
       message: tableBlock.message,
-    });
-    return false;
+    };
   }
 
   if (!principalId || !isUuid(principalId)) {
-    res.status(403).json({
+    return {
+      allowed: false,
+      status: 403,
       error: "PRINCIPAL_NOT_FOUND",
       message: "No principal is bound to this session.",
-    });
-    return false;
+    };
   }
 
   const policy = await resolveEntityPolicy(db, table, tenantId);
   if (!policy) {
-    res.status(403).json({
+    return {
+      allowed: false,
+      status: 403,
       error: "ENTITY_POLICY_REQUIRED",
       message: `Entity '${entityCode}' has no active tenant policy.`,
-    });
-    return false;
+    };
   }
 
   if (policy.access_mode === "default_deny") {
-    res.status(403).json({
+    return {
+      allowed: false,
+      status: 403,
       error: "ENTITY_POLICY_DENIED",
       message: `Entity '${entityCode}' is denied by tenant policy.`,
-    });
-    return false;
+    };
   }
 
   const operation = await resolveMutationOperation(db, entityCode, tenantId, action);
   if (!operation) {
-    res.status(403).json({
+    return {
+      allowed: false,
+      status: 403,
       error: "ENTITY_OPERATION_REQUIRED",
       message: `Entity '${entityCode}' does not expose a ${action} operation.`,
-    });
-    return false;
+    };
   }
 
   if (!operation.is_enabled) {
-    res.status(403).json({
+    return {
+      allowed: false,
+      status: 403,
       error: "ENTITY_OPERATION_DISABLED",
       message: `Entity '${entityCode}' ${action} operation is disabled.`,
-    });
-    return false;
+    };
   }
 
   const permissionLogger = logger?.warn
@@ -148,15 +177,38 @@ export async function authorizeEntityMutation(args: {
   );
 
   if (permissionResult.decision !== "allow") {
-    res.status(403).json({
+    return {
+      allowed: false,
+      status: 403,
       error: "PERMISSION_DENIED",
       message: `Permission '${operation.permission_code}' is required to ${action} '${entityCode}'.`,
       decision: permissionResult.decision,
-    });
-    return false;
+    };
   }
 
-  return true;
+  return { allowed: true };
+}
+
+/**
+ * Authorize a mutation and, on denial, write the appropriate 4xx response.
+ *
+ * Thin wrapper around {@link checkEntityMutationAuthorization}. Existing
+ * callers (PATCH/POST/DELETE handlers) are unchanged — same signature,
+ * same behavior on failure (writes JSON to `res`).
+ */
+export async function authorizeEntityMutation(args: CheckEntityMutationAuthorizationArgs & {
+  res: Response;
+}): Promise<boolean> {
+  const { res, ...rest } = args;
+  const outcome = await checkEntityMutationAuthorization(rest);
+  if (outcome.allowed) return true;
+
+  res.status(outcome.status).json({
+    error: outcome.error,
+    message: outcome.message,
+    ...(outcome.decision !== undefined ? { decision: outcome.decision } : {}),
+  });
+  return false;
 }
 
 export async function resolveEntityWriteFieldRules(

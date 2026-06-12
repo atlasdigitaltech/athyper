@@ -13,6 +13,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Separator, overlayScrimVariants,
 } from "@athyper/ui/primitives";
+import { MeUIProvider } from "@athyper/me-ui";
+import { bffFetch } from "@/lib/bff-fetch";
+import { useShellSession } from "@/hooks/use-shell-session";
+import { applyThemePreferences } from "@/lib/preferences/theme-dom";
 
 import { ProfileSection       } from "./_sections/profile-section";
 import { IdentitySection      } from "./_sections/identity-section";
@@ -60,6 +64,7 @@ const VALID_SECTIONS = NAV_ITEMS.map((i) => i.id);
 
 function SettingsContent() {
   const searchParams = useSearchParams();
+  const { bff } = useShellSession();
   const raw = (searchParams.get("section") ?? "profile") as SectionId;
 
   const [active,     setActive]     = useState<SectionId>(VALID_SECTIONS.includes(raw) ? raw : "profile");
@@ -73,6 +78,7 @@ function SettingsContent() {
   }
 
   return (
+    <MeUIProvider bffFetch={bffFetch} session={bff} applyThemePreferences={applyThemePreferences}>
     <PageFrame title="Settings" description="Manage your profile, security, and preferences">
       <div className="flex gap-0">
 
@@ -182,6 +188,7 @@ function SettingsContent() {
         </div>
       )}
     </PageFrame>
+    </MeUIProvider>
   );
 }
 

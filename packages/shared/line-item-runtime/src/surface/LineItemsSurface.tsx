@@ -81,6 +81,7 @@ export function LineItemsSurface({
   companyCodeId,
   record,
   editMode = true,
+  mobileColumns,
 }: LineItemsSurfaceProps) {
   const lineEntityCode = surface.entityCode;
 
@@ -106,6 +107,7 @@ export function LineItemsSurface({
       isLoading={isLoading}
       onRefresh={refresh}
       editMode={editMode}
+      mobileColumns={mobileColumns}
     />
   );
 }

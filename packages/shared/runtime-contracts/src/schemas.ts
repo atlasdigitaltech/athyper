@@ -166,6 +166,15 @@ export const MetaEntityLineItemsSurfaceSchema = MetaEntitySurfaceBaseSchema.exte
   canDelete: z.boolean(),
   affectsTotals: z.boolean().default(false),
   requiredForSubmit: z.boolean().default(false),
+  /**
+   * Phase 11 #8 — priority column names shown when the grid renders below
+   * the `md` breakpoint (768px). Columns outside this list render with
+   * `hidden md:table-cell` so they only appear at desktop widths.
+   *
+   * Sourced from the line entity's `display_config.mobile_columns` at
+   * compile time. Absent / empty array = show all columns at all sizes.
+   */
+  mobileColumns: z.array(z.string()).optional(),
 }).catchall(z.unknown());
 export type MetaEntityLineItemsSurface = z.infer<typeof MetaEntityLineItemsSurfaceSchema>;
 

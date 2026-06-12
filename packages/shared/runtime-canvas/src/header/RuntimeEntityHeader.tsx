@@ -1,12 +1,13 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@athyper/theme/utils";
-import type { EntityHeaderModel, HeaderFact } from "./types";
+import type { EntityHeaderModel, HeaderFact, HeaderMode } from "./types";
 import { RuntimeEntityActionBar } from "./RuntimeEntityActionBar";
 import { RuntimeEntityIdentityBar } from "./RuntimeEntityIdentityBar";
 import { RuntimeEntityTabBar, type RuntimeEntityTabBarProps } from "./RuntimeEntityTabBar";
 import { entityHeaderEditClass, entityHeaderShellClass } from "./header-chrome";
+import { usePublishHeaderOffset } from "./use-publish-header-offset";
 
 interface AmountSummary {
   label: string;
@@ -17,6 +18,20 @@ interface AmountSummary {
 
 export interface RuntimeEntityHeaderProps {
   model: EntityHeaderModel;
+  /**
+   * Controlled mode. When provided, the header reflects this value on every
+   * render and parent-driven transitions (e.g. expanded → pinned on scroll)
+   * propagate immediately. When omitted, the header is uncontrolled and uses
+   * `defaultMode` (or `"expanded"`) as the initial state.
+   *
+   * Pinned mode renders a sticky, condensed strip suitable for long-scroll
+   * object pages; expanded mode renders the full identity + tab bar.
+   */
+  mode?: HeaderMode;
+  /** Initial mode for the uncontrolled variant. Ignored when `mode` is set. */
+  defaultMode?: HeaderMode;
+  /** Notifier for mode transitions. Fires for both controlled and uncontrolled. */
+  onModeChange?: (mode: HeaderMode) => void;
   editMode?: boolean;
   onAction?: (id: string) => void;
   onBack?: () => void;
@@ -28,6 +43,11 @@ export interface RuntimeEntityHeaderProps {
   onTypeClick?: () => void;
   identitySlot?: ReactNode;
   actionLeadingSlot?: ReactNode;
+  /**
+   * Arbitrary content rendered below the identity bar in both pinned and
+   * expanded modes. Useful for scroll-spy breadcrumbs or pinned alerts.
+   */
+  extensionSlot?: ReactNode;
   className?: string;
 }
 
@@ -71,6 +91,9 @@ function toAmountSummary(xlFact: HeaderFact): AmountSummary {
 
 export function RuntimeEntityHeader({
   model,
+  mode: controlledMode,
+  defaultMode,
+  onModeChange,
   editMode = false,
   onAction,
   onBack,
@@ -82,37 +105,93 @@ export function RuntimeEntityHeader({
   onTypeClick,
   identitySlot,
   actionLeadingSlot,
+  extensionSlot,
   className,
 }: RuntimeEntityHeaderProps) {
+  // Controlled when `mode` is explicitly provided; otherwise fall back to
+  // internal state seeded from `defaultMode` (default "expanded"). This lets
+  // parents drive expanded → pinned transitions on scroll while preserving
+  // standalone usage in storybook / classic-tabs callers.
+  const isControlled = controlledMode !== undefined;
+  const [internalMode, setInternalMode] = useState<HeaderMode>(defaultMode ?? "expanded");
+  const mode = isControlled ? controlledMode : internalMode;
+  // Retained for future user-initiated mode toggles (e.g. an expand/collapse
+  // affordance). Surfacing it now keeps the controlled/uncontrolled story
+  // symmetric for callers that wire either pattern.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const setMode = (m: HeaderMode) => {
+    if (!isControlled) setInternalMode(m);
+    onModeChange?.(m);
+  };
+  const isPinned = mode === "pinned";
+
+  const pinnedRef = usePublishHeaderOffset(isPinned);
+
   const xlFact = model.facts?.find((fact) => fact.xl);
   const amountSummary = xlFact ? toAmountSummary(xlFact) : undefined;
   const actionsSlot = <RuntimeEntityActionBar actions={model.actions} onAction={onAction} />;
   const mobileActionsSlot = <RuntimeEntityActionBar actions={model.actions} onAction={onAction} compact />;
 
+  const identityBar = (
+    <RuntimeEntityIdentityBar
+      identity={model.identity}
+      onBack={onBack}
+      actionsSlot={actionsSlot}
+      mobileActionsSlot={mobileActionsSlot}
+      amountSummary={amountSummary}
+      editMode={editMode}
+      onTypeClick={onTypeClick}
+      identitySlot={identitySlot}
+      actionLeadingSlot={actionLeadingSlot}
+    />
+  );
+
+  const tabBar = ((model.tabs?.length ?? 0) > 0 || (platformIcons?.length ?? 0) > 0) ? (
+    <RuntimeEntityTabBar
+      tabs={model.tabs ?? []}
+      activeTab={activeTab}
+      onTabChange={onTabChange}
+      platformIcons={platformIcons}
+      onPlatformIconClick={onPlatformIconClick}
+      activePlatformIcon={activePlatformIcon}
+    />
+  ) : null;
+
+  const extensionBlock = extensionSlot ? (
+    <div className="border-t border-border/60 px-4 py-2 sm:px-5 lg:px-[22px]">
+      {extensionSlot}
+    </div>
+  ) : null;
+
+  // Pinned: sticky condensed strip — identity + extension + tabs only.
+  // Mounts the offset publisher so scrollspy / scroll-margin-top consumers
+  // can read `--entity-header-offset` and align section anchors correctly.
+  if (isPinned) {
+    return (
+      <div
+        ref={pinnedRef}
+        className={cn(
+          "sticky top-0 z-30",
+          entityHeaderShellClass,
+          editMode && entityHeaderEditClass,
+          className,
+        )}
+      >
+        {editMode && <div className="h-[2px] bg-primary/70" />}
+        {identityBar}
+        {extensionBlock}
+        {tabBar}
+      </div>
+    );
+  }
+
+  // Expanded (or any non-pinned future variant): full identity + extension + tabs.
   return (
     <div className={cn(entityHeaderShellClass, editMode && entityHeaderEditClass, className)}>
       {editMode && <div className="h-[2px] bg-primary/70" />}
-      <RuntimeEntityIdentityBar
-        identity={model.identity}
-        onBack={onBack}
-        actionsSlot={actionsSlot}
-        mobileActionsSlot={mobileActionsSlot}
-        amountSummary={amountSummary}
-        editMode={editMode}
-        onTypeClick={onTypeClick}
-        identitySlot={identitySlot}
-        actionLeadingSlot={actionLeadingSlot}
-      />
-      {((model.tabs?.length ?? 0) > 0 || (platformIcons?.length ?? 0) > 0) && (
-        <RuntimeEntityTabBar
-          tabs={model.tabs ?? []}
-          activeTab={activeTab}
-          onTabChange={onTabChange}
-          platformIcons={platformIcons}
-          onPlatformIconClick={onPlatformIconClick}
-          activePlatformIcon={activePlatformIcon}
-        />
-      )}
+      {identityBar}
+      {extensionBlock}
+      {tabBar}
     </div>
   );
 }

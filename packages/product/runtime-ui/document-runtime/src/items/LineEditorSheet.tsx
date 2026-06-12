@@ -6,6 +6,7 @@ import { DrawerShell } from "@athyper/ui/primitives";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
+import { useEditSessionContext } from "@athyper/content-ui";
 import {
   type LineRecord,
   MetaLineForm,
@@ -86,6 +87,13 @@ export function LineEditorSheet(props: LineEditorSheetProps) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Phase 6c: when this sheet is mounted inside an active Edit Session
+  // (object-page mode, user clicked Edit), route Save through the session's
+  // bundle so changes commit atomically with header + other line edits when
+  // the user clicks Save in the action bar. Outside an active session, fall
+  // back to the existing per-line REST PATCH.
+  const editSession = useEditSessionContext();
+
   const lineKey = recordId(line as LineRecord);
   const title = useMemo(() => lineTitle(resolvedEntity, line), [resolvedEntity, line]);
   const subtitle = useMemo(
@@ -103,6 +111,16 @@ export function LineEditorSheet(props: LineEditorSheetProps) {
     if (readOnly || !resolvedEntity || !lineKey) return;
     const patch = buildLinePatch(resolvedEntity, draft, line as LineRecord);
     if (Object.keys(patch).length === 0) {
+      onOpenChange(false);
+      return;
+    }
+
+    // Edit Session route: queue the update, close the sheet, let the action
+    // bar's Save commit it transactionally with everything else dirty.
+    if (editSession?.isEditing) {
+      editSession.updateLine(lineKey, patch as Record<string, unknown>);
+      onLineSaved?.(patch as Partial<DocumentLine>);
+      onMutated?.();
       onOpenChange(false);
       return;
     }

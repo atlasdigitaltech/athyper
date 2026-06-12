@@ -924,6 +924,7 @@ model entity {
   updated_at              DateTime?                 @db.Timestamptz(6)
   updated_by              String?                   @db.Uuid
   concurrency_policy      Json                      @default("{}")
+  plane_eligibility       String[]                  @default(["neon"])
   entity_class_profile    entity_class_profile      @relation(fields: [entity_class], references: [class_key], onUpdate: NoAction, map: "entity_class_profile_fk")
   principal               principal                 @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "entity_created_by_fk")
   tenant                  tenant?                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "entity_tenant_fk")
@@ -942,6 +943,7 @@ model entity {
   @@index([tenant_id, entity_class, status], map: "entity_tenant_class_idx", where: raw("(status = 'ACTIVE'::text)"))
   @@index([tenant_id, entity_code], map: "entity_tenant_code_idx")
   @@index([tenant_id], map: "entity_tenant_unprovisioned_pidx", where: raw("((ownership_model = 'tenant'::text) AND (provisioned_at IS NULL))"))
+  @@index([plane_eligibility], map: "entity_plane_eligibility_gin", type: Gin)
   @@schema("control")
 }
 
@@ -1230,6 +1232,7 @@ model entity_operation {
   created_by         String     @db.Uuid
   updated_at         DateTime?  @db.Timestamptz(6)
   updated_by         String?    @db.Uuid
+  plane_filter       String[]
   permission         permission @relation(fields: [permission_code], references: [code], onUpdate: NoAction, map: "eo_permission_fk")
 
   @@unique([tenant_id, entity_name, permission_code], map: "eo_binding_uq")
@@ -1343,6 +1346,11 @@ model entity_version {
   created_by                                                                         String                    @db.Uuid
   updated_at                                                                         DateTime?                 @db.Timestamptz(6)
   updated_by                                                                         String?                   @db.Uuid
+  locked_after_effective                                                             Boolean                   @default(true)
+  emergency_override_at                                                              DateTime?                 @db.Timestamptz(6)
+  emergency_override_by                                                              String?                   @db.Uuid
+  emergency_override_reason                                                          String?
+  emergency_override_ticket                                                          String?
   entity_field                                                                       entity_field[]
   entity_flow                                                                        entity_flow[]
   entity_publish_state_entity_publish_state_current_draft_version_idToentity_version entity_publish_state[]    @relation("entity_publish_state_current_draft_version_idToentity_version")
@@ -5809,8 +5817,9 @@ model lifecycle_timer_schedule {
 model notification_delivery {
   id                                                      String                 @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                               String                 @db.Uuid
-  message_id                                              String                 @db.Uuid
+  message_id                                              String?                @db.Uuid
   notification_id                                         String?                @db.Uuid
+  outbox_id                                               String?                @db.Uuid
   recipient_id                                            String?                @db.Uuid
   recipient_addr                                          String
   channel                                                 String
@@ -5839,7 +5848,8 @@ model notification_delivery {
   updated_at                                              DateTime?              @db.Timestamptz(6)
   updated_by                                              String?                @db.Uuid
   principal_notification_delivery_created_byToprincipal   principal              @relation("notification_delivery_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "ndlv_created_by_fk")
-  notification_message                                    notification_message   @relation(fields: [message_id], references: [id], onUpdate: NoAction, map: "ndlv_message_fk")
+  notification_message                                    notification_message?  @relation(fields: [message_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "ndlv_message_fk")
+  outbox                                                  outbox?                @relation(fields: [outbox_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "ndlv_outbox_fk")
   notification_provider                                   notification_provider? @relation(fields: [provider_id], references: [id], onUpdate: NoAction, map: "ndlv_provider_fk")
   principal_notification_delivery_recipient_idToprincipal principal?             @relation("notification_delivery_recipient_idToprincipal", fields: [recipient_id], references: [id], onUpdate: NoAction, map: "ndlv_recipient_fk")
   tenant                                                  tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ndlv_tenant_fk")
@@ -5852,6 +5862,7 @@ model notification_delivery {
   @@index([tenant_id, recipient_id, created_at(sort: Desc)], map: "ndlv_recipient_idx", where: raw("(recipient_id IS NOT NULL)"))
   @@index([tenant_id, subscription_id, created_at(sort: Desc)], map: "ndlv_subscription_pidx", where: raw("(subscription_id IS NOT NULL)"))
   @@index([channel, next_retry_at], map: "ndlv_worker_pickup_pidx", where: raw("(status = ANY (ARRAY['pending'::text, 'queued'::text]))"))
+  @@index([tenant_id, outbox_id, subscription_id, created_at(sort: Desc)], map: "ndlv_webhook_outbox_subscription_idx", where: raw("((channel = 'webhook'::text) AND (outbox_id IS NOT NULL) AND (subscription_id IS NOT NULL))"))
   @@schema("event")
 }
 
@@ -5960,31 +5971,32 @@ model orchestration_run {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model outbox {
-  id             String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id      String    @db.Uuid
-  topic          String
-  event_type     String?
-  event_key      String?
-  entity_type    String?
-  entity_id      String?   @db.Uuid
-  aggregate_id   String?   @db.Uuid
-  aggregate_type String?
-  actor_id       String?   @db.Uuid
-  source         String?
-  correlation_id String?   @db.Uuid
-  payload        Json      @default("{}")
-  status         String    @default("pending")
-  attempts       Int       @default(0)
-  max_attempts   Int       @default(5)
-  available_at   DateTime  @default(now()) @db.Timestamptz(6)
-  locked_at      DateTime? @db.Timestamptz(6)
-  locked_by      String?
-  locked_until   DateTime? @db.Timestamptz(6)
-  last_error     String?
-  processed_at   DateTime? @db.Timestamptz(6)
-  created_at     DateTime  @default(now()) @db.Timestamptz(6)
-  created_by     String    @db.Uuid
-  tenant         tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "outbox_tenant_fk")
+  id                    String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id             String                  @db.Uuid
+  topic                 String
+  event_type            String?
+  event_key             String?
+  entity_type           String?
+  entity_id             String?                 @db.Uuid
+  aggregate_id          String?                 @db.Uuid
+  aggregate_type        String?
+  actor_id              String?                 @db.Uuid
+  source                String?
+  correlation_id        String?                 @db.Uuid
+  payload               Json                    @default("{}")
+  status                String                  @default("pending")
+  attempts              Int                     @default(0)
+  max_attempts          Int                     @default(5)
+  available_at          DateTime                @default(now()) @db.Timestamptz(6)
+  locked_at             DateTime?               @db.Timestamptz(6)
+  locked_by             String?
+  locked_until          DateTime?               @db.Timestamptz(6)
+  last_error            String?
+  processed_at          DateTime?               @db.Timestamptz(6)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  created_by            String                  @db.Uuid
+  notification_delivery notification_delivery[]
+  tenant                tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "outbox_tenant_fk")
 
   @@index([processed_at], map: "outbox_completed_purge_pidx", where: raw("(status = 'completed'::text)"))
   @@index([topic, created_at], map: "outbox_dead_letter_pidx", where: raw("(status = 'dead_letter'::text)"))
@@ -15065,6 +15077,7 @@ model permission {
   created_by                 String                       @db.Uuid
   updated_at                 DateTime?                    @db.Timestamptz(6)
   updated_by                 String?                      @db.Uuid
+  plane_eligibility          String[]                     @default(["neon"])
   entity_operation           entity_operation[]
   permission_decision_log    permission_decision_log[]
   access_grant               access_grant[]
@@ -15076,6 +15089,7 @@ model permission {
   @@index([code], map: "permission_active_pidx", where: raw("((status)::text = 'active'::text)"))
   @@index([category_id], map: "permission_category_idx")
   @@index([id], map: "permission_plan_restricted_pidx", where: raw("(is_plan_restricted = true)"))
+  @@index([plane_eligibility], map: "permission_plane_eligibility_gin", type: Gin, where: raw("(is_active = true)"))
   @@schema("shared")
 }
 
@@ -17848,4 +17862,66 @@ model notification_delivery_claim {
   @@unique([tenant_id, idempotency_key], map: "ndcl_idempotency_uq")
   @@index([expires_at], map: "ndcl_expiry_idx")
   @@schema("event")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model entity_lifecycle_state_mask {
+  id                String    @id(map: "elsm_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String?   @db.Uuid
+  entity_name       String
+  record_status     String
+  can_edit          Boolean   @default(true)
+  can_delete        Boolean   @default(true)
+  can_transition_to String[]
+  disabled_reason   String?
+  applies_to_planes String[]  @default(["neon", "admin", "mesh"])
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  created_by        String    @db.Uuid
+  updated_at        DateTime? @db.Timestamptz(6)
+  updated_by        String?   @db.Uuid
+
+  @@unique([tenant_id, entity_name, record_status], map: "elsm_binding_uq")
+  @@index([entity_name, record_status, tenant_id], map: "elsm_lookup_idx")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model permission_alias {
+  id              String    @id(map: "pa_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  canonical_code  String
+  alias_code      String    @unique(map: "pa_alias_uq")
+  deprecated_at   DateTime  @default(now()) @db.Timestamptz(6)
+  hard_fail_after DateTime? @db.Timestamptz(6)
+  notes           String?
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  created_by      String    @db.Uuid
+
+  @@index([canonical_code], map: "pa_canonical_idx")
+  @@schema("control")
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model descriptor_cache_invalidation {
+  id                 String    @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  log_type           String    @default("system")
+  tenant_id          String?   @db.Uuid
+  entity_code        String?
+  plane_key          String?
+  reason             String
+  triggered_by_table String?
+  triggered_by_id    String?   @db.Uuid
+  processed_at       DateTime? @db.Timestamptz(6)
+  processed_by       String?
+  redis_keys_deleted Int?
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  created_by         String    @db.Uuid
+
+  @@id([id, created_at], map: "dci_pkey")
+  @@index([tenant_id, entity_code, created_at(sort: Desc)], map: "dci_tenant_entity_idx")
+  @@index([created_at], map: "dci_unprocessed_idx", where: raw("(processed_at IS NULL)"))
+  @@schema("log")
 }

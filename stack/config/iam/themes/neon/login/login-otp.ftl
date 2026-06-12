@@ -82,10 +82,7 @@
       <button class="kc-dot" aria-label="Slide 6"></button>
       <button class="kc-dot" aria-label="Slide 7"></button>
     </div>
-  </div>
-
-    </div>
-  </div>
+  </div><!-- /.kc-panel-left -->
 
   <!-- ── Right form panel ── -->
   <div class="kc-panel-right">

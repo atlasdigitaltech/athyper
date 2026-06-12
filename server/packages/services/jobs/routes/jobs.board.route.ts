@@ -104,7 +104,7 @@ async function resolveAuth(
     return null;
   }
 
-  const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+  const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
   if (!principalId) {
     res.status(403).json({ error: "NO_PRINCIPAL_BINDING", message: "No principal bound to this token in this tenant" });
     return null;

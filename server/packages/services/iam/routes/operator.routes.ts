@@ -84,7 +84,7 @@ async function resolveOperatorAuth(
     return null;
   }
 
-  const callerPrincipalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+  const callerPrincipalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
   if (!callerPrincipalId) {
     res.status(403).json({ error: "NO_PRINCIPAL", message: "No principal found for this user in the current tenant" });
     return null;

@@ -6,6 +6,7 @@ import { DrawerShell } from "@athyper/ui/primitives";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
+import { useEditSessionContext } from "@athyper/content-ui";
 import {
   type LineRecord,
   MetaLineForm,
@@ -81,6 +82,12 @@ export function LineComposerSheet({
   const isNew = !line;
   const lineKey = recordId(line as LineRecord | null | undefined);
 
+  // Phase 6c: when an Edit Session is active, route Save through the session's
+  // bundle (addLine for new, updateLine for existing) so changes commit atomically
+  // alongside header + other line edits on action-bar Save. Without a session,
+  // fall back to the existing per-line REST POST/PATCH path.
+  const editSession = useEditSessionContext();
+
   useEffect(() => {
     if (!open || !resolvedEntity) return;
     setDraft(initialDraft(resolvedEntity, line as LineRecord | null | undefined));
@@ -100,6 +107,21 @@ export function LineComposerSheet({
       : buildLinePatch(resolvedEntity, draft, line as LineRecord);
 
     if (!isNew && Object.keys(payload).length === 0) {
+      onOpenChange(false);
+      return;
+    }
+
+    // Edit Session route: queue create/update, close the sheet, action-bar
+    // Save commits transactionally. Takes precedence over onDraftSubmit only
+    // when the consumer hasn't opted into the draft path explicitly — draft
+    // submit is preserved for callers that manage state outside the session.
+    if (editSession?.isEditing && !onDraftSubmit) {
+      if (isNew) {
+        editSession.addLine(payload);
+      } else if (lineKey) {
+        editSession.updateLine(lineKey, payload as Record<string, unknown>);
+      }
+      onMutated?.();
       onOpenChange(false);
       return;
     }

@@ -66,10 +66,19 @@ import {
   observeHttpRequest,
   recordAuthContextMismatch,
   recordAuthContextMismatchSuppressed,
+  recordDeprecatedRouteHit,
   recordTokenClaimsInvalid,
   registerJobQueues,
   registerMetricCollectors,
 } from "../metrics.js";
+
+/**
+ * HTTP-date string for the `Sunset` response header on @deprecated routes.
+ * Bump this when the removal window extends; the alias removal PR clears it.
+ * Format: RFC 7231 IMF-fixdate. Read by metrics dashboards and the BFF clients
+ * that surface deprecation warnings to operators.
+ */
+const DEPRECATED_ROUTE_SUNSET_HTTP_DATE = "Sat, 12 Sep 2026 00:00:00 GMT";
 import { makeAuditEvent } from "../audit.js";
 import { runComplianceSuiteIfDev } from "../../packages/services/metadata/src/entity-compliance.js";
 import { createEntityCompilerService } from "../../packages/services/metadata/src/entity-compiler.service.js";
@@ -977,6 +986,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     importMaxUploadMb:    config.objectStorage?.maxUploadMb,
     checkPermissionBatch,
     tokenSecret:          process.env["EXPORT_TOKEN_SECRET"],
+    redis,
   });
 
   registerMasterContactsRoutes(apiRouter, {
@@ -1036,6 +1046,10 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     auth: routeAuth,
     cache: iamCache,
     logger,
+    deprecation: {
+      recordHit: recordDeprecatedRouteHit,
+      sunsetHttpDate: DEPRECATED_ROUTE_SUNSET_HTTP_DATE,
+    },
   });
 
   registerRefRoutes(apiRouter, {

@@ -2,25 +2,36 @@
  * Platform Routes — saved views, module tree, entity catalog, notifications,
  *                   user preferences, entity field browser
  *
- * GET    /api/platform/saved-views/:entity              — user + shared saved filter views
- * POST   /api/platform/saved-views/:entity              — create a saved view (entity in path)
- * POST   /api/platform/saved-views                      — create a saved view (entity_code in body)
- * DELETE /api/platform/saved-views/:entity/:id          — delete a saved view
- * PATCH  /api/platform/saved-views/:entity/:id          — update config (state_json)
- * PATCH  /api/platform/saved-views/:entity/:id/default  — set as default
- * DELETE /api/platform/saved-views/:entity/default      — clear current principal default
+ * Principal-centric endpoints — canonical /api/me/*; /api/user/* and
+ * /api/platform/* retained as aliases (registered via the meRoutes manifest):
+ *   GET    /api/me/profile           (aliases: /api/user/profile,           /api/platform/profile)
+ *   GET    /api/me/identity          (aliases: /api/user/identity,          /api/platform/identity)
+ *   GET    /api/me/preferences       (aliases: /api/user/preferences,       /api/platform/preferences)
+ *   PATCH  /api/me/preferences       (aliases: /api/user/preferences,       /api/platform/preferences)
+ *   GET    /api/me/saved-views       (alias:   /api/user/saved-views)
+ *   PATCH  /api/me/saved-views/:viewId/:action  (alias: /api/user/saved-views/:viewId/:action)
+ *   GET    /api/me/tenant-context    — active tenant + memberships + enabled module codes
  *
- * GET    /api/user/saved-views                          — all saved views for current principal
- * PATCH  /api/user/saved-views/:id/:action              — pin | star | share | archive
- * GET    /api/platform/modules                          — tenant module subscriptions
- * GET    /api/platform/entities                         — entity catalog (admin)
- * GET    /api/platform/entities/:name/fields            — fields for a specific entity
- * GET    /api/platform/preferences                      — current user's UI preferences
- * PATCH  /api/platform/preferences                      — update UI preferences
- * GET    /api/platform/notifications/unread-count       — unread notification count
- * GET    /api/platform/blueprints                       — blueprint catalog with applied status per tenant
- * POST   /api/platform/blueprints/:code/apply           — mark a blueprint as applied for this tenant
- * DELETE /api/platform/blueprints/:code/apply           — unmark (set status='removed') a blueprint
+ * Admin-gated (NOT principal-centric — requires tenant_admin group):
+ *   GET    /api/platform/admin/tenant
+ *          (aliases: /api/platform/tenant-admin, /api/user/tenant-admin)
+ *
+ * Saved-view CRUD (per-entity, admin/curated):
+ *   GET    /api/platform/saved-views/:entity              — user + shared saved filter views
+ *   POST   /api/platform/saved-views/:entity              — create a saved view (entity in path)
+ *   POST   /api/platform/saved-views                      — create a saved view (entity_code in body)
+ *   DELETE /api/platform/saved-views/:entity/:id          — delete a saved view
+ *   PATCH  /api/platform/saved-views/:entity/:id          — update config (state_json)
+ *   PATCH  /api/platform/saved-views/:entity/:id/default  — set as default
+ *   DELETE /api/platform/saved-views/:entity/default      — clear current principal default
+ *
+ *   GET    /api/platform/modules                          — tenant module subscriptions
+ *   GET    /api/platform/entities                         — entity catalog (admin)
+ *   GET    /api/platform/entities/:name/fields            — fields for a specific entity
+ *   GET    /api/platform/notifications/unread-count       — unread notification count
+ *   GET    /api/platform/blueprints                       — blueprint catalog with applied status per tenant
+ *   POST   /api/platform/blueprints/:code/apply           — mark a blueprint as applied for this tenant
+ *   DELETE /api/platform/blueprints/:code/apply           — unmark (set status='removed') a blueprint
  */
 
 import type { IncomingHttpHeaders } from "node:http";
@@ -33,7 +44,7 @@ import {
   isUuid,
   resolvePrincipalIdOrNull,
 } from "@athyper/svc-shared";
-import { jitProvisionPrincipal } from "@athyper/svc-iam";
+import { getEffectiveModuleAccess, jitProvisionPrincipal } from "@athyper/svc-iam";
 
 // ─── Deps ─────────────────────────────────────────────────────────────────────
 
@@ -51,6 +62,19 @@ export interface PlatformRoutesDeps {
     del(key: string | string[]): Promise<unknown>;
     scan?(cursor: string, matchFlag: "MATCH", pattern: string, countFlag: "COUNT", count: number): Promise<[string, string[]]>;
     smembers?(key: string): Promise<string[]>;
+  };
+  /**
+   * Optional deprecation telemetry. When provided, every hit on a
+   * `@deprecated` alias route (/user/*, /platform/{profile,identity,…},
+   * /platform/tenant-admin, /user/tenant-admin) calls `recordHit` and
+   * the response carries `Deprecation`, `Sunset`, and `Link` headers
+   * (RFC 8594). The alias is safe to remove once telemetry shows zero
+   * hits across the agreed observation window.
+   */
+  deprecation?: {
+    recordHit(method: string, aliasPath: string, canonicalPath: string): void;
+    /** HTTP-date string for the `Sunset` header. */
+    sunsetHttpDate: string;
   };
 }
 
@@ -460,7 +484,23 @@ function toEntity(row: Record<string, any>) {
 // ─── Route factory ────────────────────────────────────────────────────────────
 
 export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps): Router {
-  const { db, auth, logger, cache } = deps;
+  const { db, auth, logger, cache, deprecation } = deps;
+
+  // Wraps a canonical handler so every hit on a deprecated alias surface (a) is
+  // counted in telemetry and (b) responds with RFC 8594 deprecation headers
+  // pointing consumers at the canonical path. No-op when deprecation deps are
+  // not wired (tests, dev kernels) so the route still behaves identically.
+  function withDeprecation(canonicalPath: string, aliasPath: string, inner: RequestHandler): RequestHandler {
+    return (req, res, next) => {
+      if (deprecation) {
+        deprecation.recordHit(req.method, aliasPath, canonicalPath);
+        res.setHeader("Deprecation", "true");
+        res.setHeader("Sunset", deprecation.sunsetHttpDate);
+        res.setHeader("Link", `<${canonicalPath}>; rel="successor-version"`);
+      }
+      return inner(req, res, next);
+    };
+  }
 
   // ── GET /platform/saved-views/:entity ──────────────────────────────────────
 
@@ -1075,7 +1115,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       if (!tenantId) { res.json({ data: [] }); return; }
 
       const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
-      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.json({ data: [] }); return; }
 
       const limit  = Math.min(100, Math.max(1, parseInt(String(req.query["limit"]  ?? "50"), 10)));
@@ -1141,7 +1181,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       if (!tenantId) { res.status(404).json({ error: "NOT_FOUND" }); return; }
 
       const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
-      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
 
       await db
         .updateTable("event.notification_delivery" as never)
@@ -1173,7 +1213,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       if (!tenantId) { res.status(204).end(); return; }
 
       const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
-      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.status(204).end(); return; }
 
       await db
@@ -1206,7 +1246,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       if (!tenantId) { res.json({ count: 0 }); return; }
 
       const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
-      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
       if (!principalId) { res.json({ count: 0 }); return; }
 
       const result = await db
@@ -1256,7 +1296,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
     try {
       tenantId    = await resolveTenantId(db, xOrg, xRealm);
       const sub   = typeof claims["sub"] === "string" ? claims["sub"] : "";
-      principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null;
+      principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
     } catch {
       res.status(401).end();
       return;
@@ -1851,7 +1891,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_REQUIRED" }); return; }
 
       const [principal, profile, authBindings] = await Promise.all([
@@ -2060,7 +2100,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_REQUIRED" }); return; }
 
       // Gate: require membership in either the canonical 'tenant_admin' group
@@ -2129,6 +2169,74 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
     }
   };
 
+  // ── GET /me/tenant-context ────────────────────────────────────────────────
+  // Principal-centric tenant context. No admin gate.
+  //   - active:           the tenant/realm/workbench the request is operating in
+  //   - memberships:      tenants this KC subject is bound to within the realm
+  //                       (single-entry in neon's single-tenant case; many in mesh)
+  //   - enabled_modules:  effective module codes for the principal in the active tenant
+
+  const getTenantContextHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const xWorkbenches = (req.headers["x-workbenches"] as string) ?? "";
+      const activeWorkbench = xWorkbenches.split(",").map((s) => s.trim()).find(Boolean) ?? null;
+
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_REQUIRED" }); return; }
+
+      const [activeTenant, membershipRows, moduleAccess] = await Promise.all([
+        db.selectFrom("master.tenant as t")
+          .select(["t.id", "t.code", "t.name", "t.display_name", "t.realm_key"])
+          .where("t.id", "=", tenantId)
+          .executeTakeFirst(),
+        sub
+          ? db.selectFrom("master.principal_identity_binding as pib")
+              .innerJoin("master.tenant as t", "t.id", "pib.tenant_id")
+              .select(["t.id", "t.code", "t.name", "t.display_name", "t.realm_key"])
+              .distinct()
+              .where("pib.subject_id", "=", sub)
+              .where("pib.realm_key", "=", xRealm)
+              .execute()
+          : Promise.resolve([] as Array<Record<string, unknown>>),
+        getEffectiveModuleAccess(db, tenantId, principalId),
+      ]);
+
+      const active = activeTenant ? {
+        tenant_id:  activeTenant.id      as string,
+        code:       activeTenant.code    as string,
+        name:       (activeTenant.display_name ?? activeTenant.name) as string,
+        realm_key:  activeTenant.realm_key as string,
+        workbench:  activeWorkbench,
+      } : null;
+
+      const memberships = (membershipRows as Array<Record<string, unknown>>).map((r) => ({
+        tenant_id:  r["id"]   as string,
+        code:       r["code"] as string,
+        name:       (r["display_name"] ?? r["name"]) as string,
+        realm_key:  r["realm_key"] as string,
+        is_active:  r["id"] === tenantId,
+      }));
+
+      res.json({
+        active,
+        memberships,
+        enabled_modules: moduleAccess.moduleCodes,
+      });
+    } catch (err) {
+      logger?.error("me_tenant_context_get_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // ── Register routes ───────────────────────────────────────────────────────
 
   router.get("/platform/saved-views/:entity",                    listSavedViewsHandler);
@@ -2139,20 +2247,42 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
   router.patch("/platform/saved-views/:entity/:viewId",          updateSavedViewHandler);
   router.patch("/platform/saved-views/:entity/:viewId/default",  setDefaultViewHandler);
 
-  router.get("/user/saved-views",                     userListSavedViewsHandler);
-  router.patch("/user/saved-views/:viewId/:action",   userSavedViewActionHandler);
-  router.get("/user/preferences",                     getPreferencesHandler);
-  router.patch("/user/preferences",                   patchPreferencesHandler);
+  // Principal-centric endpoints. Canonical namespace is /me/*; /user/* and
+  // /platform/* are retained as @deprecated aliases for back-compat with older
+  // BFF callers. New consumers should call /me/*; the aliases will be removed
+  // once all known callers have migrated. Add new principal-centric routes here
+  // — the loop registers /me + every requested alias atomically so an alias
+  // can't drift out of step with the canonical route.
+  type AliasNs = "user" | "platform";
+  type Method = "get" | "post" | "patch" | "delete";
+  const meRoutes: Array<{ method: Method; path: string; handler: RequestHandler; aliases: AliasNs[] }> = [
+    { method: "get",   path: "profile",                     handler: getProfileHandler,         aliases: ["user", "platform"] },
+    { method: "get",   path: "identity",                    handler: getIdentityHandler,        aliases: ["user", "platform"] },
+    { method: "get",   path: "preferences",                 handler: getPreferencesHandler,     aliases: ["user", "platform"] },
+    { method: "patch", path: "preferences",                 handler: patchPreferencesHandler,   aliases: ["user", "platform"] },
+    { method: "get",   path: "saved-views",                 handler: userListSavedViewsHandler, aliases: ["user"] },
+    { method: "patch", path: "saved-views/:viewId/:action", handler: userSavedViewActionHandler, aliases: ["user"] },
+    { method: "get",   path: "tenant-context",              handler: getTenantContextHandler,   aliases: [] },
+  ];
+  for (const r of meRoutes) {
+    const canonicalPath = `/me/${r.path}`;
+    router[r.method](canonicalPath, r.handler);
+    for (const alias of r.aliases) {
+      const aliasPath = `/${alias}/${r.path}`;
+      router[r.method](aliasPath, withDeprecation(canonicalPath, aliasPath, r.handler));
+    }
+  }
+  // Admin-gated tenant admin view — kept under /platform/* (not /me/*) since it
+  // returns full tenant config behind a tenant_admin group check, not just "my" context.
+  // Canonical path is /platform/admin/tenant; the other two are @deprecated aliases.
+  router.get("/platform/admin/tenant",     getTenantAdminHandler);
+  router.get("/platform/tenant-admin",     withDeprecation("/platform/admin/tenant", "/platform/tenant-admin", getTenantAdminHandler)); // @deprecated
+  router.get("/user/tenant-admin",         withDeprecation("/platform/admin/tenant", "/user/tenant-admin",     getTenantAdminHandler)); // @deprecated
 
   router.get("/platform/modules", modulesHandler);
   // entity fields before entity catalog to avoid :name capture on /entities
   router.get("/platform/entities/:name/fields", entityFieldsHandler);
   router.get("/platform/entities", entitiesHandler);
-  router.get("/platform/preferences", getPreferencesHandler);
-  router.patch("/platform/preferences", patchPreferencesHandler);
-  router.get("/platform/profile", getProfileHandler);
-  router.get("/platform/identity", getIdentityHandler);
-  router.get("/platform/tenant-admin", getTenantAdminHandler);
   router.get("/platform/blueprints",                blueprintsHandler);
   router.post("/platform/blueprints/:code/apply",   applyBlueprintHandler);
   router.delete("/platform/blueprints/:code/apply", unapplyBlueprintHandler);
@@ -2193,7 +2323,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const xRealm      = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId    = await resolveTenantId(db, xOrg, xRealm);
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null) ?? SYSTEM_ACTOR;
       const body = req.body as Record<string, unknown>;
       const { from_currency, to_currency, rate, rate_type, effective_date, effective_time, source, source_reference } = body;
 
@@ -2240,7 +2370,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const xRealm      = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId    = await resolveTenantId(db, xOrg, xRealm);
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null) ?? SYSTEM_ACTOR;
       const rateId      = req.params["id"] as string ?? "";
       const body       = req.body as Record<string, unknown>;
 
@@ -2284,7 +2414,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const xRealm      = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId    = await resolveTenantId(db, xOrg, xRealm);
       const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId) : null) ?? SYSTEM_ACTOR;
+      const principalId = (sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null) ?? SYSTEM_ACTOR;
       const rateId      = req.params["id"] as string ?? "";
 
       if (!isUuid(rateId)) {
@@ -2500,7 +2630,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT", message: "X-Org header with a valid tenant is required" }); return; }
 
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
 
       // Mark the KC binding as freshly synced — updates sync_status + synced_at.

@@ -138,7 +138,7 @@ async function resolveAuth(
   }
 
   const sub = typeof claims.sub === "string" ? claims.sub : "";
-  const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub) : null;
+  const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
   return { tenantId, principalId };
 }
 

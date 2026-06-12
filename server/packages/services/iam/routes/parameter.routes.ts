@@ -36,6 +36,7 @@ export interface ParameterRoutesDeps {
 interface ParameterReadAuth {
   sub: string;
   tenantId: string;
+  xRealm: string;
 }
 
 interface ParameterAuth extends ParameterReadAuth {
@@ -237,7 +238,7 @@ async function resolveReadAuth(
     return null;
   }
 
-  return { sub, tenantId };
+  return { sub, tenantId, xRealm };
 }
 
 async function resolveParameterAuth(
@@ -249,7 +250,7 @@ async function resolveParameterAuth(
   const base = await resolveReadAuth(req, res, db, auth);
   if (!base) return null;
 
-  const callerPrincipalId = await resolvePrincipalIdOrNull(db, base.sub, base.tenantId);
+  const callerPrincipalId = await resolvePrincipalIdOrNull(db, base.sub, base.tenantId, base.xRealm);
   if (!callerPrincipalId) {
     res.status(403).json({ error: "NO_PRINCIPAL", message: "No principal found for this user in the current tenant" });
     return null;

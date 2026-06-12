@@ -627,7 +627,7 @@ export function createSupplierIntakeRoute(router: Router, deps: SupplierIntakeDe
       }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
 
       const body = req.body as {
         supplier?: Record<string, unknown>;

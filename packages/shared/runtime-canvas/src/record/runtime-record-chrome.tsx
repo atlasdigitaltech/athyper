@@ -6,7 +6,9 @@ import { cn } from "@athyper/theme/utils";
 import { useEntityEdit } from "@athyper/runtime-shared/edit";
 import type { UseOperationDispatchReturn } from "../actions";
 import type { EntityOperation } from "@athyper/api-contracts/metadata";
+import type { ReactNode } from "react";
 import { RuntimeEntityHeader } from "../header";
+import type { HeaderMode } from "../header/types";
 import { headerPrimaryActionClass, headerSecondaryActionClass } from "../header/header-chrome";
 import { useRuntimeEditFormActionState } from "../edit/runtime-edit-form-actions";
 import { PRINT_ACTION_ID, type RuntimeRecordChromeModel } from "./runtime-header-model";
@@ -23,6 +25,14 @@ interface RuntimeRecordChromeProps {
   flags?: RuntimeCanvasFlags;
   adaptedOps?: EntityOperation[];
   operationDispatch?: UseOperationDispatchReturn;
+  /**
+   * Controlled header mode. Pass-through to RuntimeEntityHeader. When set,
+   * the chrome reflects this mode on every render — used by object-page
+   * consumers that drive expanded → pinned via scroll position.
+   */
+  mode?: HeaderMode;
+  /** Pass-through extension slot below the identity bar. */
+  extensionSlot?: ReactNode;
 }
 
 export function RuntimeRecordChrome({
@@ -36,6 +46,8 @@ export function RuntimeRecordChrome({
   flags,
   adaptedOps,
   operationDispatch,
+  mode,
+  extensionSlot,
 }: RuntimeRecordChromeProps) {
   const firstTab = chrome.header.tabs?.[0]?.id;
   const [uncontrolledActiveTab, setUncontrolledActiveTab] = useState(firstTab);
@@ -117,6 +129,8 @@ export function RuntimeRecordChrome({
   const sharedHeaderProps = {
     model: chrome.header,
     editMode,
+    mode,
+    extensionSlot,
     onBack: () => guardNavigate(() => window.history.back()),
     onTypeClick: typeHref ? () => guardedNavigate(typeHref) : undefined,
     onAction: handleAction,

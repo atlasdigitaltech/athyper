@@ -23,6 +23,7 @@ import { cn } from "@athyper/theme/utils";
 import { normaliseCurrencyCode } from "@athyper/runtime-shared/core";
 import type { EntityHeaderModel, HeaderMode } from "./types";
 import { useRailState } from "./hooks/useRailState";
+import { usePublishHeaderOffset } from "./hooks/usePublishHeaderOffset";
 import { EntityIdentityBar } from "./atoms/EntityIdentityBar";
 import { EntityActionBar } from "./atoms/EntityActionBar";
 import { EntityExceptionStrip } from "./atoms/EntityExceptionStrip";
@@ -68,7 +69,15 @@ function toAmountSummary(xlFact: NonNullable<EntityHeaderModel["facts"]>[number]
 
 export interface EntityHeaderProps {
   model: EntityHeaderModel;
+  /**
+   * Controlled mode. When provided, the header reflects this value on every
+   * render and parent-driven transitions (e.g. expanded → pinned on scroll)
+   * propagate immediately. When omitted, the header is uncontrolled and uses
+   * `defaultMode` (or `"expanded"`) as the initial state.
+   */
   mode?: HeaderMode;
+  /** Initial mode for the uncontrolled variant. Ignored when `mode` is set. */
+  defaultMode?: HeaderMode;
   onModeChange?: (mode: HeaderMode) => void;
   /** When true, renders edit-mode chrome: accent bar, ring, and "Editing" badge. */
   editMode?: boolean;
@@ -98,7 +107,8 @@ export interface EntityHeaderProps {
 
 export function EntityHeader({
   model,
-  mode: initialMode = "expanded",
+  mode: controlledMode,
+  defaultMode,
   onModeChange,
   editMode = false,
   onAction,
@@ -114,10 +124,25 @@ export function EntityHeader({
   actionLeadingSlot,
   className,
 }: EntityHeaderProps) {
-  const [mode, setMode] = useState<HeaderMode>(initialMode);
-  const handleMode = (m: HeaderMode) => { setMode(m); onModeChange?.(m); };
+  // Controlled when `mode` is explicitly provided; otherwise fall back to
+  // internal state seeded from `defaultMode` (default "expanded"). This lets
+  // parents drive expanded → pinned transitions on scroll while preserving
+  // standalone usage in storybook / classic-tabs callers.
+  const isControlled = controlledMode !== undefined;
+  const [internalMode, setInternalMode] = useState<HeaderMode>(defaultMode ?? "expanded");
+  const mode = isControlled ? controlledMode! : internalMode;
+  // `setMode` is retained for future user-initiated mode toggles (e.g. an
+  // expand/collapse affordance). For now it surfaces controlled-vs-uncontrolled
+  // semantics so callers can rely on either pattern.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const setMode = (m: HeaderMode) => {
+    if (!isControlled) setInternalMode(m);
+    onModeChange?.(m);
+  };
   const isPinned   = mode === "pinned";
   const isExpanded = mode === "expanded";
+
+  const pinnedRef = usePublishHeaderOffset(isPinned);
 
   const rail = useRailState(model.progress);
 
@@ -132,12 +157,15 @@ export function EntityHeader({
   // Pinned: sticky strip — P1 + ext + compact P3 + P5 only
   if (isPinned) {
     return (
-      <div className={cn(
-        "sticky top-0 z-30",
-        entityHeaderShellClass,
-        editMode && entityHeaderEditClass,
-        className,
-      )}>
+      <div
+        ref={pinnedRef}
+        className={cn(
+          "sticky top-0 z-30",
+          entityHeaderShellClass,
+          editMode && entityHeaderEditClass,
+          className,
+        )}
+      >
         {editMode && <div className="h-[2px] bg-primary/70" />}
         <EntityIdentityBar identity={model.identity} onBack={onBack} onTypeClick={onTypeClick} actionsSlot={actionsSlot} mobileActionsSlot={mobileActionsSlot} amountSummary={amountSummary} editMode={editMode} identitySlot={identitySlot} actionLeadingSlot={actionLeadingSlot} />
         {extensionSlot && (

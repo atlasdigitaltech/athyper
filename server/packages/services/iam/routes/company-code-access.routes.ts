@@ -78,7 +78,7 @@ async function resolveAuth(
     return null;
   }
 
-  const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+  const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
   if (!principalId) {
     res.status(403).json({ error: "NO_PRINCIPAL", message: "No principal found for this user in the current tenant" });
     return null;

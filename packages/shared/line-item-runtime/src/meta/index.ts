@@ -282,10 +282,25 @@ export function buildCopyPayload(
 // useCompiledEntityMetadata HOOK
 // ─────────────────────────────────────────────────────────────────────────────
 
-type MetadataResponse = {
-  data?: CompiledEntity;
-  entity?: CompiledEntity;
+type MetadataResponse = CompiledEntity | {
+  data?: unknown;
+  entity?: unknown;
 };
+
+function isCompiledEntity(value: unknown): value is CompiledEntity {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Partial<CompiledEntity>;
+  return typeof record.entity_code === "string" && Array.isArray(record.fields);
+}
+
+function unwrapCompiledEntity(value: MetadataResponse | null): CompiledEntity | null {
+  if (isCompiledEntity(value)) return value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const body = value as { data?: unknown; entity?: unknown };
+  if (isCompiledEntity(body.data)) return body.data;
+  if (isCompiledEntity(body.entity)) return body.entity;
+  return null;
+}
 
 export function useCompiledEntityMetadata(
   entityCode: string | null | undefined,
@@ -295,9 +310,10 @@ export function useCompiledEntityMetadata(
   useEffect(() => {
     if (!entityCode) { setEntity(null); return; }
     let cancelled = false;
+    setEntity(null);
     void fetch(`/api/relay/api/metadata/entities/${encodeURIComponent(entityCode)}/compiled`)
       .then((r) => r.ok ? r.json() as Promise<MetadataResponse> : null)
-      .then((body) => { if (!cancelled) setEntity(body?.data ?? body?.entity ?? null); })
+      .then((body) => { if (!cancelled) setEntity(unwrapCompiledEntity(body)); })
       .catch(() => { if (!cancelled) setEntity(null); });
     return () => { cancelled = true; };
   }, [entityCode]);

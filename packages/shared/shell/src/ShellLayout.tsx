@@ -78,7 +78,11 @@ export function ShellLayout({
 
         {/* Main content */}
         <main className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-4 py-2 lg:px-6 lg:py-3">
+          {/* data-scroll-root marks this element as the page's scroll container.
+              Page-level hooks (scrollspy, sticky-pin triggers) discover it via
+              document.querySelector("[data-scroll-root]") without coupling to
+              @athyper/shell. There must be at most one per shell tree. */}
+          <div data-scroll-root className="flex-1 overflow-y-auto px-4 py-2 lg:px-6 lg:py-3">
             {children}
           </div>
         </main>

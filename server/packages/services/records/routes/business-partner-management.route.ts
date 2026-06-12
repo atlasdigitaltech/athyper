@@ -985,7 +985,7 @@ export function createBusinessPartnerManagementRoute(router: Router, deps: Busin
       if (!tenantId) { res.status(400).json({ error: "TENANT_REQUIRED" }); return; }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
 
       const body = normalizeBusinessPartnerIntakeBody(req.body as Record<string, unknown>);
 
@@ -1123,7 +1123,7 @@ export function createBusinessPartnerManagementRoute(router: Router, deps: Busin
       if (!tenantId) { res.status(400).json({ error: "TENANT_REQUIRED" }); return; }
 
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, claims);
+      const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
 
       const body = normalizeBusinessPartnerExtensionBody(req.body as Record<string, unknown>);
 

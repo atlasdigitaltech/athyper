@@ -1,15 +1,20 @@
 "use client";
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from "@athyper/ui/primitives";
-import type { HeaderTab } from "../types";
+import type { HeaderTab, HeaderTabBadge } from "../types";
 import {
   headerTabBarClass,
   headerTabButtonClass,
@@ -135,6 +140,12 @@ export function EntityTabBar({
   const moreActive   = overflowTabs.some((t) => t.id === activeTab);
   const showRight    = showMore || platformIcons.length > 0;
 
+  // Phase 11 #8: mobile tab strip. Below `md` (768px), the horizontal-scroll
+  // tabs collapse into a single trigger button that opens a bottom sheet
+  // listing all sections + badges. Keeps platform-icon cluster visible at
+  // the right edge.
+  const activeTabObj = tabs.find((t) => t.id === activeTab) ?? tabs[0];
+
   return (
     <>
       {/* Ghost row — fixed off-screen, measures natural tab widths */}
@@ -152,13 +163,27 @@ export function EntityTabBar({
                 {tab.count}
               </span>
             )}
+            <TabEditBadge badge={tab.badge} />
           </span>
         ))}
       </div>
 
+      {/* Phase 11 #8: mobile tab strip (below md). Single trigger + bottom sheet. */}
+      <MobileTabBar
+        tabs={tabs}
+        activeTab={activeTab}
+        activeTabObj={activeTabObj}
+        onTabChange={onTabChange}
+        platformIcons={platformIcons}
+        onPlatformIconClick={onPlatformIconClick}
+        activePlatformIcon={activePlatformIcon}
+        className={className}
+      />
+
+      {/* Desktop tab strip (md and above). Unchanged from pre-Phase-11. */}
       <div
         ref={containerRef}
-        className={cn(headerTabBarClass, className)}
+        className={cn("hidden md:flex", headerTabBarClass, className)}
       >
         {visibleTabs.map((tab) => (
           <TabButton
@@ -205,6 +230,7 @@ export function EntityTabBar({
                           {tab.count}
                         </span>
                       )}
+                      <TabEditBadge badge={tab.badge} />
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -266,7 +292,153 @@ function TabButton({ tab, active, onTabChange }: TabButtonProps) {
           {tab.count}
         </span>
       )}
+      <TabEditBadge badge={tab.badge} />
     </button>
+  );
+}
+
+// ── Mobile tab bar (Phase 11 #8) ──────────────────────────────────────────────
+
+interface MobileTabBarProps {
+  tabs: HeaderTab[];
+  activeTab?: string;
+  activeTabObj?: HeaderTab;
+  onTabChange?: (id: string) => void;
+  platformIcons?: PlatformPanelIcon[];
+  onPlatformIconClick?: (id: string) => void;
+  activePlatformIcon?: string;
+  className?: string;
+}
+
+/**
+ * Mobile tab strip — shown below the `md` breakpoint.
+ *
+ * Replaces the horizontal-scroll tabs with a single trigger button that
+ * opens a bottom sheet listing every section. Platform-icon cluster
+ * (comments / attachments / activity) stays visible inline.
+ *
+ * Phase 11 #8 design tradeoff: at very narrow widths a horizontal-scroll
+ * tab strip becomes tap-hostile. The sheet pattern matches iOS/Android
+ * conventions and keeps section dirty/error badges visible at a glance.
+ */
+function MobileTabBar({
+  tabs,
+  activeTab,
+  activeTabObj,
+  onTabChange,
+  platformIcons = [],
+  onPlatformIconClick,
+  activePlatformIcon,
+  className,
+}: MobileTabBarProps) {
+  const [open, setOpen] = useState(false);
+  if (tabs.length === 0 && platformIcons.length === 0) return null;
+
+  return (
+    <div className={cn("flex h-12 items-center gap-1 border-b border-border px-3 md:hidden", className)}>
+      {tabs.length > 0 && (
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className="flex h-10 flex-1 min-w-0 items-center justify-between gap-2 rounded-md px-3 text-left text-sm font-medium hover:bg-muted/40"
+              aria-label="Open section menu"
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {activeTabObj?.label ?? "Sections"}
+              </span>
+              <ChevronDown className="size-4 shrink-0 opacity-60" aria-hidden="true" />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
+            <SheetHeader className="pb-2">
+              <SheetTitle>Sections</SheetTitle>
+            </SheetHeader>
+            <nav className="flex flex-col gap-1 pb-4">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    disabled={tab.disabled}
+                    onClick={() => {
+                      if (tab.disabled) return;
+                      onTabChange?.(tab.id);
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      "flex min-h-12 items-center justify-between gap-3 rounded-md px-4 text-sm transition-colors",
+                      isActive ? "bg-accent text-accent-foreground font-medium" : "hover:bg-muted/40",
+                      tab.disabled && "pointer-events-none opacity-40",
+                    )}
+                  >
+                    <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
+                      {tab.label}
+                      <TabEditBadge badge={tab.badge} />
+                    </span>
+                    {tab.count != null && (
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                        {tab.count}
+                      </span>
+                    )}
+                    {isActive && (
+                      <ChevronRight className="size-4 opacity-60" aria-hidden="true" />
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </SheetContent>
+        </Sheet>
+      )}
+      {platformIcons.length > 0 && (
+        <div className={cn("flex items-center gap-1", tabs.length > 0 && "ml-1 pl-2 border-l border-border/50")}>
+          {platformIcons.map((pi) => (
+            <PlatformIconButton
+              key={pi.id}
+              icon={pi}
+              active={activePlatformIcon === pi.id}
+              onClick={onPlatformIconClick}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Edit-state badge ───────────────────────────────────────────────────────────
+
+interface TabEditBadgeProps {
+  badge?: HeaderTabBadge;
+}
+
+/**
+ * Renders the edit-state badge on a tab.
+ *
+ * Error takes precedence over dirty (an erroring section is necessarily dirty;
+ * showing both creates noise). The dirty dot uses primary; the error pill uses
+ * destructive. Both are right-aligned next to the label.
+ */
+function TabEditBadge({ badge }: TabEditBadgeProps) {
+  if (!badge) return null;
+  if (badge.type === "error") {
+    return (
+      <span
+        className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground tabular-nums"
+        aria-label={badge.count ? `${badge.count} validation error${badge.count > 1 ? "s" : ""}` : "validation error"}
+      >
+        {badge.count != null && badge.count > 0 ? badge.count : "!"}
+      </span>
+    );
+  }
+  // dirty
+  return (
+    <span
+      className="ml-1.5 inline-block size-2 rounded-full bg-primary"
+      aria-label="unsaved changes"
+    />
   );
 }
 

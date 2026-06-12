@@ -199,6 +199,7 @@ function LinesTable({
   currencyCode,
   isLoading,
   editMode,
+  mobileColumns,
 }: {
   lines:            LineRecord[];
   columns:          MetaLineColumn[];
@@ -208,7 +209,21 @@ function LinesTable({
   currencyCode?:    string;
   isLoading?:       boolean;
   editMode?:        boolean;
+  /** Phase 11 #8 — narrow-viewport priority column list. See LinesGridProps. */
+  mobileColumns?:   string[];
 }) {
+  // Phase 11 #8 — when the prop is provided, columns whose field.name (or
+  // column.key when field is absent) is NOT in the priority list render with
+  // `hidden md:table-cell` so they only appear at ≥ md (768px). Absent prop
+  // = show-all, identical to pre-Phase-11 behavior.
+  const mobileSet = mobileColumns && mobileColumns.length > 0
+    ? new Set(mobileColumns)
+    : null;
+  const hideOnMobile = (col: MetaLineColumn): boolean => {
+    if (mobileSet === null) return false;
+    const name = col.field?.name ?? col.key;
+    return !mobileSet.has(name);
+  };
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -251,6 +266,7 @@ function LinesTable({
                 className={cn(
                   "whitespace-nowrap px-3 py-2.5 text-xs font-medium text-muted-foreground",
                   col.align === "right" ? "text-right" : "text-left",
+                  hideOnMobile(col) && "hidden md:table-cell",
                 )}
                 style={{ minWidth: col.minWidth, width: col.width }}
               >
@@ -304,6 +320,7 @@ function LinesTable({
                       className={cn(
                         "px-3 py-2.5 text-sm",
                         col.align === "right" ? "text-right tabular-nums" : "text-left",
+                        hideOnMobile(col) && "hidden md:table-cell",
                       )}
                     >
                       {cellValue}
@@ -383,6 +400,7 @@ export function LinesGrid({
   editMode = true,
   draftMode = false,
   onDraftLinesChange,
+  mobileColumns,
 }: LinesGridProps) {
   const [composerOpen,  setComposerOpen]  = useState(false);
   const [composerMode,  setComposerMode]  = useState<"manual" | "catalog">("manual");
@@ -490,6 +508,7 @@ export function LinesGrid({
         currencyCode={currencyCode}
         isLoading={isLoading}
         editMode={editMode}
+        mobileColumns={mobileColumns}
       />
 
       {/* Totals footer */}

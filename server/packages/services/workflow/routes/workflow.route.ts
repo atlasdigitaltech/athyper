@@ -64,7 +64,7 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
       if (!tenantId) { res.json({ count: 0 }); return; }
 
       const sub = claims["sub"] as string ?? "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.json({ count: 0 }); return; }
 
       const count = await engine.getInboxCount({ principalId, tenantId });
@@ -86,7 +86,7 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
       if (!tenantId) { res.json({ items: [], total: 0 }); return; }
 
       const sub = claims["sub"] as string ?? "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.json({ items: [], total: 0 }); return; }
 
       const limit  = Math.min(parseInt(String(req.query["limit"]  ?? "50"), 10), 200);
@@ -161,7 +161,7 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
       }
 
       const sub = claims["sub"] as string ?? "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "no principal bound to this session" });
         return;
@@ -442,7 +442,7 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
       }
 
       const sub = claims["sub"] as string ?? "";
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "no principal bound to this session" });
         return;

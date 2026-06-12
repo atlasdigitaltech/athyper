@@ -85,37 +85,45 @@ export async function resolveTenantId(db: Kysely<any>, xOrg: string, xRealm: str
 // ── Principal resolvers ───────────────────────────────────────────────────────
 
 /**
- * Looks up the master.principal UUID by KC sub + tenant.
+ * Looks up the master.principal UUID by KC sub + tenant + realm.
  * Returns null if no binding exists (no JIT provisioning).
+ *
+ * `realmKey` is mandatory. principal_identity_binding rows are keyed by
+ * (subject_id, realm_key, tenant_id) — the same KC sub can belong to two
+ * different principals across realms (e.g. `athyper` vs `platform-control`),
+ * so the realm MUST be passed explicitly. Use `extractOrgHeaders(req).xRealm`.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function resolvePrincipalIdOrNull(db: Kysely<any>, sub: string, tenantId: string, realmKey?: string): Promise<string | null> {
-  const realm = realmKey ?? defaultRealmKey();
+export async function resolvePrincipalIdOrNull(db: Kysely<any>, sub: string, tenantId: string, realmKey: string): Promise<string | null> {
   if (!sub) return null;
+  if (!realmKey) return null;
   const row = await db
     .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")
     .where("pab.subject_id", "=", sub)
-    .where("pab.realm_key", "=", realm)
+    .where("pab.realm_key", "=", realmKey)
     .where("pab.tenant_id", "=", tenantId)
     .executeTakeFirst();
   return row ? (row.principal_id as string) : null;
 }
 
 /**
- * Resolves the master.principal UUID for a KC sub + tenant.
+ * Resolves the master.principal UUID for a KC sub + tenant + realm.
  * JIT-provisions a new principal on first use.
  * Falls back to SYSTEM_PRINCIPAL_UUID on any provisioning failure.
+ *
+ * `realmKey` is mandatory and positioned before `claims` (which is optional
+ * because the JIT path only consumes it for username/displayName hints).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function resolvePrincipalIdWithJit(
   db: Kysely<any>,
   sub: string,
   tenantId: string,
+  realmKey: string,
   claims?: Record<string, unknown>,
-  realmKey?: string,
 ): Promise<string> {
-  const realm = realmKey ?? defaultRealmKey();
+  const realm = realmKey;
   const existing = await db
     .selectFrom("master.principal_identity_binding as pab")
     .select("pab.principal_id")

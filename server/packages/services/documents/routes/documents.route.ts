@@ -462,7 +462,7 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       // created_by — resolve principal from JWT sub
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, claims)
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
       if (!mappedData.created_by) mappedData.created_by = principalId;
 
@@ -550,7 +550,7 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       // captures who triggered the change.
       const transSub = typeof claims.sub === "string" ? claims.sub : "";
       const transPrincipalId = transSub
-        ? await resolvePrincipalIdOrNull(db, transSub, tenantId)
+        ? await resolvePrincipalIdOrNull(db, transSub, tenantId, xRealm)
         : null;
 
       try {

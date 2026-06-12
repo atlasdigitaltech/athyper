@@ -110,6 +110,8 @@ const requiredActionBlocked = new Map<string, number>();
 const authFlagPostureWarnings = new Map<string, number>();
 const authContextMismatchSuppressed = new Map<string, number>();
 const tokenClaimsInvalid = new Map<string, number>();
+// key: "method\0aliasPath\0canonicalPath" → count
+const deprecatedRouteHits = new Map<string, number>();
 
 function key(labels: LabelSet): string {
   return `${labels.tenant}\0${labels.operation}\0${labels.service}`;
@@ -256,6 +258,21 @@ export function recordTokenClaimsInvalid(
   tokenClaimsInvalid.set(k, (tokenClaimsInvalid.get(k) ?? 0) + 1);
 }
 
+/**
+ * Record a hit on a deprecated route alias. Gates the safe-removal precondition
+ * for `/api/user/*` and legacy `/api/platform/{profile,identity,tenant-admin}`
+ * — once a (method, alias) row holds steady at zero for the agreed observation
+ * window, the alias can be deleted from the runtime route table.
+ */
+export function recordDeprecatedRouteHit(
+  method: string,
+  aliasPath: string,
+  canonicalPath: string,
+): void {
+  const k = `${method.toUpperCase()}\0${aliasPath}\0${canonicalPath}`;
+  deprecatedRouteHits.set(k, (deprecatedRouteHits.get(k) ?? 0) + 1);
+}
+
 export function createAiLogMetrics(): AiLogMetrics {
   return {
     writeFailed(kind: AiLogKind) {
@@ -318,6 +335,9 @@ const HELP = [
   "",
   "# HELP token_claims_invalid_total Token-claim schema parse failures by field path and enforcement mode",
   "# TYPE token_claims_invalid_total counter",
+  "",
+  "# HELP athyper_deprecated_route_hits_total Hits on deprecated runtime route aliases (gates safe-removal precondition)",
+  "# TYPE athyper_deprecated_route_hits_total counter",
 ].join("\n");
 
 function escape(v: string): string {
@@ -493,6 +513,15 @@ export function metricsHandler(_req: Request, res: Response): void {
       );
     }
     if (tokenClaimsInvalid.size > 0) lines.push("");
+
+    for (const [k, count] of deprecatedRouteHits) {
+      const parts = k.split("\0");
+      const method = parts[0] ?? ""; const aliasPath = parts[1] ?? ""; const canonical = parts[2] ?? "";
+      lines.push(
+        `athyper_deprecated_route_hits_total{method="${escape(method)}",alias="${escape(aliasPath)}",canonical="${escape(canonical)}"} ${count}`,
+      );
+    }
+    if (deprecatedRouteHits.size > 0) lines.push("");
 
     for (const collector of metricCollectors) {
       const collectStartedAt = process.hrtime.bigint();

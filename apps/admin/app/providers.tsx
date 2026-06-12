@@ -3,8 +3,14 @@
 import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { setBffClientPlane } from "@athyper/runtime-shared/client";
 import { ToastProvider, useToast } from "@athyper/ui/composites";
 import { AuthFailureBridge } from "@athyper/identity-gate";
+import { PLANE_KEY } from "@/lib/plane";
+
+// Plane-specific csrf cookie (__admin_csrf) — must run before any client
+// component reads the token. Idempotent: HMR-safe.
+setBffClientPlane(PLANE_KEY);
 
 export function AdminProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({

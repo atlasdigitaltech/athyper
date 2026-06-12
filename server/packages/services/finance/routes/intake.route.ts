@@ -41,7 +41,7 @@ export function createIntakeRoutes(router: Router, deps: FinanceRouteDeps): Rout
       const { xOrg, xRealm } = extractOrgHeaders(req);
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
-      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId, xRealm);
 
       const companyCodeId = String(req.query["company_code_id"] ?? "");
       if (!isUuid(companyCodeId)) {
@@ -114,7 +114,7 @@ export function createIntakeRoutes(router: Router, deps: FinanceRouteDeps): Rout
       const { xOrg, xRealm } = extractOrgHeaders(req);
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
-      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims.sub ?? ""), tenantId, xRealm);
 
       const companyCodeId = String(req.query["company_code_id"] ?? "");
       if (!isUuid(companyCodeId)) {

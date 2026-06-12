@@ -156,7 +156,7 @@ export function createGovernanceRoutes(router: Router, deps: GovernanceRouteDeps
     const tenantId = await resolveTenantId(db, xOrg, xRealm);
     if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return null; }
     const sub = claims["sub"] as string ?? "";
-    const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId) ?? sub;
+    const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub;
     return { tenantId, principalId };
   }
 

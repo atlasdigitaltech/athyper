@@ -34,6 +34,7 @@ import { DrawerShell } from "@athyper/ui/primitives";
 import type { AccountingDistribution, DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
+import { useEditSessionContext } from "@athyper/content-ui";
 import { appEntityDetailHref, fmtAmount } from "@athyper/runtime-shared/core";
 import { cn } from "@athyper/theme/utils";
 import { SplitAccountingPanel, type SplitAccountingPanelHandle } from "./SplitAccountingPanel";
@@ -2204,6 +2205,11 @@ export function ProcureLineEditorSheet({
   const emptyLine = useMemo(() => ({ data: {} }) as DocumentLine, []);
   const currentLine = line ?? emptyLine;
 
+  // Phase 6d: same fork as LineEditorSheet — when an Edit Session is active
+  // (object-page mode, editing), Save queues the change into the bundle
+  // instead of calling the per-line REST endpoint.
+  const editSession = useEditSessionContext();
+
   const tabs     = useMemo(() => resolveProcureEditorTabs(resolvedEntity),      [resolvedEntity]);
   const refCfg   = useMemo(() => resolveReferenceTabConfig(resolvedEntity),     [resolvedEntity]);
   const amtCfg   = useMemo(() => resolveProcureAmountConfig(resolvedEntity),    [resolvedEntity]);
@@ -2309,6 +2315,19 @@ export function ProcureLineEditorSheet({
       } finally {
         setSaving(false);
       }
+    }
+
+    // Edit Session route: queue create/update into the bundle. The action-bar
+    // Save commits transactionally with header + other line edits.
+    if (editSession?.isEditing) {
+      if (isCreating) {
+        editSession.addLine(payload);
+      } else if (lineKey) {
+        editSession.updateLine(lineKey, payload as Record<string, unknown>);
+        onLineSaved?.(payload as Partial<DocumentLine>);
+      }
+      onMutated?.();
+      return true;
     }
 
     setSaving(true);

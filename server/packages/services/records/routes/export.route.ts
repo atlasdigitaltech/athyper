@@ -233,7 +233,7 @@ export function createExportRoutes(router: Router, deps: ExportRouteDeps): Route
       }
 
       // ── RBAC guard ────────────────────────────────────────────────────────────
-      const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, String(claims["sub"] ?? ""), tenantId, xRealm);
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "Principal not found for this tenant." });
         return;

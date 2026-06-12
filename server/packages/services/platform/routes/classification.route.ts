@@ -217,7 +217,7 @@ export function registerClassificationRoutes(
       }
 
       const sub         = typeof claims["sub"] === "string" ? claims["sub"] : "";
-      const principalId = (await resolvePrincipalIdOrNull(db, sub, tenantId)) ?? SYSTEM_PRINCIPAL_UUID;
+      const principalId = (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm)) ?? SYSTEM_PRINCIPAL_UUID;
 
       const body = req.body as { items?: unknown } | undefined;
       if (!Array.isArray(body?.items) || (body!.items as unknown[]).length === 0) {
@@ -440,7 +440,7 @@ export function registerClassificationRoutes(
       }
 
       const sub         = typeof claims["sub"] === "string" ? claims["sub"] : "";
-      const principalId = (await resolvePrincipalIdOrNull(db, sub, tenantId)) ?? SYSTEM_PRINCIPAL_UUID;
+      const principalId = (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm)) ?? SYSTEM_PRINCIPAL_UUID;
 
       const now = new Date();
       const result = await db
@@ -507,7 +507,7 @@ export function registerClassificationRoutes(
       }
 
       const sub         = typeof claims["sub"] === "string" ? claims["sub"] : "";
-      const principalId = (await resolvePrincipalIdOrNull(db, sub, tenantId)) ?? SYSTEM_PRINCIPAL_UUID;
+      const principalId = (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm)) ?? SYSTEM_PRINCIPAL_UUID;
 
       const q   = req.query as Record<string, unknown>;
       const fct = typeof q["classification_type"] === "string" ? q["classification_type"] : null;

@@ -14,6 +14,7 @@ import {
 import type { AccountingDistribution, DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
+import { useEditSessionContext } from "@athyper/content-ui";
 import { ItemsGrid } from "./ItemsGrid";
 import { LineComposerSheet } from "./LineComposerSheet";
 import { LineEditorSheet } from "./LineEditorSheet";
@@ -576,6 +577,11 @@ export function LinesGrid(props: LinesGridProps) {
   const searchFields = useMemo(() => resolveSearchFields(lineEntity, columns), [columns, lineEntity]);
   const defaultSortField = useMemo(() => resolveDefaultSortField(lineEntity, columns), [columns, lineEntity]);
 
+  // Phase 6d: when LinesGrid is mounted inside an active Edit Session, mass
+  // delete and duplicate queue into the bundle instead of hitting per-line
+  // REST endpoints. Returns null outside object-page edit mode.
+  const editSession = useEditSessionContext();
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<string | undefined>(defaultSortField);
@@ -884,6 +890,19 @@ export function LinesGrid(props: LinesGridProps) {
       return;
     }
 
+    // Edit Session route: queue creates from copy payloads. Drop line_no so
+    // the server-side bundle handler auto-numbers them post-delete.
+    if (editSession?.isEditing) {
+      for (const line of selectedLines(displayLines, selectedIds)) {
+        const payload = buildCopyPayload(lineEntity, line as LineRecord);
+        delete payload["line_no"];
+        delete payload["line_number"];
+        editSession.addLine(payload);
+      }
+      setSelectedIds(new Set());
+      return;
+    }
+
     setBusy(true);
     try {
       for (const line of selectedLines(displayLines, selectedIds)) {
@@ -902,6 +921,16 @@ export function LinesGrid(props: LinesGridProps) {
   async function deleteSelection() {
     if (draftMode) {
       publishDraftLines(displayLines.filter((line) => !selectedIds.has(recordId(line as LineRecord))));
+      setSelectedIds(new Set());
+      return;
+    }
+
+    // Edit Session route: queue deletes into the bundle and clear selection.
+    // The action-bar Save commits them atomically with header + line updates.
+    if (editSession?.isEditing) {
+      for (const line of selectedLines(displayLines, selectedIds)) {
+        editSession.deleteLine(recordId(line as LineRecord));
+      }
       setSelectedIds(new Set());
       return;
     }

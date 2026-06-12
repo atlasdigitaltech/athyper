@@ -280,7 +280,7 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(403).json({ error: "TENANT_NOT_FOUND" }); return; }
 
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
 
       const body = req.body as Record<string, unknown>;
@@ -424,7 +424,7 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(403).json({ error: "TENANT_NOT_FOUND" }); return; }
 
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
 
       const runId  = req.params["runId"]  as string;
@@ -515,7 +515,7 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(403).json({ error: "TENANT_NOT_FOUND" }); return; }
 
-      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
 
       const runId = req.params["runId"] as string;

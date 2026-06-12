@@ -166,7 +166,7 @@ export function createWorkflowAdminRoutes(
       return null;
     }
     const sub         = (claims["sub"] as string) ?? "";
-    const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId);
+    const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
     if (!principalId) {
       res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" });
       return null;
