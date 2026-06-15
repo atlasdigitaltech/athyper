@@ -197,7 +197,7 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
             ? `Identity verified - ${identityLabel(session)}`
             : contextSelectSubtitle(plane)
       }
-      variant={plane === "neon" ? "brand" : "compact"}
+      variant="compact"
     >
       <div className="space-y-5">
         <ErrorBanner message={error ?? pageError} />

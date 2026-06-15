@@ -393,7 +393,6 @@ async function resolvePermissionMatchSource(
        AND (gr.expires_at IS NULL OR gr.expires_at > now())
       WHERE gm.tenant_id = ${tenantId}
         AND gm.principal_id = ${principalId}
-        AND (gm.expires_at IS NULL OR gm.expires_at > now())
     ),
     direct_persona_allow AS (
       SELECT TRUE AS is_match

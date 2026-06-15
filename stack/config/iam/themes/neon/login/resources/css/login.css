@@ -52,17 +52,24 @@
 
 html, body {
   height: 100%;
+  min-height: 100%;
   font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
   font-size: 16px;
   color: var(--fg);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
 }
 
 /* ── Page layout ── */
 .kc-page {
   display: flex;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
   height: 100dvh;
+  overflow: hidden;
 }
 
 /* ── Left branding panel — hidden on mobile ── */
@@ -71,6 +78,8 @@ html, body {
   background: var(--primary);
   flex-shrink: 0;
   color: var(--primary-fg);
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (min-width: 1024px) {
@@ -168,7 +177,11 @@ html, body {
   display: flex;
   flex-direction: column;
   background: var(--bg);
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Centered form area — flex-1 pushes footer to bottom */
@@ -177,6 +190,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 0;
+  width: 100%;
   padding: 2rem;
 }
 

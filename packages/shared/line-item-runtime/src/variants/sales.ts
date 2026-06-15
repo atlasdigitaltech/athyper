@@ -13,6 +13,7 @@ import type {
 } from "../types";
 import { fieldLabel } from "../meta";
 import { fieldsForGroups } from "./procure";
+import { resolveSummaryStripFromMeta } from "./summary-strip";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SALES CONVENTION TABLES
@@ -180,26 +181,35 @@ export function resolveSalesAmountConfig(
 ): LineItemAmountConfig | null {
   if (!entity) return null;
 
+  const meta = resolveSummaryStripFromMeta(entity);
+
   const candidates = ["gross_amount", "line_amount", "net_amount", "extended_amount", "amount"];
-  const amountField = candidates.find((name) => entity.fields.some((f) => f.name === name));
+  const amountField = meta.amountField
+    ?? candidates.find((name) => entity.fields.some((f) => f.name === name));
   if (!amountField) return null;
 
-  const currencyField = ["currency_code", "currency", "transaction_currency"].find(
-    (name) => entity.fields.some((f) => f.name === name),
-  );
+  const currencyField = meta.currencyField
+    ?? ["currency_code", "currency", "transaction_currency"].find(
+      (name) => entity.fields.some((f) => f.name === name),
+    );
 
   const fieldMap = new Map(entity.fields.map((f) => [f.name, f]));
 
-  const summaryFields: LineAmountSummaryField[] = [];
-  const addSummary = (name: string, label: string, sign: 1 | -1 = 1, bold = false, divider = false) => {
-    if (fieldMap.has(name)) summaryFields.push({ name, label, sign, bold, divider });
-  };
-  addSummary("gross_amount",   "List Price",    1);
-  addSummary("discount_amount", "Discount",     -1);
-  addSummary("discount_pct",    "Discount %",   -1);
-  addSummary("net_amount",      "Net Amount",    1, true, true);
-  addSummary("tax_amount",      "Tax",           1);
-  addSummary("billed_amount",   "Billed Amount", 1, true);
+  let summaryFields: LineAmountSummaryField[];
+  if (meta.summaryFields) {
+    summaryFields = meta.summaryFields;
+  } else {
+    summaryFields = [];
+    const addSummary = (name: string, label: string, sign: 1 | -1 = 1, bold = false, divider = false) => {
+      if (fieldMap.has(name)) summaryFields.push({ name, label, sign, bold, divider });
+    };
+    addSummary("gross_amount",   "List Price",    1);
+    addSummary("discount_amount", "Discount",     -1);
+    addSummary("discount_pct",    "Discount %",   -1);
+    addSummary("net_amount",      "Net Amount",    1, true, true);
+    addSummary("tax_amount",      "Tax",           1);
+    addSummary("billed_amount",   "Billed Amount", 1, true);
+  }
 
   const financialBar: LineFinancialBarField[] = SALES_BAR_ORDER.flatMap((name): LineFinancialBarField[] =>
     fieldMap.has(name) ? [{ name, label: fieldMap.get(name)!.label ?? name }] : [],
@@ -255,52 +265,6 @@ export function resolveFulfillmentTabConfig(entity: CompiledEntity | null): Fulf
   const quantityField = entity.fields.find((f) => f.name === "quantity")?.name ?? null;
 
   return { links, quantityField, showDeliveryStatus: links.length > 0 };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SALES COLUMN CATALOG
-// ─────────────────────────────────────────────────────────────────────────────
-
-const SALES_COLUMN_CANDIDATES = [
-  ["line_number"],
-  ["product_id", "item_id", "item_code"],
-  ["description", "item_description", "line_description"],
-  ["quantity", "qty"],
-  ["unit_code", "uom_code"],
-  ["unit_price", "price", "rate"],
-  ["gross_amount", "line_amount"],
-  ["discount_pct", "discount_amount"],
-  ["net_amount"],
-  ["tax_amount"],
-  ["billed_amount"],
-  ["fulfillment_status", "delivery_status"],
-  ["cost_center_id", "profit_center_id"],
-];
-
-export function buildSalesColumnCatalog(entity: CompiledEntity | null): MetaLineColumn[] {
-  if (!entity) return [];
-  const fieldMap = new Map(entity.fields.map((f) => [f.name, f]));
-  const out: MetaLineColumn[] = [];
-  const used = new Set<string>();
-
-  for (const candidates of SALES_COLUMN_CANDIDATES) {
-    for (const name of candidates) {
-      if (!fieldMap.has(name) || used.has(name)) continue;
-      const field = fieldMap.get(name)!;
-      used.add(name);
-      out.push({
-        key:     name,
-        label:   field.label ?? fieldLabel(field),
-        field,
-        numeric: ["money", "decimal", "integer", "numeric", "bigint"].includes(field.data_type),
-        align:   ["money", "decimal", "integer", "numeric", "bigint"].includes(field.data_type) ? "right" : "left",
-        sortable: true,
-      });
-      break;
-    }
-  }
-
-  return out;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

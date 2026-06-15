@@ -122,6 +122,7 @@ export type ServerPlaneSessionFailureReason =
   | "MFA_REQUIRED"
   | "REQUIRED_ACTION_PENDING"
   | "SESSION_BINDING_MISMATCH"
+  | "SESSION_EXPIRED"
   | "SESSION_IDLE_EXPIRED"
   | "SESSION_NOT_FOUND"
   | "SESSION_REFRESH_EXPIRED"
@@ -238,6 +239,7 @@ interface PkceState {
   realm: string;
   clientId: string;
   redirectUri: string;
+  loginHint?: string;
   provider: string | null;
   expectedContext?: LoginExpectedContext;
   silent?: boolean;
@@ -252,6 +254,16 @@ interface LoginExpectedContext {
   workspaceId: string;
   workspaceType: string;
   networkRole: string;
+}
+
+interface LoginContextTokenPayload {
+  version: 1;
+  planeKey: PlaneKey;
+  loginHint: string | null;
+  provider: string | null;
+  expectedContext?: LoginExpectedContext;
+  createdAt: number;
+  expiresAt: number;
 }
 
 interface DiscoveryCandidate {
@@ -357,6 +369,7 @@ const DEFAULT_DISCOVERY_RESEND_COOLDOWN_SECONDS = readIntegerEnv(
   300,
 );
 const DEFAULT_DISCOVERY_TRUST_TTL_DAYS = readIntegerEnv("AUTH_DISCOVERY_VERIFIED_TRUST_TTL_DAYS", 30, 0, 90);
+const LOGIN_CONTEXT_TOKEN_TTL_SECONDS = readIntegerEnv("AUTH_LOGIN_CONTEXT_TOKEN_TTL_SECONDS", 300, 60, 900);
 const DEFAULT_DISCOVERY_POLICY: DiscoveryPolicy = defaultDiscoveryPolicy();
 const DISCOVERY_RATE_LIMIT_WINDOW_SECONDS = 60;
 const DISCOVERY_RATE_LIMIT_MAX = 5;
@@ -367,6 +380,51 @@ const DISCOVERY_RATE_LIMIT_MAX = 5;
 // times while remaining imperceptible to end users.
 const DISCOVERY_RESPONSE_MIN_MS = 240;
 const AUTH_POLICY_CACHE_TTL_MS = 30_000;
+const AUTH_AUDIT_DROP_KEYS = new Set([
+  "accesstoken",
+  "authorizationcode",
+  "code",
+  "contexttoken",
+  "idtoken",
+  "oauthcode",
+  "refreshtoken",
+  "state",
+  "token",
+]);
+const AUTH_AUDIT_HASH_KEYS = new Set([
+  "availableorganizations",
+  "deliveryemail",
+  "email",
+  "identifier",
+  "keycloakorganizationalias",
+  "keycloakorganizationid",
+  "legalentitycode",
+  "legalentityid",
+  "legalentityname",
+  "loginhint",
+  "networkaccountcode",
+  "networkaccountid",
+  "networkaccountname",
+  "organizationcode",
+  "organizationid",
+  "organizationname",
+  "orgcode",
+  "orgid",
+  "orgname",
+  "providerdescription",
+  "requestedorg",
+  "selectedorg",
+  "selectedorgname",
+  "selectedtenant",
+  "selectedtenantid",
+  "selectedworkspaceid",
+  "tenantcode",
+  "tenantid",
+  "userid",
+  "username",
+  "workspacecode",
+  "workspaceid",
+]);
 
 interface ParameterSnapshotPayload {
   values?: Record<string, unknown>;
@@ -570,6 +628,7 @@ function boundedInt(value: unknown, fallback: number, min: number, max: number):
 }
 
 type AuthErrorCode =
+  | "ACCOUNT_MISMATCH"
   | "AUTH_CALLBACK_ERROR"
   | "AUTH_PROVIDER_DENIED"
   | "CONTEXT_RESOLUTION_FAILED"
@@ -597,6 +656,7 @@ type AuthErrorCode =
   | "SESSION_STORE_UNAVAILABLE";
 
 const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
+  ACCOUNT_MISMATCH: "IAM returned a different signed-in user. Clear the stale session and sign in again.",
   AUTH_CALLBACK_ERROR: "We could not complete sign in. Please try again.",
   AUTH_PROVIDER_DENIED: "The identity provider did not complete sign in.",
   CONTEXT_RESOLUTION_FAILED: "We could not resolve your access context. Please try again shortly.",
@@ -816,8 +876,26 @@ export async function validatePlaneServerSession(
 
   const now = Math.floor(Date.now() / 1000);
   const sessionPolicy = await resolveAuthSessionPolicy(plane, session);
+  if (isSessionAbsoluteExpired(session, sessionPolicy, now)) {
+    await destroySessionWithRefreshRevocation(redis, plane, effectiveSid, session, requestId, "absolute");
+    await recordAuthAudit({
+      eventType: "session_expired",
+      outcome: "failure",
+      planeKey: plane,
+      realmKey: session.realmKey,
+      sessionNamespace: session.sessionNamespace,
+      requestId,
+      userId: session.userId,
+      username: session.username,
+      sidHash: hashValue(effectiveSid),
+      activeOrg: session.activeOrg,
+      activeWorkbench: session.activeWorkbench,
+      reasonCode: "SESSION_EXPIRED",
+    });
+    return { ok: false, reason: "SESSION_EXPIRED", requestId, status: 401 };
+  }
   if (now - session.lastSeenAt >= sessionPolicy.idleTimeoutSeconds) {
-    await destroySession(redis, session.sessionNamespace, effectiveSid, session);
+    await destroySessionWithRefreshRevocation(redis, plane, effectiveSid, session, requestId, "idle");
     await recordAuthAudit({
       eventType: "session_idle_expired",
       outcome: "failure",
@@ -1186,6 +1264,9 @@ export async function handleDiscoveryPost(plane: PlaneKey, request: NextRequest)
   if (body["action"] === "select") {
     return handleDiscoverySelect(plane, request, body, requestId);
   }
+  if (body["action"] === "remembered-login") {
+    return handleRememberedLogin(plane, request, body, requestId);
+  }
 
   const identifier = normalizeDiscoveryIdentifier(
     body["identifier"] ?? body["email"] ?? body["username"] ?? body["userId"],
@@ -1487,22 +1568,37 @@ async function handleDiscoverySelect(
     typeof body["returnUrl"] === "string" ? body["returnUrl"] : payload.returnUrl,
     config.defaultPath,
   );
-  const loginUrl = buildInternalLoginUrl({
-    config,
-    realmKey,
-    provider: candidate.providerHint,
-    loginHint: payload.identifier,
-    returnUrl,
-    expectedContext: {
-      tenantId: candidate.tenantId,
-      tenantCode: candidate.tenantCode,
-      organizationCode: candidate.workspaceCode,
-      organizationName: candidate.workspaceName,
-      workspaceId: candidate.workspaceId,
-      workspaceType: candidate.workspaceType,
-      networkRole: candidate.networkRelationshipType ?? candidate.networkAccountRole ?? "",
-    },
-  });
+  let loginUrl: string;
+  try {
+    loginUrl = await buildInternalLoginUrl({
+      config,
+      realmKey,
+      provider: candidate.providerHint,
+      loginHint: payload.identifier,
+      returnUrl,
+      expectedContext: {
+        tenantId: candidate.tenantId,
+        tenantCode: candidate.tenantCode,
+        organizationCode: candidate.workspaceCode,
+        organizationName: candidate.workspaceName,
+        workspaceId: candidate.workspaceId,
+        workspaceType: candidate.workspaceType,
+        networkRole: candidate.networkRelationshipType ?? candidate.networkAccountRole ?? "",
+      },
+    });
+  } catch (err) {
+    console.warn(`[auth-bff/${plane}/discovery/${requestId}] login context token store unavailable`, err);
+    await recordAuthAudit({
+      eventType: "discovery_select_failed",
+      outcome: "failure",
+      planeKey: plane,
+      realmKey,
+      requestId,
+      reasonCode: "LOGIN_CONTEXT_TOKEN_STORE_UNAVAILABLE",
+      detail: { identifierHash: hashValue(payload.identifier), optionId },
+    });
+    return discoveryUnavailableResponse(requestId);
+  }
 
   await recordAuthAudit({
     eventType: "discovery_organization_selected",
@@ -1525,6 +1621,88 @@ async function handleDiscoverySelect(
   });
 }
 
+async function handleRememberedLogin(
+  plane: PlaneKey,
+  _request: NextRequest,
+  body: Record<string, unknown>,
+  requestId: string,
+): Promise<NextResponse> {
+  const config = getPlaneConfig(plane);
+  const realmKey = parseRequestedRealmKey(typeof body["realm"] === "string" ? body["realm"] : null, plane, true);
+  if (!realmKey) {
+    return NextResponse.json({ error: "INVALID_REALM", requestId }, { status: 400 });
+  }
+
+  const loginHint = normalizeLoginHint(body["loginHint"] ?? body["login_hint"] ?? body["email"]);
+  if (!loginHint) {
+    return NextResponse.json(
+      { error: "INVALID_IDENTIFIER", message: "Enter a valid username or email.", requestId },
+      { status: 400 },
+    );
+  }
+
+  const expectedContext = normalizeLoginExpectedContext({
+    tenantId: body["selected_tenant_id"] ?? body["tenantId"],
+    tenantCode: body["selected_tenant"] ?? body["tenantCode"],
+    organizationCode: body["selected_org"] ?? body["organizationCode"],
+    organizationName: body["selected_org_name"] ?? body["organizationName"],
+    workspaceId: body["selected_workspace_id"] ?? body["workspaceId"],
+    workspaceType: body["selected_workspace_type"] ?? body["workspaceType"],
+    networkRole: body["selected_role"] ?? body["networkRole"],
+  });
+  if (!expectedContext) {
+    return NextResponse.json(
+      { error: "INVALID_CONTEXT", message: "Choose an organization to continue.", requestId },
+      { status: 400 },
+    );
+  }
+
+  const provider = normalizeProviderHint(body["provider"]);
+  const returnUrl = sanitizeReturnUrl(
+    typeof body["returnUrl"] === "string" ? body["returnUrl"] : null,
+    config.defaultPath,
+  );
+
+  let loginUrl: string;
+  try {
+    loginUrl = await buildInternalLoginUrl({
+      config,
+      realmKey,
+      provider,
+      loginHint,
+      returnUrl,
+      expectedContext,
+    });
+  } catch (err) {
+    console.warn(`[auth-bff/${plane}/discovery/${requestId}] remembered login context token store unavailable`, err);
+    await recordAuthAudit({
+      eventType: "remembered_login_failed",
+      outcome: "failure",
+      planeKey: plane,
+      realmKey,
+      requestId,
+      reasonCode: "LOGIN_CONTEXT_TOKEN_STORE_UNAVAILABLE",
+      detail: { identifierHash: hashValue(loginHint), expectedContext },
+    });
+    return discoveryUnavailableResponse(requestId);
+  }
+
+  await recordAuthAudit({
+    eventType: "remembered_login_prepared",
+    outcome: "success",
+    planeKey: plane,
+    realmKey,
+    requestId,
+    detail: {
+      identifierHash: hashValue(loginHint),
+      expectedContext,
+      provider: provider ?? null,
+    },
+  });
+
+  return NextResponse.json({ loginUrl });
+}
+
 export async function handleLogin(plane: PlaneKey, request: NextRequest): Promise<NextResponse> {
   const requestId = requestIdFrom(request);
   const config = getPlaneConfig(plane);
@@ -1532,9 +1710,10 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
     request.nextUrl.searchParams.get("returnUrl") ?? request.nextUrl.searchParams.get("redirect"),
     config.defaultPath,
   );
-  const provider = request.nextUrl.searchParams.get("provider");
-  const loginHint = normalizeLoginHint(request.nextUrl.searchParams.get("login_hint") ?? request.nextUrl.searchParams.get("email"));
-  const expectedContext = normalizeLoginExpectedContext({
+  const contextToken = request.nextUrl.searchParams.get("context_token")?.trim() ?? "";
+  const legacyProvider = normalizeProviderHint(request.nextUrl.searchParams.get("provider"));
+  const legacyLoginHint = normalizeLoginHint(request.nextUrl.searchParams.get("login_hint") ?? request.nextUrl.searchParams.get("email"));
+  const legacyExpectedContext = normalizeLoginExpectedContext({
     tenantId: request.nextUrl.searchParams.get("selected_tenant_id"),
     tenantCode: request.nextUrl.searchParams.get("selected_tenant"),
     organizationCode: request.nextUrl.searchParams.get("selected_org"),
@@ -1575,8 +1754,30 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
     return redirectToLoginError(plane, request, "SESSION_STORE_UNAVAILABLE", requestId);
   }
 
-  const isSilent = request.nextUrl.searchParams.get("silent") === "true";
+  const loginContext = contextToken ? await loadLoginContextToken(redis, contextToken, plane).catch(() => null) : null;
+  if (contextToken && !loginContext && !legacyProvider && !legacyLoginHint && !legacyExpectedContext) {
+    await recordAuthAudit({
+      eventType: "login_start_failed",
+      outcome: "failure",
+      planeKey: plane,
+      realmKey,
+      sessionNamespace: runtime.sessionNamespace,
+      requestId,
+      reasonCode: "LOGIN_CONTEXT_TOKEN_INVALID",
+      detail: { contextToken: "invalid_or_expired" },
+    });
+    return redirectToLoginError(plane, request, "CONTEXT_RESOLUTION_FAILED", requestId);
+  }
+
+  const provider = loginContext?.provider ?? legacyProvider;
+  const loginHint = loginContext?.loginHint ?? legacyLoginHint;
+  const expectedContext = loginContext?.expectedContext ?? legacyExpectedContext;
+
+  const adminNativeMfaRequired = plane === "admin" && realmKey === "athyper";
+  const requestedSilent = request.nextUrl.searchParams.get("silent") === "true";
+  const isSilent = requestedSilent && !adminNativeMfaRequired;
   const forceAuthn =
+    adminNativeMfaRequired ||
     request.nextUrl.searchParams.get("force") === "1" ||
     request.nextUrl.searchParams.get("force_authn") === "true";
   const promptValue = isSilent ? "none" : (forceAuthn ? "login" : undefined);
@@ -1588,6 +1789,7 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
     realm: runtime.realm,
     clientId: runtime.clientId,
     redirectUri,
+    loginHint: loginHint ?? undefined,
     provider,
     expectedContext: expectedContext ?? undefined,
     silent: isSilent || undefined,
@@ -1610,10 +1812,11 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
   finalUrl.searchParams.set("athyper_plane", plane);
   finalUrl.searchParams.set("athyper_realm_role", policy.role);
 
-  // Admin logins re-authenticate if the KC SSO session is older than 1 hour.
-  // MFA is enforced by the admin-mfa-required flow bound to admin-web in KC;
-  // acr_values is intentionally omitted — aal2 is not mapped in the realm LoA
-  // table, which causes KC to loop indefinitely after completing OTP.
+  // max_age is belt-and-braces: every admin+athyper login already sends
+  // prompt=login (see adminNativeMfaRequired above), so KC re-authenticates
+  // regardless of SSO age. Kept as a fail-safe in case prompt=login is ever
+  // overridden upstream. acr_values is intentionally omitted — aal2 is not
+  // mapped in the realm LoA table, which causes KC to loop after OTP.
   if (plane === "admin" && realmKey === "athyper") {
     finalUrl.searchParams.set("max_age", "3600");
   }
@@ -1624,9 +1827,14 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
     planeKey: plane,
     realmKey,
     sessionNamespace: runtime.sessionNamespace,
-      requestId,
-      detail: { returnUrl, provider: provider ?? null, expectedContext: expectedContext ?? null },
-    });
+    requestId,
+    detail: {
+      returnUrl,
+      provider: provider ?? null,
+      expectedContextPresent: Boolean(expectedContext),
+      contextTokenPresent: Boolean(contextToken),
+    },
+  });
   return NextResponse.redirect(finalUrl);
 }
 
@@ -1650,15 +1858,8 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
             if (silentPkce.silent) {
               const dest = new URL(config.loginPath, publicBaseUrl);
               if (silentPkce.returnUrl) dest.searchParams.set("returnUrl", silentPkce.returnUrl);
-              const env = process.env.ENVIRONMENT ?? "local";
               const res = NextResponse.redirect(dest);
-              res.cookies.set("sso_skip", "1", {
-                httpOnly: true,
-                secure: env !== "local",
-                sameSite: "lax",
-                path: config.loginPath,
-                maxAge: 60,
-              });
+              setSsoSkipCookie(res, plane);
               return res;
             }
           }
@@ -1720,8 +1921,9 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
   // callback URL (e.g., via referrer header) to replay the code exchange.
   await redis.del(pkceStateKey(state));
 
+  let pkce: PkceState | null = null;
   try {
-    const pkce = JSON.parse(String(stateRaw)) as PkceState;
+    pkce = JSON.parse(String(stateRaw)) as PkceState;
     const realmKey = normalizeRealmKey(pkce.realmKey, plane);
     const runtime = resolveKeycloakRuntime(plane, realmKey, process.env);
     const sessionNamespace = runtime.sessionNamespace;
@@ -1735,6 +1937,27 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
       redirectUri: pkce.redirectUri,
     });
     const claims = decodeJwtPayload(tokens.access_token);
+    if (!loginHintMatchesClaims(pkce.loginHint, claims)) {
+      const tokenUsername = optionalStringClaim(claims.preferred_username);
+      const tokenEmail = optionalStringClaim(claims.email);
+      await recordAuthAudit({
+        eventType: "login_account_mismatch",
+        outcome: "blocked",
+        planeKey: plane,
+        realmKey,
+        sessionNamespace,
+        requestId,
+        userId: optionalStringClaim(claims.sub),
+        username: tokenUsername,
+        reasonCode: "ACCOUNT_MISMATCH",
+        detail: {
+          requestedLoginHintHash: pkce.loginHint ? hashValue(pkce.loginHint) : null,
+          tokenUsernameHash: tokenUsername ? hashValue(tokenUsername) : null,
+          tokenEmailHash: tokenEmail ? hashValue(tokenEmail) : null,
+        },
+      });
+      return redirectToLoginError(plane, request, "ACCOUNT_MISMATCH", requestId);
+    }
 
     // Admin native logins may receive an id_token without amr even after the
     // admin-web Keycloak flow challenged for OTP. Do not use a missing amr claim
@@ -1872,8 +2095,30 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
       : new URL(pkce.returnUrl, publicBaseUrl);
     const response = NextResponse.redirect(destination);
     setPlaneCookies(response, plane, sid, csrfToken, realmKey, sessionPolicy.absoluteTtlSeconds);
-    if (mfaRequired) setMfaPendingCookie(response, plane, sessionPolicy.mfaPendingTtlSeconds);
+    if (mfaRequired) {
+      setMfaPendingCookie(response, plane, sessionPolicy.mfaPendingTtlSeconds);
+    } else {
+      clearMfaPendingCookie(response, plane);
+    }
     response.cookies.set("sso_skip", "", { path: config.loginPath, maxAge: 0 });
+    if (mfaRequired && plane === "admin") {
+      await recordAuthAudit({
+        eventType: "admin_mfa_keycloak_fallback_required",
+        outcome: "partial",
+        planeKey: plane,
+        realmKey,
+        sessionNamespace,
+        requestId,
+        userId: sub,
+        username: preferredUsername,
+        sidHash: hashValue(sid),
+        detail: {
+          clientId: runtime.clientId,
+          destination: destination.pathname,
+          keycloakMfaSatisfied,
+        },
+      });
+    }
     await recordAuthAudit({
       eventType: "login_succeeded",
       outcome: "success",
@@ -1902,6 +2147,9 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
       reasonCode: code,
       detail: { reason: err instanceof Error ? err.message : "Unknown callback error" },
     });
+    if (pkce?.silent) {
+      return redirectSilentSsoFailureToLogin(plane, publicBaseUrl, pkce.returnUrl);
+    }
     return NextResponse.redirect(loginErrorUrl(config.loginPath, publicBaseUrl, code, requestId));
   }
 }
@@ -2066,8 +2314,30 @@ export async function handleRefresh(plane: PlaneKey, request: NextRequest): Prom
   const { redis, session, sid } = loaded;
   const sessionPolicy = await resolveAuthSessionPolicy(plane, session);
   const now = Math.floor(Date.now() / 1000);
+  if (isSessionAbsoluteExpired(session, sessionPolicy, now)) {
+    await destroySessionWithRefreshRevocation(redis, plane, sid, session, requestId, "absolute");
+    await recordAuthAudit({
+      eventType: "session_expired",
+      outcome: "failure",
+      planeKey: plane,
+      realmKey: session.realmKey,
+      sessionNamespace: session.sessionNamespace,
+      requestId,
+      userId: session.userId,
+      username: session.username,
+      sidHash: hashValue(sid),
+      activeOrg: session.activeOrg,
+      activeWorkbench: session.activeWorkbench,
+      reasonCode: "SESSION_EXPIRED",
+    });
+    const response = jsonAuthError("SESSION_EXPIRED", requestId, 401, {
+      redirect: "/api/auth/login",
+    });
+    clearPlaneCookies(response, plane);
+    return response;
+  }
   if (now - session.lastSeenAt >= sessionPolicy.idleTimeoutSeconds) {
-    await destroySession(redis, session.sessionNamespace, sid, session);
+    await destroySessionWithRefreshRevocation(redis, plane, sid, session, requestId, "idle");
     await recordAuthAudit({
       eventType: "session_idle_expired",
       outcome: "failure",
@@ -2288,8 +2558,28 @@ export async function handleTouch(plane: PlaneKey, request: NextRequest): Promis
   if (csrfError) return csrfError;
   const sessionPolicy = await resolveAuthSessionPolicy(plane, loaded.session);
   const now = Math.floor(Date.now() / 1000);
+  if (isSessionAbsoluteExpired(loaded.session, sessionPolicy, now)) {
+    await destroySessionWithRefreshRevocation(loaded.redis, plane, loaded.sid, loaded.session, requestId, "absolute");
+    await recordAuthAudit({
+      eventType: "session_expired",
+      outcome: "failure",
+      planeKey: plane,
+      realmKey: loaded.session.realmKey,
+      sessionNamespace: loaded.session.sessionNamespace,
+      requestId,
+      userId: loaded.session.userId,
+      username: loaded.session.username,
+      sidHash: hashValue(loaded.sid),
+      activeOrg: loaded.session.activeOrg,
+      activeWorkbench: loaded.session.activeWorkbench,
+      reasonCode: "SESSION_EXPIRED",
+    });
+    const response = jsonAuthError("SESSION_EXPIRED", requestId, 401);
+    clearPlaneCookies(response, plane);
+    return response;
+  }
   if (now - loaded.session.lastSeenAt >= sessionPolicy.idleTimeoutSeconds && request.headers.get("x-session-continue") !== "1") {
-    await destroySession(loaded.redis, loaded.session.sessionNamespace, loaded.sid, loaded.session);
+    await destroySessionWithRefreshRevocation(loaded.redis, plane, loaded.sid, loaded.session, requestId, "idle");
     await recordAuthAudit({
       eventType: "session_idle_expired",
       outcome: "failure",
@@ -2400,6 +2690,7 @@ export async function handleLogout(plane: PlaneKey, request: NextRequest): Promi
   const wantsJson = request.method === "POST" || request.headers.get("accept")?.includes("application/json");
   const response = wantsJson ? NextResponse.json({ ok: true, logoutUrl }) : NextResponse.redirect(logoutUrl);
   clearPlaneCookies(response, plane);
+  setSsoSkipCookie(response, plane);
   await recordAuthAudit({
     eventType: "logout_completed",
     outcome: "success",
@@ -2639,9 +2930,29 @@ async function rejectInactiveSession(
 
   const now = Math.floor(Date.now() / 1000);
   const sessionPolicy = await resolveAuthSessionPolicy(plane, loaded.session);
+  if (isSessionAbsoluteExpired(loaded.session, sessionPolicy, now)) {
+    await destroySessionWithRefreshRevocation(loaded.redis, plane, loaded.sid, loaded.session, requestId, "absolute");
+    await recordAuthAudit({
+      eventType: "session_expired",
+      outcome: "failure",
+      planeKey: plane,
+      realmKey: loaded.session.realmKey,
+      sessionNamespace: loaded.session.sessionNamespace,
+      requestId,
+      userId: loaded.session.userId,
+      username: loaded.session.username,
+      sidHash: hashValue(loaded.sid),
+      activeOrg: loaded.session.activeOrg,
+      activeWorkbench: loaded.session.activeWorkbench,
+      reasonCode: "SESSION_EXPIRED",
+    });
+    const response = jsonAuthError("SESSION_EXPIRED", requestId, 401, { redirect: "/api/auth/login" });
+    clearPlaneCookies(response, plane);
+    return response;
+  }
   if (now - loaded.session.lastSeenAt < sessionPolicy.idleTimeoutSeconds) return null;
 
-  await destroySession(loaded.redis, loaded.session.sessionNamespace, loaded.sid, loaded.session);
+  await destroySessionWithRefreshRevocation(loaded.redis, plane, loaded.sid, loaded.session, requestId, "idle");
   await recordAuthAudit({
     eventType: "session_idle_expired",
     outcome: "failure",
@@ -2737,6 +3048,54 @@ async function saveSessionPreservingTtl(redis: RedisClient, session: V4Session, 
   const key = sessKey(session.sessionNamespace, sid);
   const ttl = await redis.ttl(key);
   await redis.set(key, JSON.stringify(session), { EX: ttl > 0 ? ttl : SESSION_TTL_SECONDS });
+}
+
+function isSessionAbsoluteExpired(
+  session: Pick<V4Session, "createdAt">,
+  sessionPolicy: Pick<SessionPolicyDefaults, "absoluteTtlSeconds">,
+  now: number,
+): boolean {
+  return session.createdAt > 0 && now - session.createdAt >= sessionPolicy.absoluteTtlSeconds;
+}
+
+async function destroySessionWithRefreshRevocation(
+  redis: RedisClient,
+  plane: PlaneKey,
+  sid: string,
+  session: V4Session,
+  requestId: string,
+  trigger: "idle" | "absolute",
+): Promise<void> {
+  if (session.refreshToken) {
+    const runtime = resolveKeycloakRuntime(plane, session.realmKey, process.env);
+    await revokeToken({
+      baseUrl: process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local",
+      realm: runtime.realm,
+      clientId: runtime.clientId,
+      clientSecret: resolveKeycloakClientSecret(plane, session.realmKey, runtime.clientId, process.env),
+      token: session.refreshToken,
+      tokenTypeHint: "refresh_token",
+    }).catch(async (err) => {
+      const reason = err instanceof Error ? err.message : "Token revocation failed";
+      console.warn(`[auth-bff/${plane}/session/${requestId}] refresh token revoke failed`, err);
+      await recordAuthAudit({
+        eventType: "session_revoke_failed",
+        outcome: "partial",
+        planeKey: plane,
+        realmKey: session.realmKey,
+        sessionNamespace: session.sessionNamespace,
+        requestId,
+        userId: session.userId,
+        username: session.username,
+        sidHash: hashValue(sid),
+        activeOrg: session.activeOrg,
+        activeWorkbench: session.activeWorkbench,
+        reasonCode: "SESSION_REVOKE_FAILED",
+        detail: { trigger, reason },
+      });
+    });
+  }
+  await destroySession(redis, session.sessionNamespace, sid, session);
 }
 
 async function destroySession(
@@ -2835,13 +3194,44 @@ function redirectToLoginError(
   return NextResponse.redirect(loginErrorUrl(config.loginPath, resolvePublicBaseUrl(plane, request), code, requestId));
 }
 
+function redirectSilentSsoFailureToLogin(
+  plane: PlaneKey,
+  publicBaseUrl: string,
+  returnUrl: string | null | undefined,
+): NextResponse {
+  const config = getPlaneConfig(plane);
+  const dest = new URL(config.loginPath, publicBaseUrl);
+  if (returnUrl) dest.searchParams.set("returnUrl", returnUrl);
+  const response = NextResponse.redirect(dest);
+  setSsoSkipCookie(response, plane);
+  return response;
+}
+
+function setSsoSkipCookie(response: NextResponse, plane: PlaneKey): void {
+  const config = getPlaneConfig(plane);
+  const env = process.env.ENVIRONMENT ?? "local";
+  response.cookies.set("sso_skip", "1", {
+    httpOnly: true,
+    secure: env !== "local",
+    sameSite: "lax",
+    path: config.loginPath,
+    maxAge: 60,
+  });
+}
+
 async function recordAuthAudit(event: AuthAuditEvent): Promise<void> {
-  const payload = {
-    event_time: new Date().toISOString(),
-    service: "auth-bff",
-    ...event,
-  };
-  console.info("[auth-audit]", JSON.stringify(payload));
+  const payload = buildAuthAuditPayload(event);
+  const serialized = JSON.stringify(payload);
+  if (isLocalRuntime()) {
+    console.info("[auth-audit]", serialized);
+  }
+  // Always-on alert hook for events whose steady-state rate is zero. Surfacing
+  // at warn level lets container log aggregators (Loki, CloudWatch) page
+  // without depending on AUTH_AUDIT_ENDPOINT being wired. See
+  // docs/local/runbooks/rb-18-admin-mfa-keycloak-fallback.md.
+  if (event.eventType === "admin_mfa_keycloak_fallback_required") {
+    console.warn("[auth-audit][alert]", serialized);
+  }
 
   const endpoint = process.env.AUTH_AUDIT_ENDPOINT;
   if (!endpoint) return;
@@ -2849,12 +3239,77 @@ async function recordAuthAudit(event: AuthAuditEvent): Promise<void> {
     await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: serialized,
       signal: AbortSignal.timeout(1_500),
     });
   } catch {
-    // Audit export is best-effort here; local structured logs remain authoritative.
+    // Audit export is best-effort; local runtimes still get structured console logs.
   }
+}
+
+function buildAuthAuditPayload(event: AuthAuditEvent): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    event_time: new Date().toISOString(),
+    service: "auth-bff",
+    eventType: event.eventType,
+    outcome: event.outcome,
+    planeKey: event.planeKey,
+    requestId: event.requestId,
+  };
+
+  if (event.realmKey) payload.realmKey = event.realmKey;
+  if (event.sessionNamespace) payload.sessionNamespace = event.sessionNamespace;
+  if (event.userId) payload.userIdHash = hashValue(event.userId);
+  if (event.username) payload.usernameHash = hashValue(event.username);
+  if (event.sidHash) payload.sidHash = event.sidHash;
+  if (event.activeOrg) payload.activeOrgHash = hashValue(event.activeOrg);
+  if (event.activeWorkbench) payload.activeWorkbench = event.activeWorkbench;
+  if (event.reasonCode) payload.reasonCode = event.reasonCode;
+
+  const detail = redactAuthAuditRecord(event.detail);
+  if (detail && Object.keys(detail).length > 0) payload.detail = detail;
+  return payload;
+}
+
+function redactAuthAuditRecord(record: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!record) return undefined;
+  const output: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(record)) {
+    const redacted = redactAuthAuditValue(key, value);
+    if (redacted !== undefined) output[key] = redacted;
+  }
+  return output;
+}
+
+function redactAuthAuditValue(key: string, value: unknown): unknown {
+  const normalizedKey = key.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  if (normalizedKey === "expectedcontext") return redactExpectedContextForAudit(value);
+  if (AUTH_AUDIT_DROP_KEYS.has(normalizedKey)) return "[redacted]";
+  if (typeof value === "string") {
+    return AUTH_AUDIT_HASH_KEYS.has(normalizedKey) ? hashValue(value) : value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactAuthAuditValue(key, item));
+  }
+  if (value && typeof value === "object") {
+    return redactAuthAuditRecord(value as Record<string, unknown>);
+  }
+  return value;
+}
+
+function redactExpectedContextForAudit(value: unknown): Record<string, unknown> | "[redacted]" | null {
+  if (value === null || value === undefined) return null;
+  const expectedContext = normalizeStoredLoginExpectedContext(value);
+  if (!expectedContext) return "[redacted]";
+  return {
+    tenantIdHash: expectedContext.tenantId ? hashValue(expectedContext.tenantId) : null,
+    tenantCodeHash: hashValue(expectedContext.tenantCode),
+    organizationCodeHash: expectedContext.organizationCode ? hashValue(expectedContext.organizationCode) : null,
+    organizationNameHash: expectedContext.organizationName ? hashValue(expectedContext.organizationName) : null,
+    workspaceIdHash: expectedContext.workspaceId ? hashValue(expectedContext.workspaceId) : null,
+    workspaceType: expectedContext.workspaceType || null,
+    networkRole: expectedContext.networkRole || null,
+  };
 }
 
 function resolvePublicBaseUrl(plane: PlaneKey, request: NextRequest): string {
@@ -3005,12 +3460,15 @@ async function revokeToken(opts: {
   });
   if (opts.clientSecret) body.set("client_secret", opts.clientSecret);
 
-  await fetch(`${opts.baseUrl}/realms/${opts.realm}/protocol/openid-connect/revoke`, {
+  const res = await fetch(`${opts.baseUrl}/realms/${opts.realm}/protocol/openid-connect/revoke`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
     signal: AbortSignal.timeout(5_000),
-  }).catch(() => {});
+  });
+  if (!res.ok) {
+    throw new Error(`Token revocation failed: ${res.status} ${await res.text().catch(() => "")}`);
+  }
 }
 
 function resolveKeycloakClientSecret(
@@ -3075,9 +3533,9 @@ function keycloakAdminMfaSatisfied(
   const amr = Array.isArray(idClaims?.amr) ? idClaims.amr : [];
   if (amr.some(isMfaAmrValue)) return true;
 
-  // admin-web is bound to the admin-mfa-required Keycloak flow. When this BFF
-  // explicitly sent prompt=login, reaching the callback means that flow accepted
-  // password + OTP even if the realm did not map an amr claim into the token.
+  // Admin MFA is owned by Keycloak. Some realms enforce OTP but do not emit an
+  // amr mapper on the id_token, so a missing amr must not trigger a second
+  // application-side TOTP challenge after Keycloak already stepped the user up.
   return pkce.forceAuthn === true && pkce.silent !== true;
 }
 
@@ -3258,6 +3716,20 @@ function normalizeLoginExpectedContext(value: {
   };
 }
 
+function normalizeStoredLoginExpectedContext(value: unknown): LoginExpectedContext | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  return normalizeLoginExpectedContext({
+    tenantId: record["tenantId"],
+    tenantCode: record["tenantCode"],
+    organizationCode: record["organizationCode"],
+    organizationName: record["organizationName"],
+    workspaceId: record["workspaceId"],
+    workspaceType: record["workspaceType"],
+    networkRole: record["networkRole"],
+  }) ?? undefined;
+}
+
 function filterOrganizationsByExpectedContext(
   plane: PlaneKey,
   expected: LoginExpectedContext,
@@ -3380,23 +3852,19 @@ function looksLikeKeycloakOrganizationRef(value: string | null): boolean {
 }
 
 function summarizeOrganizationsForAudit(organizations: Record<string, OrgMembership>) {
-  return Object.fromEntries(
-    Object.entries(organizations).slice(0, 10).map(([alias, membership]) => [
-      alias,
-      {
-        tenantId: membership.tenantId,
-        tenantCode: membership.tenantCode,
-        workspaceId: membership.workspaceId,
-        workspaceCode: membership.workspaceCode,
-        organizationId: membership.organizationId,
-        organizationCode: membership.organizationCode,
-        legalEntityId: membership.legalEntityId,
-        legalEntityCode: membership.legalEntityCode,
-        keycloakOrganizationAlias: membership.keycloakOrganizationAlias,
-        roles: membership.roles,
-      },
-    ]),
-  );
+  return Object.entries(organizations).slice(0, 10).map(([alias, membership]) => ({
+    aliasHash: hashValue(alias),
+    tenantId: membership.tenantId,
+    tenantCode: membership.tenantCode,
+    workspaceId: membership.workspaceId,
+    workspaceCode: membership.workspaceCode,
+    organizationId: membership.organizationId,
+    organizationCode: membership.organizationCode,
+    legalEntityId: membership.legalEntityId,
+    legalEntityCode: membership.legalEntityCode,
+    keycloakOrganizationAlias: membership.keycloakOrganizationAlias,
+    roles: membership.roles,
+  }));
 }
 
 function metadataString(
@@ -3480,6 +3948,10 @@ function discoveryTokenKey(token: string): string {
   return `session:auth_discovery:${hashValue(token)}`;
 }
 
+function loginContextTokenKey(token: string): string {
+  return `session:auth_login_context:${hashValue(token)}`;
+}
+
 function discoveryTrustKey(token: string): string {
   return `session:auth_discovery_trust:${hashValue(token)}`;
 }
@@ -3556,6 +4028,59 @@ async function storeDiscoverySelectionToken(
   };
   await redis.set(discoveryTokenKey(token), JSON.stringify(payload), { EX: ttl });
   return token;
+}
+
+async function storeLoginContextToken(opts: {
+  plane: PlaneKey;
+  loginHint: string | null;
+  provider: string | null;
+  expectedContext?: LoginExpectedContext;
+}): Promise<string> {
+  const redis = await getSessionRedis();
+  const token = generateDiscoveryToken();
+  const now = Math.floor(Date.now() / 1000);
+  const payload: LoginContextTokenPayload = {
+    version: 1,
+    planeKey: opts.plane,
+    loginHint: normalizeLoginHint(opts.loginHint),
+    provider: normalizeProviderHint(opts.provider),
+    ...(opts.expectedContext ? { expectedContext: opts.expectedContext } : {}),
+    createdAt: now,
+    expiresAt: now + LOGIN_CONTEXT_TOKEN_TTL_SECONDS,
+  };
+  await redis.set(loginContextTokenKey(token), JSON.stringify(payload), { EX: LOGIN_CONTEXT_TOKEN_TTL_SECONDS });
+  return token;
+}
+
+async function loadLoginContextToken(
+  redis: RedisClient,
+  token: string,
+  plane: PlaneKey,
+): Promise<LoginContextTokenPayload | null> {
+  if (!/^[a-zA-Z0-9_-]{16,256}$/.test(token)) return null;
+  const raw = await redis.get(loginContextTokenKey(token));
+  if (!raw) return null;
+
+  const parsed = JSON.parse(String(raw)) as Partial<LoginContextTokenPayload>;
+  if (
+    parsed.version !== 1
+    || parsed.planeKey !== plane
+    || typeof parsed.expiresAt !== "number"
+    || parsed.expiresAt <= Math.floor(Date.now() / 1000)
+  ) {
+    return null;
+  }
+
+  const expectedContext = normalizeStoredLoginExpectedContext(parsed.expectedContext);
+  return {
+    version: 1,
+    planeKey: parsed.planeKey,
+    loginHint: normalizeLoginHint(parsed.loginHint),
+    provider: normalizeProviderHint(parsed.provider),
+    ...(expectedContext ? { expectedContext } : {}),
+    createdAt: typeof parsed.createdAt === "number" ? parsed.createdAt : 0,
+    expiresAt: parsed.expiresAt,
+  };
 }
 
 async function hasValidDiscoveryTrust(
@@ -3650,6 +4175,22 @@ function normalizeDiscoveryIdentifier(value: unknown): NormalizedDiscoveryIdenti
 
 function normalizeLoginHint(value: unknown): string | null {
   return normalizeDiscoveryIdentifier(value)?.value ?? null;
+}
+
+function loginHintMatchesClaims(loginHint: string | null | undefined, claims: Record<string, unknown>): boolean {
+  const expected = normalizeLoginHint(loginHint);
+  if (!expected) return true;
+  const allowed = [
+    normalizeLoginHint(claims.preferred_username),
+    normalizeLoginHint(claims.email),
+  ];
+  return allowed.some((candidate) => candidate === expected);
+}
+
+function normalizeProviderHint(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized && normalized.length <= 128 ? normalized : null;
 }
 
 function maskEmail(email: string): string {
@@ -3954,32 +4495,28 @@ function discoveryUnavailableResponse(requestId: string): NextResponse {
   );
 }
 
-function buildInternalLoginUrl(opts: {
+async function buildInternalLoginUrl(opts: {
   config: ReturnType<typeof getPlaneConfig>;
   realmKey: RealmKey;
   provider: string | null;
   loginHint: string;
   returnUrl: string;
   expectedContext?: LoginExpectedContext;
-}): string {
+}): Promise<string> {
+  const contextToken = await storeLoginContextToken({
+    plane: opts.config.key,
+    loginHint: opts.loginHint,
+    provider: opts.provider,
+    expectedContext: opts.expectedContext,
+  });
   const params = new URLSearchParams();
   params.set("realm", opts.realmKey);
   params.set("returnUrl", buildAuthSelectReturnUrl(
     opts.returnUrl,
     defaultWorkbenchForPlane(opts.config.key, opts.expectedContext),
   ));
-  params.set("login_hint", opts.loginHint);
+  params.set("context_token", contextToken);
   params.set("force", "1");
-  if (opts.expectedContext) {
-    if (opts.expectedContext.tenantId) params.set("selected_tenant_id", opts.expectedContext.tenantId);
-    params.set("selected_tenant", opts.expectedContext.tenantCode);
-    if (opts.expectedContext.organizationCode) params.set("selected_org", opts.expectedContext.organizationCode);
-    if (opts.expectedContext.organizationName) params.set("selected_org_name", opts.expectedContext.organizationName);
-    if (opts.expectedContext.workspaceId) params.set("selected_workspace_id", opts.expectedContext.workspaceId);
-    if (opts.expectedContext.workspaceType) params.set("selected_workspace_type", opts.expectedContext.workspaceType);
-    if (opts.expectedContext.networkRole) params.set("selected_role", opts.expectedContext.networkRole);
-  }
-  if (opts.provider) params.set("provider", opts.provider);
   return `/api/auth/login?${params.toString()}`;
 }
 

@@ -65,7 +65,6 @@ export {
   resolveTitleField,
   formatFieldValue,
   coerceFieldValue,
-  resolveLineColumns,
   resolveSearchFields,
   resolveDefaultSortField,
   editableLineFields,
@@ -89,7 +88,6 @@ export {
   resolveReferenceTabConfig,
   resolveLineQuantityProgress,
   computeTabBadge,
-  buildProcureColumnCatalog,
   resolveProcureGridSummary,
   normalizeProcureDraftLine,
   useProcureLineDistributions,
@@ -109,7 +107,6 @@ export {
   resolveSalesEditorTabs,
   resolveSalesAmountConfig,
   resolveFulfillmentTabConfig,
-  buildSalesColumnCatalog,
   normalizeSalesDraftLine,
 } from "./variants/sales";
 
@@ -118,7 +115,6 @@ export {
   resolveGenericComposerSections,
   resolveGenericEditorTabs,
   resolveGenericAmountConfig,
-  buildGenericColumnCatalog,
 } from "./variants/generic";
 
 // Panels
@@ -170,14 +166,26 @@ export { MetaFieldInput, UomFieldInput, CommodityCodeInput } from "./components/
 export { MetaLineForm } from "./components/MetaLineForm";
 export type { MetaLineFormProps } from "./components/MetaLineForm";
 
-export { ProcureLineComposerSheet } from "./components/ProcureLineComposerSheet";
-export { ProcureLineEditorSheet }   from "./components/ProcureLineEditorSheet";
-export { SalesLineComposerSheet }   from "./components/SalesLineComposerSheet";
-export { SalesLineEditorSheet }     from "./components/SalesLineEditorSheet";
-
-// Unified panel-driven sheet (preferred over variant-specific sheets)
+// Unified panel-driven sheet — the sole sheet implementation.
+// The legacy variant-specific sheets (ProcureLineComposerSheet,
+// ProcureLineEditorSheet, SalesLineComposerSheet, SalesLineEditorSheet)
+// were deleted in Phase 7 — they were imported but never invoked, the
+// dispatcher in LineItemSheet.tsx always picked UnifiedLineItemSheet for
+// procure / sales variants and GenericLineComposerSheet for the fallback.
 export { UnifiedLineItemSheet } from "./components/UnifiedLineItemSheet";
 export type { UnifiedLineItemSheetProps } from "./components/UnifiedLineItemSheet";
+
+// Footer amount summary strip — generic, meta-driven Net/Discount/Tax/Gross bar.
+export { LineItemFooterAmountStrip } from "./components/LineItemFooterAmountStrip";
+export type {
+  LineItemFooterAmountStripProps,
+  LineItemFooterAmountStripStatus,
+} from "./components/LineItemFooterAmountStrip";
+
+// Shared summary-strip resolver — reads display_config.line_summary_strip
+// + per-field ui_hint.line_summary. Exposed so custom variants can reuse it.
+export { resolveSummaryStripFromMeta } from "./variants/summary-strip";
+export type { ResolvedSummaryStrip } from "./variants/summary-strip";
 
 export {
   LineItemComposerSheet,
@@ -191,3 +199,40 @@ export type {
 // Surface
 export { LineItemsSurface } from "./surface/LineItemsSurface";
 export { LinesGrid }        from "./surface/LinesGrid";
+export { AddItemDropdown, type AddItemDropdownProps } from "./surface/AddItemDropdown";
+
+// Source adapters (Phase 5+)
+export {
+  createManualInvoiceLineAdapter,
+  type ManualInvoiceLineDraft,
+  type ManualInvoiceLineParentCtx,
+  type ManualInvoiceLineSelection,
+  createCatalogAdapter,
+  type CatalogCheckLive,
+  type CatalogDraft,
+  type CatalogFetchItems,
+  type CatalogItemSelection,
+  type CatalogParentCtx,
+  type CreateCatalogAdapterOptions,
+  createOpenPoLineAdapter,
+  type CreateOpenPoLineAdapterOptions,
+  type OpenPoLineCheckLive,
+  type OpenPoLineDraft,
+  type OpenPoLineFetchLines,
+  type OpenPoLineParentCtx,
+  type OpenPoLineSelection,
+  createOpenReceiptLineAdapter,
+  type CreateOpenReceiptLineAdapterOptions,
+  type OpenReceiptLineCheckLive,
+  type OpenReceiptLineDraft,
+  type OpenReceiptLineFetchLines,
+  type OpenReceiptLineParentCtx,
+  type OpenReceiptLineSelection,
+  createOpenServiceSheetLineAdapter,
+  type CreateOpenServiceSheetLineAdapterOptions,
+  type OpenServiceSheetLineCheckLive,
+  type OpenServiceSheetLineDraft,
+  type OpenServiceSheetLineFetchLines,
+  type OpenServiceSheetLineParentCtx,
+  type OpenServiceSheetLineSelection,
+} from "./adapters";

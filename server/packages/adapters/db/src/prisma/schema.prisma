@@ -498,6 +498,8 @@ model asset_class_book_policy {
   created_by                            String       @db.Uuid
   updated_at                            DateTime?    @db.Timestamptz(6)
   updated_by                            String?      @db.Uuid
+  class_clearing_posting_role_code      String?
+  expense_low_value_posting_role_code   String?
   asset_class                           asset_class  @relation(fields: [tenant_id, asset_class_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "acbp_class_fk")
   company_code                          company_code @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "acbp_company_fk")
   principal                             principal    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "acbp_created_by_fk")
@@ -1036,6 +1038,7 @@ model entity_field {
   created_by            String               @db.Uuid
   updated_at            DateTime?            @db.Timestamptz(6)
   updated_by            String?              @db.Uuid
+  defaults              Json?
   lookup_domain         lookup_domain?       @relation(fields: [enum_domain_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "ef_enum_domain_fk")
   tenant                tenant?              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ef_tenant_fk")
   entity_version        entity_version?      @relation(fields: [entity_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ef_version_fk")
@@ -1048,6 +1051,7 @@ model entity_field {
   @@index([entity_version_id], map: "ef_filterable_pidx", where: raw("(is_filterable = true)"))
   @@index([entity_version_id], map: "ef_searchable_pidx", where: raw("(is_searchable = true)"))
   @@index([entity_version_id, sort_order], map: "ef_version_sort_idx", where: raw("(entity_version_id IS NOT NULL)"))
+  @@index([entity_version_id, name], map: "ix_entity_field_defaults", where: raw("(defaults IS NOT NULL)"))
   @@schema("control")
 }
 
@@ -3071,43 +3075,50 @@ model workflow_template_stage {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model accounting_distribution {
-  id                     String    @id(map: "ad_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id              String    @db.Uuid
-  source_doc_type        String
-  source_doc_id          String    @db.Uuid
-  source_line_id         String    @db.Uuid
-  distribution_no        Int       @db.SmallInt
-  distribution_basis     String    @default("PERCENT")
-  split_pct              Decimal?  @db.Decimal(7, 4)
-  split_amount           Decimal?  @db.Decimal(18, 4)
-  split_quantity         Decimal?  @db.Decimal(18, 4)
-  distributed_amount     Decimal   @db.Decimal(18, 4)
-  currency_code          String    @db.Char(3)
-  account_source         String    @default("FROM_CATEGORY")
-  posting_role_code      String?
-  account_code           String?
-  account_lookup_key     String?
-  account_fallback       String?
-  gl_account_id          String?   @db.Uuid
-  business_intent_id     String?   @db.Uuid
-  commodity_category_id  String?   @db.Uuid
-  cost_center_id         String?   @db.Uuid
-  profit_center_id       String?   @db.Uuid
-  project_id             String?   @db.Uuid
-  site_id                String?   @db.Uuid
-  dimension_set_id       String?   @db.Uuid
-  is_capex               Boolean   @default(false)
-  asset_class_id         String?   @db.Uuid
-  tax_treatment_override String?
-  budget_allocation_id   String?   @db.Uuid
-  budget_check_result    String?
-  encumbrance_je_id      String?   @db.Uuid
-  description            String?
-  metadata               Json      @default("{}")
-  created_at             DateTime  @default(now()) @db.Timestamptz(6)
-  created_by             String    @db.Uuid
-  updated_at             DateTime? @db.Timestamptz(6)
-  updated_by             String?   @db.Uuid
+  id                                       String                                    @id(map: "ad_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                String                                    @db.Uuid
+  source_doc_type                          String
+  source_doc_id                            String                                    @db.Uuid
+  source_line_id                           String                                    @db.Uuid
+  distribution_no                          Int                                       @db.SmallInt
+  distribution_basis                       String                                    @default("PERCENT")
+  split_pct                                Decimal?                                  @db.Decimal(7, 4)
+  split_amount                             Decimal?                                  @db.Decimal(18, 4)
+  split_quantity                           Decimal?                                  @db.Decimal(18, 4)
+  distributed_amount                       Decimal                                   @db.Decimal(18, 4)
+  currency_code                            String                                    @db.Char(3)
+  account_source                           String                                    @default("FROM_CATEGORY")
+  posting_role_code                        String?
+  account_code                             String?
+  account_lookup_key                       String?
+  account_fallback                         String?
+  gl_account_id                            String?                                   @db.Uuid
+  business_intent_id                       String?                                   @db.Uuid
+  commodity_category_id                    String?                                   @db.Uuid
+  cost_center_id                           String?                                   @db.Uuid
+  profit_center_id                         String?                                   @db.Uuid
+  project_id                               String?                                   @db.Uuid
+  site_id                                  String?                                   @db.Uuid
+  dimension_set_id                         String?                                   @db.Uuid
+  is_capex                                 Boolean                                   @default(false)
+  asset_class_id                           String?                                   @db.Uuid
+  tax_treatment_override                   String?
+  budget_allocation_id                     String?                                   @db.Uuid
+  budget_check_result                      String?
+  encumbrance_je_id                        String?                                   @db.Uuid
+  description                              String?
+  metadata                                 Json                                      @default("{}")
+  created_at                               DateTime                                  @default(now()) @db.Timestamptz(6)
+  created_by                               String                                    @db.Uuid
+  updated_at                               DateTime?                                 @db.Timestamptz(6)
+  updated_by                               String?                                   @db.Uuid
+  distributed_amount_base                  Decimal?                                  @db.Decimal(18, 4)
+  exchange_rate_snapshot                   Decimal?                                  @db.Decimal(20, 10)
+  asset_posting_target                     String?
+  target_asset_id                          String?                                   @db.Uuid
+  row_version                              BigInt                                    @default(1)
+  asset                                    asset?                                    @relation(fields: [tenant_id, target_asset_id], references: [tenant_id, id], onUpdate: NoAction, map: "ad_target_asset_fk")
+  accounting_distribution_resolution_audit accounting_distribution_resolution_audit?
 
   @@unique([source_doc_type, source_doc_id, source_line_id, distribution_no], map: "ad_line_dist_uq")
   @@unique([tenant_id, id], map: "ad_tenant_id_uq")
@@ -3116,6 +3127,8 @@ model accounting_distribution {
   @@index([tenant_id, source_doc_type, source_doc_id], map: "ad_source_doc_idx")
   @@index([tenant_id, source_line_id], map: "ad_source_line_idx")
   @@index([tenant_id, commodity_category_id], map: "ad_commodity_category_idx", where: raw("(commodity_category_id IS NOT NULL)"))
+  @@index([tenant_id, target_asset_id], map: "ix_ad_capex_target", where: raw("(is_capex = true)"))
+  @@index([tenant_id, asset_class_id, asset_posting_target], map: "ix_ad_class_clearing", where: raw("(asset_posting_target = 'class_clearing'::text)"))
   @@schema("document")
 }
 
@@ -3310,7 +3323,7 @@ model bank_statement_line {
   created_at           DateTime               @default(now()) @db.Timestamptz(6)
   updated_at           DateTime?              @db.Timestamptz(6)
   bank_recon_case_line bank_recon_case_line[]
-  bank_recon_case      bank_recon_case?       @relation(fields: [recon_case_id], references: [id], onUpdate: NoAction, map: "bsl_recon_case_fk")
+  bank_recon_case      bank_recon_case?       @relation(fields: [tenant_id, recon_case_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "bsl_recon_case_fk")
   bank_statement       bank_statement         @relation(fields: [tenant_id, bank_statement_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "bsl_statement_fk")
   tenant               tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bsl_tenant_fk")
   payment_entry        payment_entry[]
@@ -4261,18 +4274,19 @@ model intercompany_transaction {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model invoice_address_snapshot {
-  id                  String   @id(map: "ias_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id           String   @db.Uuid
-  purchase_invoice_id String   @db.Uuid
+  id                  String           @id(map: "ias_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id           String           @db.Uuid
+  purchase_invoice_id String           @db.Uuid
   address_type        String
   address_line_1      String
   address_line_2      String?
   city                String?
   state_province      String?
   postal_code         String?
-  country_code        String   @db.Char(2)
-  captured_at         DateTime @default(now()) @db.Timestamptz(6)
-  captured_by         String   @db.Uuid
+  country_code        String           @db.Char(2)
+  captured_at         DateTime         @default(now()) @db.Timestamptz(6)
+  captured_by         String           @db.Uuid
+  purchase_invoice    purchase_invoice @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onUpdate: NoAction, map: "iasnap_pi_fk")
 
   @@unique([purchase_invoice_id, address_type], map: "ias_invoice_type_uq")
   @@unique([tenant_id, id], map: "ias_tenant_id_uq")
@@ -4282,19 +4296,20 @@ model invoice_address_snapshot {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model invoice_bank_snapshot {
-  id                  String   @id(map: "ibs_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id           String   @db.Uuid
-  purchase_invoice_id String   @unique(map: "ibs_invoice_uq") @db.Uuid
+  id                  String           @id(map: "ibs_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id           String           @db.Uuid
+  purchase_invoice_id String           @unique(map: "ibs_invoice_uq") @db.Uuid
   bank_name           String
-  bank_country_code   String?  @db.Char(2)
+  bank_country_code   String?          @db.Char(2)
   account_holder_name String
   account_number      String?
   iban                String?
   swift_bic           String?
   routing_number      String?
   bank_branch         String?
-  captured_at         DateTime @default(now()) @db.Timestamptz(6)
-  captured_by         String   @db.Uuid
+  captured_at         DateTime         @default(now()) @db.Timestamptz(6)
+  captured_by         String           @db.Uuid
+  purchase_invoice    purchase_invoice @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onUpdate: NoAction, map: "ibsnap_pi_fk")
 
   @@unique([tenant_id, purchase_invoice_id], map: "ibs_tenant_invoice_uq")
   @@unique([tenant_id, id], map: "ibs_tenant_id_uq")
@@ -4304,26 +4319,28 @@ model invoice_bank_snapshot {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model invoice_match_case {
-  id                      String    @id(map: "imc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id               String    @db.Uuid
-  company_code_id         String    @db.Uuid
-  purchase_invoice_id     String    @db.Uuid
-  commitment_id           String?   @db.Uuid
-  match_type              String    @default("three_way")
-  match_result            String    @default("pending")
-  total_quantity_variance Decimal   @default(0) @db.Decimal(18, 4)
-  total_price_variance    Decimal   @default(0) @db.Decimal(18, 4)
-  total_amount_variance   Decimal   @default(0) @db.Decimal(18, 4)
-  has_exceptions          Boolean   @default(false)
-  exception_count         Int       @default(0) @db.SmallInt
-  matched_at              DateTime? @db.Timestamptz(6)
-  matched_by              String?   @db.Uuid
-  metadata                Json      @default("{}")
-  status                  String    @default("pending")
-  created_at              DateTime  @default(now()) @db.Timestamptz(6)
-  created_by              String    @db.Uuid
-  updated_at              DateTime? @db.Timestamptz(6)
-  updated_by              String?   @db.Uuid
+  id                      String            @id(map: "imc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id               String            @db.Uuid
+  company_code_id         String            @db.Uuid
+  purchase_invoice_id     String            @db.Uuid
+  commitment_id           String?           @db.Uuid
+  match_type              String            @default("three_way")
+  match_result            String            @default("pending")
+  total_quantity_variance Decimal           @default(0) @db.Decimal(18, 4)
+  total_price_variance    Decimal           @default(0) @db.Decimal(18, 4)
+  total_amount_variance   Decimal           @default(0) @db.Decimal(18, 4)
+  has_exceptions          Boolean           @default(false)
+  exception_count         Int               @default(0) @db.SmallInt
+  matched_at              DateTime?         @db.Timestamptz(6)
+  matched_by              String?           @db.Uuid
+  metadata                Json              @default("{}")
+  status                  String            @default("pending")
+  created_at              DateTime          @default(now()) @db.Timestamptz(6)
+  created_by              String            @db.Uuid
+  updated_at              DateTime?         @db.Timestamptz(6)
+  updated_by              String?           @db.Uuid
+  purchase_invoice        purchase_invoice  @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "imc_invoice_fk")
+  match_exception         match_exception[]
 
   @@unique([tenant_id, purchase_invoice_id], map: "imc_invoice_uq")
   @@unique([tenant_id, id], map: "imc_tenant_id_uq")
@@ -4333,21 +4350,22 @@ model invoice_match_case {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model invoice_party_snapshot {
-  id                   String   @id(map: "ips_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id            String   @db.Uuid
-  purchase_invoice_id  String   @unique(map: "ips_invoice_uq") @db.Uuid
-  supplier_id          String?  @db.Uuid
+  id                   String           @id(map: "ips_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id            String           @db.Uuid
+  purchase_invoice_id  String           @unique(map: "ips_invoice_uq") @db.Uuid
+  supplier_id          String?          @db.Uuid
   party_name           String
   tax_registration_no  String?
   legal_entity_name    String?
-  country_code         String?  @db.Char(2)
-  is_one_time_supplier Boolean  @default(false)
+  country_code         String?          @db.Char(2)
+  is_one_time_supplier Boolean          @default(false)
   contact_name         String?
   contact_email        String?
   contact_phone        String?
-  captured_at          DateTime @default(now()) @db.Timestamptz(6)
-  captured_by          String   @db.Uuid
-  metadata             Json     @default("{}")
+  captured_at          DateTime         @default(now()) @db.Timestamptz(6)
+  captured_by          String           @db.Uuid
+  metadata             Json             @default("{}")
+  purchase_invoice     purchase_invoice @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onUpdate: NoAction, map: "ipsnap_pi_fk")
 
   @@unique([tenant_id, purchase_invoice_id], map: "ips_tenant_invoice_uq")
   @@unique([tenant_id, id], map: "ips_tenant_id_uq")
@@ -4359,21 +4377,23 @@ model invoice_party_snapshot {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model invoice_tax_snapshot {
-  id                   String   @id(map: "its_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id            String   @db.Uuid
-  purchase_invoice_id  String   @db.Uuid
-  invoice_line_id      String?  @db.Uuid
-  tax_group_id         String   @db.Uuid
-  tax_component_code   String
-  tax_rate_schedule_id String?  @db.Uuid
-  tax_base_amount      Decimal  @db.Decimal(18, 4)
-  tax_rate             Decimal  @db.Decimal(7, 4)
-  tax_amount           Decimal  @db.Decimal(18, 4)
-  currency_code        String   @db.Char(3)
-  is_recoverable       Boolean  @default(true)
-  is_withholding       Boolean  @default(false)
-  captured_at          DateTime @default(now()) @db.Timestamptz(6)
-  captured_by          String   @db.Uuid
+  id                    String                 @id(map: "its_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id             String                 @db.Uuid
+  purchase_invoice_id   String                 @db.Uuid
+  invoice_line_id       String?                @db.Uuid
+  tax_group_id          String                 @db.Uuid
+  tax_component_code    String
+  tax_rate_schedule_id  String?                @db.Uuid
+  tax_base_amount       Decimal                @db.Decimal(18, 4)
+  tax_rate              Decimal                @db.Decimal(7, 4)
+  tax_amount            Decimal                @db.Decimal(18, 4)
+  currency_code         String                 @db.Char(3)
+  is_recoverable        Boolean                @default(true)
+  is_withholding        Boolean                @default(false)
+  captured_at           DateTime               @default(now()) @db.Timestamptz(6)
+  captured_by           String                 @db.Uuid
+  purchase_invoice      purchase_invoice       @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onUpdate: NoAction, map: "itsnap_pi_fk")
+  purchase_invoice_line purchase_invoice_line? @relation(fields: [tenant_id, invoice_line_id], references: [tenant_id, id], onUpdate: NoAction, map: "itsnap_pil_fk")
 
   @@unique([tenant_id, id], map: "its_tenant_id_uq")
   @@schema("document")
@@ -4429,6 +4449,7 @@ model journal_entry {
   updated_by                String?                     @db.Uuid
   bank_recon_case           bank_recon_case[]
   bank_statement            bank_statement[]
+  journal_line              journal_line[]
   payroll_run               payroll_run?
   asset_revaluation_reserve asset_revaluation_reserve[]
   consolidation_elimination consolidation_elimination[]
@@ -4453,42 +4474,44 @@ model journal_entry {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model journal_line {
-  id                   String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id            String    @db.Uuid
-  journal_entry_id     String    @db.Uuid
-  company_code_id      String    @db.Uuid
-  book_id              String    @db.Uuid
-  fiscal_period_id     String    @db.Uuid
-  fiscal_year          Int       @db.SmallInt
-  period_number        Int       @db.SmallInt
-  posting_date         DateTime  @db.Date
-  line_no              Int       @db.SmallInt
-  gl_account_id        String    @db.Uuid
-  transaction_currency String    @db.Char(3)
-  transaction_debit    Decimal   @default(0) @db.Decimal(18, 4)
-  transaction_credit   Decimal   @default(0) @db.Decimal(18, 4)
-  base_currency        String    @db.Char(3)
-  base_debit           Decimal   @default(0) @db.Decimal(18, 4)
-  base_credit          Decimal   @default(0) @db.Decimal(18, 4)
-  exchange_rate        Decimal?  @db.Decimal(18, 10)
-  cost_center_id       String?   @db.Uuid
-  profit_center_id     String?   @db.Uuid
-  project_id           String?   @db.Uuid
-  site_id              String?   @db.Uuid
-  dimension_set_id     String?   @db.Uuid
-  party_type           String?
-  party_id             String?   @db.Uuid
-  subledger_type       String?
-  description          String?
-  source_doc_line_id   String?   @db.Uuid
-  posted_at            DateTime? @db.Timestamptz(6)
-  posted_by            String?   @db.Uuid
-  tags                 Json      @default("[]")
-  metadata             Json      @default("{}")
-  created_at           DateTime  @default(now()) @db.Timestamptz(6)
-  created_by           String    @db.Uuid
-  updated_at           DateTime? @db.Timestamptz(6)
-  updated_by           String?   @db.Uuid
+  id                     String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id              String                   @db.Uuid
+  journal_entry_id       String                   @db.Uuid
+  company_code_id        String                   @db.Uuid
+  book_id                String                   @db.Uuid
+  fiscal_period_id       String                   @db.Uuid
+  fiscal_year            Int                      @db.SmallInt
+  period_number          Int                      @db.SmallInt
+  posting_date           DateTime                 @db.Date
+  line_no                Int                      @db.SmallInt
+  gl_account_id          String                   @db.Uuid
+  transaction_currency   String                   @db.Char(3)
+  transaction_debit      Decimal                  @default(0) @db.Decimal(18, 4)
+  transaction_credit     Decimal                  @default(0) @db.Decimal(18, 4)
+  base_currency          String                   @db.Char(3)
+  base_debit             Decimal                  @default(0) @db.Decimal(18, 4)
+  base_credit            Decimal                  @default(0) @db.Decimal(18, 4)
+  exchange_rate          Decimal?                 @db.Decimal(18, 10)
+  cost_center_id         String?                  @db.Uuid
+  profit_center_id       String?                  @db.Uuid
+  project_id             String?                  @db.Uuid
+  site_id                String?                  @db.Uuid
+  dimension_set_id       String?                  @db.Uuid
+  party_type             String?
+  party_id               String?                  @db.Uuid
+  subledger_type         String?
+  description            String?
+  source_doc_line_id     String?                  @db.Uuid
+  posted_at              DateTime?                @db.Timestamptz(6)
+  posted_by              String?                  @db.Uuid
+  tags                   Json                     @default("[]")
+  metadata               Json                     @default("{}")
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by             String                   @db.Uuid
+  updated_at             DateTime?                @db.Timestamptz(6)
+  updated_by             String?                  @db.Uuid
+  journal_entry          journal_entry            @relation(fields: [tenant_id, journal_entry_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "jl_je_fk")
+  journal_line_reference journal_line_reference[]
 
   @@unique([tenant_id, journal_entry_id, line_no], map: "journal_line_je_line_uq")
   @@unique([tenant_id, id], map: "journal_line_tenant_id_uq")
@@ -4510,23 +4533,24 @@ model journal_line {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model journal_line_reference {
-  id                 String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id          String    @db.Uuid
-  journal_line_id    String    @db.Uuid
+  id                 String       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id          String       @db.Uuid
+  journal_line_id    String       @db.Uuid
   ref_type           String
   ref_doc_type       String
-  ref_doc_id         String    @db.Uuid
-  ref_doc_line_id    String?   @db.Uuid
+  ref_doc_id         String       @db.Uuid
+  ref_doc_line_id    String?      @db.Uuid
   ref_doc_number     String?
-  allocated_amount   Decimal   @db.Decimal(18, 4)
-  currency_code      String    @db.Char(3)
-  base_amount        Decimal?  @db.Decimal(18, 4)
-  is_full_settlement Boolean   @default(false)
-  settlement_date    DateTime? @db.Date
+  allocated_amount   Decimal      @db.Decimal(18, 4)
+  currency_code      String       @db.Char(3)
+  base_amount        Decimal?     @db.Decimal(18, 4)
+  is_full_settlement Boolean      @default(false)
+  settlement_date    DateTime?    @db.Date
   description        String?
-  metadata           Json      @default("{}")
-  created_at         DateTime  @default(now()) @db.Timestamptz(6)
-  created_by         String    @db.Uuid
+  metadata           Json         @default("{}")
+  created_at         DateTime     @default(now()) @db.Timestamptz(6)
+  created_by         String       @db.Uuid
+  journal_line       journal_line @relation(fields: [tenant_id, journal_line_id], references: [tenant_id, id], onUpdate: NoAction, map: "jlr_jl_fk")
 
   @@index([tenant_id, journal_line_id], map: "jlr_line_idx")
   @@index([tenant_id, ref_doc_type, ref_doc_id], map: "jlr_ref_doc_idx")
@@ -4537,31 +4561,33 @@ model journal_line_reference {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model match_exception {
-  id                    String    @id(map: "me_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id             String    @db.Uuid
-  invoice_match_case_id String    @db.Uuid
-  invoice_line_id       String    @db.Uuid
+  id                    String                @id(map: "me_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id             String                @db.Uuid
+  invoice_match_case_id String                @db.Uuid
+  invoice_line_id       String                @db.Uuid
   exception_type        String
   exception_subtype     String?
-  expected_value        Decimal?  @db.Decimal(18, 4)
-  actual_value          Decimal?  @db.Decimal(18, 4)
-  variance_amount       Decimal   @db.Decimal(18, 4)
-  variance_pct          Decimal?  @db.Decimal(7, 4)
-  currency_code         String    @db.Char(3)
-  tolerance_pct         Decimal?  @db.Decimal(5, 2)
-  tolerance_amount      Decimal?  @db.Decimal(18, 4)
-  is_within_tolerance   Boolean   @default(false)
+  expected_value        Decimal?              @db.Decimal(18, 4)
+  actual_value          Decimal?              @db.Decimal(18, 4)
+  variance_amount       Decimal               @db.Decimal(18, 4)
+  variance_pct          Decimal?              @db.Decimal(7, 4)
+  currency_code         String                @db.Char(3)
+  tolerance_pct         Decimal?              @db.Decimal(5, 2)
+  tolerance_amount      Decimal?              @db.Decimal(18, 4)
+  is_within_tolerance   Boolean               @default(false)
   resolution_type       String?
   resolution_notes      String?
-  resolved_by           String?   @db.Uuid
-  resolved_at           DateTime? @db.Timestamptz(6)
-  workflow_request_id   String?   @db.Uuid
-  metadata              Json      @default("{}")
-  status                String    @default("open")
-  created_at            DateTime  @default(now()) @db.Timestamptz(6)
-  created_by            String    @db.Uuid
-  updated_at            DateTime? @db.Timestamptz(6)
-  updated_by            String?   @db.Uuid
+  resolved_by           String?               @db.Uuid
+  resolved_at           DateTime?             @db.Timestamptz(6)
+  workflow_request_id   String?               @db.Uuid
+  metadata              Json                  @default("{}")
+  status                String                @default("open")
+  created_at            DateTime              @default(now()) @db.Timestamptz(6)
+  created_by            String                @db.Uuid
+  updated_at            DateTime?             @db.Timestamptz(6)
+  updated_by            String?               @db.Uuid
+  invoice_match_case    invoice_match_case    @relation(fields: [tenant_id, invoice_match_case_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "imx_case_fk")
+  purchase_invoice_line purchase_invoice_line @relation(fields: [tenant_id, invoice_line_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "imx_pil_fk")
 
   @@unique([tenant_id, id], map: "me_tenant_id_uq")
   @@index([tenant_id, invoice_match_case_id], map: "me_match_case_idx")
@@ -4699,70 +4725,73 @@ model party_advance_balance {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model payment_entry {
-  id                      String                 @id(map: "pe_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id               String                 @db.Uuid
-  code                    String                 @default("")
-  name                    String                 @default("")
-  company_code_id         String                 @db.Uuid
-  payment_number          String
-  payment_type            String                 @default("standard")
-  payment_direction       String                 @default("OUTBOUND")
-  supplier_id             String?                @db.Uuid
-  supplier_name           String
-  payment_method_id       String                 @db.Uuid
-  bank_account_id         String?                @db.Uuid
-  supplier_bank_link_id   String?                @db.Uuid
-  payment_reference       String?
-  bank_reference          String?
-  check_number            String?
-  document_date           DateTime               @default(dbgenerated("CURRENT_DATE")) @db.Date
-  posting_date            DateTime               @default(dbgenerated("CURRENT_DATE")) @db.Date
-  value_date              DateTime               @default(dbgenerated("CURRENT_DATE")) @db.Date
-  currency_code           String                 @db.Char(3)
-  base_currency_code      String                 @db.Char(3)
-  exchange_rate           Decimal?               @db.Decimal(18, 10)
-  payment_amount          Decimal                @db.Decimal(18, 4)
-  base_amount             Decimal?               @db.Decimal(18, 4)
-  payment_currency_code   String?                @db.Char(3)
-  payment_exchange_rate   Decimal?               @db.Decimal(18, 10)
-  payment_currency_amount Decimal?               @db.Decimal(18, 4)
-  fiscal_year             Int                    @db.SmallInt
-  period_number           Int                    @db.SmallInt
-  payment_je_id           String?                @db.Uuid
-  is_posted               Boolean                @default(false)
-  posted_at               DateTime?              @db.Timestamptz(6)
-  posted_by               String?                @db.Uuid
-  is_reversal             Boolean                @default(false)
-  reversal_of_id          String?                @db.Uuid
-  reversal_reason         String?
-  workflow_request_id     String?                @db.Uuid
-  approved_at             DateTime?              @db.Timestamptz(6)
-  approved_by             String?                @db.Uuid
-  payment_run_id          String?                @db.Uuid
-  is_batch_payment        Boolean                @default(false)
-  is_printed              Boolean                @default(false)
-  is_transmitted          Boolean                @default(false)
-  transmission_status     String?
-  is_voided               Boolean                @default(false)
-  voided_at               DateTime?              @db.Timestamptz(6)
-  voided_by               String?                @db.Uuid
-  void_reason             String?
-  cleared_date            DateTime?              @db.Date
-  line_count              Int                    @default(0) @db.SmallInt
-  notes                   String?
-  tags                    Json                   @default("[]")
-  metadata                Json                   @default("{}")
-  status                  String                 @default("draft")
-  is_active               Boolean?               @default(dbgenerated("(status = ANY (ARRAY['draft'::text, 'pending_approval'::text, 'approved'::text, 'posted'::text, 'transmitted'::text, 'printed'::text]))"))
-  status_changed_at       DateTime?              @db.Timestamptz(6)
-  status_changed_by       String?                @db.Uuid
-  created_at              DateTime               @default(now()) @db.Timestamptz(6)
-  created_by              String                 @db.Uuid
-  updated_at              DateTime?              @db.Timestamptz(6)
-  updated_by              String?                @db.Uuid
-  bank_statement_line_id  String?                @db.Uuid
-  bank_recon_case_line    bank_recon_case_line[]
-  bank_statement_line     bank_statement_line?   @relation(fields: [bank_statement_line_id], references: [id], onUpdate: NoAction, map: "pe_bank_stmt_line_fk")
+  id                           String                         @id(map: "pe_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                    String                         @db.Uuid
+  code                         String                         @default("")
+  name                         String                         @default("")
+  company_code_id              String                         @db.Uuid
+  payment_number               String
+  payment_type                 String                         @default("standard")
+  payment_direction            String                         @default("OUTBOUND")
+  supplier_id                  String?                        @db.Uuid
+  supplier_name                String
+  payment_method_id            String                         @db.Uuid
+  bank_account_id              String?                        @db.Uuid
+  supplier_bank_link_id        String?                        @db.Uuid
+  payment_reference            String?
+  bank_reference               String?
+  check_number                 String?
+  document_date                DateTime                       @default(dbgenerated("CURRENT_DATE")) @db.Date
+  posting_date                 DateTime                       @default(dbgenerated("CURRENT_DATE")) @db.Date
+  value_date                   DateTime                       @default(dbgenerated("CURRENT_DATE")) @db.Date
+  currency_code                String                         @db.Char(3)
+  base_currency_code           String                         @db.Char(3)
+  exchange_rate                Decimal?                       @db.Decimal(18, 10)
+  payment_amount               Decimal                        @db.Decimal(18, 4)
+  base_amount                  Decimal?                       @db.Decimal(18, 4)
+  payment_currency_code        String?                        @db.Char(3)
+  payment_exchange_rate        Decimal?                       @db.Decimal(18, 10)
+  payment_currency_amount      Decimal?                       @db.Decimal(18, 4)
+  fiscal_year                  Int                            @db.SmallInt
+  period_number                Int                            @db.SmallInt
+  payment_je_id                String?                        @db.Uuid
+  is_posted                    Boolean                        @default(false)
+  posted_at                    DateTime?                      @db.Timestamptz(6)
+  posted_by                    String?                        @db.Uuid
+  is_reversal                  Boolean                        @default(false)
+  reversal_of_id               String?                        @db.Uuid
+  reversal_reason              String?
+  workflow_request_id          String?                        @db.Uuid
+  approved_at                  DateTime?                      @db.Timestamptz(6)
+  approved_by                  String?                        @db.Uuid
+  payment_run_id               String?                        @db.Uuid
+  is_batch_payment             Boolean                        @default(false)
+  is_printed                   Boolean                        @default(false)
+  is_transmitted               Boolean                        @default(false)
+  transmission_status          String?
+  is_voided                    Boolean                        @default(false)
+  voided_at                    DateTime?                      @db.Timestamptz(6)
+  voided_by                    String?                        @db.Uuid
+  void_reason                  String?
+  cleared_date                 DateTime?                      @db.Date
+  line_count                   Int                            @default(0) @db.SmallInt
+  notes                        String?
+  tags                         Json                           @default("[]")
+  metadata                     Json                           @default("{}")
+  status                       String                         @default("draft")
+  is_active                    Boolean?                       @default(dbgenerated("(status = ANY (ARRAY['draft'::text, 'pending_approval'::text, 'approved'::text, 'posted'::text, 'transmitted'::text, 'printed'::text]))"))
+  status_changed_at            DateTime?                      @db.Timestamptz(6)
+  status_changed_by            String?                        @db.Uuid
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  created_by                   String                         @db.Uuid
+  updated_at                   DateTime?                      @db.Timestamptz(6)
+  updated_by                   String?                        @db.Uuid
+  bank_statement_line_id       String?                        @db.Uuid
+  bank_recon_case_line         bank_recon_case_line[]
+  bank_statement_line          bank_statement_line?           @relation(fields: [tenant_id, bank_statement_line_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pe_bsl_fk")
+  payment_entry_allocation     payment_entry_allocation[]
+  payment_remittance_output    payment_remittance_output[]
+  payment_term_discount_result payment_term_discount_result[]
 
   @@unique([tenant_id, id], map: "pe_tenant_id_uq")
   @@unique([tenant_id, company_code_id, payment_number], map: "pe_tenant_number_uq")
@@ -4780,30 +4809,33 @@ model payment_entry {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model payment_entry_allocation {
-  id                          String    @id(map: "pea_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                   String    @db.Uuid
-  payment_entry_id            String    @db.Uuid
-  line_no                     Int       @db.SmallInt
-  purchase_invoice_id         String?   @db.Uuid
-  commitment_id               String?   @db.Uuid
-  currency_code               String    @db.Char(3)
-  allocated_amount            Decimal   @db.Decimal(18, 4)
-  discount_amount             Decimal   @default(0) @db.Decimal(18, 4)
-  withholding_tax_amount      Decimal   @default(0) @db.Decimal(18, 4)
-  advance_recovery_amount     Decimal   @default(0) @db.Decimal(18, 4)
-  retention_amount            Decimal   @default(0) @db.Decimal(18, 4)
-  net_payment_amount          Decimal?  @default(dbgenerated("((((allocated_amount - discount_amount) - withholding_tax_amount) - advance_recovery_amount) - retention_amount)")) @db.Decimal(18, 4)
-  base_currency_code          String?   @db.Char(3)
-  exchange_rate               Decimal?  @db.Decimal(18, 10)
-  base_amount                 Decimal?  @db.Decimal(18, 4)
-  fx_gain_loss                Decimal   @default(0) @db.Decimal(18, 4)
-  is_discount_taken           Boolean   @default(false)
-  discount_due_date           DateTime? @db.Date
-  payment_term_application_id String?   @db.Uuid
+  id                          String                    @id(map: "pea_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                   String                    @db.Uuid
+  payment_entry_id            String                    @db.Uuid
+  line_no                     Int                       @db.SmallInt
+  purchase_invoice_id         String?                   @db.Uuid
+  commitment_id               String?                   @db.Uuid
+  currency_code               String                    @db.Char(3)
+  allocated_amount            Decimal                   @db.Decimal(18, 4)
+  discount_amount             Decimal                   @default(0) @db.Decimal(18, 4)
+  withholding_tax_amount      Decimal                   @default(0) @db.Decimal(18, 4)
+  advance_recovery_amount     Decimal                   @default(0) @db.Decimal(18, 4)
+  retention_amount            Decimal                   @default(0) @db.Decimal(18, 4)
+  net_payment_amount          Decimal?                  @default(dbgenerated("((((allocated_amount - discount_amount) - withholding_tax_amount) - advance_recovery_amount) - retention_amount)")) @db.Decimal(18, 4)
+  base_currency_code          String?                   @db.Char(3)
+  exchange_rate               Decimal?                  @db.Decimal(18, 10)
+  base_amount                 Decimal?                  @db.Decimal(18, 4)
+  fx_gain_loss                Decimal                   @default(0) @db.Decimal(18, 4)
+  is_discount_taken           Boolean                   @default(false)
+  discount_due_date           DateTime?                 @db.Date
+  payment_term_application_id String?                   @db.Uuid
   notes                       String?
-  metadata                    Json      @default("{}")
-  created_at                  DateTime  @default(now()) @db.Timestamptz(6)
-  created_by                  String    @db.Uuid
+  metadata                    Json                      @default("{}")
+  created_at                  DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                  String                    @db.Uuid
+  purchase_invoice            purchase_invoice?         @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onUpdate: NoAction, map: "pea_invoice_fk")
+  payment_entry               payment_entry             @relation(fields: [tenant_id, payment_entry_id], references: [tenant_id, id], onUpdate: NoAction, map: "pea_payment_fk")
+  payment_term_application    payment_term_application? @relation(fields: [tenant_id, payment_term_application_id], references: [tenant_id, id], onUpdate: NoAction, map: "pea_pta_fk")
 
   @@unique([payment_entry_id, line_no], map: "pea_line_uq")
   @@unique([tenant_id, id], map: "pea_tenant_id_uq")
@@ -4816,25 +4848,26 @@ model payment_entry_allocation {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model payment_remittance_output {
-  id                String    @id(map: "pro_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String    @db.Uuid
-  company_code_id   String    @db.Uuid
+  id                String        @id(map: "pro_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String        @db.Uuid
+  company_code_id   String        @db.Uuid
   remittance_number String
-  payment_entry_id  String    @db.Uuid
-  supplier_id       String    @db.Uuid
-  currency_code     String    @db.Char(3)
-  total_amount      Decimal   @db.Decimal(18, 4)
-  net_remitted      Decimal   @db.Decimal(18, 4)
-  delivery_method   String    @default("EMAIL")
-  delivered_at      DateTime? @db.Timestamptz(6)
-  delivery_status   String    @default("pending")
-  render_output_id  String?   @db.Uuid
-  metadata          Json      @default("{}")
-  status            String    @default("draft")
-  created_at        DateTime  @default(now()) @db.Timestamptz(6)
-  created_by        String    @db.Uuid
-  updated_at        DateTime? @db.Timestamptz(6)
-  updated_by        String?   @db.Uuid
+  payment_entry_id  String        @db.Uuid
+  supplier_id       String        @db.Uuid
+  currency_code     String        @db.Char(3)
+  total_amount      Decimal       @db.Decimal(18, 4)
+  net_remitted      Decimal       @db.Decimal(18, 4)
+  delivery_method   String        @default("EMAIL")
+  delivered_at      DateTime?     @db.Timestamptz(6)
+  delivery_status   String        @default("pending")
+  render_output_id  String?       @db.Uuid
+  metadata          Json          @default("{}")
+  status            String        @default("draft")
+  created_at        DateTime      @default(now()) @db.Timestamptz(6)
+  created_by        String        @db.Uuid
+  updated_at        DateTime?     @db.Timestamptz(6)
+  updated_by        String?       @db.Uuid
+  payment_entry     payment_entry @relation(fields: [tenant_id, payment_entry_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "prem_payment_fk")
 
   @@unique([tenant_id, id], map: "pro_tenant_id_uq")
   @@unique([tenant_id, company_code_id, remittance_number], map: "pro_tenant_number_uq")
@@ -4848,52 +4881,58 @@ model payment_remittance_output {
 /// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model payment_term_application {
-  id                           String    @id(map: "pta_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                    String    @db.Uuid
-  invoice_id                   String    @db.Uuid
-  invoice_line_id              String?   @db.Uuid
-  commitment_id                String?   @db.Uuid
-  payment_term_id              String?   @db.Uuid
-  clause_id                    String?   @db.Uuid
+  id                           String                     @id(map: "pta_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                    String                     @db.Uuid
+  invoice_id                   String                     @db.Uuid
+  invoice_line_id              String?                    @db.Uuid
+  commitment_id                String?                    @db.Uuid
+  payment_term_id              String?                    @db.Uuid
+  clause_id                    String?                    @db.Uuid
   term_snapshot                Json?
   clause_snapshot              Json?
-  application_status           String    @default("APPLIED")
+  application_status           String                     @default("APPLIED")
   clause_type                  String
   clause_code                  String
-  calculated_basis_amount      Decimal   @db.Decimal(18, 4)
-  default_pct                  Decimal?  @db.Decimal(5, 2)
-  applied_pct                  Decimal?  @db.Decimal(5, 2)
-  default_amount               Decimal   @db.Decimal(18, 4)
-  applied_amount               Decimal   @db.Decimal(18, 4)
-  is_user_editable             Boolean   @default(false)
+  calculated_basis_amount      Decimal                    @db.Decimal(18, 4)
+  default_pct                  Decimal?                   @db.Decimal(5, 2)
+  applied_pct                  Decimal?                   @db.Decimal(5, 2)
+  default_amount               Decimal                    @db.Decimal(18, 4)
+  applied_amount               Decimal                    @db.Decimal(18, 4)
+  is_user_editable             Boolean                    @default(false)
   evaluation_sequence_no       Int
-  running_total_amount         Decimal   @default(0) @db.Decimal(18, 4)
-  remaining_balance_amount     Decimal   @default(0) @db.Decimal(18, 4)
-  is_effective                 Boolean   @default(true)
-  reversed_by_application_id   String?   @db.Uuid
-  superseded_by_application_id String?   @db.Uuid
+  running_total_amount         Decimal                    @default(0) @db.Decimal(18, 4)
+  remaining_balance_amount     Decimal                    @default(0) @db.Decimal(18, 4)
+  is_effective                 Boolean                    @default(true)
+  reversed_by_application_id   String?                    @db.Uuid
+  superseded_by_application_id String?                    @db.Uuid
   system_reason_code           String?
   manual_override_reason       String?
-  workflow_request_id          String?   @db.Uuid
-  override_requested_by        String?   @db.Uuid
-  override_requested_at        DateTime? @db.Timestamptz(6)
+  workflow_request_id          String?                    @db.Uuid
+  override_requested_by        String?                    @db.Uuid
+  override_requested_at        DateTime?                  @db.Timestamptz(6)
   override_decision            String?
-  override_decided_by          String?   @db.Uuid
-  override_decided_at          DateTime? @db.Timestamptz(6)
-  schedule_id                  String?   @db.Uuid
-  base_event_date              DateTime? @db.Date
-  days_applied                 Int?      @db.SmallInt
-  resolved_due_date            DateTime? @db.Date
-  metadata                     Json      @default("{}")
-  created_at                   DateTime  @default(now()) @db.Timestamptz(6)
-  created_by                   String    @db.Uuid
-  updated_at                   DateTime? @db.Timestamptz(6)
-  updated_by                   String?   @db.Uuid
+  override_decided_by          String?                    @db.Uuid
+  override_decided_at          DateTime?                  @db.Timestamptz(6)
+  schedule_id                  String?                    @db.Uuid
+  base_event_date              DateTime?                  @db.Date
+  days_applied                 Int?                       @db.SmallInt
+  resolved_due_date            DateTime?                  @db.Date
+  metadata                     Json                       @default("{}")
+  created_at                   DateTime                   @default(now()) @db.Timestamptz(6)
+  created_by                   String                     @db.Uuid
+  updated_at                   DateTime?                  @db.Timestamptz(6)
+  updated_by                   String?                    @db.Uuid
+  pricing_component_id         String?                    @db.Uuid
+  payment_entry_allocation     payment_entry_allocation[]
+  purchase_invoice             purchase_invoice           @relation(fields: [tenant_id, invoice_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "pta_invoice_fk")
+  purchase_invoice_line        purchase_invoice_line?     @relation(fields: [tenant_id, invoice_line_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pta_invoice_line_fk")
+  pricing_component            pricing_component?         @relation(fields: [tenant_id, pricing_component_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pta_pricing_component_fk")
 
   @@unique([tenant_id, id], map: "pta_tenant_id_uq")
   @@index([commitment_id, clause_code], map: "pta_commitment_clause_idx", where: raw("(is_effective = true)"))
   @@index([commitment_id, clause_code, evaluation_sequence_no], map: "pta_commitment_cumulative_idx", where: raw("(is_effective = true)"))
   @@index([invoice_id], map: "pta_invoice_idx")
+  @@index([tenant_id, pricing_component_id], map: "ix_pta_pricing_component", where: raw("(pricing_component_id IS NOT NULL)"))
   @@schema("document")
 }
 
@@ -4901,26 +4940,28 @@ model payment_term_application {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model payment_term_discount_result {
-  id                       String   @id(map: "ptdr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                String   @db.Uuid
-  payment_id               String   @db.Uuid
-  invoice_id               String   @db.Uuid
-  commitment_id            String?  @db.Uuid
-  payment_term_id          String?  @db.Uuid
-  discount_tier_id         String?  @db.Uuid
-  allocated_payment_amount Decimal  @db.Decimal(18, 4)
-  qualification_date       DateTime @db.Date
-  qualified_tier_no        Int?     @db.SmallInt
-  qualified_days_actual    Int      @db.SmallInt
-  discount_basis_amount    Decimal  @db.Decimal(18, 4)
-  discount_pct             Decimal? @db.Decimal(5, 2)
-  discount_amount          Decimal  @db.Decimal(18, 4)
+  id                       String           @id(map: "ptdr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                String           @db.Uuid
+  payment_id               String           @db.Uuid
+  invoice_id               String           @db.Uuid
+  commitment_id            String?          @db.Uuid
+  payment_term_id          String?          @db.Uuid
+  discount_tier_id         String?          @db.Uuid
+  allocated_payment_amount Decimal          @db.Decimal(18, 4)
+  qualification_date       DateTime         @db.Date
+  qualified_tier_no        Int?             @db.SmallInt
+  qualified_days_actual    Int              @db.SmallInt
+  discount_basis_amount    Decimal          @db.Decimal(18, 4)
+  discount_pct             Decimal?         @db.Decimal(5, 2)
+  discount_amount          Decimal          @db.Decimal(18, 4)
   application_status       String
-  is_reversal              Boolean  @default(false)
-  reverses_id              String?  @unique(map: "ptdr_single_reversal_uq", where: raw("(is_reversal = true)")) @db.Uuid
-  metadata                 Json     @default("{}")
-  created_at               DateTime @default(now()) @db.Timestamptz(6)
-  created_by               String   @db.Uuid
+  is_reversal              Boolean          @default(false)
+  reverses_id              String?          @unique(map: "ptdr_single_reversal_uq", where: raw("(is_reversal = true)")) @db.Uuid
+  metadata                 Json             @default("{}")
+  created_at               DateTime         @default(now()) @db.Timestamptz(6)
+  created_by               String           @db.Uuid
+  purchase_invoice         purchase_invoice @relation(fields: [tenant_id, invoice_id], references: [tenant_id, id], onUpdate: NoAction, map: "ptdr_invoice_fk")
+  payment_entry            payment_entry    @relation(fields: [tenant_id, payment_id], references: [tenant_id, id], onUpdate: NoAction, map: "ptdr_payment_fk")
 
   @@unique([tenant_id, id], map: "ptdr_tenant_id_uq")
   @@index([invoice_id], map: "ptdr_invoice_idx")
@@ -4931,81 +4972,90 @@ model payment_term_discount_result {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model purchase_invoice {
-  id                       String    @id(map: "pi_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                String    @db.Uuid
-  code                     String    @default("")
-  name                     String    @default("")
-  company_code_id          String    @db.Uuid
-  invoice_number           String
-  fiscal_document_number   String?
-  invoice_source           String    @default("po_based")
-  invoice_type             String    @default("standard")
-  description              String?
-  supplier_id              String?   @db.Uuid
-  supplier_invoice_number  String?
-  supplier_invoice_date    DateTime? @db.Date
-  commitment_id            String?   @db.Uuid
-  document_date            DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date
-  posting_date             DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date
-  received_date            DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date
-  baseline_date            DateTime? @db.Date
-  due_date                 DateTime? @db.Date
-  currency_code            String    @db.Char(3)
-  base_currency_code       String    @db.Char(3)
-  exchange_rate            Decimal?  @db.Decimal(18, 10)
-  subtotal_amount          Decimal   @default(0) @db.Decimal(18, 4)
-  discount_amount          Decimal   @default(0) @db.Decimal(18, 4)
-  freight_amount           Decimal   @default(0) @db.Decimal(18, 4)
-  misc_charges_amount      Decimal   @default(0) @db.Decimal(18, 4)
-  total_amount             Decimal   @default(0) @db.Decimal(18, 4)
-  tax_amount               Decimal   @default(0) @db.Decimal(18, 4)
-  withholding_tax_amount   Decimal   @default(0) @db.Decimal(18, 4)
-  payable_amount           Decimal?  @default(dbgenerated("(total_amount - withholding_tax_amount)")) @db.Decimal(18, 4)
-  payment_term_id          String?   @db.Uuid
-  term_snapshot            Json?
-  payment_method_id        String?   @db.Uuid
-  advance_deduction_amount Decimal   @default(0) @db.Decimal(18, 4)
-  retention_amount         Decimal   @default(0) @db.Decimal(18, 4)
-  retention_pct            Decimal?  @db.Decimal(5, 2)
-  paid_amount              Decimal   @default(0) @db.Decimal(18, 4)
-  outstanding_amount       Decimal?  @default(dbgenerated("((((total_amount - withholding_tax_amount) - advance_deduction_amount) - retention_amount) - paid_amount)")) @db.Decimal(18, 4)
-  budget_allocation_id     String?   @db.Uuid
-  budget_check_result      String?
-  fiscal_year              Int       @db.SmallInt
-  period_number            Int       @db.SmallInt
-  cost_center_id           String?   @db.Uuid
-  profit_center_id         String?   @db.Uuid
-  project_id               String?   @db.Uuid
-  site_id                  String?   @db.Uuid
-  dimension_set_id         String?   @db.Uuid
-  ap_je_id                 String?   @db.Uuid
-  is_posted                Boolean   @default(false)
-  posted_at                DateTime? @db.Timestamptz(6)
-  posted_by                String?   @db.Uuid
-  match_type               String    @default("three_way")
-  match_status             String    @default("unmatched")
-  is_reversal              Boolean   @default(false)
-  reversal_of_id           String?   @db.Uuid
-  is_credit_note           Boolean   @default(false)
-  workflow_request_id      String?   @db.Uuid
-  approved_at              DateTime? @db.Timestamptz(6)
-  approved_by              String?   @db.Uuid
-  hold_reason              String?
-  line_count               Int       @default(0) @db.SmallInt
-  notes                    String?
-  tags                     Json      @default("[]")
-  metadata                 Json      @default("{}")
-  status                   String    @default("draft")
-  is_active                Boolean?  @default(dbgenerated("(status = ANY (ARRAY['draft'::text, 'pending_approval'::text, 'approved'::text, 'posted'::text, 'partially_paid'::text, 'on_hold'::text]))"))
-  status_changed_at        DateTime? @db.Timestamptz(6)
-  status_changed_by        String?   @db.Uuid
-  created_at               DateTime  @default(now()) @db.Timestamptz(6)
-  created_by               String    @db.Uuid
-  updated_at               DateTime? @db.Timestamptz(6)
-  updated_by               String?   @db.Uuid
-  tax_mode                 String?
-  tax_mode_source          String?
-  row_version              BigInt    @default(1)
+  id                           String                         @id(map: "pi_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                    String                         @db.Uuid
+  code                         String                         @default("")
+  name                         String                         @default("")
+  company_code_id              String                         @db.Uuid
+  invoice_number               String
+  fiscal_document_number       String?
+  invoice_source               String                         @default("po_based")
+  invoice_type                 String                         @default("standard")
+  description                  String?
+  supplier_id                  String?                        @db.Uuid
+  supplier_invoice_number      String?
+  supplier_invoice_date        DateTime?                      @db.Date
+  commitment_id                String?                        @db.Uuid
+  document_date                DateTime                       @default(dbgenerated("CURRENT_DATE")) @db.Date
+  posting_date                 DateTime                       @default(dbgenerated("CURRENT_DATE")) @db.Date
+  received_date                DateTime                       @default(dbgenerated("CURRENT_DATE")) @db.Date
+  baseline_date                DateTime?                      @db.Date
+  due_date                     DateTime?                      @db.Date
+  currency_code                String                         @db.Char(3)
+  base_currency_code           String                         @db.Char(3)
+  exchange_rate                Decimal?                       @db.Decimal(18, 10)
+  subtotal_amount              Decimal                        @default(0) @db.Decimal(18, 4)
+  discount_amount              Decimal                        @default(0) @db.Decimal(18, 4)
+  freight_amount               Decimal                        @default(0) @db.Decimal(18, 4)
+  misc_charges_amount          Decimal                        @default(0) @db.Decimal(18, 4)
+  total_amount                 Decimal                        @default(0) @db.Decimal(18, 4)
+  tax_amount                   Decimal                        @default(0) @db.Decimal(18, 4)
+  withholding_tax_amount       Decimal                        @default(0) @db.Decimal(18, 4)
+  payable_amount               Decimal?                       @default(dbgenerated("(total_amount - withholding_tax_amount)")) @db.Decimal(18, 4)
+  payment_term_id              String?                        @db.Uuid
+  term_snapshot                Json?
+  payment_method_id            String?                        @db.Uuid
+  advance_deduction_amount     Decimal                        @default(0) @db.Decimal(18, 4)
+  retention_amount             Decimal                        @default(0) @db.Decimal(18, 4)
+  retention_pct                Decimal?                       @db.Decimal(5, 2)
+  paid_amount                  Decimal                        @default(0) @db.Decimal(18, 4)
+  outstanding_amount           Decimal?                       @default(dbgenerated("((((total_amount - withholding_tax_amount) - advance_deduction_amount) - retention_amount) - paid_amount)")) @db.Decimal(18, 4)
+  budget_allocation_id         String?                        @db.Uuid
+  budget_check_result          String?
+  fiscal_year                  Int                            @db.SmallInt
+  period_number                Int                            @db.SmallInt
+  cost_center_id               String?                        @db.Uuid
+  profit_center_id             String?                        @db.Uuid
+  project_id                   String?                        @db.Uuid
+  site_id                      String?                        @db.Uuid
+  dimension_set_id             String?                        @db.Uuid
+  ap_je_id                     String?                        @db.Uuid
+  is_posted                    Boolean                        @default(false)
+  posted_at                    DateTime?                      @db.Timestamptz(6)
+  posted_by                    String?                        @db.Uuid
+  match_type                   String                         @default("three_way")
+  match_status                 String                         @default("unmatched")
+  is_reversal                  Boolean                        @default(false)
+  reversal_of_id               String?                        @db.Uuid
+  is_credit_note               Boolean                        @default(false)
+  workflow_request_id          String?                        @db.Uuid
+  approved_at                  DateTime?                      @db.Timestamptz(6)
+  approved_by                  String?                        @db.Uuid
+  hold_reason                  String?
+  line_count                   Int                            @default(0) @db.SmallInt
+  notes                        String?
+  tags                         Json                           @default("[]")
+  metadata                     Json                           @default("{}")
+  status                       String                         @default("draft")
+  is_active                    Boolean?                       @default(dbgenerated("(status = ANY (ARRAY['draft'::text, 'pending_approval'::text, 'approved'::text, 'posted'::text, 'partially_paid'::text, 'on_hold'::text]))"))
+  status_changed_at            DateTime?                      @db.Timestamptz(6)
+  status_changed_by            String?                        @db.Uuid
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  created_by                   String                         @db.Uuid
+  updated_at                   DateTime?                      @db.Timestamptz(6)
+  updated_by                   String?                        @db.Uuid
+  tax_mode                     String?
+  tax_mode_source              String?
+  row_version                  BigInt                         @default(1)
+  invoice_address_snapshot     invoice_address_snapshot[]
+  invoice_bank_snapshot        invoice_bank_snapshot?
+  invoice_match_case           invoice_match_case?
+  invoice_party_snapshot       invoice_party_snapshot?
+  invoice_tax_snapshot         invoice_tax_snapshot[]
+  payment_entry_allocation     payment_entry_allocation[]
+  payment_term_application     payment_term_application[]
+  payment_term_discount_result payment_term_discount_result[]
+  purchase_invoice_line        purchase_invoice_line[]
 
   @@unique([tenant_id, id], map: "pi_tenant_id_uq")
   @@unique([tenant_id, company_code_id, invoice_number], map: "pi_tenant_number_uq")
@@ -5014,7 +5064,7 @@ model purchase_invoice {
   @@index([tenant_id, budget_allocation_id], map: "pi_budget_allocation_idx", where: raw("(budget_allocation_id IS NOT NULL)"))
   @@index([tenant_id, commitment_id], map: "pi_commitment_idx", where: raw("(commitment_id IS NOT NULL)"))
   @@index([tenant_id, cost_center_id], map: "pi_cost_center_idx", where: raw("(cost_center_id IS NOT NULL)"))
-  @@index([tenant_id, due_date], map: "pi_due_date_idx", where: raw("((status = ANY (ARRAY['posted'::text, 'partially_paid'::text])) AND (due_date IS NOT NULL))"))
+  @@index([tenant_id, company_code_id, due_date], map: "pi_due_date_idx", where: raw("(status = ANY (ARRAY['approved'::text, 'posted'::text, 'partially_paid'::text]))"))
   @@index([tenant_id, company_code_id, fiscal_year, period_number], map: "pi_fiscal_period_idx")
   @@index([tenant_id, match_status], map: "pi_match_status_idx", where: raw("(match_status = ANY (ARRAY['unmatched'::text, 'partially_matched'::text, 'match_exception'::text]))"))
   @@index([tenant_id], map: "pi_status_on_hold_idx", where: raw("(status = 'on_hold'::text)"))
@@ -5031,49 +5081,62 @@ model purchase_invoice {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model purchase_invoice_line {
-  id                       String    @id(map: "pil_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                String    @db.Uuid
-  purchase_invoice_id      String    @db.Uuid
-  line_no                  Int       @db.SmallInt
-  commitment_line_id       String?   @db.Uuid
-  goods_receipt_line_id    String?   @db.Uuid
-  ses_line_id              String?   @db.Uuid
-  item_id                  String?   @db.Uuid
+  id                       String                     @id(map: "pil_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                String                     @db.Uuid
+  purchase_invoice_id      String                     @db.Uuid
+  line_no                  Int                        @db.SmallInt
+  commitment_line_id       String?                    @db.Uuid
+  goods_receipt_line_id    String?                    @db.Uuid
+  ses_line_id              String?                    @db.Uuid
+  item_id                  String?                    @db.Uuid
   item_description         String
-  procurement_type         String    @default("goods")
-  commodity_category_id    String?   @db.Uuid
-  business_intent_id       String?   @db.Uuid
+  procurement_type         String                     @default("goods")
+  commodity_category_id    String?                    @db.Uuid
+  business_intent_id       String?                    @db.Uuid
   uom_code                 String
-  quantity                 Decimal   @db.Decimal(18, 4)
-  unit_price               Decimal   @db.Decimal(18, 4)
-  price_unit               Decimal   @default(1) @db.Decimal(18, 4)
-  net_amount               Decimal?  @default(dbgenerated("((quantity * unit_price) / NULLIF(price_unit, (0)::numeric))")) @db.Decimal(18, 4)
-  discount_pct             Decimal?  @default(0) @db.Decimal(5, 2)
-  discount_amount          Decimal?  @default(0) @db.Decimal(18, 4)
-  tax_group_id             String?   @db.Uuid
-  tax_amount               Decimal   @default(0) @db.Decimal(18, 4)
-  withholding_tax_group_id String?   @db.Uuid
-  withholding_tax_amount   Decimal   @default(0) @db.Decimal(18, 4)
-  gross_amount             Decimal   @default(0) @db.Decimal(18, 4)
-  cost_center_id           String?   @db.Uuid
-  profit_center_id         String?   @db.Uuid
-  project_id               String?   @db.Uuid
-  site_id                  String?   @db.Uuid
-  dimension_set_id         String?   @db.Uuid
-  is_asset                 Boolean   @default(false)
-  asset_category_id        String?   @db.Uuid
-  matched_quantity         Decimal   @default(0) @db.Decimal(18, 4)
-  match_status             String    @default("unmatched")
+  quantity                 Decimal                    @db.Decimal(18, 4)
+  unit_price               Decimal                    @db.Decimal(18, 4)
+  price_unit               Decimal                    @default(1) @db.Decimal(18, 4)
+  net_amount               Decimal?                   @default(dbgenerated("((quantity * unit_price) / NULLIF(price_unit, (0)::numeric))")) @db.Decimal(18, 4)
+  discount_pct             Decimal?                   @default(0) @db.Decimal(5, 2)
+  discount_amount          Decimal?                   @default(0) @db.Decimal(18, 4)
+  tax_group_id             String?                    @db.Uuid
+  tax_amount               Decimal                    @default(0) @db.Decimal(18, 4)
+  withholding_tax_group_id String?                    @db.Uuid
+  withholding_tax_amount   Decimal                    @default(0) @db.Decimal(18, 4)
+  gross_amount             Decimal                    @default(0) @db.Decimal(18, 4)
+  cost_center_id           String?                    @db.Uuid
+  profit_center_id         String?                    @db.Uuid
+  project_id               String?                    @db.Uuid
+  site_id                  String?                    @db.Uuid
+  dimension_set_id         String?                    @db.Uuid
+  is_asset                 Boolean                    @default(false)
+  asset_category_id        String?                    @db.Uuid
+  matched_quantity         Decimal                    @default(0) @db.Decimal(18, 4)
+  match_status             String                     @default("unmatched")
   notes                    String?
-  metadata                 Json      @default("{}")
-  status                   String    @default("open")
-  created_at               DateTime  @default(now()) @db.Timestamptz(6)
-  created_by               String    @db.Uuid
-  updated_at               DateTime? @db.Timestamptz(6)
-  updated_by               String?   @db.Uuid
-  retention_pct            Decimal?  @default(0) @db.Decimal(5, 2)
-  retention_amount         Decimal   @default(0) @db.Decimal(18, 4)
-  classification_decision  Json      @default("{}")
+  metadata                 Json                       @default("{}")
+  status                   String                     @default("open")
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  created_by               String                     @db.Uuid
+  updated_at               DateTime?                  @db.Timestamptz(6)
+  updated_by               String?                    @db.Uuid
+  retention_pct            Decimal?                   @default(0) @db.Decimal(5, 2)
+  retention_amount         Decimal                    @default(0) @db.Decimal(18, 4)
+  classification_decision  Json                       @default("{}")
+  source_binding           Json?
+  budget_allocation_id     String?                    @db.Uuid
+  asset_treatment          String?                    @default("none")
+  asset_class_id           String?                    @db.Uuid
+  target_asset_id          String?                    @db.Uuid
+  row_version              BigInt                     @default(1)
+  invoice_tax_snapshot     invoice_tax_snapshot[]
+  match_exception          match_exception[]
+  payment_term_application payment_term_application[]
+  asset_class              asset_class?               @relation(fields: [tenant_id, asset_class_id], references: [tenant_id, id], onUpdate: NoAction, map: "pil_asset_class_fk")
+  budget_allocation        budget_allocation?         @relation(fields: [tenant_id, budget_allocation_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "pil_budget_allocation_fk")
+  purchase_invoice         purchase_invoice           @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "pil_invoice_fk")
+  asset                    asset?                     @relation(fields: [tenant_id, target_asset_id], references: [tenant_id, id], onUpdate: NoAction, map: "pil_target_asset_fk")
 
   @@unique([purchase_invoice_id, line_no], map: "pil_line_uq")
   @@unique([tenant_id, id], map: "pil_tenant_id_uq")
@@ -5081,10 +5144,13 @@ model purchase_invoice_line {
   @@index([tenant_id, business_intent_id], map: "pil_business_intent_idx", where: raw("(business_intent_id IS NOT NULL)"))
   @@index([tenant_id, commitment_line_id], map: "pil_commitment_line_idx", where: raw("(commitment_line_id IS NOT NULL)"))
   @@index([tenant_id, goods_receipt_line_id], map: "pil_gr_line_idx", where: raw("(goods_receipt_line_id IS NOT NULL)"))
-  @@index([tenant_id, purchase_invoice_id], map: "pil_invoice_idx")
+  @@index([tenant_id, purchase_invoice_id, line_no], map: "pil_invoice_idx")
   @@index([tenant_id, purchase_invoice_id], map: "pil_match_exception_idx", where: raw("(match_status = 'match_exception'::text)"))
   @@index([tenant_id, match_status], map: "pil_match_status_idx", where: raw("(match_status <> 'fully_matched'::text)"))
   @@index([tenant_id, commodity_category_id], map: "pil_commodity_category_idx", where: raw("(commodity_category_id IS NOT NULL)"))
+  @@index([source_binding], map: "pil_source_binding_gin", type: Gin, where: raw("(source_binding IS NOT NULL)"))
+  @@index([tenant_id, asset_class_id], map: "ix_pil_asset_class", where: raw("(asset_treatment <> 'none'::text)"))
+  @@index([tenant_id, target_asset_id], map: "ix_pil_asset_target", where: raw("(target_asset_id IS NOT NULL)"))
   @@schema("document")
 }
 
@@ -8628,6 +8694,8 @@ model asset {
   created_by                                                          String                      @db.Uuid
   updated_at                                                          DateTime?                   @db.Timestamptz(6)
   updated_by                                                          String?                     @db.Uuid
+  accounting_distribution                                             accounting_distribution[]
+  purchase_invoice_line                                               purchase_invoice_line[]
   asset_revaluation_reserve                                           asset_revaluation_reserve[]
   company_code                                                        company_code                @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_cc_fk")
   asset_class                                                         asset_class                 @relation(fields: [tenant_id, asset_class_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "asset_class_fk")
@@ -8804,6 +8872,7 @@ model asset_class {
   updated_by                    String?                         @db.Uuid
   asset_class_book_policy       asset_class_book_policy[]
   commodity_category_buy_policy commodity_category_buy_policy[]
+  purchase_invoice_line         purchase_invoice_line[]
   asset                         asset[]
   principal                     principal                       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ac_created_by_fk")
   asset_class                   asset_class?                    @relation("asset_classToasset_class", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ac_parent_fk")
@@ -9309,54 +9378,55 @@ model brand_profile {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model budget_allocation {
-  id                                                                              String                @id(map: "balloc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                       String                @db.Uuid
+  id                                                                              String                  @id(map: "balloc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                       String                  @db.Uuid
   code                                                                            String
   name                                                                            String
-  budget_profile_id                                                               String                @db.Uuid
-  company_code_id                                                                 String                @db.Uuid
-  fiscal_year                                                                     Int                   @db.SmallInt
-  currency_code                                                                   String                @db.Char(3)
-  cost_center_id                                                                  String?               @db.Uuid
-  project_id                                                                      String?               @db.Uuid
-  gl_account_id                                                                   String?               @db.Uuid
-  profit_center_id                                                                String?               @db.Uuid
-  dimension_set_id                                                                String?               @db.Uuid
-  responsible_person_id                                                           String?               @db.Uuid
-  allocated_amount                                                                Decimal               @default(0) @db.Decimal(18, 4)
-  reserved_amount                                                                 Decimal               @default(0) @db.Decimal(18, 4)
-  consumed_amount                                                                 Decimal               @default(0) @db.Decimal(18, 4)
-  released_amount                                                                 Decimal               @default(0) @db.Decimal(18, 4)
-  available_amount                                                                Decimal?              @default(dbgenerated("(((allocated_amount - reserved_amount) - consumed_amount) + released_amount)")) @db.Decimal(18, 4)
+  budget_profile_id                                                               String                  @db.Uuid
+  company_code_id                                                                 String                  @db.Uuid
+  fiscal_year                                                                     Int                     @db.SmallInt
+  currency_code                                                                   String                  @db.Char(3)
+  cost_center_id                                                                  String?                 @db.Uuid
+  project_id                                                                      String?                 @db.Uuid
+  gl_account_id                                                                   String?                 @db.Uuid
+  profit_center_id                                                                String?                 @db.Uuid
+  dimension_set_id                                                                String?                 @db.Uuid
+  responsible_person_id                                                           String?                 @db.Uuid
+  allocated_amount                                                                Decimal                 @default(0) @db.Decimal(18, 4)
+  reserved_amount                                                                 Decimal                 @default(0) @db.Decimal(18, 4)
+  consumed_amount                                                                 Decimal                 @default(0) @db.Decimal(18, 4)
+  released_amount                                                                 Decimal                 @default(0) @db.Decimal(18, 4)
+  available_amount                                                                Decimal?                @default(dbgenerated("(((allocated_amount - reserved_amount) - consumed_amount) + released_amount)")) @db.Decimal(18, 4)
   multi_year_strategy                                                             String?
-  overspend_policy                                                                String                @default("BLOCK")
-  tolerance_pct                                                                   Decimal               @default(0.00) @db.Decimal(5, 2)
-  requires_approval                                                               Boolean               @default(true)
-  approval_threshold                                                              Decimal?              @db.Decimal(18, 4)
-  is_carry_forward                                                                Boolean               @default(false)
-  carry_forward_from_id                                                           String?               @db.Uuid
-  sort_order                                                                      Int                   @default(0) @db.SmallInt
-  tags                                                                            Json                  @default("[]")
-  metadata                                                                        Json                  @default("{}")
-  status                                                                          String                @default("draft")
-  is_active                                                                       Boolean?              @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                                               DateTime?             @db.Timestamptz(6)
-  status_changed_by                                                               String?               @db.Uuid
-  created_at                                                                      DateTime              @default(now()) @db.Timestamptz(6)
-  created_by                                                                      String                @db.Uuid
-  updated_at                                                                      DateTime?             @db.Timestamptz(6)
-  updated_by                                                                      String?               @db.Uuid
+  overspend_policy                                                                String                  @default("BLOCK")
+  tolerance_pct                                                                   Decimal                 @default(0.00) @db.Decimal(5, 2)
+  requires_approval                                                               Boolean                 @default(true)
+  approval_threshold                                                              Decimal?                @db.Decimal(18, 4)
+  is_carry_forward                                                                Boolean                 @default(false)
+  carry_forward_from_id                                                           String?                 @db.Uuid
+  sort_order                                                                      Int                     @default(0) @db.SmallInt
+  tags                                                                            Json                    @default("[]")
+  metadata                                                                        Json                    @default("{}")
+  status                                                                          String                  @default("draft")
+  is_active                                                                       Boolean?                @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                                               DateTime?               @db.Timestamptz(6)
+  status_changed_by                                                               String?                 @db.Uuid
+  created_at                                                                      DateTime                @default(now()) @db.Timestamptz(6)
+  created_by                                                                      String                  @db.Uuid
+  updated_at                                                                      DateTime?               @db.Timestamptz(6)
+  updated_by                                                                      String?                 @db.Uuid
   forecast_line                                                                   forecast_line[]
+  purchase_invoice_line                                                           purchase_invoice_line[]
   budget_balance                                                                  budget_balance[]
   budget_transaction                                                              budget_transaction[]
-  budget_transfer_budget_transfer_tenant_id_from_allocation_idTobudget_allocation budget_transfer[]     @relation("budget_transfer_tenant_id_from_allocation_idTobudget_allocation")
-  budget_transfer_budget_transfer_tenant_id_to_allocation_idTobudget_allocation   budget_transfer[]     @relation("budget_transfer_tenant_id_to_allocation_idTobudget_allocation")
+  budget_transfer_budget_transfer_tenant_id_from_allocation_idTobudget_allocation budget_transfer[]       @relation("budget_transfer_tenant_id_from_allocation_idTobudget_allocation")
+  budget_transfer_budget_transfer_tenant_id_to_allocation_idTobudget_allocation   budget_transfer[]       @relation("budget_transfer_tenant_id_to_allocation_idTobudget_allocation")
   commitment_schedule                                                             commitment_schedule[]
-  budget_allocation                                                               budget_allocation?    @relation("budget_allocationTobudget_allocation", fields: [tenant_id, carry_forward_from_id], references: [tenant_id, id], onDelete: SetNull, map: "fk_ba_carry_forward")
-  other_budget_allocation                                                         budget_allocation[]   @relation("budget_allocationTobudget_allocation")
-  company_code                                                                    company_code          @relation(fields: [company_code_id], references: [id], map: "fk_ba_company_code")
-  budget_profile                                                                  budget_profile        @relation(fields: [tenant_id, budget_profile_id], references: [tenant_id, id], onDelete: Cascade, map: "fk_ba_profile")
-  tenant                                                                          tenant                @relation(fields: [tenant_id], references: [id], map: "fk_ba_tenant")
+  budget_allocation                                                               budget_allocation?      @relation("budget_allocationTobudget_allocation", fields: [tenant_id, carry_forward_from_id], references: [tenant_id, id], onDelete: SetNull, map: "fk_ba_carry_forward")
+  other_budget_allocation                                                         budget_allocation[]     @relation("budget_allocationTobudget_allocation")
+  company_code                                                                    company_code            @relation(fields: [company_code_id], references: [id], map: "fk_ba_company_code")
+  budget_profile                                                                  budget_profile          @relation(fields: [tenant_id, budget_profile_id], references: [tenant_id, id], onDelete: Cascade, map: "fk_ba_profile")
+  tenant                                                                          tenant                  @relation(fields: [tenant_id], references: [id], map: "fk_ba_tenant")
 
   @@unique([tenant_id, budget_profile_id, code], map: "balloc_tenant_code_uq")
   @@unique([tenant_id, id], map: "balloc_tenant_id_uq")
@@ -9462,6 +9532,7 @@ model business_intent {
   business_intent                         business_intent?                          @relation("business_intentTobusiness_intent", fields: [tenant_id, parent_id], references: [tenant_id, id], onUpdate: NoAction, map: "bi_parent_fk")
   other_business_intent                   business_intent[]                         @relation("business_intentTobusiness_intent")
   tenant                                  tenant                                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bi_tenant_fk")
+  condition_type                          condition_type[]
 
   @@unique([tenant_id, code], map: "bi_code_uq")
   @@unique([tenant_id, id], map: "bi_tenant_id_uq")
@@ -11294,54 +11365,55 @@ model fx_rate {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model gl_account {
-  id                                                                                                                                 String                                @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                                                                          String                                @db.Uuid
+  id                                                                                                                                 String                                     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                                                          String                                     @db.Uuid
   code                                                                                                                               String
   name                                                                                                                               String
-  chart_of_account_id                                                                                                                String                                @db.Uuid
-  parent_id                                                                                                                          String?                               @db.Uuid
-  level_no                                                                                                                           Int                                   @default(1) @db.SmallInt
+  chart_of_account_id                                                                                                                String                                     @db.Uuid
+  parent_id                                                                                                                          String?                                    @db.Uuid
+  level_no                                                                                                                           Int                                        @default(1) @db.SmallInt
   path                                                                                                                               String?
   description                                                                                                                        String?
   account_class                                                                                                                      String
-  node_type                                                                                                                          String                                @default("posting")
+  node_type                                                                                                                          String                                     @default("posting")
   normal_balance                                                                                                                     String
   subledger_type                                                                                                                     String?
-  currency_code                                                                                                                      String?                               @db.Char(3)
-  sort_order                                                                                                                         Int                                   @default(0) @db.SmallInt
-  tags                                                                                                                               Json                                  @default("[]")
-  metadata                                                                                                                           Json                                  @default("{}")
-  status                                                                                                                             String                                @default("draft")
-  is_active                                                                                                                          Boolean?                              @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                                                                                                  DateTime?                             @db.Timestamptz(6)
-  status_changed_by                                                                                                                  String?                               @db.Uuid
-  created_at                                                                                                                         DateTime                              @default(now()) @db.Timestamptz(6)
-  created_by                                                                                                                         String                                @db.Uuid
-  updated_at                                                                                                                         DateTime?                             @db.Timestamptz(6)
-  updated_by                                                                                                                         String?                               @db.Uuid
-  account_type_id                                                                                                                    String?                               @db.Uuid
-  is_reconciling                                                                                                                     Boolean                               @default(false)
-  is_blocked                                                                                                                         Boolean                               @default(false)
+  currency_code                                                                                                                      String?                                    @db.Char(3)
+  sort_order                                                                                                                         Int                                        @default(0) @db.SmallInt
+  tags                                                                                                                               Json                                       @default("[]")
+  metadata                                                                                                                           Json                                       @default("{}")
+  status                                                                                                                             String                                     @default("draft")
+  is_active                                                                                                                          Boolean?                                   @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                                                                                                  DateTime?                                  @db.Timestamptz(6)
+  status_changed_by                                                                                                                  String?                                    @db.Uuid
+  created_at                                                                                                                         DateTime                                   @default(now()) @db.Timestamptz(6)
+  created_by                                                                                                                         String                                     @db.Uuid
+  updated_at                                                                                                                         DateTime?                                  @db.Timestamptz(6)
+  updated_by                                                                                                                         String?                                    @db.Uuid
+  account_type_id                                                                                                                    String?                                    @db.Uuid
+  is_reconciling                                                                                                                     Boolean                                    @default(false)
+  is_blocked                                                                                                                         Boolean                                    @default(false)
   posting_level                                                                                                                      String?
   commodity_category_buy_policy                                                                                                      commodity_category_buy_policy[]
-  commodity_category_inventory_policy_commodity_category_inventory_policy_tenant_id_default_cogs_gl_account_idTogl_account           commodity_category_inventory_policy[] @relation("commodity_category_inventory_policy_tenant_id_default_cogs_gl_account_idTogl_account")
-  commodity_category_inventory_policy_commodity_category_inventory_policy_tenant_id_default_inventory_gl_account_idTogl_account      commodity_category_inventory_policy[] @relation("commodity_category_inventory_policy_tenant_id_default_inventory_gl_account_idTogl_account")
-  commodity_category_inventory_policy_commodity_category_inventory_policy_tenant_id_default_price_variance_gl_account_idTogl_account commodity_category_inventory_policy[] @relation("commodity_category_inventory_policy_tenant_id_default_price_variance_gl_account_idTogl_account")
-  commodity_category_inventory_policy_commodity_category_inventory_policy_tenant_id_default_wip_gl_account_idTogl_account            commodity_category_inventory_policy[] @relation("commodity_category_inventory_policy_tenant_id_default_wip_gl_account_idTogl_account")
-  commodity_category_sell_policy_commodity_category_sell_policy_tenant_id_default_deferred_revenue_gl_account_idTogl_account         commodity_category_sell_policy[]      @relation("commodity_category_sell_policy_tenant_id_default_deferred_revenue_gl_account_idTogl_account")
-  commodity_category_sell_policy_commodity_category_sell_policy_tenant_id_default_revenue_gl_account_idTogl_account                  commodity_category_sell_policy[]      @relation("commodity_category_sell_policy_tenant_id_default_revenue_gl_account_idTogl_account")
-  commodity_category_sell_policy_commodity_category_sell_policy_tenant_id_default_unbilled_ar_gl_account_idTogl_account              commodity_category_sell_policy[]      @relation("commodity_category_sell_policy_tenant_id_default_unbilled_ar_gl_account_idTogl_account")
+  commodity_category_inventory_policy_commodity_category_inventory_policy_tenant_id_default_cogs_gl_account_idTogl_account           commodity_category_inventory_policy[]      @relation("commodity_category_inventory_policy_tenant_id_default_cogs_gl_account_idTogl_account")
+  commodity_category_inventory_policy_commodity_category_inventory_policy_tenant_id_default_inventory_gl_account_idTogl_account      commodity_category_inventory_policy[]      @relation("commodity_category_inventory_policy_tenant_id_default_inventory_gl_account_idTogl_account")
+  commodity_category_inventory_policy_commodity_category_inventory_policy_tenant_id_default_price_variance_gl_account_idTogl_account commodity_category_inventory_policy[]      @relation("commodity_category_inventory_policy_tenant_id_default_price_variance_gl_account_idTogl_account")
+  commodity_category_inventory_policy_commodity_category_inventory_policy_tenant_id_default_wip_gl_account_idTogl_account            commodity_category_inventory_policy[]      @relation("commodity_category_inventory_policy_tenant_id_default_wip_gl_account_idTogl_account")
+  commodity_category_sell_policy_commodity_category_sell_policy_tenant_id_default_deferred_revenue_gl_account_idTogl_account         commodity_category_sell_policy[]           @relation("commodity_category_sell_policy_tenant_id_default_deferred_revenue_gl_account_idTogl_account")
+  commodity_category_sell_policy_commodity_category_sell_policy_tenant_id_default_revenue_gl_account_idTogl_account                  commodity_category_sell_policy[]           @relation("commodity_category_sell_policy_tenant_id_default_revenue_gl_account_idTogl_account")
+  commodity_category_sell_policy_commodity_category_sell_policy_tenant_id_default_unbilled_ar_gl_account_idTogl_account              commodity_category_sell_policy[]           @relation("commodity_category_sell_policy_tenant_id_default_unbilled_ar_gl_account_idTogl_account")
   supplier_posting_override                                                                                                          supplier_posting_override[]
+  accounting_distribution_resolution_audit                                                                                           accounting_distribution_resolution_audit[]
   fx_revaluation_line                                                                                                                fx_revaluation_line[]
   gl_balance                                                                                                                         gl_balance[]
   bank_account_house_config                                                                                                          bank_account_house_config[]
   company_code_gl_account                                                                                                            company_code_gl_account[]
-  chart_of_account                                                                                                                   chart_of_account                      @relation(fields: [tenant_id, chart_of_account_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "gla_chart_fk")
-  principal                                                                                                                          principal                             @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "gla_created_by_fk")
-  currency                                                                                                                           currency?                             @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "gla_currency_fk")
-  gl_account                                                                                                                         gl_account?                           @relation("gl_accountTogl_account", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "gla_parent_fk")
-  other_gl_account                                                                                                                   gl_account[]                          @relation("gl_accountTogl_account")
-  tenant                                                                                                                             tenant                                @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "gla_tenant_fk")
+  chart_of_account                                                                                                                   chart_of_account                           @relation(fields: [tenant_id, chart_of_account_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "gla_chart_fk")
+  principal                                                                                                                          principal                                  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "gla_created_by_fk")
+  currency                                                                                                                           currency?                                  @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "gla_currency_fk")
+  gl_account                                                                                                                         gl_account?                                @relation("gl_accountTogl_account", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "gla_parent_fk")
+  other_gl_account                                                                                                                   gl_account[]                               @relation("gl_accountTogl_account")
+  tenant                                                                                                                             tenant                                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "gla_tenant_fk")
 
   @@unique([tenant_id, chart_of_account_id, code], map: "gl_account_chart_code_uq")
   @@unique([tenant_id, id], map: "gl_account_tenant_id_uq")
@@ -12673,6 +12745,7 @@ model planning_model {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model principal {
   id                                                                                                    String                                @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                                                             String                                @db.Uuid
@@ -17924,4 +17997,152 @@ model descriptor_cache_invalidation {
   @@index([tenant_id, entity_code, created_at(sort: Desc)], map: "dci_tenant_entity_idx")
   @@index([created_at], map: "dci_unprocessed_idx", where: raw("(processed_at IS NULL)"))
   @@schema("log")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model accounting_distribution_resolution_audit {
+  accounting_distribution_id String                  @id(map: "ad_resolution_audit_pkey") @db.Uuid
+  tenant_id                  String                  @db.Uuid
+  resolution_steps           Json                    @default("[]")
+  resolved_gl_account_id     String                  @db.Uuid
+  resolution_path            String
+  resolver_version           String
+  resolved_at                DateTime                @default(now()) @db.Timestamptz(6)
+  metadata                   Json                    @default("{}")
+  accounting_distribution    accounting_distribution @relation(fields: [tenant_id, accounting_distribution_id], references: [tenant_id, id], onUpdate: NoAction, map: "ad_resolution_audit_ad_fk")
+  gl_account                 gl_account              @relation(fields: [tenant_id, resolved_gl_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "ad_resolution_audit_gl_fk")
+
+  @@unique([tenant_id, accounting_distribution_id], map: "ad_resolution_audit_tenant_uq")
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pricing_component {
+  id                                                                                  String                     @id(map: "pc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                           String                     @db.Uuid
+  company_code_id                                                                     String                     @db.Uuid
+  source_doc_type                                                                     String
+  source_doc_id                                                                       String                     @db.Uuid
+  source_line_id                                                                      String?                    @db.Uuid
+  term_type                                                                           String
+  condition_type_id                                                                   String                     @db.Uuid
+  sequence                                                                            Int                        @default(100)
+  basis                                                                               String
+  rate_value                                                                          Decimal?                   @db.Decimal(20, 10)
+  amount_value                                                                        Decimal?                   @db.Decimal(18, 4)
+  base_for_calculation                                                                Decimal?                   @db.Decimal(18, 4)
+  computed_amount                                                                     Decimal                    @default(0) @db.Decimal(18, 4)
+  computed_base_amount                                                                Decimal                    @default(0) @db.Decimal(18, 4)
+  entry_level                                                                         String
+  apportion_basis                                                                     String?
+  is_apportioned                                                                      Boolean                    @default(false)
+  is_apportioned_from_id                                                              String?                    @db.Uuid
+  origin                                                                              String
+  ref_source_doc_type                                                                 String?
+  ref_source_doc_id                                                                   String?                    @db.Uuid
+  ref_source_line_id                                                                  String?                    @db.Uuid
+  ref_value                                                                           Decimal?                   @db.Decimal(18, 4)
+  tax_group_id                                                                        String?                    @db.Uuid
+  is_inclusive                                                                        Boolean?
+  recoverable_pct                                                                     Decimal?                   @db.Decimal(7, 4)
+  tax_section_code                                                                    String?
+  currency_code                                                                       String                     @db.Char(3)
+  base_currency_code                                                                  String                     @db.Char(3)
+  exchange_rate                                                                       Decimal                    @default(1.0) @db.Decimal(20, 10)
+  business_intent_id                                                                  String?                    @db.Uuid
+  posting_role_code                                                                   String?
+  gl_account_id                                                                       String?                    @db.Uuid
+  account_source                                                                      String?
+  superseded_by_id                                                                    String?                    @db.Uuid
+  superseded_at                                                                       DateTime?                  @db.Timestamptz(6)
+  superseded_by_user                                                                  String?                    @db.Uuid
+  row_version                                                                         BigInt                     @default(1)
+  tags                                                                                Json                       @default("[]")
+  metadata                                                                            Json                       @default("{}")
+  created_at                                                                          DateTime                   @default(now()) @db.Timestamptz(6)
+  created_by                                                                          String                     @db.Uuid
+  updated_at                                                                          DateTime?                  @db.Timestamptz(6)
+  updated_by                                                                          String?                    @db.Uuid
+  payment_term_application                                                            payment_term_application[]
+  pricing_component_pricing_component_is_apportioned_from_idTopricing_component       pricing_component?         @relation("pricing_component_is_apportioned_from_idTopricing_component", fields: [is_apportioned_from_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pc_apportioned_from_fk")
+  other_pricing_component_pricing_component_is_apportioned_from_idTopricing_component pricing_component[]        @relation("pricing_component_is_apportioned_from_idTopricing_component")
+  condition_type                                                                      condition_type             @relation(fields: [condition_type_id], references: [id], onUpdate: NoAction, map: "pc_condition_type_fk")
+  pricing_component_pricing_component_superseded_by_idTopricing_component             pricing_component?         @relation("pricing_component_superseded_by_idTopricing_component", fields: [superseded_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pc_superseded_by_fk")
+  other_pricing_component_pricing_component_superseded_by_idTopricing_component       pricing_component[]        @relation("pricing_component_superseded_by_idTopricing_component")
+
+  @@unique([tenant_id, id], map: "pc_tenant_id_uq")
+  @@index([tenant_id, is_apportioned_from_id], map: "ix_pc_apportion_chain", where: raw("(is_apportioned_from_id IS NOT NULL)"))
+  @@index([tenant_id, condition_type_id], map: "ix_pc_condition_type", where: raw("(superseded_by_id IS NULL)"))
+  @@index([tenant_id, source_doc_type, source_doc_id, source_line_id, term_type, sequence], map: "ix_pc_source_active", where: raw("(superseded_by_id IS NULL)"))
+  @@index([tenant_id, superseded_by_id], map: "ix_pc_supersede_chain", where: raw("(superseded_by_id IS NOT NULL)"))
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model supplier_rebuild_orphan_quarantine {
+  id                String   @id(map: "srq_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  detected_at       DateTime @default(now()) @db.Timestamptz(6)
+  source_schema     String   @default("document")
+  source_table      String
+  source_id         String   @db.Uuid
+  tenant_id         String?  @db.Uuid
+  stale_supplier_id String   @db.Uuid
+  action_taken      String
+  notes             String?
+
+  @@index([source_table, detected_at(sort: Desc)], map: "srq_source_idx")
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model condition_type {
+  id                         String              @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                  String?             @db.Uuid
+  code                       String
+  name                       String
+  description                String?
+  term_type                  String
+  default_basis              String
+  default_rate               Decimal?            @db.Decimal(20, 10)
+  default_amount             Decimal?            @db.Decimal(18, 4)
+  default_apportion_basis    String?
+  default_posting_role_code  String?
+  default_business_intent_id String?             @db.Uuid
+  default_account_source     String?
+  default_tax_group_id       String?             @db.Uuid
+  default_is_inclusive       Boolean?
+  default_recoverable_pct    Decimal?            @db.Decimal(7, 4)
+  default_tax_section_code   String?
+  is_taxable                 Boolean             @default(false)
+  is_apportionable           Boolean             @default(true)
+  applies_to_classes         Json                @default("[]")
+  is_system                  Boolean             @default(false)
+  sort_order                 Int                 @default(0) @db.SmallInt
+  status                     String              @default("active")
+  is_active                  Boolean?            @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at          DateTime?           @db.Timestamptz(6)
+  status_changed_by          String?             @db.Uuid
+  tags                       Json                @default("[]")
+  metadata                   Json                @default("{}")
+  created_at                 DateTime            @default(now()) @db.Timestamptz(6)
+  created_by                 String              @db.Uuid
+  updated_at                 DateTime?           @db.Timestamptz(6)
+  updated_by                 String?             @db.Uuid
+  pricing_component          pricing_component[]
+  business_intent            business_intent?    @relation(fields: [tenant_id, default_business_intent_id], references: [tenant_id, id], onUpdate: NoAction, map: "condition_type_business_intent_fk")
+
+  @@unique([tenant_id, code], map: "condition_type_tenant_code_uq")
+  @@unique([tenant_id, id], map: "condition_type_tenant_id_uq")
+  @@index([term_type, sort_order], map: "ix_condition_type_system", where: raw("((is_system = true) AND (status = 'active'::text))"))
+  @@index([tenant_id, term_type], map: "ix_condition_type_term_type", where: raw("(status = 'active'::text)"))
+  @@schema("master")
 }

@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { waitFor } from "@testing-library/react";
 import { renderHook, act } from "../utils/renderHook";
 import { useDocumentPageController } from "../../object-page/useDocumentPageController";
 import { getSectionElementId } from "../../object-page/types";
 import {
   installScrollIntoViewMock,
   installMatchMediaMock,
+  installRequestAnimationFrameMock,
 } from "../utils/mockBrowser";
 
 const SECTION_IDS = ["__overview", "__lines", "__distributions"];
@@ -28,25 +30,51 @@ describe("useDocumentPageController", () => {
     expect(result.current.activeSectionId).toBe("__overview");
   });
 
-  it("initial activeSectionId is resolved from the URL hash when present", () => {
+  it("starts from first section for hydration and then honors URL hash after mount", async () => {
+    mountSectionElements();
+    const raf = installRequestAnimationFrameMock();
+    const scroll = installScrollIntoViewMock();
     window.history.replaceState(null, "", "/page#__distributions");
-    const { result } = renderHook(() => useDocumentPageController({ sectionIds: SECTION_IDS }));
+    const renders: string[] = [];
+    const { result } = renderHook(() => {
+      const controller = useDocumentPageController({ sectionIds: SECTION_IDS });
+      renders.push(controller.activeSectionId);
+      return controller;
+    });
+
+    expect(renders[0]).toBe("__overview");
+    await waitFor(() => {
+      expect(result.current.activeSectionId).toBe("__distributions");
+    });
+    act(() => { raf.flush(); });
+
     expect(result.current.activeSectionId).toBe("__distributions");
+    expect(scroll.calls).toHaveLength(1);
   });
 
-  it("custom hashFor / idForHash overrides identity mapping for clean URLs", () => {
+  it("custom hashFor / idForHash overrides identity mapping for clean URLs after mount", async () => {
+    mountSectionElements();
     window.history.replaceState(null, "", "/page#accounting");
     const hashFor: Record<string, string> = {
       __overview:      "details",
       __lines:         "lines",
       __distributions: "accounting",
     };
-    const { result } = renderHook(() => useDocumentPageController({
-      sectionIds: SECTION_IDS,
-      hashFor:    (id) => hashFor[id] ?? id,
-      idForHash:  (hash) => Object.entries(hashFor).find(([, h]) => h === hash)?.[0] ?? null,
-    }));
-    expect(result.current.activeSectionId).toBe("__distributions");
+    const renders: string[] = [];
+    const { result } = renderHook(() => {
+      const controller = useDocumentPageController({
+        sectionIds: SECTION_IDS,
+        hashFor:    (id) => hashFor[id] ?? id,
+        idForHash:  (hash) => Object.entries(hashFor).find(([, h]) => h === hash)?.[0] ?? null,
+      });
+      renders.push(controller.activeSectionId);
+      return controller;
+    });
+
+    expect(renders[0]).toBe("__overview");
+    await waitFor(() => {
+      expect(result.current.activeSectionId).toBe("__distributions");
+    });
   });
 
   it("scrollToSection fires scrollIntoView, updates state, updates URL hash", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
@@ -12,10 +12,13 @@ import {
 import { setClients } from "@athyper/query";
 import { registerDefaultFieldRenderers } from "@athyper/runtime-canvas/fields";
 import { setBffClientPlane } from "@athyper/runtime-shared/client";
+// Cleanup-plan v5 P5.5 — top-level import runs the document-runtime
+// registry bootstrap (composer / sidecar / strategy registrations).
+// Idempotent + HMR-safe per amendment 8.
+import "@/lib/bootstrap-document-runtime";
 import { ToastProvider, useToast } from "@athyper/ui/composites";
 import { AuthFailureBridge } from "@athyper/identity-gate";
 import { PLANE_KEY } from "@/lib/plane";
-import { applyThemePreferences } from "@/lib/preferences/theme-dom";
 
 // Plane-specific csrf cookie (__csrf) — must run before any client component
 // reads the token. Idempotent: HMR-safe.
@@ -61,7 +64,6 @@ export function NeonProviders({ children }: { children: ReactNode }) {
     <ToastProvider>
       <QueryClientProvider client={queryClient}>
         <AuthFailureBridgeWired />
-        <PreferencesDomHydrator />
         {children}
       </QueryClientProvider>
     </ToastProvider>
@@ -99,28 +101,4 @@ function AuthFailureBridgeWired() {
       }}
     />
   );
-}
-
-function PreferencesDomHydrator() {
-  useEffect(() => {
-    const controller = new AbortController();
-
-    fetch("/api/me/preferences", {
-      cache: "no-store",
-      credentials: "include",
-      signal: controller.signal,
-    })
-      .then((res) => (res.ok ? res.json() as Promise<Record<string, unknown>> : null))
-      .then((profile) => {
-        if (!profile) return;
-        applyThemePreferences(profile);
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-      });
-
-    return () => controller.abort();
-  }, []);
-
-  return null;
 }

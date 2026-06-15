@@ -9,6 +9,14 @@ on:
     branches:
       - main
       - develop
+  # Cleanup-plan v5 P5c — manual trigger for the screenshot parity gate
+  # while activation prereqs land. See tests/visual/README.md.
+  workflow_dispatch:
+    inputs:
+      playwright_base_url:
+        description: 'Base URL for Neon (e.g. https://neon.athyper.local)'
+        required:    false
+        default:     'https://neon.athyper.local'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -101,6 +109,12 @@ jobs:
       - name: Workspace policy
         run: pnpm run policy
 
+      # Admin-plane strict MFA realm guard. This is intentionally DB-free: it
+      # validates the checked-in Keycloak realm export still emits amr and keeps
+      # admin-web bound to the mandatory OTP browser flow.
+      - name: Verify Keycloak realm strict MFA
+        run: pnpm --filter @athyper/runtime-server run realm-strict-mfa:verify
+
       # F8 Phase 2 — single-ingress port hardening. Fails if any service
       # with traefik.* labels also publishes a backend port directly on
       # the host (bypass path). Advisory while baseline is clean; promote
@@ -108,6 +122,71 @@ jobs:
       - name: Verify port hardening (F8 Phase 2)
         continue-on-error: true
         run: bash stack/scripts/setup/verify-port-hardening.sh
+
+  # ─── Screenshot Regression (PI) ──────────────────────────────────
+  # Cleanup-plan v5 P5c. Visual diff against a pinned reference
+  # snapshot of the descriptor-driven PI route. After Sprint 8 PR6
+  # the framework (Playwright dep, global setup, fixture seed
+  # skeleton, spec) is in place; the test itself stays guarded by
+  # `test.skip(...)` until the activation steps in
+  # `tests/visual/README.md` complete:
+  #   1. `pnpm exec playwright install chromium` (per-machine)
+  #   2. PC + AD INSERTs authored in
+  #      server/db/seed/tenants/neon/010_demo/999_visual_fixture_pi.sql
+  #   3. PLAYWRIGHT_USER + PLAYWRIGHT_PASSWORD set in CI secrets
+  #   4. PLAYWRIGHT_BASE_URL set in CI secrets
+  #   5. Reference snapshot generated + committed
+  #
+  # To enable: flip the `if:` guard below + the `env:` block per
+  # `tests/visual/README.md` § "Flip the CI gate".
+  # ─────────────────────────────────────────────────────────────────
+  screenshot-parity-pi:
+    name: Screenshot Regression (PI)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run visual regression tests
+        env:
+          # Activation: replace `inputs.playwright_base_url` with
+          # `${{ secrets.PLAYWRIGHT_BASE_URL }}` once a stable test env
+          # URL is configured as a repo secret.
+          PLAYWRIGHT_BASE_URL: ${{ inputs.playwright_base_url }}
+          # Activation: add `PLAYWRIGHT_USER` + `PLAYWRIGHT_PASSWORD` to
+          # the env block here once those repo secrets are configured.
+          # Until they exist global-setup writes an empty storageState
+          # and the spec's `test.skip(...)` keeps the suite dormant.
+        run: pnpm test:visual
+
+      - name: Upload diff artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-parity-diffs
+          path: |
+            tests/visual/.playwright-output/
+            tests/visual/__screenshots__/
+          retention-days: 14
 
   # ─── Build ───────────────────────────────────────────────────────
   # Builds all workspace packages excluding @athyper/web (Next.js app)

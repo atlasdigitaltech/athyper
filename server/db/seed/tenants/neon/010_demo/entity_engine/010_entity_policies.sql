@@ -17,7 +17,7 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
-    -- ── Seed one entity_policy per master.* and document.* entity using defaults ──
+    -- Seed one entity_policy per master.*, document.*, and log.* entity using defaults.
     -- access_mode    : 'default_allow'  — demo tenant is open by default
     -- audit_mode     : 'enabled'        — full audit trail for all entities
     -- company_scope  : 'single' for DOCUMENT/LOG, 'none' otherwise
@@ -27,7 +27,7 @@ BEGIN
     FOR r IN
         SELECT e.id AS entity_id, e.entity_class
         FROM   control.entity e
-        WHERE  e.table_schema IN ('master', 'document')
+        WHERE  e.table_schema IN ('master', 'document', 'log')
           AND  e.ownership_model = 'system'
           AND  e.entity_code != 'bank_account_house_config'
           AND  NOT EXISTS (
@@ -86,7 +86,7 @@ BEGIN
       FROM control.entity e
      WHERE ep.tenant_id = v_tenant_id
        AND ep.entity_id = e.id
-       AND e.table_schema IN ('master', 'document')
+       AND e.table_schema IN ('master', 'document', 'log')
        AND e.ownership_model = 'system'
        AND ep.access_mode = 'default_deny';
 

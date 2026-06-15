@@ -1,4 +1,5 @@
 const ERROR_MESSAGES: Record<string, string> = {
+  ACCOUNT_MISMATCH: "IAM returned a different signed-in user. Clear the stale session and sign in again.",
   AUTH_CALLBACK_ERROR: "We could not complete sign in. Please try again.",
   AUTH_PROVIDER_DENIED: "The identity provider did not complete sign in. Please try again.",
   CONTEXT_RESOLUTION_FAILED: "We could not resolve your access context. Please try again shortly.",

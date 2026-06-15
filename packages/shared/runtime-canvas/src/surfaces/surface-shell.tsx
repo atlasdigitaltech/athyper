@@ -1,10 +1,10 @@
 "use client";
 
-import { Component, Suspense, useMemo, useState, type ReactNode } from "react";
+import { Component, Suspense, useMemo, type ReactNode } from "react";
 import type { MetaEntityRuntimeDescriptor, MetaEntitySurface, ProcessRuntimeState } from "@athyper/runtime-contracts";
 import { flattenRuntimeRecord, type RuntimeListState, type RuntimeRecordRow } from "@athyper/runtime-shared/core";
-import { cn } from "@athyper/theme/utils";
 import { RuntimeEditState } from "../edit/runtime-edit-form";
+import { useActiveTab } from "../record/runtime-record-workspace";
 import { getSurfaceRenderer } from "./registry";
 import type { RuntimeCanvasFlags } from "./types";
 
@@ -51,9 +51,12 @@ export function DescriptorSurfaceShell({
   }, [contract.surfaces, flags.disabledSurfaceKinds]);
 
   const defaultSurface = mainSurfaces.find((s) => s.kind === "fields") ?? mainSurfaces[0];
-  const [activeKey, setActiveKey] = useState<string>(() => defaultSurface?.key ?? "");
-
-  const activeSurface = mainSurfaces.find((s) => s.key === activeKey) ?? defaultSurface;
+  // Chrome (RuntimeEntityHeader) owns tab state via `RuntimeRecordWorkspace`.
+  // We consume the active key through `ActiveTabContext` so there is exactly
+  // one navigation source per record page — no second in-shell tab strip.
+  const activeTabFromChrome = useActiveTab();
+  const activeSurface =
+    mainSurfaces.find((s) => s.key === activeTabFromChrome) ?? defaultSurface;
 
   const recordData = useMemo(() => flattenRuntimeRecord(record), [record]);
 
@@ -67,14 +70,6 @@ export function DescriptorSurfaceShell({
 
   return (
     <div id="surfaces" className="flex flex-col gap-2.5">
-      {mainSurfaces.length > 1 ? (
-        <SurfaceTabBar
-          surfaces={mainSurfaces}
-          activeKey={activeKey}
-          onSelect={setActiveKey}
-        />
-      ) : null}
-
       {activeSurface ? (
         <SurfaceErrorBoundary
           key={`${activeSurface.key}:${recordId}`}
@@ -96,56 +91,6 @@ export function DescriptorSurfaceShell({
           </Suspense>
         </SurfaceErrorBoundary>
       ) : null}
-    </div>
-  );
-}
-
-function SurfaceTabBar({
-  surfaces,
-  activeKey,
-  onSelect,
-}: {
-  surfaces: MetaEntitySurface[];
-  activeKey: string;
-  onSelect: (key: string) => void;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="Detail sections"
-      className="flex gap-0 overflow-x-auto border-b"
-    >
-      {surfaces.map((surface) => {
-        const isActive = surface.key === activeKey;
-        return (
-          <button
-            key={surface.key}
-            role="tab"
-            aria-selected={isActive}
-            aria-controls={`surface-panel-${surface.key}`}
-            onClick={() => onSelect(surface.key)}
-            onKeyDown={(event) => {
-              if (event.key === "ArrowRight") {
-                const idx = surfaces.findIndex((s) => s.key === surface.key);
-                const next = surfaces[idx + 1] ?? surfaces[0];
-                if (next) onSelect(next.key);
-              } else if (event.key === "ArrowLeft") {
-                const idx = surfaces.findIndex((s) => s.key === surface.key);
-                const prev = surfaces[idx - 1] ?? surfaces[surfaces.length - 1];
-                if (prev) onSelect(prev.key);
-              }
-            }}
-            className={cn(
-              "flex h-9 shrink-0 items-center border-b-2 px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              isActive
-                ? "border-foreground text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {surface.label}
-          </button>
-        );
-      })}
     </div>
   );
 }

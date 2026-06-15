@@ -17,7 +17,8 @@ import {
   type SortingState,
   type RowSelectionState,
 } from "@tanstack/react-table";
-import { type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { Fragment, type CSSProperties, type MouseEvent as ReactMouseEvent, type MutableRefObject, type ReactNode, useRef, useState } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ListPlus } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { Button } from "../primitives/Button";
@@ -119,6 +120,40 @@ export interface DataTableProps<TData> {
    */
   pinnedColumns?: string[];
   tableContainerRef?: React.RefObject<HTMLDivElement | null>;
+  /**
+   * Opt-in row virtualization for large in-memory datasets. Callers should
+   * pair this with a bounded, scrollable table container class such as
+   * `overflow-auto max-h-[calc(100dvh-14rem)]`.
+   */
+  virtualized?: boolean;
+  /** Estimated row height in px for virtualized rendering. */
+  virtualRowEstimate?: number;
+  /** Extra rows rendered above/below the visible viewport. */
+  virtualOverscan?: number;
+  /**
+   * Stable row identity. When provided, TanStack keys selection state by
+   * the returned id instead of row index — selection survives sort and
+   * filter changes. Without it, sorting a selected list shuffles which
+   * rows appear selected.
+   */
+  getRowId?: (row: TData, index: number) => string;
+  /**
+   * Inline row-expansion content renderer. When `getIsRowExpanded(row)`
+   * returns `true`, a full-width row is rendered below the matching
+   * `<tr>` containing the node returned here. Both props must be
+   * supplied together; either one alone is a no-op.
+   *
+   * Caller owns the expansion state (single-row vs multi-row, click
+   * affordance, etc.). DataTable just renders.
+   *
+   * Virtualization caveat: expansion content increases real row height
+   * beyond `virtualRowEstimate`, so the virtualizer's total-size estimate
+   * drifts. Practical impact is minimal for short grids (the typical use
+   * case for expansion); pair `virtualized` with `renderRowExpansion`
+   * only when rows are bounded.
+   */
+  renderRowExpansion?: (row: TData) => ReactNode;
+  getIsRowExpanded?: (row: TData) => boolean;
 }
 
 export function DataTable<TData>({
@@ -146,11 +181,17 @@ export function DataTable<TData>({
   rowActions,
   tableContainerClassName,
   tableContainerRef,
+  virtualized = false,
+  virtualRowEstimate,
+  virtualOverscan = 8,
   density = "comfortable",
   aggregations,
   pinnedColumns,
   onRowContextMenu,
   getRowClassName,
+  getRowId,
+  renderRowExpansion,
+  getIsRowExpanded,
 }: DataTableProps<TData>) {
   // Row density maps
   const CELL_PAD: Record<string, string> = {
@@ -165,6 +206,13 @@ export function DataTable<TData>({
   };
   const cellPad  = CELL_PAD[density] ?? CELL_PAD.comfortable;
   const headerH  = HEADER_H[density] ?? HEADER_H.comfortable;
+  const ROW_ESTIMATE: Record<string, number> = {
+    compact:     36,
+    comfortable: 44,
+    spacious:    56,
+  };
+  const estimatedRowHeight = virtualRowEstimate ?? ROW_ESTIMATE[density] ?? 44;
+  const internalTableContainerRef = useRef<HTMLDivElement | null>(null);
   const [internalSorting, setInternalSorting] = useState<SortingState>([]);
   const [internalSelection, setInternalSelection] = useState<RowSelectionState>({});
 
@@ -284,6 +332,7 @@ export function DataTable<TData>({
     data,
     columns: allColumns,
     state: { sorting, rowSelection },
+    getRowId,
     onSortingChange: setSorting as (s: SortingState | ((old: SortingState) => SortingState)) => void,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
@@ -298,9 +347,83 @@ export function DataTable<TData>({
     enableRowSelection: selectable,
   });
 
+  const tableRows = table.getRowModel().rows;
+  const shouldVirtualizeRows = virtualized && !loading && tableRows.length > 0;
+  const rowVirtualizer = useVirtualizer({
+    count: shouldVirtualizeRows ? tableRows.length : 0,
+    getScrollElement: () => internalTableContainerRef.current,
+    estimateSize: () => estimatedRowHeight,
+    overscan: virtualOverscan,
+  });
+  const virtualItems = shouldVirtualizeRows ? rowVirtualizer.getVirtualItems() : [];
+  const fallbackVirtualCount = shouldVirtualizeRows && virtualItems.length === 0
+    ? Math.min(tableRows.length, Math.max(1, virtualOverscan * 2 + 1))
+    : 0;
+  const virtualTopPad = virtualItems[0]?.start ?? 0;
+  const virtualBottomPad = virtualItems.length > 0
+    ? Math.max(0, rowVirtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0))
+    : 0;
+  const setTableContainerNode = (node: HTMLDivElement | null) => {
+    internalTableContainerRef.current = node;
+    if (tableContainerRef) {
+      (tableContainerRef as MutableRefObject<HTMLDivElement | null>).current = node;
+    }
+  };
+
+  const expansionEnabled = Boolean(renderRowExpansion && getIsRowExpanded);
+  const renderTableRow = (row: typeof tableRows[number]) => {
+    const isExpanded = expansionEnabled && getIsRowExpanded!(row.original);
+    return (
+      <Fragment key={row.id}>
+        <tr
+          className={cn(
+            "border-b transition-colors hover:bg-muted/50",
+            row.getIsSelected() && "bg-muted",
+            onRowClick && "cursor-pointer",
+            isExpanded && "bg-muted/40",
+            getRowClassName?.(row.original),
+          )}
+          onClick={(event) => {
+            if (isInteractiveRowClick(event)) return;
+            onRowClick?.(row.original);
+          }}
+          onContextMenu={(e) => onRowContextMenu?.(row.original, e)}
+          data-state={row.getIsSelected() ? "selected" : undefined}
+        >
+          {row.getVisibleCells().map((cell) => {
+            const cKey = "accessorKey" in cell.column.columnDef
+              ? String((cell.column.columnDef as { accessorKey: unknown }).accessorKey)
+              : cell.column.id;
+            const cPin = getPinStyle(cKey);
+            return (
+              <td
+                key={cell.id}
+                className={cn(
+                  cellPad,
+                  "align-middle",
+                  cPin && "border-r shadow-[1px_0_0_0_var(--border)]",
+                )}
+                style={cPin}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </td>
+            );
+          })}
+        </tr>
+        {isExpanded && (
+          <tr className="border-b bg-muted/20" data-row-expansion="true">
+            <td colSpan={allColumns.length} className="p-0">
+              {renderRowExpansion!(row.original)}
+            </td>
+          </tr>
+        )}
+      </Fragment>
+    );
+  };
+
   return (
     <div className={cn("space-y-3", className)}>
-      <div ref={tableContainerRef} className={cn("rounded-md border", tableContainerClassName)}>
+      <div ref={setTableContainerNode} className={cn("rounded-md border", tableContainerClassName)}>
         <table className="w-full caption-bottom text-sm">
           <thead className="sticky top-0 z-10 border-b bg-muted">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -351,55 +474,38 @@ export function DataTable<TData>({
                   Loading...
                 </td>
               </tr>
-            ) : table.getRowModel().rows.length === 0 ? (
+            ) : tableRows.length === 0 ? (
               <tr>
                 <td colSpan={allColumns.length} className="h-24 text-center text-muted-foreground">
                   {emptyMessage}
                 </td>
               </tr>
+            ) : shouldVirtualizeRows && virtualItems.length > 0 ? (
+              <>
+                {virtualTopPad > 0 && (
+                  <tr aria-hidden="true">
+                    <td colSpan={allColumns.length} style={{ height: virtualTopPad, padding: 0, border: 0 }} />
+                  </tr>
+                )}
+                {virtualItems.map((virtualRow) => {
+                  const row = tableRows[virtualRow.index];
+                  return row ? renderTableRow(row) : null;
+                })}
+                {virtualBottomPad > 0 && (
+                  <tr aria-hidden="true">
+                    <td colSpan={allColumns.length} style={{ height: virtualBottomPad, padding: 0, border: 0 }} />
+                  </tr>
+                )}
+              </>
+            ) : shouldVirtualizeRows && fallbackVirtualCount > 0 ? (
+              tableRows.slice(0, fallbackVirtualCount).map(renderTableRow)
             ) : (
-              table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className={cn(
-                    "border-b transition-colors hover:bg-muted/50",
-                    row.getIsSelected() && "bg-muted",
-                    onRowClick && "cursor-pointer",
-                    getRowClassName?.(row.original),
-                  )}
-                  onClick={(event) => {
-                    if (isInteractiveRowClick(event)) return;
-                    onRowClick?.(row.original);
-                  }}
-                  onContextMenu={(e) => onRowContextMenu?.(row.original, e)}
-                  data-state={row.getIsSelected() ? "selected" : undefined}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    const cKey = "accessorKey" in cell.column.columnDef
-                      ? String((cell.column.columnDef as { accessorKey: unknown }).accessorKey)
-                      : cell.column.id;
-                    const cPin = getPinStyle(cKey);
-                    return (
-                      <td
-                        key={cell.id}
-                        className={cn(
-                          cellPad,
-                          "align-middle",
-                          cPin && "border-r shadow-[1px_0_0_0_var(--border)]",
-                        )}
-                        style={cPin}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))
+              tableRows.map(renderTableRow)
             )}
           </tbody>
 
           {/* Aggregation footer — rendered only when aggregations map is non-empty */}
-          {aggregations && Object.keys(aggregations).length > 0 && !loading && table.getRowModel().rows.length > 0 && (
+          {aggregations && Object.keys(aggregations).length > 0 && !loading && tableRows.length > 0 && (
             <tfoot className="sticky bottom-0 z-10 border-t-2 bg-muted font-medium">
               <tr>
                 {allColumns.map((col) => {

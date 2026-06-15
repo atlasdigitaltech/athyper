@@ -431,6 +431,7 @@ BEGIN
           "work_item_decision": "approve",
           "create_posting": true,
           "is_reversal": true,
+          "reversal_of_invoice_id": "10000000-0000-0000-0000-000000000004",
           "ui_focus": "versions"
         }
       ]'::jsonb
@@ -451,6 +452,7 @@ BEGIN
       work_item_decision text,
       create_posting boolean,
       is_reversal boolean,
+      reversal_of_invoice_id uuid,
       ui_focus text
     )
   LOOP
@@ -517,6 +519,7 @@ BEGIN
       approved_by,
       is_posted,
       is_reversal,
+      reversal_of_id,
       is_credit_note,
       hold_reason,
       metadata,
@@ -559,6 +562,7 @@ BEGIN
       CASE WHEN v_approved_at IS NOT NULL THEN v_admin_id ELSE NULL END,
       false,
       r.is_reversal,
+      CASE WHEN r.is_reversal THEN r.reversal_of_invoice_id ELSE NULL END,
       CASE WHEN r.is_reversal THEN true ELSE false END,
       CASE WHEN r.status = 'on_hold' THEN 'Awaiting procurement exception review.' ELSE NULL END,
       jsonb_build_object(

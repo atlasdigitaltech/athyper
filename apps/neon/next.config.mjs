@@ -10,15 +10,17 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.resolve(__dirname, "../.."),
   serverExternalPackages: ["redis"],
-  turbopack: {
-    root: path.resolve(__dirname, "../.."),
-  },
   transpilePackages: [
     "@athyper/app-neon",
     "@athyper/runtime-list",
+    "@athyper/api-client",
     "@athyper/brand",
     "@athyper/api-contracts",
     "@athyper/auth-bff",
+    "@athyper/bff-relay",
+    "@athyper/content-ui",
+    "@athyper/me-ui",
+    "@athyper/query",
     "@athyper/app-neon-command-hub",
     "@athyper/app-neon-navigation",
     "@athyper/app-neon-route-manifest",
@@ -60,14 +62,6 @@ const nextConfig = {
       { source: "/document/:type", destination: "/app/:type", permanent: true },
       { source: "/document/:type/:rest*", destination: "/app/:type/:rest*", permanent: true },
     ];
-  },
-  async rewrites() {
-    return {
-      beforeFiles: [
-        // Preserve public auth URLs while routing through a dev-safe internal namespace.
-        { source: "/api/auth/:path*", destination: "/api/bff-auth/:path*" },
-      ],
-    };
   },
 };
 

@@ -79,12 +79,17 @@ export {
 } from "./fields";
 export { FlowModal, type FlowModalProps } from "./flow";
 export {
+  AuditSummaryStrip,
   RuntimeEntityActionBar,
   RuntimeEntityHeader,
   RuntimeEntityIdentityBar,
   RuntimeEntityTabBar,
+  resolveAuditSummaryData,
 } from "./header";
 export type {
+  AuditSummaryActor,
+  AuditSummaryData,
+  AuditSummaryStripProps,
   EntityHeaderModel,
   HeaderAction,
   HeaderAudit,
@@ -98,6 +103,7 @@ export type {
   RuntimeEntityHeaderProps,
   RuntimeEntityIdentityBarProps,
   RuntimeEntityTabBarProps,
+  ResolveAuditSummaryInput,
 } from "./header";
 export {
   AttachmentsPanel,

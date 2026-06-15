@@ -19,6 +19,13 @@ export interface RuntimeSurfaceRendererProps {
   processState?: ProcessRuntimeState;
   detailState?: RuntimeListState;
   flags?: RuntimeCanvasFlags;
+  /**
+   * True when the parent shell wants the surface in editable mode.
+   * Renderers that can edit should also call `useEditSessionContext()`
+   * to get the live session (setHeaderField, getFieldMask, fieldErrors,
+   * pendingHeaderPatch). Renderers that can't edit can safely ignore.
+   */
+  editMode?: boolean;
 }
 
 export type RuntimeSurfaceRenderer = (props: RuntimeSurfaceRendererProps) => ReactNode;

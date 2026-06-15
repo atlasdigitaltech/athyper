@@ -423,11 +423,44 @@ export interface LinesGridProps {
    * descriptor. Optional; absent metadata = show-all degradation.
    */
   mobileColumns?:  string[];
+
+  /**
+   * Plan v5 amendment 2 — optional renderer for content below an
+   * expanded row. The grid owns the expand/collapse state internally;
+   * consumers only supply the renderer. Passing `undefined` disables
+   * expansion (default).
+   */
+  renderRowExpansion?: (line: LineRecord) => ReactNode;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LINE ITEMS SURFACE PROPS (outer wrapper injected into runtime-canvas)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Cleanup-plan v5 amendment 2 — controlled-data bundle.
+ *
+ * When provided, `LineItemsSurface` skips its internal fetches
+ * (`/api/relay/.../lines` and `/api/relay/.../distributions`) and uses
+ * the supplied collection instead. Refresh requests flow back through
+ * `onRefresh`, so the parent owns invalidation.
+ *
+ * The single-bundle shape (instead of separate `lines?`, `distributions?`,
+ * `isLoading?` props) prevents mixed-mode confusion — controlled mode
+ * either owns all the data or none.
+ */
+export interface ControlledLineItemsSurfaceData<L extends LineRecord = LineRecord> {
+  lines:          ReadonlyArray<L>;
+  distributions?: ReadonlyArray<AccountingDistribution>;
+  isLoading:      boolean;
+  error?:         Error | null;
+  /**
+   * Called when AccountingPanel mutates a distribution or another
+   * subsystem wants the surface to re-fetch. Parent must re-issue
+   * `useDocumentChildren` queries and update the bundle.
+   */
+  onRefresh:      () => void | Promise<void>;
+}
 
 export interface LineItemsSurfaceProps {
   surface:      MetaEntityLineItemsSurface;
@@ -440,4 +473,17 @@ export interface LineItemsSurfaceProps {
   editMode?:    boolean;
   /** Phase 11 #8 — see LinesGridProps.mobileColumns. Passed through unchanged. */
   mobileColumns?: string[];
+
+  /**
+   * Plan v5 amendment 2 — when provided, surface uses the parent-owned
+   * data bundle and skips internal fetches. See ControlledLineItemsSurfaceData.
+   */
+  controlledData?: ControlledLineItemsSurfaceData;
+
+  /**
+   * Plan v5 amendment 2 — optional renderer mounted below a row when
+   * it expands. Returning `null` shows no expansion content. Wiring
+   * the expanded-row state lives inside LinesGrid (see grid props).
+   */
+  renderRowExpansion?: (line: LineRecord) => ReactNode;
 }

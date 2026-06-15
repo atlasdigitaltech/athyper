@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { validatePlaneServerSession } from "@athyper/auth-bff";
 import { getPlaneConfig, isSupportSession } from "@athyper/session-plane";
 import { AppShellClient } from "./AppShellClient";
+import { PreferencesDomHydrator } from "./PreferencesDomHydrator";
 import { RequiredActionBannerSlot } from "./RequiredActionBannerSlot";
+import { SourceAdapterClient } from "./SourceAdapterClient";
 import { PLANE_KEY } from "@/lib/plane";
 
 export default async function ShellLayout({ children }: { children: ReactNode }) {
@@ -37,7 +39,8 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   return (
     <AppShellClient supportMode={isSupportSession(PLANE_KEY, validation.session.realmKey)}>
       <RequiredActionBannerSlot actions={requiredActions} />
-      {children}
+      <PreferencesDomHydrator />
+      <SourceAdapterClient>{children}</SourceAdapterClient>
     </AppShellClient>
   );
 }

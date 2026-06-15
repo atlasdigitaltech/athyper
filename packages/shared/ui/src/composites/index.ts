@@ -98,3 +98,13 @@ export {
   type ToastOptions,
   type ToastIntent,
 } from "./Toast";
+export {
+  FloatingSelectionBar,
+  type FloatingSelectionBarProps,
+  type SelectionAction,
+  type SelectionActionGroup,
+  type SelectionActionShortcut,
+  type SelectionActionVariant,
+  type SelectionBadgeTone,
+  type AutoFocusMode,
+} from "./FloatingSelectionBar";

@@ -169,6 +169,15 @@ services:
   gateway:
     command:
       - --accesslog=${GATEWAY_ACCESSLOG:-true}
+      - --accesslog.format=json
+      - --accesslog.fields.defaultMode=keep
+      - --accesslog.fields.names.RequestPath=drop
+      - --accesslog.fields.headers.defaultMode=drop
+      - --accesslog.fields.headers.names.Authorization=drop
+      - --accesslog.fields.headers.names.Cookie=drop
+      - --accesslog.fields.headers.names.Set-Cookie=drop
+      - --accesslog.fields.headers.names.User-Agent=keep
+      - --accesslog.fields.headers.names.X-Forwarded-For=keep
       - --api.dashboard=true
       - --api.insecure=false
       - --entrypoints.web.address=:80

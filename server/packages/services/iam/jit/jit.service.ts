@@ -93,7 +93,13 @@ export async function jitProvisionPrincipal(
     .executeTakeFirst();
 
   if (existingBinding) {
-    return { principal_id: existingBinding.principal_id, created: false };
+    const principalId = existingBinding.principal_id as string;
+    // Backfill default persona for principals provisioned before persona
+    // assignment was wired into JIT. Without a master.principal_persona row,
+    // checkPermissionBatch resolves every permission to 'not_found' and the
+    // ActionBar renders empty.
+    await ensureDefaultPersona(db, tenant_id, principalId);
+    return { principal_id: principalId, created: false };
   }
 
   // All remaining work runs inside a single transaction.
@@ -105,11 +111,16 @@ export async function jitProvisionPrincipal(
     await sql`SELECT set_config('app.current_principal_id', ${SYSTEM_UUID}, true)`.execute(trx);
 
     // ── Step 2: Look for pre-seeded principal by username ────────────────────
+    // Case-insensitive: the seed authors principal codes in upper case
+    // (e.g. `ACFB.OWNER`) while KC ships `preferred_username` in lower case
+    // (`acfb.owner`). A case-sensitive match would miss the seeded row and
+    // Step 3 below would create a duplicate principal with no group
+    // memberships, breaking the ActionBar for the user.
     const existingPrincipal = await trx
       .selectFrom("master.principal")
       .select("id")
       .where("tenant_id", "=", tenant_id)
-      .where("code", "=", username)
+      .where(sql`lower(code)`, "=", username.toLowerCase())
       .executeTakeFirst();
 
     let principalId: string;
@@ -132,7 +143,8 @@ export async function jitProvisionPrincipal(
 
       if (existingKCBinding) {
         if (existingKCBinding.subject_id === sub) {
-          // Binding is already correct — nothing to do.
+          // Binding is already correct — only backfill persona if missing.
+          await insertDefaultPersonaIfMissing(trx, tenant_id, principalId);
           return { principal_id: principalId, created: false };
         }
         // Wrong subject_id (seed mismatch) — update binding to the real KC UUID.
@@ -152,6 +164,7 @@ export async function jitProvisionPrincipal(
           .where("provider_code", "=", "keycloak")
           .execute();
 
+        await insertDefaultPersonaIfMissing(trx, tenant_id, principalId);
         return { principal_id: principalId, created: false };
       }
       // No binding yet — fall through to Step 3c to insert it.
@@ -256,6 +269,69 @@ export async function jitProvisionPrincipal(
       )
       .execute();
 
+    // ── Step 3d: Assign default 'owner' persona ─────────────────────────────
+    // Without this, checkPermissionBatch resolves every permission to
+    // 'not_found' for this principal and the ActionBar renders empty.
+    await insertDefaultPersonaIfMissing(trx, tenant_id, principalId);
+
     return { principal_id: principalId, created: true };
   });
+}
+
+// ─── Persona helpers ────────────────────────────────────────────────────────────
+
+// Idempotent persona assignment for use inside an existing transaction.
+// Caller must have already set app.current_principal_id on the transaction
+// (jitProvisionPrincipal does this at the top of its main trx).
+async function insertDefaultPersonaIfMissing(
+  trx: Kysely<AnyDb>,
+  tenant_id: string,
+  principal_id: string,
+): Promise<void> {
+  const existing = await trx
+    .selectFrom("master.principal_persona")
+    .select("id")
+    .where("tenant_id", "=", tenant_id)
+    .where("principal_id", "=", principal_id)
+    .executeTakeFirst();
+  if (existing) return;
+
+  const persona = await trx
+    .selectFrom("shared.persona")
+    .select("id")
+    .where("code", "=", "owner")
+    .executeTakeFirst();
+  if (!persona) return;
+
+  await trx
+    .insertInto("master.principal_persona")
+    .values({
+      tenant_id,
+      principal_id,
+      persona_id: persona.id,
+      assigned_by: SYSTEM_UUID,
+      created_by: SYSTEM_UUID,
+    })
+    .onConflict((oc) => oc.columns(["tenant_id", "principal_id"]).doNothing())
+    .execute();
+}
+
+// Standalone variant for the fast-path (binding-already-exists) branch.
+// Wraps the work in its own transaction so app.current_principal_id stays
+// in scope across the persona INSERT. Best-effort: any failure is logged
+// but doesn't fail the login.
+async function ensureDefaultPersona(
+  db: Kysely<AnyDb>,
+  tenant_id: string,
+  principal_id: string,
+): Promise<void> {
+  try {
+    await db.transaction().execute(async (trx) => {
+      await sql`SELECT set_config('app.current_principal_id', ${SYSTEM_UUID}, true)`.execute(trx);
+      await insertDefaultPersonaIfMissing(trx, tenant_id, principal_id);
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[jit] default persona backfill failed", err);
+  }
 }

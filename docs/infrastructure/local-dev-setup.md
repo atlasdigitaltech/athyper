@@ -269,17 +269,18 @@ Corepack has activated the pinned pnpm version.
 stack\scripts\setup\setup-env.bat local all
 ```
 
-This copies `stack/env/.env.example` to `stack/env/.env` and sets
-`ENVIRONMENT=local`. For local development `server/.env` and any manually created
-plane app `.env.local` files are optional IDE conveniences; the wrapper scripts derive
-the values they need from `stack/env/.env`.
+This copies `stack/env/.env.example` to `stack/env/.env`, copies
+`server/.env.example` to `server/.env`, and sets `ENVIRONMENT=local`. For local
+development, `server/.env` is only for direct IDE / `pnpm dev` runs; the wrapper
+scripts derive the values they need from `stack/env/.env`.
 
 > **Why three env files?** The stack `.env` is the source of truth for the Docker Compose
 > services. `server/.env` and app `.env.local` files are loaded by manual `pnpm dev` in each
 > package — `pnpm` spawns a new shell per command and does not inherit environment
 > variables set in the calling `.bat` script. The `api-up.bat`, `web-up.bat`, and `planes-up.bat` scripts
 > translate Docker hostnames to `127.0.0.1` equivalents and inject them into the child
-> process, so you rarely need to hand-edit `server/.env` directly.
+> process, so `server/.env` must use host-reachable addresses like `127.0.0.1`, never
+> Docker-only names like `memorycache`.
 
 Open `stack\env\.env` and set the local roots using **forward slashes**. Keep
 `ATHYPER_SECRETS_ROOT` empty so local Compose stays in single-file mode:

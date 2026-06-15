@@ -33,6 +33,7 @@
     "@athyper/domain-widgets": "workspace:*",
     "@athyper/metadata-client": "workspace:*",
     "@athyper/query": "workspace:*",
+    "@athyper/runtime-bulk-actions": "workspace:*",
     "@athyper/runtime-shared": "workspace:*",
     "@athyper/workflow-ui": "workspace:*"
   },

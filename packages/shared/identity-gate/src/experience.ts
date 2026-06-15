@@ -25,9 +25,6 @@ export interface ContextCopy {
 
 export interface AuthExperience {
   product: ProductBrandKey;
-  lineage: string;
-  domainWallLabel: string;
-  techSignature: string;
   logo: {
     dark: string;
     light: string;
@@ -49,9 +46,6 @@ function getLogoAssets(plane: PlaneKey): AuthExperience["logo"] {
 export const AUTH_EXPERIENCE: Record<PlaneKey, AuthExperience> = {
   neon: {
     product: "neon",
-    lineage: "athyper . business operating platform",
-    domainWallLabel: "Business domains in neon",
-    techSignature: "Metadata-driven · Multi-tenant",
     logo: getLogoAssets("neon"),
     login: {
       title: "Welcome back",
@@ -84,12 +78,6 @@ export const AUTH_EXPERIENCE: Record<PlaneKey, AuthExperience> = {
         tags: ["Engagement", "CRM", "Sales", "Orders", "Revenue"],
       },
       {
-        label: "People",
-        title: "Empower every person. Elevate the organization.",
-        body: "Run the workforce lifecycle with intelligent HR and payroll capabilities that keep teams engaged, aligned, and compliant.",
-        tags: ["HR", "Payroll", "Workforce", "Compliance", "Benefits"],
-      },
-      {
         label: "Governance Workbench",
         navLabel: "Governance",
         title: "Turn intake into governed execution.",
@@ -103,13 +91,16 @@ export const AUTH_EXPERIENCE: Record<PlaneKey, AuthExperience> = {
         body: "Power production, maintenance, facilities, leases, and fixed assets with lifecycle visibility and accountable execution.",
         tags: ["Maintenance", "Facilities", "Leases", "Assets", "Production"],
       },
+      {
+        label: "People",
+        title: "Empower every person. Elevate the organization.",
+        body: "Run the workforce lifecycle with intelligent HR and payroll capabilities that keep teams engaged, aligned, and compliant.",
+        tags: ["HR", "Payroll", "Workforce", "Compliance", "Benefits"],
+      },
     ],
   },
   admin: {
     product: "admin",
-    lineage: "athyper . business technology platform",
-    domainWallLabel: "Platform domains",
-    techSignature: "Metadata-driven · Multi-tenant",
     logo: getLogoAssets("admin"),
     login: {
       title: "Console access",
@@ -167,9 +158,6 @@ export const AUTH_EXPERIENCE: Record<PlaneKey, AuthExperience> = {
   },
   mesh: {
     product: "mesh",
-    lineage: "athyper . business collaboration network",
-    domainWallLabel: "Network domains",
-    techSignature: "Metadata-driven · Multi-tenant",
     logo: getLogoAssets("mesh"),
     login: {
       title: "Welcome back",

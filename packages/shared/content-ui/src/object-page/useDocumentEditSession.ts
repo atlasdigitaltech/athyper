@@ -129,6 +129,13 @@ export interface UseDocumentEditSessionReturn {
   resetHeaderField: (name: string) => void;
   discard: () => void;
   save: () => Promise<boolean>;
+  /**
+   * Re-fetch the edit context (etag, fieldMask, sectionMask, status) without
+   * leaving edit mode or discarding pending edits. Used by the 409 conflict
+   * dialog so the user can retry Save with the server's latest etag while
+   * preserving their in-progress changes.
+   */
+  refreshContext: () => Promise<boolean>;
   /** Lookup helper: returns the mask entry for a field, or a default `editable: true`. */
   getFieldMask: (name: string) => FieldMaskEntry;
 
@@ -338,6 +345,32 @@ export function useDocumentEditSession(
       setIsLoadingContext(false);
     }
   }, [enabled, isEditing, resetDirtyState]);
+
+  const refreshContext = useCallback(async (): Promise<boolean> => {
+    if (!enabled || !isEditing) return false;
+    setIsLoadingContext(true);
+    setContextError(null);
+    try {
+      const ctx = await callbacksRef.current.loadContext();
+      setEtag(ctx.etag);
+      setStatus(ctx.status);
+      setCanUpdate(ctx.canUpdate);
+      setDisabledReason(ctx.disabledReason ?? null);
+      setFieldMask(ctx.fieldMask);
+      setSectionMask(ctx.sectionMask);
+      setSaveStatus("idle");
+      setSaveError(null);
+      setConflictEtag(null);
+      autosavePausedRef.current = false;
+      return ctx.canUpdate;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to refresh edit context.";
+      setContextError(message);
+      return false;
+    } finally {
+      setIsLoadingContext(false);
+    }
+  }, [enabled, isEditing]);
 
   const exitEdit = useCallback(
     (opts?: { discardDirty?: boolean }): boolean => {
@@ -562,6 +595,55 @@ export function useDocumentEditSession(
       const pauseOnError = autosaveConfigRef.current?.pauseOnError ?? true;
 
       if (outcome.type === "conflict") {
+        // First-conflict auto-recovery: if the server reported the current
+        // etag, retry the save once with it transparently. This collapses the
+        // common "stale local state but no real conflicting edits" case
+        // (HMR-preserved hook state, page open across a re-seed, race with
+        // a fire-and-forget side-effect) into a single successful save.
+        // Only fall through to the dialog when the retry itself conflicts —
+        // that means another user genuinely modified the doc between our
+        // refresh and our retry.
+        const retryEtag = outcome.currentEtag;
+        if (retryEtag && retryEtag !== etag) {
+          setEtag(retryEtag);
+          const retry = await callbacksRef.current.saveChanges(
+            {
+              ...(headerPart ? { header: headerPart } : {}),
+              ...(linesPart ? { lines: linesPart } : {}),
+            },
+            retryEtag,
+          );
+          if (retry.type === "ok") {
+            const { response } = retry;
+            setEtag(response.etag);
+            setStatus(response.status);
+            setFieldMask(response.fieldMask);
+            setSectionMask(response.sectionMask);
+            setPendingHeaderPatch({});
+            setPendingLineCreates([]);
+            setPendingLineUpdates({});
+            setPendingLineDeletes([]);
+            pendingCreatesLengthRef.current = 0;
+            setFieldErrors({});
+            setSaveStatus("saved");
+            callbacksRef.current.onSaveSuccess?.(response);
+            return true;
+          }
+          if (retry.type === "validation") {
+            setSaveStatus("saveFailed");
+            setSaveError(retry.message ?? "Validation failed.");
+            setFieldErrors(retry.fieldErrors);
+            if (pauseOnError) autosavePausedRef.current = true;
+            return false;
+          }
+          if (retry.type === "error") {
+            setSaveStatus("saveFailed");
+            setSaveError(retry.message);
+            if (pauseOnError) autosavePausedRef.current = true;
+            return false;
+          }
+          // retry.type === "conflict" — fall through to the dialog
+        }
         setSaveStatus("conflict");
         setSaveError(outcome.message ?? "Document changed on the server.");
         setConflictEtag(outcome.currentEtag ?? null);
@@ -634,6 +716,7 @@ export function useDocumentEditSession(
     resetHeaderField,
     discard,
     save,
+    refreshContext,
     getFieldMask,
     pauseAutosave,
     resumeAutosave,

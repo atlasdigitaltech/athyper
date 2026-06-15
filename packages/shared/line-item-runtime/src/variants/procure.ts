@@ -16,6 +16,7 @@ import type {
 } from "../types";
 import { editableLineFields, fieldLabel, formatFieldValue, recordValue } from "../meta";
 import type { LineRecord } from "../types";
+import { resolveSummaryStripFromMeta } from "./summary-strip";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONVENTION TABLES
@@ -299,12 +300,13 @@ export function resolveProcureAmountConfig(
   entity: CompiledEntity | null,
 ): LineItemAmountConfig | null {
   if (!entity) return null;
-  const amountField = detectAmountField(entity);
+  const meta = resolveSummaryStripFromMeta(entity);
+  const amountField = meta.amountField ?? detectAmountField(entity);
   if (!amountField) return null;
   return {
     amountField,
-    currencyField:  detectCurrencyField(entity) ?? undefined,
-    summaryFields:  buildSummaryFields(entity, amountField),
+    currencyField:  meta.currencyField ?? detectCurrencyField(entity) ?? undefined,
+    summaryFields:  meta.summaryFields ?? buildSummaryFields(entity, amountField),
     financialBar:   buildFinancialBar(entity),
   };
 }
@@ -499,57 +501,6 @@ export function computeTabBadge(
     return val != null && val !== "" && val !== false;
   }).length;
   return filled > 0 ? filled : undefined;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PROCURE COLUMN CATALOG
-// ─────────────────────────────────────────────────────────────────────────────
-
-const PROCURE_COLUMN_CANDIDATES = [
-  ["line_number"],
-  ["procurement_type"],
-  ["item_code", "item_id"],
-  ["item_description", "description", "line_description"],
-  ["quantity", "qty"],
-  ["unit_code", "uom_code"],
-  ["unit_price", "price", "rate"],
-  ["net_amount", "line_amount"],
-  ["discount_pct", "discount_amount"],
-  ["tax_amount"],
-  ["gross_amount"],
-  ["match_status", "matching_status"],
-  ["classification_status", "classify_status"],
-  ["cost_center_id", "cost_center"],
-];
-
-export function buildProcureColumnCatalog(
-  entity: CompiledEntity | null,
-): MetaLineColumn[] {
-  if (!entity) return [];
-  const fieldMap = new Map(entity.fields.map((f) => [f.name, f]));
-  const out: MetaLineColumn[] = [];
-  const used = new Set<string>();
-
-  for (const candidates of PROCURE_COLUMN_CANDIDATES) {
-    for (const name of candidates) {
-      if (!fieldMap.has(name) || used.has(name)) continue;
-      const field = fieldMap.get(name)!;
-      used.add(name);
-      out.push({
-        key:     name,
-        label:   field.label ?? fieldLabel(field),
-        field,
-        numeric: ["money", "decimal", "integer", "numeric", "bigint"].includes(field.data_type),
-        align:   ["money", "decimal", "integer", "numeric", "bigint"].includes(field.data_type)
-          ? "right"
-          : "left",
-        sortable: true,
-      });
-      break;
-    }
-  }
-
-  return out;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

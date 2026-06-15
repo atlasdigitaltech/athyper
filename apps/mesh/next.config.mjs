@@ -10,9 +10,6 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.resolve(__dirname, "../.."),
   serverExternalPackages: ["redis"],
-  turbopack: {
-    root: path.resolve(__dirname, "../.."),
-  },
   transpilePackages: [
     "@athyper/brand",
     "@athyper/auth-bff",

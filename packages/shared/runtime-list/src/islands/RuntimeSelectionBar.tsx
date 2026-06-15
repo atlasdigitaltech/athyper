@@ -1,6 +1,20 @@
 "use client";
 
+/**
+ * RuntimeSelectionBar — surface adapter for the runtime master/lookup list.
+ *
+ * Thin wrapper around the shared `@athyper/ui/composites/FloatingSelectionBar`.
+ * Maps the bookmark-state callbacks into the data-driven `actions[]`
+ * contract. The component's external prop shape is preserved so
+ * `SelectionIsland.tsx` consumers do not need to change.
+ */
+
+import { useMemo } from "react";
 import { Star, StarOff } from "lucide-react";
+import {
+  FloatingSelectionBar,
+  type SelectionAction,
+} from "@athyper/ui/composites";
 import { runtimeListText } from "../core/resources";
 
 interface RuntimeSelectionBarProps {
@@ -20,40 +34,39 @@ export function RuntimeSelectionBar({
   onRemoveFavourite,
   onClear,
 }: RuntimeSelectionBarProps) {
+  const actions = useMemo<SelectionAction[]>(() => [
+    {
+      id:       "favourite",
+      label:    "Mark as Favourite",
+      icon:     Star,
+      group:    "primary",
+      disabled: markFavouriteDisabled,
+      onSelect: onMarkFavourite,
+    },
+    {
+      id:       "unfavourite",
+      label:    "Remove Favourite",
+      icon:     StarOff,
+      group:    "primary",
+      disabled: removeFavouriteDisabled,
+      onSelect: onRemoveFavourite,
+    },
+  ], [markFavouriteDisabled, removeFavouriteDisabled, onMarkFavourite, onRemoveFavourite]);
+
+  // `runtimeListText.summary.selectedCount` was used for SR-friendly text in
+  // the previous implementation. The shared primitive now formats this via
+  // its `noun` prop; we use generic "record(s)" to match the existing string.
+  void runtimeListText;
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center">
-      <div className="pointer-events-auto flex items-center gap-3 rounded-full border bg-background px-4 py-2 shadow-lg ring-1 ring-border">
-        <span className="text-sm font-medium text-foreground">
-          {runtimeListText.summary.selectedCount(count)}
-        </span>
-        <div className="h-4 w-px bg-border" />
-        <button
-          type="button"
-          onClick={onMarkFavourite}
-          disabled={markFavouriteDisabled}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary disabled:cursor-not-allowed disabled:text-muted-foreground/45"
-        >
-          <Star aria-hidden="true" className="size-3.5" />
-          Mark as Favourite
-        </button>
-        <button
-          type="button"
-          onClick={onRemoveFavourite}
-          disabled={removeFavouriteDisabled}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary disabled:cursor-not-allowed disabled:text-muted-foreground/45"
-        >
-          <StarOff aria-hidden="true" className="size-3.5" />
-          Remove Favourite
-        </button>
-        <div className="h-4 w-px bg-border" />
-        <button
-          type="button"
-          onClick={onClear}
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          {runtimeListText.actions.clear}
-        </button>
-      </div>
-    </div>
+    <FloatingSelectionBar
+      count={count}
+      noun={{ singular: "record", plural: "records" }}
+      actions={actions}
+      onClear={onClear}
+      enableShortcuts={false}
+      autoFocus="keyboard-only"
+      testId="runtime-selection-bar"
+    />
   );
 }

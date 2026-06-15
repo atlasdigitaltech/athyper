@@ -5,6 +5,15 @@ discovery.docker "linux" {
 loki.process "normalize" {
   forward_to = [loki.write.loki.receiver]
 
+  // Defense-in-depth for framework or proxy request lines that include auth
+  // callback/login URLs. Traefik staging/prod access logs drop RequestPath;
+  // this backstop redacts sensitive query values from any container log that
+  // still reaches Loki.
+  stage.replace {
+    expression = `(?:[?&](?:access_token|auth_session_id|client_secret|code|context_token|email|error_description|execution|id_token|id_token_hint|iss|login_hint|oauthcode|refresh_token|selected_org|selected_org_name|selected_role|selected_tenant|selected_tenant_id|selected_workspace_id|selected_workspace_type|session_code|session_state|state|tab_id|token)=)([^&\s"']+)`
+    replace    = "[redacted]"
+  }
+
   stage.json {
     expressions = {
       trace_id = "trace_id",

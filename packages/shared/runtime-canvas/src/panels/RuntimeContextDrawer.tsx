@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import { Clock, Lock, MessageSquare, Paperclip, type LucideIcon } from "lucide-react";
-import { DrawerShell } from "@athyper/ui/primitives";
 import { formatBytes } from "@athyper/runtime-shared/core";
+import { DrawerPeekShell } from "@athyper/ui/surfaces/shells";
 
 const PANEL_META: Record<string, { label: string; Icon: LucideIcon }> = {
   comments:    { label: "Comments",    Icon: MessageSquare },
@@ -161,22 +161,19 @@ export function EntityContextDrawer({
   const titleCount = activePanel === "attachments" ? attachments?.count : panelCount;
 
   return (
-    <DrawerShell
+    <DrawerPeekShell
       open={open}
       onOpenChange={onOpenChange}
-      intent="context"
       widthKey={activePanel ? `${widthScope}:${entity.entity_code}:${activePanel}` : undefined}
       defaultWidth="60vw"
       minWidth="30vw"
       expandedWidth="80vw"
       maxWidth="85vw"
-      resizable
-      expandable
       title={panelTitle(activePanel, titleCount)}
       subtitle={activePanel === "attachments" ? attachmentSubtitle(identitySubtitle, attachments) : identitySubtitle}
-      headerRight={headerRight}
+      actions={headerRight}
     >
       {children}
-    </DrawerShell>
+    </DrawerPeekShell>
   );
 }

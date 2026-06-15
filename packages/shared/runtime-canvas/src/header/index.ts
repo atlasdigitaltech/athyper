@@ -15,6 +15,14 @@ export {
   RuntimeEntityTabBar,
   type RuntimeEntityTabBarProps,
 } from "./RuntimeEntityTabBar";
+export {
+  AuditSummaryStrip,
+  resolveAuditSummaryData,
+  type AuditSummaryActor,
+  type AuditSummaryData,
+  type AuditSummaryStripProps,
+  type ResolveAuditSummaryInput,
+} from "./AuditSummaryStrip";
 export type {
   EntityHeaderModel,
   HeaderAction,

@@ -131,15 +131,19 @@ export function useEntityFlow(entityCode: string, trigger: string = "new") {
 export function useEntityList(
   entityCode: string,
   params?: EntityListParams,
+  opts?: { enabled?: boolean },
 ) {
   // Build a stable, complete cache key from all request params.
-  // Sort, filters, search, page, pageSize, and facets all determine unique data.
+  // Sort, filters, search, page, pageSize, facets, and parent scope all
+  // determine unique data — omit any and the cache will collide across
+  // distinct parent records.
   const cacheKey = params ? {
     ...(params.q        ? { _q:      params.q                    } : {}),
     ...(params.sort?.length ? { _sort: params.sort.map((s) => `${s.key}:${s.dir}`).join(",") } : {}),
     ...(params.page     ? { _page:   params.page                 } : {}),
     ...(params.pageSize ? { _size:   params.pageSize             } : {}),
     ...(params.facets   ? { _facets: params.facets               } : {}),
+    ...(params.parent_id ? { _parent: params.parent_id           } : {}),
     ...(params.filters  ? params.filters                         : {}),
   } : undefined;
 
@@ -149,6 +153,10 @@ export function useEntityList(
       : queryKeys.entityList.byType(entityCode),
     queryFn: () => records().list(entityCode, params),
     staleTime: 30 * 1000,
+    // `enabled` defaults to true so existing callers are unchanged. The
+    // embedded grid passes `false` when a caller-provided dataOverride
+    // bypasses the server query.
+    enabled: opts?.enabled !== false,
   });
 }
 

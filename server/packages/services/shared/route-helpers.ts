@@ -7,7 +7,7 @@
  */
 
 import type { RequestHandler } from "express";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -134,26 +134,38 @@ export async function resolvePrincipalIdWithJit(
   if (existing) {
     const principalId = existing.principal_id as string;
     // Backfill persona for principals provisioned before this fix was in place.
+    // Wrap in a transaction so the GUC set below stays in scope through the
+    // INSERT — the audit trigger trg_set_updated_at() reads
+    // app.current_principal_id and fails the audit-pair check if it's NULL,
+    // silently rolling back the persona row and leaving the user with no
+    // operations in the ActionBar.
     try {
-      const hasPersona = await db
-        .selectFrom("master.principal_persona as pp")
-        .select("pp.id")
-        .where("pp.principal_id", "=", principalId)
-        .where("pp.tenant_id", "=", tenantId)
-        .executeTakeFirst();
-      if (!hasPersona) {
-        const persona = await db
+      await db.transaction().execute(async (trx) => {
+        const hasPersona = await trx
+          .selectFrom("master.principal_persona as pp")
+          .select("pp.id")
+          .where("pp.principal_id", "=", principalId)
+          .where("pp.tenant_id", "=", tenantId)
+          .executeTakeFirst();
+        if (hasPersona) return;
+        const persona = await trx
           .selectFrom("shared.persona" as never)
           .select("id" as never)
           .where("code" as never, "=", "owner" as never)
           .executeTakeFirst() as Record<string, unknown> | undefined;
-        if (persona) {
-          await db.insertInto("master.principal_persona" as never)
-            .values({ tenant_id: tenantId, principal_id: principalId, persona_id: persona["id"], assigned_by: SYSTEM_PRINCIPAL_UUID, created_by: SYSTEM_PRINCIPAL_UUID } as never)
-            .execute();
-        }
-      }
-    } catch { /* best-effort — principal already usable */ }
+        if (!persona) return;
+        await sql`SELECT set_config('app.current_principal_id', ${SYSTEM_PRINCIPAL_UUID}, true)`.execute(trx);
+        await trx.insertInto("master.principal_persona" as never)
+          .values({ tenant_id: tenantId, principal_id: principalId, persona_id: persona["id"], assigned_by: SYSTEM_PRINCIPAL_UUID, created_by: SYSTEM_PRINCIPAL_UUID } as never)
+          .execute();
+      });
+    } catch (err) {
+      // Don't bubble — the user can still authenticate. But warn so the
+      // failure is visible in logs instead of silently producing a
+      // permissionless principal.
+      // eslint-disable-next-line no-console
+      console.warn("[jit] principal_persona backfill failed", err);
+    }
     return principalId;
   }
 
@@ -165,6 +177,10 @@ export async function resolvePrincipalIdWithJit(
     const displayName = (typeof claims?.name === "string" ? claims.name : null) ?? username;
 
     const principalId = await db.transaction().execute(async (trx) => {
+      // Audit trigger trg_set_updated_at() reads app.current_principal_id.
+      // Without this, the persona INSERT below fails the audit-pair check
+      // and rolls back the entire JIT transaction.
+      await sql`SELECT set_config('app.current_principal_id', ${SYSTEM_PRINCIPAL_UUID}, true)`.execute(trx);
       const p = await trx
         .insertInto("master.principal" as never)
         .values({ tenant_id: tenantId, code: username.slice(0, 50), name: displayName, principal_type: "user", is_locked: false, is_service_account: false, principal_source: "oidc_jit", status: "active", created_by: SYSTEM_PRINCIPAL_UUID } as never)

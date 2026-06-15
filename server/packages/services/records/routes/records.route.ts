@@ -4396,6 +4396,15 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       "ses_line_id",
       "is_asset",
       "asset_category_id",
+      // source_binding (jsonb) — written by @athyper/runtime-add-item adapters
+      // (catalog / open_po_line / open_receipt_line / open_service_sheet_line
+      // / manual_invoice_line). The column was added to
+      // document.purchase_invoice_line in DDL 01s_tables_source_binding.sql
+      // with a CHECK constraint that gates shape. INSERT only succeeds
+      // against line tables that have the column; if a future line entity
+      // is wired through the framework but hasn't had the column added,
+      // PostgreSQL will reject with "column source_binding does not exist".
+      "source_binding",
     ];
 
     for (const column of directColumns) {
@@ -4405,6 +4414,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     if (body["line_number"] != null)           row["line_no"]        = Number(body["line_number"]);
     if (body["description"]   !== undefined)   row["item_description"] = body["description"] ?? "";
     if (body["unit_code"]     !== undefined)   row["uom_code"]       = body["unit_code"]   ?? "";
+    // Framework-side adapters use camelCase (`sourceBinding`); DB column is
+    // snake_case. Accept both forms at the boundary so consumers don't have
+    // to translate. Shape is validated server-side by the DB CHECK
+    // constraint (must be an object with a string `sourceType` field) and
+    // client-side by SourceBindingSchema in @athyper/runtime-contracts.
+    if (body["sourceBinding"] !== undefined)   row["source_binding"]  = body["sourceBinding"];
     if (body["quantity"]      !== undefined)   row["quantity"]       = body["quantity"]    ?? 1;
     if (body["unit_price"]    !== undefined)   row["unit_price"]     = body["unit_price"]  ?? 0;
     if (body["line_amount"]   !== undefined)   row["gross_amount"]   = body["line_amount"] ?? 0;
@@ -4472,6 +4487,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       retention_pct:           r["retention_pct"]            ?? null,
       retention_amount:        r["retention_amount"]         ?? null,
       withholding_tax_amount:  r["withholding_tax_amount"]   ?? null,
+      // Surface source_binding under both casing conventions: the DB column
+      // (snake_case) flows through the `...r` spread above; this entry
+      // mirrors it under the camelCase name the framework uses for the
+      // SourceBindingSchema shape consumers read on the client.
+      sourceBinding:           r["source_binding"]           ?? null,
       data:                    meta,
     };
   }

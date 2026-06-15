@@ -147,8 +147,8 @@ export function RuntimeEntityTabBar({
       <div
         ref={containerRef}
         className={cn(
-          "hidden md:flex",
           headerTabBarClass,
+          "hidden md:flex",
           className,
         )}
       >

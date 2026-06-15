@@ -452,6 +452,9 @@ export async function handlePostPayment(
 
     // ── Create JE lines ────────────────────────────────────────────────────────
     // Line 1: DR AP Control (clears payable)
+    // HF2-6: pre-generate the JL id so we can emit journal_line_reference rows
+    // linking this AP-clearing JL back to each individual PEA after the insert.
+    const apControlJlId = crypto.randomUUID();
     await sql`
       INSERT INTO document.journal_line (
         id, tenant_id, journal_entry_id,
@@ -462,7 +465,7 @@ export async function handlePostPayment(
         subledger_type, party_type, party_id,
         created_by
       ) VALUES (
-        ${crypto.randomUUID()}, ${tenantId}, ${jeId},
+        ${apControlJlId}, ${tenantId}, ${jeId},
         ${companyId}, ${bookId}, ${fiscalPeriodId}, ${fiscalYear}, ${periodNumber}, ${postingDate},
         1, ${apControlId},
         ${"AP Settlement — " + supplierName},
@@ -472,6 +475,40 @@ export async function handlePostPayment(
         ${principalId ?? V_SU}
       )
     `.execute(trx);
+
+    // HF2-6: emit one journal_line_reference per allocation, linking the AP
+    // Control JL back to each PEA. JLR column shape (verified against schema):
+    //   ref_type        - free text discriminator, here 'payment_allocation'
+    //   ref_doc_type    - logical parent type, here 'payment_entry'
+    //   ref_doc_id      - parent payment_entry id
+    //   ref_doc_line_id - the specific allocation id
+    //   allocated_amount, currency_code, base_amount - allocation amounts
+    //   is_full_settlement - true when net_payment_amount == allocated_amount
+    //                        AND the invoice is now fully paid (best-effort here:
+    //                        we only know per-allocation; PI rollup decides).
+    // Unique index on (tenant, jl, ref_doc_type, ref_doc_id, ref_doc_line_id) so
+    // re-posting the same PE is a no-op via ON CONFLICT DO NOTHING.
+    for (const a of allocations) {
+      const allocAmt = Number(a.allocated_amount);
+      if (allocAmt <= 0) continue;   // jlr_amount_pos_chk requires > 0
+      await sql`
+        INSERT INTO document.journal_line_reference (
+          tenant_id, journal_line_id,
+          ref_type, ref_doc_type, ref_doc_id, ref_doc_line_id,
+          allocated_amount, currency_code, base_amount,
+          description, created_by
+        ) VALUES (
+          ${tenantId}, ${apControlJlId},
+          'payment_allocation', 'payment_entry', ${paymentId}, ${a.id},
+          ${allocAmt.toFixed(4)}, ${currencyCode}, ${(allocAmt * exchangeRate).toFixed(4)},
+          ${"AP Settlement allocation — " + paymentNumber},
+          ${principalId ?? V_SU}
+        )
+        ON CONFLICT (tenant_id, journal_line_id, ref_doc_type, ref_doc_id,
+                     COALESCE(ref_doc_line_id, '00000000-0000-0000-0000-000000000000'::uuid))
+        DO NOTHING
+      `.execute(trx);
+    }
 
     // Line 2: CR Bank (actual cash out = SUM(net_payment_amount))
     let nextLineNo = 2;

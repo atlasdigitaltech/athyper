@@ -1,15 +1,31 @@
 "use client";
 
 import { LineItemVariantRegistry } from "../registry";
-import type { LineItemComposerProps, LineItemEditorProps, LineItemVariantKey } from "../types";
-import { ProcureLineComposerSheet } from "./ProcureLineComposerSheet";
-import { ProcureLineEditorSheet } from "./ProcureLineEditorSheet";
-import { SalesLineComposerSheet } from "./SalesLineComposerSheet";
-import { SalesLineEditorSheet } from "./SalesLineEditorSheet";
+import type { LineItemComposerProps, LineItemEditorProps } from "../types";
 import { MetaLineForm } from "./MetaLineForm";
 import { UnifiedLineItemSheet } from "./UnifiedLineItemSheet";
+import { LineItemFooterAmountStrip } from "./LineItemFooterAmountStrip";
 import { PROCURE_PANELS } from "../variants/procure-panels";
 import { SALES_PANELS } from "../variants/sales-panels";
+import { resolveProcureAmountConfig } from "../variants/procure";
+import { resolveSalesAmountConfig }   from "../variants/sales";
+import { resolveGenericAmountConfig } from "../variants/generic";
+import type { CompiledEntity } from "@athyper/api-contracts/metadata";
+import type { LineItemAmountConfig, LineItemVariantKey } from "../types";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Variant → amount config resolver dispatch.
+// Each resolver already reads entity display_config.line_summary_strip and
+// per-field ui_hint.line_summary, so the strip is fully meta-driven and the
+// variant just supplies the fallback heuristic.
+// ─────────────────────────────────────────────────────────────────────────────
+function amountConfigResolverFor(
+  key: LineItemVariantKey,
+): (entity: CompiledEntity | null) => LineItemAmountConfig | null {
+  if (key === "procure") return resolveProcureAmountConfig;
+  if (key === "sales")   return resolveSalesAmountConfig;
+  return resolveGenericAmountConfig;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GENERIC FALLBACK SHEETS (thin wrappers that just use MetaLineForm)
@@ -87,12 +103,32 @@ function GenericLineComposerSheet({
     finally { setSaving(false); }
   }
 
+  const amountConfig = resolvedEntity ? resolveGenericAmountConfig(resolvedEntity) : null;
+
   return (
     <DrawerShell open={open} onOpenChange={onOpenChange} intent="transactional"
       widthKey={`${entityCode}:generic-line-composer`} defaultWidth={560} expandedWidth={880}
       minWidth={380} maxWidth="92vw" resizable expandable
       badge={resolvedEntity?.entity_name} title={title}
-      footerStart={saveError ? <span className="flex items-center gap-1.5 text-xs text-destructive"><AlertTriangle className="h-3.5 w-3.5" />{saveError}</span> : undefined}
+      footerStart={amountConfig || saveError ? (
+        <div className="flex min-w-0 flex-col gap-1">
+          {saveError && (
+            <span className="flex items-center gap-1.5 text-xs text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {saveError}
+            </span>
+          )}
+          {amountConfig && (
+            <LineItemFooterAmountStrip
+              amountConfig={amountConfig}
+              entity={resolvedEntity}
+              draft={draft}
+              line={(line as LineRecord | null | undefined) ?? null}
+              currencyCode={currencyCode}
+            />
+          )}
+        </div>
+      ) : undefined}
       footerEnd={<>
         <button type="button" onClick={() => onOpenChange(false)} className="h-8 rounded-lg border border-border/60 px-4 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground">Cancel</button>
         <button type="button" onClick={() => void save()} disabled={saving || !resolvedEntity} className="h-8 rounded-lg bg-foreground px-4 text-xs font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-40">{saving ? "Saving…" : isNew ? "Add" : "Save"}</button>
@@ -138,6 +174,7 @@ export function LineItemComposerSheet({ variantKey, ...props }: LineItemComposer
             companyCodeId={props.companyCodeId}
             line={props.line}
             panels={definition.panels}
+            amountConfigResolver={definition.resolveAmountConfig ?? amountConfigResolverFor(variantKey)}
             onDraftSubmit={props.onDraftSubmit}
             onMutated={props.onMutated}
           />
@@ -163,6 +200,7 @@ export function LineItemComposerSheet({ variantKey, ...props }: LineItemComposer
         companyCodeId={props.companyCodeId}
         line={props.line ?? undefined}
         panels={PROCURE_PANELS}
+        amountConfigResolver={resolveProcureAmountConfig}
         onDraftSubmit={props.onDraftSubmit}
         onMutated={props.onMutated}
       />
@@ -183,6 +221,7 @@ export function LineItemComposerSheet({ variantKey, ...props }: LineItemComposer
         companyCodeId={props.companyCodeId}
         line={props.line ?? undefined}
         panels={SALES_PANELS}
+        amountConfigResolver={resolveSalesAmountConfig}
         onDraftSubmit={props.onDraftSubmit}
         onMutated={props.onMutated}
       />
@@ -221,6 +260,7 @@ export function LineItemEditorSheet({ variantKey, ...props }: LineItemEditorShee
             companyCodeId={props.companyCodeId}
             line={props.line}
             panels={definition.panels}
+            amountConfigResolver={definition.resolveAmountConfig ?? amountConfigResolverFor(variantKey)}
             readOnly={props.readOnly && !props.canEdit}
             initialPanel={props.initialTab}
             onDraftSubmit={props.onDraftSubmit}
@@ -252,6 +292,7 @@ export function LineItemEditorSheet({ variantKey, ...props }: LineItemEditorShee
         companyCodeId={props.companyCodeId}
         line={props.line}
         panels={PROCURE_PANELS}
+        amountConfigResolver={resolveProcureAmountConfig}
         readOnly={props.readOnly && !props.canEdit}
         initialPanel={props.initialTab}
         onDraftSubmit={props.onDraftSubmit}
@@ -278,6 +319,7 @@ export function LineItemEditorSheet({ variantKey, ...props }: LineItemEditorShee
         companyCodeId={props.companyCodeId}
         line={props.line}
         panels={SALES_PANELS}
+        amountConfigResolver={resolveSalesAmountConfig}
         readOnly={props.readOnly && !props.canEdit}
         initialPanel={props.initialTab}
         onDraftSubmit={props.onDraftSubmit}

@@ -19,6 +19,7 @@ import type { RuntimeCanvasFlags } from "@athyper/runtime-canvas/surfaces";
 import { logDescriptorHealthInDev } from "@/lib/server/meta-entity-descriptor-health";
 import { getNeonServerSession } from "@/lib/server/session";
 import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";
+import { buildPurchaseInvoiceDocumentRuntimeSurfaces } from "@/lib/server/pi-document-runtime-surfaces";
 
 const METADATA_REVALIDATE_SECONDS = 300;
 const warnedRuntimeMetadata = new Set<string>();
@@ -213,7 +214,7 @@ export const getMetaEntityRuntimeDescriptor = cache(
       });
       warnIfPrototypeContractDriftInDev(entityCode, compiled, descriptor);
       logDescriptorHealthInDev(descriptor, canvasFlags);
-      return descriptor;
+      return injectDocumentRuntimeSurfaces(entityCode, descriptor);
     } catch (error) {
       warnIfDescriptorCompileFailedInDev(entityCode, error);
       return undefined;
@@ -642,4 +643,44 @@ function warnIfCompiledEntityParseFailedInDev(entityCode: string, error: unknown
     `[neon-meta-entity-runtime] ${entityCode}: compiled metadata contract parse failed`,
     error,
   );
+}
+
+/**
+ * Cleanup Plan v5 §P6 — descriptor surface injection for the document
+ * runtime cutover.
+ *
+ * Appends the four PI document-runtime surfaces (document_header,
+ * polymorphic_pc_lines, header_scope_pc_strip, postings_preview) so the
+ * generic `[entity]/[id]` renderer mounts the descriptor-driven PI view.
+ * Also drops the compiler-emitted `line_items` surface for PI — it would
+ * otherwise render alongside `polymorphic_pc_lines` (both ask the user
+ * to view document lines, the former fetching its own copy via the
+ * standard records API and the latter reading from the canonical
+ * DocumentRuntimeContext slice).
+ *
+ * Injection happens here (rather than via a stored entity_surface row)
+ * because there is no `control.entity_surface` table — surfaces are
+ * compiler outputs, not stored rows. A real registry is P7+ scope.
+ *
+ * Sprint 7 deleted the legacy PI route + client; Sprint 8 PR5 dropped
+ * the `PI_VIA_DESCRIPTOR` flag (no fallback = no rollback to gate).
+ * New document families (SI, GR, …) add their own branch here when
+ * their composer + strategy + surfaces ship.
+ */
+function injectDocumentRuntimeSurfaces(
+  entityCode: string,
+  descriptor: MetaEntityRuntimeDescriptor,
+): MetaEntityRuntimeDescriptor {
+  if (entityCode !== "purchase_invoice") return descriptor;
+
+  return {
+    ...descriptor,
+    surfaces: [
+      // The compiler-emitted `line_items` surface is replaced by the
+      // injected `polymorphic_pc_lines` below — single canonical lines
+      // section per amendment 2 (no duplicate fetches, no duplicate UI).
+      ...descriptor.surfaces.filter((s) => s.kind !== "line_items"),
+      ...buildPurchaseInvoiceDocumentRuntimeSurfaces(),
+    ],
+  };
 }

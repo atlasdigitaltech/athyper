@@ -6,13 +6,23 @@
  * and consumed by the rendering runtimes (master / document / ledger) on the
  * frontend.
  *
- * CONTRACT VERSION: "meta-entity-runtime/v1"
+ * CONTRACT VERSION: "meta-entity-runtime/v1.1"
+ *   v1.1 (additive): interactionSurfaceKind + interactionOptions on
+ *   MetaEntityOperation; descriptor-level FK validator for
+ *   addContract.targetRelation. Existing v1 descriptors keep validating
+ *   because every new field is optional.
  *   Bump META_ENTITY_RUNTIME_CONTRACT_VERSION and the z.literal() in
  *   MetaEntityRuntimeDescriptorSchema on any breaking shape change.
  */
 import { z } from "zod";
 
-export const META_ENTITY_RUNTIME_CONTRACT_VERSION = "meta-entity-runtime/v1" as const;
+import {
+  InteractionOptionsSchema,
+  InteractionSurfaceKindSchema,
+  validateInteractionSurfaceShape,
+} from "./interaction-surface";
+
+export const META_ENTITY_RUNTIME_CONTRACT_VERSION = "meta-entity-runtime/v1.1" as const;
 
 export const MetaEntityRendererSchema = z.enum(["master", "document", "ledger", "simple"]);
 export type MetaEntityRenderer = z.infer<typeof MetaEntityRendererSchema>;
@@ -39,6 +49,13 @@ export const MetaEntitySurfaceKindSchema = z.enum([
   "audit_summary",
   "audit_trail",
   "flow",
+  // Cleanup-plan v5 P5a — descriptor-driven document runtime surfaces.
+  // 4 kinds (NOT 5: payment_terms is a sidecar slot under document_header,
+  // not a separate surface kind — per amendment 4).
+  "document_header",
+  "polymorphic_pc_lines",
+  "header_scope_pc_strip",
+  "postings_preview",
 ]);
 export type MetaEntitySurfaceKind = z.infer<typeof MetaEntitySurfaceKindSchema>;
 
@@ -215,11 +232,129 @@ export const MetaEntityGenericSurfaceSchema = MetaEntitySurfaceBaseSchema.extend
   config: JsonObjectSchema.optional(),
 }).catchall(z.unknown());
 
+// ─────────────────────────────────────────────────────────────────────
+// Cleanup-plan v5 P5a — document-runtime surface kinds + Zod configs.
+// Each kind has its own typed config schema so seed authors get
+// compile-time validation. Optional fields default sensibly so a
+// minimal seed row is valid.
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Per-surface toolbar action descriptor. Aggregated at provider mount
+ * into the central action registry (amendment 3 — declarative
+ * registration, no side-effects between surfaces).
+ */
+export const SurfaceToolbarActionSchema = z.object({
+  code:        z.string().min(1),
+  label:       z.string().min(1),
+  icon:        z.string().min(1).optional(),
+  placement:   z.enum(["primary", "secondary", "overflow"]).default("secondary"),
+  permissionCode: z.string().min(1).optional(),
+}).catchall(z.unknown());
+export type SurfaceToolbarAction = z.infer<typeof SurfaceToolbarActionSchema>;
+
+/** One amount-summary chip entry on the document header. */
+export const AmountSummaryFieldSchema = z.object({
+  label:      z.string().min(1),
+  field:      z.string().min(1),
+  intent:     z.string().min(1).optional(),
+  emphasized: z.boolean().default(false),
+}).catchall(z.unknown());
+export type AmountSummaryField = z.infer<typeof AmountSummaryFieldSchema>;
+
+/**
+ * document_header — composer-registry-driven header.
+ *
+ * `header_composer_code` resolves to a registered composer via
+ * `runtime-canvas/document-runtime/composer-registry`. Per amendment 4
+ * the renderer NEVER selects the composer by shape-matching; the seed
+ * is explicit.
+ *
+ * `side_car_slots` lists slot keys resolved via the sidecar registry
+ * (PI registers "payment_terms" → PaymentTermsCard at app boot).
+ *
+ * `toolbar_actions` declares actions that THIS surface contributes to
+ * the header toolbar. The provider aggregates across all surfaces
+ * (amendment 3); the header itself just renders the aggregated set.
+ */
+export const MetaEntityDocumentHeaderSurfaceSchema = MetaEntitySurfaceBaseSchema.extend({
+  kind: z.literal("document_header"),
+  config: z.object({
+    header_composer_code:  z.string().min(1),
+    amount_summary_fields: z.array(AmountSummaryFieldSchema).default([]),
+    side_car_slots:        z.array(z.string().min(1)).default([]),
+    toolbar_actions:       z.array(SurfaceToolbarActionSchema).default([]),
+  }).catchall(z.unknown()),
+}).catchall(z.unknown());
+export type MetaEntityDocumentHeaderSurface = z.infer<typeof MetaEntityDocumentHeaderSurfaceSchema>;
+
+/**
+ * polymorphic_pc_lines — line grid + per-row PC/AD expansion.
+ *
+ * Bindings reference `control.polymorphic_child_binding.binding_code`
+ * (Sprint 3 P3a). The provider's useDocumentChildren consumes them
+ * and produces a single canonical line collection (amendment 2).
+ *
+ * tax_profile / condition_type_capabilities feed the drawer config
+ * props from Sprint 2 P2c.2.
+ */
+export const MetaEntityPolymorphicPcLinesSurfaceSchema = MetaEntitySurfaceBaseSchema.extend({
+  kind: z.literal("polymorphic_pc_lines"),
+  config: z.object({
+    line_binding_code:               z.string().min(1),
+    pricing_component_binding_code:  z.string().min(1).optional(),
+    distribution_binding_code:       z.string().min(1).optional(),
+    condition_type_lookup_code:      z.string().min(1).optional(),
+    tax_group_lookup_code:           z.string().min(1).optional(),
+    tax_profile_code:                z.string().min(1).optional(),
+    condition_type_capabilities:     JsonObjectSchema.optional(),
+  }).catchall(z.unknown()),
+}).catchall(z.unknown());
+export type MetaEntityPolymorphicPcLinesSurface = z.infer<typeof MetaEntityPolymorphicPcLinesSurfaceSchema>;
+
+/**
+ * header_scope_pc_strip — projection strip below the lines grid.
+ * Sibling-aware: reads the same PC binding as polymorphic_pc_lines
+ * via the provider context (no separate fetch).
+ */
+export const MetaEntityHeaderScopePcStripSurfaceSchema = MetaEntitySurfaceBaseSchema.extend({
+  kind: z.literal("header_scope_pc_strip"),
+  config: z.object({
+    label_override: z.string().min(1).optional(),
+  }).catchall(z.unknown()).optional(),
+}).catchall(z.unknown());
+export type MetaEntityHeaderScopePcStripSurface = z.infer<typeof MetaEntityHeaderScopePcStripSurfaceSchema>;
+
+/**
+ * postings_preview — read-only GL aggregation sheet.
+ *
+ * `posting_strategy_code` references the in-process strategy registry
+ * (e.g. "ap_invoice", "ar_invoice", "je_passthrough"). Strategies are
+ * code-resident TS modules (v5 §3.9 / §4.9 decision); the descriptor
+ * just references them by code.
+ *
+ * `toolbar_action` is what the document_header surface picks up via
+ * the aggregated toolbar action registry (amendment 3).
+ */
+export const MetaEntityPostingsPreviewSurfaceSchema = MetaEntitySurfaceBaseSchema.extend({
+  kind: z.literal("postings_preview"),
+  config: z.object({
+    posting_strategy_code: z.string().min(1),
+    toolbar_action:        SurfaceToolbarActionSchema.optional(),
+  }).catchall(z.unknown()),
+}).catchall(z.unknown());
+export type MetaEntityPostingsPreviewSurface = z.infer<typeof MetaEntityPostingsPreviewSurfaceSchema>;
+
 export const MetaEntitySurfaceSchema = z.discriminatedUnion("kind", [
   MetaEntityFieldsSurfaceSchema,
   MetaEntityLineItemsSurfaceSchema,
   MetaEntityChildRecordsSurfaceSchema,
   MetaEntityGenericSurfaceSchema,
+  // P5a document-runtime additions
+  MetaEntityDocumentHeaderSurfaceSchema,
+  MetaEntityPolymorphicPcLinesSurfaceSchema,
+  MetaEntityHeaderScopePcStripSurfaceSchema,
+  MetaEntityPostingsPreviewSurfaceSchema,
 ]);
 export type MetaEntitySurface = z.infer<typeof MetaEntitySurfaceSchema>;
 
@@ -359,6 +494,48 @@ export const MetaEntityOperationSchema = z.object({
     requiresReason: z.boolean().optional(),
     requiresConfirmation: z.boolean().optional(),
   }).catchall(z.unknown())).optional(),
+  // Interaction surface contract (Phase 1, contract v1.1).
+  // Both optional and additive — existing v1 descriptors keep validating
+  // because the runtime treats absence as "no interaction surface declared".
+  interactionSurfaceKind: InteractionSurfaceKindSchema.optional(),
+  interactionOptions: InteractionOptionsSchema.optional(),
+}).superRefine((op, ctx) => {
+  const kind = op.interactionSurfaceKind;
+  const opts = op.interactionOptions;
+
+  // Rule 1 — interactionSurfaceKind requires handlerType=MODAL (one-way).
+  // The reverse is intentionally not enforced: legacy ops may declare
+  // handlerType=MODAL without an explicit interactionSurfaceKind. Those
+  // render with the runtime's default modal chrome until migrated.
+  if (kind && op.handlerType !== "MODAL") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["interactionSurfaceKind"],
+      message: `interactionSurfaceKind requires handlerType=MODAL (got ${op.handlerType})`,
+    });
+  }
+
+  // Rule 2 — interactionOptions requires interactionSurfaceKind.
+  if (opts && !kind) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["interactionOptions"],
+      message: "interactionOptions requires interactionSurfaceKind",
+    });
+  }
+
+  // Rules 3-9 (and source-adapter shape check) live in the shared shape
+  // validator so override merge + op schema cannot drift.
+  if (kind) {
+    const issues = validateInteractionSurfaceShape({ kind, options: opts });
+    for (const issue of issues) {
+      ctx.addIssue({
+        code: "custom",
+        path: [...issue.path],
+        message: issue.message,
+      });
+    }
+  }
 });
 export type MetaEntityOperation = z.infer<typeof MetaEntityOperationSchema>;
 
@@ -607,6 +784,31 @@ export const MetaEntityRuntimeDescriptorSchema = z.object({
   concurrency: MetaEntityConcurrencySummarySchema.optional(),
   extensions: MetaEntityExtensionsSchema.optional(),
   audit: MetaEntityContractAuditSchema,
+}).superRefine((desc, ctx) => {
+  // Descriptor-level guard: addContract.targetRelation must be a declared
+  // has_many or m2m relation. belongs_to is rejected — add ops append into
+  // a collection, not into a scalar parent reference.
+  const relationByKey = new Map(desc.relations.map((r) => [r.key, r] as const));
+  desc.operations.forEach((op, opIdx) => {
+    const addContract = op.interactionOptions?.addContract;
+    if (!addContract) return;
+    const rel = relationByKey.get(addContract.targetRelation);
+    if (!rel) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["operations", opIdx, "interactionOptions", "addContract", "targetRelation"],
+        message: `targetRelation "${addContract.targetRelation}" is not declared in relations[]`,
+      });
+      return;
+    }
+    if (rel.kind === "belongs_to") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["operations", opIdx, "interactionOptions", "addContract", "targetRelation"],
+        message: `targetRelation "${addContract.targetRelation}" is belongs_to; add ops require has_many or m2m`,
+      });
+    }
+  });
 });
 export type MetaEntityRuntimeDescriptor = z.infer<typeof MetaEntityRuntimeDescriptorSchema>;
 

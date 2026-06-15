@@ -175,22 +175,8 @@ export function coerceFieldValue(value: unknown, field: EntityField): unknown {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COLUMN RESOLUTION
+// SEARCH FIELDS
 // ─────────────────────────────────────────────────────────────────────────────
-
-export function resolveLineColumns(entity: CompiledEntity | null): MetaLineColumn[] {
-  if (!entity) return [];
-  return entity.fields
-    .filter((f) => f.origin !== "system" && !f.is_computed)
-    .map((f): MetaLineColumn => ({
-      key:     f.name,
-      label:   fieldLabel(f),
-      field:   f,
-      align:   ["money", "decimal", "integer", "numeric", "bigint"].includes(f.data_type) ? "right" : "left",
-      numeric: ["money", "decimal", "integer", "numeric", "bigint"].includes(f.data_type),
-      sortable: true,
-    }));
-}
 
 export function resolveSearchFields(entity: CompiledEntity | null): EntityField[] {
   if (!entity) return [];

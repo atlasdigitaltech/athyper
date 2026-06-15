@@ -2,21 +2,26 @@
 /**
  * AP FK Orphan Pre-Check (H1 gate)
  *
- * Runs BEFORE 03c_constraints_ap_validate.sql. For each of the 22 FK
- * candidates in 03b_constraints_ap_closure.sql, executes a LEFT JOIN to
- * detect rows that point at non-existent parents. Reports counts per FK +
- * sample IDs.
+ * Runs BEFORE the operator validation script. For each of the 23 FK candidates
+ * declared in:
+ *   server/db/ddl/document/03b_constraints_ap_closure.sql   (initial set)
+ *   server/db/ddl/document/03f_constraints_pea_pta_restrict.sql (HF2-2 reshape)
+ * executes a LEFT JOIN to detect rows that point at non-existent parents.
+ * Reports counts per FK + sample IDs.
  *
  * Usage:
  *   DATABASE_URL=... npx tsx server/scripts/verify-ap-fk-orphans.ts
  *   npx tsx server/scripts/verify-ap-fk-orphans.ts --json
  *   npx tsx server/scripts/verify-ap-fk-orphans.ts --tenant <uuid>
  *
+ * If this returns 0 violations, run the operator validation script:
+ *   psql "$DATABASE_URL" -f server/db/scripts/run-ap-fk-validate.sql
+ *
  * Exit:
- *   0 — all 22 FKs have zero orphans; safe to VALIDATE
+ *   0 — all 23 FKs have zero orphans; safe to VALIDATE
  *   1 — orphans found; triage before VALIDATE
  *
- * Spec: AP Schema Hardening Plan §H1
+ * Spec: AP Schema Hardening Plan §H1; Hardening Sprint H-Fix-2 §HF2-4
  */
 
 import pg from "pg";

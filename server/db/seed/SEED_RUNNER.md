@@ -121,23 +121,49 @@ platform/002_permission_model/018_persona_permission.sql
 platform/002_permission_model/019_role.sql
 
 # Control tables
-# One table-owned file per control table. Entity-engine, domain-registration,
-# workflow, operation, and blueprint-registry control metadata lives here.
-# Lookup domain/value seeds remain in 000_lookups/LookupDomain/*.
+# Default layout is one table-owned file per control table. During development,
+# tightly coupled domain contracts may be consolidated when that is clearer than
+# patch-style fragments. Lookup domain/value seeds remain in 000_lookups/LookupDomain/*.
+platform/003_control/005_rebuild_entity_metadata.sql
 platform/003_control/010_entity_class_profile.sql
 platform/003_control/020_field_group.sql
 platform/003_control/030_lifecycle.sql
+platform/003_control/031_lifecycle_state.sql
+platform/003_control/032_lifecycle_transition.sql
+platform/003_control/033_lifecycle_transition_gate.sql
+platform/003_control/034_lifecycle_transition_hook.sql
+platform/003_control/035_lifecycle_timer_policy.sql
+platform/003_control/036_lifecycle_hook_override.sql
 platform/003_control/040_entity.sql
+platform/003_control/040a_all_schema_entity_coverage.sql
 platform/003_control/041_entity_version.sql
 platform/003_control/042_entity_field.sql
 platform/003_control/042b_field_group_member.sql
+platform/003_control/042d_ap_purchase_invoice_contract.sql
 platform/003_control/043_entity_relation.sql
 platform/003_control/044_entity_operation.sql
 platform/003_control/044b_site_warehouse_metadata.sql
+platform/003_control/045_entity_field_data_type_normalization.sql
 platform/003_control/045_entity_lifecycle.sql
 platform/003_control/046_entity_flow.sql
+platform/003_control/047_entity_flow_section.sql
+platform/003_control/048_entity_flow_step.sql
+platform/003_control/049_entity_flow_field.sql
 platform/003_control/050_entity_numbering_config.sql
+platform/003_control/051_entity_numbering_counter.sql
+platform/003_control/052_entity_policy.sql
+platform/003_control/053_entity_publish_state.sql
+platform/003_control/054_feature_flag.sql
+platform/003_control/055_field_security_policy.sql
+platform/003_control/056_forecast_budget_bridge.sql
+platform/003_control/057_forecast_line.sql
+platform/003_control/058_formula_expression.sql
+platform/003_control/059_formula_expression_version.sql
 platform/003_control/060_workflow_template.sql
+platform/003_control/061_workflow_template_stage.sql
+platform/003_control/062_workflow_template_rule.sql
+platform/003_control/063_workflow_sla_policy.sql
+platform/003_control/064_workflow_definition.sql
 platform/003_control/070_hook_action_registry.sql
 platform/003_control/080_transaction_event_catalog.sql
 platform/003_control/081_transaction_flow_template.sql
@@ -146,6 +172,10 @@ platform/003_control/083_notification_routing_rule.sql
 platform/003_control/084_cron_schedule.sql
 platform/003_control/085_parameter_definition.sql
 platform/003_control/090_blueprint_registry.sql
+platform/003_control/091_default_print_profile.sql
+platform/003_control/092_entity_print_config.sql
+platform/003_control/093_print_hide_fields.sql
+platform/003_control/095_three_plane_runtime_contract.sql
 
 platform/003_master/*.sql
 

@@ -23,10 +23,10 @@ export function LogoutClient({ plane }: { plane: PlaneKey }) {
           signal: controller.signal,
         });
         const data = (await res.json().catch(() => ({}))) as { logoutUrl?: string };
-        window.location.href = data.logoutUrl ?? config.loginPath;
+        window.location.assign(data.logoutUrl ?? config.loginPath);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
-        window.location.href = config.loginPath;
+        window.location.assign(config.loginPath);
       }
     }
 

@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.tsx",
     "./actions": "./src/actions/index.ts",
+    "./document-runtime": "./src/document-runtime/index.ts",
     "./fields": "./src/fields/index.ts",
     "./flow": "./src/flow/index.ts",
     "./header": "./src/header/index.ts",

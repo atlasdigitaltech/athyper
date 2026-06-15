@@ -43,11 +43,14 @@ COMMENT ON TABLE document.supplier_rebuild_orphan_quarantine IS
     'Triage path: delete orphan row OR resurrect the missing supplier OR set '
     'app.rebuild_force=true to override.';
 
--- Make it append-only too
-DROP TRIGGER IF EXISTS trg_srq_immutable ON document.supplier_rebuild_orphan_quarantine;
-CREATE TRIGGER trg_srq_immutable
-    BEFORE UPDATE OR DELETE ON document.supplier_rebuild_orphan_quarantine
-    FOR EACH ROW EXECUTE FUNCTION log.trg_prevent_mutation();
+-- HF2-1 (clean-deploy fix): the trigger that attaches log.trg_prevent_mutation()
+-- to this table was moved to 06q_supplier_orphan_quarantine_triggers.sql.
+-- Rationale: log.trg_prevent_mutation() is defined in log/05_functions.sql,
+-- which runs at provisioner phase 80. 01*.sql files run at phase 40 — so a
+-- clean deploy that includes the CREATE TRIGGER here would fail with
+-- "function log.trg_prevent_mutation() does not exist". The trigger attachment
+-- now lives in a 06*.sql file (phase 90), where the function is guaranteed
+-- to exist.
 
 
 -- =============================================================================

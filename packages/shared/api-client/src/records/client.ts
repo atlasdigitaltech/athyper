@@ -19,11 +19,21 @@ export interface EntityListParams {
   page?:     number;
   pageSize?: number;
   facets?:   FacetScope;
+  /**
+   * Parent-FK scope for child entities. The backend resolves the physical
+   * column via `identity_config.parent.field` and applies it as a hard
+   * filter — see server records.route.ts (`?parent_id=<uuid>` handler).
+   *
+   * Owned by the embedded caller (e.g. the document-page line grid bound
+   * to its parent record). Not user-controlled, not URL-serialised into
+   * saved views.
+   */
+  parent_id?: string;
 }
 
 /** Encode EntityListParams into a URL query string (including leading "?"). */
 function buildListQueryString(params: EntityListParams & Partial<PaginationRequest>): string {
-  const { filters, q, sort, group, pageSize, page, facets } = params;
+  const { filters, q, sort, group, pageSize, page, facets, parent_id } = params;
   const sp = new URLSearchParams();
 
   if (q)              sp.set("q",         q);
@@ -37,6 +47,7 @@ function buildListQueryString(params: EntityListParams & Partial<PaginationReque
   }
   if (group)          sp.set("group",     group);
   if (facets)         sp.set("facets",    facets);
+  if (parent_id)      sp.set("parent_id", parent_id);
 
   // Encode filters as per-field sigil params: filter.<field>=<sigil>
   if (filters) {

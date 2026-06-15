@@ -7,6 +7,7 @@ import type {
 } from "../types";
 import { fieldLabel } from "../meta";
 import { fieldsForGroups } from "./procure";
+import { resolveSummaryStripFromMeta } from "./summary-strip";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GENERIC VARIANT RESOLVERS
@@ -66,26 +67,22 @@ export function resolveGenericEditorTabs(entity: CompiledEntity | null): LineIte
 
 export function resolveGenericAmountConfig(entity: CompiledEntity | null): LineItemAmountConfig | null {
   if (!entity) return null;
-  const amountField = entity.fields.find((f) => f.data_type === "money");
-  if (!amountField) return null;
+  const meta = resolveSummaryStripFromMeta(entity);
+
+  const fallbackAmountField = entity.fields.find((f) => f.data_type === "money");
+  const amountFieldName = meta.amountField ?? fallbackAmountField?.name ?? null;
+  if (!amountFieldName) return null;
+
+  const amountFieldDef = entity.fields.find((f) => f.name === amountFieldName) ?? fallbackAmountField!;
+  const summaryFields = meta.summaryFields ?? [
+    { name: amountFieldDef.name, label: fieldLabel(amountFieldDef), bold: true },
+  ];
+
   return {
-    amountField:  amountField.name,
-    summaryFields: [{ name: amountField.name, label: fieldLabel(amountField), bold: true }],
-    financialBar:  [{ name: amountField.name, label: fieldLabel(amountField) }],
+    amountField:   amountFieldName,
+    currencyField: meta.currencyField ?? undefined,
+    summaryFields,
+    financialBar:  [{ name: amountFieldDef.name, label: fieldLabel(amountFieldDef) }],
   };
 }
 
-export function buildGenericColumnCatalog(entity: CompiledEntity | null): MetaLineColumn[] {
-  if (!entity) return [];
-  return entity.fields
-    .filter((f) => f.origin !== "system" && !f.is_computed)
-    .slice(0, 8)
-    .map((f): MetaLineColumn => ({
-      key:     f.name,
-      label:   fieldLabel(f),
-      field:   f,
-      numeric: ["money", "decimal", "integer", "numeric"].includes(f.data_type),
-      align:   ["money", "decimal", "integer", "numeric"].includes(f.data_type) ? "right" : "left",
-      sortable: true,
-    }));
-}

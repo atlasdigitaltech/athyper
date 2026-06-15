@@ -1066,7 +1066,9 @@
         "plane": "mesh",
         "backchannel.logout.url": "https://mesh.athyper.local/api/auth/backchannel-logout"
       },
-      "authenticationFlowBindingOverrides": {},
+      "authenticationFlowBindingOverrides": {
+        "browser": "c4f7b626-43ef-4cb4-a8df-b531dfc38d5a"
+      },
       "fullScopeAllowed": false,
       "nodeReRegistrationTimeout": -1,
       "defaultClientScopes": [
@@ -1187,7 +1189,9 @@
         "pkce.code.challenge.method": "S256",
         "backchannel.logout.url": "https://neon.athyper.local/api/auth/backchannel-logout"
       },
-      "authenticationFlowBindingOverrides": {},
+      "authenticationFlowBindingOverrides": {
+        "browser": "c4f7b626-43ef-4cb4-a8df-b531dfc38d5a"
+      },
       "fullScopeAllowed": false,
       "nodeReRegistrationTimeout": -1,
       "defaultClientScopes": [
@@ -1873,6 +1877,18 @@
           "name": "acr loa level",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-acr-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "true",
+            "introspection.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "id": "c3f0e1d2-4a5b-4c0d-9e1f-2b3a4c5d6e7f",
+          "name": "amr",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-amr-mapper",
           "consentRequired": false,
           "config": {
             "id.token.claim": "true",
@@ -3800,6 +3816,74 @@
           "priority": 20,
           "autheticatorFlow": true,
           "flowAlias": "Browser - Conditional 2FA",
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "id": "c4f7b626-43ef-4cb4-a8df-b531dfc38d5a",
+      "alias": "athyper-user-plane-browser",
+      "description": "Browser flow for Neon and Mesh without login-time OTP",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "auth-spnego",
+          "authenticatorFlow": false,
+          "requirement": "DISABLED",
+          "priority": 20,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "identity-provider-redirector",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 25,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "ALTERNATIVE",
+          "priority": 26,
+          "autheticatorFlow": true,
+          "flowAlias": "Organization",
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "ALTERNATIVE",
+          "priority": 30,
+          "autheticatorFlow": true,
+          "flowAlias": "athyper-user-plane-browser forms",
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "id": "5d63d1db-71f2-4ac7-a8af-6fb0613e68b2",
+      "alias": "athyper-user-plane-browser forms",
+      "description": "Username/password login without login-time OTP for user planes",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-username-password-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "autheticatorFlow": false,
           "userSetupAllowed": false
         }
       ]

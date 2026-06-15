@@ -4,8 +4,10 @@ import { getPlaneConfig, pkceStateKey, type PlaneKey } from "@athyper/session-pl
 
 import {
   handleCallback,
+  handleDiscoveryPost,
   handleLogin,
   handleLogout,
+  handleRefresh,
   handleSessionGet,
   handleSessionPatch,
   type OrgMembership,
@@ -227,6 +229,102 @@ describe("tenant admin login, context select, and dashboard handoff", () => {
     });
   });
 
+  it("forces Admin native login through Keycloak even when silent SSO is requested", async () => {
+    const loginResponse = await handleLogin(
+      "admin",
+      nextRequest(ADMIN_HOST, "/api/auth/login?realm=athyper&silent=true&returnUrl=%2Fdashboard"),
+    );
+
+    const authRedirect = new URL(requiredHeader(loginResponse, "location"));
+    expect(authRedirect.searchParams.get("client_id")).toBe("admin-web");
+    expect(authRedirect.searchParams.get("prompt")).toBe("login");
+    expect(authRedirect.searchParams.get("max_age")).toBe("3600");
+
+    const state = authRedirect.searchParams.get("state");
+    expect(state).toBeTruthy();
+    const pkce = JSON.parse((await requireRedis().get(pkceStateKey(state!)))!) as {
+      silent?: boolean;
+      forceAuthn?: boolean;
+    };
+    expect(pkce.silent).toBeUndefined();
+    expect(pkce.forceAuthn).toBe(true);
+  });
+
+  it("keeps Neon silent SSO as prompt=none", async () => {
+    const loginResponse = await handleLogin(
+      "neon",
+      nextRequest(NEON_HOST, "/api/auth/login?realm=athyper&silent=true&returnUrl=%2Fdashboard"),
+    );
+
+    const authRedirect = new URL(requiredHeader(loginResponse, "location"));
+    expect(authRedirect.searchParams.get("client_id")).toBe("neon-web");
+    expect(authRedirect.searchParams.get("prompt")).toBe("none");
+    expect(authRedirect.searchParams.get("max_age")).toBeNull();
+
+    const state = authRedirect.searchParams.get("state");
+    expect(state).toBeTruthy();
+    const pkce = JSON.parse((await requireRedis().get(pkceStateKey(state!)))!) as {
+      silent?: boolean;
+      forceAuthn?: boolean;
+    };
+    expect(pkce.silent).toBe(true);
+    expect(pkce.forceAuthn).toBeUndefined();
+  });
+
+  it("falls back to the Mesh login chooser when silent SSO has no access context", async () => {
+    const loginResponse = await handleLogin(
+      "mesh",
+      nextRequest(MESH_HOST, "/api/auth/login?realm=athyper&silent=true&returnUrl=%2Fdashboard"),
+    );
+    const state = authStateFromRedirect(loginResponse.headers.get("location"));
+
+    mockFetch({
+      clientId: "mesh-web",
+      realmRoles: ["MESH_BUYER_USER"],
+      organizations: {},
+    });
+
+    const callbackResponse = await handleCallback(
+      "mesh",
+      nextRequest(MESH_HOST, `/api/auth/callback?code=ok&state=${state}`),
+    );
+
+    const location = new URL(requiredHeader(callbackResponse, "location"));
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("returnUrl")).toBe("/dashboard");
+    expect(location.searchParams.get("error")).toBeNull();
+    expect(callbackResponse.cookies.get("sso_skip")?.value).toBe("1");
+    expect([...requireRedis().values.keys()].filter((key) => key.startsWith("sess:mesh:"))).toHaveLength(0);
+  });
+
+  it("blocks a callback when IAM returns a different user than the requested login hint", async () => {
+    const redis = requireRedis();
+    mockFetch({
+      clientId: "neon-web",
+      identity: ATHQ_AGENT_IDENTITY,
+      realmRoles: ["NEON_USER"],
+      organizations: NEON_ORGANIZATIONS,
+    });
+
+    const loginResponse = await handleLogin(
+      "neon",
+      nextRequest(NEON_HOST, `/api/auth/login?${loginParams(NEON_SELECTED, "user", ATHQ_ADMIN_IDENTITY.username)}`),
+    );
+    const state = authStateFromRedirect(loginResponse.headers.get("location"));
+    const pkce = JSON.parse((await redis.get(pkceStateKey(state)))!) as { loginHint?: string };
+    expect(pkce.loginHint).toBe("athq.admin");
+
+    const callbackResponse = await handleCallback(
+      "neon",
+      nextRequest(NEON_HOST, `/api/auth/callback?code=ok&state=${state}`),
+    );
+
+    const location = new URL(requiredHeader(callbackResponse, "location"));
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("error")).toBe("ACCOUNT_MISMATCH");
+    expect([...redis.values.keys()].filter((key) => key.startsWith("sess:neon:"))).toHaveLength(0);
+  });
+
   it("blocks a pre-selected context when IAM resolves a different tenant or organization", async () => {
     const redis = requireRedis();
     mockFetch({
@@ -269,6 +367,92 @@ describe("tenant admin login, context select, and dashboard handoff", () => {
     expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("error")).toBe("CONTEXT_NOT_ALLOWED");
     expect([...redis.values.keys()].filter((key) => key.startsWith("sess:neon:"))).toHaveLength(0);
+  });
+
+  it("prepares remembered organization login with an opaque context token instead of raw auth context params", async () => {
+    const response = await handleDiscoveryPost("neon", nextRequest("neon.athyper.local", "/api/auth/discovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "remembered-login",
+        realm: "athyper",
+        returnUrl: "/dashboard",
+        loginHint: "athq.admin",
+        selected_tenant_id: NEON_SELECTED.tenantId,
+        selected_tenant: NEON_SELECTED.tenantCode,
+        selected_org: NEON_SELECTED.orgCode,
+        selected_org_name: NEON_SELECTED.orgName,
+        selected_workspace_id: NEON_SELECTED.workspaceId,
+        selected_workspace_type: NEON_SELECTED.workspaceType,
+      }),
+    }));
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as { loginUrl: string };
+    const loginUrl = new URL(body.loginUrl, "http://neon.athyper.local");
+    expect(loginUrl.pathname).toBe("/api/auth/login");
+    expect(loginUrl.searchParams.get("context_token")).toBeTruthy();
+    expect(loginUrl.searchParams.get("returnUrl")).toContain("/auth/select");
+    for (const param of [
+      "login_hint",
+      "selected_tenant_id",
+      "selected_tenant",
+      "selected_org",
+      "selected_org_name",
+      "selected_workspace_id",
+      "selected_workspace_type",
+      "selected_role",
+    ]) {
+      expect(loginUrl.searchParams.get(param)).toBeNull();
+    }
+
+    const loginResponse = await handleLogin("neon", nextRequest("neon.athyper.local", `${loginUrl.pathname}${loginUrl.search}`));
+    const authRedirect = new URL(requiredHeader(loginResponse, "location"));
+    expect(authRedirect.searchParams.get("login_hint")).toBe("athq.admin");
+    const state = authRedirect.searchParams.get("state");
+    expect(state).toBeTruthy();
+    const pkce = JSON.parse((await requireRedis().get(pkceStateKey(state!)))!) as {
+      expectedContext?: { tenantCode: string; organizationName: string; workspaceId: string };
+    };
+    expect(pkce.expectedContext).toMatchObject({
+      tenantCode: NEON_SELECTED.tenantCode,
+      organizationName: NEON_SELECTED.orgName,
+      workspaceId: NEON_SELECTED.workspaceId,
+    });
+  });
+
+  it("redacts auth audit console payloads in local runtimes", async () => {
+    vi.mocked(console.info).mockClear();
+    await handleLogin(
+      "neon",
+      nextRequest("neon.athyper.local", `/api/auth/login?${loginParams(NEON_SELECTED, "user")}`),
+    );
+
+    const serializedAudit = vi.mocked(console.info).mock.calls
+      .map((call) => String(call[1] ?? ""))
+      .find((value) => value.includes("login_started"));
+
+    expect(serializedAudit).toBeTruthy();
+    const auditPayload = JSON.parse(serializedAudit!) as { detail?: Record<string, unknown> };
+    expect(serializedAudit).not.toContain(ATHQ_ADMIN_IDENTITY.username);
+    expect(serializedAudit).not.toContain(NEON_SELECTED.orgName);
+    expect(serializedAudit).not.toContain(NEON_SELECTED.workspaceId);
+    expect(auditPayload.detail?.expectedContext).toBeUndefined();
+    expect(auditPayload.detail?.expectedContextPresent).toBe(true);
+    expect(auditPayload.detail?.contextToken).toBeUndefined();
+    expect(auditPayload.detail?.contextTokenPresent).toBe(false);
+  });
+
+  it("does not write auth audit payloads to console outside local runtimes", async () => {
+    process.env.ENVIRONMENT = "production";
+    vi.mocked(console.info).mockClear();
+
+    await handleLogin(
+      "neon",
+      nextRequest("neon.athyper.local", `/api/auth/login?${loginParams(NEON_SELECTED, "user")}`),
+    );
+
+    expect(console.info).not.toHaveBeenCalled();
   });
 });
 
@@ -315,6 +499,146 @@ describe("cross-plane browser scenarios", () => {
     });
   });
 
+  it("preserves Admin MFA verification across refresh", async () => {
+    const browser = new BrowserJar("Chrome normal profile");
+    await loginAndActivateInBrowser(adminLoginFixture(browser));
+
+    const config = getPlaneConfig("admin");
+    const sid = browser.get(ADMIN_HOST, effectiveTestCookieName(config.cookieName));
+    const csrf = browser.get(ADMIN_HOST, effectiveTestCookieName(config.csrfCookieName));
+    expect(sid).toBeTruthy();
+    expect(csrf).toBeTruthy();
+
+    const redis = requireRedis();
+    const sessionKey = `sess:${config.key}:${sid}`;
+    const originalTtl = await redis.ttl(sessionKey);
+    const session = sessionFromRedis("admin", sid!);
+    expect(session.mfaRequired).toBe(false);
+    expect(session.mfaVerified).toBe(true);
+
+    await redis.set(sessionKey, JSON.stringify({
+      ...session,
+      accessExpiresAt: Math.floor(Date.now() / 1000) + 10,
+    }), { EX: originalTtl });
+
+    const refreshResponse = await handleRefresh("admin", browser.request(ADMIN_HOST, "/api/auth/refresh", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrf! },
+    }));
+    expect(refreshResponse.status).toBe(200);
+    browser.capture(ADMIN_HOST, refreshResponse);
+
+    const rotatedSid = browser.get(ADMIN_HOST, effectiveTestCookieName(config.cookieName));
+    expect(rotatedSid).toBeTruthy();
+    expect(rotatedSid).not.toBe(sid);
+    const refreshed = sessionFromRedis("admin", rotatedSid!);
+    expect(refreshed.mfaRequired).toBe(false);
+    expect(refreshed.mfaVerified).toBe(true);
+    expect(await redis.ttl(`sess:${config.key}:${rotatedSid}`)).toBe(originalTtl);
+  });
+
+  it("does not auto-verify a pending Admin MFA session across refresh", async () => {
+    const browser = new BrowserJar("Chrome normal profile");
+    await loginAndActivateInBrowser(adminLoginFixture(browser));
+
+    const config = getPlaneConfig("admin");
+    const sid = browser.get(ADMIN_HOST, effectiveTestCookieName(config.cookieName));
+    const csrf = browser.get(ADMIN_HOST, effectiveTestCookieName(config.csrfCookieName));
+    expect(sid).toBeTruthy();
+    expect(csrf).toBeTruthy();
+
+    const redis = requireRedis();
+    const sessionKey = `sess:${config.key}:${sid}`;
+    const originalTtl = await redis.ttl(sessionKey);
+    const session = sessionFromRedis("admin", sid!);
+
+    // Inject MFA-pending state — refresh must not silently upgrade it.
+    await redis.set(sessionKey, JSON.stringify({
+      ...session,
+      mfaRequired: true,
+      mfaVerified: false,
+      mfaVerifiedAt: undefined,
+      accessExpiresAt: Math.floor(Date.now() / 1000) + 10,
+    }), { EX: originalTtl });
+
+    const refreshResponse = await handleRefresh("admin", browser.request(ADMIN_HOST, "/api/auth/refresh", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrf! },
+    }));
+    expect(refreshResponse.status).toBe(200);
+    browser.capture(ADMIN_HOST, refreshResponse);
+
+    const rotatedSid = browser.get(ADMIN_HOST, effectiveTestCookieName(config.cookieName));
+    expect(rotatedSid).toBeTruthy();
+    const refreshed = sessionFromRedis("admin", rotatedSid!);
+    expect(refreshed.mfaRequired).toBe(true);
+    expect(refreshed.mfaVerified).toBe(false);
+    expect(refreshed.mfaVerifiedAt).toBeUndefined();
+    expect(await redis.ttl(`sess:${config.key}:${rotatedSid}`)).toBe(originalTtl);
+  });
+
+  it("revokes the Keycloak refresh token when refresh observes idle expiry", async () => {
+    const browser = new BrowserJar("Chrome normal profile");
+    await loginAndActivateInBrowser(neonLoginFixture(browser));
+
+    const config = getPlaneConfig("neon");
+    const sid = browser.get(NEON_HOST, effectiveTestCookieName(config.cookieName));
+    const csrf = browser.get(NEON_HOST, effectiveTestCookieName(config.csrfCookieName));
+    expect(sid).toBeTruthy();
+    expect(csrf).toBeTruthy();
+
+    const redis = requireRedis();
+    const sessionKey = `sess:${config.key}:${sid}`;
+    const originalTtl = await redis.ttl(sessionKey);
+    const session = sessionFromRedis("neon", sid!);
+    const now = Math.floor(Date.now() / 1000);
+    await redis.set(sessionKey, JSON.stringify({
+      ...session,
+      lastSeenAt: now - 3_601,
+    }), { EX: originalTtl });
+
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockClear();
+    const refreshResponse = await handleRefresh("neon", browser.request(NEON_HOST, "/api/auth/refresh", {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrf! },
+    }));
+
+    expect(refreshResponse.status).toBe(401);
+    await expect(refreshResponse.json()).resolves.toMatchObject({ error: "SESSION_IDLE_EXPIRED" });
+    expect(redis.values.has(sessionKey)).toBe(false);
+    expect(revokeFetchCalls(fetchMock)).toHaveLength(1);
+  });
+
+  it("revokes the Keycloak refresh token when validation observes absolute expiry", async () => {
+    const browser = new BrowserJar("Chrome normal profile");
+    await loginAndActivateInBrowser(neonLoginFixture(browser));
+
+    const config = getPlaneConfig("neon");
+    const sid = browser.get(NEON_HOST, effectiveTestCookieName(config.cookieName));
+    expect(sid).toBeTruthy();
+
+    const redis = requireRedis();
+    const sessionKey = `sess:${config.key}:${sid}`;
+    const originalTtl = await redis.ttl(sessionKey);
+    const session = sessionFromRedis("neon", sid!);
+    const now = Math.floor(Date.now() / 1000);
+    await redis.set(sessionKey, JSON.stringify({
+      ...session,
+      createdAt: now - 28_801,
+      lastSeenAt: now,
+    }), { EX: originalTtl });
+
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockClear();
+    const sessionResponse = await handleSessionGet("neon", browser.request(NEON_HOST, "/api/auth/session"));
+
+    expect(sessionResponse.status).toBe(401);
+    await expect(sessionResponse.json()).resolves.toMatchObject({ error: "SESSION_EXPIRED" });
+    expect(redis.values.has(sessionKey)).toBe(false);
+    expect(revokeFetchCalls(fetchMock)).toHaveLength(1);
+  });
+
   it("Scenario B: Neon logout clears only Neon app session, then Admin can login in the same browser", async () => {
     const browser = new BrowserJar("Chrome normal profile");
 
@@ -334,6 +658,8 @@ describe("cross-plane browser scenarios", () => {
     }));
     browser.capture(NEON_HOST, logoutResponse);
     expect(logoutResponse.status).toBe(200);
+    expect(logoutResponse.cookies.get("sso_skip")?.value).toBe("1");
+    expect(browser.get(NEON_HOST, "sso_skip")).toBe("1");
     await expectNoSession("neon", browser, NEON_HOST);
 
     await loginAndActivateInBrowser(adminLoginFixture(browser));
@@ -414,6 +740,117 @@ describe("account matrix across Neon, Admin, and Mesh", () => {
         expectedOrganizationAliases: [flow.expectedActiveOrg],
       });
     }
+  });
+});
+
+describe("admin Keycloak MFA ownership", () => {
+  beforeEach(() => {
+    testState.redis = new MemoryRedis();
+    process.env = {
+      ...ORIGINAL_ENV,
+      ENVIRONMENT: "test",
+      KEYCLOAK_BASE_URL: "https://iam.test",
+      AUTH_CONTEXT_RESOLVER_URL: "http://runtime.test/api/session/contexts",
+      AUTH_AUDIT_ENDPOINT: "",
+      APP_MFA_ENFORCED: "false",
+    };
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    process.env = { ...ORIGINAL_ENV };
+    testState.redis = null;
+  });
+
+  it("trusts the forced admin Keycloak login when the id_token omits the mfa amr claim", async () => {
+    vi.mocked(console.info).mockClear();
+    vi.mocked(console.warn).mockClear();
+    mockFetch({
+      clientId: "admin-web",
+      identity: ATHQ_ADMIN_IDENTITY,
+      realmRoles: ["ADMIN_USER", "NEON_USER"],
+      organizations: ADMIN_ORGANIZATIONS,
+      idTokenAmr: [],
+    });
+
+    const loginResponse = await handleLogin(
+      "admin",
+      nextRequest(ADMIN_HOST, `/api/auth/login?${loginParams(ADMIN_SELECTED, "admin")}`),
+    );
+    const state = authStateFromRedirect(loginResponse.headers.get("location"));
+    const callbackResponse = await handleCallback(
+      "admin",
+      nextRequest(ADMIN_HOST, `/api/auth/callback?code=ok&state=${state}`),
+    );
+
+    const location = new URL(requiredHeader(callbackResponse, "location"));
+    expect(location.pathname).toBe("/auth/select");
+    expect(location.searchParams.get("returnUrl")).toBe("/dashboard");
+    expect(location.searchParams.get("filter")).toBe("admin");
+
+    const sidCookieName = effectiveTestCookieName(getPlaneConfig("admin").cookieName);
+    const sid = callbackResponse.cookies.get(sidCookieName)?.value;
+    expect(sid).toBeTruthy();
+    const session = sessionFromRedis("admin", sid!);
+    expect(session.mfaRequired).toBe(false);
+    expect(session.mfaVerified).toBe(true);
+    expect(session.mfaVerifiedAt).toBeGreaterThan(0);
+
+    const mfaPendingCookieName = effectiveTestCookieName(getPlaneConfig("admin").mfaPendingCookieName);
+    const clearedMfaCookie = callbackResponse.cookies.getAll()
+      .find((cookie) => cookie.name === mfaPendingCookieName);
+    expect(clearedMfaCookie?.value).toBe("");
+
+    const fallbackAudit = vi.mocked(console.info).mock.calls
+      .map((call) => String(call[1] ?? ""))
+      .find((value) => value.includes("admin_mfa_keycloak_fallback_required"));
+    expect(fallbackAudit).toBeFalsy();
+
+    const alertCall = vi.mocked(console.warn).mock.calls
+      .find((call) => String(call[0] ?? "") === "[auth-audit][alert]"
+        && String(call[1] ?? "").includes("admin_mfa_keycloak_fallback_required"));
+    expect(alertCall).toBeFalsy();
+  });
+
+  it("keeps the app fallback for an admin callback state that was not force-authenticated", async () => {
+    vi.mocked(console.info).mockClear();
+    vi.mocked(console.warn).mockClear();
+    mockFetch({
+      clientId: "admin-web",
+      identity: ATHQ_ADMIN_IDENTITY,
+      realmRoles: ["ADMIN_USER", "NEON_USER"],
+      organizations: ADMIN_ORGANIZATIONS,
+      idTokenAmr: [],
+    });
+
+    const loginResponse = await handleLogin(
+      "admin",
+      nextRequest(ADMIN_HOST, `/api/auth/login?${loginParams(ADMIN_SELECTED, "admin")}`),
+    );
+    const state = authStateFromRedirect(loginResponse.headers.get("location"));
+    const redis = requireRedis();
+    const pkce = JSON.parse((await redis.get(pkceStateKey(state)))!) as Record<string, unknown>;
+    await redis.set(pkceStateKey(state), JSON.stringify({ ...pkce, forceAuthn: undefined }), { EX: 1_800 });
+
+    const callbackResponse = await handleCallback(
+      "admin",
+      nextRequest(ADMIN_HOST, `/api/auth/callback?code=ok&state=${state}`),
+    );
+
+    const location = new URL(requiredHeader(callbackResponse, "location"));
+    expect(location.pathname).toBe("/mfa/challenge");
+    expect(location.searchParams.get("returnUrl")).toBeTruthy();
+
+    const sidCookieName = effectiveTestCookieName(getPlaneConfig("admin").cookieName);
+    const sid = callbackResponse.cookies.get(sidCookieName)?.value;
+    expect(sid).toBeTruthy();
+    const session = sessionFromRedis("admin", sid!);
+    expect(session.mfaRequired).toBe(true);
+    expect(session.mfaVerified).toBe(false);
+    expect(session.mfaVerifiedAt).toBeUndefined();
   });
 });
 
@@ -574,6 +1011,13 @@ const ATHQ_ADMIN_IDENTITY: TestIdentity = {
   username: "athq.admin",
   email: "athq.admin@athyper.demo",
   displayName: "ATHQ Admin",
+};
+
+const ATHQ_AGENT_IDENTITY: TestIdentity = {
+  sub: "kc-athq-agent",
+  username: "athq.agent",
+  email: "athq.agent@athyper.demo",
+  displayName: "ATHQ Agent",
 };
 
 const PRODUCT_ADMIN_IDENTITY: TestIdentity = {
@@ -974,6 +1418,18 @@ function requiredHeader(response: { headers: Headers }, name: string): string {
   return value!;
 }
 
+function fetchUrl(input: string | URL | Request): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.toString();
+  return input.url;
+}
+
+function revokeFetchCalls(fetchMock: { mock: { calls: Array<[string | URL | Request, RequestInit?]> } }) {
+  return fetchMock.mock.calls.filter(([input]) => (
+    fetchUrl(input) === "https://iam.test/realms/athyper/protocol/openid-connect/revoke"
+  ));
+}
+
 function sessionFromRedis(plane: PlaneKey, sid: string): V4Session {
   const session = requireRedis().values.get(`sess:${getPlaneConfig(plane).key}:${sid}`);
   expect(session).toBeTruthy();
@@ -990,6 +1446,7 @@ function mockFetch(opts: {
   identity?: TestIdentity;
   realmRoles: readonly string[];
   organizations: Record<string, OrgMembership>;
+  idTokenAmr?: readonly string[];
 }) {
   vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
     const url = typeof input === "string"
@@ -1021,10 +1478,11 @@ function mockFetch(opts: {
           roles: opts.realmRoles,
         },
       };
+      const amrClaim = opts.idTokenAmr ?? ["otp"];
       return Response.json({
         access_token: jwt(claims),
         refresh_token: "refresh-token",
-        id_token: jwt({ ...claims, amr: ["otp"] }),
+        id_token: jwt({ ...claims, amr: amrClaim }),
         token_type: "Bearer",
         expires_in: 3_600,
         refresh_expires_in: 7_200,

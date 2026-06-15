@@ -269,6 +269,87 @@ SET
     updated_by = '00000000-0000-0000-0000-000000000000'
 WHERE data_type = 'lookup';
 
+-- Legacy AP/master seeds used array aliases before runtime data types were
+-- standardized. Keep those repairs in the final normalization owner.
+UPDATE control.entity_field ef
+SET
+    data_type = 'text_array',
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
+JOIN control.entity e
+  ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND ef.column_name IN ('aliases', 'business_types')
+  AND ef.data_type IN ('text[]', 'enum[]')
+  AND e.table_schema = 'master'
+  AND e.table_name IN ('supplier', 'customer', 'legal_entity')
+  AND e.tenant_id IS NULL
+  AND ev.version_no = 1;
+
+-- Hierarchy/grouping metadata belongs with final field normalization because it
+-- depends on the settled entity_field rows and their canonical data types.
+UPDATE control.entity_field ef
+SET
+    is_groupable = true,
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
+JOIN control.entity e
+  ON e.id = ev.entity_id
+WHERE ef.entity_version_id = ev.id
+  AND e.tenant_id IS NULL
+  AND ev.version_no = 1
+  AND ef.is_active = true
+  AND ef.is_sortable = true
+  AND ef.is_groupable = false
+  AND (
+      (
+          ef.name LIKE 'level%'
+          AND ef.data_type IN ('integer', 'smallint', 'number')
+      )
+      OR (
+          ef.name = 'parent_code'
+          AND ef.data_type = 'text'
+      )
+  );
+
+WITH gl_account_parent_reference AS (
+    SELECT jsonb_build_object(
+        'target_entity', 'gl_account',
+        'target_field', 'id',
+        'display_field', 'name',
+        'display_format', 'code_label',
+        'picker', jsonb_build_object(
+            'code_field', 'code',
+            'show_code', true
+        )
+    ) AS reference_config
+)
+UPDATE control.entity_field ef
+SET
+    is_groupable = true,
+    reference_config = cfg.reference_config,
+    validation = COALESCE(ef.validation, '{}'::jsonb)
+                 || jsonb_build_object('ref_entity', 'gl_account'),
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
+JOIN control.entity e
+  ON e.id = ev.entity_id
+CROSS JOIN gl_account_parent_reference cfg
+WHERE ef.entity_version_id = ev.id
+  AND e.tenant_id IS NULL
+  AND e.entity_code = 'gl_account'
+  AND ev.version_no = 1
+  AND ef.is_active = true
+  AND ef.name = 'parent_id'
+  AND (
+      ef.is_groupable = false
+      OR ef.reference_config IS DISTINCT FROM cfg.reference_config
+      OR COALESCE(ef.validation->>'ref_entity', '') IS DISTINCT FROM 'gl_account'
+  );
+
 -- Invalidate compiled descriptors whose field payload no longer matches the
 -- active control.entity_field rows. snapshot.entity_compiled is append-only at
 -- runtime, so seeds temporarily disable the immutability triggers for this

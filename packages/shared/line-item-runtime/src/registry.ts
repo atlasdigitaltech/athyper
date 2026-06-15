@@ -1,5 +1,7 @@
 import type { LineItemVariantDefinition, LineItemVariantKey } from "./types";
 
+declare const process: { env: { NODE_ENV: string } };
+
 // ─────────────────────────────────────────────────────────────────────────────
 // LINE ITEM VARIANT REGISTRY
 //

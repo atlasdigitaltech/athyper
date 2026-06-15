@@ -168,22 +168,15 @@ DO $$ BEGIN
         ON DELETE RESTRICT NOT VALID;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- PEA payment_term_application_id is nullable — column-scoped SET NULL
+-- HF2-2: PEA is append-only (06x trigger), so cascaded SET NULL would be
+-- trigger-rejected. RESTRICT, not SET NULL.
 DO $$ BEGIN
     ALTER TABLE document.payment_entry_allocation
         ADD CONSTRAINT pea_pta_fk
         FOREIGN KEY (tenant_id, payment_term_application_id)
         REFERENCES document.payment_term_application (tenant_id, id)
-        ON DELETE SET NULL (payment_term_application_id) NOT VALID;
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-    WHEN syntax_error THEN
-        ALTER TABLE document.payment_entry_allocation
-            ADD CONSTRAINT pea_pta_fk
-            FOREIGN KEY (tenant_id, payment_term_application_id)
-            REFERENCES document.payment_term_application (tenant_id, id)
-            ON DELETE RESTRICT NOT VALID;
-END $$;
+        ON DELETE RESTRICT NOT VALID;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 -- =============================================================================

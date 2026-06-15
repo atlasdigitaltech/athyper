@@ -192,10 +192,6 @@ REM ============================================================
 REM fn_server — resolves server/{env}.env.example
 REM ============================================================
 :fn_server
-  if /I "!ENV_NAME!"=="local" (
-    echo   [server] skipped -- edit server\.env manually for local dev ^(pnpm does not inherit batch env^)
-    exit /b 0
-  )
   set "SRV_TPL=!SERVER_DIR!\!ENV_NAME!.env.example"
   if not exist "!SRV_TPL!" set "SRV_TPL=!SERVER_DIR!\.env.example"
 
@@ -255,7 +251,10 @@ echo Next steps:
 if /I "!TARGET!"=="all"     echo   - stack    : Open stack\env\.env and fill in any ${VAR} placeholders.
 if /I "!TARGET!"=="stack"   echo   - stack    : Open stack\env\.env and fill in any ${VAR} placeholders.
 if /I "!ENV_NAME!"=="local" (
-  if /I "!TARGET!"=="all"     echo   - server   : server\.env must exist for local dev ^(pnpm does not inherit batch env^).
+  if /I "!TARGET!"=="all"     echo   - server   : Generated server\.env is for direct pnpm dev / IDE runs.
+  if /I "!TARGET!"=="server"  echo   - server   : Generated server\.env is for direct pnpm dev / IDE runs.
+  if /I "!TARGET!"=="runtime" echo   - server   : Generated server\.env is for direct pnpm dev / IDE runs.
+  if /I "!TARGET!"=="all"     echo   - api-up   : api-up.bat still reads stack\env\.env directly.
   if /I "!TARGET!"=="all"     echo   - stack    : stack\env\.env is used by Docker Compose and web-up.bat.
 ) else (
   if /I "!TARGET!"=="all"     echo   - server   : Open server\.env -- set credentials and external service URLs.

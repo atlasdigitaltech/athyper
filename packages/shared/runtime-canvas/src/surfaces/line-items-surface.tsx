@@ -9,6 +9,7 @@ import type {
   MetaEntitySurface,
 } from "@athyper/runtime-contracts";
 import { LineItemsSurface } from "@athyper/line-item-runtime/surface";
+import { useEditSessionContext } from "@athyper/content-ui";
 import type { RuntimeSurfaceRendererProps } from "./types";
 
 // Fallback statuses used when the descriptor carries no lifecycle masks (legacy
@@ -29,6 +30,7 @@ export function LineItemsSurfaceRenderer({
   record,
   recordId,
   contract,
+  editMode: parentEditMode,
 }: RuntimeSurfaceRendererProps) {
   if (surface.kind !== "line_items") return null;
   const lineItemsSurface = surface as MetaEntityLineItemsSurface;
@@ -45,7 +47,17 @@ export function LineItemsSurfaceRenderer({
   const statusAllowsEdit = statusMask
     ? statusMask.canEdit
     : docStatus === null || LEGACY_EDITABLE_STATUSES.has(docStatus);
-  const editMode = lineItemsSurface.canEdit && statusAllowsEdit;
+  // The two "can the surface ever edit?" gates (descriptor canEdit + status
+  // mask) are AND-ed with the live page-level intent: the parent shell's
+  // editMode prop and the document edit-session's isEditing flag. Without
+  // this, the Add Item button / row checkboxes stay active in view mode
+  // for any Draft document.
+  const session = useEditSessionContext();
+  const editMode =
+    lineItemsSurface.canEdit
+    && statusAllowsEdit
+    && Boolean(parentEditMode)
+    && Boolean(session?.isEditing);
 
   // Phase 11 #8 — priority column list rides on the line-items surface
   // descriptor itself (compiled from the line entity's

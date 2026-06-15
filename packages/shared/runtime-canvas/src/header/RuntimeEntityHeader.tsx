@@ -171,7 +171,7 @@ export function RuntimeEntityHeader({
       <div
         ref={pinnedRef}
         className={cn(
-          "sticky top-0 z-30",
+          "sticky top-0 z-sticky",
           entityHeaderShellClass,
           editMode && entityHeaderEditClass,
           className,

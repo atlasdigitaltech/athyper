@@ -12,6 +12,7 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:content-ui": "pnpm --filter @athyper/content-ui test",
+    "test:visual": "playwright test --config=playwright.config.ts",
     "storybook": "turbo dev --filter=@athyper/storybook",
     "contracts:check": "turbo contracts:check",
     "db:setup:rebuild-entity-metadata": "pnpm --dir server/db run db:setup:rebuild-entity-metadata",
@@ -33,7 +34,8 @@
     "policy:neon-mesh-boundary": "node scripts/policy/verify-neon-mesh-boundary.mjs",
     "policy:mesh-boundaries": "node scripts/policy/verify-plane-boundaries.mjs",
     "policy:plane-boundaries": "node scripts/policy/verify-plane-boundaries.mjs",
-    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:typography && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries"
+    "policy:content-ui-boundaries": "node scripts/policy/verify-content-ui-boundaries.mjs",
+    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:typography && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -47,6 +49,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "syncpack": "^14.3.0",

@@ -55,7 +55,7 @@
       <div class="kc-username-chip">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
         <span>${auth.attemptedUsername}</span>
-        <a href="${url.loginRestartFlowUrl}" class="kc-chip-restart" title="Sign in as someone else">&#10005;</a>
+        <a href="${url.loginRestartFlowUrl}" class="kc-chip-restart" data-kc-change-user title="Use another user ID">Change</a>
       </div>
       </#if>
 
@@ -101,7 +101,7 @@
       <!-- Footer -->
       <div class="kc-footer">
         <p>&copy; ${.now?string("yyyy")} athyper. All rights reserved.</p>
-        <p><a href="${url.loginRestartFlowUrl}">Sign in as a different user</a></p>
+        <p><a href="${url.loginRestartFlowUrl}" data-kc-change-user>Use another user ID</a></p>
       </div>
 
     </div><!-- /.kc-form-card -->
@@ -129,5 +129,6 @@
   var timer = setInterval(function () { show((current + 1) % slides.length); }, 5000);
 })();
 </script>
+<#include "_change-user-script.ftl">
 </body>
 </html>

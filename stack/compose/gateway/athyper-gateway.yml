@@ -46,6 +46,7 @@ services:
       - --accesslog=${GATEWAY_ACCESSLOG:-true}
       - --accesslog.format=json
       - --accesslog.fields.defaultMode=keep
+      - --accesslog.fields.names.RequestPath=${GATEWAY_ACCESSLOG_REQUEST_PATH_MODE:-drop}
       - --accesslog.fields.headers.defaultMode=drop
       - --accesslog.fields.headers.names.Authorization=drop
       - --accesslog.fields.headers.names.Cookie=drop

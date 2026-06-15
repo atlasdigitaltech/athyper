@@ -12,6 +12,18 @@ interface PaletteDrawerProps {
   onClose:   () => void;
   children:  React.ReactNode;
   footer?:   React.ReactNode;
+  /**
+   * Backdrop styling behind the drawer.
+   *   - `"dim"` (default): dim + blur the page underneath. Matches the
+   *     entity-list page-level UX where the drawer takes focus.
+   *   - `"transparent"`: invisible backdrop. Page underneath stays at
+   *     full clarity. Used by embedded grids (line items) where the
+   *     drawer is a secondary affordance within a parent document page
+   *     that shouldn't be visually displaced when opened.
+   *
+   * Click-to-close behaviour is identical in both modes.
+   */
+  backdrop?: "dim" | "transparent";
 }
 
 const FOCUSABLE_SELECTOR = [
@@ -30,6 +42,7 @@ export function PaletteDrawer({
   onClose,
   children,
   footer,
+  backdrop = "dim",
 }: PaletteDrawerProps) {
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const [isDesktop, setIsDesktop] = useState(() => (
@@ -85,11 +98,18 @@ export function PaletteDrawer({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50">
+    // z-modal (400) is required to stack above the page-level sticky chrome
+    // (`z-sticky` = 100; see RuntimeEntityHeader). Using a literal `z-50`
+    // here caused embedded consumers' page headers to render on top of
+    // the drawer's right edge — see the column-picker bug fix.
+    <div className="fixed inset-0 z-modal">
       <button
         type="button"
         aria-label={`Discard ${title} changes`}
-        className="absolute inset-0 cursor-default bg-foreground/20 backdrop-blur-[1px]"
+        className={[
+          "absolute inset-0 cursor-default",
+          backdrop === "dim" ? "bg-foreground/20 backdrop-blur-[1px]" : "",
+        ].filter(Boolean).join(" ")}
         onClick={onClose}
       />
       <div

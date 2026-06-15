@@ -10,7 +10,7 @@
  * continue to render via `RuntimeEditPage` / `RuntimeDetailPage`.
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   DocumentObjectPageWorkspace,
@@ -19,9 +19,14 @@ import {
   readRuntimeCanvasFlags,
   type RuntimeRecordChromeModel,
 } from "@athyper/runtime-canvas";
-import type {
-  DocumentEditSessionSaveOutcome,
-  DocumentSectionDescriptor,
+import {
+  DocumentRuntimeContextProvider,
+  type DocumentChildBindings,
+} from "@athyper/runtime-canvas/document-runtime";
+import {
+  useEditSessionContext,
+  type DocumentEditSessionSaveOutcome,
+  type DocumentSectionDescriptor,
 } from "@athyper/content-ui";
 import type {
   DocumentEditContext,
@@ -37,6 +42,7 @@ import {
   flattenRuntimeRecord,
   type RuntimeRecordRow,
 } from "@athyper/runtime-shared/core";
+import { csrfFetch } from "@/lib/bff-fetch";
 
 interface DocumentObjectPageClientProps {
   entityCode: string;
@@ -66,6 +72,27 @@ const CONTEXT_PANEL_KINDS: ReadonlySet<MetaEntitySurfaceKind> = new Set<MetaEnti
   "versions",
   "compare",
 ]);
+
+/**
+ * Document-runtime child bindings are declared on the
+ * `polymorphic_pc_lines` surface (Cleanup Plan v5 §P5a). When that
+ * surface is absent — e.g. a document entity without a PC/AD model —
+ * the provider mounts with no bindings and `useDocumentChildren`
+ * returns empty collections without firing any fetch.
+ */
+function extractDocumentChildBindings(
+  descriptor: MetaEntityRuntimeDescriptor,
+): DocumentChildBindings | undefined {
+  const surface = descriptor.surfaces.find((s) => s.kind === "polymorphic_pc_lines");
+  if (!surface || surface.kind !== "polymorphic_pc_lines") return undefined;
+  const lineBindingCode = surface.config.line_binding_code;
+  if (!lineBindingCode) return undefined;
+  return {
+    line:              lineBindingCode,
+    pricingComponent:  surface.config.pricing_component_binding_code,
+    distribution:      surface.config.distribution_binding_code,
+  };
+}
 
 export default function DocumentObjectPageClient({
   entityCode,
@@ -108,6 +135,20 @@ export default function DocumentObjectPageClient({
     [descriptor.surfaces, flags.disabledSurfaceKinds],
   );
 
+  // ── Header-placed surfaces ────────────────────────────────────────────────
+  // Cleanup Plan v5 §P6 F2 — surfaces seeded with `placement: "header"`
+  // (today: PI `document_header`) render once above the section loop,
+  // not inside the scrollspy tab system. Order is preserved so multiple
+  // header surfaces stack predictably.
+  const headerSurfaces = useMemo(
+    () => descriptor.surfaces
+      .filter((s) => s.enabled && !CONTEXT_PANEL_KINDS.has(s.kind))
+      .filter((s) => s.placement === "header")
+      .filter((s) => !flags.disabledSurfaceKinds?.includes(s.kind))
+      .sort((a, b) => a.order - b.order),
+    [descriptor.surfaces, flags.disabledSurfaceKinds],
+  );
+
   const sections = useMemo<DocumentSectionDescriptor<string>[]>(
     () => mainSurfaces.map((surface, idx) => ({
       id: `surface_${surface.key}`,
@@ -135,25 +176,77 @@ export default function DocumentObjectPageClient({
   // ── Per-section renderer ──────────────────────────────────────────────────
   const recordData = useMemo(() => flattenRuntimeRecord(record), [record]);
 
+  // ── DocumentRuntimeContext bindings ───────────────────────────────────────
+  // Derived from the descriptor's `polymorphic_pc_lines` surface config; when
+  // absent the provider becomes a no-op shell (action pub/sub + rules without
+  // child fetches). Mounted unconditionally so any surface renderer can
+  // safely call useDocumentRuntimeContext() — failing closed if any surface
+  // depends on context that the provider never supplies is fine, throwing
+  // because the provider was never mounted is not.
+  const documentBindings = useMemo(
+    () => extractDocumentChildBindings(descriptor),
+    [descriptor],
+  );
+
   const renderSection = useCallback(
     (descr: DocumentSectionDescriptor<string>) => {
       const surface = mainSurfaces.find((s) => `surface_${s.key}` === descr.id);
       if (!surface) return null;
       const Renderer = getSurfaceRenderer(surface.kind);
       if (!Renderer) return null;
+      // Wrapper reads the live edit session from context (provided by the
+      // workspace via EditSessionProvider) and forwards `editMode` to the
+      // renderer. Renderers that don't support editing simply ignore it.
       return (
-        <Renderer
-          contract={descriptor}
-          surface={surface}
-          record={recordData}
-          recordId={recordId}
-          processState={processState}
-          flags={flags}
-        />
+        <SurfaceEditModeSlot>
+          {(editMode) => (
+            <Renderer
+              contract={descriptor}
+              surface={surface}
+              record={recordData}
+              recordId={recordId}
+              processState={processState}
+              flags={flags}
+              editMode={editMode}
+            />
+          )}
+        </SurfaceEditModeSlot>
       );
     },
     [mainSurfaces, descriptor, recordData, recordId, processState, flags],
   );
+
+  // ── Header surface slot ───────────────────────────────────────────────────
+  // Built outside the workspace JSX so the slot ReactNode is stable across
+  // workspace re-renders. The rendered children mount INSIDE the workspace's
+  // EditSessionProvider (slot is a prop, evaluated lazily at render time),
+  // so SurfaceEditModeSlot resolves the live session correctly.
+  const headerSurfaceSlot = useMemo<ReactNode>(() => {
+    if (headerSurfaces.length === 0) return null;
+    return (
+      <>
+        {headerSurfaces.map((surface) => {
+          const Renderer = getSurfaceRenderer(surface.kind);
+          if (!Renderer) return null;
+          return (
+            <SurfaceEditModeSlot key={surface.key}>
+              {(editMode) => (
+                <Renderer
+                  contract={descriptor}
+                  surface={surface}
+                  record={recordData}
+                  recordId={recordId}
+                  processState={processState}
+                  flags={flags}
+                  editMode={editMode}
+                />
+              )}
+            </SurfaceEditModeSlot>
+          );
+        })}
+      </>
+    );
+  }, [headerSurfaces, descriptor, recordData, recordId, processState, flags]);
 
   // ── Edit-session transport ────────────────────────────────────────────────
   const loadEditContext = useCallback(async (): Promise<DocumentEditContext> => {
@@ -169,7 +262,7 @@ export default function DocumentObjectPageClient({
 
   const saveEditSession = useCallback(
     async (body: EditSessionPatchBody, etag: string): Promise<DocumentEditSessionSaveOutcome> => {
-      const res = await fetch(
+      const res = await csrfFetch(
         `/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/edit-session`,
         {
           method: "PATCH",
@@ -219,21 +312,41 @@ export default function DocumentObjectPageClient({
   }, [router]);
 
   return (
-    <DocumentObjectPageWorkspace
-      contract={descriptor}
-      record={record}
+    <DocumentRuntimeContextProvider
+      descriptor={descriptor}
       recordId={recordId}
-      recordUuid={recordUuid}
-      processState={processState}
-      chrome={chrome}
-      sections={sections}
-      renderSection={renderSection}
-      loadEditContext={loadEditContext}
-      saveEditSession={saveEditSession}
-      streamUrl={streamUrl}
-      onRefreshRecord={onRefreshRecord}
-      autoEnterEdit={autoEnterEdit}
-      flags={flags}
-    />
+      record={recordData}
+      bindings={documentBindings}
+    >
+      <DocumentObjectPageWorkspace
+        contract={descriptor}
+        record={record}
+        recordId={recordId}
+        recordUuid={recordUuid}
+        processState={processState}
+        chrome={chrome}
+        sections={sections}
+        renderSection={renderSection}
+        headerSurfaceSlot={headerSurfaceSlot}
+        loadEditContext={loadEditContext}
+        saveEditSession={saveEditSession}
+        streamUrl={streamUrl}
+        onRefreshRecord={onRefreshRecord}
+        autoEnterEdit={autoEnterEdit}
+        flags={flags}
+      />
+    </DocumentRuntimeContextProvider>
   );
+}
+
+// Lives inside the workspace's EditSessionProvider, so the context lookup
+// here returns the live session. The render prop pattern keeps the consumer
+// signature tight without forcing every surface renderer to consume context.
+function SurfaceEditModeSlot({
+  children,
+}: {
+  children: (editMode: boolean) => ReactNode;
+}) {
+  const session = useEditSessionContext();
+  return <>{children(Boolean(session?.isEditing))}</>;
 }

@@ -183,7 +183,7 @@ export function EntityTabBar({
       {/* Desktop tab strip (md and above). Unchanged from pre-Phase-11. */}
       <div
         ref={containerRef}
-        className={cn("hidden md:flex", headerTabBarClass, className)}
+        className={cn(headerTabBarClass, "hidden md:flex", className)}
       >
         {visibleTabs.map((tab) => (
           <TabButton

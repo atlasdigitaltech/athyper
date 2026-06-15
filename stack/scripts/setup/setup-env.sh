@@ -141,6 +141,10 @@ setup_stack() {
 # setup_server
 # ----------------------------
 setup_server() {
+  if [[ "$ENV_NAME" == "local" && -f "$SERVER_DIR/.env.example" ]]; then
+    backup_and_copy "$SERVER_DIR/.env.example" "$SERVER_DIR/.env" "server"
+    return 0
+  fi
   if [[ "$ENV_NAME" == "local" ]]; then
     echo "  [server] skipped — api-up.sh reads stack/env/.env directly (no server/.env needed)"
     return 0
@@ -194,7 +198,8 @@ echo ""
 echo "Next steps:"
 [[ "$TARGET" == "all" || "$TARGET" == "stack" ]] && echo "  • stack    : Open stack/env/.env and fill in any \${VAR} placeholders."
 if [[ "$ENV_NAME" == "local" ]]; then
-  [[ "$TARGET" == "all" ]] && echo "  • api-up.sh / web-up.sh will load stack/env/.env directly (no server/.env or .env.local needed)."
+  [[ "$TARGET" == "all" || "$TARGET" == "runtime" || "$TARGET" == "server" ]] && echo "  • server   : Generated server/.env is for direct pnpm dev / IDE runs."
+  [[ "$TARGET" == "all" ]] && echo "  • api-up.sh / web-up.sh still load stack/env/.env directly."
 else
   [[ "$TARGET" == "all" || "$TARGET" == "runtime" || "$TARGET" == "server" ]] && echo "  • server   : Open server/.env — set credentials and external service URLs."
   [[ "$TARGET" == "all" || "$TARGET" == "runtime" || "$TARGET" == "apps"   ]] && echo "  • apps/web : Open apps/web/.env.local — verify RUNTIME_API_URL and KEYCLOAK_BASE_URL."

@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS master.principal (
     CONSTRAINT principal_tenant_code_uq      UNIQUE (tenant_id, code),
     CONSTRAINT principal_tenant_id_uq        UNIQUE (tenant_id, id),
     CONSTRAINT principal_code_nonempty       CHECK (btrim(code) <> ''),
+    CONSTRAINT principal_code_norm_chk       CHECK (code = lower(btrim(code))),
     CONSTRAINT principal_name_nonempty       CHECK (btrim(name) <> ''),
     CONSTRAINT principal_login_email_norm_chk CHECK (login_email IS NULL OR login_email = lower(trim(login_email))),
     -- Sealed platform vocabulary — inline CHECK only, no lookup domain
@@ -200,6 +201,8 @@ CREATE TABLE IF NOT EXISTS master.principal_profile (
     CONSTRAINT principal_profile_pkey             PRIMARY KEY (id),
     CONSTRAINT principal_profile_principal_uq     UNIQUE (tenant_id, principal_id),
     CONSTRAINT principal_profile_keycloak_uq      UNIQUE NULLS NOT DISTINCT (keycloak_id),
+    CONSTRAINT principal_profile_keycloak_username_norm_chk
+        CHECK (keycloak_username IS NULL OR keycloak_username = lower(btrim(keycloak_username))),
     -- Intentionally a sealed inline CHECK — not lookup-backed. Keycloak sync status
     -- values are protocol-defined, not business-extensible. Same pattern on mfa_config.
     CONSTRAINT principal_profile_sync_status_chk  CHECK (keycloak_sync_status IN ('pending', 'synced', 'drift', 'error')),
@@ -297,6 +300,7 @@ CREATE TABLE IF NOT EXISTS master.principal_identity_binding (
     )),
     CONSTRAINT pib_realm_key_fmt        CHECK (realm_key ~ '^[a-z][a-z0-9_-]{1,62}$'),
     CONSTRAINT pib_subject_nonempty     CHECK (btrim(subject_id) <> ''),
+    CONSTRAINT pib_username_norm_chk    CHECK (username IS NULL OR username = lower(btrim(username))),
     CONSTRAINT pib_issuer_nonempty      CHECK (issuer IS NULL OR btrim(issuer) <> ''),
     CONSTRAINT pib_audience_nonempty    CHECK (audience IS NULL OR btrim(audience) <> ''),
     CONSTRAINT pib_client_id_nonempty   CHECK (client_id IS NULL OR btrim(client_id) <> ''),

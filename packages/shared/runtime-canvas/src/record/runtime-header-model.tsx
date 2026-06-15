@@ -68,7 +68,7 @@ export function buildRuntimeRecordChromeModel({
   const actions = resolveHeaderActions(contract, record, recordId, mode, actionHrefs, processState, flags);
   const tabs = resolveHeaderTabs(contract, record, processState, flags, mode);
   const { platformIcons, platformIconHrefs } = record
-    ? resolvePlatformIcons(contract, recordId, mode)
+    ? resolvePlatformIcons(contract, recordId)
     : { platformIcons: undefined, platformIconHrefs: {} };
 
   return {
@@ -197,8 +197,7 @@ function resolveHeaderActions(
   return actions;
 }
 
-function supportsRecordPrint(contract: MetaEntityRuntimeDescriptor, mode: RuntimeMode): boolean {
-  if (mode !== "detail") return false;
+function supportsRecordPrint(contract: MetaEntityRuntimeDescriptor): boolean {
   const displayConfig = contract.extensions?.["displayConfig"];
   if (!isRecord(displayConfig) || !Object.hasOwn(displayConfig, "print_config")) return true;
   const printConfig = displayConfig["print_config"];
@@ -243,7 +242,6 @@ function resolveTabHrefs(
 function resolvePlatformIcons(
   contract: MetaEntityRuntimeDescriptor,
   recordId: string,
-  mode: RuntimeMode,
 ): { platformIcons?: PlatformPanelIcon[]; platformIconHrefs: Record<string, string> } {
   const icons: PlatformPanelIcon[] = [];
   const hrefs: Record<string, string> = {};
@@ -255,7 +253,7 @@ function resolvePlatformIcons(
     surfacesByIcon.set(icon.id, surface);
   }
 
-  if (supportsRecordPrint(contract, mode)) {
+  if (supportsRecordPrint(contract)) {
     icons.push({ id: "print", label: "Print", icon: <Printer className="h-5 w-5" /> });
   }
 

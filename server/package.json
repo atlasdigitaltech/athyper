@@ -17,6 +17,7 @@
     "test:coverage": "vitest --coverage",
     "rls:verify": "pnpm --dir db run db:verify:rls",
     "tenant-stamp:verify": "tsx scripts/verify-tenant-stamp.ts",
+    "realm-strict-mfa:verify": "tsx scripts/verify-realm-strict-mfa.ts",
     "field-security:verify": "pnpm --dir db run db:verify:field-security",
     "secdef:verify": "pnpm --dir db run db:verify:secdef",
     "archetypes:verify": "pnpm --dir db run db:verify:archetypes",

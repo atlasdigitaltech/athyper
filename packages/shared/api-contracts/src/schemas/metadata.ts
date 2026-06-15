@@ -192,6 +192,20 @@ export const FieldUiHintSchema = z.object({
   suffix: z.string().optional(),
   hide_label: z.boolean().optional(),
   autocomplete: z.string().optional(),
+  /**
+   * Per-field opt-in for the line-item sheet footer summary strip.
+   * When set, the field is included in the inline Net / Discount / Tax / Gross
+   * style bar at the bottom of LineItemComposerSheet / LineItemEditorSheet.
+   * The strip resolver reads field-level hints first, then falls back to
+   * entity display_config.line_summary_strip, then to variant heuristics.
+   */
+  line_summary: z.object({
+    label:    z.string().optional(),
+    sign:     z.union([z.literal(1), z.literal(-1)]).optional(),
+    bold:     z.boolean().optional(),
+    divider:  z.boolean().optional(),
+    order:    z.number().int().optional(),
+  }).optional(),
 }).passthrough();
 export type FieldUiHint = z.infer<typeof FieldUiHintSchema>;
 
@@ -999,6 +1013,30 @@ export const CompiledEntitySchema = z.object({
      * from entity fields rather than per-document UI code.
      */
     line_grid: z.record(z.string(), z.unknown()).optional(),
+    /**
+     * Line-item sheet footer strip override.
+     * Set on the LINE entity (e.g. purchase_invoice_line) to control which
+     * money fields appear in the inline Net / Discount / Tax / Gross bar that
+     * sits in LineItemComposerSheet / LineItemEditorSheet's footer.
+     *
+     * `amount_field`     — primary amount column (default: heuristic).
+     * `currency_field`   — currency column (default: heuristic).
+     * `fields`           — ordered list; each names an entity field plus its
+     *                      display attributes. When omitted, the variant
+     *                      resolver falls back to its built-in field list
+     *                      (procure: net/discount/tax/charges/gross, etc.).
+     */
+    line_summary_strip: z.object({
+      amount_field:    z.string().optional(),
+      currency_field:  z.string().optional(),
+      fields: z.array(z.object({
+        name:    z.string(),
+        label:   z.string().optional(),
+        sign:    z.union([z.literal(1), z.literal(-1)]).optional(),
+        bold:    z.boolean().optional(),
+        divider: z.boolean().optional(),
+      })).optional(),
+    }).optional(),
     /**
      * Semantic resolver key for status-field badge coloring in list/detail views.
      * When set, overrides the heuristic detection in resolvePresentationConfig.

@@ -105,15 +105,12 @@ export function useDocumentPageController(
     [hashFor],
   );
 
-  // Initial state — resolve from hash or fall back to initialId / first section.
-  const [activeSectionId, setActiveSectionIdState] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      const hash = window.location.hash.slice(1);
-      const fromHash = resolveHashId(hash);
-      if (fromHash) return fromHash;
-    }
-    return initialId ?? sectionIds[0] ?? "";
-  });
+  // Initial state must be deterministic across server render and hydration.
+  // URL hashes are only available in the browser, so they are applied after
+  // mount by the effect below.
+  const [activeSectionId, setActiveSectionIdState] = useState<string>(
+    initialId ?? sectionIds[0] ?? "",
+  );
 
   const intent = useScrollIntent();
 
@@ -171,6 +168,7 @@ export function useDocumentPageController(
     const hash = window.location.hash.slice(1);
     const targetId = resolveHashId(hash);
     if (!targetId) return;
+    setActiveSectionIdState(targetId);
     // Defer to next frame so DocumentSection refs have registered.
     const raf = window.requestAnimationFrame(() => {
       scrollToSectionRef.current(targetId, "tabClick");

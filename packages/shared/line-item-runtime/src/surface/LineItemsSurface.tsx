@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import type { AccountingDistribution, DocumentLine } from "@athyper/api-contracts/documents";
 import type { MetaEntityLineItemsSurface } from "@athyper/runtime-contracts";
-import type { CompiledEntity } from "@athyper/api-contracts/metadata";
-import type { LineItemsSurfaceProps, LineRecord } from "../types";
+import type { ControlledLineItemsSurfaceData, LineItemsSurfaceProps, LineRecord } from "../types";
 import { LinesGrid } from "./LinesGrid";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -14,11 +13,19 @@ import { LinesGrid } from "./LinesGrid";
 type LinesResponse = { data?: DocumentLine[] };
 type DistributionsResponse = { data?: AccountingDistribution[] };
 
+/**
+ * Plan v5 amendment 2 — when `controlledData` is supplied, the hook
+ * skips its internal fetches and surfaces the parent-owned bundle.
+ * React hooks must be called unconditionally, so the early-return at
+ * the bottom of the function is the gate — useEffect itself bails when
+ * controlled mode is active.
+ */
 function useLineItemsData(
   entityCode:      string,
   recordId:        string,
   lineEntityCode:  string,
   surface:         MetaEntityLineItemsSurface,
+  controlledData?: ControlledLineItemsSurfaceData,
 ): {
   lines:         LineRecord[];
   distributions: AccountingDistribution[];
@@ -31,6 +38,7 @@ function useLineItemsData(
   const [refreshKey,    setRefreshKey]    = useState(0);
 
   useEffect(() => {
+    if (controlledData) return;                                        // controlled mode — skip fetch
     if (!entityCode || !recordId || !lineEntityCode) return;
     let cancelled = false;
     setIsLoading(true);
@@ -56,7 +64,16 @@ function useLineItemsData(
 
     void Promise.all(fetches).finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, [entityCode, recordId, lineEntityCode, surface.displayMode, refreshKey]);
+  }, [entityCode, recordId, lineEntityCode, surface.displayMode, refreshKey, controlledData]);
+
+  if (controlledData) {
+    return {
+      lines:         controlledData.lines as LineRecord[],
+      distributions: (controlledData.distributions ?? []) as AccountingDistribution[],
+      isLoading:     controlledData.isLoading,
+      refresh:       () => { void controlledData.onRefresh(); },
+    };
+  }
 
   const refresh = () => setRefreshKey((k) => k + 1);
   return { lines, distributions, isLoading, refresh };
@@ -82,6 +99,8 @@ export function LineItemsSurface({
   record,
   editMode = true,
   mobileColumns,
+  controlledData,
+  renderRowExpansion,
 }: LineItemsSurfaceProps) {
   const lineEntityCode = surface.entityCode;
 
@@ -90,6 +109,7 @@ export function LineItemsSurface({
     recordId,
     lineEntityCode,
     surface,
+    controlledData,
   );
 
   return (
@@ -108,6 +128,7 @@ export function LineItemsSurface({
       onRefresh={refresh}
       editMode={editMode}
       mobileColumns={mobileColumns}
+      renderRowExpansion={renderRowExpansion}
     />
   );
 }

@@ -87,6 +87,39 @@ describe("typed client route builders", () => {
   });
 });
 
+describe("records client — list query string", () => {
+  it("appends parent_id when provided, omits it otherwise", async () => {
+    const { calls, fetch } = recordingFetch({ data: [], pagination: {} });
+    const client = createRecordsClient(fetch);
+
+    await client.list("purchase_invoice_line", { parent_id: "inv-42" });
+    await client.list("purchase_invoice_line");
+
+    expect(calls[0]?.path).toBe("/api/records/purchase_invoice_line?parent_id=inv-42");
+    expect(calls[1]?.path).toBe("/api/records/purchase_invoice_line");
+  });
+
+  it("coexists with other params without collision", async () => {
+    const { calls, fetch } = recordingFetch({ data: [], pagination: {} });
+    const client = createRecordsClient(fetch);
+
+    await client.list("purchase_invoice_line", {
+      q: "consulting",
+      parent_id: "inv-42",
+      page: 2,
+      pageSize: 50,
+      sort: [{ key: "line_number", dir: "asc" }],
+    });
+
+    const url = new URL(`http://x${calls[0]?.path ?? ""}`);
+    expect(url.searchParams.get("parent_id")).toBe("inv-42");
+    expect(url.searchParams.get("q")).toBe("consulting");
+    expect(url.searchParams.get("page")).toBe("2");
+    expect(url.searchParams.get("page_size")).toBe("50");
+    expect(url.searchParams.get("sort")).toBe("line_number:asc");
+  });
+});
+
 describe("metadata client", () => {
   it("returns null for missing entity flows only", async () => {
     const notFoundFetch: ApiFetch = async () => {

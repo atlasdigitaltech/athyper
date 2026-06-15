@@ -14,27 +14,6 @@
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
   <style>
-    .kc-otp-user {
-      display: flex;
-      align-items: center;
-      gap: 0.625rem;
-      padding: 0.625rem 0.875rem;
-      background: oklch(0.975 0 0);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 0.875rem;
-      color: var(--muted-fg);
-    }
-    .kc-otp-user svg {
-      width: 1rem;
-      height: 1rem;
-      flex-shrink: 0;
-      color: var(--muted-fg);
-    }
-    .kc-otp-user strong {
-      color: var(--fg);
-      font-weight: 500;
-    }
     .kc-otp-select { display: flex; flex-direction: column; gap: 0.375rem; }
     .kc-otp-select select {
       width: 100%;
@@ -87,36 +66,34 @@
   <!-- ── Right form panel ── -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
-    <div class="kc-form-card">
+      <div class="kc-form-card">
 
         <#include "_neon-brand-mobile.ftl">
 
-      <!-- Header -->
-      <div class="kc-header">
-        <h2>${msg("doLogIn")}</h2>
-        <p>${msg("loginTotpDescription")}</p>
-      </div>
+        <!-- Signed-in-as indicator -->
+        <#if auth?has_content && auth.showUsername() && !auth.showResetCredentials()>
+        <div class="kc-username-chip">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+          <span>${auth.attemptedUsername}</span>
+          <a href="${url.loginRestartFlowUrl}" class="kc-chip-restart" data-kc-change-user title="Use another user ID">Change</a>
+        </div>
+        </#if>
 
-      <!-- Alert -->
-      <#if message?has_content>
+        <!-- Header -->
+        <div class="kc-header">
+          <h2>${msg("doLogIn")}</h2>
+          <p>Enter the one-time code from your authenticator app to continue.</p>
+        </div>
+
+        <!-- Alert -->
+        <#if message?has_content>
         <div class="kc-alert kc-alert-${message.type}">
           ${kcSanitize(message.summary)?no_esc}
         </div>
-      </#if>
+        </#if>
 
-      <!-- Signed-in-as indicator -->
-      <#if auth?has_content && auth.showUsername() && !auth.showResetCredentials()>
-        <div class="kc-otp-user">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-          </svg>
-          <span><strong>${auth.attemptedUsername}</strong></span>
-          <a class="kc-link" href="${url.loginRestartFlowUrl}" style="margin-left:auto;">${msg("restartLoginTooltip")}</a>
-        </div>
-      </#if>
-
-      <!-- OTP form -->
-      <form class="kc-form" action="${url.loginAction}" method="post">
+        <!-- OTP form -->
+        <form class="kc-form" action="${url.loginAction}" method="post">
 
         <!-- OTP device selector (shown when user has multiple OTP devices) -->
         <#if otpLogin.userOtpCredentials?size gt 1>
@@ -155,7 +132,7 @@
           <button class="kc-btn kc-btn-primary" type="submit">${msg("doLogIn")}</button>
         </div>
 
-      </form>
+        </form>
 
       </div><!-- /.kc-form-card -->
     </div><!-- /.kc-form-wrapper -->
@@ -185,5 +162,6 @@
   var timer = setInterval(function () { show((current + 1) % slides.length); }, 5000);
 })();
 </script>
+<#include "_change-user-script.ftl">
 </body>
 </html>

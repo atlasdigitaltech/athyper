@@ -2927,7 +2927,7 @@ BEGIN
   -- Stamp ui_hint.visible_when on invoice-type-specific fields so the overview and
   -- edit panels hide them when irrelevant (evaluated via evaluateRule in the UI).
   UPDATE control.entity_field ef
-     SET ui_hint = v.ui_hint::jsonb,
+     SET ui_hint = COALESCE(ef.ui_hint, '{}'::jsonb) || v.ui_hint::jsonb,
          updated_at = now(),
          updated_by = v_su
     FROM (VALUES
@@ -2937,7 +2937,7 @@ BEGIN
       ('credit_reference',          '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
       ('credit_note_date',          '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
       ('credit_note_name',          '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
-      ('application_strategy',      '{"visible_when":{"==":[{"var":"invoice_type"},"credit_note"]}}'),
+      ('application_strategy',      '{"visible_when":{"==":[{"var":"invoice_type"},"retention_release"]}}'),
       -- debit note fields
       ('debited_invoice_id',        '{"visible_when":{"==":[{"var":"invoice_type"},"debit_note"]}}'),
       ('debit_reason',              '{"visible_when":{"==":[{"var":"invoice_type"},"debit_note"]}}'),

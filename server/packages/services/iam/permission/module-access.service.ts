@@ -121,7 +121,6 @@ export async function getEffectiveModuleAccess(
        AND r.status = 'active'
       WHERE gm.tenant_id = ${tenantId}
         AND gm.principal_id = ${principalId}
-       AND (gm.expires_at IS NULL OR gm.expires_at > now())
         AND r.module_id IS NOT NULL
     ),
     plan_modules AS (

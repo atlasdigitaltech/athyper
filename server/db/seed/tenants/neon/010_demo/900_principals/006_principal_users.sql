@@ -5,24 +5,25 @@
 -- Schemas:  master.principal, master.principal_profile,
 --           master.principal_identity_binding
 -- Purpose:  Pre-seed two system principal accounts per organisational unit:
---             • <TenantCode>.OWNER — full operational control
---             • <TenantCode>.ADMIN — administrative access
---           For tenants with multiple legal entities (athyper only, 17 CCs):
---             • <CCCode>.OWNER   — CC-scoped operational control
---             • <CCCode>.ADMIN   — CC-scoped administrative access
+--             • <tenant-code>.owner — full operational control
+--             • <tenant-code>.admin — administrative access
+--           For athyper company codes that do not already have canonical demo
+--           owner/admin users:
+--             • <cc-code>.owner   — CC-scoped operational control
+--             • <cc-code>.admin   — CC-scoped administrative access
 --
 -- UUID series:
---   Tenant-level:   bb001000-0000-0000-0000-{seq:012x}  (01..1c, 28 users)
---   CC-level:       bb002000-0000-0000-0000-{seq:012x}  (01..22, 34 users)
+--   Tenant-level:   bb001000-0000-0000-0000-{seq:012x}  (01..02, 2 users)
+--   CC-level:       bb002000-0000-0000-0000-{seq:012x}  (01..1a, 1d..22, 32 users)
 --
 -- Tenant mapping (seq → tenant code):
 --   01-02  athyper
---   (odd=OWNER, even=ADMIN)
+--   (odd=owner, even=admin)
 --
 -- athyper CC mapping (seq → CC code):
 --   01-02 ACFB  03-04 ADPM  05-06 AITM  07-08 AJED  09-0a AMRE
 --   0b-0c APHS  0d-0e AQTS  0f-10 AQTU  11-12 ASAC  13-14 ASAH
---   15-16 ASGF  17-18 ASPE  19-1a ATEM  1b-1c ATHQ  1d-1e AUET
+--   15-16 ASGF  17-18 ASPE  19-1a ATEM  1b-1c reserved for ATHQ demo users  1d-1e AUET
 --   1f-20 AUIC  21-22 AUKA
 --
 -- Idempotent: ON CONFLICT DO NOTHING / DO UPDATE
@@ -72,8 +73,6 @@ BEGIN
           'bb002000-0000-0000-0000-000000000018'::uuid,
           'bb002000-0000-0000-0000-000000000019'::uuid,
           'bb002000-0000-0000-0000-00000000001a'::uuid,
-          'bb002000-0000-0000-0000-00000000001b'::uuid,
-          'bb002000-0000-0000-0000-00000000001c'::uuid,
           'bb002000-0000-0000-0000-00000000001d'::uuid,
           'bb002000-0000-0000-0000-00000000001e'::uuid,
           'bb002000-0000-0000-0000-00000000001f'::uuid,
@@ -84,7 +83,7 @@ BEGIN
       AND p.id <> pp.keycloak_id::uuid;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- STAGE A: master.principal — tenant-level principal users (28)
+    -- STAGE A: master.principal — tenant-level principal users (2)
     -- ══════════════════════════════════════════════════════════════════════
 
     INSERT INTO master.principal (
@@ -95,14 +94,14 @@ BEGIN
     SELECT v.id, t.id, v.code, v.name,
            'user', false, false, 'internal', 'active', v_su
     FROM (VALUES
-        ('bb001000-0000-0000-0000-000000000001'::uuid, 'athyper', 'athyper.OWNER', 'Athyper Group Owner'),
-        ('bb001000-0000-0000-0000-000000000002'::uuid, 'athyper', 'athyper.ADMIN', 'Athyper Group Admin')
+        ('bb001000-0000-0000-0000-000000000001'::uuid, 'athyper', 'athyper.owner', 'Athyper Group Owner'),
+        ('bb001000-0000-0000-0000-000000000002'::uuid, 'athyper', 'athyper.admin', 'Athyper Group Admin')
     ) AS v(id, tenant_code, code, name)
     JOIN master.tenant t ON t.code = v.tenant_code AND t.realm_key = 'athyper'
     ON CONFLICT (tenant_id, code) DO NOTHING;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- STAGE B: master.principal — CC-level principal users (34, all in athyper)
+    -- STAGE B: master.principal — CC-level principal users (32, all in athyper)
     -- ══════════════════════════════════════════════════════════════════════
 
     INSERT INTO master.principal (
@@ -115,45 +114,43 @@ BEGIN
            v.code, v.name,
            'user', false, false, 'internal', 'active', v_su
     FROM (VALUES
-        ('bb002000-0000-0000-0000-000000000001'::uuid, 'ACFB.OWNER', 'ACFB Owner'),
-        ('bb002000-0000-0000-0000-000000000002'::uuid, 'ACFB.ADMIN', 'ACFB Admin'),
-        ('bb002000-0000-0000-0000-000000000003'::uuid, 'ADPM.OWNER', 'ADPM Owner'),
-        ('bb002000-0000-0000-0000-000000000004'::uuid, 'ADPM.ADMIN', 'ADPM Admin'),
-        ('bb002000-0000-0000-0000-000000000005'::uuid, 'AITM.OWNER', 'AITM Owner'),
-        ('bb002000-0000-0000-0000-000000000006'::uuid, 'AITM.ADMIN', 'AITM Admin'),
-        ('bb002000-0000-0000-0000-000000000007'::uuid, 'AJED.OWNER', 'AJED Owner'),
-        ('bb002000-0000-0000-0000-000000000008'::uuid, 'AJED.ADMIN', 'AJED Admin'),
-        ('bb002000-0000-0000-0000-000000000009'::uuid, 'AMRE.OWNER', 'AMRE Owner'),
-        ('bb002000-0000-0000-0000-00000000000a'::uuid, 'AMRE.ADMIN', 'AMRE Admin'),
-        ('bb002000-0000-0000-0000-00000000000b'::uuid, 'APHS.OWNER', 'APHS Owner'),
-        ('bb002000-0000-0000-0000-00000000000c'::uuid, 'APHS.ADMIN', 'APHS Admin'),
-        ('bb002000-0000-0000-0000-00000000000d'::uuid, 'AQTS.OWNER', 'AQTS Owner'),
-        ('bb002000-0000-0000-0000-00000000000e'::uuid, 'AQTS.ADMIN', 'AQTS Admin'),
-        ('bb002000-0000-0000-0000-00000000000f'::uuid, 'AQTU.OWNER', 'AQTU Owner'),
-        ('bb002000-0000-0000-0000-000000000010'::uuid, 'AQTU.ADMIN', 'AQTU Admin'),
-        ('bb002000-0000-0000-0000-000000000011'::uuid, 'ASAC.OWNER', 'ASAC Owner'),
-        ('bb002000-0000-0000-0000-000000000012'::uuid, 'ASAC.ADMIN', 'ASAC Admin'),
-        ('bb002000-0000-0000-0000-000000000013'::uuid, 'ASAH.OWNER', 'ASAH Owner'),
-        ('bb002000-0000-0000-0000-000000000014'::uuid, 'ASAH.ADMIN', 'ASAH Admin'),
-        ('bb002000-0000-0000-0000-000000000015'::uuid, 'ASGF.OWNER', 'ASGF Owner'),
-        ('bb002000-0000-0000-0000-000000000016'::uuid, 'ASGF.ADMIN', 'ASGF Admin'),
-        ('bb002000-0000-0000-0000-000000000017'::uuid, 'ASPE.OWNER', 'ASPE Owner'),
-        ('bb002000-0000-0000-0000-000000000018'::uuid, 'ASPE.ADMIN', 'ASPE Admin'),
-        ('bb002000-0000-0000-0000-000000000019'::uuid, 'ATEM.OWNER', 'ATEM Owner'),
-        ('bb002000-0000-0000-0000-00000000001a'::uuid, 'ATEM.ADMIN', 'ATEM Admin'),
-        ('bb002000-0000-0000-0000-00000000001b'::uuid, 'ATHQ.OWNER', 'ATHQ Owner'),
-        ('bb002000-0000-0000-0000-00000000001c'::uuid, 'ATHQ.ADMIN', 'ATHQ Admin'),
-        ('bb002000-0000-0000-0000-00000000001d'::uuid, 'AUET.OWNER', 'AUET Owner'),
-        ('bb002000-0000-0000-0000-00000000001e'::uuid, 'AUET.ADMIN', 'AUET Admin'),
-        ('bb002000-0000-0000-0000-00000000001f'::uuid, 'AUIC.OWNER', 'AUIC Owner'),
-        ('bb002000-0000-0000-0000-000000000020'::uuid, 'AUIC.ADMIN', 'AUIC Admin'),
-        ('bb002000-0000-0000-0000-000000000021'::uuid, 'AUKA.OWNER', 'AUKA Owner'),
-        ('bb002000-0000-0000-0000-000000000022'::uuid, 'AUKA.ADMIN', 'AUKA Admin')
+        ('bb002000-0000-0000-0000-000000000001'::uuid, 'acfb.owner', 'ACFB Owner'),
+        ('bb002000-0000-0000-0000-000000000002'::uuid, 'acfb.admin', 'ACFB Admin'),
+        ('bb002000-0000-0000-0000-000000000003'::uuid, 'adpm.owner', 'ADPM Owner'),
+        ('bb002000-0000-0000-0000-000000000004'::uuid, 'adpm.admin', 'ADPM Admin'),
+        ('bb002000-0000-0000-0000-000000000005'::uuid, 'aitm.owner', 'AITM Owner'),
+        ('bb002000-0000-0000-0000-000000000006'::uuid, 'aitm.admin', 'AITM Admin'),
+        ('bb002000-0000-0000-0000-000000000007'::uuid, 'ajed.owner', 'AJED Owner'),
+        ('bb002000-0000-0000-0000-000000000008'::uuid, 'ajed.admin', 'AJED Admin'),
+        ('bb002000-0000-0000-0000-000000000009'::uuid, 'amre.owner', 'AMRE Owner'),
+        ('bb002000-0000-0000-0000-00000000000a'::uuid, 'amre.admin', 'AMRE Admin'),
+        ('bb002000-0000-0000-0000-00000000000b'::uuid, 'aphs.owner', 'APHS Owner'),
+        ('bb002000-0000-0000-0000-00000000000c'::uuid, 'aphs.admin', 'APHS Admin'),
+        ('bb002000-0000-0000-0000-00000000000d'::uuid, 'aqts.owner', 'AQTS Owner'),
+        ('bb002000-0000-0000-0000-00000000000e'::uuid, 'aqts.admin', 'AQTS Admin'),
+        ('bb002000-0000-0000-0000-00000000000f'::uuid, 'aqtu.owner', 'AQTU Owner'),
+        ('bb002000-0000-0000-0000-000000000010'::uuid, 'aqtu.admin', 'AQTU Admin'),
+        ('bb002000-0000-0000-0000-000000000011'::uuid, 'asac.owner', 'ASAC Owner'),
+        ('bb002000-0000-0000-0000-000000000012'::uuid, 'asac.admin', 'ASAC Admin'),
+        ('bb002000-0000-0000-0000-000000000013'::uuid, 'asah.owner', 'ASAH Owner'),
+        ('bb002000-0000-0000-0000-000000000014'::uuid, 'asah.admin', 'ASAH Admin'),
+        ('bb002000-0000-0000-0000-000000000015'::uuid, 'asgf.owner', 'ASGF Owner'),
+        ('bb002000-0000-0000-0000-000000000016'::uuid, 'asgf.admin', 'ASGF Admin'),
+        ('bb002000-0000-0000-0000-000000000017'::uuid, 'aspe.owner', 'ASPE Owner'),
+        ('bb002000-0000-0000-0000-000000000018'::uuid, 'aspe.admin', 'ASPE Admin'),
+        ('bb002000-0000-0000-0000-000000000019'::uuid, 'atem.owner', 'ATEM Owner'),
+        ('bb002000-0000-0000-0000-00000000001a'::uuid, 'atem.admin', 'ATEM Admin'),
+        ('bb002000-0000-0000-0000-00000000001d'::uuid, 'auet.owner', 'AUET Owner'),
+        ('bb002000-0000-0000-0000-00000000001e'::uuid, 'auet.admin', 'AUET Admin'),
+        ('bb002000-0000-0000-0000-00000000001f'::uuid, 'auic.owner', 'AUIC Owner'),
+        ('bb002000-0000-0000-0000-000000000020'::uuid, 'auic.admin', 'AUIC Admin'),
+        ('bb002000-0000-0000-0000-000000000021'::uuid, 'auka.owner', 'AUKA Owner'),
+        ('bb002000-0000-0000-0000-000000000022'::uuid, 'auka.admin', 'AUKA Admin')
     ) AS v(id, code, name)
     ON CONFLICT (tenant_id, code) DO NOTHING;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- STAGE C: master.principal_profile — all 62 principal users
+    -- STAGE C: master.principal_profile — all 34 system principal users
     -- ══════════════════════════════════════════════════════════════════════
 
     -- shared.trg_set_updated_at() reads app.current_principal_id to set updated_by.
@@ -170,10 +167,10 @@ BEGIN
     SELECT
         p.tenant_id,
         p.id,
-        CASE WHEN p.principal_source = 'internal' THEN split_part(p.code, '.', 1) ELSE '' END,
+        CASE WHEN p.principal_source = 'internal' THEN upper(split_part(p.code, '.', 1)) ELSE '' END,
         CASE
-            WHEN p.code LIKE '%.OWNER' THEN 'Owner'
-            WHEN p.code LIKE '%.ADMIN' THEN 'Admin'
+            WHEN lower(p.code) LIKE '%.owner' THEN 'Owner'
+            WHEN lower(p.code) LIKE '%.admin' THEN 'Admin'
             ELSE '' END,
         p.name,
         p.id,           -- KC UUID = principal UUID
@@ -210,8 +207,6 @@ BEGIN
         'bb002000-0000-0000-0000-000000000018'::uuid,
         'bb002000-0000-0000-0000-000000000019'::uuid,
         'bb002000-0000-0000-0000-00000000001a'::uuid,
-        'bb002000-0000-0000-0000-00000000001b'::uuid,
-        'bb002000-0000-0000-0000-00000000001c'::uuid,
         'bb002000-0000-0000-0000-00000000001d'::uuid,
         'bb002000-0000-0000-0000-00000000001e'::uuid,
         'bb002000-0000-0000-0000-00000000001f'::uuid,
@@ -226,7 +221,7 @@ BEGIN
             updated_by           = v_su;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- STAGE D: master.principal_identity_binding — all 62 principal users
+    -- STAGE D: master.principal_identity_binding — all 34 system principal users
     -- ══════════════════════════════════════════════════════════════════════
 
     INSERT INTO master.principal_identity_binding (
@@ -272,8 +267,6 @@ BEGIN
         'bb002000-0000-0000-0000-000000000018'::uuid,
         'bb002000-0000-0000-0000-000000000019'::uuid,
         'bb002000-0000-0000-0000-00000000001a'::uuid,
-        'bb002000-0000-0000-0000-00000000001b'::uuid,
-        'bb002000-0000-0000-0000-00000000001c'::uuid,
         'bb002000-0000-0000-0000-00000000001d'::uuid,
         'bb002000-0000-0000-0000-00000000001e'::uuid,
         'bb002000-0000-0000-0000-00000000001f'::uuid,
@@ -284,6 +277,48 @@ BEGIN
     AND p.principal_source = 'internal'
     ON CONFLICT (tenant_id, principal_id, realm_key, provider_code) DO NOTHING;
 
-    RAISE NOTICE '[003_principal_users] 36 principal users seeded (2 tenant-level + 34 CC-level)';
+    -- ══════════════════════════════════════════════════════════════════════
+    -- STAGE E: master.principal_persona — assign default persona per user
+    -- ══════════════════════════════════════════════════════════════════════
+    --
+    -- Without a persona, checkPermissionBatch falls through with
+    -- persona_id=ZERO_UUID — every permission returns 'not_found' and the
+    -- ActionBar renders empty. 002_demo_principal_personas.sql only seeds
+    -- the aa001000-* demo users; the bb001000/bb002000 system principals
+    -- created above need their own assignment.
+    --
+    --   *.owner  → 'owner' persona (full operational access)
+    --   *.admin  → 'admin' persona (administrative access)
+
+    ALTER TABLE master.principal_persona
+        DISABLE TRIGGER trg_principal_persona_iam_outbox;
+
+    INSERT INTO master.principal_persona (
+        tenant_id, principal_id, persona_id,
+        assigned_by, created_by
+    )
+    SELECT
+        p.tenant_id,
+        p.id,
+        per.id,
+        v_su,
+        v_su
+    FROM master.principal p
+    JOIN master.tenant t ON t.id = p.tenant_id AND t.code = 'athyper' AND t.realm_key = 'athyper'
+    JOIN shared.persona per
+      ON per.code = CASE
+                      WHEN lower(p.code) LIKE '%.owner' THEN 'owner'
+                      WHEN lower(p.code) LIKE '%.admin' THEN 'admin'
+                   END
+    WHERE p.principal_source = 'internal'
+      AND (lower(p.code) LIKE '%.owner' OR lower(p.code) LIKE '%.admin')
+    ON CONFLICT (tenant_id, principal_id) DO UPDATE
+        SET persona_id = excluded.persona_id;
+
+    ALTER TABLE master.principal_persona
+        ENABLE TRIGGER trg_principal_persona_iam_outbox;
+
+    RAISE NOTICE '[003_principal_users] 34 principal users seeded (2 tenant-level + 32 CC-level)';
+    RAISE NOTICE '[003_principal_users] 34 principal_persona assignments seeded (owner/admin)';
 
 END $principal_users$;

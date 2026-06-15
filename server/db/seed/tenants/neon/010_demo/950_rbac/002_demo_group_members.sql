@@ -9,9 +9,9 @@
 --
 -- Two tiers of membership:
 --
--- Tier 1 — Principal system users (62 users from 003_principal_users.sql):
---   Each *.OWNER user → their tenant/CC OWNER group
---   Each *.ADMIN user → their tenant/CC ADMIN group
+-- Tier 1 — Principal system users (34 users from 003_principal_users.sql):
+--   Each *.owner user → their tenant/CC OWNER group
+--   Each *.admin user → their tenant/CC ADMIN group
 --
 -- Tier 2 — Demo users (17 users from 001_demo_principals.sql):
 --   persona=owner/manager → athyper ATHYPER-OWNER group (tenant-level)
@@ -32,10 +32,10 @@ BEGIN
     TRUNCATE master.auth_group_member CASCADE;
     RAISE NOTICE '[002_demo_auth_group_members] Cleared auth_group_member';
  
-    -- ── Step 1: Assign principal system users (tenant-level, 28 users) ───────
+    -- ── Step 1: Assign principal system users (tenant-level, 2 users) ────────
     --
-    -- *.OWNER  → <TENANT_CODE_UPPER>-OWNER group in their tenant
-    -- *.ADMIN  → <TENANT_CODE_UPPER>-ADMIN group in their tenant
+    -- *.owner  → <TENANT_CODE_UPPER>-OWNER group in their tenant
+    -- *.admin  → <TENANT_CODE_UPPER>-ADMIN group in their tenant
     --
     INSERT INTO master.auth_group_member (
         tenant_id, principal_id, group_id,
@@ -50,7 +50,7 @@ BEGIN
     JOIN master.tenant t ON t.id = p.tenant_id
     JOIN master.auth_group pg ON pg.tenant_id = p.tenant_id
         AND pg.code = upper(replace(t.code, '-', '_'))
-                      || CASE WHEN p.code LIKE '%.OWNER' THEN '-OWNER' ELSE '-ADMIN' END
+                      || CASE WHEN lower(p.code) LIKE '%.owner' THEN '-OWNER' ELSE '-ADMIN' END
     WHERE p.id IN (
         'bb001000-0000-0000-0000-000000000001'::uuid,
         'bb001000-0000-0000-0000-000000000002'::uuid
@@ -59,10 +59,10 @@ BEGIN
 
     RAISE NOTICE '[002_demo_auth_group_members] Step 1 complete — 2 tenant-level principal users assigned';
  
-    -- ── Step 2: Assign CC-level principals (athyper, 34 users) ───────────────
+    -- ── Step 2: Assign CC-level principals (athyper, 32 users) ───────────────
     --
-    -- <CC>.OWNER → <CC>-OWNER group
-    -- <CC>.ADMIN → <CC>-ADMIN group
+    -- <cc>.owner → <CC>-OWNER group
+    -- <cc>.admin → <CC>-ADMIN group
     --
     INSERT INTO master.auth_group_member (
         tenant_id, principal_id, group_id,
@@ -75,8 +75,8 @@ BEGIN
         now(), v_su, v_su
     FROM master.principal p
     JOIN master.auth_group pg ON pg.tenant_id = p.tenant_id
-        AND pg.code = split_part(p.code, '.', 1)
-                      || CASE WHEN p.code LIKE '%.OWNER' THEN '-OWNER' ELSE '-ADMIN' END
+        AND pg.code = upper(split_part(p.code, '.', 1))
+                      || CASE WHEN lower(p.code) LIKE '%.owner' THEN '-OWNER' ELSE '-ADMIN' END
     WHERE p.id IN (
         'bb002000-0000-0000-0000-000000000001'::uuid,
         'bb002000-0000-0000-0000-000000000002'::uuid,
@@ -104,8 +104,6 @@ BEGIN
         'bb002000-0000-0000-0000-000000000018'::uuid,
         'bb002000-0000-0000-0000-000000000019'::uuid,
         'bb002000-0000-0000-0000-00000000001a'::uuid,
-        'bb002000-0000-0000-0000-00000000001b'::uuid,
-        'bb002000-0000-0000-0000-00000000001c'::uuid,
         'bb002000-0000-0000-0000-00000000001d'::uuid,
         'bb002000-0000-0000-0000-00000000001e'::uuid,
         'bb002000-0000-0000-0000-00000000001f'::uuid,
@@ -115,7 +113,7 @@ BEGIN
     )
     ON CONFLICT (tenant_id, principal_id, group_id) DO NOTHING;
  
-    RAISE NOTICE '[002_demo_auth_group_members] Step 2 complete — 34 CC-level principals assigned';
+    RAISE NOTICE '[002_demo_auth_group_members] Step 2 complete — 32 CC-level principals assigned';
  
     -- ── Step 3: Assign demo users to correct scope groups ────────────────────
     --

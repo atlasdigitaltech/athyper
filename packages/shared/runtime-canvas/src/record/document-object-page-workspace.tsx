@@ -32,9 +32,18 @@ import type {
   MetaEntityRuntimeDescriptor,
   ProcessRuntimeState,
 } from "@athyper/runtime-contracts";
-import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
+import { flattenRuntimeRecord, type RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { RuntimeRecordChrome } from "./runtime-record-chrome";
 import type { RuntimeRecordChromeModel } from "./runtime-header-model";
+import { useContainingScrollRoot } from "./use-containing-scroll-root";
+import type { HeaderAction } from "../header";
+import {
+  ContextDrawerHost,
+  PrintPreviewHost,
+  buildContextDrawerEntity,
+  useContextDrawer,
+  usePrintPreview,
+} from "../panels";
 import type { RuntimeCanvasFlags } from "../surfaces/types";
 
 /**
@@ -80,6 +89,16 @@ export interface DocumentObjectPageWorkspaceProps {
   sections: DocumentSectionDescriptor<string>[];
   /** Render contents of a single section. Called per descriptor in `sections`. */
   renderSection: (descriptor: DocumentSectionDescriptor<string>) => ReactNode;
+  /**
+   * Surfaces with `placement: "header"` render here — between the chrome
+   * and the section loop, inside the workspace's EditSessionProvider so
+   * the consumer's render tree can call `useEditSessionContext()`.
+   *
+   * Cleanup Plan v5 §P6 F2 — `document_header` surface mount slot.
+   * Pass `undefined` when no header-placed surfaces exist; the slot then
+   * renders nothing and the layout collapses to chrome + sections.
+   */
+  headerSurfaceSlot?: ReactNode;
 
   // Edit-session glue — route owns transport, this component owns lifecycle.
   loadEditContext: DocumentEditSessionLoadCallback;
@@ -114,14 +133,15 @@ interface StreamConflictState {
 }
 
 export function DocumentObjectPageWorkspace({
-  contract: _contract,
-  recordId: _recordId,
-  recordUuid: _recordUuid,
-  record: _record,
+  contract,
+  recordId,
+  recordUuid,
+  record,
   processState: _processState,
   chrome,
   sections,
   renderSection,
+  headerSurfaceSlot,
   autoEnterEdit,
   loadEditContext,
   saveEditSession,
@@ -131,6 +151,19 @@ export function DocumentObjectPageWorkspace({
   onRefreshRecord,
   flags,
 }: DocumentObjectPageWorkspaceProps) {
+  const { scopeRef, scrollRoot } = useContainingScrollRoot<HTMLDivElement>();
+
+  // ── Context drawer (comments / attachments / activity) ────────────────────
+  const recordData = useMemo(() => flattenRuntimeRecord(record), [record]);
+  const drawerEntity = useMemo(() => buildContextDrawerEntity(contract), [contract]);
+  const drawer = useContextDrawer({
+    entityCode: contract.entityCode,
+    recordId,
+    recordUuid,
+    platformIcons: chrome.platformIcons,
+  });
+  const print = usePrintPreview();
+
   // ── Edit session ──────────────────────────────────────────────────────────
   const editSession = useDocumentEditSession({
     enabled: true,
@@ -174,6 +207,7 @@ export function DocumentObjectPageWorkspace({
     sectionIds,
     hashFor: (id) => sectionById.get(id) ?? id,
     idForHash: (hash) => sectionByHash.get(hash) ?? null,
+    scrollRoot,
   });
 
   const lazy = useLazyDocumentSections({
@@ -183,9 +217,18 @@ export function DocumentObjectPageWorkspace({
       ? [pageController.activeSectionId]
       : [],
   });
+  const { markLoaded: markSectionLoaded } = lazy;
+
+  useEffect(() => {
+    if (!pageController.activeSectionId) return;
+    markSectionLoaded(pageController.activeSectionId);
+  }, [markSectionLoaded, pageController.activeSectionId]);
 
   // ── Pin-on-scroll → header mode ───────────────────────────────────────────
-  const isHeaderPinned = usePinOnScroll({ threshold: PIN_ON_SCROLL_THRESHOLD });
+  const isHeaderPinned = usePinOnScroll({
+    threshold: PIN_ON_SCROLL_THRESHOLD,
+    scrollRoot,
+  });
   const headerMode = isHeaderPinned ? "pinned" : "expanded";
 
   // ── Dirty map → tab badges + jump-to-error ────────────────────────────────
@@ -242,6 +285,64 @@ export function DocumentObjectPageWorkspace({
     return { ...chrome, header: { ...chrome.header, tabs: badged } };
   }, [chrome, dirtyMap.dirtySectionIds, dirtyMap.errorCountBySection]);
 
+  // ── Inject Save / Revert actions when an edit session is active ───────────
+  // Document edits don't go through the master form-publisher pattern (no
+  // <form id={formId}>), so we expose the etag-based session directly as
+  // chrome actions with `onSelect` callbacks. Revert clears pending changes
+  // but stays in edit mode — matches the master "Revert" UX. The user exits
+  // edit via the existing "View" action (chrome adds it for mode==="edit")
+  // or by navigating away.
+  const editSave = editSession.save;
+  const editDiscard = editSession.discard;
+  const editIsDirty = editSession.isDirty;
+  const editIsSaving = editSession.saveStatus === "saving";
+  const editIsEditing = editSession.isEditing;
+  const chromeWithEditActions = useMemo<RuntimeRecordChromeModel>(() => {
+    if (!editIsEditing) return chromeWithBadges;
+    const saveAction: HeaderAction = {
+      id: "__doc_save",
+      label: editIsSaving ? "Saving" : "Save",
+      placement: "primary",
+      order: 5,
+      disabled: !editIsDirty || editIsSaving,
+      pending: editIsSaving,
+      onSelect: async () => {
+        await editSave();
+      },
+    };
+    const revertAction: HeaderAction = {
+      id: "__doc_revert",
+      label: "Revert",
+      placement: "primary",
+      order: 6,
+      disabled: !editIsDirty || editIsSaving,
+      onSelect: () => {
+        editDiscard();
+      },
+    };
+    return {
+      ...chromeWithBadges,
+      header: {
+        ...chromeWithBadges.header,
+        actions: [saveAction, revertAction, ...chromeWithBadges.header.actions],
+      },
+    };
+  }, [
+    chromeWithBadges,
+    editIsEditing,
+    editIsDirty,
+    editIsSaving,
+    editSave,
+    editDiscard,
+  ]);
+
+  // Overlay the drawer's enriched platform icons (with badge counts) onto the
+  // chrome model the chrome component consumes.
+  const chromeForRender = useMemo<RuntimeRecordChromeModel>(
+    () => ({ ...chromeWithEditActions, platformIcons: drawer.enrichedPlatformIcons }),
+    [chromeWithEditActions, drawer.enrichedPlatformIcons],
+  );
+
   // ── Section render gate (lazy data) ───────────────────────────────────────
   const renderSectionGated = useCallback(
     (descriptor: DocumentSectionDescriptor<string>) => {
@@ -262,15 +363,20 @@ export function DocumentObjectPageWorkspace({
 
   return (
     <EditSessionProvider value={editSession}>
-      <div className="flex flex-col gap-2.5">
+      <div ref={scopeRef} className="flex flex-col gap-2.5">
         <RuntimeRecordChrome
-          chrome={chromeWithBadges}
+          chrome={chromeForRender}
           editMode={editSession.isEditing}
           mode={headerMode}
           activeTab={pageController.activeSectionId}
           onActiveTabChange={handleTabChange}
+          activePlatformIcon={drawer.activePlatformIcon}
+          onPlatformIconClick={drawer.onPlatformIconClick}
+          onPrint={print.openPrint}
           flags={flags}
         />
+
+        {headerSurfaceSlot}
 
         <DocumentObjectPage
           sections={sections}
@@ -278,6 +384,30 @@ export function DocumentObjectPageWorkspace({
           renderSection={renderSectionGated}
         />
       </div>
+
+      <ContextDrawerHost
+        entity={drawerEntity}
+        entityCode={contract.entityCode}
+        recordId={recordId}
+        recordUuid={recordUuid}
+        recordData={recordData}
+        activePanel={drawer.activePanel}
+        onClose={drawer.close}
+        typeLabel={chrome.header.identity.typeLabel}
+        identityName={chrome.header.identity.name ?? chrome.header.identity.number}
+        commentsCount={drawer.commentsCount}
+        attachmentsSummary={drawer.attachmentsSummary}
+        onCommentsCountChange={drawer.onCommentsCountChange}
+      />
+
+      <PrintPreviewHost
+        contract={contract}
+        entityCode={contract.entityCode}
+        recordUuid={recordUuid}
+        recordData={recordData}
+        open={print.isOpen}
+        onClose={print.close}
+      />
 
       {/* Reactive 409 dialog — fires when save returns conflict.
           Phase 12 #2: suppress when the proactive SSE recovery dialog
@@ -308,10 +438,8 @@ export function DocumentObjectPageWorkspace({
             </Button>
             <Button
               onClick={async () => {
-                editSession.discard();
-                editSession.exitEdit({ discardDirty: true });
+                await editSession.refreshContext();
                 await handleRefreshAfterConflict();
-                await editSession.enterEdit();
               }}
             >
               Reload &amp; keep editing
@@ -361,11 +489,9 @@ export function DocumentObjectPageWorkspace({
             {streamConflict?.newStatus && (
               <Button
                 onClick={async () => {
-                  editSession.discard();
-                  editSession.exitEdit({ discardDirty: true });
                   setStreamConflict(null);
+                  await editSession.refreshContext();
                   await handleRefreshAfterConflict();
-                  await editSession.enterEdit();
                 }}
               >
                 Reload &amp; keep editing
@@ -377,4 +503,3 @@ export function DocumentObjectPageWorkspace({
     </EditSessionProvider>
   );
 }
-

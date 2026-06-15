@@ -51,15 +51,38 @@ export interface ResolvedFormConfig {
 
 /**
  * Resolve list view configuration from a compiled entity.
+ *
+ * Column-selection semantics:
+ *   - If `display_config.list_columns` is a non-empty array, it is
+ *     authoritative for BOTH membership AND order. Unknown field names are
+ *     silently dropped; fields not listed are NOT re-added by sort_order.
+ *   - If `list_columns` is absent or empty, fall back to the heuristic:
+ *     filterable-or-sortable fields, top 8, ordered by `sort_order`.
+ *
+ * This locked behaviour lets seed data (or tenant overrides) opt entities
+ * into descriptor-driven column ordering — the embedded entity-list grid
+ * depends on it. Existing callers whose entities don't declare
+ * `list_columns` are unchanged (the fallback path is identical to the
+ * previous implementation).
  */
 export function resolveListConfig(entity: CompiledEntity): ResolvedListConfig {
   const { fields, display_config } = entity;
 
-  // Determine which columns to show
   const listColumnNames = display_config.list_columns;
-  const columns = listColumnNames
-    ? fields.filter((f) => listColumnNames.includes(f.name))
-    : fields.filter((f) => f.is_filterable || f.is_sortable).slice(0, 8);
+  const hasAuthoritativeList = Array.isArray(listColumnNames) && listColumnNames.length > 0;
+
+  let columns: EntityField[];
+  if (hasAuthoritativeList) {
+    const fieldByName = new Map(fields.map((f) => [f.name, f]));
+    columns = listColumnNames
+      .map((name) => fieldByName.get(name))
+      .filter((f): f is EntityField => f !== undefined);
+  } else {
+    columns = fields
+      .filter((f) => f.is_filterable || f.is_sortable)
+      .slice(0, 8)
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }
 
   const searchFieldNames = entity.search_config?.enabled === false
     ? []
@@ -71,7 +94,7 @@ export function resolveListConfig(entity: CompiledEntity): ResolvedListConfig {
     : fields.filter((f) => f.is_searchable);
 
   return {
-    columns: columns.sort((a, b) => a.sort_order - b.sort_order),
+    columns,
     searchFields,
     defaultSortField: display_config.default_sort_field,
     defaultSortOrder: display_config.default_sort_order ?? "asc",

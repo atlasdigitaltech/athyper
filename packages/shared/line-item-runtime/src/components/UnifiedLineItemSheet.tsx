@@ -6,6 +6,7 @@ import { cn } from "@athyper/theme/utils";
 import { DrawerShell } from "@athyper/ui/primitives";
 import { relayMutate } from "@athyper/runtime-shared/client";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
+import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import {
   buildCreatePayload,
   buildLinePatch,
@@ -17,11 +18,16 @@ import {
   useCompiledEntityMetadata,
 } from "../meta";
 import type {
+  LineItemAmountConfig,
   LineItemPanel,
   LineItemPanelContext,
   LineItemPanelProps,
   LineRecord,
 } from "../types";
+import {
+  LineItemFooterAmountStrip,
+  type LineItemFooterAmountStripStatus,
+} from "./LineItemFooterAmountStrip";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROPS
@@ -59,6 +65,20 @@ export interface UnifiedLineItemSheetProps {
   hasNextLine?:    boolean;
   onPreviousLine?: () => void;
   onNextLine?:     () => void;
+  /**
+   * Amount summary strip resolver (Net / Discount / Tax / Gross).
+   * When provided, the resolved config is rendered as an inline bar in the
+   * footer (left of the Cancel/Save buttons), tracking the running money
+   * breakdown for this line as the draft changes.
+   *
+   * Pass one of `resolveProcureAmountConfig`, `resolveSalesAmountConfig`, or
+   * `resolveGenericAmountConfig` from the line-item-runtime variant module.
+   * Each resolver already honours entity-level + field-level metadata
+   * overrides (display_config.line_summary_strip, ui_hint.line_summary).
+   */
+  amountConfigResolver?: (entity: CompiledEntity | null) => LineItemAmountConfig | null;
+  /** Optional trailing status chip on the summary strip (e.g. "unallocated"). */
+  summaryStatus?:        LineItemFooterAmountStripStatus | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -140,6 +160,8 @@ export function UnifiedLineItemSheet({
   hasNextLine,
   onPreviousLine,
   onNextLine,
+  amountConfigResolver,
+  summaryStatus,
 }: UnifiedLineItemSheetProps) {
   const fetchedEntity  = useCompiledEntityMetadata(lineEntityProp ? null : lineEntityCode);
   const entity         = lineEntityProp ?? fetchedEntity;
@@ -192,6 +214,12 @@ export function UnifiedLineItemSheet({
   }, [activeKey, visiblePanels]);
 
   const activePanelDef = visiblePanels.find((p) => p.key === activeKey);
+
+  // ── Amount summary strip config (resolved once per entity) ──
+  const amountConfig = useMemo(
+    () => (amountConfigResolver ? amountConfigResolver(entity) : null),
+    [amountConfigResolver, entity],
+  );
 
   // ── Draft change handler (patch merge) ──
   const handleDraftChange = useCallback((patch: Record<string, unknown>) => {
@@ -299,11 +327,25 @@ export function UnifiedLineItemSheet({
         ) : undefined
       }
       footerStart={
-        saveError ? (
-          <span className="flex items-center gap-1.5 text-xs text-destructive">
-            <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
-            {saveError}
-          </span>
+        amountConfig || saveError ? (
+          <div className="flex min-w-0 flex-col gap-1">
+            {saveError && (
+              <span className="flex items-center gap-1.5 text-xs text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+                {saveError}
+              </span>
+            )}
+            {amountConfig && (
+              <LineItemFooterAmountStrip
+                amountConfig={amountConfig}
+                entity={entity}
+                draft={draft}
+                line={line ?? null}
+                currencyCode={currencyCode}
+                status={summaryStatus ?? null}
+              />
+            )}
+          </div>
         ) : undefined
       }
       footerEnd={

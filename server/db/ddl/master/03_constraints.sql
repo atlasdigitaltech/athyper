@@ -196,6 +196,13 @@ DO $$ BEGIN
         CHECK ((updated_at IS NULL) = (updated_by IS NULL));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- principal.code normalized to KC/IAM username casing.
+DO $$ BEGIN
+    ALTER TABLE master.principal
+        ADD CONSTRAINT principal_code_norm_chk
+        CHECK (code = lower(btrim(code)));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- principal.tenant_id → master.tenant
 ALTER TABLE master.principal DROP CONSTRAINT IF EXISTS principal_tenant_fk;
 DO $$ BEGIN
@@ -209,6 +216,9 @@ END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS principal_external_ref_uidx
     ON master.principal (tenant_id, external_ref)
     WHERE external_ref IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS principal_tenant_code_lower_uidx
+    ON master.principal (tenant_id, lower(code));
 
 -- principal_profile → principal (composite FK, cascade delete)
 DO $$ BEGIN
@@ -236,11 +246,18 @@ DO $$ BEGIN
         CHECK ((updated_at IS NULL) = (updated_by IS NULL));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- principal_profile.keycloak_username normalized to KC/IAM username casing.
+DO $$ BEGIN
+    ALTER TABLE master.principal_profile
+        ADD CONSTRAINT principal_profile_keycloak_username_norm_chk
+        CHECK (keycloak_username IS NULL OR keycloak_username = lower(btrim(keycloak_username)));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- ── principal_identity_binding foreign keys ──────────────────────────────────────
 -- These were absent from the table DDL (04_tables) and are added here to keep
 -- FK declarations co-located with the rest of the identity layer constraints.
 
--- pab.tenant_id → master.tenant
+-- principal_identity_binding.tenant_id → master.tenant
 ALTER TABLE master.principal_identity_binding DROP CONSTRAINT IF EXISTS pib_tenant_fk;
 DO $$ BEGIN
     ALTER TABLE master.principal_identity_binding
@@ -268,7 +285,13 @@ DO $$ BEGIN
         CHECK ((updated_at IS NULL) = (updated_by IS NULL));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- contact_link.status — fixed two-state lifecycle, not tenant-extensible.
+-- principal_identity_binding.username normalized to KC/IAM username casing.
+DO $$ BEGIN
+    ALTER TABLE master.principal_identity_binding
+        ADD CONSTRAINT pib_username_norm_chk
+        CHECK (username IS NULL OR username = lower(btrim(username)));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- pab realm-aware uniqueness. The older provider-only uniqueness cannot support
 -- the same human having separate neon, mesh, admin, and platform-control identities.
 ALTER TABLE master.principal_identity_binding DROP CONSTRAINT IF EXISTS pib_principal_provider_uq;

@@ -15,8 +15,8 @@ import {
 import { authErrorMessageFromSearch } from "./errors";
 import { getAuthExperience } from "./experience";
 import type { BrowserLocationSnapshot } from "./types";
-import { buildLoginHref, buildSelectContinuation, readFinalDestinationFromSearch } from "./url";
-import { getDefaultWorkbenchForPlane, type WorkbenchFilter } from "./workbench";
+import { buildLoginHref, readFinalDestinationFromSearch } from "./url";
+import { getDefaultWorkbenchForPlane } from "./workbench";
 
 type DiscoveryMode = "email" | "returning" | "awaiting" | "verified";
 
@@ -96,6 +96,18 @@ interface DiscoverySelectResponse {
 }
 
 const REMEMBERED_LIMIT = 5;
+const SENSITIVE_LOGIN_QUERY_PARAMS = [
+  "context_token",
+  "email",
+  "login_hint",
+  "selected_org",
+  "selected_org_name",
+  "selected_role",
+  "selected_tenant",
+  "selected_tenant_id",
+  "selected_workspace_id",
+  "selected_workspace_type",
+];
 
 export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: string }) {
   const config = getPlaneConfig(plane);
@@ -147,9 +159,10 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
         return;
       }
 
+      const changeUser = params.get("change_user") === "1" || params.get("changeUser") === "1";
       const remembered = readRememberedOrganizations(plane);
       setRememberedOrganizations(remembered);
-      setMode(remembered.length > 0 ? "returning" : "email");
+      setMode(!changeUser && remembered.length > 0 ? "returning" : "email");
     };
 
     syncBrowserLocation();
@@ -295,7 +308,28 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
       if (!res.ok || !data.loginUrl) {
         throw new Error(data.message ?? `We could not prepare this ${plane === "mesh" ? "network account" : "organization"} sign-in.`);
       }
-      rememberOrganization(plane, candidate, loginUrlWithoutEmailHint(data.loginUrl), verifiedEmail ?? email.trim());
+      rememberOrganization(plane, candidate, safeRememberedLoginUrl(data.loginUrl), verifiedEmail ?? email.trim());
+      window.location.assign(data.loginUrl);
+    } catch (err) {
+      setDiscoveryError(err instanceof Error ? err.message : `We could not prepare this ${plane === "mesh" ? "network account" : "organization"} sign-in.`);
+      setLoading(null);
+    }
+  }
+
+  async function selectRememberedOrganization(organization: RememberedOrganization) {
+    const key = rememberedOrganizationKey(organization);
+    setLoading(`remembered:${key}`);
+    setDiscoveryError(null);
+    try {
+      const res = await fetch("/api/auth/discovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rememberedLoginRequestBody(plane, organization, finalDestination, config.nativeRealm)),
+      });
+      const data = (await res.json().catch(() => ({}))) as DiscoverySelectResponse;
+      if (!res.ok || !data.loginUrl) {
+        throw new Error(data.message ?? `We could not prepare this ${plane === "mesh" ? "network account" : "organization"} sign-in.`);
+      }
       window.location.assign(data.loginUrl);
     } catch (err) {
       setDiscoveryError(err instanceof Error ? err.message : `We could not prepare this ${plane === "mesh" ? "network account" : "organization"} sign-in.`);
@@ -317,7 +351,7 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
       subtitle={shellCopy.subtitle}
       variant="brand"
       footer={
-        <div className="flex items-center justify-between text-xs leading-none text-muted-foreground/60">
+        <div className="flex flex-col items-start gap-2 text-left text-[11px] leading-4 text-muted-foreground/60 sm:flex-row sm:items-center sm:justify-between sm:text-xs sm:leading-5">
           <span>&copy; {new Date().getFullYear()} athyper. All rights reserved.</span>
           <button
             className="transition-colors hover:text-foreground disabled:opacity-50"
@@ -339,7 +373,6 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
         <ErrorBanner message={discoveryError ?? error} />
         {mode === "returning" ? (
           <ReturningOrganizations
-            finalDestination={finalDestination}
             loading={loading}
             onDifferentOrganization={() => {
               startDifferentSignIn();
@@ -349,6 +382,7 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
               setRememberedOrganizations([]);
               startDifferentSignIn();
             }}
+            onSelect={(organization) => { void selectRememberedOrganization(organization); }}
             plane={plane}
             organizations={rememberedOrganizations}
           />
@@ -435,18 +469,18 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
 }
 
 function ReturningOrganizations({
-  finalDestination,
   loading,
   onDifferentOrganization,
   organizations,
   onForget,
+  onSelect,
   plane,
 }: {
-  finalDestination: string;
   loading: string | null;
   onDifferentOrganization: () => void;
   organizations: RememberedOrganization[];
   onForget: () => void;
+  onSelect: (organization: RememberedOrganization) => void;
   plane: PlaneKey;
 }) {
   const showBoundaryDetails = plane !== "admin";
@@ -459,7 +493,7 @@ function ReturningOrganizations({
             disabled={loading !== null}
             key={`${rememberedOrganizationKey(organization)}:${organization.lastVisitedAt}`}
             onClick={() => {
-              window.location.assign(loginUrlForRememberedOrganization(plane, organization, finalDestination));
+              onSelect(organization);
             }}
             type="button"
           >
@@ -699,7 +733,7 @@ function readRememberedOrganizations(plane: PlaneKey): RememberedOrganization[] 
         ) {
           return [];
         }
-        return [{ ...item, loginHint }];
+        return [{ ...item, loginHint, loginUrl: safeRememberedLoginUrl(item.loginUrl) }];
       })
       .sort((a, b) => b.lastVisitedAt - a.lastVisitedAt);
     const deduped = new Map<string, RememberedOrganization>();
@@ -739,9 +773,10 @@ function rememberOrganization(plane: PlaneKey, candidate: DiscoveryCandidate, lo
       networkAccountRole: candidate.networkAccountRole ?? null,
       networkRelationshipType: candidate.networkRelationshipType ?? null,
     };
+    const nextKey = rememberedOrganizationKey(next);
     const nextDedupeKey = rememberedOrganizationDedupeKey(next);
     const existing = readRememberedOrganizations(plane).filter((item) =>
-      rememberedOrganizationKey(item) !== organizationKey
+      rememberedOrganizationKey(item) !== nextKey
       && rememberedOrganizationDedupeKey(item) !== nextDedupeKey
     );
     window.localStorage.setItem(rememberedKey(plane), JSON.stringify([next, ...existing].slice(0, REMEMBERED_LIMIT)));
@@ -788,12 +823,14 @@ function rememberedOrganizationDetails(
 ): Array<{ label: string; value: string }> {
   if (plane === "mesh") {
     return compactDetails([
+      ["User ID", organization.loginHint],
       ["Network Account Code", meshRememberedAccountCode(organization)],
       ["Role", formatMeshAccountRole(meshRememberedAccountRole(organization))],
     ]);
   }
 
   return compactDetails([
+    ["User ID", organization.loginHint],
     ["Tenant", organization.tenantName ?? organization.displayName],
     ["Organization / Legal Entity", organization.displayName],
   ]);
@@ -889,13 +926,17 @@ function candidateOrganizationSubtitle(candidate: DiscoveryCandidate): string {
 }
 
 function rememberedOrganizationKey(organization: RememberedOrganization): string {
-  return organization.organizationKey || organization.workspaceKey || `${organization.tenantCode}:${organization.loginUrl}`;
+  const base = organization.organizationKey || organization.workspaceKey || `${organization.tenantCode}:${organization.loginUrl}`;
+  const loginHint = normalizeStoredLoginHint(organization.loginHint);
+  return loginHint ? `${base}:${loginHint}` : base;
 }
 
 function rememberedOrganizationDedupeKey(organization: RememberedOrganization): string {
+  const loginHint = normalizeStoredLoginHint(organization.loginHint) ?? "";
   return [
     organization.tenantCode.trim().toLowerCase(),
     organization.displayName.trim().toLowerCase(),
+    loginHint,
     organization.loginUrl,
   ].join(":");
 }
@@ -918,10 +959,12 @@ function legacyRememberedKey(plane: PlaneKey): string {
   return `${plane}.remembered_workspaces`;
 }
 
-function loginUrlWithoutEmailHint(value: string): string {
+function safeRememberedLoginUrl(value: string): string {
   try {
     const url = new URL(value, "https://local.invalid");
-    url.searchParams.delete("login_hint");
+    for (const param of SENSITIVE_LOGIN_QUERY_PARAMS) {
+      url.searchParams.delete(param);
+    }
     const next = `${url.pathname}${url.search}${url.hash}`;
     return next || value;
   } catch {
@@ -929,83 +972,35 @@ function loginUrlWithoutEmailHint(value: string): string {
   }
 }
 
-function loginUrlForRememberedOrganization(
+function rememberedLoginRequestBody(
   plane: PlaneKey,
   organization: RememberedOrganization,
   finalDestination: string,
-): string {
+  realm: string,
+): Record<string, string> {
   const hint = normalizeStoredLoginHint(organization.loginHint);
-  try {
-    const url = new URL(organization.loginUrl, "https://local.invalid");
-    url.searchParams.set(
-      "returnUrl",
-      buildSelectContinuation(
-        finalDestination,
-        rememberedWorkbenchFilterForOrganization(plane, organization),
-      ),
-    );
-    if (hint) url.searchParams.set("login_hint", hint);
-    url.searchParams.set("force", "1");
-    if (organization.tenantId) url.searchParams.set("selected_tenant_id", organization.tenantId);
-    url.searchParams.set("selected_tenant", organization.tenantCode);
-    if (plane === "mesh" && !hasMeshAccountContext(organization)) {
-      url.searchParams.delete("selected_org");
-      url.searchParams.delete("selected_org_name");
-      url.searchParams.delete("selected_workspace_id");
-      url.searchParams.delete("selected_workspace_type");
-      stripNestedAuthSelectFilter(url);
-    } else {
-      if (organization.organizationCode) url.searchParams.set("selected_org", organization.organizationCode);
-      if (organization.displayName) url.searchParams.set("selected_org_name", organization.displayName);
-      if (organization.organizationId) url.searchParams.set("selected_workspace_id", organization.organizationId);
-      if (organization.organizationType) url.searchParams.set("selected_workspace_type", organization.organizationType);
-    }
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return organization.loginUrl;
-  }
-}
+  const body: Record<string, string> = {
+    action: "remembered-login",
+    realm,
+    returnUrl: finalDestination,
+    loginHint: hint ?? "",
+    selected_tenant_id: organization.tenantId ?? "",
+    selected_tenant: organization.tenantCode,
+  };
 
-function rememberedWorkbenchFilterForOrganization(
-  plane: PlaneKey,
-  organization: RememberedOrganization,
-): WorkbenchFilter | null {
-  if (plane !== "mesh") return getDefaultWorkbenchForPlane(plane);
-  return meshWorkbenchFilterForRemembered(organization) ?? null;
+  if (plane !== "mesh" || hasMeshAccountContext(organization)) {
+    body.selected_org = organization.organizationCode ?? "";
+    body.selected_org_name = organization.displayName;
+    body.selected_workspace_id = organization.organizationId ?? "";
+    body.selected_workspace_type = organization.organizationType ?? "";
+    body.selected_role = meshRememberedAccountRole(organization) ?? "";
+  }
+  return body;
 }
 
 function hasMeshAccountContext(organization: RememberedOrganization): boolean {
   return organization.organizationType === "network_account"
     || Boolean(organization.networkAccountId || organization.networkAccountCode || organization.networkAccountRole);
-}
-
-function stripNestedAuthSelectFilter(url: URL): void {
-  const returnUrl = url.searchParams.get("returnUrl");
-  if (!returnUrl) return;
-  try {
-    const nested = new URL(returnUrl, "https://local.invalid");
-    nested.searchParams.delete("filter");
-    url.searchParams.set("returnUrl", `${nested.pathname}${nested.search}${nested.hash}`);
-  } catch {
-    // Keep the original returnUrl if it is not parseable as a relative URL.
-  }
-}
-
-function meshWorkbenchFilterForRemembered(organization: RememberedOrganization): "user" | "partner" | null {
-  const role = meshRememberedAccountRole(organization);
-  if (!role) return null;
-  const normalized = role.trim().toLowerCase();
-  if (normalized === "buyer" || normalized === "user") return "user";
-  if (
-    normalized === "partner"
-    || normalized === "supplier"
-    || normalized === "carrier"
-    || normalized === "broker"
-    || normalized === "service_provider"
-  ) {
-    return "partner";
-  }
-  return null;
 }
 
 function normalizeStoredLoginHint(value: string | null | undefined): string | undefined {
