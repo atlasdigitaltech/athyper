@@ -5,22 +5,135 @@
 -- Merged from: (base) + 004a_document_journal.sql through 004i_document_p2p.sql
 -- ============================================================================
 
--- ── Rebuild guard: NULL out orphaned master.supplier references ───────────────
--- master/01h_tables_business_partner.sql rebuilds master.supplier via DROP/CREATE,
--- wiping all rows. document/* tables use CREATE TABLE IF NOT EXISTS and survive
--- the rebuild with stale supplier_id values. This block must run before any
--- supplier FK is added so the constraint addition never sees an orphaned row.
-DO $guard$ BEGIN
-    UPDATE document.commitment_procurement     SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
-    UPDATE document.purchase_invoice           SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
-    UPDATE document.invoice_party_snapshot     SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
-    UPDATE document.payment_entry              SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
-    UPDATE document.payment_remittance_output  SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
-    UPDATE document.purchase_order_confirmation SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
-    UPDATE document.delivery_note              SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
-    UPDATE document.goods_receipt              SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
-    UPDATE document.service_entry_sheet        SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
-    UPDATE document.party_advance_balance      SET supplier_id = NULL WHERE supplier_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = supplier_id);
+-- ── Rebuild guard: handle orphaned master.supplier references safely ───────────
+-- HF-1 (Hardening Sprint H-Fix): the original guard blindly UPDATE...SET supplier_id=NULL
+-- on tables where supplier_id is NOT NULL, which would raise a constraint violation
+-- and abort the rebuild.
+--
+-- Verified state of supplier_id column per target:
+--     NULLABLE                     | NOT NULL
+--     ─────────────────────────────|───────────────────────────────────
+--     invoice_party_snapshot       | commitment_procurement
+--     payment_entry                | delivery_note
+--     purchase_invoice             | goods_receipt
+--                                  | party_advance_balance  (also: no metadata col)
+--                                  | payment_remittance_output
+--                                  | purchase_order_confirmation
+--                                  | service_entry_sheet
+--
+-- Strategy:
+--   • Nullable columns      → UPDATE...SET supplier_id=NULL and tag in metadata
+--   • NOT NULL columns      → INSERT into document.supplier_rebuild_orphan_quarantine,
+--                             then RAISE EXCEPTION unless app.rebuild_force=true
+--   • PAB has no metadata   → quarantine, do not touch
+--
+-- The quarantine table is provisioned in 01q_supplier_orphan_quarantine.sql.
+-- Operator workflow: review the quarantine table → resurrect the missing supplier
+-- OR delete the orphan row OR `SET LOCAL app.rebuild_force = 'true'` and re-run.
+DO $guard$
+DECLARE
+    v_orphan_count integer := 0;
+    v_force        boolean := COALESCE(NULLIF(current_setting('app.rebuild_force', true), ''), 'false') = 'true';
+    v_run_started  timestamptz := now();
+BEGIN
+    -- ── Phase 1: nullable supplier_id targets (3 tables) ─────────────────────
+    -- Safe: NULL the FK column and tag the row's metadata with the stale id.
+
+    UPDATE document.purchase_invoice pi
+       SET supplier_id = NULL,
+           metadata    = COALESCE(metadata,'{}'::jsonb)
+                         || jsonb_build_object('_rebuild_orphan_supplier_id', pi.supplier_id::text,
+                                               '_rebuild_orphan_at',          v_run_started::text)
+     WHERE pi.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = pi.supplier_id);
+
+    UPDATE document.invoice_party_snapshot ips
+       SET supplier_id = NULL,
+           metadata    = COALESCE(metadata,'{}'::jsonb)
+                         || jsonb_build_object('_rebuild_orphan_supplier_id', ips.supplier_id::text,
+                                               '_rebuild_orphan_at',          v_run_started::text)
+     WHERE ips.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = ips.supplier_id);
+
+    UPDATE document.payment_entry pe
+       SET supplier_id = NULL,
+           metadata    = COALESCE(metadata,'{}'::jsonb)
+                         || jsonb_build_object('_rebuild_orphan_supplier_id', pe.supplier_id::text,
+                                               '_rebuild_orphan_at',          v_run_started::text)
+     WHERE pe.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = pe.supplier_id);
+
+    -- ── Phase 2: NOT NULL supplier_id targets (7 tables) ─────────────────────
+    -- Quarantine + raise. Do NOT attempt to NULL.
+
+    INSERT INTO document.supplier_rebuild_orphan_quarantine
+        (source_schema, source_table, source_id, tenant_id, stale_supplier_id, action_taken)
+    SELECT 'document','commitment_procurement', cp.id, cp.tenant_id, cp.supplier_id,
+           CASE WHEN v_force THEN 'force_skipped' ELSE 'detected_blocking' END
+      FROM document.commitment_procurement cp
+     WHERE cp.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = cp.supplier_id);
+
+    INSERT INTO document.supplier_rebuild_orphan_quarantine
+        (source_schema, source_table, source_id, tenant_id, stale_supplier_id, action_taken)
+    SELECT 'document','delivery_note', dn.id, dn.tenant_id, dn.supplier_id,
+           CASE WHEN v_force THEN 'force_skipped' ELSE 'detected_blocking' END
+      FROM document.delivery_note dn
+     WHERE dn.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = dn.supplier_id);
+
+    INSERT INTO document.supplier_rebuild_orphan_quarantine
+        (source_schema, source_table, source_id, tenant_id, stale_supplier_id, action_taken)
+    SELECT 'document','goods_receipt', gr.id, gr.tenant_id, gr.supplier_id,
+           CASE WHEN v_force THEN 'force_skipped' ELSE 'detected_blocking' END
+      FROM document.goods_receipt gr
+     WHERE gr.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = gr.supplier_id);
+
+    INSERT INTO document.supplier_rebuild_orphan_quarantine
+        (source_schema, source_table, source_id, tenant_id, stale_supplier_id, action_taken)
+    SELECT 'document','party_advance_balance', pab.id, pab.tenant_id, pab.supplier_id,
+           CASE WHEN v_force THEN 'force_skipped' ELSE 'detected_blocking' END
+      FROM document.party_advance_balance pab
+     WHERE pab.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = pab.supplier_id);
+
+    INSERT INTO document.supplier_rebuild_orphan_quarantine
+        (source_schema, source_table, source_id, tenant_id, stale_supplier_id, action_taken)
+    SELECT 'document','payment_remittance_output', prm.id, prm.tenant_id, prm.supplier_id,
+           CASE WHEN v_force THEN 'force_skipped' ELSE 'detected_blocking' END
+      FROM document.payment_remittance_output prm
+     WHERE prm.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = prm.supplier_id);
+
+    INSERT INTO document.supplier_rebuild_orphan_quarantine
+        (source_schema, source_table, source_id, tenant_id, stale_supplier_id, action_taken)
+    SELECT 'document','purchase_order_confirmation', poc.id, poc.tenant_id, poc.supplier_id,
+           CASE WHEN v_force THEN 'force_skipped' ELSE 'detected_blocking' END
+      FROM document.purchase_order_confirmation poc
+     WHERE poc.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = poc.supplier_id);
+
+    INSERT INTO document.supplier_rebuild_orphan_quarantine
+        (source_schema, source_table, source_id, tenant_id, stale_supplier_id, action_taken)
+    SELECT 'document','service_entry_sheet', ses.id, ses.tenant_id, ses.supplier_id,
+           CASE WHEN v_force THEN 'force_skipped' ELSE 'detected_blocking' END
+      FROM document.service_entry_sheet ses
+     WHERE ses.supplier_id IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM master.supplier s WHERE s.id = ses.supplier_id);
+
+    -- ── Phase 3: count detected_blocking from THIS run; raise unless forced ──
+    SELECT COUNT(*) INTO v_orphan_count
+      FROM document.supplier_rebuild_orphan_quarantine
+     WHERE action_taken = 'detected_blocking'
+       AND detected_at >= v_run_started;
+
+    IF v_orphan_count > 0 AND NOT v_force THEN
+        RAISE EXCEPTION
+          'SUPPLIER_REBUILD_BLOCKED: % orphan row(s) in NOT NULL tables — review document.supplier_rebuild_orphan_quarantine then SET LOCAL app.rebuild_force = ''true'' and re-run to proceed',
+          v_orphan_count
+          USING ERRCODE = 'SP001';
+    END IF;
 END $guard$;
 
 -- ── §6  document.workflow_request ────────────────────────────────────────────

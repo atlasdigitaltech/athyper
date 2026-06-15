@@ -33,6 +33,7 @@
 
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import { validatePcInvariants } from "./pricing-component.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -49,7 +50,11 @@ export type InvariantCode =
   | "REVERSAL_OF_NOT_POSTED"
   | "PO_COMMITMENT_REQUIRED"
   | "PARTY_SNAPSHOT_MISSING"
-  | "APPROVAL_AUDIT_PAIR_MISMATCH";
+  | "APPROVAL_AUDIT_PAIR_MISMATCH"
+  // P4 v1.2 — Pricing Component invariants (forwarded from pricing-component.service)
+  | "PC_BASIS_VALUE_DRIFT"
+  | "PC_APPORTION_SUM_DRIFT"
+  | "PC_SUPERSEDE_CHAIN_BROKEN";
 
 export interface InvariantViolation {
   code:    InvariantCode;
@@ -286,6 +291,19 @@ export async function validatePurchaseInvoiceInvariants(
         message: "Invoice past draft must have an invoice_party_snapshot row. Re-submit to populate.",
       });
     }
+  }
+
+  // ── Invariants 11-13: Pricing Component checks (P4 v1.2) ────────────────
+  // PC is in shadow mode through P4 — these invariants surface PC-internal
+  // drift but do not block submit unless PC rows actually exist for the
+  // invoice. validatePcInvariants short-circuits on zero PC rows.
+  const pcViolations = await validatePcInvariants(db, tenantId, invoiceId);
+  for (const v of pcViolations) {
+    violations.push({
+      code:    v.code as InvariantCode,
+      message: v.message,
+      details: v.details,
+    });
   }
 
   return { ok: violations.length === 0, violations };

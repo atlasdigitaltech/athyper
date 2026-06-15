@@ -217,9 +217,9 @@ CREATE INDEX IF NOT EXISTS pi_commitment_idx
     WHERE commitment_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS pi_posting_date_idx
     ON document.purchase_invoice (tenant_id, company_code_id, posting_date DESC);
-CREATE INDEX IF NOT EXISTS pi_due_date_idx
-    ON document.purchase_invoice (tenant_id, due_date)
-    WHERE status IN ('posted','partially_paid') AND due_date IS NOT NULL;
+-- HF-6 (Hardening Sprint H-Fix): pi_due_date_idx had two definitions; the
+-- later improved version below is canonical (see ~line 568). Earlier definition
+-- removed to keep source clean.
 -- Aging reports scoped by company: (tenant, company, due_date) covers
 -- "show me all overdue invoices for company X" without a cross-company fan-out.
 CREATE INDEX IF NOT EXISTS pi_aging_company_idx
@@ -235,19 +235,12 @@ CREATE INDEX IF NOT EXISTS pi_pending_approval_idx
 CREATE INDEX IF NOT EXISTS pi_supplier_invoice_dedup_idx
     ON document.purchase_invoice (tenant_id, supplier_id, supplier_invoice_number, supplier_invoice_date)
     WHERE supplier_id IS NOT NULL AND status NOT IN ('cancelled','rejected');
-CREATE INDEX IF NOT EXISTS pi_workflow_idx
-    ON document.purchase_invoice (workflow_request_id)
-    WHERE workflow_request_id IS NOT NULL;
+-- HF-6: pi_workflow_idx earlier dup removed (identical to the later definition).
 
 -- ── document.purchase_invoice_line ───────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS pil_invoice_idx
-    ON document.purchase_invoice_line (tenant_id, purchase_invoice_id);
-CREATE INDEX IF NOT EXISTS pil_commitment_line_idx
-    ON document.purchase_invoice_line (tenant_id, commitment_line_id)
-    WHERE commitment_line_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS pil_gr_line_idx
-    ON document.purchase_invoice_line (tenant_id, goods_receipt_line_id)
-    WHERE goods_receipt_line_id IS NOT NULL;
+-- HF-6: pil_invoice_idx earlier dup removed in favor of the later version which
+-- includes (..., line_no ASC). pil_commitment_line_idx and pil_gr_line_idx
+-- earlier dups removed (identical to the later versions).
 CREATE INDEX IF NOT EXISTS pil_match_exception_idx
     ON document.purchase_invoice_line (tenant_id, purchase_invoice_id)
     WHERE match_status = 'match_exception';

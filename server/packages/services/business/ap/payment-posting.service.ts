@@ -4,11 +4,16 @@
  * handlePostPayment:
  *   Validates the payment is in 'approved' (or 'draft' for direct-post) status, then:
  *   1. Creates document.journal_entry (payment settlement header)
- *   2. Creates document.journal_line rows:
- *        DR  AP Control account      — clears the payable (per allocation)
- *        CR  Bank/Clearing account   — reduces cash
+ *   2. Creates document.journal_line rows (H6 v1.2 — full decomposition):
+ *        DR  AP Control account      — clears the payable (per allocated_amount)
+ *        CR  Bank/Clearing account   — reduces cash by net_payment_amount
  *        CR  Discount Income         — if early payment discount was taken
+ *        CR  Withholding Tax Payable — if WHT was deducted at settlement
+ *        CR  Advance Prepaid (asset) — if advance recovery was applied
+ *        CR  Retention Payable       — if retention was held back
  *        DR/CR FX Gain/Loss          — if payment currency differs from invoice currency
+ *      Net cash out = allocated - discount - WHT - advance_recovery - retention
+ *      = SUM(payment_entry_allocation.net_payment_amount)
  *   3. Updates payment_entry: status → 'posted', payment_je_id, is_posted, posted_at/by
  *   4. Marks each allocated invoice as fully/partially paid
  *
@@ -154,6 +159,85 @@ async function resolveDiscountAccount(
   return result.rows[0]?.account_id ?? null;
 }
 
+// ── H6 v1.2: Additional resolvers for payment-time deductions ────────────────
+
+async function resolveWhtPayableAccount(
+  db:        AnyDb,
+  tenantId:  string,
+  companyId: string,
+): Promise<string | null> {
+  // WHT payable: liability account whose code references withholding/WHT/TDS
+  const result = await sql<{ account_id: string }>`
+    SELECT ga.id AS account_id
+    FROM   master.gl_account ga
+    JOIN   master.company_code_chart_assignment cca
+           ON  cca.chart_of_account_id = ga.chart_of_account_id
+           AND cca.tenant_id           = ${tenantId}
+           AND cca.company_code_id     = ${companyId}
+           AND cca.status              = 'active'
+    WHERE  ga.tenant_id     = ${tenantId}
+      AND  ga.account_class = 'liability'
+      AND  ga.is_active     = true
+      AND  ga.node_type     = 'posting'
+      AND  (ga.code ILIKE '%withhold%' OR ga.code ILIKE '%wht%' OR ga.code ILIKE '%tds%'
+            OR ga.name ILIKE '%withhold%' OR ga.name ILIKE '%TDS%')
+    ORDER  BY ga.code
+    LIMIT  1
+  `.execute(db);
+  return result.rows[0]?.account_id ?? null;
+}
+
+async function resolveAdvancePrepaidAccount(
+  db:        AnyDb,
+  tenantId:  string,
+  companyId: string,
+): Promise<string | null> {
+  // Advance to supplier sits as an asset (prepayment); recovery CR reduces that asset.
+  const result = await sql<{ account_id: string }>`
+    SELECT ga.id AS account_id
+    FROM   master.gl_account ga
+    JOIN   master.company_code_chart_assignment cca
+           ON  cca.chart_of_account_id = ga.chart_of_account_id
+           AND cca.tenant_id           = ${tenantId}
+           AND cca.company_code_id     = ${companyId}
+           AND cca.status              = 'active'
+    WHERE  ga.tenant_id     = ${tenantId}
+      AND  ga.account_class = 'asset'
+      AND  ga.is_active     = true
+      AND  ga.node_type     = 'posting'
+      AND  (ga.code ILIKE '%advance%' OR ga.code ILIKE '%prepaid%'
+            OR ga.name ILIKE '%advance to supplier%' OR ga.name ILIKE '%vendor advance%' OR ga.name ILIKE '%prepayment%')
+    ORDER  BY ga.code
+    LIMIT  1
+  `.execute(db);
+  return result.rows[0]?.account_id ?? null;
+}
+
+async function resolveRetentionPayableAccount(
+  db:        AnyDb,
+  tenantId:  string,
+  companyId: string,
+): Promise<string | null> {
+  // Retention payable: liability account holding back amounts pending warranty/completion.
+  const result = await sql<{ account_id: string }>`
+    SELECT ga.id AS account_id
+    FROM   master.gl_account ga
+    JOIN   master.company_code_chart_assignment cca
+           ON  cca.chart_of_account_id = ga.chart_of_account_id
+           AND cca.tenant_id           = ${tenantId}
+           AND cca.company_code_id     = ${companyId}
+           AND cca.status              = 'active'
+    WHERE  ga.tenant_id     = ${tenantId}
+      AND  ga.account_class = 'liability'
+      AND  ga.is_active     = true
+      AND  ga.node_type     = 'posting'
+      AND  (ga.code ILIKE '%retention%' OR ga.name ILIKE '%retention%')
+    ORDER  BY ga.code
+    LIMIT  1
+  `.execute(db);
+  return result.rows[0]?.account_id ?? null;
+}
+
 // ── JE number generation ──────────────────────────────────────────────────────
 
 async function nextJeCode(db: AnyDb, tenantId: string, companyId: string): Promise<string> {
@@ -234,30 +318,76 @@ export async function handlePostPayment(
     const periodNumber     = Number(payment["period_number"] ?? (new Date().getMonth() + 1));
     const now              = new Date();
 
-    // Load allocations
+    // Load allocations (H6 v1.2 — include all reduction columns)
     const allocResult = await sql<{
       id: string;
       purchase_invoice_id: string | null;
       allocated_amount: string;
       discount_amount: string;
       withholding_tax_amount: string;
+      advance_recovery_amount: string;
+      retention_amount: string;
       net_payment_amount: string;
     }>`
       SELECT id, purchase_invoice_id, allocated_amount, discount_amount,
-             withholding_tax_amount, net_payment_amount
+             withholding_tax_amount, advance_recovery_amount, retention_amount,
+             net_payment_amount
       FROM document.payment_entry_allocation
       WHERE payment_entry_id = ${paymentId} AND tenant_id = ${tenantId}
       ORDER BY line_no
     `.execute(trx);
 
     const allocations = allocResult.rows;
-    const totalDiscount   = allocations.reduce((s, a) => s + Number(a.discount_amount), 0);
-    const totalAllocated  = allocations.reduce((s, a) => s + Number(a.allocated_amount), 0) || paymentAmount;
+    const totalDiscount       = allocations.reduce((s, a) => s + Number(a.discount_amount), 0);
+    const totalWithholding    = allocations.reduce((s, a) => s + Number(a.withholding_tax_amount), 0);
+    const totalAdvanceRecover = allocations.reduce((s, a) => s + Number(a.advance_recovery_amount), 0);
+    const totalRetention      = allocations.reduce((s, a) => s + Number(a.retention_amount), 0);
+    const totalAllocated      = allocations.reduce((s, a) => s + Number(a.allocated_amount), 0) || paymentAmount;
+    // Cash out = allocated - all deductions = SUM(net_payment_amount)
+    const totalNetCashOut     = totalAllocated - totalDiscount - totalWithholding - totalAdvanceRecover - totalRetention;
 
     // Resolve GL accounts
-    const apControlId = await resolveApControlAccount(trx, tenantId, companyId);
-    const bankGlId    = await resolveBankAccount(trx, tenantId, companyId, bankAccountId);
-    const discountId  = totalDiscount > 0 ? await resolveDiscountAccount(trx, tenantId, companyId) : null;
+    const apControlId       = await resolveApControlAccount(trx, tenantId, companyId);
+    const bankGlId          = await resolveBankAccount(trx, tenantId, companyId, bankAccountId);
+    const discountId        = totalDiscount       > 0 ? await resolveDiscountAccount(trx, tenantId, companyId)        : null;
+    const whtPayableId      = totalWithholding    > 0 ? await resolveWhtPayableAccount(trx, tenantId, companyId)      : null;
+    const advancePrepaidId  = totalAdvanceRecover > 0 ? await resolveAdvancePrepaidAccount(trx, tenantId, companyId)  : null;
+    const retentionPayableId = totalRetention     > 0 ? await resolveRetentionPayableAccount(trx, tenantId, companyId) : null;
+
+    // HF-5: hard 422 when a non-zero reduction has no GL account configured.
+    // Earlier behavior was logger.warn + continue, which left the JE unbalanced
+    // and surfaced as a generic insertion error downstream. Now: fail early with
+    // a clear actionable message naming each missing account.
+    const accountErrors: Array<{ field: string; message: string }> = [];
+    if (totalWithholding > 0 && !whtPayableId) {
+      accountErrors.push({
+        field:   "wht_payable_account",
+        message: `Total withholding of ${totalWithholding.toFixed(2)} requires a withholding tax payable GL account (account_class='liability', code/name matching 'withhold', 'WHT', or 'TDS') configured for this company.`,
+      });
+    }
+    if (totalAdvanceRecover > 0 && !advancePrepaidId) {
+      accountErrors.push({
+        field:   "advance_prepaid_account",
+        message: `Total advance recovery of ${totalAdvanceRecover.toFixed(2)} requires a vendor advance / prepaid asset GL account (account_class='asset', code/name matching 'advance' or 'prepaid') configured for this company.`,
+      });
+    }
+    if (totalRetention > 0 && !retentionPayableId) {
+      accountErrors.push({
+        field:   "retention_payable_account",
+        message: `Total retention of ${totalRetention.toFixed(2)} requires a retention payable GL account (account_class='liability', code/name matching 'retention') configured for this company.`,
+      });
+    }
+    if (accountErrors.length > 0) {
+      logger?.warn("payment_post_missing_reduction_accounts", { tenantId, paymentId, accountErrors });
+      return {
+        status: 422,
+        body: {
+          error:   "MISSING_GL_ACCOUNT_FOR_REDUCTIONS",
+          message: "Payment cannot be posted: required GL accounts for one or more allocation reductions are not configured. Fix the chart of accounts, then retry.",
+          errors:  accountErrors,
+        },
+      };
+    }
 
     if (!apControlId) {
       return { status: 422, body: { error: "NO_AP_CONTROL_ACCOUNT", message: "Cannot find AP control GL account for this company" } };
@@ -343,9 +473,9 @@ export async function handlePostPayment(
       )
     `.execute(trx);
 
-    // Line 2: CR Bank (cash out) — skip if entirely covered by discount
-    const netCashOut = paymentAmount - totalDiscount;
-    if (netCashOut > 0) {
+    // Line 2: CR Bank (actual cash out = SUM(net_payment_amount))
+    let nextLineNo = 2;
+    if (totalNetCashOut > 0) {
       await sql`
         INSERT INTO document.journal_line (
           id, tenant_id, journal_entry_id,
@@ -357,16 +487,17 @@ export async function handlePostPayment(
         ) VALUES (
           ${crypto.randomUUID()}, ${tenantId}, ${jeId},
           ${companyId}, ${bookId}, ${fiscalPeriodId}, ${fiscalYear}, ${periodNumber}, ${postingDate},
-          2, ${bankGlId},
+          ${nextLineNo}, ${bankGlId},
           ${"Bank Payment — " + paymentNumber},
-          ${currencyCode}, 0, ${netCashOut.toFixed(4)},
-          ${baseCurrencyCode}, 0, ${(netCashOut * exchangeRate).toFixed(4)}, ${exchangeRate},
+          ${currencyCode}, 0, ${totalNetCashOut.toFixed(4)},
+          ${baseCurrencyCode}, 0, ${(totalNetCashOut * exchangeRate).toFixed(4)}, ${exchangeRate},
           ${principalId ?? V_SU}
         )
       `.execute(trx);
+      nextLineNo++;
     }
 
-    // Line 3 (optional): CR Discount Income
+    // Line N: CR Discount Income (optional)
     if (totalDiscount > 0 && discountId) {
       await sql`
         INSERT INTO document.journal_line (
@@ -379,13 +510,83 @@ export async function handlePostPayment(
         ) VALUES (
           ${crypto.randomUUID()}, ${tenantId}, ${jeId},
           ${companyId}, ${bookId}, ${fiscalPeriodId}, ${fiscalYear}, ${periodNumber}, ${postingDate},
-          3, ${discountId},
+          ${nextLineNo}, ${discountId},
           ${"Early Payment Discount — " + paymentNumber},
           ${currencyCode}, 0, ${totalDiscount.toFixed(4)},
           ${baseCurrencyCode}, 0, ${(totalDiscount * exchangeRate).toFixed(4)}, ${exchangeRate},
           ${principalId ?? V_SU}
         )
       `.execute(trx);
+      nextLineNo++;
+    }
+
+    // Line N: CR Withholding Tax Payable (H6 v1.2)
+    if (totalWithholding > 0 && whtPayableId) {
+      await sql`
+        INSERT INTO document.journal_line (
+          id, tenant_id, journal_entry_id,
+          company_code_id, book_id, fiscal_period_id, fiscal_year, period_number, posting_date,
+          line_no, gl_account_id, description,
+          transaction_currency, transaction_debit, transaction_credit,
+          base_currency, base_debit, base_credit, exchange_rate,
+          created_by
+        ) VALUES (
+          ${crypto.randomUUID()}, ${tenantId}, ${jeId},
+          ${companyId}, ${bookId}, ${fiscalPeriodId}, ${fiscalYear}, ${periodNumber}, ${postingDate},
+          ${nextLineNo}, ${whtPayableId},
+          ${"Withholding Tax — " + paymentNumber},
+          ${currencyCode}, 0, ${totalWithholding.toFixed(4)},
+          ${baseCurrencyCode}, 0, ${(totalWithholding * exchangeRate).toFixed(4)}, ${exchangeRate},
+          ${principalId ?? V_SU}
+        )
+      `.execute(trx);
+      nextLineNo++;
+    }
+
+    // Line N: CR Advance Prepaid (asset reduction) — recovery applied (H6 v1.2)
+    if (totalAdvanceRecover > 0 && advancePrepaidId) {
+      await sql`
+        INSERT INTO document.journal_line (
+          id, tenant_id, journal_entry_id,
+          company_code_id, book_id, fiscal_period_id, fiscal_year, period_number, posting_date,
+          line_no, gl_account_id, description,
+          transaction_currency, transaction_debit, transaction_credit,
+          base_currency, base_debit, base_credit, exchange_rate,
+          created_by
+        ) VALUES (
+          ${crypto.randomUUID()}, ${tenantId}, ${jeId},
+          ${companyId}, ${bookId}, ${fiscalPeriodId}, ${fiscalYear}, ${periodNumber}, ${postingDate},
+          ${nextLineNo}, ${advancePrepaidId},
+          ${"Advance Recovery — " + paymentNumber},
+          ${currencyCode}, 0, ${totalAdvanceRecover.toFixed(4)},
+          ${baseCurrencyCode}, 0, ${(totalAdvanceRecover * exchangeRate).toFixed(4)}, ${exchangeRate},
+          ${principalId ?? V_SU}
+        )
+      `.execute(trx);
+      nextLineNo++;
+    }
+
+    // Line N: CR Retention Payable (H6 v1.2)
+    if (totalRetention > 0 && retentionPayableId) {
+      await sql`
+        INSERT INTO document.journal_line (
+          id, tenant_id, journal_entry_id,
+          company_code_id, book_id, fiscal_period_id, fiscal_year, period_number, posting_date,
+          line_no, gl_account_id, description,
+          transaction_currency, transaction_debit, transaction_credit,
+          base_currency, base_debit, base_credit, exchange_rate,
+          created_by
+        ) VALUES (
+          ${crypto.randomUUID()}, ${tenantId}, ${jeId},
+          ${companyId}, ${bookId}, ${fiscalPeriodId}, ${fiscalYear}, ${periodNumber}, ${postingDate},
+          ${nextLineNo}, ${retentionPayableId},
+          ${"Retention Withheld — " + paymentNumber},
+          ${currencyCode}, 0, ${totalRetention.toFixed(4)},
+          ${baseCurrencyCode}, 0, ${(totalRetention * exchangeRate).toFixed(4)}, ${exchangeRate},
+          ${principalId ?? V_SU}
+        )
+      `.execute(trx);
+      nextLineNo++;
     }
 
     // ── Transition JE: draft → created (validates balance, caches totals) ────────

@@ -34,6 +34,7 @@ import { matchInvoice } from "./invoice-match.service.js";
 import { validatePurchaseInvoiceInvariants } from "./invoice-invariants.service.js";
 import { captureInvoiceSnapshots } from "./invoice-snapshot.service.js";
 import { syncBusinessLifecycle, type BusinessLifecycleSyncHook } from "./lifecycle-sync-hook.js";
+import { seedRetentionFromPricingComponents } from "./retention-advance-seeder.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -268,6 +269,13 @@ export async function handleSubmitForApproval(
     const supplierIdForSnap = (invoice["supplier_id"] as string | null) ?? null;
     const snapActor = principalId ?? V_NIL;
     await captureInvoiceSnapshots(trx, tenantId, invoiceId, supplierIdForSnap, snapActor, logger);
+
+    // Seed retention PTA rows from PC retention components (P2 v1.2).
+    // Runs AFTER snapshots so the legal record is frozen first; runs BEFORE
+    // status change so PTA rows exist before workflow inspects them. Idempotent
+    // via ON CONFLICT (invoice_id, clause_code, line_id, sequence). Withholding
+    // skipped pending PTA clause_type CHECK extension (see service).
+    await seedRetentionFromPricingComponents(trx, tenantId, invoiceId, snapActor, logger);
 
     const now = new Date();
 
