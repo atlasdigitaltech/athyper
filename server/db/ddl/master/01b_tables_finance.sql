@@ -1505,6 +1505,21 @@ COMMENT ON TABLE master.commodity_classification IS
     'owner_id → entity, polymorphic classification_type → commodity_code or industry_code. '
     'EXCLUDE constraint ensures at most one primary per (entity, type, domain).';
 
+-- Remove spend_category rows that would conflict with an already-migrated
+-- commodity_category row sharing the same unique key, then migrate the rest.
+DELETE FROM master.commodity_classification sc_cc
+ WHERE sc_cc.owner_type = 'spend_category'
+   AND EXISTS (
+       SELECT 1
+       FROM master.commodity_classification dup
+       WHERE dup.tenant_id           = sc_cc.tenant_id
+         AND dup.owner_type          = 'commodity_category'
+         AND dup.owner_id            = sc_cc.owner_id
+         AND dup.classification_type = sc_cc.classification_type
+         AND dup.domain_code         = sc_cc.domain_code
+         AND dup.code_id             = sc_cc.code_id
+   );
+
 UPDATE master.commodity_classification cc
    SET owner_type = 'commodity_category',
        metadata = COALESCE(cc.metadata, '{}'::jsonb)
