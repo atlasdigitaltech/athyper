@@ -1039,6 +1039,23 @@ async function runReset(connectionString: string): Promise<void> {
   try {
     log({ msg: "reset_start" });
 
+    // Evict all other connections before dropping schemas. Without this,
+    // DROP SCHEMA CASCADE deadlocks against app connections holding object locks
+    // (e.g. SELECT or idle-in-transaction on a schema we're about to drop).
+    const terminated = await client.query<{ count: string }>(`
+      SELECT count(*)::text AS count
+      FROM (
+        SELECT pg_terminate_backend(pid)
+        FROM pg_stat_activity
+        WHERE pid <> pg_backend_pid()
+          AND datname = current_database()
+      ) t
+    `);
+    const count = terminated.rows[0]?.count ?? "0";
+    if (count !== "0") {
+      log({ msg: "reset_terminated_connections", count });
+    }
+
     const schemas = [
       "shared",
       "control",
