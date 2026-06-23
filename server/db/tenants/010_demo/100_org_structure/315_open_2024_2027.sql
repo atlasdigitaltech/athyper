@@ -192,7 +192,7 @@ BEGIN
                    ba.company_code_id,
                    ba.book_id,
                    v.fy,
-                   v.pn,
+                   g.pn,
                    CASE
                      WHEN v.fy = 2024 THEN 'hard_close'
                      WHEN v.fy = 2025 THEN 'soft_close'
@@ -205,7 +205,7 @@ BEGIN
             JOIN   master.ledger_book lb
                    ON lb.id = ba.book_id AND lb.tenant_id = ba.tenant_id
             CROSS JOIN (VALUES (2024),(2025),(2026),(2027)) AS v(fy)
-            CROSS JOIN generate_series(0,12) AS v(pn)
+            CROSS JOIN generate_series(0,12) AS g(pn)
             WHERE  t.code = ANY (ARRAY['athyper','technostat','cirrusatlantic'])
               AND  ba.status  = 'active'
               AND  lb.category = 'statutory'
