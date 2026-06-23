@@ -501,13 +501,19 @@ BEGIN
             v_cal_month    := EXTRACT(month FROM v_month_start)::int;
             v_posting_date := v_month_start + 14;  -- post on the 15th
 
-            -- Resolve the fiscal period that contains this posting date
+            -- Resolve the fiscal period that contains this posting date.
+            -- Exclude 'future' and 'hard_close' periods: the period-gate trigger
+            -- (BEFORE INSERT on journal_entry) blocks both statuses, and companies
+            -- with non-January fiscal years may have calendar-2026 months that fall
+            -- in FY2027 (status='future'). Returning NULL causes the CONTINUE below
+            -- to skip those months cleanly without hitting the trigger.
             SELECT id, fiscal_year::smallint, period_number::smallint
             INTO v_fp_id, v_fp_fy, v_fp_pnum
             FROM master.fiscal_period
             WHERE tenant_id = v_tid AND company_code_id = v_cc.id
               AND v_posting_date BETWEEN start_date AND end_date
               AND period_type = 'normal'
+              AND status NOT IN ('future', 'hard_close')
             LIMIT 1;
 
             CONTINUE WHEN v_fp_id IS NULL;
@@ -1295,17 +1301,19 @@ BEGIN
 
     UPDATE document.journal_entry
     SET    status = 'created'
-    WHERE  tenant_id  = v_tid
-      AND  status     = 'draft'
-      AND  je_number  LIKE 'JE-%';
+    WHERE  tenant_id   = v_tid
+      AND  status      = 'draft'
+      AND  je_number   LIKE 'JE-%'
+      AND  fiscal_year BETWEEN 2024 AND 2026;
 
     UPDATE document.journal_entry
     SET    status     = 'posted',
            posted_at  = now(),
            posted_by  = v_su
-    WHERE  tenant_id  = v_tid
-      AND  status     = 'created'
-      AND  je_number  LIKE 'JE-%';
+    WHERE  tenant_id   = v_tid
+      AND  status      = 'created'
+      AND  je_number   LIKE 'JE-%'
+      AND  fiscal_year BETWEEN 2024 AND 2026;
 
     -- ── F: Link reversals — JE-10 → status='reversed', reversed_by_id=JE-10R ─
     -- The immutability guard allows posted→reversed + reversed_by_id in one UPDATE.
