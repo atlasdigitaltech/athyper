@@ -4620,7 +4620,7 @@ BEGIN
     -- Invalidate any compiled-entity cache by bumping the version hash on
     -- both entities so the metadata service recompiles on next fetch.
     UPDATE control.entity_version ev
-       SET version_hash = encode(gen_random_bytes(16), 'hex'),
+       SET version_hash = encode(gen_random_bytes(32), 'hex'),
            updated_at   = now(),
            updated_by   = v_su
       FROM control.entity e
