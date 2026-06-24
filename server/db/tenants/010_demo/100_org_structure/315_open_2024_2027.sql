@@ -1,12 +1,12 @@
 -- ============================================================================
 -- 315_open_2024_2027.sql — Ensure FY2024–FY2027 fiscal periods exist and open
 -- ============================================================================
--- Covers all three tenants: athyper (demo), technostat, cirrusatlantic
+-- Covers target demo tenants: technostat, cirrusatlantic
 --
 -- Part A: INSERT fiscal periods FY2024–FY2027 for all active companies
 --         ON CONFLICT DO NOTHING — existing rows are kept as-is; Part B
---         will force the status to 'open' regardless.
--- Part B: UPDATE master.fiscal_period → 'open' for ALL FY2024–2027
+--         will force the status to expected lifecycle states by fiscal year.
+-- Part B: UPDATE master.fiscal_period → lifecycle state by FY for FY2024–2027
 --         opening/normal periods (idempotent; handles partial prior seeds
 --         such as technostat P11 which left FY2026 as 'future', and demo
 --         313 which only opened Jan 2024–May 2026 by date window).
@@ -48,7 +48,7 @@ BEGIN
     FOR v_tenant IN
         SELECT id, code
         FROM   master.tenant
-        WHERE  code IN ('athyper', 'technostat', 'cirrusatlantic')
+        WHERE  code IN ('technostat', 'cirrusatlantic')
         ORDER  BY code
     LOOP
         RAISE NOTICE '[%] Processing FY2024-2027 (tenant_id=%)', v_tenant.code, v_tenant.id;
@@ -123,20 +123,30 @@ BEGIN
         RAISE NOTICE '[%] Part A: FY2024-2027 periods created/verified for all companies', v_tenant.code;
 
         -- ══════════════════════════════════════════════════════════════════
-        -- PART B: Force all FY2024–2027 opening/normal periods → 'open'
+        -- PART B: Apply expected lifecycle status by fiscal year
         -- ══════════════════════════════════════════════════════════════════
-        -- Covers rows left as 'future' or 'hard_close' by prior partial seeds:
+        -- Covers rows left as legacy values by prior partial seeds:
         --   • technostat P11: FY2026 normal periods seeded as 'future' (except P5)
         --   • demo 313: FY2024 opening/normal opened by date window (Apr/Mar-start
         --     companies had pre-2024 calendar months left as 'hard_close')
-        UPDATE master.fiscal_period
-        SET    status     = 'open',
+        UPDATE master.fiscal_period fp
+        SET    status     = CASE
+                         WHEN fp.fiscal_year = 2024 THEN 'hard_close'
+                         WHEN fp.fiscal_year = 2025 THEN 'soft_close'
+                         WHEN fp.fiscal_year = 2026 THEN 'open'
+                         ELSE 'future'
+                     END,
                updated_at = now(),
                updated_by = v_su
         WHERE  tenant_id  = v_tenant.id
           AND  fiscal_year BETWEEN 2024 AND 2027
           AND  period_type IN ('opening', 'normal')
-          AND  status      != 'open';
+          AND (
+                (fp.fiscal_year = 2024 AND fp.status <> 'hard_close')
+             OR (fp.fiscal_year = 2025 AND fp.status <> 'soft_close')
+             OR (fp.fiscal_year = 2026 AND fp.status <> 'open')
+             OR (fp.fiscal_year >= 2027 AND fp.status <> 'future')
+          );
 
         GET DIAGNOSTICS v_fp_upd = ROW_COUNT;
         v_fp_total := v_fp_total + v_fp_upd;
@@ -191,17 +201,22 @@ BEGIN
     -- PART D: Assertions — fail fast if any gap remains
     -- ══════════════════════════════════════════════════════════════════════
 
-    -- D1: No opening/normal period in FY2024–2027 is non-open for any of the 3 tenants
+    -- D1: No opening/normal period in FY2024–2027 has unexpected lifecycle status
     IF EXISTS (
         SELECT 1
         FROM   master.fiscal_period fp
         JOIN   master.tenant t ON t.id = fp.tenant_id
-        WHERE  t.code         IN ('athyper', 'technostat', 'cirrusatlantic')
+        WHERE  t.code         IN ('technostat', 'cirrusatlantic')
           AND  fp.fiscal_year   BETWEEN 2024 AND 2027
           AND  fp.period_type   IN ('opening', 'normal')
-          AND  fp.status        NOT IN ('open', 'soft_close')
+          AND (
+                (fp.fiscal_year = 2024 AND fp.status <> 'hard_close')
+             OR (fp.fiscal_year = 2025 AND fp.status <> 'soft_close')
+             OR (fp.fiscal_year = 2026 AND fp.status <> 'open')
+             OR (fp.fiscal_year >= 2027 AND fp.status <> 'future')
+          )
     ) THEN
-        RAISE EXCEPTION '315 FAIL D1: Some FY2024-2027 opening/normal periods are not open — check master.fiscal_period';
+        RAISE EXCEPTION '315 FAIL D1: Some FY2024-2027 opening/normal periods are not in expected lifecycle state — check master.fiscal_period';
     END IF;
 
     -- D2: Every (company × statutory-book) pair has BPS P0 open for each of FY2024–2027
@@ -216,7 +231,7 @@ BEGIN
             JOIN   master.ledger_book lb
                    ON lb.id = ba.book_id AND lb.tenant_id = ba.tenant_id
             CROSS  JOIN (VALUES (2024),(2025),(2026),(2027)) AS v(fy)
-            WHERE  t.code    IN ('athyper', 'technostat', 'cirrusatlantic')
+              WHERE  t.code    IN ('technostat', 'cirrusatlantic')
               AND  ba.status  = 'active'
               AND  lb.category = 'statutory'
         )
@@ -234,6 +249,6 @@ BEGIN
         RAISE EXCEPTION '315 FAIL D2: Some statutory books missing open book_period_status P0 for FY2024-2027';
     END IF;
 
-    RAISE NOTICE '315 DONE: % fiscal_period rows opened + % BPS rows processed. FY2024-2027 fully open for athyper, technostat, cirrusatlantic.',
+    RAISE NOTICE '315 DONE: % fiscal_period rows updated + % BPS rows processed. FY2024-2027 lifecycle statuses updated for technostat and cirrusatlantic.',
         v_fp_total, v_bps_total;
 END $open2024_2027$;
