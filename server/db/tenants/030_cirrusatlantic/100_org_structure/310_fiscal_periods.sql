@@ -42,8 +42,8 @@ BEGIN
             v_fy_start := make_date(v_fy - 1, v_cc.fiscal_year_start_month, 1);
             v_fy_end   := (v_fy_start + interval '12 months' - interval '1 day')::date;
 
-            -- Both open for dev
-            v_status := 'open';
+            -- Shared demo lifecycle for posting gate
+            v_status := CASE WHEN v_fy = 2026 THEN 'open' ELSE 'future' END;
 
             -- Period 0: opening balance
             INSERT INTO master.fiscal_period

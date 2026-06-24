@@ -38,14 +38,13 @@ BEGIN
                      created_by, metadata)
                 VALUES
                     (v_tid, v_row.company_code_id, v_row.book_id,
-                     v_fy, v_pnum,
-                     'open', now(), v_su,
+                    v_fy, v_pnum,
+                     CASE WHEN v_fy = 2026 THEN 'open' ELSE 'future' END,
+                     now(), v_su,
                      v_su, v_meta)
                 ON CONFLICT (tenant_id, company_code_id, book_id, fiscal_year, period_number)
                 DO UPDATE SET
-                    status    = CASE WHEN governance.book_period_status.status = 'future'
-                                     THEN 'open'
-                                     ELSE governance.book_period_status.status END,
+                    status    = EXCLUDED.status,
                     opened_at = COALESCE(governance.book_period_status.opened_at, now()),
                     opened_by = COALESCE(governance.book_period_status.opened_by, v_su),
                     updated_at = now(),
