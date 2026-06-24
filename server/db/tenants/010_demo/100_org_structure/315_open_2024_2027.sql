@@ -1,17 +1,36 @@
 -- ============================================================================
--- 315_open_2024_2027.sql -- Fiscal period + book-period windowing
+-- 315_open_2024_2027.sql — Ensure FY2024–FY2027 fiscal periods exist and open
 -- ============================================================================
--- Sets period availability for tenants: athyper, technostat, cirrusatlantic
--- FY2024: hard_close
--- FY2025: soft_close
--- FY2026: open for P0..P12
--- FY2027+: future
+-- Covers all three tenants: athyper (demo), technostat, cirrusatlantic
+--
+-- Part A: INSERT fiscal periods FY2024–FY2027 for all active companies
+--         ON CONFLICT DO NOTHING — existing rows are kept as-is; Part B
+--         will force the status to 'open' regardless.
+-- Part B: UPDATE master.fiscal_period → 'open' for ALL FY2024–2027
+--         opening/normal periods (idempotent; handles partial prior seeds
+--         such as technostat P11 which left FY2026 as 'future', and demo
+--         313 which only opened Jan 2024–May 2026 by date window).
+-- Part C: UPSERT governance.book_period_status → 'open' for FY2024–2027
+--         periods 0–12 across every (company × statutory-book) pair.
+--         Unconditional upsert: forces 'open' even on previously
+--         soft-closed or hard-closed BPS rows for dev environments.
+-- Part D: Assertions — fail fast if any gap remains.
+--
+-- FY boundary formula (standard across all start months):
+--   v_fy_start = make_date(fy [or fy-1 for non-Jan], start_month, 1)
+--   e.g.  Jan-start FY2024 → Jan 1 2024 – Dec 31 2024
+--         Jul-start FY2024 → Jul 1 2023 – Jun 30 2024
+--         Apr-start FY2024 → Apr 1 2023 – Mar 31 2024
+--
+-- Idempotent: safe to re-run at any time.
+-- Depends on: all prior org-structure seeds (company codes, ledger books,
+--             book assignments) for each tenant being already applied.
 -- ============================================================================
 
 DO $open2024_2027$
 DECLARE
     v_su        uuid  := '00000000-0000-0000-0000-000000000000';
-    v_meta      jsonb := '{"_seed": {"pack": "315_org", "version": "1.2.0"}}'::jsonb;
+    v_meta      jsonb := '{"_seed": {"pack": "315_org", "version": "1.3.0"}}'::jsonb;
     v_tenant    record;
     v_cc        record;
     v_ba        record;
@@ -21,7 +40,6 @@ DECLARE
     v_pstart    date;
     v_pend      date;
     v_pnum      int;
-    v_bps_status text;
     v_fp_upd    int;
     v_fp_total  int := 0;
     v_bps_rows  int;
@@ -35,7 +53,9 @@ BEGIN
     LOOP
         RAISE NOTICE '[%] Processing FY2024-2027 (tenant_id=%)', v_tenant.code, v_tenant.id;
 
-        -- PART A: Ensure fiscal periods exist for FY2024-2027.
+        -- ══════════════════════════════════════════════════════════════════
+        -- PART A: Create missing FY2024–FY2027 fiscal periods
+        -- ══════════════════════════════════════════════════════════════════
         FOR v_cc IN
             SELECT id, code, fiscal_year_start_month
             FROM   master.company_code
@@ -83,7 +103,7 @@ BEGIN
                     ON CONFLICT (tenant_id, company_code_id, fiscal_year, period_number) DO NOTHING;
                 END LOOP;
 
-                -- Period 13: year-end adjustment stays future by default.
+                -- Period 13: year-end adjustment — stays 'future'
                 INSERT INTO master.fiscal_period
                     (tenant_id, company_code_id, code, name,
                      fiscal_year, period_number, period_type,
@@ -100,29 +120,35 @@ BEGIN
             END LOOP; -- v_fy
         END LOOP; -- v_cc
 
-        RAISE NOTICE '[%] Part A: FY2024-2027 periods created/verified', v_tenant.code;
+        RAISE NOTICE '[%] Part A: FY2024-2027 periods created/verified for all companies', v_tenant.code;
 
-        -- PART B: Enforce fiscal_period status window for opening/normal periods.
+        -- ══════════════════════════════════════════════════════════════════
+        -- PART B: Force all FY2024–2027 opening/normal periods → 'open'
+        -- ══════════════════════════════════════════════════════════════════
+        -- Covers rows left as 'future' or 'hard_close' by prior partial seeds:
+        --   • technostat P11: FY2026 normal periods seeded as 'future' (except P5)
+        --   • demo 313: FY2024 opening/normal opened by date window (Apr/Mar-start
+        --     companies had pre-2024 calendar months left as 'hard_close')
         UPDATE master.fiscal_period
-        SET    status     = CASE
-                             WHEN fiscal_year = 2024 THEN 'hard_close'
-                             WHEN fiscal_year = 2025 THEN 'soft_close'
-                             WHEN fiscal_year = 2026 THEN 'open'
-                             WHEN fiscal_year >= 2027 THEN 'future'
-                             ELSE status
-                           END,
+        SET    status     = 'open',
                updated_at = now(),
                updated_by = v_su
         WHERE  tenant_id  = v_tenant.id
           AND  fiscal_year BETWEEN 2024 AND 2027
-          AND  period_type IN ('opening', 'normal');
+          AND  period_type IN ('opening', 'normal')
+          AND  status      != 'open';
 
         GET DIAGNOSTICS v_fp_upd = ROW_COUNT;
         v_fp_total := v_fp_total + v_fp_upd;
-        RAISE NOTICE '[%] Part B: % fiscal_period rows aligned', v_tenant.code, v_fp_upd;
+        RAISE NOTICE '[%] Part B: % fiscal_period rows updated to open', v_tenant.code, v_fp_upd;
 
-        -- PART C: Book-period statuses mirror same window for P0-P12.
+        -- ══════════════════════════════════════════════════════════════════
+        -- PART C: UPSERT book_period_status FY2024–2027 P0–P12 → 'open'
+        -- ══════════════════════════════════════════════════════════════════
+        -- Forces 'open' unconditionally so that trg_je_period_gate_fn never
+        -- blocks journal_entry inserts for any period in the target range.
         v_bps_rows := 0;
+
         FOR v_ba IN
             SELECT ba.company_code_id, ba.book_id
             FROM   master.company_code_book_assignment ba
@@ -134,14 +160,6 @@ BEGIN
         LOOP
             FOR v_fy IN 2024..2027 LOOP
                 FOR v_pnum IN 0..12 LOOP
-                    v_bps_status :=
-                        CASE
-                            WHEN v_fy = 2024 THEN 'hard_close'
-                            WHEN v_fy = 2025 THEN 'soft_close'
-                            WHEN v_fy = 2026 THEN 'open'
-                            ELSE 'future'
-                        END;
-
                     INSERT INTO governance.book_period_status
                         (tenant_id, company_code_id, book_id,
                          fiscal_year, period_number,
@@ -150,11 +168,11 @@ BEGIN
                     VALUES
                         (v_tenant.id, v_ba.company_code_id, v_ba.book_id,
                          v_fy, v_pnum,
-                         v_bps_status, now(), v_su,
+                         'open', now(), v_su,
                          v_su, v_meta)
                     ON CONFLICT (tenant_id, company_code_id, book_id, fiscal_year, period_number)
                     DO UPDATE SET
-                        status     = EXCLUDED.status,
+                        status     = 'open',
                         opened_at  = COALESCE(governance.book_period_status.opened_at, now()),
                         updated_at = now(),
                         updated_by = v_su;
@@ -166,64 +184,56 @@ BEGIN
 
         v_bps_total := v_bps_total + v_bps_rows;
         RAISE NOTICE '[%] Part C: % book_period_status rows processed', v_tenant.code, v_bps_rows;
+
     END LOOP; -- v_tenant
 
-    -- PART D: Assert final window is correct.
+    -- ══════════════════════════════════════════════════════════════════════
+    -- PART D: Assertions — fail fast if any gap remains
+    -- ══════════════════════════════════════════════════════════════════════
+
+    -- D1: No opening/normal period in FY2024–2027 is non-open for any of the 3 tenants
     IF EXISTS (
         SELECT 1
         FROM   master.fiscal_period fp
         JOIN   master.tenant t ON t.id = fp.tenant_id
-        WHERE  t.code IN ('athyper', 'technostat', 'cirrusatlantic')
-          AND  fp.fiscal_year BETWEEN 2024 AND 2027
-          AND  fp.period_type IN ('opening', 'normal')
-          AND  (
-                   (fp.fiscal_year = 2024 AND fp.status <> 'hard_close')
-                OR (fp.fiscal_year = 2025 AND fp.status <> 'soft_close')
-                OR (fp.fiscal_year = 2026 AND fp.status <> 'open')
-                OR (fp.fiscal_year >= 2027 AND fp.status <> 'future')
-               )
+        WHERE  t.code         IN ('athyper', 'technostat', 'cirrusatlantic')
+          AND  fp.fiscal_year   BETWEEN 2024 AND 2027
+          AND  fp.period_type   IN ('opening', 'normal')
+          AND  fp.status        NOT IN ('open', 'soft_close')
     ) THEN
-        RAISE EXCEPTION '315 FAIL D1: FY2024-FY2027 opening/normal period status mismatch in master.fiscal_period';
+        RAISE EXCEPTION '315 FAIL D1: Some FY2024-2027 opening/normal periods are not open — check master.fiscal_period';
     END IF;
 
+    -- D2: Every (company × statutory-book) pair has BPS P0 open for each of FY2024–2027
     IF EXISTS (
         WITH expected AS (
             SELECT t.id AS tenant_id,
                    ba.company_code_id,
                    ba.book_id,
-                   v.fy,
-                   g.pn,
-                   CASE
-                     WHEN v.fy = 2024 THEN 'hard_close'
-                     WHEN v.fy = 2025 THEN 'soft_close'
-                     WHEN v.fy = 2026 THEN 'open'
-                     ELSE 'future'
-                   END AS expected_status
+                   v.fy AS fiscal_year
             FROM   master.tenant t
-            JOIN   master.company_code_book_assignment ba
-                   ON ba.tenant_id = t.id
+            JOIN   master.company_code_book_assignment ba ON ba.tenant_id = t.id
             JOIN   master.ledger_book lb
                    ON lb.id = ba.book_id AND lb.tenant_id = ba.tenant_id
-            CROSS JOIN (VALUES (2024),(2025),(2026),(2027)) AS v(fy)
-            CROSS JOIN generate_series(0,12) AS g(pn)
-            WHERE  t.code = ANY (ARRAY['athyper','technostat','cirrusatlantic'])
+            CROSS  JOIN (VALUES (2024),(2025),(2026),(2027)) AS v(fy)
+            WHERE  t.code    IN ('athyper', 'technostat', 'cirrusatlantic')
               AND  ba.status  = 'active'
               AND  lb.category = 'statutory'
         )
-        SELECT 1
-        FROM   expected e
-        WHERE  NOT EXISTS (
+        SELECT 1 FROM expected e
+        WHERE NOT EXISTS (
             SELECT 1 FROM governance.book_period_status bps
-            WHERE bps.tenant_id      = e.tenant_id
-              AND bps.company_code_id = e.company_code_id
-              AND bps.book_id         = e.book_id
-              AND bps.fiscal_year     = e.fy
-              AND bps.period_number   = e.pn
-              AND bps.status          = e.expected_status
+            WHERE  bps.tenant_id        = e.tenant_id
+              AND  bps.company_code_id  = e.company_code_id
+              AND  bps.book_id          = e.book_id
+              AND  bps.fiscal_year      = e.fiscal_year
+              AND  bps.period_number    = 0
+              AND  bps.status           = 'open'
         )
     ) THEN
-        RAISE EXCEPTION '315 FAIL D2: Some statutory books have unexpected book_period_status in FY2024-2027';
+        RAISE EXCEPTION '315 FAIL D2: Some statutory books missing open book_period_status P0 for FY2024-2027';
     END IF;
 
-    RAISE NOTICE '315 DONE: % fiscal_period rows aligned + % BPS rows processed.', v_fp_total, v_bps_total;
+    RAISE NOTICE '315 DONE: % fiscal_period rows opened + % BPS rows processed. FY2024-2027 fully open for athyper, technostat, cirrusatlantic.',
+        v_fp_total, v_bps_total;
 END $open2024_2027$;
