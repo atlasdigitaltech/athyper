@@ -4531,3 +4531,111 @@ SET
 
     RAISE NOTICE '005_domain_registrations/300_control/002_commodity_category_policy_apps: done';
 END $$;
+
+
+-- ============================================================================
+-- === SOURCE: 050_journal_entry_editor_display_config.sql ===
+-- ============================================================================
+-- Wires the journal_entry entity to its line editor metadata so the runtime
+-- JournalLinesGrid can resolve:
+--   * which entity holds the lines (journal_line)
+--   * how its fields map to API payload keys (gl_account_code, debit, credit)
+--
+-- Without this config the runtime falls back to undefined field names, the
+-- line validator returns an empty payload, and the parent flow state sees
+-- "No lines" even after the user has typed values — the inputs render from
+-- the line editor's local state but never propagate to the draft.
+--
+-- Reader source of truth:
+--   packages/shared/runtime/document-runtime/src/items/JournalLinesGrid.tsx
+--     readJournalLineEntityCode  → display_config.journal_editor.line_entity
+--     readJournalLineFieldNames  → display_config.journal_editor.fields
+--                                  (or journal_line.display_config.journal_line_fields)
+--
+-- Payload contract source of truth:
+--   server/framework/runtime/services/finance/routes/journal.route.ts
+--     POST /finance/journals expects { gl_account_code, debit, credit, description }
+--
+-- Idempotent: jsonb merge preserves any unrelated keys already present.
+-- ============================================================================
+
+DO $$
+DECLARE
+    v_su          uuid := '00000000-0000-0000-0000-000000000000';
+    v_je_rows     integer := 0;
+    v_jl_rows     integer := 0;
+    v_je_editor   jsonb;
+    v_jl_fields   jsonb;
+BEGIN
+    v_je_editor := jsonb_build_object(
+        'journal_editor', jsonb_build_object(
+            'line_entity', 'journal_line',
+            'fields', jsonb_build_object(
+                'account_field',                     'gl_account_id',
+                'account_code_payload_field',        'gl_account_code',
+                'debit_field',                       'transaction_debit',
+                'debit_payload_field',               'debit',
+                'credit_field',                      'transaction_credit',
+                'credit_payload_field',              'credit',
+                'transaction_currency_field',        'transaction_currency',
+                'transaction_currency_payload_field','transaction_currency',
+                'description_payload_field',         'description',
+                'reference_payload_field',           'reference'
+            )
+        ),
+        'line_entity_code', 'journal_line'
+    );
+
+    v_jl_fields := jsonb_build_object(
+        'journal_line_fields', jsonb_build_object(
+            'account_field',                     'gl_account_id',
+            'account_code_payload_field',        'gl_account_code',
+            'debit_field',                       'transaction_debit',
+            'debit_payload_field',               'debit',
+            'credit_field',                      'transaction_credit',
+            'credit_payload_field',              'credit',
+            'transaction_currency_field',        'transaction_currency',
+            'transaction_currency_payload_field','transaction_currency',
+            'description_payload_field',         'description',
+            'reference_payload_field',           'reference'
+        )
+    );
+
+    UPDATE control.entity
+       SET display_config = COALESCE(display_config, '{}'::jsonb) || v_je_editor,
+           updated_at     = now(),
+           updated_by     = v_su
+     WHERE entity_code = 'journal_entry'
+       AND tenant_id IS NULL;
+    GET DIAGNOSTICS v_je_rows = ROW_COUNT;
+
+    UPDATE control.entity
+       SET display_config = COALESCE(display_config, '{}'::jsonb) || v_jl_fields,
+           updated_at     = now(),
+           updated_by     = v_su
+     WHERE entity_code = 'journal_line'
+       AND tenant_id IS NULL;
+    GET DIAGNOSTICS v_jl_rows = ROW_COUNT;
+
+    -- Invalidate any compiled-entity cache by bumping the version hash on
+    -- both entities so the metadata service recompiles on next fetch.
+    UPDATE control.entity_version ev
+       SET version_hash = encode(gen_random_bytes(16), 'hex'),
+           updated_at   = now(),
+           updated_by   = v_su
+      FROM control.entity e
+     WHERE ev.entity_id = e.id
+       AND ev.tenant_id IS NULL
+       AND e.tenant_id  IS NULL
+       AND e.entity_code IN ('journal_entry', 'journal_line');
+
+    IF v_je_rows = 0 THEN
+        RAISE NOTICE '050_journal_entry_editor_display_config: journal_entry entity not found (skipped)';
+    END IF;
+    IF v_jl_rows = 0 THEN
+        RAISE NOTICE '050_journal_entry_editor_display_config: journal_line entity not found (skipped)';
+    END IF;
+
+    RAISE NOTICE '050_journal_entry_editor_display_config: done (journal_entry=%, journal_line=%)',
+        v_je_rows, v_jl_rows;
+END $$;
