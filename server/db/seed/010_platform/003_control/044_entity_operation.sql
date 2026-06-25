@@ -2455,6 +2455,22 @@ FROM (VALUES
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
         ON CONFLICT DO NOTHING;
+
+        UPDATE control.entity_field ef
+        SET    reference_config = ref.cfg,
+               lookup_config    = ref.lkp
+        FROM   (VALUES
+            ('chart_of_account_id'::text,
+             '{"target_entity":"chart_of_account","target_field":"id","display_field":"name"}'::jsonb,
+             NULL::jsonb),
+            ('parent_id',
+             '{"target_entity":"gl_account","target_field":"id","display_field":"name","picker":{"code_field":"code","show_code":true}}'::jsonb,
+             '{"search_fields":["code","name"],"dependent_filter":{"source_field":"chart_of_account_id","target_field":"chart_of_account_id"}}'::jsonb)
+        ) AS ref(field_name, cfg, lkp)
+        WHERE  ef.entity_version_id = v_ev
+          AND  ef.name = ref.field_name
+          AND  (ef.reference_config IS DISTINCT FROM ref.cfg
+             OR ef.lookup_config IS DISTINCT FROM ref.lkp);
     END IF;
 
     -- ── gl_account_hierarchy ──────────────────────────────────────────────────
@@ -6338,7 +6354,8 @@ WHERE ef.entity_version_id = ev.id
           'is_reconciling',
           'is_blocked',
           'posting_level',
-          'currency_id'
+          'currency_id',
+          'account_class'
       ))
    OR (e.name = 'customer' AND ef.name IN (
           'legal_name',
@@ -6464,7 +6481,12 @@ WITH field_updates(entity_name, field_name, data_type, ui_type, is_required, val
     ('payment_term_discount_tier','payment_term_id',NULL,NULL,NULL,'{"ref_entity":"payment_term"}'::jsonb,NULL),
     ('payment_term_discount_tier','tier_no',NULL,NULL,NULL,'{"min":1}'::jsonb,NULL),
     ('payment_term_discount_tier','qualify_within_days',NULL,NULL,NULL,'{"min":1}'::jsonb,NULL),
-    ('payment_term_discount_tier','discount_pct',NULL,NULL,NULL,'{"min":0,"max":100}'::jsonb,NULL)
+    ('payment_term_discount_tier','discount_pct',NULL,NULL,NULL,'{"min":0,"max":100}'::jsonb,NULL),
+
+    -- gl_account enum fields: ensure data_type='enum' even if originally seeded as 'string'
+    ('gl_account','account_nature','enum','select',NULL::boolean,NULL::jsonb,NULL::jsonb),
+    ('gl_account','node_type',     'enum','select',NULL::boolean,NULL::jsonb,NULL::jsonb),
+    ('gl_account','normal_balance','enum','select',NULL::boolean,NULL::jsonb,NULL::jsonb)
 )
 UPDATE control.entity_field ef
 SET    data_type   = COALESCE(fu.data_type, ef.data_type),

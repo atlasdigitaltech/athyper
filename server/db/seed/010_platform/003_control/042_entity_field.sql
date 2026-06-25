@@ -4617,6 +4617,37 @@ BEGIN
        AND tenant_id IS NULL;
     GET DIAGNOSTICS v_jl_rows = ROW_COUNT;
 
+    -- Add document_header config so the UI reads the correct status field and
+    -- maps lifecycle state codes to stage labels in the progress rail.
+    UPDATE control.entity
+       SET display_config = COALESCE(display_config, '{}'::jsonb) || jsonb_build_object(
+               'document_header', jsonb_build_object(
+                   'status_field',     'status',
+                   'number_field',     'document_no',
+                   'lifecycle_stages', jsonb_build_array(
+                       jsonb_build_object('key', 'draft',            'label', 'Draft'),
+                       jsonb_build_object('key', 'created',          'label', 'Ready'),
+                       jsonb_build_object('key', 'pending_approval', 'label', 'Submitted'),
+                       jsonb_build_object('key', 'approved',         'label', 'Approved'),
+                       jsonb_build_object('key', 'posted',           'label', 'Posted')
+                   )
+               )
+           ),
+           updated_at = now(),
+           updated_by = v_su
+     WHERE entity_code = 'journal_entry'
+       AND tenant_id IS NULL;
+
+    -- Override auto-computed list_columns for journal_line so the Items tab
+    -- shows meaningful business columns instead of just created_at.
+    UPDATE control.entity
+       SET display_config = COALESCE(display_config, '{}'::jsonb) ||
+               '{"list_columns":["line_no","transaction_debit","transaction_credit","description","transaction_currency"]}'::jsonb,
+           updated_at = now(),
+           updated_by = v_su
+     WHERE entity_code = 'journal_line'
+       AND tenant_id IS NULL;
+
     -- Invalidate any compiled-entity cache by bumping the version hash on
     -- both entities so the metadata service recompiles on next fetch.
     UPDATE control.entity_version ev
@@ -4638,4 +4669,95 @@ BEGIN
 
     RAISE NOTICE '050_journal_entry_editor_display_config: done (journal_entry=%, journal_line=%)',
         v_je_rows, v_jl_rows;
+END $$;
+
+-- ============================================================================
+-- Fix: gl_account field display corrections
+--   1. Hide the auto-generated 'account_class' text field — it duplicates the
+--      explicit 'account_nature' enum/select field that maps to the same column.
+--   2. Promote the auto-generated 'normal_balance' text field to enum/select
+--      with the correct lookup domain (blocked by ON CONFLICT DO NOTHING above).
+-- ============================================================================
+DO $$
+DECLARE
+    v_su uuid := '00000000-0000-0000-0000-000000000000';
+BEGIN
+    -- 1. Hide raw account_class field so only the enum 'Account Class' dropdown shows.
+    --    Uses ui_hint.display.hide_in (checked by fieldHiddenInSurface) rather than
+    --    ui_type='hidden' which only affects rendering, not visibility filtering.
+    UPDATE control.entity_field ef
+       SET ui_hint    = jsonb_set(
+                          COALESCE(ef.ui_hint, '{}'::jsonb),
+                          '{display,hide_in}',
+                          '["edit","create","detail","list"]'::jsonb,
+                          true
+                        ),
+           updated_at = now(),
+           updated_by = v_su
+      FROM control.entity_version ev
+      JOIN control.entity e ON e.id = ev.entity_id
+     WHERE ef.entity_version_id = ev.id
+       AND e.entity_code        = 'gl_account'
+       AND e.tenant_id          IS NULL
+       AND ev.version_no        = 1
+       AND ef.name              = 'account_class';
+
+    -- 2. Relabel account_nature → 'Account Class' and wire its enum domain.
+    UPDATE control.entity_field ef
+       SET label            = 'Account Class',
+           enum_domain_code = 'master.gl_account_class',
+           enum_config      = NULL,
+           updated_at       = now(),
+           updated_by       = v_su
+      FROM control.entity_version ev
+      JOIN control.entity e ON e.id = ev.entity_id
+     WHERE ef.entity_version_id = ev.id
+       AND e.entity_code        = 'gl_account'
+       AND e.tenant_id          IS NULL
+       AND ev.version_no        = 1
+       AND ef.name              = 'account_nature';
+
+    -- 3. Promote normal_balance to enum/select with the balance lookup domain.
+    UPDATE control.entity_field ef
+       SET data_type        = 'enum',
+           ui_type          = 'select',
+           enum_domain_code = 'master.gl_account_balance',
+           enum_config      = NULL,
+           updated_at       = now(),
+           updated_by       = v_su
+      FROM control.entity_version ev
+      JOIN control.entity e ON e.id = ev.entity_id
+     WHERE ef.entity_version_id = ev.id
+       AND e.entity_code        = 'gl_account'
+       AND e.tenant_id          IS NULL
+       AND ev.version_no        = 1
+       AND ef.column_name       = 'normal_balance';
+
+    -- 4. Promote subledger_type to enum/select with the subledger lookup domain.
+    UPDATE control.entity_field ef
+       SET data_type        = 'enum',
+           ui_type          = 'select',
+           enum_domain_code = 'master.gl_account_subledger',
+           enum_config      = NULL,
+           updated_at       = now(),
+           updated_by       = v_su
+      FROM control.entity_version ev
+      JOIN control.entity e ON e.id = ev.entity_id
+     WHERE ef.entity_version_id = ev.id
+       AND e.entity_code        = 'gl_account'
+       AND e.tenant_id          IS NULL
+       AND ev.version_no        = 1
+       AND ef.column_name       = 'subledger_type';
+
+    -- Bust compiled-entity cache for gl_account.
+    UPDATE control.entity_version ev
+       SET version_hash = encode(gen_random_bytes(32), 'hex'),
+           updated_at   = now(),
+           updated_by   = v_su
+      FROM control.entity e
+     WHERE ev.entity_id  = e.id
+       AND e.entity_code = 'gl_account'
+       AND e.tenant_id   IS NULL;
+
+    RAISE NOTICE 'gl_account field corrections applied';
 END $$;

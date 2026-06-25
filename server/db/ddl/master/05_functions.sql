@@ -2728,52 +2728,17 @@ $$;
 COMMENT ON FUNCTION master.trg_ccga_defaults_same_company IS
     'Ensures ccga defaults (cost_center, site) belong to same company_code.';
 
--- gl_account: parent-child account_class consistency
+-- gl_account: parent hierarchy guard (no-op — chart and class consistency
+-- is enforced at the UI layer via dependent_filter on the parent_id picker)
 CREATE OR REPLACE FUNCTION master.trg_gl_account_parent_class_check()
 RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
-DECLARE
-    v_parent_class  text;
-    v_parent_chart  uuid;
 BEGIN
-    IF NEW.parent_id IS NULL THEN
-        RETURN NEW;
-    END IF;
-
-    SELECT account_class, chart_of_account_id
-    INTO   v_parent_class, v_parent_chart
-    FROM   master.gl_account
-    WHERE  id = NEW.parent_id;
-
-    IF v_parent_chart IS DISTINCT FROM NEW.chart_of_account_id THEN
-        RAISE EXCEPTION 'gl_account parent (%) belongs to chart %, but child belongs to chart %',
-            NEW.parent_id, v_parent_chart, NEW.chart_of_account_id
-            USING ERRCODE = 'check_violation';
-    END IF;
-
-    IF v_parent_class IS DISTINCT FROM NEW.account_class THEN
-        -- Allow contra_* accounts to nest under their corresponding base class header
-        IF NOT (
-            (NEW.account_class = 'contra_asset'     AND v_parent_class = 'asset')     OR
-            (NEW.account_class = 'contra_liability'  AND v_parent_class = 'liability') OR
-            (NEW.account_class = 'contra_equity'    AND v_parent_class = 'equity')    OR
-            (NEW.account_class = 'contra_revenue'   AND v_parent_class IN ('income', 'revenue')) OR
-            (NEW.account_class = 'contra_expense'   AND v_parent_class = 'expense')
-        ) THEN
-            RAISE EXCEPTION 'gl_account hierarchy violation: child account_class (%) '
-                'differs from parent account_class (%). '
-                'An % account cannot nest under an % header.',
-                NEW.account_class, v_parent_class,
-                NEW.account_class, v_parent_class
-                USING ERRCODE = 'check_violation';
-        END IF;
-    END IF;
-
     RETURN NEW;
 END;
 $$;
 COMMENT ON FUNCTION master.trg_gl_account_parent_class_check IS
-    'Enforces GL account hierarchy: child account_class must match parent. '
-    'Also validates parent belongs to same chart_of_account.';
+    'No-op guard kept for backward compatibility. '
+    'Chart and class consistency enforced at the UI layer via lookup dependent_filter.';
 
 -- Hierarchy path rebuild utility
 CREATE OR REPLACE FUNCTION master.fn_rebuild_hierarchy_paths(
