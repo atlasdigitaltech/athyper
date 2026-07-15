@@ -18,25 +18,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Fetch signed qualification report
         env:
           REPORT_URL: ${{ vars.META_ENTITY_QUALIFICATION_REPORT_URL }}
           REPORT_TOKEN: ${{ secrets.META_ENTITY_QUALIFICATION_TOKEN }}
         run: |
-          mkdir -p perf/qualification/artifacts
+          mkdir -p perf/qualification/evidence
           curl --fail --silent --show-error \
             --retry 3 --retry-all-errors \
             -H "Authorization: Bearer ${REPORT_TOKEN}" \
             "${REPORT_URL}" \
-            -o perf/qualification/artifacts/current-report.json
+            -o perf/qualification/current-report.json
+
+      - name: Fetch signed release evidence bundle
+        env:
+          EVIDENCE_URL: ${{ vars.META_ENTITY_QUALIFICATION_EVIDENCE_URL }}
+          EVIDENCE_TOKEN: ${{ secrets.META_ENTITY_QUALIFICATION_TOKEN }}
+        run: |
+          if [ -z "$EVIDENCE_URL" ]; then
+            echo "No signed evidence bundle configured; the release gate will fail on missing evidence."
+            exit 0
+          fi
+          curl --fail --silent --show-error \
+            --retry 3 --retry-all-errors \
+            -H "Authorization: Bearer ${EVIDENCE_TOKEN}" \
+            "${EVIDENCE_URL}" \
+            -o /tmp/athyper-release-evidence.zip
+          unzip -oq /tmp/athyper-release-evidence.zip -d perf/qualification
 
       - name: Enforce budgets, regression ceiling, and parity
-        run: node scripts/performance/qualify-meta-entity.mjs --current=perf/qualification/artifacts/current-report.json --output=perf/qualification/artifacts/result.json
+        run: node scripts/performance/qualify-meta-entity.mjs --current=perf/qualification/current-report.json --output=perf/qualification/result.json
+
+      - name: Enforce release gate
+        run: pnpm policy:release-gate --qualification=perf/qualification/result.json
 
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: meta-entity-qualification-${{ github.run_id }}
-          path: perf/qualification/artifacts/
+          path: perf/qualification/
           retention-days: 90

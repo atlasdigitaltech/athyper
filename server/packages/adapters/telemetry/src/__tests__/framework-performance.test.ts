@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   observeFrameworkPhase,
+  observeFrameworkInfrastructure,
+  collectFrameworkInfrastructureMetrics,
   observeFrameworkPoolWait,
   observeFrameworkRedis,
   observeFrameworkSql,
@@ -19,6 +21,7 @@ describe("framework performance context", () => {
       entityCode: "supplier",
       operation: "list",
       rolloutCohort: "internal",
+      tenantClass: "large",
     }, async () => {
       observeFrameworkSql(4);
       observeFrameworkSql(6);
@@ -28,6 +31,8 @@ describe("framework performance context", () => {
       observeFrameworkPhase("query", 9);
       setFrameworkCacheState("l2_hit");
       setFrameworkResponseBytes(512);
+      observeFrameworkInfrastructure("lock_contention", 1, { entity: "supplier" });
+      observeFrameworkInfrastructure("queue_latency_ms", 12, { topic: "entity_mutation" });
 
       const snapshot = snapshotFrameworkPerformance();
       expect(snapshot).toMatchObject({
@@ -35,6 +40,7 @@ describe("framework performance context", () => {
         entityCode: "supplier",
         operation: "list",
         rolloutCohort: "internal",
+        tenantClass: "large",
         cacheState: "l2_hit",
         sqlCount: 2,
         sqlDurationMs: 10,
@@ -49,6 +55,13 @@ describe("framework performance context", () => {
       });
       expect(snapshot?.totalDurationMs).toBeGreaterThanOrEqual(0);
     });
+  });
+
+  it("exports infrastructure degradation and queue metrics", () => {
+    observeFrameworkInfrastructure("redis_degradation", 1, { component: "descriptor" });
+    const output = collectFrameworkInfrastructureMetrics().join("\n");
+    expect(output).toContain("athyper_framework_redis_degradation_total");
+    expect(output).toContain("athyper_framework_queue_latency_ms_count");
   });
 
   it("does nothing outside a request performance context", () => {

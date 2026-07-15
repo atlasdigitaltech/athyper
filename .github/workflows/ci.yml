@@ -193,6 +193,9 @@ jobs:
       - name: Verify records identity-boundary ratchet
         run: pnpm policy:records-identity-boundary
 
+      - name: Verify performance phase history and legacy boundary
+        run: pnpm policy:performance-phase-history
+
   # P0 performance baseline. Advisory until two stable captured runs have
   # been reviewed. Enable by setting the PERF_BASE_URL repository variable.
   performance-baseline:

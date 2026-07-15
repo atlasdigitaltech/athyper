@@ -12,6 +12,7 @@ const config = load("config/governance/release-gate.json");
 const failures = [];
 const warnings = [];
 const advisory = args.advisory === true || args.advisory === "true";
+const qualificationPath = args.qualification || "perf/qualification/result.json";
 
 const evidence = (name, path) => {
   if (!existsSync(resolve(root, path))) {
@@ -22,7 +23,10 @@ const evidence = (name, path) => {
 };
 
 const report = evidence("performanceReport", config.requiredEvidence.performanceReport);
-if (report) {
+const qualification = existsSync(resolve(root, qualificationPath)) ? load(qualificationPath) : null;
+if (!qualification) failures.push(`qualification: missing result artifact ${qualificationPath}`);
+else if (qualification.passed !== true) failures.push("qualification: performance qualification did not pass");
+if (report && !qualification) {
   for (const field of ["queryCountBudget", "latencyBudget", "transactionDurationBudget"]) {
     if (report[field]?.passed !== true && report.budgets?.[field]?.passed !== true) {
       failures.push(`${field}: budget was not explicitly passed`);
@@ -30,7 +34,10 @@ if (report) {
   }
 }
 for (const [name, path] of Object.entries(config.requiredEvidence)) {
-  if (name !== "performanceReport" && name !== "queryCountBudget" && name !== "latencyBudget" && name !== "transactionDurationBudget") evidence(name, path);
+  if (name !== "performanceReport" && name !== "queryCountBudget" && name !== "latencyBudget" && name !== "transactionDurationBudget") {
+    const artifact = evidence(name, path);
+    if (artifact && artifact.passed !== true) failures.push(`${name}: evidence artifact did not pass`);
+  }
 }
 
 const compatibilityPath = config.requiredEvidence.compatibilityTraffic;

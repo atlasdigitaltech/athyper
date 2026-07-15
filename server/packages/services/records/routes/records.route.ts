@@ -59,6 +59,7 @@ import {
 } from "@athyper/svc-shared";
 import type { CacheClient } from "@athyper/svc-iam";
 import type { ExecutionDescriptorProvider } from "@athyper/svc-metadata";
+import { observeFrameworkInfrastructure } from "@athyper/adapter-telemetry";
 import {
   resolveParameterSnapshot,
   getIntParam,
@@ -4929,6 +4930,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const initialStatus = typeof initialRow?.status === "string" ? initialRow.status : "unknown";
       const rawCursor = req.header("Last-Event-ID") ?? String(req.query["lastEventId"] ?? "");
       let durableCursor = /^\d+$/.test(rawCursor) ? Number(rawCursor) : 0;
+      if (rawCursor) observeFrameworkInfrastructure("sse_reconnect", 1, { entity: entityCode });
 
       // â”€â”€ Redis subscription with 2s timeout fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // Mirrors the collab activity SSE pattern: race subscribe() against
@@ -4970,6 +4972,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           const writable = res.write(`${cursor ? `id: ${cursor}\n` : ""}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
           if (!writable) {
             logger?.warn("records_stream_slow_client", { entity: entityCode, recordId: physicalId });
+            observeFrameworkInfrastructure("sse_slow_client_disconnect", 1, { entity: entityCode });
             res.destroy();
           }
         } catch (err) {

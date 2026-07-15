@@ -4,7 +4,10 @@ import {
   observeFrameworkPhase,
   runWithFrameworkPerformance,
   setFrameworkCacheState,
+  setFrameworkTenantClass,
   setFrameworkResponseBytes,
+  collectFrameworkInfrastructureMetrics,
+  observeFrameworkInfrastructure,
   snapshotFrameworkPerformance,
   startFrameworkPhase,
   type FrameworkPerformanceSnapshot,
@@ -24,6 +27,7 @@ interface ObservationLabels {
   operation: string;
   cacheState: string;
   cohort: string;
+  tenantClass: string;
 }
 
 class HistogramStore {
@@ -149,6 +153,7 @@ export function classifyFrameworkRequest(req: Pick<Request, "method" | "original
       metadata[1]!,
       "descriptor_bootstrap",
       req.headers["x-rollout-cohort"],
+      req.headers["x-tenant-class"] ?? req.headers["x-tenant-size-class"],
     );
   }
 
@@ -161,10 +166,10 @@ export function classifyFrameworkRequest(req: Pick<Request, "method" | "original
 
   if (!suffix || suffix === "/") {
     const operation = method === "GET" ? "list" : method === "POST" ? "create" : "other";
-    return identity(`${prefix}/:entity`, entityCode, operation, req.headers["x-rollout-cohort"]);
+    return identity(`${prefix}/:entity`, entityCode, operation, req.headers["x-rollout-cohort"], req.headers["x-tenant-class"] ?? req.headers["x-tenant-size-class"]);
   }
   if (/^\/[^/]+\/edit\/submit\/?$/.test(suffix) && method === "POST") {
-    return identity(`${prefix}/:entity/:id/edit/submit`, entityCode, "aggregate_save", req.headers["x-rollout-cohort"]);
+    return identity(`${prefix}/:entity/:id/edit/submit`, entityCode, "aggregate_save", req.headers["x-rollout-cohort"], req.headers["x-tenant-class"] ?? req.headers["x-tenant-size-class"]);
   }
   if (/^\/[^/]+\/?$/.test(suffix)) {
     const operation = method === "GET"
@@ -174,7 +179,7 @@ export function classifyFrameworkRequest(req: Pick<Request, "method" | "original
         : method === "DELETE"
           ? "delete"
           : "other";
-    return identity(`${prefix}/:entity/:id`, entityCode, operation, req.headers["x-rollout-cohort"]);
+    return identity(`${prefix}/:entity/:id`, entityCode, operation, req.headers["x-rollout-cohort"], req.headers["x-tenant-class"] ?? req.headers["x-tenant-size-class"]);
   }
   return null;
 }
@@ -220,6 +225,7 @@ export function collectFrameworkPerformanceMetrics(): string[] {
     ...responseBytes.render(),
     ...phaseDuration.render(),
   );
+  lines.push(...collectFrameworkInfrastructureMetrics());
   return lines;
 }
 
@@ -230,6 +236,7 @@ function observeFrameworkRequest(snapshot: FrameworkPerformanceSnapshot, statusC
     operation: snapshot.operation,
     cacheState: snapshot.cacheState,
     cohort: snapshot.rolloutCohort,
+    tenantClass: snapshot.tenantClass,
   };
   const key = labelKey(labels);
   increment(reported, "true");
@@ -260,10 +267,18 @@ function applyResponseObservations(res: Response): void {
   const listCacheHeader = String(res.getHeader("X-List-Cache") ?? "").toUpperCase();
   const descriptorCacheHeader = String(res.getHeader("X-Descriptor-Cache") ?? "").toUpperCase();
   const effectiveCacheHeader = descriptorCacheHeader || cacheHeader || listCacheHeader;
+  const localsTenantClass = String(locals["tenantClass"] ?? res.getHeader("X-Tenant-Class") ?? "");
+  if (localsTenantClass) setFrameworkTenantClass(localsTenantClass);
   if (effectiveCacheHeader === "L0" || effectiveCacheHeader === "L1") setFrameworkCacheState("l1_hit");
   else if (effectiveCacheHeader === "L2") setFrameworkCacheState("l2_hit");
   else if (effectiveCacheHeader === "L3") setFrameworkCacheState("miss");
-  else if (effectiveCacheHeader === "L3_REDIS_DEGRADED") setFrameworkCacheState("error");
+  else if (effectiveCacheHeader === "L3_REDIS_DEGRADED") {
+    setFrameworkCacheState("error");
+    observeFrameworkInfrastructure("redis_degradation");
+  }
+  if (String(res.getHeader("X-Cache-Fallback") ?? "").toLowerCase() === "true") {
+    observeFrameworkInfrastructure("cache_fallback");
+  }
   else if (effectiveCacheHeader === "HIT") setFrameworkCacheState("l2_hit");
   else if (effectiveCacheHeader === "MISS") setFrameworkCacheState("miss");
   else if (effectiveCacheHeader === "BYPASS") setFrameworkCacheState("bypass");
@@ -291,12 +306,14 @@ function identity(
   rawEntity: string,
   operation: FrameworkRequestIdentity["operation"],
   rawCohort: unknown,
+  rawTenantClass: unknown,
 ): FrameworkRequestIdentity {
   return {
     route,
     entityCode: decodeURIComponent(rawEntity).trim().replace(/-/g, "_").toLowerCase() || "unknown",
     operation,
     rolloutCohort: rolloutCohort(rawCohort),
+    tenantClass: tenantClass(rawTenantClass),
   };
 }
 
@@ -308,20 +325,28 @@ function rolloutCohort(value: unknown): FrameworkRolloutCohort {
 }
 
 function labelKey(labels: ObservationLabels): string {
-  return [labels.route, labels.entity, labels.operation, labels.cacheState, labels.cohort].join("\0");
+  return [labels.route, labels.entity, labels.operation, labels.cacheState, labels.cohort, labels.tenantClass].join("\0");
 }
 
 function renderLabels(key: string): string {
-  const [route = "unknown", entity = "unknown", operation = "other", cacheState = "none", cohort = "unassigned", phase] = key.split("\0");
+  const [route = "unknown", entity = "unknown", operation = "other", cacheState = "none", cohort = "unassigned", tenantClass = "unknown", phase] = key.split("\0");
   const labels = [
     `route="${escape(route)}"`,
     `entity="${escape(entity)}"`,
     `operation="${escape(operation)}"`,
     `cache_state="${escape(cacheState)}"`,
     `rollout_cohort="${escape(cohort)}"`,
+    `tenant_class="${escape(tenantClass)}"`,
   ];
   if (phase) labels.push(`phase="${escape(phase)}"`);
   return labels.join(",");
+}
+
+function tenantClass(value: unknown): string {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return typeof raw === "string" && /^[a-z0-9_-]{1,32}$/i.test(raw.trim())
+    ? raw.trim().toLowerCase()
+    : "unknown";
 }
 
 function statusClass(statusCode: number): string {
