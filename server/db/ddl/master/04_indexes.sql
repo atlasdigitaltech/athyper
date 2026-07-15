@@ -38,27 +38,33 @@ CREATE INDEX IF NOT EXISTS principal_profile_sync_drift_pidx ON master.principal
 CREATE INDEX IF NOT EXISTS principal_profile_required_actions_pidx ON master.principal_profile (tenant_id) WHERE array_length(keycloak_required_actions, 1) > 0;
 
 -- contact_link
--- Purpose-scoped primary uniqueness: at most one is_primary=true per (owner, channel, purpose).
--- purpose is nullable — NULLS NOT DISTINCT ensures NULL purpose is treated as a single bucket.
+-- Purpose+qualifier-scoped primary uniqueness: at most one is_primary=true per
+-- (owner, channel, purpose, role_qualifier). purpose and role_qualifier are both
+-- nullable — NULLS NOT DISTINCT ensures NULL is treated as a single bucket value.
 DROP INDEX IF EXISTS master.ux_contact_link_one_primary;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_contact_link_one_primary
-    ON master.contact_link (tenant_id, owner_type, owner_id, channel_type, purpose)
+    ON master.contact_link (tenant_id, owner_type, owner_id, channel_type, purpose, role_qualifier)
     NULLS NOT DISTINCT
     WHERE is_primary = true;
 
--- Value-level dedup: prevents duplicate (owner, channel, value, purpose) rows regardless of is_primary.
+-- Value-level dedup: prevents duplicate (owner, channel, value, purpose, role_qualifier) rows.
 -- Used by fn_upsert_contact_link ON CONFLICT for true upsert semantics.
+DROP INDEX IF EXISTS master.contact_link_value_uq;
 CREATE UNIQUE INDEX IF NOT EXISTS contact_link_value_uq
-    ON master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose)
+    ON master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier)
     NULLS NOT DISTINCT;
 
+-- Principal-login uniqueness: still does NOT need role_qualifier — auth purposes forbid
+-- qualifier via contact_link_auth_no_qualifier_chk, so qualifier is always NULL on these rows.
 CREATE UNIQUE INDEX IF NOT EXISTS ux_contact_link_principal_login ON master.contact_link (tenant_id, lower(value)) WHERE owner_type = 'principal' AND channel_type = 'email' AND purpose = 'login' AND is_verified = true AND is_primary = true;
 CREATE INDEX IF NOT EXISTS contact_link_owner_idx ON master.contact_link (tenant_id, owner_type, owner_id);
 CREATE INDEX IF NOT EXISTS contact_link_verified_pidx ON master.contact_link (tenant_id, owner_type, owner_id, channel_type) WHERE is_verified = true;
 
--- Per-purpose primary lookup: supports fn_sync_principal_login_email and equivalent resolvers
+-- Per-purpose+qualifier primary lookup: supports fn_resolve_contact / fn_resolve_party_contact
+-- and fn_sync_principal_login_email (login_email path always has role_qualifier=NULL per CHECK).
+DROP INDEX IF EXISTS master.contact_link_primary_purpose_idx;
 CREATE INDEX IF NOT EXISTS contact_link_primary_purpose_idx
-    ON master.contact_link (tenant_id, owner_type, owner_id, channel_type, purpose)
+    ON master.contact_link (tenant_id, owner_type, owner_id, channel_type, purpose, role_qualifier)
     WHERE is_primary = true AND is_verified = true AND status = 'active';
 
 -- contact_email
@@ -68,6 +74,20 @@ CREATE INDEX IF NOT EXISTS contact_email_disposable_pidx ON master.contact_email
 
 -- contact_phone
 CREATE INDEX IF NOT EXISTS contact_phone_e164_idx ON master.contact_phone (tenant_id, e164) WHERE e164 IS NOT NULL;
+
+-- contact_marketing_consent
+-- Owner uniqueness already enforced by the table-level UNIQUE constraint on
+-- (tenant_id, owner_type, owner_id); the UNIQUE constraint creates a B-tree
+-- index that also satisfies fn_check_marketing_consent's owner-key lookup —
+-- no additional owner-keyed index needed.
+--
+-- Helpful for "find all opted_out owners for compliance audits" type queries:
+CREATE INDEX IF NOT EXISTS contact_marketing_consent_status_idx
+    ON master.contact_marketing_consent (tenant_id, status, owner_type);
+
+-- Audit-trail queries by status change time
+CREATE INDEX IF NOT EXISTS contact_marketing_consent_changed_idx
+    ON master.contact_marketing_consent (tenant_id, status_changed_at DESC);
 
 -- label
 CREATE INDEX IF NOT EXISTS label_active_pidx
@@ -125,6 +145,11 @@ CREATE INDEX IF NOT EXISTS address_country_idx
 CREATE INDEX IF NOT EXISTS address_active_pidx
     ON master.address (tenant_id)
     WHERE status = 'active';
+
+-- Phase 3a: jurisdiction reverse lookup (analytics, tax rules referencing addresses)
+CREATE INDEX IF NOT EXISTS address_tax_jurisdiction_pidx
+    ON master.address (tenant_id, tax_jurisdiction_id)
+    WHERE tax_jurisdiction_id IS NOT NULL AND status = 'active';
 
 -- address_link
 CREATE INDEX IF NOT EXISTS address_link_owner_idx
@@ -435,6 +460,11 @@ CREATE INDEX IF NOT EXISTS comment_retention_pidx
 CREATE INDEX IF NOT EXISTS comment_fts_idx
     ON master.comment USING GIN (to_tsvector('english', comment_text))
     WHERE deleted_at IS NULL;
+-- Intent filter (e.g. submission_note, approval_note, rejection_reason)
+CREATE INDEX IF NOT EXISTS comment_intent_idx
+    ON master.comment (tenant_id, entity_type, entity_id, comment_intent,
+                       created_at DESC)
+    WHERE deleted_at IS NULL;
 
 -- —— §5  master.comment_draft ———————————————————————————————————————————
 -- Draft lookup: find user's draft for a specific entity target
@@ -576,6 +606,8 @@ CREATE INDEX IF NOT EXISTS le_active_pidx  ON master.legal_entity (tenant_id) WH
 CREATE INDEX IF NOT EXISTS cc_tenant_idx        ON master.company_code (tenant_id);
 CREATE INDEX IF NOT EXISTS cc_legal_entity_idx  ON master.company_code (tenant_id, legal_entity_id);
 CREATE INDEX IF NOT EXISTS cc_active_pidx       ON master.company_code (tenant_id) WHERE is_active = true;
+-- EntityQueryService keyset list: tenant scope, stable natural ordering, id tie-breaker.
+CREATE INDEX IF NOT EXISTS cc_tenant_code_id_idx ON master.company_code (tenant_id, code, id);
 
 -- ── master.cost_center ──────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS cc_tenant_company_idx ON master.cost_center (tenant_id, company_code_id);
@@ -902,9 +934,12 @@ CREATE INDEX IF NOT EXISTS ccdd_cc_type_active_pidx
 CREATE INDEX IF NOT EXISTS tj_country_pidx
     ON master.tax_jurisdiction (tenant_id, country_code)
     WHERE is_active = true;
-CREATE INDEX IF NOT EXISTS tj_parent_idx
-    ON master.tax_jurisdiction (tenant_id, parent_id)
-    WHERE parent_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS tj_state_region_pidx
+    ON master.tax_jurisdiction (tenant_id, country_code, state_region_code)
+    WHERE is_active = true AND state_region_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS tj_type_pidx
+    ON master.tax_jurisdiction (tenant_id, jurisdiction_type)
+    WHERE is_active = true;
 
 -- ── master.fx_rate ───────────────────────────────────────────────────────────
 -- Unique: one active rate per (pair, type, date, time)

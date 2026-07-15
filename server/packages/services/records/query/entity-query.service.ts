@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { withFrameworkPhase } from "@athyper/adapter-telemetry";
 import type { ExecutionDescriptorV1 } from "@athyper/svc-metadata";
 import { buildEntityKeysetListCacheKey, stableEntityListCacheHash } from "../cache/list-cache.js";
 import { decodeKeysetCursor, encodeKeysetCursor } from "./keyset-cursor.js";
@@ -36,6 +37,10 @@ export class EntityQueryService {
   }
 
   async list(command: ListEntitiesCommand): Promise<EntityListResult> {
+    return withFrameworkPhase("query", () => this.listMeasured(command));
+  }
+
+  private async listMeasured(command: ListEntitiesCommand): Promise<EntityListResult> {
     assertContext(command);
     const limit = normalizeLimit(command.limit);
     const sort = compileSort(command.descriptor, command.sort);
@@ -83,6 +88,10 @@ export class EntityQueryService {
   }
 
   async detail(command: GetEntityDetailCommand): Promise<EntityDetailResult> {
+    return withFrameworkPhase("query", () => this.detailMeasured(command));
+  }
+
+  private async detailMeasured(command: GetEntityDetailCommand): Promise<EntityDetailResult> {
     assertContext(command);
     const field = fieldByColumn(command.descriptor, command.descriptor.storage.primaryKey);
     const plan = compilePlan({ ...command, filters: [{ field, operator: "eq", value: command.id }] }, compileSort(command.descriptor), 1);

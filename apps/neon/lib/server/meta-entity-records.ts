@@ -16,6 +16,9 @@ const PRINCIPAL_AUDIT_FIELDS = new Set([
   "deleted_by",
   "status_changed_by",
 ]);
+const ENTITY_CODE_ALIASES: Record<string, string> = {
+  unit_of_measure: "uom",
+};
 
 export interface MetaEntityRecordList {
   records: RuntimeRecordRow[];
@@ -23,6 +26,7 @@ export interface MetaEntityRecordList {
   pagination?: RuntimeListPagination;
   isFullyLoaded?: boolean;
   reasons?: Record<string, boolean>;
+  navigation?: { hasMore: boolean; nextCursor?: string; countMode?: string; total?: number };
 }
 
 export interface MetaEntityRecordDetail {
@@ -52,7 +56,16 @@ export const getMetaEntityRecordList = cache(
       return unavailable(scope.message);
     }
 
-    const result = await fetchRecordRows(entityCode, buildRecordListQuery(searchParams, scope.filters), headers);
+    const queryMode = entityQueryMode(entityCode);
+    const legacyQuery = buildRecordListQuery(searchParams, scope.filters);
+    const v1Query = buildRecordListQuery({
+      ...searchParams,
+      query_v1: "1",
+      count_mode: searchParams["count_mode"] ?? (queryMode === "shadow" ? "exact" : "none"),
+    }, scope.filters);
+    const result = queryMode === "shadow"
+      ? await fetchShadowRecordRows(entityCode, legacyQuery, v1Query, headers)
+      : await fetchRecordRows(entityCode, queryMode === "serve" ? v1Query : legacyQuery, headers);
     if (result.status === "unavailable") {
       return unavailable(result.message);
     }
@@ -66,6 +79,7 @@ export const getMetaEntityRecordList = cache(
       pagination: result.pagination,
       isFullyLoaded: isFullyLoaded(records.length, result.pagination),
       reasons: result.reasons,
+      navigation: result.navigation,
     };
   },
 );
@@ -144,7 +158,10 @@ function buildRecordListQuery(
 ): string {
   const params = new URLSearchParams();
 
-  setParam(params, "page", searchParams["page"]);
+  const queryV1 = String(Array.isArray(searchParams["query_v1"]) ? searchParams["query_v1"][0] : searchParams["query_v1"] ?? "").toLowerCase();
+  if (!(queryV1 === "1" || queryV1 === "true" || queryV1 === "yes")) {
+    setParam(params, "page", searchParams["page"]);
+  }
   setParam(params, "page_size", searchParams["page_size"] ?? String(DEFAULT_PAGE_SIZE));
   setParam(params, "q", searchParams["q"]);
   setParam(params, "sort", searchParams["sort"]);
@@ -152,6 +169,10 @@ function buildRecordListQuery(
   setParam(params, "cols", searchParams["cols"]);
   setParam(params, "facets", searchParams["facets"]);
   setParam(params, "picker_tree", searchParams["picker_tree"]);
+  setParam(params, "include_provisional", searchParams["include_provisional"]);
+  setParam(params, "cursor", searchParams["cursor"]);
+  setParam(params, "count_mode", searchParams["count_mode"]);
+  setParam(params, "query_v1", searchParams["query_v1"]);
 
   for (const [key, value] of Object.entries(searchParams)) {
     if (key.startsWith("filter.")) {
@@ -209,6 +230,13 @@ function buildDetailLookupPlans(
   recordId: string,
   descriptor: MetaEntityRuntimeDescriptor | undefined,
 ): DetailLookupPlan[] {
+  // Detail lookup always opts into provisional visibility. The caller already
+  // has the record id (from a redirect or a link), so hiding a draft they
+  // just created — because the compiled descriptor happens to disagree with
+  // the runtime on createMode — is a bug, not a feature. The records
+  // service still applies tenant + scope + RLS; is_provisional is just a
+  // list-view convenience filter that has no place on a by-id lookup.
+  const searchParams: Record<string, string> = { include_provisional: "true" };
   const scopedIds = filters["filter.id"]?.split(",").filter(Boolean) ?? [];
   const scopedRecordMatches = scopedIds.some((id) => sameRecordValue(id, recordId));
   if (scopedIds.length > 0 && isUuidLike(recordId) && !scopedRecordMatches) {
@@ -222,7 +250,7 @@ function buildDetailLookupPlans(
   if ((scopedIds.length === 0 || scopedRecordMatches) && (isUuidLike(recordId) || scopedRecordMatches)) {
     plans.push({
       status: "ready",
-      searchParams: { page_size: "1" },
+      searchParams: { ...searchParams, page_size: "1" },
       filters: {
         ...filters,
         "filter.id": recordId,
@@ -235,7 +263,7 @@ function buildDetailLookupPlans(
   for (const fieldName of detailLookupFieldNames(descriptor)) {
     plans.push({
       status: "ready",
-      searchParams: { page_size: "2" },
+      searchParams: { ...searchParams, page_size: "2" },
       filters: {
         ...filters,
         [`filter.${fieldName}`]: recordId,
@@ -247,7 +275,7 @@ function buildDetailLookupPlans(
 
   plans.push({
     status: "ready",
-    searchParams: { page_size: "10", q: recordId },
+    searchParams: { ...searchParams, page_size: "10", q: recordId },
     filters,
     matches: (record) => (
       sameRecordValue(record.id, recordId)
@@ -429,6 +457,21 @@ async function hydrateDisplayValues(
 ): Promise<RuntimeRecordRow[]> {
   const referenceHydratedRecords = await hydrateReferenceDisplayValues(records, descriptor, headers, session);
   return hydrateLookupDisplayValues(referenceHydratedRecords, descriptor, headers);
+}
+
+/**
+ * Applies the canonical metadata-driven display hydration to records fetched
+ * by document child/relation loaders. Those loaders intentionally fetch raw
+ * rows directly, so they must opt into the same contract used by the generic
+ * entity list and detail readers.
+ */
+export async function hydrateMetaEntityRecordRows(
+  records: RuntimeRecordRow[],
+  descriptor: MetaEntityRuntimeDescriptor | undefined,
+  session: V4Session,
+  headers: Record<string, string> = buildRuntimeHeaders(session),
+): Promise<RuntimeRecordRow[]> {
+  return hydrateDisplayValues(records, descriptor, headers, session);
 }
 
 async function hydrateReferenceDisplayValues(
@@ -887,7 +930,7 @@ async function resolveSiteIdsForCompanyCodes(
 }
 
 type RecordRowsResult =
-  | { status: "ready"; records: RuntimeRecordRow[]; pagination?: RuntimeListPagination; reasons?: Record<string, boolean> }
+  | { status: "ready"; records: RuntimeRecordRow[]; pagination?: RuntimeListPagination; reasons?: Record<string, boolean>; navigation?: { hasMore: boolean; nextCursor?: string; countMode?: string; total?: number } }
   | { status: "unavailable"; message: string };
 
 type IdResolutionResult =
@@ -907,7 +950,18 @@ async function fetchRecordRows(
       headers,
       cache: "no-store",
     });
-  } catch {
+  } catch (err) {
+    // Silent catches here masked the real cause of 503 RECORDS_UNAVAILABLE
+    // responses for hours during the AD drawer bring-up. Log the actual
+    // network error so the next time fetch throws (TLS, ECONNREFUSED,
+    // dispatcher abort, etc.) the cause is in the Next.js console instead
+    // of behind a generic "Records service is unavailable" string.
+    const errorText = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    const causeText = err instanceof Error && err.cause ? `; cause=${String(err.cause)}` : "";
+    console.error(
+      `[meta-entity-records] fetch threw: entity=${entityCode}; path=${pathname}; ` +
+      `runtimeUrl=${buildRuntimeUrl(pathname)}; error=${errorText}${causeText}`,
+    );
     return { status: "unavailable", message: "Records service is unavailable." };
   }
 
@@ -922,7 +976,50 @@ async function fetchRecordRows(
     records: data.map(normalizeRuntimeRecord).filter(isRuntimeRecordRow),
     pagination: readRuntimePagination(json),
     reasons: readReasons(json),
+    navigation: readKeysetNavigation(json),
   };
+}
+
+async function fetchShadowRecordRows(
+  entityCode: string,
+  legacyQuery: string,
+  v1Query: string,
+  headers: Record<string, string>,
+): Promise<RecordRowsResult> {
+  const [legacy, candidate] = await Promise.all([
+    fetchRecordRows(entityCode, legacyQuery, headers),
+    fetchRecordRows(entityCode, v1Query, headers),
+  ]);
+  if (legacy.status === "ready" && candidate.status === "ready") {
+    const normalize = (rows: RuntimeRecordRow[]) => rows.map((row) =>
+      Object.fromEntries(Object.entries(row)
+        .filter(([key]) => !["_cache_state", "updated_at"].includes(key))
+        .sort(([a], [b]) => a.localeCompare(b))));
+    const legacyRows = normalize(legacy.records);
+    const candidateRows = normalize(candidate.records);
+    const legacyIds = legacy.records.map((row) => String(row.id ?? ""));
+    const candidateIds = candidate.records.map((row) => String(row.id ?? ""));
+    const legacyTotal = legacy.pagination?.total;
+    const candidateTotal = candidate.pagination?.total ?? candidate.navigation?.total;
+    const mismatches = [
+      ...(JSON.stringify(legacyRows) !== JSON.stringify(candidateRows) ? ["row_values_or_nulls"] : []),
+      ...(JSON.stringify(legacyIds) !== JSON.stringify(candidateIds) ? ["row_order_or_security_filter"] : []),
+      ...(legacyTotal !== undefined && candidateTotal !== undefined && legacyTotal !== candidateTotal ? ["count"] : []),
+      ...(JSON.stringify(legacy.navigation?.countMode ?? "") !== JSON.stringify(candidate.navigation?.countMode ?? "") ? ["count_mode"] : []),
+    ];
+    if (mismatches.length > 0) {
+      console.warn(`[meta-entity-records] EntityQueryService shadow parity mismatch: entity=${entityCode} categories=${mismatches.join(",")}`);
+    }
+  }
+  return legacy;
+}
+
+function entityQueryMode(entityCode: string): "off" | "shadow" | "serve" {
+  const pilots = new Set((process.env["NEON_ENTITY_QUERY_V1_PILOTS"] ?? process.env["ENTITY_QUERY_V1_PILOTS"] ?? "")
+    .split(",").map((value) => normalizeEntityCode(value)).filter(Boolean));
+  if (!pilots.has(entityCode)) return "off";
+  const mode = process.env["NEON_ENTITY_QUERY_V1_MODE"]?.trim().toLowerCase();
+  return mode === "serve" ? "serve" : mode === "shadow" ? "shadow" : "off";
 }
 
 function isFullyLoaded(rowCount: number, pagination: RuntimeListPagination | undefined): boolean {
@@ -950,6 +1047,18 @@ function readRuntimePagination(value: unknown): RuntimeListPagination | undefine
   return total !== undefined && page !== undefined && pageSize !== undefined && totalPages !== undefined
     ? { total, page, pageSize, totalPages }
     : undefined;
+}
+
+function readKeysetNavigation(value: unknown): { hasMore: boolean; nextCursor?: string; countMode?: string; total?: number } | undefined {
+  if (!isRecord(value) || !isRecord(value["pagination"])) return undefined;
+  const pagination = value["pagination"];
+  if (typeof pagination["has_more"] !== "boolean") return undefined;
+  return {
+    hasMore: pagination["has_more"],
+    ...(typeof pagination["next_cursor"] === "string" ? { nextCursor: pagination["next_cursor"] } : {}),
+    ...(typeof pagination["count_mode"] === "string" ? { countMode: pagination["count_mode"] } : {}),
+    ...(readNonNegativeInteger(pagination["total"]) !== undefined ? { total: readNonNegativeInteger(pagination["total"]) } : {}),
+  };
 }
 
 function readPositiveInteger(value: unknown): number | undefined {
@@ -1009,7 +1118,8 @@ export function normalizeRouteRecordId(routeRecordId: string): string {
 
 function normalizeEntityCode(routeEntity: string): string {
   const parts = routeEntity.trim().split(".").filter(Boolean);
-  return (parts.at(-1) ?? "").replace(/-/g, "_");
+  const entityCode = (parts.at(-1) ?? "").replace(/-/g, "_");
+  return ENTITY_CODE_ALIASES[entityCode] ?? entityCode;
 }
 
 function isUuidLike(value: string): boolean {

@@ -14,6 +14,11 @@ export interface EntityListCacheKeyInput {
   version:        string;
 }
 
+export interface EntityKeysetListCacheKeyInput extends Omit<EntityListCacheKeyInput, "page"> {
+  cursor: string;
+  generation: string;
+}
+
 export function entityListVersionKey(tenantId: string, entityCode: string): string {
   return `listver:${tenantId}:${entityCode}`;
 }
@@ -66,6 +71,17 @@ export function buildEntityListCountCacheKey(input: Omit<EntityListCacheKeyInput
     `filter:${input.filterHash}`,
     `sort:${input.sortHash}`,
     `search:${input.searchHash}`,
+  ].join(":");
+}
+
+/** Keyset pages are content-addressed by cursor, never by a derived page number. */
+export function buildEntityKeysetListCacheKey(input: EntityKeysetListCacheKeyInput): string {
+  return [
+    "listpage:v2", input.tenantId, input.entityCode, `gen:${input.generation}`,
+    `v${input.version}`, `scope:${input.scopeHash}`, `sec:${input.securityHash}`,
+    `desc:${input.descriptorHash}`, `filter:${input.filterHash}`, `sort:${input.sortHash}`,
+    `search:${input.searchHash}`, `cursor:${stableEntityListCacheHash(input.cursor || "start")}`,
+    `s:${input.pageSize}`,
   ].join(":");
 }
 
