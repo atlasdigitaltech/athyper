@@ -9,7 +9,8 @@
  * Resolution:
  *   1. Look up control.entity_operation by entity_name + permission_code.
  *   2. Fetch the record to know current status and get field values for copies.
- *   3. Dispatch based on handler_target:
+ *   3. Dispatch server commands from execution_target. handler_target remains
+ *      UI-only metadata (for example flow:submit_for_approval).
  *
  *   Status transitions (validated via snapshot.status_route / entity_lifecycle):
  *     submit    → SUBMITTED
@@ -33,21 +34,18 @@
  *              | { ok: true, newRecord: { id } }   (copy/reverse)
  */
 
-import type { Request, RequestHandler, Response, Router } from "express";
+import type { RequestHandler, Response, Router } from "express";
 import { sql, type Kysely } from "kysely";
 import {
-  verifyBearer,
   isUuid,
-  resolveTenantId,
-  resolvePrincipalIdOrNull,
-  extractOrgHeaders,
   SYSTEM_PRINCIPAL_UUID,
+  emitOutboxEvent,
 } from "@athyper/svc-shared";
 import { handlePromoteProforma } from "@athyper/svc-business";
-import { handleSubmitForApproval } from "@athyper/svc-business";
-import { handlePostInvoice }      from "@athyper/svc-business";
-import { handleReverseInvoice }   from "@athyper/svc-business";
 import { matchInvoice }           from "@athyper/svc-business";
+import { runLifecycleHooks }      from "@athyper/svc-business";
+import { purchaseOrderSubmitPreflight } from "@athyper/svc-business";
+import { evaluatePurchaseOrderTransition } from "@athyper/svc-business";
 import {
   placeInvoiceOnHold,
   releaseInvoiceHold,
@@ -60,28 +58,26 @@ import {
   handleVoidPayment,
 } from "@athyper/svc-business";
 import type { BusinessLifecycleSyncHook } from "@athyper/svc-business";
-import { checkPermission } from "@athyper/svc-iam";
-import type { CacheClient } from "@athyper/svc-iam";
-import { createFeatureFlagService } from "@athyper/svc-platform";
+import { checkPermission, createCompanyCodeScopeService, requireVerifiedContext } from "@athyper/svc-iam";
 import {
-  createWorkflowLifecycleRuntime,
+  createWorkflowEngine,
   syncLifecycleInstanceForStatus,
-  type OperationResult,
-  type WorkflowRuntimeFeatureFlags,
 } from "@athyper/svc-workflow";
 import { handleReverseJournalEntry } from "@athyper/svc-finance";
 import { copyRecordFromMetadata } from "../copy-record.service.js";
+import {
+  LifecycleCommandResolutionError,
+  resolveLifecycleCommand,
+  type LifecycleCommandRegistration,
+} from "./lifecycle-command.registry.js";
+import {
+  executeLifecycleTransition,
+  LifecycleTransitionError,
+} from "../lifecycle/execute-lifecycle-transition.js";
+import { resolveLifecycleOrchestratorRollout } from "../lifecycle/lifecycle-orchestrator-rollout.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
-
-interface NotificationQueue {
-  add(
-    name: string,
-    data: { messageId: string; tenantId: string },
-    opts?: Record<string, unknown>,
-  ): Promise<unknown>;
-}
 
 // Cache of generated columns per (schema, table). Generated columns
 // (`GENERATED ALWAYS AS … STORED`) cannot accept user-supplied values on
@@ -122,9 +118,6 @@ export interface ActionDispatcherDeps {
     warn(event: string, fields?: Record<string, unknown>): void;
     info(event: string, fields?: Record<string, unknown>): void;
   };
-  cache?: CacheClient;
-  featureFlags?: WorkflowRuntimeFeatureFlags;
-  notificationQueue?: NotificationQueue;
 }
 
 function createLifecycleSyncHook(
@@ -186,7 +179,10 @@ interface StatusRouteCompiled {
 }
 
 interface ActionLifecycleTransition {
+  /** control.lifecycle_transition.id — used to look up hook rows. */
+  transition_id: string;
   to_state: string;
+  operation_code: string;
   requires_reason?: boolean;
   requires_confirmation?: boolean;
 }
@@ -206,7 +202,9 @@ async function resolveLifecycleTransitionForAction(
     .innerJoin("control.lifecycle_state as fs", "fs.id" as never, "lt.from_state_id" as never)
     .innerJoin("control.lifecycle_state as ts", "ts.id" as never, "lt.to_state_id" as never)
     .select([
+      "lt.id as transition_id",
       "ts.code as to_state",
+      "lt.operation_code as operation_code",
       "lt.config",
     ] as never[])
     .where("el.entity_name" as never, "=", entityName as never)
@@ -223,12 +221,14 @@ async function resolveLifecycleTransitionForAction(
     .orderBy("el.tenant_id" as never, "desc")
     .orderBy("el.priority" as never, "asc")
     .limit(1)
-    .executeTakeFirst() as { to_state: string; config: unknown } | undefined;
+    .executeTakeFirst() as { transition_id: string; to_state: string; operation_code: string; config: unknown } | undefined;
 
   if (!row) return null;
   const config = asRecord(row.config);
   return {
-    to_state: row.to_state,
+    transition_id:  row.transition_id,
+    to_state:       row.to_state,
+    operation_code: row.operation_code,
     requires_reason: readConfigBoolean(config, "requires_reason")
       ?? readConfigBoolean(config, "require_reason")
       ?? readConfigBoolean(config, "require_comment"),
@@ -312,177 +312,13 @@ async function isTransitionAllowed(
 
 // ─── Route factory ─────────────────────────────────────────────────────────────
 
-const PURCHASE_INVOICE_LIFECYCLE_CHANGED = "purchase_invoice.lifecycle.changed";
-const NOTIFICATION_CHANNELS = new Set(["in_app", "email", "sms", "push", "webhook", "whatsapp"]);
-
-function normalizeNotificationChannels(value: unknown): string[] {
-  if (!Array.isArray(value)) return ["in_app"];
-  const channels = value
-    .map((v) => (typeof v === "string" ? v.trim() : ""))
-    .filter((v) => v && NOTIFICATION_CHANNELS.has(v));
-  const unique = [...new Set(channels)];
-  return unique.length > 0 ? unique : ["in_app"];
-}
-
-function notificationTextArray(values: string[]) {
-  return sql`ARRAY[${sql.join(values)}]::text[]`;
-}
-
-async function enqueuePendingNotification(
-  db: AnyDb,
-  queue: NotificationQueue | undefined,
-  tenantId: string,
-  messageId: string,
-  logger?: ActionDispatcherDeps["logger"],
-): Promise<void> {
-  if (!queue) return;
-
-  try {
-    await sql`
-      UPDATE event.notification_message
-      SET    status = 'planning', updated_at = now()
-      WHERE  id = ${messageId}::uuid
-        AND  tenant_id = ${tenantId}::uuid
-        AND  status = 'pending'
-    `.execute(db);
-
-    await queue.add(
-      "send",
-      { messageId, tenantId },
-      {
-        jobId:            `notif-${messageId}`,
-        attempts:         3,
-        backoff:          { type: "exponential", delay: 60_000 },
-        removeOnComplete: { count: 500 },
-        removeOnFail:     { count: 200 },
-      },
-    );
-  } catch (err) {
-    await sql`
-      UPDATE event.notification_message
-      SET    status = 'pending', updated_at = now()
-      WHERE  id = ${messageId}::uuid
-        AND  tenant_id = ${tenantId}::uuid
-        AND  status = 'planning'
-    `.execute(db).catch(() => undefined);
-    logger?.warn("purchase_invoice_notification_enqueue_failed", { messageId, err: String(err) });
-  }
-}
-
-async function emitPurchaseInvoiceLifecycleNotification(
-  db: AnyDb,
-  opts: {
-    notificationQueue?: NotificationQueue;
-    tenantId: string;
-    actorId: string;
-    recordId: string;
-    fromStatus: string;
-    toStatus: string;
-    record: Record<string, unknown>;
-    logger?: ActionDispatcherDeps["logger"];
-  },
-): Promise<void> {
-  const rules = await sql<{
-    id: string;
-    template_key: string;
-    channels: string[] | null;
-    recipient_rules: Record<string, unknown> | null;
-  }>`
-    SELECT id, template_key, channels, recipient_rules
-    FROM   control.notification_routing_rule
-    WHERE  (tenant_id IS NULL OR tenant_id = ${opts.tenantId}::uuid)
-      AND  event_type = ${PURCHASE_INVOICE_LIFECYCLE_CHANGED}
-      AND  is_enabled = true
-      AND  (entity_type IS NULL OR entity_type = 'purchase_invoice')
-      AND  (lifecycle_state IS NULL OR lifecycle_state = ${opts.toStatus})
-      AND  workflow_phase IS NULL
-    ORDER BY sort_order ASC
-  `.execute(db);
-
-  const docNo = String(
-    opts.record["invoice_number"]
-      ?? opts.record["purchase_invoice_number"]
-      ?? opts.record["document_number"]
-      ?? opts.recordId,
-  );
-
-  for (const rule of rules.rows) {
-    const explicitIds = Array.isArray(rule.recipient_rules?.["explicit_ids"])
-      ? (rule.recipient_rules?.["explicit_ids"] as unknown[]).filter((id): id is string => typeof id === "string" && isUuid(id))
-      : [];
-    const actorRecipient = rule.recipient_rules?.["actor"] === true ? [opts.actorId] : [];
-    const recipients = [...new Set([...explicitIds, ...actorRecipient])];
-    if (recipients.length === 0) continue;
-
-    const channels = normalizeNotificationChannels(rule.channels);
-    for (const recipientId of recipients) {
-      const payload = {
-        recipient_id:    recipientId,
-        actor_id:        opts.actorId,
-        entity_type:     "purchase_invoice",
-        entity_id:       opts.recordId,
-        document_number: docNo,
-        from_status:     opts.fromStatus,
-        to_status:       opts.toStatus,
-        lifecycle_state: opts.toStatus,
-        title:           "Purchase invoice status changed",
-        body:            `Purchase invoice ${docNo} changed from ${opts.fromStatus} to ${opts.toStatus}.`,
-        source_plane:    "neon",
-      };
-
-      const inserted = await sql<{ id: string }>`
-        INSERT INTO event.notification_message
-          (tenant_id,    event_id,          event_code,
-           rule_id,      template_key,      template_version,
-           entity_type,  entity_id,         subject,
-           payload,      channels,          priority,
-           recipient_count, status,         created_by)
-        VALUES
-          (${opts.tenantId}::uuid,
-           ${`${PURCHASE_INVOICE_LIFECYCLE_CHANGED}:${opts.recordId}:${opts.fromStatus}:${opts.toStatus}`},
-           ${PURCHASE_INVOICE_LIFECYCLE_CHANGED},
-           ${rule.id}::uuid,
-           ${rule.template_key},
-           1,
-           'purchase_invoice',
-           ${opts.recordId}::uuid,
-           null,
-           ${JSON.stringify(payload)}::jsonb,
-           ${notificationTextArray(channels)},
-           'normal',
-           1,
-           'pending',
-           ${opts.actorId}::uuid)
-        RETURNING id
-      `.execute(db);
-
-      const messageId = inserted.rows[0]?.id;
-      if (messageId) {
-        await enqueuePendingNotification(db, opts.notificationQueue, opts.tenantId, messageId, opts.logger);
-      }
-    }
-  }
-}
-
 export function createActionDispatcherRoute(router: Router, deps: ActionDispatcherDeps): Router {
-  const { db, auth, logger } = deps;
+  const { db, logger } = deps;
   const lifecycleSync = createLifecycleSyncHook(logger);
-  const featureFlags = deps.featureFlags ?? createFeatureFlagService({
-    db,
-    redis: createFeatureFlagRedis(deps.cache),
-    logger,
-  });
-  const workflowRuntime = createWorkflowLifecycleRuntime({
-    db,
-    logger,
-    featureFlags,
-    checkPermission,
-  });
 
   const handler: RequestHandler = async (req, res, next) => {
     try {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
+      const verifiedContext = requireVerifiedContext(req, res);
 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
       const recordId   = String(req.params["id"] ?? "");
@@ -493,38 +329,9 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
         return;
       }
 
-      const { xOrg, xRealm } = extractOrgHeaders(req);
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "MISSING_TENANT", message: "X-Org header is required" });
-        return;
-      }
-
-      const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub ? (await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) ?? sub) : null;
+      const { tenantId, principalId } = verifiedContext;
       const body    = (req.body ?? {}) as Record<string, unknown>;
       const remarks = typeof body["remarks"] === "string" ? body["remarks"] : undefined;
-
-      if (isPurchaseInvoiceRuntimePilot(entityCode, code)
-        && await shouldUseWorkflowRuntime(featureFlags, tenantId, logger)) {
-        if (!principalId || !isUuid(principalId)) {
-          res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "no principal bound to this session" });
-          return;
-        }
-
-        const runtimeResult = await workflowRuntime.executeOperation({
-          tenantId,
-          entityName: entityCode,
-          entityId: recordId,
-          operationCode: "submit",
-          actorId: principalId,
-          idempotencyKey: extractIdempotencyKey(req, body, entityCode, recordId, "submit"),
-          remarks,
-          payload: body,
-        });
-        sendRuntimeResult(res, runtimeResult);
-        return;
-      }
 
       // ── Look up the operation ─────────────────────────────────────────────────
       const operation = await db
@@ -535,6 +342,7 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           "eo.permission_code",
           "eo.handler_type",
           "eo.handler_target",
+          "eo.execution_target",
           "eo.is_record_required",
           "eo.is_enabled",
           "pc.code as permission_category_code",
@@ -563,6 +371,7 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           permission_code: string;
           handler_type: string;
           handler_target: string | null;
+          execution_target: string | null;
           is_record_required: boolean;
           is_enabled: boolean;
           permission_category_code: string;
@@ -638,9 +447,149 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
         return;
       }
 
-      const target  = (operation.handler_target ?? code).toLowerCase();
+      const recordCompanyCodeId = typeof record["company_code_id"] === "string"
+        ? record["company_code_id"]
+        : null;
+      if (recordCompanyCodeId) {
+        if (verifiedContext.companyCodeId && verifiedContext.companyCodeId !== recordCompanyCodeId) {
+          res.status(403).json({ error: "COMPANY_SCOPE_DENIED", message: "The record is outside the active company context." });
+          return;
+        }
+        if (verifiedContext.legalEntityId) {
+          const companyInScope = await db
+            .selectFrom("master.company_code as cc")
+            .select("cc.id")
+            .where("cc.id", "=", recordCompanyCodeId)
+            .where("cc.tenant_id", "=", tenantId)
+            .where("cc.legal_entity_id", "=", verifiedContext.legalEntityId)
+            .executeTakeFirst();
+          if (!companyInScope) {
+            res.status(403).json({ error: "COMPANY_SCOPE_DENIED", message: "The record is outside the active legal-entity context." });
+            return;
+          }
+        }
+        const companyAllowed = await createCompanyCodeScopeService(db)
+          .hasAccess(principalId, recordCompanyCodeId, tenantId);
+        if (!companyAllowed) {
+          res.status(403).json({ error: "COMPANY_SCOPE_DENIED", message: "The principal is not authorized for the record company." });
+          return;
+        }
+      }
+
+      const interactionTarget = (operation.handler_target ?? code).toLowerCase();
+      let target = (operation.execution_target ?? interactionTarget).toLowerCase();
+      let lifecycleCommand: LifecycleCommandRegistration | undefined;
+      if (target.startsWith("lifecycle:")) {
+        const commandOperationCode = target.slice("lifecycle:".length);
+        const flowCode = interactionTarget.startsWith("flow:")
+          ? interactionTarget.slice("flow:".length)
+          : undefined;
+        try {
+          lifecycleCommand = resolveLifecycleCommand(entityCode, commandOperationCode, flowCode);
+          const rollout = await resolveLifecycleOrchestratorRollout(
+            db, tenantId, entityCode, commandOperationCode,
+          );
+          logger?.info("lifecycle_command_orchestrator_resolution", {
+            tenantId,
+            entity: entityCode,
+            operation: commandOperationCode,
+            registryKey: `${lifecycleCommand.entityCode}::${lifecycleCommand.operationCode}`,
+            rolloutSource: rollout.source,
+            enabled: rollout.enabled,
+            legacyRoute: req.path.startsWith("/records/"),
+          });
+          if (req.path.startsWith("/records/")) {
+            logger?.warn("lifecycle_command_legacy_route_usage", {
+              tenantId,
+              entity: entityCode,
+              operation: commandOperationCode,
+              registryKey: `${lifecycleCommand.entityCode}::${lifecycleCommand.operationCode}`,
+            });
+          }
+          if (!rollout.enabled) {
+            logger?.warn("lifecycle_command_legacy_usage", {
+              tenantId,
+              entity: entityCode,
+              operation: commandOperationCode,
+              registryKey: `${lifecycleCommand.entityCode}::${lifecycleCommand.operationCode}`,
+              reason: "entity_flag_disabled",
+              legacyRoute: req.path.startsWith("/records/"),
+            });
+            res.status(503).json({
+              error: "LIFECYCLE_ORCHESTRATOR_DISABLED",
+              message: `Lifecycle command orchestration is not enabled for '${entityCode}::${commandOperationCode}'.`,
+            });
+            return;
+          }
+        } catch (err) {
+          if (err instanceof LifecycleCommandResolutionError) {
+            logger?.warn("action_dispatch_lifecycle_command_resolution_failed", {
+              entity: entityCode,
+              operation: commandOperationCode,
+              flowCode,
+              executionTarget: target,
+              error: err.code,
+            });
+            res.status(err.code === "LIFECYCLE_COMMAND_NOT_REGISTERED" ? 500 : 422).json({
+              error: err.code,
+              message: err.message,
+            });
+            return;
+          }
+          throw err;
+        }
+      }
       const now     = new Date();
       const currentStatus = String(record["status"] ?? "");
+
+      if (lifecycleCommand) {
+        try {
+          const transitioned = await executeLifecycleTransition({
+            db,
+            tenantId,
+            entityCode,
+            recordId,
+            operationCode: lifecycleCommand.operationCode,
+            principalId,
+            operationPayload: body,
+            command: lifecycleCommand,
+            expectedCurrentStatus: currentStatus,
+            logger,
+          });
+          logger?.info("action_dispatch_lifecycle_command", {
+            entity: entityCode,
+            tenantId,
+            recordId,
+            operation: lifecycleCommand.operationCode,
+            registryKey: `${lifecycleCommand.entityCode}::${lifecycleCommand.operationCode}`,
+            transitionId: transitioned.transitionId,
+            executionToken: transitioned.executionToken,
+            idempotencyReplay: transitioned.idempotencyReplay,
+            legacyRoute: req.path.startsWith("/records/"),
+            from: transitioned.fromStatus,
+            to: transitioned.toStatus,
+          });
+          res.json({ ok: true, record: transitioned.record });
+          return;
+        } catch (err) {
+          if (err instanceof LifecycleTransitionError) {
+            logger?.warn("action_dispatch_lifecycle_command_failed", {
+              entity: entityCode,
+              tenantId,
+              recordId,
+              operation: lifecycleCommand.operationCode,
+              error: err.code,
+            });
+            res.status(err.status).json({
+              error: err.code,
+              message: err.message,
+              ...(err.details ? { details: err.details } : {}),
+            });
+            return;
+          }
+          throw err;
+        }
+      }
       const lifecycleTransition = await resolveLifecycleTransitionForAction(
         db,
         entityCode,
@@ -654,6 +603,158 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           error: "ACTION_REASON_REQUIRED",
           message: `Operation '${code}' requires a reason`,
         });
+        return;
+      }
+
+      // Purchase-order submit is a workflow command, not a plain status flip.
+      // Validation, workflow correlation, lifecycle hooks, source mutation and
+      // outbox emission all share one transaction.
+      if (entityCode === "purchase_order"
+        && (code === "submit" || code === "submit_for_approval")) {
+        if (!principalId || !isUuid(principalId)) {
+          res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "No principal is bound to this session." });
+          return;
+        }
+
+        const preflight = await purchaseOrderSubmitPreflight(db, tenantId, recordId);
+        if (!preflight.ok) {
+          res.status(422).json({
+            error: "PO_SUBMIT_PREFLIGHT_FAILED",
+            message: "Purchase order is not ready for submission.",
+            ...preflight,
+          });
+          return;
+        }
+
+        const submitted = await db.transaction().execute(async (trx) => {
+          const locked = await sql<Record<string, unknown>>`
+            SELECT * FROM document.commitment
+             WHERE tenant_id = ${tenantId}::uuid
+               AND id = ${recordId}::uuid
+               AND commitment_type = 'purchase_order'
+             FOR UPDATE
+          `.execute(trx);
+          const po = locked.rows[0];
+          if (!po || po["status"] !== "draft") return null;
+
+          const txPreflight = await purchaseOrderSubmitPreflight(trx, tenantId, recordId);
+          if (!txPreflight.ok) {
+            throw Object.assign(new Error("PO_SUBMIT_PREFLIGHT_FAILED"), { code: 422, preflight: txPreflight });
+          }
+
+          const transitionId = lifecycleTransition?.transition_id;
+          if (transitionId) {
+            await runLifecycleHooks(trx as never, {
+              tenantId,
+              transitionId,
+              sourceDocType: "purchase_order",
+              sourceDocId: recordId,
+              principalId,
+              timing: "before",
+              fromStatus: "draft",
+              toStatus: "pending_approval",
+              operationCode: lifecycleTransition.operation_code,
+            });
+          }
+
+          const workflow = createWorkflowEngine({ db: trx as never, logger });
+          const request = await workflow.createRequest({
+            tenantId,
+            entityType: "purchase_order",
+            entityId: recordId,
+            payload: po,
+            companyCodeId: String(po["company_code_id"]),
+            requestedBy: principalId,
+          });
+
+          let generatedCode = String(po["code"] ?? "");
+          if (po["is_provisional"] === true) {
+            const documentDate = normalizeDateOnly(po["document_date"]);
+            const numberResult = await sql<{ value: string | null }>`
+              SELECT control.next_entity_number(
+                ${tenantId}::uuid, 'purchase_order', 'code',
+                ${String(po["company_code_id"])}::uuid,
+                NULL::smallint, NULL::smallint, NULL, ${documentDate!}::date
+              ) AS value
+            `.execute(trx);
+            generatedCode = numberResult.rows[0]?.value
+              ?? `PO-${new Date().toISOString().slice(0, 7).replace("-", "")}-${recordId.slice(0, 6).toUpperCase()}`;
+          }
+
+          const updatedResult = await sql<Record<string, unknown>>`
+            UPDATE document.commitment
+               SET status = 'pending_approval',
+                   workflow_request_id = ${request.id}::uuid,
+                   code = CASE WHEN is_provisional THEN ${generatedCode} ELSE code END,
+                   name = CASE WHEN is_provisional AND btrim(name) = '' THEN ${`Purchase Order ${generatedCode}`} ELSE name END,
+                   is_provisional = false,
+                   draft_expires_at = NULL,
+                   status_changed_at = now(),
+                   status_changed_by = ${principalId}::uuid,
+                   updated_at = now(),
+                   updated_by = ${principalId}::uuid,
+                   row_version = row_version + 1
+             WHERE tenant_id = ${tenantId}::uuid
+               AND id = ${recordId}::uuid
+               AND status = 'draft'
+             RETURNING *
+          `.execute(trx);
+          const updated = updatedResult.rows[0];
+          if (!updated) return null;
+
+          await syncLifecycleInstanceForStatus({
+            db: trx as never,
+            tenantId,
+            entityName: "purchase_order",
+            entityId: recordId,
+            status: "pending_approval",
+            actorId: principalId,
+            payload: updated,
+            logger,
+          });
+
+          if (transitionId) {
+            await runLifecycleHooks(trx as never, {
+              tenantId,
+              transitionId,
+              sourceDocType: "purchase_order",
+              sourceDocId: recordId,
+              principalId,
+              timing: "after",
+              fromStatus: "draft",
+              toStatus: "pending_approval",
+              operationCode: lifecycleTransition.operation_code,
+            });
+          }
+
+          await emitOutboxEvent(trx as never, {
+            tenantId,
+            topic: "purchase_order.lifecycle",
+            eventType: "purchase_order.submitted",
+            eventKey: `purchase_order.submitted:${recordId}:${request.id}`,
+            entityType: "purchase_order",
+            entityId: recordId,
+            aggregateType: "commitment",
+            aggregateId: recordId,
+            actorId: principalId,
+            payload: {
+              public_entity_type: "purchase_order",
+              aggregate_root_type: "commitment",
+              commitment_type: "purchase_order",
+              aggregate_root_id: recordId,
+              workflow_request_id: request.id,
+              from_status: "draft",
+              to_status: "pending_approval",
+            },
+          });
+          return { updated, request, preflight: txPreflight };
+        });
+
+        if (!submitted) {
+          res.status(409).json({ error: "CONFLICT", message: "Purchase order was modified before submission." });
+          return;
+        }
+        res.json({ ok: true, record: submitted.updated, workflow_request_id: submitted.request.id, warnings: submitted.preflight.warnings });
         return;
       }
 
@@ -765,7 +866,16 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
       }
 
       // ── Dispatch: status transition ───────────────────────────────────────────
-      const targetStatus = lifecycleTransition?.to_state ?? TARGET_STATUS[target];
+      let targetStatus = lifecycleTransition?.to_state ?? TARGET_STATUS[target];
+      if (entityCode === "purchase_order") {
+        const command = target === "PO.PLACE_ORDER".toLowerCase() ? "place_order" : target;
+        const policy = evaluatePurchaseOrderTransition(record, command, now);
+        if (!policy.allowed) {
+          res.status(422).json({ error: policy.code, message: policy.message });
+          return;
+        }
+        targetStatus = policy.targetStatus ?? targetStatus;
+      }
       if (targetStatus) {
         if (currentStatus === targetStatus) {
           // Idempotent — already in target state
@@ -787,53 +897,297 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           return;
         }
 
+        const isProvisionalPurchaseOrder = entityCode === "purchase_order"
+          && record["is_provisional"] === true
+          && targetStatus !== "draft";
+        const provisionalDocumentDate = isProvisionalPurchaseOrder
+          ? normalizeDateOnly(record["document_date"])
+          : null;
+        if (isProvisionalPurchaseOrder) {
+          const missing = [
+            !record["company_code_id"] ? "company_code_id" : null,
+            !record["party_id"] ? "party_id" : null,
+            !record["order_type"] ? "order_type" : null,
+            !provisionalDocumentDate ? "document_date" : null,
+            !record["currency_code"] ? "currency_code" : null,
+            !record["requested_by"] ? "requested_by" : null,
+          ].filter((value): value is string => Boolean(value));
+          if (missing.length > 0) {
+            res.status(422).json({
+              error: "DRAFT_PROMOTION_VALIDATION_FAILED",
+              message: "Required fields are missing before this Purchase Order can be submitted.",
+              fields: missing,
+            });
+            return;
+          }
+        }
+
         const transitionPatch: Record<string, unknown> = {
           status:            targetStatus,
           status_changed_at: now,
           status_changed_by: principalId,
           updated_at:        now,
           updated_by:        principalId,
-          ...(remarks ? { notes: remarks } : {}),
+          ...(remarks && entityCode !== "purchase_order" ? { notes: remarks } : {}),
         };
+        if (entityCode === "purchase_order" && target === "hold") {
+          transitionPatch["metadata"] = sql`
+            COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(
+              'lifecycle_hold', jsonb_build_object(
+                'previous_status', ${currentStatus},
+                'reason', ${remarks ?? String(body["hold_reason"] ?? "")},
+                'held_at', now(),
+                'held_by', ${principalId ?? SYSTEM_PRINCIPAL_UUID}::uuid
+              )
+            )
+          `;
+        } else if (entityCode === "purchase_order" && target === "release_hold") {
+          transitionPatch["metadata"] = sql`
+            (COALESCE(metadata, '{}'::jsonb) - 'lifecycle_hold') || jsonb_build_object(
+              'last_hold_release', jsonb_build_object(
+                'released_at', now(),
+                'released_by', ${principalId ?? SYSTEM_PRINCIPAL_UUID}::uuid
+              )
+            )
+          `;
+        }
         if (entityCode === "journal_entry" && targetStatus === "posted") {
           transitionPatch["posted_at"] = now;
           transitionPatch["posted_by"] = principalId;
         }
 
-        const updated = await db.transaction().execute(async (trx) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const row = await (trx.updateTable(fullTable) as any)
-            .set(transitionPatch)
-            .where("id",        "=", recordId)
-            .where("tenant_id", "=", tenantId)
-            .where("status",    "=", currentStatus) // optimistic lock
-            .returningAll()
-            .executeTakeFirst() as Record<string, unknown> | undefined;
-
-          if (!row) return undefined;
-
-          const sync = await syncLifecycleInstanceForStatus({
-            db: trx as never,
-            tenantId,
-            entityName: entityCode,
-            entityId: recordId,
-            status: targetStatus,
-            actorId: principalId ?? SYSTEM_PRINCIPAL_UUID,
-            payload: row,
-            logger,
-          });
-          if (!sync.synced) {
-            logger?.warn("action_dispatch_lifecycle_instance_sync_skipped", {
-              entity: entityCode,
+        // Review R2 Fix 2 — invoke the LifecycleHookRunner around the
+        // state mutation. Required hook failures (BEFORE or AFTER) throw
+        // from the runner, abort the transaction, and surface as 422
+        // REQUIRED_HOOK_FAILED. AFTER hooks run inside the same TX so
+        // side effects (JE writes via transaction_flow.dispatch, activity
+        // log) commit atomically with the status change.
+        let updated: Record<string, unknown> | undefined;
+        if (lifecycleTransition) {
+          try {
+            const transitioned = await executeLifecycleTransition({
+              db,
               tenantId,
+              entityCode,
               recordId,
-              status: targetStatus,
-              reason: sync.reason,
-            });
-          }
+              operationCode: lifecycleTransition.operation_code,
+              principalId,
+              operationPayload: body,
+              expectedCurrentStatus: currentStatus,
+              recordPatch: transitionPatch,
+              logger,
+              prepare: async ({ db: trx, record: lockedRecord, transition }) => {
+                const recordPatch: Record<string, unknown> = {};
+                if (isProvisionalPurchaseOrder) {
+                  const numberResult = await sql<{ value: string | null }>`
+                    SELECT control.next_entity_number(
+                      ${tenantId}::uuid,
+                      'purchase_order'::text,
+                      'code'::text,
+                      ${String(lockedRecord["company_code_id"])}::uuid,
+                      NULL::smallint,
+                      NULL::smallint,
+                      NULL,
+                      ${provisionalDocumentDate!}::date
+                    ) AS value
+                  `.execute(trx);
+                  const generated = numberResult.rows[0]?.value
+                    ?? `PO-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+                  recordPatch["code"] = generated;
+                  recordPatch["name"] = String(lockedRecord["name"] ?? "").trim()
+                    || `Purchase Order ${generated}`;
+                  recordPatch["is_provisional"] = false;
+                  recordPatch["draft_expires_at"] = null;
+                }
 
-          return row;
-        });
+                if (entityCode === "purchase_order" && code === "withdraw") {
+                  const workflowRequestId = lockedRecord["workflow_request_id"];
+                  if (typeof workflowRequestId === "string" && isUuid(workflowRequestId)) {
+                    await sql`
+                      UPDATE document.workflow_request
+                         SET status = 'canceled', updated_at = now(),
+                             updated_by = ${principalId}::uuid
+                       WHERE tenant_id = ${tenantId}::uuid
+                         AND id = ${workflowRequestId}::uuid
+                         AND status = 'pending'
+                    `.execute(trx);
+                    await sql`
+                      UPDATE event.work_item
+                         SET status = 'skipped', completed_at = now(), updated_at = now(),
+                             updated_by = ${principalId}::uuid
+                       WHERE tenant_id = ${tenantId}::uuid
+                         AND workflow_request_id = ${workflowRequestId}::uuid
+                         AND status IN ('pending','assigned','in_progress')
+                    `.execute(trx);
+                  }
+                  recordPatch["workflow_request_id"] = null;
+                }
+
+                if (entityCode === "purchase_order"
+                  && ["cancelled", "expired", "closed"].includes(transition.toStatus)) {
+                  const lineStatus = transition.toStatus === "closed" ? "closed" : "cancelled";
+                  await sql`
+                    UPDATE document.commitment_line
+                       SET status = ${lineStatus}, updated_at = now(), updated_by = ${principalId}::uuid
+                     WHERE tenant_id = ${tenantId}::uuid
+                       AND commitment_id = ${recordId}::uuid
+                       AND status NOT IN ('closed','cancelled')
+                  `.execute(trx);
+                  await sql`
+                    UPDATE document.schedule_line
+                       SET is_current_version = false,
+                           terminal_status = CASE WHEN ${transition.toStatus} = 'closed' THEN 'CLOSED' ELSE 'CANCELED' END,
+                           updated_at = now(), updated_by = ${principalId}::uuid
+                     WHERE tenant_id = ${tenantId}::uuid
+                       AND source_doc_type = 'commitment_line'
+                       AND source_doc_id = ${recordId}::uuid
+                       AND is_current_version = true
+                       AND terminal_status IS NULL
+                  `.execute(trx);
+                }
+                return { recordPatch };
+              },
+            });
+            logger?.info("action_dispatch_transition", {
+              entity: entityCode, tenantId, recordId, code,
+              from: transitioned.fromStatus, to: transitioned.toStatus,
+            });
+            res.json({ ok: true, record: transitioned.record });
+            return;
+          } catch (err) {
+            if (!(err instanceof LifecycleTransitionError)) throw err;
+            logger?.warn("action_dispatch_lifecycle_transition_failed", {
+              entity: entityCode, tenantId, recordId, operation: code, error: err.code,
+            });
+            res.status(err.status).json({
+              error: err.code,
+              message: err.message,
+              ...(err.details ? { details: err.details } : {}),
+            });
+            return;
+          }
+        }
+        try {
+          updated = await db.transaction().execute(async (trx) => {
+            const effectiveTransitionPatch = { ...transitionPatch };
+            if (isProvisionalPurchaseOrder) {
+              const numberResult = await sql<{ value: string | null }>`
+                SELECT control.next_entity_number(
+                  ${tenantId}::uuid,
+                  'purchase_order'::text,
+                  'code'::text,
+                  ${String(record["company_code_id"])}::uuid,
+                  NULL::smallint,
+                  NULL::smallint,
+                  NULL,
+                  ${provisionalDocumentDate!}::date
+                ) AS value
+              `.execute(trx);
+              const generated = numberResult.rows[0]?.value
+                ?? `PO-${new Date().toISOString().slice(0, 7).replace("-", "")}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+              effectiveTransitionPatch["code"] = generated;
+              effectiveTransitionPatch["name"] = String(record["name"] ?? "").trim()
+                || `Purchase Order ${generated}`;
+              effectiveTransitionPatch["is_provisional"] = false;
+              effectiveTransitionPatch["draft_expires_at"] = null;
+            }
+            if (entityCode === "purchase_order" && code === "withdraw") {
+              const workflowRequestId = record["workflow_request_id"];
+              if (typeof workflowRequestId === "string" && isUuid(workflowRequestId)) {
+                await sql`
+                  UPDATE document.workflow_request
+                     SET status = 'canceled', updated_at = now(),
+                         updated_by = ${principalId ?? SYSTEM_PRINCIPAL_UUID}::uuid
+                   WHERE tenant_id = ${tenantId}::uuid
+                     AND id = ${workflowRequestId}::uuid
+                     AND status = 'pending'
+                `.execute(trx);
+                await sql`
+                  UPDATE event.work_item
+                     SET status = 'skipped', completed_at = now(), updated_at = now(),
+                         updated_by = ${principalId ?? SYSTEM_PRINCIPAL_UUID}::uuid
+                   WHERE tenant_id = ${tenantId}::uuid
+                     AND workflow_request_id = ${workflowRequestId}::uuid
+                     AND status IN ('pending','assigned','in_progress')
+                `.execute(trx);
+              }
+              effectiveTransitionPatch["workflow_request_id"] = null;
+            }
+
+            if (entityCode === "purchase_order"
+              && ["cancelled", "expired", "closed"].includes(targetStatus)) {
+              const lineStatus = targetStatus === "cancelled" || targetStatus === "expired"
+                ? "cancelled"
+                : "closed";
+              await sql`
+                UPDATE document.commitment_line
+                   SET status = ${lineStatus}, updated_at = now(),
+                       updated_by = ${principalId ?? SYSTEM_PRINCIPAL_UUID}::uuid
+                 WHERE tenant_id = ${tenantId}::uuid
+                   AND commitment_id = ${recordId}::uuid
+                   AND status NOT IN ('closed','cancelled')
+              `.execute(trx);
+              await sql`
+                UPDATE document.schedule_line
+                   SET is_current_version = false,
+                       terminal_status = CASE WHEN ${targetStatus} = 'closed' THEN 'CLOSED' ELSE 'CANCELED' END,
+                       updated_at = now(), updated_by = ${principalId ?? SYSTEM_PRINCIPAL_UUID}::uuid
+                 WHERE tenant_id = ${tenantId}::uuid
+                   AND source_doc_type = 'commitment_line'
+                   AND source_doc_id = ${recordId}::uuid
+                   AND is_current_version = true
+                   AND terminal_status IS NULL
+              `.execute(trx);
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const row = await (trx.updateTable(fullTable) as any)
+              .set(effectiveTransitionPatch)
+              .where("id",        "=", recordId)
+              .where("tenant_id", "=", tenantId)
+              .where("status",    "=", currentStatus) // optimistic lock
+              .returningAll()
+              .executeTakeFirst() as Record<string, unknown> | undefined;
+
+            if (!row) return undefined;
+
+            const sync = await syncLifecycleInstanceForStatus({
+              db: trx as never,
+              tenantId,
+              entityName: entityCode,
+              entityId: recordId,
+              status: targetStatus,
+              actorId: principalId ?? SYSTEM_PRINCIPAL_UUID,
+              payload: row,
+              logger,
+            });
+            if (!sync.synced) {
+              logger?.warn("action_dispatch_lifecycle_instance_sync_skipped", {
+                entity: entityCode,
+                tenantId,
+                recordId,
+                status: targetStatus,
+                reason: sync.reason,
+              });
+            }
+
+            return row;
+          });
+        } catch (err) {
+          if (err instanceof Error && /hook .* failed \(required\)/.test(err.message)) {
+            logger?.warn("action_dispatch_required_hook_failed", {
+              entity: entityCode, tenantId, recordId,
+              from: currentStatus, to: targetStatus,
+              error: err.message,
+            });
+            res.status(422).json({
+              error:   "REQUIRED_HOOK_FAILED",
+              message: err.message,
+            });
+            return;
+          }
+          throw err;
+        }
 
         if (!updated) {
           res.status(409).json({ error: "CONFLICT", message: "Record was modified by another process. Please retry." });
@@ -843,27 +1197,6 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
         logger?.info("action_dispatch_transition", {
           entity: entityCode, tenantId, recordId, code, from: currentStatus, to: targetStatus,
         });
-
-        if (entityCode === "purchase_invoice") {
-          await emitPurchaseInvoiceLifecycleNotification(db, {
-            notificationQueue: deps.notificationQueue,
-            tenantId,
-            actorId: principalId,
-            recordId,
-            fromStatus: currentStatus,
-            toStatus: targetStatus,
-            record: updated,
-            logger,
-          }).catch((err) => {
-            logger?.warn("purchase_invoice_notification_emit_failed", {
-              tenantId,
-              recordId,
-              from: currentStatus,
-              to: targetStatus,
-              err: String(err),
-            });
-          });
-        }
 
         res.json({ ok: true, record: updated });
         return;
@@ -945,39 +1278,6 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           return;
         }
 
-        if (flowCode === "submit_for_approval") {
-          const { status, body: respBody } = await handleSubmitForApproval(
-            db, tenantId, recordId, principalId, body, logger, lifecycleSync,
-          );
-          if (status === 200) {
-            logger?.info("action_dispatch_submit_for_approval", { entity: entityCode, tenantId, recordId });
-          }
-          res.status(status).json(respBody);
-          return;
-        }
-
-        if (flowCode === "post_invoice") {
-          const { status, body: respBody } = await handlePostInvoice(
-            db, tenantId, recordId, principalId, body, logger, lifecycleSync,
-          );
-          if (status === 200) {
-            logger?.info("action_dispatch_post_invoice", { entity: entityCode, tenantId, recordId });
-          }
-          res.status(status).json(respBody);
-          return;
-        }
-
-        if (flowCode === "reverse_invoice") {
-          const { status, body: respBody } = await handleReverseInvoice(
-            db, tenantId, recordId, principalId, body, logger, lifecycleSync,
-          );
-          if (status === 201) {
-            logger?.info("action_dispatch_reverse_invoice", { entity: entityCode, tenantId, recordId });
-          }
-          res.status(status).json(respBody);
-          return;
-        }
-
         if (flowCode === "run_matching") {
           const result = await matchInvoice(db, tenantId, recordId, principalId, logger);
           logger?.info("action_dispatch_run_matching", { entity: entityCode, tenantId, recordId, matchStatus: result.invoiceStatus });
@@ -1011,13 +1311,27 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
     }
   };
 
-  router.post("/records/:entity/:id/action/:code", handler);
+  // Dual-mount: canonical + legacy alias. The legacy /records/* mount stays
+  // until the client cleanup track migrates all callers to runtimePath.action(...).
+  router.post("/runtime/v1/entities/:entity/:id/action/:code", handler);
+  router.post("/records/:entity/:id/action/:code",             handler);
 
   return router;
 }
 
 function isWorkflowTaskDecision(permissionCode: string, categoryCode: string): boolean {
   return categoryCode === "workflow" && WORKFLOW_TASK_DECISIONS.has(permissionLeaf(permissionCode));
+}
+
+function normalizeDateOnly(value: unknown): string | null {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
 }
 
 function permissionLeaf(permissionCode: string): string {
@@ -1065,82 +1379,4 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
-}
-
-function createFeatureFlagRedis(cache: CacheClient | undefined): {
-  get(key: string): Promise<string | null>;
-  setex(key: string, seconds: number, value: string): Promise<unknown>;
-} {
-  if (!cache) {
-    return {
-      get: async () => null,
-      setex: async () => undefined,
-    };
-  }
-  return {
-    get: (key) => cache.get(key),
-    setex: (key, seconds, value) => cache.set(key, value, "EX", seconds),
-  };
-}
-
-function isPurchaseInvoiceRuntimePilot(entityCode: string, code: string): boolean {
-  return entityCode === "purchase_invoice" && (code === "submit" || code === "submit_for_approval");
-}
-
-async function shouldUseWorkflowRuntime(
-  featureFlags: WorkflowRuntimeFeatureFlags,
-  tenantId: string,
-  logger: ActionDispatcherDeps["logger"],
-): Promise<boolean> {
-  try {
-    const flags = await featureFlags.bulkCheck([
-      "workflow_runtime.enabled",
-      "workflow_runtime.entity.purchase_invoice",
-    ], tenantId);
-    return flags.get("workflow_runtime.enabled") === true
-      && flags.get("workflow_runtime.entity.purchase_invoice") === true;
-  } catch (err) {
-    logger?.warn("workflow_runtime_feature_flag_error", {
-      err: err instanceof Error ? err.message : String(err),
-    });
-    return false;
-  }
-}
-
-function extractIdempotencyKey(
-  req: Request,
-  body: Record<string, unknown>,
-  entityCode: string,
-  recordId: string,
-  operationCode: string,
-): string {
-  const header = req.headers["idempotency-key"];
-  if (typeof header === "string" && header.trim()) return header.trim();
-  if (Array.isArray(header)) {
-    const first = header.find((value) => value.trim());
-    if (first) return first.trim();
-  }
-  const bodyKey = body["idempotency_key"];
-  if (typeof bodyKey === "string" && bodyKey.trim()) return bodyKey.trim();
-  return `${entityCode}:${recordId}:${operationCode}:implicit`;
-}
-
-function sendRuntimeResult(res: Response, result: OperationResult): void {
-  if (result.ok) {
-    res.status(result.statusCode).json({
-      ok: true,
-      record: result.record,
-      workflow_request_id: result.workflowRequestId,
-      lifecycle: result.lifecycle,
-      ...(result.replayed ? { _replayed: true } : {}),
-    });
-    return;
-  }
-
-  res.status(result.statusCode).json({
-    error: result.error?.code ?? "WORKFLOW_RUNTIME_ERROR",
-    message: result.error?.message ?? "Workflow runtime operation failed",
-    details: result.error?.details,
-    ...(result.replayed ? { _replayed: true } : {}),
-  });
 }

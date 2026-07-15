@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { withFrameworkPhase } from "@athyper/adapter-telemetry";
 
 import { EntityCapabilityManifestSchema, type EntityCapabilityManifest } from "@athyper/api-contracts/metadata";
 import type { Kysely } from "kysely";
@@ -157,6 +158,10 @@ export class DefaultEntityMutationService implements EntityMutationService {
   }
 
   async create(command: CreateEntityCommand): Promise<MutationResult> {
+    return withFrameworkPhase("mutation", () => this.createMeasured(command));
+  }
+
+  private async createMeasured(command: CreateEntityCommand): Promise<MutationResult> {
     const target = await this.resolveTarget(command.context, command.entityCode);
     if (!target) return { kind: "CapabilityUnavailable", entityCode: command.entityCode };
     const gate = this.gate(target, "create", command.origin, command.context.permissions.allowed);
@@ -240,6 +245,10 @@ export class DefaultEntityMutationService implements EntityMutationService {
   }
 
   async patch(command: PatchEntityCommand): Promise<MutationResult> {
+    return withFrameworkPhase("mutation", () => this.patchMeasured(command));
+  }
+
+  private async patchMeasured(command: PatchEntityCommand): Promise<MutationResult> {
     const prepared = await this.preparePatch(command);
     if ("error" in prepared) return prepared.error;
     const { target, projection, handler, requestHash, mapped } = prepared;
@@ -395,6 +404,10 @@ export class DefaultEntityMutationService implements EntityMutationService {
   }
 
   async delete(command: DeleteEntityCommand): Promise<MutationResult> {
+    return withFrameworkPhase("mutation", () => this.deleteMeasured(command));
+  }
+
+  private async deleteMeasured(command: DeleteEntityCommand): Promise<MutationResult> {
     if (command.expectedVersion === undefined) return { kind: "VersionRequired" };
     const idempotency = validateIdempotency(command.idempotencyKey, false);
     if (idempotency) return idempotency;
@@ -465,10 +478,14 @@ export class DefaultEntityMutationService implements EntityMutationService {
   }
 
   async transition(command: TransitionEntityCommand): Promise<MutationResult> {
-    return this.invokeRegistered(command, "transition");
+    return withFrameworkPhase("mutation", () => this.invokeRegistered(command, "transition"));
   }
 
   async mutateAggregate(command: AggregateMutationCommand): Promise<MutationResult> {
+    return withFrameworkPhase("mutation", () => this.mutateAggregateMeasured(command));
+  }
+
+  private async mutateAggregateMeasured(command: AggregateMutationCommand): Promise<MutationResult> {
     if (command.expectedVersion === undefined) return { kind: "VersionRequired" };
     const idempotency = validateIdempotency(command.idempotencyKey, false);
     if (idempotency) return idempotency;

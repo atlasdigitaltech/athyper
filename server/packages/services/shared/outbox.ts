@@ -47,6 +47,25 @@ export interface EmitOutboxEventInput {
   actorId:      string;
 }
 
+export interface DurableMutationEventKeyInput {
+  tenantId: string;
+  entityType: string;
+  entityId: string;
+  version: string | number;
+  eventType: string;
+}
+
+/** Stable identity shared by emitters and idempotent consumers. */
+export function buildDurableMutationEventKey(input: DurableMutationEventKeyInput): string {
+  return [
+    input.tenantId,
+    input.entityType,
+    input.entityId,
+    String(input.version),
+    input.eventType,
+  ].map((part) => encodeURIComponent(part)).join("/");
+}
+
 /**
  * Insert a row into event.outbox. Works on either a Kysely instance or a
  * transaction handle — same signature as the rest of the runtime's DB
@@ -57,7 +76,7 @@ export async function emitOutboxEvent(
   db: Kysely<any>,
   input: EmitOutboxEventInput,
 ): Promise<void> {
-  await db
+  let query = db
     .insertInto("event.outbox" as never)
     .values({
       tenant_id:      input.tenantId,
@@ -70,6 +89,12 @@ export async function emitOutboxEvent(
       aggregate_type: input.aggregateType,
       payload:        JSON.stringify(input.payload ?? {}),
       created_by:     input.actorId,
-    } as never)
-    .execute();
+    } as never);
+  if (input.eventKey) {
+    query = query.onConflict((conflict) => conflict
+      .columns(["tenant_id", "event_key"] as never)
+      .where("event_key" as never, "is not", null)
+      .doNothing());
+  }
+  await query.execute();
 }

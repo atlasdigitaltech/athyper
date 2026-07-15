@@ -26,15 +26,22 @@ import { setDefaultRealmKey } from "@athyper/svc-shared/bootstrap";
 import { recordAuthFlagPostureWarning, recordTenantStampSkipped } from "../metrics.js";
 import { applyAuthFlagPostureValidation } from "./auth-flag-validator.js";
 import { tryGetContext } from "./request-context.js";
-import { createRedisClient, type RedisClientOptions } from "@athyper/adapter-memorycache";
+import { createRedisClient, type RedisClientOptions } from "@athyper/adapter-memory-cache";
+import {
+  instrumentFrameworkRedisClient,
+  observeFrameworkPoolWait,
+  observeFrameworkSql,
+  observeFrameworkTransaction,
+} from "../../packages/adapters/telemetry/src/index.js";
 import { createAuthAdapter } from "@athyper/adapter-auth";
 import {
   createS3ObjectStorageAdapter,
   type ObjectStorageAdapter,
-} from "@athyper/adapter-objectstorage";
+} from "@athyper/adapter-object-storage";
 import {
   createJobsService,
   createWfOutboxHandler,
+  createP2pNotificationOutboxHandler,
   type NotificationChannelHandler,
   type BackupObjectStorage,
 } from "@athyper/svc-jobs";
@@ -51,6 +58,8 @@ import { ServiceRegistry, type HealthCheck, type HealthContribution } from "@ath
 import { createFeatureFlagService } from "../../packages/services/platform/feature-flag.service.js";
 import { createMetadataApprovalBridge } from "../../packages/services/metadata/src/metadata-approval-bridge.js";
 import { createEntityCompilerService } from "../../packages/services/metadata/src/entity-compiler.service.js";
+import { getRecordsCapabilityHandlerManifest } from "@athyper/svc-records";
+import { createEntityMutationOutboxHandler } from "../services/entity-mutation-outbox.handler.js";
 import { invalidateDescriptorCache } from "../../packages/services/metadata/index.js";
 import { WorkflowEngine, ApproverResolverService } from "@athyper/svc-workflow";
 import { createPdfRendererClient } from "@athyper/server-foundation/render/pdf-renderer-client";
@@ -117,7 +126,6 @@ function parseRedisUrl(url: string) {
     keepAlive: 60_000,
   };
 }
-
 function createObjectStorageRefAdapter(
   objectStorageRef: { current: ObjectStorageAdapter | null },
 ): ObjectStorageAdapter {
@@ -321,17 +329,27 @@ export async function bootstrap(
     tenantIdProvider: () => tryGetContext()?.tenantId,
     onSkippedStamp: onTenantStampSkipped,
     onRollbackFailure: onTenantStampRollbackFailure,
+    performanceObserver: {
+      onPoolAcquire: observeFrameworkPoolWait,
+      onQuery: observeFrameworkSql,
+      onTransaction: observeFrameworkTransaction,
+    },
     // Phase 1.5: wrap pool with retry policy (connection-level errors only)
     ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
-  });
+  } as never);
   lifecycle.onShutdown(() => db.close());
 
   const meshDb = config.meshDb?.url
-    ? createDbAdapter({
+      ? createDbAdapter({
         connectionString: config.meshDb.url,
         poolMax: config.meshDb.poolMax ?? 2,
+        performanceObserver: {
+          onPoolAcquire: observeFrameworkPoolWait,
+          onQuery: observeFrameworkSql,
+          onTransaction: observeFrameworkTransaction,
+        },
         ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
-      })
+      } as never)
     : null;
   if (meshDb) lifecycle.onShutdown(() => meshDb.close());
 
@@ -356,14 +374,14 @@ export async function bootstrap(
   // `connectionName` surfaces in Redis `CLIENT LIST` so ops can tell which
   // consumer a connection belongs to during failover / incident triage.
   // BullMQ passes the option through to every Queue/Worker ioredis instance.
-  const redis = createRedisClient({
+  const redis = instrumentFrameworkRedisClient(createRedisClient({
     ...parseRedisUrl(config.redis.url),
     connectionName: "athyper-cache",
     connectTimeout: config.redis.connectTimeout,
     maxRetriesPerRequest: config.redis.maxRetriesPerRequest,
     errorLogCooldownMs: config.redis.errorLogCooldownMs,
     logger,
-  });
+  }));
   lifecycle.onShutdown(() => redis.disconnect());
 
   const descriptorCache = {
@@ -374,6 +392,7 @@ export async function bootstrap(
     del: async (k: string): Promise<void> => {
       await redis.del(k);
     },
+    incr: (k: string) => redis.incr(k),
   };
 
   const bullmqRedisUrl = config.redis.bullmqUrl || config.redis.url;
@@ -566,8 +585,10 @@ export async function bootstrap(
   }
 
   const topicHandlers = new Map([
-    ["wf", createWfOutboxHandler(_db)],
+    ["wf",           createWfOutboxHandler(_db)],
+    ["notification", createP2pNotificationOutboxHandler(_db)],
   ] as Array<[string, import("@athyper/svc-jobs").OutboxTopicHandler]>);
+  let searchOutboxHandler: import("@athyper/svc-jobs").OutboxTopicHandler | undefined;
   if (searchService) {
     // Per-entity enrichment overrides — the generic handler falls back to
     // defaultRowToSearchDocument for any entity not listed here.
@@ -575,13 +596,28 @@ export async function bootstrap(
       [INVOICE_ENTITY_TYPE,       invoiceOverride],
       [JOURNAL_ENTRY_ENTITY_TYPE, journalEntryOverride],
     ]);
-    topicHandlers.set("search", createSearchOutboxHandler({
+    searchOutboxHandler = createSearchOutboxHandler({
       db:        _db,
       search:    searchService,
       overrides: searchOverrides,
       logger,
-    }));
+    });
+    topicHandlers.set("search", searchOutboxHandler);
   }
+  // One atomic mutation envelope fans out idempotent cache/realtime/search work.
+  // Notification and integration consumers retain the same durable event row
+  // through their independent outbox/webhook projections.
+  topicHandlers.set("entity_mutation", createEntityMutationOutboxHandler({
+    redis: {
+      incr: (key: string) => redis.incr(key),
+      publish: (channel: string, payload: string) => redis.publish(channel, payload),
+      isProcessed: async (key: string) => (await redis.exists(key)) === 1,
+      markProcessed: async (key: string, ttlSeconds: number) => {
+        await redis.set(key, "1", "EX", ttlSeconds);
+      },
+    },
+    ...(searchOutboxHandler ? { search: searchOutboxHandler } : {}),
+  }));
 
   // ─── PDF Renderer client — Gotenberg first, legacy fallback ─────────────────
   // Constructed before createJobsService so the render-document worker can be
@@ -607,7 +643,10 @@ export async function bootstrap(
   // storage adapter are present. API/scheduler receive queue handles only.
   const tikaUrl = process.env["DOCPARSER_URL"]?.trim() || undefined;
   const attachmentStorage = objectStorage
-    ? { get: (key: string) => objectStorage.get(key) }
+    ? {
+        get:    (key: string) => objectStorage.get(key),
+        delete: (key: string) => objectStorage.delete(key),
+      }
     : undefined;
 
   // ─── Backup object storage (I-07, I-11) ─────────────────────────────────────
@@ -808,7 +847,7 @@ export async function bootstrap(
   // after all services are initialised so WorkflowEngine and EntityCompilerService
   // are guaranteed to be ready.
   const metadataApprovalBridge = createMetadataApprovalBridge(_db);
-  const entityCompiler = createEntityCompilerService(_db, logger);
+  const entityCompiler = createEntityCompilerService(_db, logger, getRecordsCapabilityHandlerManifest());
   const approverResolver = new ApproverResolverService({ db: _db, logger: { warn: (e, f) => logger.warn?.(e, f) } });
   const workflowEngine = new WorkflowEngine({ db: _db, logger, approverResolver });
 

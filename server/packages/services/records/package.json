@@ -25,13 +25,19 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@athyper/adapter-telemetry": "workspace:*",
+    "@athyper/api-contracts": "workspace:*",
+    "@athyper/cascade": "workspace:*",
+    "@athyper/finance-rules": "workspace:*",
     "@athyper/svc-business": "workspace:*",
     "@athyper/svc-finance": "workspace:*",
     "@athyper/svc-iam": "workspace:*",
+    "@athyper/svc-metadata": "workspace:*",
     "@athyper/svc-platform": "workspace:*",
     "@athyper/svc-policy": "workspace:*",
     "@athyper/svc-shared": "workspace:*",
     "@athyper/svc-workflow": "workspace:*",
+    "@athyper/temporal": "workspace:*",
     "busboy": "^1.6.0"
   },
   "devDependencies": {

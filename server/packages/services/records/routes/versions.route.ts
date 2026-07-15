@@ -160,7 +160,9 @@ export function createVersionsRoute(router: Router, deps: VersionsRouteDeps): Ro
     }
   };
 
-  router.get("/records/:entity/:id/versions", handler);
+  // Dual-mount: canonical + legacy alias (rename window).
+  router.get("/runtime/v1/entities/:entity/:id/versions", handler);
+  router.get("/records/:entity/:id/versions",             handler);
 
   // ── POST /records/:entity/:id/amend ──────────────────────────────────────────
   // Opens a new amendment cycle for the record.  Transitions status to 'amending';
@@ -252,7 +254,8 @@ export function createVersionsRoute(router: Router, deps: VersionsRouteDeps): Ro
     }
   };
 
-  router.post("/records/:entity/:id/amend", amendHandler);
+  router.post("/runtime/v1/entities/:entity/:id/amend", amendHandler);
+  router.post("/records/:entity/:id/amend",             amendHandler);
 
   return router;
 }

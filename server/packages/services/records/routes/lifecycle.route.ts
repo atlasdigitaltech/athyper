@@ -27,11 +27,9 @@
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import {
-  verifyBearer,
   isUuid,
-  resolveTenantId,
-  extractOrgHeaders,
 } from "@athyper/svc-shared";
+import { requireVerifiedContext } from "@athyper/svc-iam";
 import { normalizeLifecycleStateCode } from "@athyper/svc-workflow";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,25 +71,17 @@ interface CurrentLifecycleRow {
 }
 
 export function createLifecycleRoute(router: Router, deps: LifecycleRouteDeps): Router {
-  const { db, auth, logger } = deps;
+  const { db, logger } = deps;
 
   const handler: RequestHandler = async (req, res, next) => {
     try {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
+      const { tenantId } = requireVerifiedContext(req, res);
 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_").toLowerCase();
       const recordId   = String(req.params["id"] ?? "");
 
       if (!isUuid(recordId)) {
         res.status(400).json({ error: "INVALID_ID", message: "Record id must be a valid UUID" });
-        return;
-      }
-
-      const { xOrg, xRealm } = extractOrgHeaders(req);
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "MISSING_TENANT", message: "X-Org header is required" });
         return;
       }
 
