@@ -18,6 +18,21 @@ const route = readFileSync(resolve(root, "server/packages/services/records/route
 for (const marker of ["legacy.create", "legacy.patch", "legacy.delete"]) {
   if (!route.includes(marker)) failures.push(`legacy mutation fallback '${marker}' is missing`);
 }
+const descriptorRoute = readFileSync(resolve(root, "server/packages/services/metadata/routes/compiled-entity.route.ts"), "utf8");
+if (descriptorRoute.includes("ALLOW_LEGACY_DESCRIPTOR_FINGERPRINT_CACHE")) {
+  failures.push("legacy descriptor fingerprint environment path is still present");
+}
+if (descriptorRoute.includes("!executionResolution")) {
+  failures.push("descriptor route still has an execution-resolution bypass");
+}
+const scanInventory = JSON.parse(readFileSync(resolve(root, "config/governance/redis-scan-inventory.json"), "utf8"));
+for (const entry of scanInventory.entries ?? []) {
+  try { readFileSync(resolve(root, entry.path), "utf8"); }
+  catch { failures.push(`Redis SCAN inventory path is missing: ${entry.path}`); }
+  if (!entry.classification || entry.requestPath !== false) {
+    failures.push(`Redis SCAN inventory entry is not bounded/non-request: ${entry.path}`);
+  }
+}
 if (failures.length) {
   console.error(failures.map((failure) => `FAIL: ${failure}`).join("\n"));
   process.exit(1);

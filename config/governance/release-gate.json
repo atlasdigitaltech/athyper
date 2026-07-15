@@ -6,6 +6,8 @@
     "queryCountBudget": "perf/qualification/current-report.json",
     "latencyBudget": "perf/qualification/current-report.json",
     "transactionDurationBudget": "perf/qualification/current-report.json",
+    "companyCodeRead": "perf/qualification/company-code-read.json",
+    "companyCodeMutation": "perf/qualification/company-code-mutation.json",
     "rlsVerification": "perf/qualification/evidence/rls.json",
     "outboxDurability": "perf/qualification/evidence/outbox-durability.json",
     "redisDegradation": "perf/qualification/evidence/redis-degradation.json",

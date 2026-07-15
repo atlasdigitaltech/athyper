@@ -143,6 +143,8 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
     router.get(    "/documents/:docType/:id/attachments/:attachmentId/download", unavailable);
     router.get(    "/documents/:docType/:id/attachments",                        unavailable);
     router.post(   "/documents/:docType/:id/attachments",                        unavailable);
+    router.post(   "/documents/:docType/:id/attachments/upload/initiate",        unavailable);
+    router.post(   "/documents/:docType/:id/attachments/upload/complete",        unavailable);
     router.delete( "/documents/:docType/:id/attachments/:attachmentId",          unavailable);
     return;
   }
@@ -324,6 +326,106 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
   }
 
   // ── LIST attachments ──────────────────────────────────────────────────────────
+  const initiatePresignedUploadHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { docType, id } = req.params as { docType: string; id: string };
+      if (!isUuid(id)) { res.status(404).json({ error: "DOCUMENT_NOT_FOUND" }); return; }
+      const entity = await resolveDocumentEntity(db, docType);
+      if (!entity) { res.status(404).json({ error: "ENTITY_NOT_FOUND" }); return; }
+      const authorized = await authorize(req, res, claims, entity.name as string, id, "create_attachment");
+      if (!authorized) return;
+      const body = req.body as { filename?: string; content_type?: string; size_bytes?: number };
+      const fileName = body.filename?.trim().slice(0, 500);
+      const contentType = (body.content_type ?? "application/octet-stream").slice(0, 200);
+      const sizeBytes = Number(body.size_bytes);
+      if (!fileName || !Number.isSafeInteger(sizeBytes) || sizeBytes < 1) {
+        res.status(400).json({ error: "INVALID_UPLOAD_INTENT", message: "filename and positive size_bytes are required" });
+        return;
+      }
+      if (sizeBytes > maxUploadBytes) { respondFileTooLarge(res, "multipart", sizeBytes); return; }
+      const intent = await svc.initiatePresignedUpload({
+        tenantId: authorized.tenantId,
+        entityType: entity.name as string,
+        entityId: id,
+        fileName,
+        contentType,
+        tenantCode: authorized.tenantCode,
+        companyCode: authorized.companyCode,
+      });
+      res.status(201).json({
+        upload_id: intent.attachmentId,
+        object_key: intent.storageKey,
+        upload_url: intent.uploadUrl,
+        expires_in_seconds: intent.expiresInSeconds,
+        required_headers: { "content-type": contentType },
+        status: "initiated",
+      });
+    } catch (err) {
+      logger?.error("attachments_presigned_initiate_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  const completePresignedUploadHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { docType, id } = req.params as { docType: string; id: string };
+      if (!isUuid(id)) { res.status(404).json({ error: "DOCUMENT_NOT_FOUND" }); return; }
+      const entity = await resolveDocumentEntity(db, docType);
+      if (!entity) { res.status(404).json({ error: "ENTITY_NOT_FOUND" }); return; }
+      const authorized = await authorize(req, res, claims, entity.name as string, id, "create_attachment");
+      if (!authorized) return;
+      const body = req.body as {
+        upload_id?: string; object_key?: string; filename?: string; content_type?: string;
+        size_bytes?: number; etag?: string; sha256?: string;
+      };
+      if (!body.upload_id || !isUuid(body.upload_id) || !body.object_key || !body.filename) {
+        res.status(400).json({ error: "INVALID_UPLOAD_COMPLETION", message: "upload_id, object_key, and filename are required" });
+        return;
+      }
+      const entityPath = (entity.name as string).replace(/\./g, "/");
+      const ownedPrefix = `/${entityPath}/${id}/${body.upload_id}/v1/`;
+      const tenantPrefix = `${authorized.tenantCode}/${authorized.companyCode ?? authorized.tenantCode}/`;
+      if (!body.object_key.startsWith(tenantPrefix) || !body.object_key.includes(ownedPrefix)) {
+        res.status(403).json({ error: "UPLOAD_KEY_NOT_ALLOWED", message: "Object key is not owned by this document" });
+        return;
+      }
+      const sizeBytes = Number(body.size_bytes);
+      if (!Number.isSafeInteger(sizeBytes) || sizeBytes < 1 || sizeBytes > maxUploadBytes) {
+        respondFileTooLarge(res, "multipart", sizeBytes);
+        return;
+      }
+      const result = await svc.completePresignedUpload({
+        tenantId: authorized.tenantId,
+        entityType: entity.name as string,
+        entityId: id,
+        attachmentId: body.upload_id,
+        storageKey: body.object_key,
+        fileName: body.filename.slice(0, 500),
+        contentType: (body.content_type ?? "application/octet-stream").slice(0, 200),
+        expectedSizeBytes: sizeBytes,
+        expectedEtag: body.etag,
+        expectedSha256: body.sha256 && /^[a-fA-F0-9]{64}$/.test(body.sha256) ? body.sha256.toLowerCase() : undefined,
+        principalId: authorized.principalId,
+        tenantCode: authorized.tenantCode,
+        companyCode: authorized.companyCode,
+      });
+      enqueueTikaExtract(result.id, authorized.tenantId, result.versionNo, result.sha256 || undefined);
+      res.status(201).json(toAttachmentResponse(result, docType, id));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/ATTACHMENT_(SIZE|ETAG|CHECKSUM)_MISMATCH/.test(message)) {
+        res.status(409).json({ error: "UPLOAD_INTEGRITY_FAILED", message });
+        return;
+      }
+      logger?.error("attachments_presigned_complete_error", { err: message });
+      next(err);
+    }
+  };
+
   const listHandler: RequestHandler = async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -1054,6 +1156,8 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
   // Register routes — more specific paths first
   router.get(    "/documents/:docType/:id/attachments/:attachmentId/download", downloadHandler);
   router.post(   "/documents/:docType/:id/attachments/:attachmentId/reindex",  reindexHandler);
+  router.post(   "/documents/:docType/:id/attachments/upload/initiate",        initiatePresignedUploadHandler);
+  router.post(   "/documents/:docType/:id/attachments/upload/complete",        completePresignedUploadHandler);
   router.patch(  "/documents/:docType/:id/attachments/:attachmentId",          renameHandler);
   router.get(    "/documents/:docType/:id/attachments",                        listHandler);
   router.post(   "/documents/:docType/:id/attachments",                        uploadHandler);

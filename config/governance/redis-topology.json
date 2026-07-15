@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "production": {
+    "jobRedis": "dedicated-url-or-explicit-approved-namespace-acl",
+    "requiredEnvironment": "REDIS_BULLMQ_URL",
+    "sharedOverride": "ALLOW_SHARED_BULLMQ_REDIS=true",
+    "overridePolicy": "shared Redis is permitted only when queue keys are isolated by ACL/namespace and the capacity review is attached to the release evidence"
+  },
+  "failureModes": {
+    "redisUnavailable": "permission decisions fail closed; cache reads miss safely; SSE remains durable-catch-up/keepalive-only; queue producers expose degradation",
+    "staleDescriptor": "do not serve without current generation and authorization context",
+    "cacheStampede": "single-flight descriptor compilation and bounded retry/backoff",
+    "invalidationLag": "measure generation lag and fail closed for security-sensitive reads",
+    "queueBacklog": "measure queue latency/backlog and apply bounded admission/backpressure"
+  }
+}

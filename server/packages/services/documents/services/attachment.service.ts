@@ -16,7 +16,7 @@
  *   master.attachment.status = 'deleted' (logical-only; physical S3 cleanup deferred).
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Transform, type TransformCallback } from "node:stream";
 import { sql } from "kysely";
 import type { Kysely } from "kysely";
@@ -64,6 +64,30 @@ export interface UploadResult {
   versionNo:   number;
   createdAt:   unknown;
   storageKey:  string;
+}
+
+export interface PresignedUploadIntent {
+  attachmentId: string;
+  storageKey: string;
+  uploadUrl: string;
+  expiresInSeconds: number;
+}
+
+export interface CompletePresignedUploadParams {
+  tenantId: string;
+  entityType: string;
+  entityId: string;
+  attachmentId: string;
+  storageKey: string;
+  fileName: string;
+  contentType: string;
+  expectedSizeBytes: number;
+  expectedEtag?: string;
+  expectedSha256?: string;
+  principalId: string;
+  tenantCode?: string;
+  companyCode?: string;
+  linkKind?: "primary" | "related" | "supporting" | "compliance" | "audit";
 }
 
 export interface AttachmentListItem {
@@ -255,7 +279,7 @@ export class ContentAttachmentService {
       scanMeta,
     } = params;
 
-    const attachmentId = crypto.randomUUID();
+    const attachmentId = randomUUID();
     const storageKey = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName, 1, companyCode, tenantCode);
     const sha256 = createHash("sha256").update(fileBuffer).digest("hex");
 
@@ -381,6 +405,105 @@ export class ContentAttachmentService {
       throw err;
     }
   }
+
+  /**
+   * Creates a short-lived direct-upload intent. No database row is created
+   * until completion verifies the object; this prevents abandoned intents
+   * from becoming visible attachments.
+   */
+  async initiatePresignedUpload(params: {
+    tenantId: string;
+    entityType: string;
+    entityId: string;
+    fileName: string;
+    contentType: string;
+    tenantCode?: string;
+    companyCode?: string;
+    expiresInSeconds?: number;
+  }): Promise<PresignedUploadIntent> {
+    const attachmentId = randomUUID();
+    const storageKey = this.generateStorageKey(
+      params.tenantId,
+      params.entityType,
+      params.entityId,
+      attachmentId,
+      params.fileName,
+      1,
+      params.companyCode,
+      params.tenantCode,
+    );
+    const expiresInSeconds = params.expiresInSeconds ?? 900;
+    const uploadUrl = await this.storage.putPresignedUrl(storageKey, expiresInSeconds);
+    return { attachmentId, storageKey, uploadUrl, expiresInSeconds };
+  }
+
+  /**
+   * Completes a direct upload only after object metadata and optional
+   * checksum/ETag evidence match the client declaration. The attachment and
+   * ownership link are then inserted in one transaction as quarantined.
+   */
+  async completePresignedUpload(params: CompletePresignedUploadParams): Promise<UploadResult> {
+    const metadata = await this.storage.getMetadata(params.storageKey);
+    if (metadata.size !== params.expectedSizeBytes) {
+      throw new Error(`ATTACHMENT_SIZE_MISMATCH:${metadata.size}:${params.expectedSizeBytes}`);
+    }
+    if (params.expectedEtag && metadata.etag && metadata.etag.replaceAll('"', "") !== params.expectedEtag.replaceAll('"', "")) {
+      throw new Error("ATTACHMENT_ETAG_MISMATCH");
+    }
+    const sha256 = params.expectedSha256
+      ? createHash("sha256").update(await this.storage.get(params.storageKey)).digest("hex")
+      : "";
+    if (params.expectedSha256 && sha256 !== params.expectedSha256.toLowerCase()) {
+      throw new Error("ATTACHMENT_CHECKSUM_MISMATCH");
+    }
+    const row = await this.db.transaction().execute(async (trx) => {
+      const attachment = await trx.insertInto("master.attachment" as never).values({
+        id: params.attachmentId,
+        tenant_id: params.tenantId,
+        file_name: params.fileName.slice(0, 500),
+        original_filename: params.fileName.slice(0, 500),
+        content_type: params.contentType.slice(0, 200),
+        size_bytes: metadata.size,
+        sha256: params.expectedSha256 ?? null,
+        kind: "attachment",
+        storage_bucket: this.storageBucket,
+        storage_key: params.storageKey,
+        version_no: 1,
+        reference_count: 1,
+        is_current: true,
+        is_active: true,
+        is_virus_scanned: false,
+        is_preview_generation_failed: false,
+        is_auto_delete_on_expiry: false,
+        status: "quarantined",
+        status_changed_at: new Date(),
+        uploaded_by: params.principalId,
+        created_by: params.principalId,
+        metadata: { upload_mode: "presigned", etag: metadata.etag ?? null },
+      } as never).returning(["id", "file_name", "content_type", "size_bytes", "created_at", "status", "version_no", "storage_key"] as never[]).executeTakeFirstOrThrow();
+      await trx.insertInto("master.entity_document_link" as never).values({
+        tenant_id: params.tenantId,
+        entity_type: params.entityType,
+        entity_id: params.entityId,
+        attachment_id: params.attachmentId,
+        link_kind: params.linkKind ?? "related",
+        display_order: 0,
+        created_by: params.principalId,
+      } as never).execute();
+      return attachment as Record<string, unknown>;
+    });
+    return {
+      id: row.id as string,
+      fileName: row.file_name as string,
+      contentType: row.content_type as string,
+      sizeBytes: Number(row.size_bytes ?? metadata.size),
+      sha256,
+      status: row.status as AttachmentStatus,
+      versionNo: Number(row.version_no ?? 1),
+      createdAt: row.created_at,
+      storageKey: row.storage_key as string,
+    };
+  }
   // ── Upload (streaming) ───────────────────────────────────────────────────────
   // Uses putStream() so file bytes are never fully buffered in memory.
   // SHA-256 and byte count are computed inline via Sha256PassThrough.
@@ -396,7 +519,7 @@ export class ContentAttachmentService {
       idempotencyKey,
     } = params;
 
-    const attachmentId  = crypto.randomUUID();
+    const attachmentId  = randomUUID();
     const storageKey    = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName, 1, companyCode, tenantCode);
 
     // Pipe the incoming stream through the hashing transform before S3

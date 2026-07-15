@@ -9,7 +9,31 @@ const json = (path) => JSON.parse(readFileSync(resolve(root, path), "utf8"));
 const inventory = json("config/governance/meta-entity-routes.json");
 const budgets = json("config/governance/meta-entity-performance-budgets.json");
 const baseline = json("perf/baselines/meta-entity-qualification.v1.json");
-const current = json("perf/qualification/current-report.example.json");
+const current = {
+  ...json("perf/qualification/current-report.example.json"),
+  // Unit-test-only proof fixture. The CLI never uses the example report for
+  // release decisions; staging must provide these fields in current-report.
+  companyCodeRead: {
+    stableRuns: 2,
+    p95Ms: 100,
+    p99Ms: 200,
+    shadowComparison: { ordering: true, counts: true, securityFiltering: true, referenceLabels: true, nullDefaultBehavior: true, differences: 0 },
+    tenantFixtures: { small: true, large: true },
+    queryPlans: { keyset: true, tenantLeadingIndex: true, sortCompatibleIndex: true, unboundedRelationNPlusOne: false },
+  },
+  companyCodeMutation: {
+    postgresIntegration: true,
+    atomicCommit: { record: true, audit: true, idempotency: true, outbox: true },
+    rollback: { auditFailure: true, outboxFailure: true },
+    duplicateReplay: true,
+    stableEventKey: true,
+    operations: {
+      patch: { p95Ms: 200, p99Ms: 400, transactionP95Ms: 40 },
+      create: { p95Ms: 200, p99Ms: 400, transactionP95Ms: 80 },
+      delete: { p95Ms: 200, p99Ms: 400, transactionP95Ms: 80 },
+    },
+  },
+};
 
 test("accepts a report within route, SQL, transaction, and parity gates", () => {
   assert.equal(qualifyMetaEntity({ inventory, budgets, baseline, current, exceptions: { exceptions: [] } }).passed, true);

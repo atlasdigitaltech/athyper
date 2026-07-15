@@ -60,6 +60,7 @@ import {
 import type { CacheClient } from "@athyper/svc-iam";
 import type { ExecutionDescriptorProvider } from "@athyper/svc-metadata";
 import { observeFrameworkInfrastructure } from "@athyper/adapter-telemetry";
+import { subscribeRecordSse } from "./record-sse-fanout.js";
 import {
   resolveParameterSnapshot,
   getIntParam,
@@ -4936,15 +4937,17 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Mirrors the collab activity SSE pattern: race subscribe() against
       // a short timeout so a down Redis degrades to keepalive-only mode.
       const channel = recordChannel(tenantId, entityCode, physicalId);
-      let subscriber: RedisClient | undefined;
+      let unsubscribeRecordFeed: (() => void) | undefined;
+      let wakeRecordDrain: (() => void) | undefined;
       let feedMode: "pubsub" | "keepalive-only" = "keepalive-only";
 
       if (redis) {
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         try {
-          subscriber = redis.duplicate();
-          await Promise.race([
-            subscriber.subscribe(channel),
+          unsubscribeRecordFeed = await Promise.race([
+            subscribeRecordSse(redis, channel, () => {
+              wakeRecordDrain?.();
+            }),
             new Promise<never>((_, reject) => {
               timeoutId = setTimeout(() => reject(new Error("pubsub_timeout")), 2_000);
             }),
@@ -4954,8 +4957,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         } catch (err) {
           if (timeoutId) clearTimeout(timeoutId);
           logger?.error("records_stream_subscribe_error", { err: String(err), entity: entityCode, recordId: physicalId });
-          try { subscriber?.disconnect(); } catch { /* ignore */ }
-          subscriber = undefined;
+          unsubscribeRecordFeed?.();
+          unsubscribeRecordFeed = undefined;
         }
       }
 
@@ -5033,22 +5036,18 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         })();
         try { await drainInFlight; } finally { drainInFlight = undefined; }
       };
-      await drainDurableEvents();
-
-      // Forward published events to this client.
-      if (subscriber) {
-        subscriber.on("message", (_channel: string, payload: string) => {
-          void payload;
-          void drainDurableEvents().catch((err) => {
-            logger?.warn("records_stream_durable_drain_error", { err: String(err) });
-          });
+      wakeRecordDrain = () => {
+        void drainDurableEvents().catch((err) => {
+          logger?.warn("records_stream_durable_drain_error", { err: String(err) });
         });
-      }
+      };
+      await drainDurableEvents();
 
       const keepalive = setInterval(sendKeepalive, KEEPALIVE_MS);
       req.on("close", () => {
         clearInterval(keepalive);
-        try { subscriber?.disconnect(); } catch { /* ignore */ }
+        unsubscribeRecordFeed?.();
+        unsubscribeRecordFeed = undefined;
       });
     } catch (err) {
       logger?.error("records_stream_error", { err: String(err) });

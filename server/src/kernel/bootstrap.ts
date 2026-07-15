@@ -396,6 +396,11 @@ export async function bootstrap(
   };
 
   const bullmqRedisUrl = config.redis.bullmqUrl || config.redis.url;
+  if (config.env !== "local" && !config.redis.bullmqUrl && process.env.ALLOW_SHARED_BULLMQ_REDIS !== "true") {
+    throw new Error(
+      "REDIS_BULLMQ_URL is required outside local development; set ALLOW_SHARED_BULLMQ_REDIS=true only with an approved namespace/ACL policy",
+    );
+  }
   const bullmqConnection = {
     ...parseRedisUrl(bullmqRedisUrl),
     connectionName: "athyper-bullmq",

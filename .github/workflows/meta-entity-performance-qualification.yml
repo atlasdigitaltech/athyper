@@ -61,7 +61,12 @@ jobs:
           unzip -oq /tmp/athyper-release-evidence.zip -d perf/qualification
 
       - name: Enforce budgets, regression ceiling, and parity
-        run: node scripts/performance/qualify-meta-entity.mjs --current=perf/qualification/current-report.json --output=perf/qualification/result.json
+        run: >-
+          node scripts/performance/qualify-meta-entity.mjs
+          --current=perf/qualification/current-report.json
+          --output=perf/qualification/result.json
+          --readOutput=perf/qualification/company-code-read.json
+          --mutationOutput=perf/qualification/company-code-mutation.json
 
       - name: Enforce release gate
         run: pnpm policy:release-gate --qualification=perf/qualification/result.json

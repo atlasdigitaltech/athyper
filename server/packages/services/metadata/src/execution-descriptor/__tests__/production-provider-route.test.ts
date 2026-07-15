@@ -14,12 +14,12 @@ describe("production execution descriptor integration", () => {
     expect(route).toContain("res.json(result.serialized)");
   });
 
-  it("uses provider generation validation before the compatibility fingerprint path", () => {
+  it("uses provider generation validation and retires the fingerprint SQL path", () => {
     const generationPath = route.indexOf("if (cache && tenantId && executionResolution)");
-    const compatibilityPath = route.indexOf("if (cache && tenantId && !executionResolution)");
     expect(generationPath).toBeGreaterThan(0);
-    expect(compatibilityPath).toBeGreaterThan(generationPath);
-    expect(route.slice(generationPath, compatibilityPath)).not.toContain("fpQuery");
+    expect(route).not.toContain("ALLOW_LEGACY_DESCRIPTOR_FINGERPRINT_CACHE");
+    expect(route).not.toContain("fpQuery");
+    expect(route).not.toContain("legacyDescriptorFingerprintCacheEnabled");
   });
 
   it("does not scan or delete Redis keys in the descriptor recovery listener", () => {

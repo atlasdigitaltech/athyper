@@ -31,6 +31,68 @@ export function qualifyMetaEntity({ inventory, budgets, baseline, current, excep
     }
     if ((measured.compatibilityTraffic ?? 0) > 0) warnings.push(`${contract.id}: compatibility traffic is ${measured.compatibilityTraffic}`);
   }
+  const companyCode = qualifyCompanyCodeSlices(current);
+  failures.push(...companyCode.failures);
+  warnings.push(...companyCode.warnings);
+  return { passed: failures.length === 0, failures, warnings };
+}
+
+/**
+ * Promotion contract for the first converged read and mutation entity.
+ * The values are deliberately supplied by staging/load-test capture; this
+ * function never invents evidence and therefore fails closed when fields are
+ * absent from the real report.
+ */
+export function qualifyCompanyCodeSlices(current) {
+  const failures = [];
+  const warnings = [];
+  const read = current.companyCodeRead;
+  const mutation = current.companyCodeMutation;
+  const requireTrue = (object, key, label) => {
+    if (object?.[key] !== true) failures.push(`company_code: ${label} was not proven`);
+  };
+
+  if (!read) failures.push("company_code: read qualification is missing");
+  else {
+    if ((read.stableRuns ?? 0) < 2) failures.push("company_code: read slice has fewer than two stable runs");
+    for (const key of ["ordering", "counts", "securityFiltering", "referenceLabels", "nullDefaultBehavior"]) {
+      requireTrue(read.shadowComparison, key, `shadow comparison ${key}`);
+    }
+    for (const key of ["small", "large"]) requireTrue(read.tenantFixtures, key, `tenant fixture ${key}`);
+    for (const key of ["keyset", "tenantLeadingIndex", "sortCompatibleIndex"]) {
+      requireTrue(read.queryPlans, key, `query plan ${key}`);
+    }
+    if (read.queryPlans?.unboundedRelationNPlusOne !== false) {
+      failures.push("company_code: unbounded relation N+1 was not disproven");
+    }
+    budget("company_code.list", "p95Ms", read.p95Ms, 150, "cached list p95 ms", failures);
+    budget("company_code.list", "p99Ms", read.p99Ms, 350, "cached list p99 ms", failures);
+    if ((read.shadowComparison?.differences ?? 1) !== 0) {
+      failures.push("company_code: shadow read differences remain");
+    }
+  }
+
+  if (!mutation) failures.push("company_code: mutation qualification is missing");
+  else {
+    requireTrue(mutation, "postgresIntegration", "PostgreSQL integration");
+    for (const key of ["record", "audit", "idempotency", "outbox"]) {
+      requireTrue(mutation.atomicCommit, key, `atomic ${key} commit`);
+    }
+    for (const key of ["auditFailure", "outboxFailure"]) {
+      requireTrue(mutation.rollback, key, `rollback on ${key}`);
+    }
+    requireTrue(mutation, "duplicateReplay", "duplicate replay");
+    requireTrue(mutation, "stableEventKey", "stable event key");
+    for (const operation of ["patch", "create", "delete"]) {
+      const measured = mutation.operations?.[operation];
+      if (!measured) { failures.push(`company_code.${operation}: mutation latency is missing`); continue; }
+      budget(`company_code.${operation}`, "p95Ms", measured.p95Ms, 400, "mutation p95 ms", failures);
+      budget(`company_code.${operation}`, "p99Ms", measured.p99Ms, 800, "mutation p99 ms", failures);
+    }
+    for (const [operation, maximum] of [["patch", 50], ["create", 100], ["delete", 100]]) {
+      budget(`company_code.${operation}`, "transactionP95Ms", mutation.operations?.[operation]?.transactionP95Ms, maximum, "transaction p95 ms", failures);
+    }
+  }
   return { passed: failures.length === 0, failures, warnings };
 }
 
@@ -66,6 +128,14 @@ function cli() {
     current: load("current", "perf/qualification/current-report.json"),
     exceptions: load("exceptions", "config/governance/meta-entity-performance-exceptions.json"),
   });
+  if (args.readOutput) {
+    const slice = qualifyCompanyCodeSlices(load("current", "perf/qualification/current-report.json"));
+    writeFileSync(resolve(root, args.readOutput), JSON.stringify({ ...slice, entity: "company_code", slice: "read", generatedAt: new Date().toISOString() }, null, 2) + "\n");
+  }
+  if (args.mutationOutput) {
+    const slice = qualifyCompanyCodeSlices(load("current", "perf/qualification/current-report.json"));
+    writeFileSync(resolve(root, args.mutationOutput), JSON.stringify({ ...slice, entity: "company_code", slice: "mutation", generatedAt: new Date().toISOString() }, null, 2) + "\n");
+  }
   if (args.output) writeFileSync(resolve(root, args.output), JSON.stringify(result, null, 2) + "\n");
   for (const warning of result.warnings) console.warn(`WARN: ${warning}`);
   if (!result.passed) {
