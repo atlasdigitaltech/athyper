@@ -26,9 +26,9 @@ Contract version bumped to `meta-entity-runtime/v1.1` (additive — every new fi
 
 ---
 
-## Phase 1.5 — line-item-runtime typecheck fix (Jun 2026)
+## Phase 1.5 — runtime-line-item typecheck fix (Jun 2026)
 
-**Landed:** [packages/shared/line-item-runtime/src/registry.ts](../../packages/shared/line-item-runtime/src/registry.ts) — added a 1-line `declare const process` ambient mirroring the established codebase pattern (4 other shared packages use the same idiom). Cleared a pre-existing typecheck error that was blocking Phase 2's regression gate.
+**Landed:** [packages/shared/runtime-line-item/src/registry.ts](../../packages/shared/runtime-line-item/src/registry.ts) — added a 1-line `declare const process` ambient mirroring the established codebase pattern (4 other shared packages use the same idiom). Cleared a pre-existing typecheck error that was blocking Phase 2's regression gate.
 
 ---
 
@@ -66,12 +66,12 @@ Built on top of the existing `DrawerShell` primitive at [packages/shared/ui/src/
 
 **Landed:** Shells + stack controller moved from `runtime-canvas` to [packages/shared/ui/src/surfaces/](../../packages/shared/ui/src/surfaces/).
 
-**Why:** `line-item-runtime` sits *upstream* of `runtime-canvas` (canvas depends on line-item). To consume shells in Phase 5, the shells had to move *below* both packages. New location resolves the dependency direction:
+**Why:** `runtime-line-item` sits *upstream* of `runtime-canvas` (canvas depends on line-item). To consume shells in Phase 5, the shells had to move *below* both packages. New location resolves the dependency direction:
 
 ```
 @athyper/runtime-contracts
     ↑
-@athyper/ui   ←  line-item-runtime  AND  runtime-canvas
+@athyper/ui   ←  runtime-line-item  AND  runtime-canvas
    (surfaces)        (consumes)         (consumes)
 ```
 
@@ -98,13 +98,13 @@ No consumer code changes — `runtime-canvas/src/surfaces/index.ts` re-exports `
 
 ## Phase 5 — First real adapter: `manual_invoice_line` (Jun 2026)
 
-**Landed:** [packages/shared/line-item-runtime/src/adapters/manual-invoice-line.ts](../../packages/shared/line-item-runtime/src/adapters/manual-invoice-line.ts).
+**Landed:** [packages/shared/runtime-line-item/src/adapters/manual-invoice-line.ts](../../packages/shared/runtime-line-item/src/adapters/manual-invoice-line.ts).
 
 The simplest source — no remote fetch, no picker UI used. Composer is the fill UI; consumer calls `controller.stageLine(adapter, draft)` directly.
 
 **Adapter shape:** `picker.kind: "page"` (placeholder; schema requires picker but consumers skip it), `cacheStrategy: "stale-while-revalidate"` (avoids the page+session schema rejection while being inert), `selectionShape: id_only`, no side effects.
 
-**LinesGrid integration:** [packages/shared/line-item-runtime/src/surface/LinesGrid.tsx](../../packages/shared/line-item-runtime/src/surface/LinesGrid.tsx) → `handleDraftComposerSubmit` now routes through the adapter's `toDraftShape`, attaching `sourceBinding` to every draft line.
+**LinesGrid integration:** [packages/shared/runtime-line-item/src/surface/LinesGrid.tsx](../../packages/shared/runtime-line-item/src/surface/LinesGrid.tsx) → `handleDraftComposerSubmit` now routes through the adapter's `toDraftShape`, attaching `sourceBinding` to every draft line.
 
 22 tests including contract suite + 3-line invoice smoke + LinesGrid binding shape.
 
@@ -116,7 +116,7 @@ Five PR plan; three landed, two deferred.
 
 ### PR #1 — `catalog` (Jun 2026)
 
-**Landed:** [packages/shared/line-item-runtime/src/adapters/catalog.ts](../../packages/shared/line-item-runtime/src/adapters/catalog.ts).
+**Landed:** [packages/shared/runtime-line-item/src/adapters/catalog.ts](../../packages/shared/runtime-line-item/src/adapters/catalog.ts).
 
 Picker kind: `overlay` (bound to parent doc). Selection: `id_qty_uom`. Side effect: `emit_event`. Configurable unit-price-drift tolerance (default 10%). Currency mismatch annotation (no FX conversion at adapter layer — record + propagate, finance decides).
 
@@ -124,7 +124,7 @@ Picker kind: `overlay` (bound to parent doc). Selection: `id_qty_uom`. Side effe
 
 ### PR #2 — `open_po_line` (Jun 2026)
 
-**Landed:** [packages/shared/line-item-runtime/src/adapters/open-po-line.ts](../../packages/shared/line-item-runtime/src/adapters/open-po-line.ts).
+**Landed:** [packages/shared/runtime-line-item/src/adapters/open-po-line.ts](../../packages/shared/runtime-line-item/src/adapters/open-po-line.ts).
 
 Picker kind: `modal-select` (grids need columns). Selection: `id_qty`. Match type: `three_way` (pinned at type level). Side effects: `reserve_remaining_quantity` → `link_source_line` per line.
 
@@ -138,7 +138,7 @@ See [source-adapters/open_contract_line.md](./source-adapters/open_contract_line
 
 ### PR #4 — `open_receipt_line` (Jun 2026)
 
-**Landed:** [packages/shared/line-item-runtime/src/adapters/open-receipt-line.ts](../../packages/shared/line-item-runtime/src/adapters/open-receipt-line.ts).
+**Landed:** [packages/shared/runtime-line-item/src/adapters/open-receipt-line.ts](../../packages/shared/runtime-line-item/src/adapters/open-receipt-line.ts).
 
 Picker kind: `modal-select`. Selection: `id_qty`. Match type: `three_way`. Reserve targets `goods_receipt_line` (NOT the PO — important three-way-matching semantic). PO back-reference preserved on both draft AND `sourceBinding.sourceRef`.
 
@@ -148,7 +148,7 @@ DDL ref: [server/db/ddl/document/01j_tables_p2p.sql](../../server/db/ddl/documen
 
 ### PR #5 — `open_service_sheet_line` (Jun 2026)
 
-**Landed:** [packages/shared/line-item-runtime/src/adapters/open-service-sheet-line.ts](../../packages/shared/line-item-runtime/src/adapters/open-service-sheet-line.ts).
+**Landed:** [packages/shared/runtime-line-item/src/adapters/open-service-sheet-line.ts](../../packages/shared/runtime-line-item/src/adapters/open-service-sheet-line.ts).
 
 Picker kind: `modal-select`. Selection: `id_qty`. Match type: `three_way`. **Service period preserved** on both draft (`servicePeriodStart`/`servicePeriodEnd`) AND `sourceRef` — drives period accrual logic without unwrapping the binding. PO back-reference preserved. Reserve targets `service_sheet_line`.
 
@@ -164,7 +164,7 @@ See [source-adapters/inventory.md](./source-adapters/inventory.md). DDL exists f
 
 ## Phase 7 — Cleanup + docs (Jun 2026)
 
-**Deletions:** Four deprecated parallel sheets removed from `packages/shared/line-item-runtime/src/components/`:
+**Deletions:** Four deprecated parallel sheets removed from `packages/shared/runtime-line-item/src/components/`:
 
 - `ProcureLineComposerSheet.tsx`
 - `ProcureLineEditorSheet.tsx`
@@ -188,7 +188,7 @@ These were imported by `LineItemSheet.tsx` but **never invoked** — the dispatc
 | Contracts (`runtime-contracts`) | 131 | ✅ all green |
 | Surfaces + stack (`@athyper/ui`) | 46 | ✅ |
 | Add-item core (`runtime-add-item`) | 53 | ✅ |
-| Adapters (`line-item-runtime`) | 138 | ✅ |
+| Adapters (`runtime-line-item`) | 138 | ✅ |
 | Surface migrations (`runtime-canvas`) | 7 | ✅ |
 | **Total** | **375** | |
 

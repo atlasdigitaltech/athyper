@@ -1,14 +1,14 @@
-export { RuntimeListClientProvider, useRuntimeListClient } from "./RuntimeListContext";
+export { RuntimeListClientProvider, useRuntimeListClient } from "./runtime-list-context";
 export { OrganizePalette } from "./organize";
-export { RuntimeListCommandBar } from "./RuntimeListCommandBar";
-export { SelectionIsland } from "./SelectionIsland";
+export { RuntimeListCommandBar } from "./runtime-list-command-bar";
+export { SelectionIsland } from "./selection-island";
 
 // Reusable column-picker primitive — router-free, callback-driven.
 // Consumed by `ColumnControl` (URL-mode wrapper) inside this package and
-// by external embedded grids (e.g. line-items in @athyper/line-item-runtime)
+// by external embedded grids (e.g. line-items in @athyper/runtime-line-item)
 // that persist via their own mechanism (localStorage / user preference).
 export {
   ColumnPickerBase,
   type ColumnPickerBaseProps,
-} from "./organize/ColumnPickerBase";
+} from "./organize/column-picker-base";
 export type { ResolvedColumn } from "../core/types";

@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  // Force the automatic JSX runtime. Mirrors the line-item-runtime config
+  // Force the automatic JSX runtime. Mirrors the runtime-line-item config
   // for the same reason: runtime-list's tsconfig uses `jsx: "preserve"` so
   // vitest needs an explicit transform mode.
   esbuild: {

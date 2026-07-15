@@ -20,7 +20,7 @@ Three list-page implementations exist in the monorepo. Only one is live.
 |---|---|---|---|
 | `RuntimeListPage` | [`@athyper/runtime-list/server`](packages/shared/runtime-list/src/server/) | **active, production** | `NeonListPage`, `MeshListPage`, `AdminListPage` via adapter pattern |
 | `RuntimeListPage` (different file, same name) | [`@athyper/runtime-canvas/list/runtime-list-page.tsx`](packages/shared/runtime-canvas/src/list/runtime-list-page.tsx) | dead | Exported but no external import |
-| `EntityListPage` | [`@athyper/entity-runtime/list/EntityListPage.tsx`](packages/product/runtime-ui/entity-runtime/src/list/EntityListPage.tsx) | **dead** (3343 lines, 75 hooks) | None |
+| `EntityListPage` | [`@athyper/entity-runtime/list/EntityListPage.tsx`](packages/product-deprecated/runtime-ui/entity-runtime/src/list/EntityListPage.tsx) | **dead** (3343 lines, 75 hooks) | None |
 
 The apps route through:
 
@@ -30,7 +30,7 @@ apps/neon/app/(shell)/app/[entity]/page.tsx
     → RuntimeListPage (@athyper/runtime-list/server)
 ```
 
-`EntityListPage` is **never instantiated**. It's exported from [`entity-runtime/src/index.ts:16`](packages/product/runtime-ui/entity-runtime/src/index.ts#L16) and registered in [`renderer.registry.ts:41`](packages/product/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts#L41) as the `table` renderer, but **neither the export nor the registry has a consumer**.
+`EntityListPage` is **never instantiated**. It's exported from [`entity-runtime/src/index.ts:16`](packages/product-deprecated/runtime-ui/entity-runtime/src/index.ts#L16) and registered in [`renderer.registry.ts:41`](packages/product-deprecated/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts#L41) as the `table` renderer, but **neither the export nor the registry has a consumer**.
 
 ### Dead sibling components
 
@@ -98,45 +98,45 @@ Detail/form/edit/intake are out of scope for this initiative; they need their ow
 Single PR, surgically delete:
 
 1. **Files**:
-   - `packages/product/runtime-ui/entity-runtime/src/list/EntityListPage.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/KanbanView.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/DashboardView.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/ExcelView.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/FilterDrawer.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/SortDrawer.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/GroupDrawer.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/ColumnDrawer.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/GroupedListView.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/RowActionMenu.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/RowMetaStrip.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/CompactView.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/ColumnFilterHeader.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/ColumnFilterPopover.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/FieldFilterControl.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/ListOverflowMenu.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/MyWorkDropdown.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/SmartCreateButton.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/useEntityListUrl.ts`
-   - `packages/product/runtime-ui/entity-runtime/src/list/listPresentation.tsx`
-   - `packages/product/runtime-ui/entity-runtime/src/list/virtualFilterLabels.ts`
-   - `packages/product/runtime-ui/entity-runtime/src/list/index.ts`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/EntityListPage.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/KanbanView.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/DashboardView.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/ExcelView.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/FilterDrawer.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/SortDrawer.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/GroupDrawer.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/ColumnDrawer.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/GroupedListView.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/RowActionMenu.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/RowMetaStrip.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/CompactView.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/ColumnFilterHeader.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/ColumnFilterPopover.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/FieldFilterControl.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/ListOverflowMenu.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/MyWorkDropdown.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/SmartCreateButton.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/useEntityListUrl.ts`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/listPresentation.tsx`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/virtualFilterLabels.ts`
+   - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/index.ts`
 
-2. **Re-exports** in [`entity-runtime/src/index.ts`](packages/product/runtime-ui/entity-runtime/src/index.ts) — drop `EntityListPage`, `KanbanView`, `DashboardView`, `ExcelView`, `useEntityListUrl`, etc.
+2. **Re-exports** in [`entity-runtime/src/index.ts`](packages/product-deprecated/runtime-ui/entity-runtime/src/index.ts) — drop `EntityListPage`, `KanbanView`, `DashboardView`, `ExcelView`, `useEntityListUrl`, etc.
 
-3. **Renderer map** in [`entity-runtime/src/metadata/renderer.registry.ts`](packages/product/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts) — delete `listRendererMap` and `ListRendererKey`. Decide whether to keep `detailRendererMap` (depends on detail-page audit).
+3. **Renderer map** in [`entity-runtime/src/metadata/renderer.registry.ts`](packages/product-deprecated/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts) — delete `listRendererMap` and `ListRendererKey`. Decide whether to keep `detailRendererMap` (depends on detail-page audit).
 
-4. **Subpath export** in [`entity-runtime/package.json`](packages/product/runtime-ui/entity-runtime/package.json) — drop `"./list": "./src/list/index.ts"`.
+4. **Subpath export** in [`entity-runtime/package.json`](packages/product-deprecated/runtime-ui/entity-runtime/package.json) — drop `"./list": "./src/list/index.ts"`.
 
 5. **Verification**:
    - `pnpm typecheck` across all packages.
-   - `pnpm test` line-item-runtime, metadata-client, api-client.
+   - `pnpm test` runtime-line-item, metadata-client, api-client.
    - `verify-plane-boundaries.ts` — should stay green.
 
 ### Stage R2 — Retire the bulk + import subtrees (~half day)
 
 Same structural pattern as R1, smaller surface:
-- `packages/product/runtime-ui/entity-runtime/src/bulk/`
-- `packages/product/runtime-ui/entity-runtime/src/import/`
+- `packages/product-deprecated/runtime-ui/entity-runtime/src/bulk/`
+- `packages/product-deprecated/runtime-ui/entity-runtime/src/import/`
 - Subpath exports `./bulk` and `./import` removed from package.json.
 
 ### Stage R3 (optional, deferred) — Retire `runtime-canvas/list/runtime-list-page.tsx`
@@ -175,7 +175,7 @@ Pattern worth applying to future initiatives: before scoping a "migrate X to Y" 
 
 ## Open questions
 
-1. **`detailRendererMap`** in [`renderer.registry.ts:30`](packages/product/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts#L30). Grep confirmed no external consumer — `detailRendererMap` and `DetailRendererKey` only appear in the definition file plus two internal barrels (`entity-runtime/src/index.ts:75,85` and `entity-runtime/src/metadata/index.ts:33,39`). Despite that, **intentionally deferred to R4** along with the rest of the `./detail` audit, so R1 stays surgical to the list subtree. Deleting `detailRendererMap` in R1 would pull `./detail` into scope unnecessarily.
+1. **`detailRendererMap`** in [`renderer.registry.ts:30`](packages/product-deprecated/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts#L30). Grep confirmed no external consumer — `detailRendererMap` and `DetailRendererKey` only appear in the definition file plus two internal barrels (`entity-runtime/src/index.ts:75,85` and `entity-runtime/src/metadata/index.ts:33,39`). Despite that, **intentionally deferred to R4** along with the rest of the `./detail` audit, so R1 stays surgical to the list subtree. Deleting `detailRendererMap` in R1 would pull `./detail` into scope unnecessarily.
 2. **`runtime-canvas/src/index.tsx:54`** re-exports `RuntimeListPage`. Does anything outside the package read it? Likely no; confirm before R3.
 3. **migration-log.md** — the retirement gets an entry when R1 lands: a brief paragraph noting that `entity-runtime/list` is being progressively retired because apps already use `runtime-list`, with a pointer to this doc.
 

@@ -1,0 +1,68 @@
+{
+  "name": "@athyper/document-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./chain": "./src/chain/index.ts",
+    "./header": "./src/header/index.ts",
+    "./status": "./src/status/index.ts",
+    "./exceptions": "./src/exceptions/index.ts",
+    "./overview": "./src/overview/index.ts",
+    "./items": "./src/items/index.ts",
+    "./accounting": "./src/accounting/index.ts",
+    "./health": "./src/health/index.ts",
+    "./satellites": "./src/satellites/index.ts",
+    "./amounts": "./src/amounts/index.ts",
+    "./validation": "./src/validation/index.ts",
+    "./actions": "./src/actions/index.ts",
+    "./orchestrator": "./src/orchestrator/index.ts",
+    "./intake": "./src/intake/index.ts",
+    "./composite": "./src/composite/index.ts",
+    "./register": "./src/register.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@athyper/api-contracts": "workspace:*",
+    "@athyper/content-ui": "workspace:*",
+    "@athyper/domain-widgets": "workspace:*",
+    "@athyper/runtime-line-item": "workspace:*",
+    "@athyper/metadata-client": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*",
+    "@tanstack/react-virtual": "^3.13.0"
+  },
+  "peerDependencies": {
+    "@athyper/entity-runtime": "workspace:*",
+    "@athyper/icons": "workspace:*",
+    "@athyper/theme": "workspace:*",
+    "@athyper/ui": "workspace:*",
+    "@athyper/workflow-ui": "workspace:*",
+    "@tanstack/react-query": ">=5 <6",
+    "lucide-react": "^1.8.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@athyper/entity-runtime": "workspace:*",
+    "@tanstack/react-query": "^5.99.0",
+    "@athyper/icons": "workspace:*",
+    "@athyper/theme": "workspace:*",
+    "@athyper/ui": "workspace:*",
+    "@athyper/workflow-ui": "workspace:*",
+    "@testing-library/react": "^16.1.0",
+    "jsdom": "^25.0.1",
+    "lucide-react": "^1.8.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

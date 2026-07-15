@@ -20,10 +20,10 @@ The framework collapses all that into one orchestrator (`AddItemController`) con
 @athyper/runtime-contracts        Zod-validated shapes (manifest, selection, binding, draft, side effects)
 @athyper/ui/surfaces              Shells + SurfaceStackController (Phase 2-3 deliverables)
 @athyper/runtime-add-item         Executable contract + registry + controller + test harness
-@athyper/line-item-runtime        Concrete adapters (manual, catalog, open_po_line, open_receipt_line, open_service_sheet_line)
+@athyper/runtime-line-item        Concrete adapters (manual, catalog, open_po_line, open_receipt_line, open_service_sheet_line)
 ```
 
-Dependency direction is strict: `runtime-add-item` depends on `runtime-contracts` + `@athyper/ui`. `line-item-runtime` depends on `runtime-add-item`. Apps depend on `line-item-runtime`. No package upstream of `runtime-add-item` can know about specific adapters.
+Dependency direction is strict: `runtime-add-item` depends on `runtime-contracts` + `@athyper/ui`. `runtime-line-item` depends on `runtime-add-item`. Apps depend on `runtime-line-item`. No package upstream of `runtime-add-item` can know about specific adapters.
 
 ---
 
@@ -103,7 +103,7 @@ The flow is mechanical. For a new source `X`:
 
 ### 1. Define the shapes
 
-In `packages/shared/line-item-runtime/src/adapters/X.ts`:
+In `packages/shared/runtime-line-item/src/adapters/X.ts`:
 
 ```ts
 export interface XSelection extends Record<string, unknown> {
@@ -245,7 +245,7 @@ The suite is 14 framework assertions: manifest schema validity, framework-versio
 
 ### 5. Integration scenarios to cover
 
-Mirror the patterns in [open_po_line.integration.test.tsx](../../packages/shared/line-item-runtime/src/adapters/__tests__/open-po-line.integration.test.tsx):
+Mirror the patterns in [open_po_line.integration.test.tsx](../../packages/shared/runtime-line-item/src/adapters/__tests__/open-po-line.integration.test.tsx):
 
 - Permission gating (allow + deny + undefined-permission paths)
 - Multi-line staging + commit with the right number of side effects
@@ -291,11 +291,11 @@ If your source supports partial selection (PO line at 50 of 100, contract drawin
 
 | Adapter | Picker | Selection | Match | Side effects | DDL |
 |---|---|---|---|---|---|
-| [`manual_invoice_line`](../../packages/shared/line-item-runtime/src/adapters/manual-invoice-line.ts) | n/a (composer is fill) | `id_only` | — | none | n/a — pure UI source |
-| [`catalog`](../../packages/shared/line-item-runtime/src/adapters/catalog.ts) | `overlay` | `id_qty_uom` | — | `emit_event` | `mesh.catalog_item` + `mesh.catalog_price` |
-| [`open_po_line`](../../packages/shared/line-item-runtime/src/adapters/open-po-line.ts) | `modal-select` | `id_qty` | `three_way` | `reserve_remaining_quantity` + `link_source_line` | resolved via `commitment` abstraction |
-| [`open_receipt_line`](../../packages/shared/line-item-runtime/src/adapters/open-receipt-line.ts) | `modal-select` | `id_qty` | `three_way` | `reserve_remaining_quantity` (targets `goods_receipt_line`) + `link_source_line` | `document.goods_receipt` + `goods_receipt_line` |
-| [`open_service_sheet_line`](../../packages/shared/line-item-runtime/src/adapters/open-service-sheet-line.ts) | `modal-select` | `id_qty` | `three_way` | `reserve_remaining_quantity` (targets `service_sheet_line`) + `link_source_line` | `document.service_entry_sheet` + `service_entry_sheet_line` |
+| [`manual_invoice_line`](../../packages/shared/runtime-line-item/src/adapters/manual-invoice-line.ts) | n/a (composer is fill) | `id_only` | — | none | n/a — pure UI source |
+| [`catalog`](../../packages/shared/runtime-line-item/src/adapters/catalog.ts) | `overlay` | `id_qty_uom` | — | `emit_event` | `mesh.catalog_item` + `mesh.catalog_price` |
+| [`open_po_line`](../../packages/shared/runtime-line-item/src/adapters/open-po-line.ts) | `modal-select` | `id_qty` | `three_way` | `reserve_remaining_quantity` + `link_source_line` | resolved via `commitment` abstraction |
+| [`open_receipt_line`](../../packages/shared/runtime-line-item/src/adapters/open-receipt-line.ts) | `modal-select` | `id_qty` | `three_way` | `reserve_remaining_quantity` (targets `goods_receipt_line`) + `link_source_line` | `document.goods_receipt` + `goods_receipt_line` |
+| [`open_service_sheet_line`](../../packages/shared/runtime-line-item/src/adapters/open-service-sheet-line.ts) | `modal-select` | `id_qty` | `three_way` | `reserve_remaining_quantity` (targets `service_sheet_line`) + `link_source_line` | `document.service_entry_sheet` + `service_entry_sheet_line` |
 | `open_contract_line` | DEFERRED | — | — | — | none — [deferral note](./source-adapters/open_contract_line.md) |
 | `inventory` | DEFERRED | — | — | — | partial only — [deferral note](./source-adapters/inventory.md) |
 

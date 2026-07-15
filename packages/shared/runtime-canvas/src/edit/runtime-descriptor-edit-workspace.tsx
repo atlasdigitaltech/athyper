@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import { WorkPanel } from "@athyper/surface-kit";
+import type { EntityFieldDefaults } from "@athyper/cascade";
 import type { MetaEntityField, MetaEntityLineItemsSurface, MetaEntityRuntimeDescriptor, ProcessRuntimeState } from "@athyper/runtime-contracts";
-import type { EntityEditableField } from "@athyper/runtime-shared/edit";
-import { LineItemsSurface } from "@athyper/line-item-runtime/surface";
+import type { EntityEditableField } from "@athyper/runtime-shared";
+import { LineItemsSurface } from "@athyper/runtime-line-item/surface";
+import { applyServerDefaultsResolve, createRefilterCheck } from "@athyper/runtime-shared/resolvers";
 import { useActiveTab } from "../record/runtime-record-workspace";
 import {
   useEntityEditState,
   type EntityEditState,
   type EntityEditStateResult,
   type ValidationResult,
-} from "@athyper/runtime-shared/edit";
+} from "@athyper/runtime-shared";
 import {
   buildMetaEntityEditableFields,
   buildMetaEntityFieldGroups,
@@ -31,10 +34,18 @@ import {
   type FormValues,
 } from "./runtime-edit-form";
 import { RuntimeFieldSet } from "./runtime-field-set";
+import { useFormProvenance } from "./use-form-provenance";
 import {
   runtimeEditFormDomId,
   useRuntimeEditFormActionPublisher,
 } from "./runtime-edit-form-actions";
+import { hasClientSourceChangeCandidates } from "./source-change-candidates";
+import {
+  completeClassicWriteAttempt,
+  createClassicWriteSignature,
+  resolveClassicWriteAttempt,
+  type ClassicWriteAttempt,
+} from "./classic-write-idempotency";
 import type { RuntimeRecordChromeModel } from "../record/runtime-header-model";
 
 interface RuntimeDescriptorEditWorkspaceProps {
@@ -62,6 +73,7 @@ export function RuntimeDescriptorEditWorkspace({
     [allFields, contract, record],
   );
   const [savedValues, setSavedValues] = useState<FormValues>(initialValues);
+  const classicWriteAttemptsRef = useRef(new Map<string, ClassicWriteAttempt>());
 
   const currentStatus = readStatusValue(savedValues);
 
@@ -93,9 +105,23 @@ export function RuntimeDescriptorEditWorkspace({
         "X-CSRF-Token": getCookie(csrfCookieName),
       };
       if (expectedVersion) headers["If-Match"] = expectedVersion;
+      const classicSignature = expectedVersion
+        ? createClassicWriteSignature({
+            entityCode: contract.entityCode,
+            recordId,
+            expectedVersion,
+            data: built.data,
+          })
+        : null;
+      if (classicSignature) {
+        headers["Idempotency-Key"] = resolveClassicWriteAttempt(
+          classicWriteAttemptsRef.current,
+          classicSignature,
+        ).idempotencyKey;
+      }
 
       const response = await fetch(
-        `/api/runtime-records/${encodeURIComponent(contract.routeSlug)}/${encodeURIComponent(recordId)}`,
+        runtimePath.detail(contract.routeSlug, recordId),
         {
           method: "PATCH",
           headers,
@@ -120,6 +146,8 @@ export function RuntimeDescriptorEditWorkspace({
             : undefined,
         };
       }
+
+      if (classicSignature) completeClassicWriteAttempt(classicWriteAttemptsRef.current, classicSignature);
 
       setSavedValues((current) => ({
         ...current,
@@ -207,6 +235,29 @@ function RuntimeDescriptorEditForm({
     () => buildMetaEntityFieldGroups(contract, "edit"),
     [contract],
   );
+  const defaultsByField = useMemo<Record<string, EntityFieldDefaults>>(() => {
+    const out: Record<string, EntityFieldDefaults> = {};
+    for (const field of contract.fields) {
+      const defaults = field.defaults as EntityFieldDefaults | undefined;
+      if (defaults && (defaults.on_source_change || defaults.default_value_source)) {
+        out[field.name] = defaults;
+      }
+    }
+    return out;
+  }, [contract.fields]);
+  const provenance = useFormProvenance(savedValues as Record<string, unknown>);
+  const refilterCheck = useMemo(
+    () => createRefilterCheck({ entityCode: contract.routeSlug || contract.entityCode }),
+    [contract.entityCode, contract.routeSlug],
+  );
+  const cascadeSeqRef = useRef(0);
+  const cascadeAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      cascadeAbortRef.current?.abort();
+    };
+  }, []);
 
   const actionStatus = stateResult.isSaving
     ? "saving"
@@ -257,13 +308,57 @@ function RuntimeDescriptorEditForm({
     stateResult.discard();
   }
 
+  function updateFieldWithCascade(name: string, value: FormPrimitive) {
+    const oldValues = formValues;
+    const nextValues: FormValues = { ...formValues, [name]: value };
+    stateResult.updateField(name, value);
+    provenance.markUserInput(name);
+
+    if (!hasClientSourceChangeCandidates(contract.fields, [name], defaultsByField)) return;
+
+    cascadeSeqRef.current += 1;
+    const mySeq = cascadeSeqRef.current;
+    cascadeAbortRef.current?.abort();
+    const controller = new AbortController();
+    cascadeAbortRef.current = controller;
+
+    void applyServerDefaultsResolve({
+      entityCode:       contract.routeSlug || contract.entityCode,
+      recordId,
+      changedFields:   [name],
+      oldValues:       oldValues as Record<string, unknown>,
+      newValues:       nextValues as Record<string, unknown>,
+      provenance:      provenance.provenance,
+      defaultsByField,
+      refilterCheck,
+      signal:          controller.signal,
+    })
+      .then((result) => {
+        if (mySeq !== cascadeSeqRef.current) return;
+
+        for (const [fieldName, nextValue] of Object.entries(result.valueUpdates)) {
+          if (nextValue === null || nextValue === undefined) {
+            stateResult.updateField(fieldName, "");
+          } else if (typeof nextValue === "boolean") {
+            stateResult.updateField(fieldName, nextValue);
+          } else {
+            stateResult.updateField(fieldName, String(nextValue));
+          }
+        }
+        for (const target of result.derivedFields) provenance.markDerived(target);
+        for (const target of result.clearedFields) provenance.markCleared(target);
+      })
+      .catch(() => {
+        // Source-change derivation is best-effort in the classic edit shell.
+      });
+  }
+
   const recordData = useMemo(() => {
     const data = record && typeof record["data"] === "object" && record["data"] !== null
       ? record["data"] as Record<string, unknown>
       : {};
     return { ...record, ...data } as Record<string, unknown>;
   }, [record]);
-
   if (activeLineItemsSurface) {
     const currencyCode = typeof recordData["currency_code"] === "string" ? recordData["currency_code"] : undefined;
     const companyCodeId = typeof recordData["company_code_id"] === "string" ? recordData["company_code_id"] : undefined;
@@ -315,7 +410,7 @@ function RuntimeDescriptorEditForm({
             recordId={recordId}
             record={recordData}
             surface="edit"
-            onFieldChange={(name, value) => stateResult.updateField(name, value)}
+            onFieldChange={(name, value) => updateFieldWithCascade(name, value)}
           />
         </WorkPanel>
       ))}
@@ -396,8 +491,7 @@ function withConcurrencyVersion(
   values: FormValues,
   record: RuntimeRecordRow | undefined,
 ): FormValues {
-  if (!contract.concurrency || contract.concurrency.strategy === "none") return values;
-  const versionField = contract.concurrency.versionColumn ?? "row_version";
+  const versionField = contract.concurrency?.versionColumn ?? "row_version";
 
   const version = readRecordPrimitive(record, versionField);
   if (version === null) return values;
@@ -409,8 +503,7 @@ function readConcurrencyVersion(
   values: FormValues,
   record: RuntimeRecordRow | undefined,
 ): string | null {
-  if (!contract.concurrency || contract.concurrency.strategy === "none") return null;
-  const versionField = contract.concurrency.versionColumn ?? "row_version";
+  const versionField = contract.concurrency?.versionColumn ?? "row_version";
 
   const value = values[versionField] ?? readRecordPrimitive(record, versionField);
   return stringifyVersion(value) ?? null;
@@ -462,7 +555,7 @@ function toEntityEditState(state: EntityEditStateResult): EntityEditState {
 function readSavedRecord(value: unknown): RuntimeRecordRow | undefined {
   if (!isRecord(value)) return undefined;
   const saved = value["record"];
-  return isRecord(saved) ? saved as RuntimeRecordRow : undefined;
+  return (isRecord(saved) ? saved : value) as RuntimeRecordRow;
 }
 
 function readStatusValue(values: FormValues): string | undefined {
@@ -473,3 +566,4 @@ function readStatusValue(values: FormValues): string | undefined {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
+
