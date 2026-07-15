@@ -7,10 +7,13 @@
   },
   "scripts": {
     "dev": "turbo dev",
-    "build": "turbo build",
-    "lint": "turbo lint",
+    "build": "turbo build --concurrency 1",
+    "lint": "pnpm policy:shared-grouping && turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "test:neon-route-open": "pnpm --dir apps/neon run test:route-suites:open",
+    "test:neon-route-auth-notifications": "pnpm --dir apps/neon run test:route-suites:auth-notifications",
+    "test:neon-route-phase4": "pnpm --dir apps/neon run test:route-suites:phase4",
     "test:content-ui": "pnpm --filter @athyper/content-ui test",
     "test:visual": "playwright test --config=playwright.config.ts",
     "storybook": "turbo dev --filter=@athyper/storybook",
@@ -35,7 +38,21 @@
     "policy:mesh-boundaries": "node scripts/policy/verify-plane-boundaries.mjs",
     "policy:plane-boundaries": "node scripts/policy/verify-plane-boundaries.mjs",
     "policy:content-ui-boundaries": "node scripts/policy/verify-content-ui-boundaries.mjs",
-    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:typography && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries"
+    "policy:shared-naming": "node scripts/policy/verify-shared-naming.mjs",
+    "policy:legacy-package-ids": "node scripts/policy/verify-legacy-package-ids.mjs --report policy/reports/legacy-package-ids.json",
+    "policy:legacy-runtime-retirement": "node scripts/policy/verify-legacy-runtime-retirement.mjs",
+      "policy:meta-entity": "node scripts/policy/verify-meta-entity-governance.mjs && node scripts/policy/verify-meta-entity-test-matrix.mjs && node scripts/policy/verify-meta-entity-dependencies.mjs",
+    "qualify:meta-entity": "node scripts/performance/qualify-meta-entity.mjs",
+      "test:meta-entity-governance": "node --test scripts/performance/qualify-meta-entity.test.mjs",
+      "test:meta-entity-dependencies": "node --test scripts/policy/verify-meta-entity-dependencies.test.mjs",
+    "retire:meta-entity": "node scripts/performance/verify-meta-entity-retirement.mjs",
+    "policy:shared-ownership": "node scripts/policy/verify-shared-ownership.mjs --strict --report policy/reports/shared-ownership-drift.json",
+    "policy:shared-grouping:strict": "node scripts/policy/verify-shared-naming.mjs --strict-group --group-report policy/reports/shared-grouping-audit.json",
+    "policy:shared-naming:legacy": "node scripts/policy/verify-shared-naming.mjs --strict --legacy",
+    "policy:shared-grouping": "node scripts/policy/verify-shared-naming.mjs",
+    "document-open-rollout-ci-gate": "tsx --tsconfig apps/neon/tsconfig.json scripts/document-open-rollout-ci-gate.mjs",
+    "document-open-rollout-snapshot-export": "tsx --tsconfig apps/neon/tsconfig.json scripts/document-open-rollout-snapshot-export.mjs",
+    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:typography && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries && pnpm policy:shared-ownership && pnpm policy:shared-naming && pnpm policy:shared-grouping && pnpm policy:legacy-package-ids && pnpm policy:legacy-runtime-retirement && pnpm policy:meta-entity"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
