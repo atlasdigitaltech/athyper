@@ -25,9 +25,12 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@athyper/adapter-telemetry": "workspace:*",
     "@athyper/api-contracts": "workspace:*",
     "@athyper/svc-iam": "workspace:*",
-    "@athyper/svc-shared": "workspace:*"
+    "@athyper/svc-shared": "workspace:*",
+    "@athyper/svc-workflow": "workspace:*",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",

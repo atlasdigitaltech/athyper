@@ -1,6 +1,10 @@
 import type { Response } from "express";
 import type { Kysely } from "kysely";
-import { checkPermission } from "@athyper/svc-iam";
+import {
+  checkPermission,
+  readVerifiedRequestContext,
+  type VerifiedRequestContext,
+} from "@athyper/svc-iam";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -27,6 +31,18 @@ export interface EntityWriteFieldRule {
   is_computed: boolean;
   is_write_once: boolean;
   editability: Record<string, unknown>;
+  /** Present when the rule came from the compiler-owned capability snapshot. */
+  compiled?: {
+    createWritable: boolean;
+    updateWritable: boolean;
+    readOnly: boolean;
+    computed: boolean;
+    systemManaged: boolean;
+    systemOrigin: boolean;
+    writeOnce: boolean;
+    statusLimited: boolean;
+    editableInStatuses: string[];
+  };
 }
 
 interface MutationGuardLogger {
@@ -97,11 +113,46 @@ export interface CheckEntityMutationAuthorizationArgs {
   action: EntityMutationAction;
   recordId?: string | null;
   logger?: MutationGuardLogger;
+  /** Immutable request identity used as the scope for promise memoization. */
+  authorizationContext?: VerifiedRequestContext;
 }
+
+const requestAuthorizationMemos = new WeakMap<
+  VerifiedRequestContext,
+  Map<string, Promise<EntityMutationAuthorizeOutcome>>
+>();
 
 export async function checkEntityMutationAuthorization(
   args: CheckEntityMutationAuthorizationArgs,
 ): Promise<EntityMutationAuthorizeOutcome> {
+  const { authorizationContext } = args;
+  if (authorizationContext) {
+    let memo = requestAuthorizationMemos.get(authorizationContext);
+    if (!memo) {
+      memo = new Map();
+      requestAuthorizationMemos.set(authorizationContext, memo);
+    }
+    const key = [
+      authorizationContext.authEpoch,
+      authorizationContext.profileHash,
+      args.tenantId,
+      args.principalId ?? "",
+      args.table.entity_id,
+      args.table.version_id,
+      args.entityCode,
+      args.action,
+      args.recordId ?? "",
+    ].join("\0");
+    const existing = memo.get(key);
+    if (existing) return existing;
+    const pending = checkEntityMutationAuthorization({
+      ...args,
+      authorizationContext: undefined,
+    });
+    memo.set(key, pending);
+    return pending;
+  }
+
   const { db, table, entityCode, tenantId, principalId, action, recordId, logger } = args;
 
   const tableBlock = mutationTableBlock(table, action);
@@ -200,7 +251,10 @@ export async function authorizeEntityMutation(args: CheckEntityMutationAuthoriza
   res: Response;
 }): Promise<boolean> {
   const { res, ...rest } = args;
-  const outcome = await checkEntityMutationAuthorization(rest);
+  const outcome = await checkEntityMutationAuthorization({
+    ...rest,
+    authorizationContext: rest.authorizationContext ?? readVerifiedRequestContext(res),
+  });
   if (outcome.allowed) return true;
 
   res.status(outcome.status).json({
@@ -216,6 +270,9 @@ export async function resolveEntityWriteFieldRules(
   entityCode: string,
 ): Promise<Map<string, EntityWriteFieldRule>> {
   const name = entityCode.replace(/-/g, "_");
+  const compiledRules = await resolveCompiledEntityWriteFieldRules(db, name);
+  if (compiledRules) return compiledRules;
+
   const rows = await db
     .selectFrom("control.entity_field as ef")
     .innerJoin("control.entity_version as ev", "ev.id" as never, "ef.entity_version_id" as never)
@@ -253,6 +310,68 @@ export async function resolveEntityWriteFieldRules(
       is_computed: row.is_computed,
       is_write_once: row.is_write_once,
       editability: asRecord(row.editability),
+    });
+  }
+  return rules;
+}
+
+async function resolveCompiledEntityWriteFieldRules(
+  db: AnyDb,
+  entityCode: string,
+): Promise<Map<string, EntityWriteFieldRule> | null> {
+  const row = await (db.selectFrom("snapshot.entity_compiled as ec" as never) as any)
+    .innerJoin("control.entity_version as ev", "ev.id", "ec.entity_version_id")
+    .innerJoin("control.entity as e", "e.id", "ev.entity_id")
+    .select(["ec.compiled_json", "ev.id as effective_version_id"])
+    .where((eb: any) => eb.or([
+      eb("e.name", "=", entityCode),
+      eb("e.entity_code", "=", entityCode),
+      eb("e.slug", "=", entityCode),
+    ]))
+    .where("e.tenant_id", "is", null)
+    .where("ev.status", "=", "EFFECTIVE")
+    .executeTakeFirst() as { compiled_json?: unknown; effective_version_id?: string } | undefined;
+  if (!row?.compiled_json) return null;
+
+  let compiled: unknown = row.compiled_json;
+  if (typeof compiled === "string") {
+    try { compiled = JSON.parse(compiled) as unknown; } catch { return null; }
+  }
+  const root = asRecord(compiled);
+  const capability = asRecord(root["capability_manifest"]);
+  const write = asRecord(capability["write"]);
+  if (write["entityVersionId"] !== row.effective_version_id || !Array.isArray(write["fields"])) return null;
+
+  const rules = new Map<string, EntityWriteFieldRule>();
+  for (const value of write["fields"]) {
+    const decision = asRecord(value);
+    const writable = asRecord(decision["writable"]);
+    const fieldName = typeof decision["name"] === "string" ? decision["name"] : null;
+    const columnName = typeof decision["columnName"] === "string" ? decision["columnName"] : null;
+    if (!fieldName || !columnName) return null;
+    const statuses = Array.isArray(decision["editableInStatuses"])
+      ? decision["editableInStatuses"].filter((item): item is string => typeof item === "string")
+      : [];
+    const statusLimited = decision["statusLimited"] === true;
+    rules.set(fieldName, {
+      name: fieldName,
+      column_name: columnName,
+      origin: decision["systemOrigin"] === true ? "system" : null,
+      is_read_only: decision["readOnly"] === true,
+      is_computed: decision["computed"] === true,
+      is_write_once: decision["writeOnce"] === true,
+      editability: statusLimited ? { editable_in_status: statuses } : {},
+      compiled: {
+        createWritable: writable["create"] === true,
+        updateWritable: writable["update"] === true,
+        readOnly: decision["readOnly"] === true,
+        computed: decision["computed"] === true,
+        systemManaged: decision["systemManaged"] === true,
+        systemOrigin: decision["systemOrigin"] === true,
+        writeOnce: decision["writeOnce"] === true,
+        statusLimited,
+        editableInStatuses: statuses,
+      },
     });
   }
   return rules;
@@ -298,6 +417,24 @@ export function isEntityFieldWritable(
   recordStatus?: string | null,
 ): FieldWritabilityResult {
   if (!rule) return deny("FIELD_NOT_REGISTERED");
+  if (rule.compiled) {
+    if (rule.compiled.readOnly) return deny("FIELD_READ_ONLY");
+    if (rule.compiled.computed) return deny("FIELD_COMPUTED");
+    if (rule.compiled.writeOnce && action === "update") return deny("FIELD_WRITE_ONCE");
+    if (rule.compiled.systemManaged) return deny("FIELD_SYSTEM_MANAGED");
+    if (rule.compiled.systemOrigin && rule.name !== "status") return deny("FIELD_SYSTEM_ORIGIN");
+    if (action === "create" && !rule.compiled.createWritable) return deny("FIELD_NOT_EDITABLE");
+    if (action === "update") {
+      if (!rule.compiled.updateWritable) return deny("FIELD_NOT_EDITABLE");
+      if (rule.compiled.statusLimited) {
+        const current = (recordStatus ?? "").toLowerCase().trim();
+        if (current && !rule.compiled.editableInStatuses.includes(current)) {
+          return deny("FIELD_LOCKED_BY_STATUS");
+        }
+      }
+    }
+    return { writable: true };
+  }
   if (rule.is_read_only) return deny("FIELD_READ_ONLY");
   if (rule.is_computed) return deny("FIELD_COMPUTED");
   if (rule.is_write_once && action === "update") return deny("FIELD_WRITE_ONCE");
@@ -338,11 +475,27 @@ function mutationTableBlock(
   }
 
   if (table.backing_type !== "table") {
-    return {
-      status: 403,
-      error: "ENTITY_BACKING_READ_ONLY",
-      message: `Entity '${table.name}' is backed by ${table.backing_type} and cannot be mutated by the generic records API.`,
-    };
+    // View / function-backed entities are mutable only when an explicit
+    // write facade is declared in feature_flags. The facade owns the fan-out
+    // to physical tables and the post-write read-back from the view.
+    const facadeName = readStringFlag(table.feature_flags, "write_facade");
+    if (!facadeName) {
+      return {
+        status: 403,
+        error: "ENTITY_BACKING_READ_ONLY",
+        message: `Entity '${table.name}' is backed by ${table.backing_type} and cannot be mutated by the generic records API.`,
+      };
+    }
+    if (action === "delete") {
+      return {
+        status: 403,
+        error: "ENTITY_WRITE_FACADE_UNSUPPORTED_ACTION",
+        message: `Write facade '${facadeName}' for entity '${table.name}' does not implement '${action}'. Deletes and lifecycle transitions go through the action dispatcher.`,
+      };
+    }
+    // create + facade declared: createHandler looks up the registry and dispatches.
+    // update + facade declared: let generic UPDATE target the view; view-backed
+    // documents own their fan-out with INSTEAD OF UPDATE triggers.
   }
 
   const mutability = table.mutability.toLowerCase();
@@ -422,13 +575,23 @@ async function resolveMutationOperation(
   }
 
   const matches = [...deduped.values()].filter((row) => permissionMatchesAction(row.permission_code, action));
-  return matches.find((row) => row.is_enabled) ?? matches[0] ?? null;
+  const ranked = matches.sort((left, right) =>
+    mutationPermissionRank(left.permission_code, action) - mutationPermissionRank(right.permission_code, action)
+  );
+  return ranked.find((row) => row.is_enabled) ?? ranked[0] ?? null;
 }
 
 function permissionMatchesAction(permissionCode: string, action: EntityMutationAction): boolean {
   const normalized = permissionCode.toLowerCase().replace(/[^a-z0-9]+/g, "_");
   const tokens = new Set(normalized.split("_").filter(Boolean));
   return MUTATION_PERMISSION_TOKENS[action].some((token) => tokens.has(token));
+}
+
+function mutationPermissionRank(permissionCode: string, action: EntityMutationAction): number {
+  const normalized = permissionCode.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  if (normalized === action) return 0;
+  if (MUTATION_PERMISSION_TOKENS[action].includes(normalized)) return 1;
+  return 10;
 }
 
 function hardDeleteEnabled(featureFlags: Record<string, unknown>): boolean {
@@ -444,6 +607,13 @@ function storageColumnName(columnName: string): string {
 
 function readBoolean(record: Record<string, unknown>, key: string): boolean {
   return record[key] === true;
+}
+
+function readStringFlag(record: Record<string, unknown>, key: string): string | null {
+  const v = record[key];
+  if (typeof v !== "string") return null;
+  const trimmed = v.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

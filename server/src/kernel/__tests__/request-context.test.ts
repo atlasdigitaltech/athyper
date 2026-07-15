@@ -15,11 +15,13 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  bindVerifiedRequestContext,
   getContext,
   tryGetContext,
   runWithContext,
   runWithJobContext,
 } from "../request-context.js";
+import type { VerifiedRequestContext } from "@athyper/svc-iam";
 
 // ─── getContext() ─────────────────────────────────────────────────────────────
 
@@ -90,6 +92,35 @@ describe("runWithContext()", () => {
     );
 
     expect(childCtxId).toBe("req-parent");
+  });
+
+  it("bridges the exact immutable verified context into ALS", () => {
+    const verified = Object.freeze({
+      requestId: "req-verified",
+      planeKey: "neon",
+      realmKey: "athyper",
+      tenantId: "11111111-1111-4111-8111-111111111111",
+      principalId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      authEpoch: 9,
+      profileHash: "profile-hash",
+      permissions: {
+        personaId: "persona-id",
+        principalFingerprint: "fingerprint",
+      },
+    }) as unknown as VerifiedRequestContext;
+
+    runWithContext({ requestId: "bootstrap" }, () => {
+      bindVerifiedRequestContext(verified);
+      expect(getContext()).toMatchObject({
+        requestId: "req-verified",
+        tenantId: verified.tenantId,
+        principalId: verified.principalId,
+        authEpoch: 9,
+        profileHash: "profile-hash",
+        verified,
+      });
+      expect(getContext().verified).toBe(verified);
+    });
   });
 });
 

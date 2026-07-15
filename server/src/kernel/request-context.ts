@@ -12,6 +12,7 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
+import type { VerifiedRequestContext } from "@athyper/svc-iam";
 
 export type PlaneKey = "neon" | "mesh" | "admin";
 
@@ -57,6 +58,10 @@ export interface RequestContext {
    * upgrades and grant changes bust the cache automatically.
    */
   profileHash?: string;
+  /** Current principal security epoch from the verified identity boundary. */
+  authEpoch?: number;
+  /** Exact immutable IAM context shared with the route boundary. */
+  verified?: VerifiedRequestContext;
 }
 
 export function normalizePlaneKey(value: unknown): PlaneKey | undefined {
@@ -126,6 +131,23 @@ export function getContext(): RequestContext {
   return ctx;
 }
 
+/** Attach the exact frozen IAM object to the active request ALS context. */
+export function bindVerifiedRequestContext(context: VerifiedRequestContext): void {
+  const current = getContext();
+  current.verified = context;
+  current.requestId = context.requestId;
+  current.planeKey = context.planeKey;
+  current.realmKey = context.realmKey;
+  current.realm = context.realmKey;
+  current.tenantId = context.tenantId;
+  current.principalId = context.principalId;
+  current.profileHash = context.profileHash;
+  current.authEpoch = context.authEpoch;
+  current.personaId = context.permissions.personaId;
+  current.accountGrantId = context.permissions.accountGrantId;
+  current.principalFingerprint = context.permissions.principalFingerprint;
+}
+
 /**
  * Runs fn within the given request context.
  *
@@ -162,6 +184,8 @@ export async function runWithJobContext<T>(
     accountGrantId: payloadCtx.accountGrantId,
     principalFingerprint: payloadCtx.principalFingerprint,
     profileHash: payloadCtx.profileHash,
+    authEpoch: payloadCtx.authEpoch,
+    verified: payloadCtx.verified,
   };
   return store.run(ctx, () => Promise.resolve(fn()));
 }

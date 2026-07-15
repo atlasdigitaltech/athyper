@@ -25,8 +25,14 @@ import {
   createPermissionContextMiddleware,
   isPlaneKey,
 } from "@athyper/svc-iam";
-import { registerMetadataRoutes } from "@athyper/svc-metadata";
-import { registerRecordsRoutes } from "@athyper/svc-records";
+import {
+  createRuntimeBootstrapLoader,
+  ExecutionDescriptorProvider,
+  registerMetadataRoutes,
+  RuntimeBootstrapProvider,
+} from "@athyper/svc-metadata";
+import { getRecordsCapabilityHandlerManifest, registerRecordsRoutes } from "@athyper/svc-records";
+import { createResolverRoute, registerAllResolvers } from "@athyper/svc-shared";
 import { registerSearchRoutes } from "@athyper/svc-search";
 import { registerDocumentsRoutes } from "@athyper/svc-documents";
 import { registerCollabRoutes } from "@athyper/svc-collab";
@@ -46,12 +52,16 @@ import { mapPostgresBusinessError } from "@athyper/svc-shared";
 import { registerJobsAdminRoutes } from "../../packages/services/jobs/routes/jobs.admin.route.js";
 import { registerJobsBoardRoutes } from "../../packages/services/jobs/routes/jobs.board.route.js";
 
-import { registerWorkflowRoutes } from "@athyper/svc-workflow";
+import {
+  registerWorkflowRoutes,
+  ConventionWorkflowSourceEntityAdapter,
+} from "@athyper/svc-workflow";
+import { runLifecycleHooks } from "@athyper/svc-business";
 import { registerPolicyRoutes } from "@athyper/svc-policy";
 import { registerAuditRoutes } from "@athyper/svc-audit";
 import { ClamavScanner, registerContentRoutes } from "@athyper/svc-content";
 import { registerIntegrationRoutes } from "@athyper/svc-integration";
-import { registerDocServicesRoutes } from "@athyper/svc-docservices";
+import { registerDocServicesRoutes } from "@athyper/svc-doc-services";
 import { createGotenbergClient } from "@athyper/server-foundation/render/gotenberg-client";
 import { createOpenApiRouter } from "@athyper/server-foundation/openapi/openapi-generator";
 import {
@@ -71,6 +81,11 @@ import {
   registerJobQueues,
   registerMetricCollectors,
 } from "../metrics.js";
+import {
+  collectFrameworkPerformanceMetrics,
+  createFrameworkPerformanceMiddleware,
+  startFrameworkPhase,
+} from "../framework-performance.js";
 
 /**
  * HTTP-date string for the `Sunset` response header on @deprecated routes.
@@ -84,6 +99,7 @@ import { runComplianceSuiteIfDev } from "../../packages/services/metadata/src/en
 import { createEntityCompilerService } from "../../packages/services/metadata/src/entity-compiler.service.js";
 import { createPlatformMetricCollector } from "@athyper/server-foundation/monitoring/platform-metrics";
 import {
+  bindVerifiedRequestContext,
   normalizePlaneKey,
   parseOrgHeader,
   runWithContext,
@@ -375,7 +391,10 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // Register BullMQ queues for /metrics queue depth gauges.
   // Cast to Record<string, unknown> — DepthQueue duck-type is satisfied by BullMQ Queue.
   registerJobQueues(jobs.queues as unknown as Parameters<typeof registerJobQueues>[0]);
-  registerMetricCollectors([{ name: "platform", collect: createPlatformMetricCollector(_db) }]);
+  registerMetricCollectors([
+    { name: "platform", collect: createPlatformMetricCollector(_db) },
+    { name: "framework_performance", collect: async () => collectFrameworkPerformanceMetrics() },
+  ]);
 
   // ─── IAM cache client ──────────────────────────────────────────────────────
   // Provides the full CacheClient surface used by IAM and platform routes:
@@ -409,13 +428,49 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   const descriptorCache = {
     get: (k: string) => redis.get(k),
+    mget: (...keys: string[]) => redis.mget(...keys),
     set: async (k: string, v: string, ttl: number): Promise<void> => {
       await redis.set(k, v, "EX", ttl);
     },
     del: async (k: string): Promise<void> => {
       await redis.del(k);
     },
+    incr: (k: string) => redis.incr(k),
   };
+  const executionDescriptorProvider = new ExecutionDescriptorProvider({
+    redis: descriptorCache,
+    generationCacheTtlMs: 1_000,
+    loadFromL3: ({ entityCode, tenantId }) => deps.entityCompiler.loadExecutionDescriptor(entityCode, tenantId),
+    logger,
+  });
+  // Keep each API replica's bounded generation cache exact without polling
+  // Redis on every L1 descriptor hit. The invalidation publisher increments
+  // the generation vector and emits this message after the increments commit.
+  const descriptorInvalidationSubscriber = redis.duplicate();
+  descriptorInvalidationSubscriber.on("message", (_channel, raw) => {
+    try {
+      const payload = JSON.parse(raw) as { plane?: string; tenant?: string; entity?: string };
+      executionDescriptorProvider.applyInvalidation({
+        ...(payload.plane === "neon" || payload.plane === "mesh" || payload.plane === "admin" ? { plane: payload.plane } : {}),
+        ...(payload.tenant ? { tenantId: payload.tenant } : {}),
+        ...(payload.entity ? { entityCode: payload.entity } : {}),
+      });
+    } catch (error) {
+      logger.warn("execution_descriptor_invalidation_message_invalid", { err: String(error) });
+    }
+  });
+  void descriptorInvalidationSubscriber.subscribe("execdesc:invalidate:v1").catch((error) => {
+    logger.warn("execution_descriptor_invalidation_subscribe_failed", { err: String(error) });
+  });
+  lifecycle.onShutdown(() => descriptorInvalidationSubscriber.disconnect());
+  const runtimeBootstrapProvider = new RuntimeBootstrapProvider({
+    redis: descriptorCache,
+    load: createRuntimeBootstrapLoader({
+      db: db.kysely as never,
+      loadCompiledEntity: async (entityCode, tenantId) =>
+        deps.entityCompiler.loadRuntimeCompiledEntity(entityCode, tenantId) as unknown as Promise<Record<string, unknown> | null>,
+    }),
+  });
 
   // ─── Health checks ────────────────────────────────────────────────────────
   // Three-level contract: healthy | degraded | unhealthy
@@ -530,6 +585,11 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       ...parseOrgHeader(req.headers["x-org"]),
     }, next);
   });
+
+  // P0 meta-entity performance baseline. This sits inside the canonical
+  // request ALS so DB and Redis adapter callbacks contribute to the same
+  // request-local snapshot. Unrelated routes pass through without allocation.
+  app.use(createFrameworkPerformanceMiddleware());
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     const startedAt = process.hrtime.bigint();
@@ -783,6 +843,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   //     verifyTokenForCurrentContext once the token is verified.
   const effectiveDefaultRealm = kernelConfig?.iam.defaultRealmKey ?? config.iam.realm;
   apiRouter.use(async (req: Request, _res: Response, next: NextFunction) => {
+    const endRequestContext = startFrameworkPhase("request_context");
     const xOrg   = (req.headers["x-org"]   as string) ?? "";
     const xRealm =
       (req.headers["x-realm-key"] as string | undefined) ??
@@ -831,6 +892,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
         }
       }
     }
+    endRequestContext();
     next();
   });
 
@@ -849,6 +911,11 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // DEFAULT_PUBLIC_ROUTES inside require-platform-context.ts.
   if ((process.env.AUTH_PLATFORM_CONTEXT_GATE ?? "off").toLowerCase() === "on") {
     logger.info("auth_platform_context_gate_enabled");
+    apiRouter.use((_req: Request, res: Response, next: NextFunction) => {
+      (res.locals as Record<string, unknown>)["authenticationStartedAt"] = process.hrtime.bigint();
+      (res.locals as Record<string, unknown>)["authenticationPhaseEnd"] = startFrameworkPhase("authentication");
+      next();
+    });
     apiRouter.use(createRequirePlatformContext({
       verifyToken: verifyTokenForCurrentContext,
       logger,
@@ -857,6 +924,16 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       reporter: pipelineReporter,
       env: config.env,
     }));
+    apiRouter.use((_req: Request, res: Response, next: NextFunction) => {
+      const startedAt = (res.locals as Record<string, unknown>)["authenticationStartedAt"];
+      if (typeof startedAt === "bigint") {
+        (res.locals as Record<string, unknown>)["authenticationMs"] =
+          Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+      }
+      const endAuthentication = (res.locals as Record<string, unknown>)["authenticationPhaseEnd"];
+      if (typeof endAuthentication === "function") (endAuthentication as () => void)();
+      next();
+    });
   }
 
   // ── KC admin token factory ────────────────────────────────────────────────
@@ -931,8 +1008,18 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   apiRouter.use(createPermissionContextMiddleware({
     registry: permissionResolverRegistry,
     onError: (err) => logger.warn("permission_context_middleware_failed", { err: String(err) }),
+    onResolved: (permissions) => {
+      const context = tryGetContext();
+      if (!context) return;
+      context.tenantId = permissions.tenantId;
+      context.principalId = permissions.principalId;
+      context.profileHash = permissions.profileHash;
+      context.personaId = permissions.personaId;
+      context.accountGrantId = permissions.accountGrantId;
+      context.principalFingerprint = permissions.principalFingerprint;
+    },
     readContextInput: (req): { planeKey: "neon" | "admin" | "mesh"; tenantId: string; principalId: string } | null => {
-      const planeRaw = req.headers["x-plane"];
+      const planeRaw = req.headers["x-plane-key"] ?? req.headers["x-plane"];
       const plane    = Array.isArray(planeRaw) ? planeRaw[0] : planeRaw;
       if (!isPlaneKey(plane)) return null;
 
@@ -971,8 +1058,15 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     auth: routeAuth,
     logger,
     cache: descriptorCache,
+    executionDescriptorProvider,
+    readAuthenticatedContext: () => {
+      const context = tryGetContext();
+      return context ? { tenantId: context.tenantId } : undefined;
+    },
+    runtimeBootstrapProvider,
     checkPermissionBatch,
     getEffectiveModuleAccess,
+    validateEntityVersionActivation: (versionId) => deps.entityCompiler.validateVersionForActivation(versionId),
   });
 
   registerRecordsRoutes(apiRouter, {
@@ -982,11 +1076,28 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     cache:                iamCache,
     objectStorage,
     importQueue:          jobs.queues.import,
-    notificationQueue:    jobs.queues.notifications,
     importMaxUploadMb:    config.objectStorage?.maxUploadMb,
     checkPermissionBatch,
+    permissionResolverRegistry,
+    executionDescriptorProvider,
+    entityQueryPilotCodes: new Set((process.env["ENTITY_QUERY_V1_PILOTS"] ?? "")
+      .split(",").map((value) => value.trim()).filter(Boolean)),
+    entityQueryCursorSecret: process.env["ENTITY_QUERY_CURSOR_SECRET"] ?? process.env["EXPORT_TOKEN_SECRET"],
     tokenSecret:          process.env["EXPORT_TOKEN_SECRET"],
     redis,
+    readAuthenticatedContext: () => {
+      const context = tryGetContext();
+      return context ? { tenantId: context.tenantId } : undefined;
+    },
+    onVerifiedContext: bindVerifiedRequestContext,
+  });
+
+  // Cascade rederive resolvers — POST /api/resolvers/:code
+  registerAllResolvers();
+  createResolverRoute(apiRouter, {
+    db:   db.kysely,
+    auth: routeAuth,
+    logger,
   });
 
   registerMasterContactsRoutes(apiRouter, {
@@ -1080,6 +1191,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     db: db.kysely,
     auth: routeAuth,
     cache: iamCache,
+    checkPermissionBatch,
     logger,
   });
 
@@ -1087,6 +1199,62 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     db: db.kysely,
     auth: routeAuth,
     logger,
+    sourceEntityAdapter: new ConventionWorkflowSourceEntityAdapter(logger, {
+      beforeComplete: async (trx, completion, targetStatus) => {
+        if (completion.entityType.replace(/^document\./, "") !== "purchase_order") return;
+        const transition = await trx
+          .selectFrom("control.lifecycle_transition as lt")
+          .innerJoin("control.lifecycle as lc", "lc.id", "lt.lifecycle_id")
+          .innerJoin("control.lifecycle_state as fs", "fs.id", "lt.from_state_id")
+          .innerJoin("control.lifecycle_state as ts", "ts.id", "lt.to_state_id")
+          .select(["lt.id as transition_id", "lt.operation_code"])
+          .where("lc.code", "=", "commitment")
+          .where("fs.code", "=", "pending_approval")
+          .where("ts.code", "=", targetStatus)
+          .where("lt.is_active", "=", true)
+          .where("lt.tenant_id", "is", null)
+          .executeTakeFirst() as { transition_id: string; operation_code: string } | undefined;
+        if (!transition) throw Object.assign(new Error(`PO_WORKFLOW_TRANSITION_NOT_FOUND: pending_approval -> ${targetStatus}`), { code: 422 });
+        await runLifecycleHooks(trx as never, {
+          tenantId: completion.tenantId,
+          transitionId: transition.transition_id,
+          sourceDocType: "purchase_order",
+          sourceDocId: completion.entityId,
+          principalId: completion.actorId,
+          timing: "before",
+          fromStatus: "pending_approval",
+          toStatus: targetStatus,
+          operationCode: transition.operation_code,
+        });
+      },
+      afterComplete: async (trx, completion, targetStatus) => {
+        if (completion.entityType.replace(/^document\./, "") !== "purchase_order") return;
+        const transition = await trx
+          .selectFrom("control.lifecycle_transition as lt")
+          .innerJoin("control.lifecycle as lc", "lc.id", "lt.lifecycle_id")
+          .innerJoin("control.lifecycle_state as fs", "fs.id", "lt.from_state_id")
+          .innerJoin("control.lifecycle_state as ts", "ts.id", "lt.to_state_id")
+          .select(["lt.id as transition_id", "lt.operation_code"])
+          .where("lc.code", "=", "commitment")
+          .where("fs.code", "=", "pending_approval")
+          .where("ts.code", "=", targetStatus)
+          .where("lt.is_active", "=", true)
+          .where("lt.tenant_id", "is", null)
+          .executeTakeFirst() as { transition_id: string; operation_code: string } | undefined;
+        if (!transition) return;
+        await runLifecycleHooks(trx as never, {
+          tenantId: completion.tenantId,
+          transitionId: transition.transition_id,
+          sourceDocType: "purchase_order",
+          sourceDocId: completion.entityId,
+          principalId: completion.actorId,
+          timing: "after",
+          fromStatus: "pending_approval",
+          toStatus: targetStatus,
+          operationCode: transition.operation_code,
+        });
+      },
+    }),
   });
 
   registerPolicyRoutes(apiRouter, {
@@ -1308,7 +1476,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // Compiles all system entities first so snapshot.entity_compiled rows exist,
   // then validates the 10-point checklist. Never blocks boot or affects /readyz.
   lifecycle.onReady(async () => {
-    await createEntityCompilerService(_db, logger).compileAllSystemEntities();
+    await createEntityCompilerService(_db, logger, getRecordsCapabilityHandlerManifest()).compileAllSystemEntities();
     await runComplianceSuiteIfDev(_db, logger);
   });
 

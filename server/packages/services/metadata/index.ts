@@ -3,3 +3,5 @@ export {
   invalidateDescriptorCache,
   type DescriptorCache,
 } from "./routes/compiled-entity.route.js";
+export * from "./src/execution-descriptor/index.js";
+export * from "./routes/runtime-bootstrap.route.js";
