@@ -292,7 +292,12 @@ function validateWritableField(
   }
   if (field.isReadOnly) return { ok: false, message: "This field is read-only." };
   if (field.isComputed) return { ok: false, message: "This field is computed." };
-  if (SYSTEM_FIELD_NAMES.has(field.name) || SYSTEM_FIELD_NAMES.has(field.columnName)) {
+  const contractIdentityFields = new Set([
+    descriptor.storage?.primaryKey,
+    descriptor.storage?.tenantColumn,
+  ].filter((value): value is string => typeof value === "string" && value.length > 0));
+  if (SYSTEM_FIELD_NAMES.has(field.name) || SYSTEM_FIELD_NAMES.has(field.columnName)
+    || contractIdentityFields.has(field.name) || contractIdentityFields.has(field.columnName)) {
     return { ok: false, message: "This field is managed by the system." };
   }
   if (mode === "edit" && field.isWriteOnce) {

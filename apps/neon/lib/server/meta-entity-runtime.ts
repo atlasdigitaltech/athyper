@@ -475,12 +475,17 @@ async function fetchRelationRuntimeProjections(
     relation.target_entity ?? relation.targetEntity,
   ).filter((value): value is string => typeof value === "string" && value.length > 0))];
   const entries = await Promise.all(targets.map(async (targetEntity) => {
-    const [compiled, operations, entityPolicy] = await Promise.all([
-      fetchCompiledEntity(targetEntity, headers),
+    // The relation graph contains catalog references as well as executable
+    // runtime entities. Resolve the execution artifact first; only executable
+    // targets may request operation/policy descriptors. This prevents the
+    // Neon server from turning every metadata relation into a descriptor
+    // lookup for catalog-only entities.
+    const compiled = await fetchCompiledEntity(targetEntity, headers);
+    if (!compiled) return null;
+    const [operations, entityPolicy] = await Promise.all([
       fetchEntityOperations(targetEntity, headers),
       fetchEntityPolicy(targetEntity, headers),
     ]);
-    if (!compiled) return null;
     try {
       const child = compileMetaEntityRuntimeDescriptor(compiled, {
         operations,

@@ -107,10 +107,16 @@ class SubmitForApprovalRuntimeEntityAdapter implements RuntimeEntityAdapter, Wor
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updated = await (trx.updateTable(this.config.table as never) as any)
+    const sourceTable = context.storage
+      ? `${context.storage.schema}.${context.storage.table}`
+      : this.config.table;
+    let updateQuery = (trx.updateTable(sourceTable as never) as any)
       .set(patch as never)
-      .where("id" as never, "=" as never, context.entityId as never)
-      .where("tenant_id" as never, "=" as never, context.tenantId as never)
+      .where((context.storage?.primaryKey ?? "id") as never, "=" as never, context.entityId as never);
+    if (context.storage?.tenantColumn) {
+      updateQuery = updateQuery.where(context.storage.tenantColumn as never, "=" as never, context.tenantId as never);
+    }
+    const updated = await updateQuery
       .where("status" as never, "=" as never, this.fromStatus as never)
       .returningAll()
       .executeTakeFirst() as Record<string, unknown> | undefined;

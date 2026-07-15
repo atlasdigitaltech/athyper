@@ -6,7 +6,7 @@
 
 ## Client cleanup track â€” session progress
 
-The followup session migrated client callers for the sub-resources that had dedicated `runtimePath.*` helpers added, then dual-mounted every remaining records sub-resource server-side. **Scope was constrained mid-session to exclude the deprecated `packages/product-deprecated/runtime-ui/` tree** per the user's instruction; that tree is reverted to HEAD and will be removed in a future cleanup rather than migrated.
+The followup session migrated client callers for the sub-resources that had dedicated `runtimePath.*` helpers added, then dual-mounted every remaining records sub-resource server-side. The canonical metadata/runtime packages are now consolidated; the deprecated `packages/product-deprecated/runtime-ui/` tree remains only as the final records-relay deletion tranche.
 
 ### What landed
 - **BFF catchall** at [apps/neon/app/api/runtime/v1/[...path]/route.ts](apps/neon/app/api/runtime/v1/[...path]/route.ts) â€” generic relay for sub-resources without a typed BFF handler. Clients now hit `/api/runtime/v1/...` directly (no more `/api/relay/api/records/...` prefix).

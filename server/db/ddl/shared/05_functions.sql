@@ -15,7 +15,11 @@ CREATE OR REPLACE FUNCTION shared.trg_set_updated_at() RETURNS trigger
 AS $$
 BEGIN
     NEW.updated_at := now();
-    NEW.updated_by := nullif(current_setting('app.current_principal_id', true), '')::uuid;
+    NEW.updated_by := COALESCE(
+        nullif(current_setting('app.current_principal_id', true), '')::uuid,
+        NEW.updated_by,
+        OLD.updated_by
+    );
     RETURN NEW;
 END;
 $$;

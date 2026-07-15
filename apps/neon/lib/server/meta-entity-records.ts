@@ -56,16 +56,14 @@ export const getMetaEntityRecordList = cache(
       return unavailable(scope.message);
     }
 
-    const queryMode = entityQueryMode(entityCode);
+    const queryMode = entityQueryMode(descriptor);
     const legacyQuery = buildRecordListQuery(searchParams, scope.filters);
     const v1Query = buildRecordListQuery({
       ...searchParams,
       query_v1: "1",
-      count_mode: searchParams["count_mode"] ?? (queryMode === "shadow" ? "exact" : "none"),
+      count_mode: searchParams["count_mode"] ?? "none",
     }, scope.filters);
-    const result = queryMode === "shadow"
-      ? await fetchShadowRecordRows(entityCode, legacyQuery, v1Query, headers)
-      : await fetchRecordRows(entityCode, queryMode === "serve" ? v1Query : legacyQuery, headers);
+    const result = await fetchRecordRows(entityCode, queryMode === "serve" ? v1Query : legacyQuery, headers, descriptor);
     if (result.status === "unavailable") {
       return unavailable(result.message);
     }
@@ -119,6 +117,7 @@ export const getMetaEntityRecordDetail = cache(
         entityCode,
         buildRecordListQuery(plan.searchParams, plan.filters),
         headers,
+        descriptor,
       );
       if (result.status === "unavailable") {
         lastUnavailableMessage = result.message;
@@ -237,9 +236,12 @@ function buildDetailLookupPlans(
   // service still applies tenant + scope + RLS; is_provisional is just a
   // list-view convenience filter that has no place on a by-id lookup.
   const searchParams: Record<string, string> = { include_provisional: "true" };
-  const scopedIds = filters["filter.id"]?.split(",").filter(Boolean) ?? [];
+  const primaryKeyField = resolvePrimaryKeyFieldName(descriptor);
+  const scopedIds = filters[`filter.${primaryKeyField}`]?.split(",").filter(Boolean)
+    ?? filters["filter.id"]?.split(",").filter(Boolean)
+    ?? [];
   const scopedRecordMatches = scopedIds.some((id) => sameRecordValue(id, recordId));
-  if (scopedIds.length > 0 && isUuidLike(recordId) && !scopedRecordMatches) {
+  if (scopedIds.length > 0 && !scopedRecordMatches) {
     return [{
       status: "unavailable",
       message: "Record is outside the active organization scope.",
@@ -247,15 +249,17 @@ function buildDetailLookupPlans(
   }
 
   const plans: DetailLookupPlan[] = [];
-  if ((scopedIds.length === 0 || scopedRecordMatches) && (isUuidLike(recordId) || scopedRecordMatches)) {
+  if (scopedIds.length === 0 || scopedRecordMatches) {
     plans.push({
       status: "ready",
       searchParams: { ...searchParams, page_size: "1" },
       filters: {
         ...filters,
-        "filter.id": recordId,
+        [`filter.${primaryKeyField}`]: recordId,
       },
-      matches: (record) => sameRecordValue(record.id, recordId) || sameRecordValue(readRecordString(record, "id"), recordId),
+      matches: (record) => sameRecordValue(readRecordString(record, primaryKeyField), recordId)
+        || sameRecordValue(record.id, recordId)
+        || sameRecordValue(readRecordString(record, "id"), recordId),
       allowSingleFallback: true,
     });
   }
@@ -290,6 +294,7 @@ function detailLookupFieldNames(descriptor: MetaEntityRuntimeDescriptor | undefi
   const existingFields = new Set(descriptor?.fields.map((field) => field.name) ?? []);
   const displayConfig = asRecordOrUndefined(descriptor?.extensions?.["displayConfig"]);
   const candidates = [
+    resolvePrimaryKeyFieldName(descriptor),
     readJsonString(displayConfig, "code_field"),
     readJsonString(displayConfig, "title_field"),
     readJsonString(displayConfig, "subtitle_field"),
@@ -310,6 +315,12 @@ function detailLookupFieldNames(descriptor: MetaEntityRuntimeDescriptor | undefi
     seen.add(fieldName);
     return true;
   });
+}
+
+function resolvePrimaryKeyFieldName(descriptor: MetaEntityRuntimeDescriptor | undefined): string {
+  const primaryKey = descriptor?.storage?.primaryKey ?? "id";
+  return descriptor?.fields.find((field) => field.name === primaryKey || field.columnName === primaryKey)?.name
+    ?? primaryKey;
 }
 
 type ScopeFilterResult =
@@ -333,18 +344,24 @@ async function resolveScopeFilters(
   }
 
   const fields = new Set(descriptor?.fields.map((field) => field.name) ?? []);
-  const filters: Record<string, string> = {
-    "filter.tenant_id": tenantId,
-  };
+  const primaryKeyField = resolvePrimaryKeyFieldName(descriptor);
+  const filters: Record<string, string> = {};
+  const tenantColumn = descriptor?.storage?.tenantColumn;
+  if (tenantColumn || !descriptor) {
+    const tenantField = descriptor?.fields.find((field) =>
+      field.name === tenantColumn || field.columnName === tenantColumn,
+    )?.name ?? "tenant_id";
+    filters[`filter.${tenantField}`] = tenantId;
+  }
 
   const activeCompanyCodeId = resolveActiveCompanyCodeId(membership);
   if (activeCompanyCodeId) {
-    const result = await applyCompanyCodeScope(entityCode, fields, filters, tenantId, [activeCompanyCodeId], headers);
+    const result = await applyCompanyCodeScope(entityCode, fields, filters, tenantId, [activeCompanyCodeId], headers, primaryKeyField);
     return result ?? { status: "ready", filters };
   }
 
   if (membership?.legalEntityId) {
-    const result = await applyLegalEntityScope(entityCode, fields, filters, tenantId, membership.legalEntityId, headers);
+    const result = await applyLegalEntityScope(entityCode, fields, filters, tenantId, membership.legalEntityId, headers, primaryKeyField);
     return result ?? { status: "ready", filters };
   }
 
@@ -365,9 +382,10 @@ async function applyLegalEntityScope(
   tenantId: string,
   legalEntityId: string,
   headers: Record<string, string>,
+  primaryKeyField: string,
 ): Promise<ScopeFilterResult | null> {
   if (entityCode === "legal_entity") {
-    filters["filter.id"] = legalEntityId;
+    filters[`filter.${primaryKeyField}`] = legalEntityId;
     return null;
   }
 
@@ -382,7 +400,7 @@ async function applyLegalEntityScope(
   }
   const companyCodeIds = companyCodeResolution.ids;
   if (entityCode === "site" || fields.has("company_code_id")) {
-    return applyCompanyCodeScope(entityCode, fields, filters, tenantId, companyCodeIds, headers);
+    return applyCompanyCodeScope(entityCode, fields, filters, tenantId, companyCodeIds, headers, primaryKeyField);
   }
 
   if (entityCode === "warehouse" || fields.has("site_id")) {
@@ -404,11 +422,12 @@ async function applyCompanyCodeScope(
   tenantId: string,
   companyCodeIds: string[],
   headers: Record<string, string>,
+  primaryKeyField: string,
 ): Promise<ScopeFilterResult | null> {
   if (companyCodeIds.length === 0) return emptyScope("No company codes are visible in the active organization scope.");
 
   if (entityCode === "company_code") {
-    filters["filter.id"] = companyCodeIds.join(",");
+    filters[`filter.${primaryKeyField}`] = companyCodeIds.join(",");
     return null;
   }
 
@@ -941,6 +960,7 @@ async function fetchRecordRows(
   entityCode: string,
   query: string,
   headers: Record<string, string>,
+  descriptor?: MetaEntityRuntimeDescriptor,
 ): Promise<RecordRowsResult> {
   const pathname = `/api/records/${encodeURIComponent(entityCode)}${query}`;
 
@@ -966,60 +986,26 @@ async function fetchRecordRows(
   }
 
   if (!response.ok) {
-    return { status: "unavailable", message: `Records service returned ${response.status}.` };
+    const errorBody = await readJson(response);
+    return {
+      status: "unavailable",
+      message: formatRecordsServiceError(response.status, errorBody),
+    };
   }
 
   const json = await readJson(response);
   const data = isRecord(json) && Array.isArray(json["data"]) ? json["data"] : [];
   return {
     status: "ready",
-    records: data.map(normalizeRuntimeRecord).filter(isRuntimeRecordRow),
+    records: data.map((row) => normalizeRuntimeRecord(row, descriptor)).filter(isRuntimeRecordRow),
     pagination: readRuntimePagination(json),
     reasons: readReasons(json),
     navigation: readKeysetNavigation(json),
   };
 }
 
-async function fetchShadowRecordRows(
-  entityCode: string,
-  legacyQuery: string,
-  v1Query: string,
-  headers: Record<string, string>,
-): Promise<RecordRowsResult> {
-  const [legacy, candidate] = await Promise.all([
-    fetchRecordRows(entityCode, legacyQuery, headers),
-    fetchRecordRows(entityCode, v1Query, headers),
-  ]);
-  if (legacy.status === "ready" && candidate.status === "ready") {
-    const normalize = (rows: RuntimeRecordRow[]) => rows.map((row) =>
-      Object.fromEntries(Object.entries(row)
-        .filter(([key]) => !["_cache_state", "updated_at"].includes(key))
-        .sort(([a], [b]) => a.localeCompare(b))));
-    const legacyRows = normalize(legacy.records);
-    const candidateRows = normalize(candidate.records);
-    const legacyIds = legacy.records.map((row) => String(row.id ?? ""));
-    const candidateIds = candidate.records.map((row) => String(row.id ?? ""));
-    const legacyTotal = legacy.pagination?.total;
-    const candidateTotal = candidate.pagination?.total ?? candidate.navigation?.total;
-    const mismatches = [
-      ...(JSON.stringify(legacyRows) !== JSON.stringify(candidateRows) ? ["row_values_or_nulls"] : []),
-      ...(JSON.stringify(legacyIds) !== JSON.stringify(candidateIds) ? ["row_order_or_security_filter"] : []),
-      ...(legacyTotal !== undefined && candidateTotal !== undefined && legacyTotal !== candidateTotal ? ["count"] : []),
-      ...(JSON.stringify(legacy.navigation?.countMode ?? "") !== JSON.stringify(candidate.navigation?.countMode ?? "") ? ["count_mode"] : []),
-    ];
-    if (mismatches.length > 0) {
-      console.warn(`[meta-entity-records] EntityQueryService shadow parity mismatch: entity=${entityCode} categories=${mismatches.join(",")}`);
-    }
-  }
-  return legacy;
-}
-
-function entityQueryMode(entityCode: string): "off" | "shadow" | "serve" {
-  const pilots = new Set((process.env["NEON_ENTITY_QUERY_V1_PILOTS"] ?? process.env["ENTITY_QUERY_V1_PILOTS"] ?? "")
-    .split(",").map((value) => normalizeEntityCode(value)).filter(Boolean));
-  if (!pilots.has(entityCode)) return "off";
-  const mode = process.env["NEON_ENTITY_QUERY_V1_MODE"]?.trim().toLowerCase();
-  return mode === "serve" ? "serve" : mode === "shadow" ? "shadow" : "off";
+function entityQueryMode(descriptor?: MetaEntityRuntimeDescriptor): "off" | "serve" {
+  return descriptor ? "serve" : "off";
 }
 
 function isFullyLoaded(rowCount: number, pagination: RuntimeListPagination | undefined): boolean {
@@ -1071,11 +1057,17 @@ function readNonNegativeInteger(value: unknown): number | undefined {
   return Number.isFinite(item) && item >= 0 ? Math.floor(item) : undefined;
 }
 
-function normalizeRuntimeRecord(value: unknown): RuntimeRecordRow | null {
+function normalizeRuntimeRecord(value: unknown, descriptor?: MetaEntityRuntimeDescriptor): RuntimeRecordRow | null {
   if (!isRecord(value)) return null;
 
   const nestedData = isRecord(value["data"]) ? value["data"] : undefined;
-  const id = typeof value["id"] === "string" ? value["id"] : undefined;
+  const primaryKey = descriptor?.storage?.primaryKey;
+  const rawId = value["id"]
+    ?? (primaryKey ? value[primaryKey] : undefined)
+    ?? (primaryKey && nestedData ? nestedData[primaryKey] : undefined);
+  const id = typeof rawId === "string" || typeof rawId === "number"
+    ? String(rawId)
+    : undefined;
 
   return {
     ...value,
@@ -1100,6 +1092,21 @@ async function readJson(response: Response): Promise<unknown | null> {
   }
 }
 
+export function formatRecordsServiceError(status: number, body: unknown): string {
+  if (isRecord(body)) {
+    const code = typeof body["error"] === "string"
+      ? body["error"]
+      : typeof body["code"] === "string"
+        ? body["code"]
+        : undefined;
+    const message = typeof body["message"] === "string" ? body["message"].trim() : "";
+    if (code && message) return `Records service returned ${status} (${code}): ${message}`;
+    if (code) return `Records service returned ${status} (${code}).`;
+    if (message) return `Records service returned ${status}: ${message}`;
+  }
+  return `Records service returned ${status}.`;
+}
+
 export function normalizeRouteRecordId(routeRecordId: string): string {
   let normalized = routeRecordId.trim();
 
@@ -1120,10 +1127,6 @@ function normalizeEntityCode(routeEntity: string): string {
   const parts = routeEntity.trim().split(".").filter(Boolean);
   const entityCode = (parts.at(-1) ?? "").replace(/-/g, "_");
   return ENTITY_CODE_ALIASES[entityCode] ?? entityCode;
-}
-
-function isUuidLike(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
 function sameRecordValue(value: string | undefined, expected: string): boolean {

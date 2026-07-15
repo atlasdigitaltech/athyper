@@ -19,6 +19,8 @@ import type { Kysely } from "kysely";
 export interface EntityMeta {
   schema: string;
   table:  string;
+  primaryKey: string;
+  tenantColumn: string | null;
 }
 
 export interface EntityMetaService {
@@ -49,13 +51,30 @@ export function createEntityMetaService(
       const normalised = entityType.replace(/-/g, "_");
       const row = await db
         .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"])
+        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+        .select(["e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column"] as never[])
         .where("e.name" as never, "=", normalised as never)
         .where("e.tenant_id" as never, "is", null as never)
-        .executeTakeFirst();
+        .where("e.runtime_enabled" as never, "=", true as never)
+        .where("e.status" as never, "=", "ACTIVE" as never)
+        .where("e.is_active" as never, "=", true as never)
+        .where("e.read_capability" as never, "<>", "none" as never)
+        .where("e.primary_key" as never, "is not", null as never)
+        .where("ev.status" as never, "=", "EFFECTIVE" as never)
+        .executeTakeFirst() as {
+          table_schema: string;
+          table_name: string;
+          primary_key: string;
+          tenant_column: string | null;
+        } | undefined;
 
       const meta: EntityMeta | null = row
-        ? { schema: String(row.table_schema), table: String(row.table_name) }
+        ? {
+            schema: String(row.table_schema),
+            table: String(row.table_name),
+            primaryKey: String(row.primary_key),
+            tenantColumn: row.tenant_column == null ? null : String(row.tenant_column),
+          }
         : null;
 
       cache.set(entityType, { meta, expiresAt: Date.now() + ttlMs });

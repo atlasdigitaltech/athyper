@@ -118,6 +118,7 @@ export function createAdminResolver(deps: AdminResolverDeps): PermissionResolver
         planLocked: new Set<string>(),
         planeExcluded,
         entries,
+        authorizationScopes: new Map(),
         profileHash,
         schemaHash: input.schemaHash ?? computeSchemaHash(),
         resolvedAt: Date.now(),

@@ -192,6 +192,8 @@ require_var COMPOSE_PROJECT_NAME
 echo "[2/6] Required variables..."
 require_var DATABASE_URL
 require_var REDIS_URL
+require_var ATTACHMENT_AUTH_STRICT
+require_var ATTACHMENT_MULTIPART_CLEANUP_STRICT
 require_var PUBLIC_BASE_URL
 require_var PUBLIC_WEB_URL
 require_var APPS_ATHYPER_WEB_HOST

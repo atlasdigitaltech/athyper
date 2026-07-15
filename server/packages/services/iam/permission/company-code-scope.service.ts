@@ -339,8 +339,8 @@ export class CompanyCodeScopeService {
    *   'legal_entity' → scoped to company codes linked to those legal entities
    *                    (subtree expansion via fn_resolve_le_subtree_companies)
    *
-   * If the principal has no group role assignments at all, falls back to
-   * unrestricted to preserve backward compatibility for new users / service accounts.
+   * A principal with no explicit assignment is denied by default. Tenant-wide
+   * access requires an explicit tenant assignment.
    */
   private async resolveRbacScope(
     principalId: string,
@@ -433,15 +433,8 @@ export class CompanyCodeScopeService {
       return { principalId, tenantId, companyCodeIds: codes.map((c) => c.id), companyCodes: codes, isUnrestricted: false };
     }
 
-    // No RBAC assignments — unrestricted fallback (new users, service accounts)
-    const allCodes = await this.db
-      .selectFrom("master.company_code as cc" as never)
-      .select(["cc.id", "cc.code", "cc.name"] as never[])
-      .where("cc.tenant_id" as never, "=", tenantId as never)
-      .where("cc.status"    as never, "=", "active" as never)
-      .execute() as Array<{ id: string; code: string; name: string }>;
-
-    return { principalId, tenantId, companyCodeIds: allCodes.map((c) => c.id), companyCodes: allCodes, isUnrestricted: true };
+    // No RBAC assignments: fail closed.
+    return { principalId, tenantId, companyCodeIds: [], companyCodes: [], isUnrestricted: false };
   }
 
   /**

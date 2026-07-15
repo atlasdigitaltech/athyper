@@ -52,6 +52,10 @@ export function createEntityPolicyRoute(router: Router, deps: EntityPolicyRouteD
           "e.security_tier",
           "e.governance_level",
           "e.mutability",
+          "e.runtime_enabled",
+          "e.status",
+          "e.is_active",
+          "e.read_capability",
           "ev.id as version_id",
         ] as never[])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,6 +65,10 @@ export function createEntityPolicyRoute(router: Router, deps: EntityPolicyRouteD
           eb("e.slug" as never, "=", entityCode.replace(/_/g, "-") as never),
         ]))
         .where("e.tenant_id" as never, "is", null)
+        .where("e.runtime_enabled" as never, "=", true as never)
+        .where("e.status" as never, "=", "ACTIVE" as never)
+        .where("e.is_active" as never, "=", true as never)
+        .where("e.read_capability" as never, "<>", "none" as never)
         .where("ev.status" as never, "=", "EFFECTIVE" as never)
         .limit(1)
         .executeTakeFirst() as {

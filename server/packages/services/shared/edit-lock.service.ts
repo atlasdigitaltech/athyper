@@ -122,7 +122,7 @@ export async function acquireLock(
         DELETE FROM control.record_edit_lock
          WHERE tenant_id              = ${tenantId}
            AND aggregate_entity_name  = ${entityName}
-           AND aggregate_record_id    = ${recordId}::uuid
+           AND aggregate_record_id    = ${recordId}
            AND expires_at             < now()
       `.execute(trx);
 
@@ -136,7 +136,7 @@ export async function acquireLock(
            locked_by, lock_token, session_id, lock_reason,
            acquired_at, expires_at, last_heartbeat_at)
         VALUES
-          (${tenantId}, ${entityName}, ${recordId}::uuid,
+          (${tenantId}, ${entityName}, ${recordId},
            ${lockedBy}::uuid, ${token},
            ${sessionId ?? null}, ${lockReason ?? null},
            now(), now() + (${ttlSeconds} || ' seconds')::interval, now())
@@ -166,7 +166,7 @@ export async function acquireLock(
         FROM control.record_edit_lock
        WHERE tenant_id             = ${tenantId}
          AND aggregate_entity_name = ${entityName}
-         AND aggregate_record_id   = ${recordId}::uuid
+         AND aggregate_record_id   = ${recordId}
     `.execute(db);
 
     const holder = existing.rows[0];
@@ -200,7 +200,7 @@ export async function verifyLock(
       FROM control.record_edit_lock
      WHERE tenant_id             = ${tenantId}
        AND aggregate_entity_name = ${entityName}
-       AND aggregate_record_id   = ${recordId}::uuid
+       AND aggregate_record_id   = ${recordId}
   `.execute(db);
 
   const lock = row.rows[0];
@@ -233,7 +233,7 @@ export async function renewLock(
            last_heartbeat_at = now()
      WHERE tenant_id             = ${tenantId}
        AND aggregate_entity_name = ${entityName}
-       AND aggregate_record_id   = ${recordId}::uuid
+       AND aggregate_record_id   = ${recordId}
        AND lock_token            = ${lockToken}
     RETURNING expires_at
   `.execute(db);
@@ -257,7 +257,7 @@ export async function releaseLock(
     DELETE FROM control.record_edit_lock
      WHERE tenant_id             = ${tenantId}
        AND aggregate_entity_name = ${entityName}
-       AND aggregate_record_id   = ${recordId}::uuid
+       AND aggregate_record_id   = ${recordId}
        AND locked_by             = ${lockedBy}::uuid
        AND lock_token            = ${lockToken}
   `.execute(db);
@@ -278,7 +278,7 @@ export async function forceReleaseLock(
     DELETE FROM control.record_edit_lock
      WHERE tenant_id             = ${tenantId}
        AND aggregate_entity_name = ${entityName}
-       AND aggregate_record_id   = ${recordId}::uuid
+       AND aggregate_record_id   = ${recordId}
   `.execute(db);
 }
 
@@ -304,7 +304,7 @@ export async function getLockStatus(
       FROM control.record_edit_lock
      WHERE tenant_id             = ${tenantId}
        AND aggregate_entity_name = ${entityName}
-       AND aggregate_record_id   = ${recordId}::uuid
+       AND aggregate_record_id   = ${recordId}
   `.execute(db);
 
   const lock = row.rows[0];

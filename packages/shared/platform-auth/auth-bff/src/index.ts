@@ -46,6 +46,19 @@ export interface OrgMembership {
   legalEntityName?: string;
   keycloakOrganizationId?: string;
   keycloakOrganizationAlias?: string;
+  workContextDomain?: "procurement" | "sales";
+  scopeVersion?: number;
+  authEpoch?: number;
+}
+
+export interface NeonWorkContext {
+  type: "legal_entity" | "operating_organization";
+  id: string;
+  code: string;
+  name: string;
+  tenantId: string;
+  domain?: "procurement" | "sales";
+  scopeVersion?: number;
 }
 
 export interface V4Session {
@@ -60,6 +73,8 @@ export interface V4Session {
   email?: string;
   organizations: Record<string, OrgMembership>;
   activeOrg: string | null;
+  activeWorkContext?: NeonWorkContext;
+  authEpoch?: number;
   activeWorkbench: string | null;
   scope: string;
   tokenType: string;
@@ -122,6 +137,7 @@ export interface PublicSession {
   email?: string;
   organizations: Record<string, OrgMembership>;
   activeOrg: string | null;
+  activeWorkContext?: NeonWorkContext;
   activeWorkbench: string | null;
   accessExpiresAt: number;
   mfaRequired: boolean;
@@ -486,13 +502,11 @@ const AUTH_POLICY_BOUNDS = {
 
 async function resolveAuthSessionPolicy(
   plane: PlaneKey,
-  session: Pick<V4Session, "accessToken" | "activeOrg" | "organizations" | "planeKey" | "realmKey"> | null,
+  session: Pick<V4Session, "accessToken" | "activeOrg" | "activeWorkContext" | "authEpoch" | "organizations" | "planeKey" | "realmKey"> | null,
 ): Promise<SessionPolicyDefaults> {
   if (!session) return getPlaneSessionDefaults(plane);
 
-  const activeOrgAlias = session.activeOrg && session.organizations[session.activeOrg]
-    ? session.activeOrg
-    : Object.keys(session.organizations)[0] ?? null;
+  const activeOrgAlias = resolveCanonicalActiveOrgAlias(session);
   const activeMembership = activeOrgAlias ? session.organizations[activeOrgAlias] : undefined;
   const tenantKey = activeMembership?.tenantId ?? activeOrgAlias;
   if (!activeOrgAlias || !tenantKey) return getPlaneSessionDefaults(plane);
@@ -522,7 +536,7 @@ async function resolveAuthSessionPolicy(
 }
 
 function buildRuntimePolicyHeaders(
-  session: Pick<V4Session, "accessToken" | "organizations" | "planeKey" | "realmKey">,
+  session: Pick<V4Session, "accessToken" | "activeWorkContext" | "authEpoch" | "organizations" | "planeKey" | "realmKey">,
   activeOrgAlias: string,
   activeMembership: OrgMembership | undefined,
 ): Record<string, string> {
@@ -534,17 +548,40 @@ function buildRuntimePolicyHeaders(
     "X-Org": activeOrgAlias,
   };
 
+  const activeContext = activeMembership ? toNeonWorkContext(activeMembership) : undefined;
   if (activeMembership?.tenantId) headers["X-Tenant-ID"] = activeMembership.tenantId;
   if (activeMembership?.tenantCode) headers["X-Tenant-Code"] = activeMembership.tenantCode;
   if (activeMembership?.contextType) headers["X-Org-Context-Type"] = activeMembership.contextType;
   if (activeMembership?.organizationId) headers["X-Organization-ID"] = activeMembership.organizationId;
-  if (activeMembership?.organizationCode) headers["X-Organization-Code"] = activeMembership.organizationCode;
   if (activeMembership?.legalEntityId) headers["X-Legal-Entity-ID"] = activeMembership.legalEntityId;
-  if (activeMembership?.legalEntityCode) headers["X-Legal-Entity-Code"] = activeMembership.legalEntityCode;
+  if (activeContext) {
+    headers["X-Work-Context-Type"] = activeContext.type;
+    headers["X-Work-Context-ID"] = activeContext.id;
+    if (activeContext.domain) headers["X-Work-Context-Domain"] = activeContext.domain;
+    if (activeContext.scopeVersion !== undefined) headers["X-Scope-Version"] = String(activeContext.scopeVersion);
+  }
+  if (session.authEpoch !== undefined) headers["X-Auth-Epoch"] = String(session.authEpoch);
   if (orgAliases.length > 0) headers["X-Org-Aliases"] = orgAliases.join(",");
   if (activeMembership?.roles.length) headers["X-Workbenches"] = activeMembership.roles.join(",");
 
   return headers;
+}
+
+function resolveCanonicalActiveOrgAlias(
+  session: Pick<V4Session, "activeOrg" | "activeWorkContext" | "organizations">,
+): string | null {
+  const activeContext = session.activeWorkContext;
+  if (activeContext) {
+    const contextAlias = Object.keys(session.organizations).find((alias) => {
+      const membership = session.organizations[alias];
+      return [membership?.id, membership?.organizationId, membership?.legalEntityId]
+        .includes(activeContext.id);
+    });
+    if (contextAlias) return contextAlias;
+  }
+  return session.activeOrg && session.organizations[session.activeOrg]
+    ? session.activeOrg
+    : Object.keys(session.organizations)[0] ?? null;
 }
 
 function normalizeAuthPolicy(values: Record<string, unknown>): SessionPolicyDefaults {
@@ -717,6 +754,7 @@ interface AuthAuditEvent {
   username?: string | undefined;
   sidHash?: string | undefined;
   activeOrg?: string | null;
+  activeWorkContext?: NeonWorkContext | undefined;
   activeWorkbench?: string | null;
   reasonCode?: AuthErrorCode | string | undefined;
   detail?: Record<string, unknown> | undefined;
@@ -762,6 +800,10 @@ export function createSessionPatchHandler(plane: PlaneKey) {
   return (request: NextRequest) => handleSessionPatch(plane, request);
 }
 
+export function createSessionContextsGetHandler(plane: PlaneKey) {
+  return (request: NextRequest) => handleSessionContextsGet(plane, request);
+}
+
 export function createSessionDeleteHandler(plane: PlaneKey) {
   return (request: NextRequest) => handleSessionDelete(plane, request);
 }
@@ -797,6 +839,10 @@ export function createBackchannelLogoutPostHandler(plane: PlaneKey) {
 const VERIFIED_SESSION_CACHE_TTL_MS = 5_000;
 const VERIFIED_SESSION_CACHE_LIMIT = 1_000;
 const verifiedSessionCache = new Map<string, { value: ServerPlaneSessionValidation; expiresAt: number }>();
+
+function invalidateLegacySessionOnLoad(): boolean {
+  return process.env.AUTH_BFF_LEGACY_SESSION_INVALIDATE === "true";
+}
 
 export async function validatePlaneServerSession(
   plane: PlaneKey,
@@ -1071,6 +1117,10 @@ async function validatePlaneServerSessionUncached(
     await saveSessionPreservingTtl(redis, session, session.sid);
   }
 
+  if (!runtimeHeadersMatchSession(session, input.headers)) {
+    return { ok: false, reason: "SESSION_BINDING_MISMATCH", requestId, status: 403 };
+  }
+
   return {
     ok: true,
     sid: session.sid,
@@ -1078,6 +1128,27 @@ async function validatePlaneServerSessionUncached(
     publicSession: toPublicSession(plane, session, sessionPolicy),
     sessionPolicy,
   };
+}
+
+function runtimeHeadersMatchSession(session: V4Session, headers?: HeaderReader): boolean {
+  if (!headers) return true;
+  const activeAlias = resolveCanonicalActiveOrgAlias(session);
+  const active = activeAlias ? session.organizations[activeAlias] : undefined;
+  const check = (name: string, expected: string | undefined): boolean => {
+    const supplied = headers.get(name);
+    return supplied === null || supplied === undefined || supplied === "" || supplied === expected;
+  };
+  if (!active) return true;
+  const contextId = active.organizationId ?? active.legalEntityId ?? active.id;
+  return (
+    check("x-tenant-id", active.tenantId)
+    && check("x-tenant-code", active.tenantCode)
+    && check("x-work-context-type", active.contextType)
+    && check("x-work-context-id", contextId)
+    && check("x-work-context-domain", active.workContextDomain)
+    && check("x-auth-epoch", active.authEpoch === undefined ? undefined : String(active.authEpoch))
+    && check("x-scope-version", active.scopeVersion === undefined ? undefined : String(active.scopeVersion))
+  );
 }
 
 function readVerifiedSessionCache(key: string): ServerPlaneSessionValidation | undefined {
@@ -2282,8 +2353,29 @@ export async function handleSessionPatch(plane: PlaneKey, request: NextRequest):
     return jsonAuthError("MFA_REQUIRED", requestId, 403);
   }
 
-  const body = await request.json().catch(() => ({})) as { org?: string; workbench?: string };
-  if (!body.org || !body.workbench) {
+  const body = await request.json().catch(() => ({})) as {
+    org?: string;
+    workbench?: string;
+    context?: { type?: string; id?: string; domain?: string };
+  };
+  let freshOrganizations: Record<string, OrgMembership>;
+  try {
+    freshOrganizations = await resolveSessionOrganizations({
+      plane,
+      realmKey: loaded.session.realmKey,
+      accessToken: loaded.session.accessToken,
+      workbenches: loaded.session.activeWorkbench ? [loaded.session.activeWorkbench] : [],
+      requestId,
+    });
+  } catch {
+    return jsonAuthError("CONTEXT_RESOLUTION_FAILED", requestId, 403);
+  }
+  const organizations = Object.keys(freshOrganizations).length > 0
+    ? freshOrganizations
+    : loaded.session.organizations;
+  const requestedOrg = body.org ?? resolveContextAlias(organizations, body.context);
+  const requestedWorkbench = body.workbench ?? loaded.session.activeWorkbench ?? "user";
+  if (!requestedOrg || !requestedWorkbench) {
     await recordAuthAudit({
       eventType: "context_activation_failed",
       outcome: "failure",
@@ -2298,7 +2390,7 @@ export async function handleSessionPatch(plane: PlaneKey, request: NextRequest):
     });
     return jsonAuthError("MISSING_CONTEXT", requestId, 400);
   }
-  const org = loaded.session.organizations[body.org];
+  const org = organizations[requestedOrg];
   if (!org) {
     await recordAuthAudit({
       eventType: "context_activation_denied",
@@ -2311,11 +2403,17 @@ export async function handleSessionPatch(plane: PlaneKey, request: NextRequest):
       username: loaded.session.username,
       sidHash: hashValue(loaded.sid),
       reasonCode: "CONTEXT_NOT_ALLOWED",
-      detail: { requestedOrg: body.org },
+      detail: { requestedOrg },
     });
     return jsonAuthError("CONTEXT_NOT_ALLOWED", requestId, 403);
   }
-  if (!org.roles.includes(body.workbench)) {
+  const previousOrg = loaded.session.activeOrg
+    ? loaded.session.organizations[loaded.session.activeOrg]
+    : undefined;
+  if (previousOrg?.tenantId && org.tenantId && previousOrg.tenantId !== org.tenantId) {
+    return jsonAuthError("CONTEXT_NOT_ALLOWED", requestId, 403);
+  }
+  if (!org.roles.includes(requestedWorkbench)) {
     await recordAuthAudit({
       eventType: "context_activation_denied",
       outcome: "blocked",
@@ -2327,22 +2425,24 @@ export async function handleSessionPatch(plane: PlaneKey, request: NextRequest):
       username: loaded.session.username,
       sidHash: hashValue(loaded.sid),
       reasonCode: "CONTEXT_NOT_ALLOWED",
-      detail: { requestedOrg: body.org, requestedWorkbench: body.workbench, allowedWorkbenches: org.roles },
+      detail: { requestedOrg, requestedWorkbench, allowedWorkbenches: org.roles },
     });
     return jsonAuthError("CONTEXT_NOT_ALLOWED", requestId, 403);
   }
 
   const updated = {
     ...loaded.session,
-    activeOrg: body.org,
-    activeWorkbench: body.workbench,
+    organizations,
+    activeOrg: requestedOrg,
+    activeWorkbench: requestedWorkbench,
+    activeWorkContext: toNeonWorkContext(org),
     lastSeenAt: Math.floor(Date.now() / 1000),
   } satisfies V4Session;
   await saveSessionPreservingTtl(loaded.redis, updated, loaded.sid);
   const previousMembership = loaded.session.activeOrg
     ? loaded.session.organizations[loaded.session.activeOrg]
     : undefined;
-  if (loaded.session.activeOrg !== body.org || loaded.session.activeWorkbench !== body.workbench) {
+  if (loaded.session.activeOrg !== requestedOrg || loaded.session.activeWorkbench !== requestedWorkbench) {
     await publishDescriptorRuntimeInvalidation(loaded.redis, {
       ...(previousMembership?.tenantId ? { tenant: previousMembership.tenantId } : {}),
       plane,
@@ -2363,8 +2463,8 @@ export async function handleSessionPatch(plane: PlaneKey, request: NextRequest):
     userId: loaded.session.userId,
     username: loaded.session.username,
     sidHash: hashValue(loaded.sid),
-    activeOrg: body.org,
-    activeWorkbench: body.workbench,
+    activeOrg: requestedOrg,
+    activeWorkbench: requestedWorkbench,
   });
   const response = NextResponse.json({ ok: true, requestId });
   await syncRotatedPlaneCookies(response, plane, { ...loaded, session: updated });
@@ -2382,6 +2482,59 @@ async function publishDescriptorRuntimeInvalidation(
     emittedAt: Date.now(),
     origin: "auth-bff",
   }));
+}
+
+async function handleSessionContextsGet(plane: PlaneKey, request: NextRequest): Promise<NextResponse> {
+  const requestId = requestIdFrom(request);
+  const loaded = await loadSession(plane, request);
+  if (!loaded.ok) return loaded.response;
+  const organizations = await resolveSessionOrganizations({
+    plane,
+    realmKey: loaded.session.realmKey,
+    accessToken: loaded.session.accessToken,
+    workbenches: loaded.session.activeWorkbench ? [loaded.session.activeWorkbench] : [],
+    requestId,
+  }).catch(() => null);
+  if (!organizations) return jsonAuthError("CONTEXT_RESOLUTION_FAILED", requestId, 403);
+
+  const contexts = Object.values(organizations).map(toNeonWorkContext);
+  return NextResponse.json({
+    contexts,
+    legalEntities: contexts.filter((context) => context.type === "legal_entity"),
+    procurementOrganizations: contexts.filter((context) => context.domain === "procurement"),
+    salesOrganizations: contexts.filter((context) => context.domain === "sales"),
+    activeContext: loaded.session.activeWorkContext ?? (
+      loaded.session.activeOrg ? toNeonWorkContext(loaded.session.organizations[loaded.session.activeOrg]!) : null
+    ),
+  });
+}
+
+function toNeonWorkContext(org: OrgMembership): NeonWorkContext {
+  const type = org.contextType === "operating_organization" ? "operating_organization" : "legal_entity";
+  return {
+    type,
+    id: org.organizationId ?? org.legalEntityId ?? org.id,
+    code: org.organizationCode ?? org.legalEntityCode ?? org.alias,
+    name: org.organizationName ?? org.legalEntityName ?? org.name,
+    tenantId: org.tenantId ?? "",
+    ...(org.workContextDomain ? { domain: org.workContextDomain } : {}),
+    ...(org.scopeVersion !== undefined ? { scopeVersion: org.scopeVersion } : {}),
+  };
+}
+
+function resolveContextAlias(
+  organizations: Record<string, OrgMembership>,
+  context: { type?: string; id?: string; domain?: string } | undefined,
+): string | undefined {
+  if (!context?.type || !context.id) return undefined;
+  return Object.entries(organizations).find(([, org]) => {
+    const typeMatches = context.type === "operating_organization"
+      ? org.contextType === "operating_organization"
+      : context.type === "legal_entity" && org.contextType === "legal_entity";
+    const idMatches = [org.id, org.organizationId, org.legalEntityId].includes(context.id);
+    const domainMatches = !context.domain || org.workContextDomain === context.domain;
+    return typeMatches && idMatches && domainMatches;
+  })?.[0];
 }
 
 export async function handleSessionDelete(plane: PlaneKey, request: NextRequest): Promise<NextResponse> {
@@ -2965,7 +3118,7 @@ async function loadSession(
     clearPlaneCookies(response, plane);
     return { ok: false, response };
   }
-  const session = parseSessionJson(raw);
+  let session = parseSessionJson(raw);
   if (!session) {
     await destroySession(redis, namespace, effectiveSid);
     if (effectiveSid !== sid) {
@@ -2985,6 +3138,20 @@ async function loadSession(
     clearPlaneCookies(response, plane);
     return { ok: false, response };
   }
+  if (session.activeOrg && !session.activeWorkContext) {
+    if (invalidateLegacySessionOnLoad()) {
+      await destroySession(redis, namespace, effectiveSid, session);
+      const response = jsonAuthError("SESSION_NOT_FOUND", requestId, 401, { authenticated: false });
+      clearPlaneCookies(response, plane);
+      return { ok: false, response };
+    }
+    const legacyMembership = session.organizations[session.activeOrg];
+    if (legacyMembership) {
+      session = { ...session, activeWorkContext: toNeonWorkContext(legacyMembership) };
+      await saveSessionPreservingTtl(redis, session, effectiveSid);
+    }
+  }
+
   return {
     ok: true,
     redis,
@@ -3106,6 +3273,7 @@ async function requireCsrf(
     username: session.username,
     sidHash: hashValue(sid),
     activeOrg: session.activeOrg,
+    activeWorkContext: session.activeWorkContext,
     activeWorkbench: session.activeWorkbench,
     reasonCode: "CSRF_VALIDATION_FAILED",
     detail: {
@@ -3930,6 +4098,15 @@ function optionalOrgMembershipMetadata(value: Record<string, unknown>): Partial<
   if ((v = m(["legalEntityName", "legal_entity_name"]))) result.legalEntityName = v;
   if ((v = m(["keycloakOrganizationId", "keycloak_organization_id"]))) result.keycloakOrganizationId = v;
   if ((v = m(["keycloakOrganizationAlias", "keycloak_organization_alias"]))) result.keycloakOrganizationAlias = v;
+  if ((v = m(["workContextDomain", "work_context_domain", "domain"]))) {
+    if (v === "procurement" || v === "sales") result.workContextDomain = v;
+  }
+  const scopeVersion = value.scopeVersion ?? attributes.scopeVersion ?? attributes.scope_version;
+  if (typeof scopeVersion === "number" && Number.isFinite(scopeVersion)) result.scopeVersion = scopeVersion;
+  else if (typeof scopeVersion === "string" && /^\d+$/.test(scopeVersion)) result.scopeVersion = Number(scopeVersion);
+  const authEpoch = value.authEpoch ?? attributes.authEpoch ?? attributes.auth_epoch;
+  if (typeof authEpoch === "number" && Number.isFinite(authEpoch)) result.authEpoch = authEpoch;
+  else if (typeof authEpoch === "string" && /^\d+$/.test(authEpoch)) result.authEpoch = Number(authEpoch);
   return result;
 }
 

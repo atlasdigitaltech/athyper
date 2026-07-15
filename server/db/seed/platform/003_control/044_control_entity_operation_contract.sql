@@ -257,35 +257,29 @@ BEGIN
             jsonb_build_object('natural_key_fields', to_jsonb(v_natural_key_fields::text[])),
             'ACTIVE', v_su
         )
-        ON CONFLICT ON CONSTRAINT entity_physical_uq DO UPDATE
-        SET module_id = EXCLUDED.module_id,
-            entity_code = EXCLUDED.entity_code,
-            label_singular = EXCLUDED.label_singular,
-            label_plural = EXCLUDED.label_plural,
-            icon_key = EXCLUDED.icon_key,
-            color_token = EXCLUDED.color_token,
-            display_config = EXCLUDED.display_config,
-            identity_config = COALESCE(control.entity.identity_config, '{}'::jsonb) || EXCLUDED.identity_config,
-            feature_flags = control.entity.feature_flags || EXCLUDED.feature_flags,
-            status = 'ACTIVE',
-            updated_at = now(),
-            updated_by = v_su
+        -- Registry ownership is 040/040a. This legacy block may only reuse
+        -- an already-discovered row and must never overwrite its contract.
+        ON CONFLICT ON CONSTRAINT entity_physical_uq DO NOTHING
         RETURNING id INTO v_entity_id;
 
-        INSERT INTO control.entity_version (
-            entity_id, tenant_id, version_no, status,
-            label, change_type, effective_from, created_by
-        )
-        VALUES (
-            v_entity_id, NULL, 1, 'EFFECTIVE',
-            'Initial People Phase 1 version', 'structural', now(), v_su
-        )
-        ON CONFLICT (entity_id, version_no) DO UPDATE
-        SET status = 'EFFECTIVE',
-            updated_at = now(),
-            updated_by = v_su
-        RETURNING id INTO v_entity_version_id;
+        IF v_entity_id IS NULL THEN
+            SELECT e.id INTO v_entity_id
+            FROM control.entity e
+            WHERE e.tenant_id IS NULL
+              AND e.table_schema = r.table_schema
+              AND e.table_name = r.table_name;
+        END IF;
 
+        SELECT ev.id INTO v_entity_version_id
+        FROM control.entity_version ev
+        WHERE ev.entity_id = v_entity_id
+          AND ev.status = 'EFFECTIVE'
+        ORDER BY ev.version_no DESC
+        LIMIT 1;
+
+        -- 042 is the sole physical-column generator. The historical loop is
+        -- retained as an executable reference but is intentionally inert.
+        IF false THEN
         FOR c IN
             SELECT column_name, data_type, udt_name, is_nullable, ordinal_position
             FROM information_schema.columns
@@ -361,6 +355,7 @@ BEGIN
             )
             ON CONFLICT DO NOTHING;
         END LOOP;
+        END IF;
 
         v_lifecycle_id := CASE r.lifecycle_code
             WHEN 'lc_org_master' THEN COALESCE(v_lc_org, v_lc_active)
@@ -523,6 +518,9 @@ BEGIN
     -- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     -- Step 6: Seed entity_version rows for any newly inserted entities.
     -- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    -- Version ownership is 041. Keep this legacy statement inert so reset
+    -- ordering cannot create a second version authority.
+    IF false THEN
     INSERT INTO control.entity_version (entity_id, tenant_id, version_no, status, label, change_type, effective_from, created_by)
     SELECT e.id, NULL, 1, 'EFFECTIVE', 'Initial Version', 'structural', now(), v_su
     FROM control.entity e
@@ -534,6 +532,7 @@ BEGIN
       AND NOT EXISTS (
           SELECT 1 FROM control.entity_version ev WHERE ev.entity_id = e.id
       );
+    END IF;
 
     RAISE NOTICE 'entity_numbering registry cleanup complete';
 END $$;
@@ -2520,7 +2519,8 @@ FROM (VALUES
        is_searchable, sort_order, created_by)
         ON CONFLICT DO NOTHING;
 
-        DELETE FROM control.entity_field
+        UPDATE control.entity_field
+           SET runtime_enabled = false
         WHERE entity_version_id = v_ev
           AND name IN ('book_code','is_leading');
     END IF;
@@ -2679,8 +2679,9 @@ FROM (VALUES
         -- Remove is_preferred / is_preferred_supplier if mistakenly seeded on supplier entity.
         -- This field belongs to supplier_qualification (016_supplier_qualification.sql),
         -- not master.supplier â€” querying it against master.supplier causes a column error.
-        DELETE FROM control.entity_field
-        WHERE entity_version_id = v_ev
+         UPDATE control.entity_field
+            SET runtime_enabled = false
+         WHERE entity_version_id = v_ev
           AND name IN ('is_preferred', 'is_preferred_supplier');
 
         INSERT INTO control.entity_field (
@@ -2973,8 +2974,9 @@ FROM (VALUES
     -- ========================================================================
 
 
-    DELETE FROM control.entity_field ef
-    USING control.entity_version ev, control.entity e
+    UPDATE control.entity_field ef
+       SET runtime_enabled = false
+    FROM control.entity_version ev, control.entity e
     WHERE ef.entity_version_id = ev.id
       AND ev.entity_id = e.id
       AND e.name = 'business_intent'
@@ -3750,15 +3752,17 @@ FROM (VALUES
     -- Section: 015_fields_products
     -- ========================================================================
 
-    DELETE FROM control.entity_field ef
-    USING control.entity_version ev, control.entity e
+    UPDATE control.entity_field ef
+       SET runtime_enabled = false
+    FROM control.entity_version ev, control.entity e
     WHERE ef.entity_version_id = ev.id
       AND ev.entity_id = e.id
       AND e.name IN ('product', 'item')
       AND ef.name IN ('spend_category_id', 'item_category_id');
 
-    DELETE FROM control.entity_field ef
-    USING control.entity_version ev, control.entity e
+    UPDATE control.entity_field ef
+       SET runtime_enabled = false
+    FROM control.entity_version ev, control.entity e
     WHERE ef.entity_version_id = ev.id
       AND ev.entity_id = e.id
       AND e.name = 'company_code_spend_policy';
@@ -4284,6 +4288,10 @@ FROM (VALUES
                 END IF;
             END IF;
 
+            -- 042_control_entity_field_contract.sql is the only physical-column
+            -- generator. Keep this historical coverage INSERT unreachable;
+            -- the patch below updates existing 042 rows by field name.
+            IF false THEN
             INSERT INTO control.entity_field (
                 entity_version_id,
                 name,
@@ -4415,13 +4423,44 @@ FROM (VALUES
 
             GET DIAGNOSTICS v_rows = ROW_COUNT;
             v_total := v_total + v_rows;
+            END IF;
+
+            UPDATE control.entity_field ef
+               SET label = COALESCE(ef.label, initcap(replace(c.column_name, '_', ' '))),
+                   data_type = v_data_type,
+                   ui_type = v_ui_type,
+                   cardinality = CASE
+                       WHEN v_data_type IN ('text_array', 'uuid_array', 'int_array', 'jsonb_array') THEN 'many'
+                       WHEN c.is_nullable = 'NO' THEN 'one'
+                       ELSE 'zero_or_one'
+                   END,
+                   origin = v_origin,
+                   is_read_only = CASE
+                       WHEN ef.is_write_once THEN ef.is_read_only
+                       ELSE ef.is_read_only OR r.entity_readonly OR r.backing_type = 'view'
+                   END,
+                   reference_config = COALESCE(ef.reference_config, CASE
+                       WHEN v_ref_entity IS NOT NULL THEN jsonb_build_object('ref_entity', v_ref_entity)
+                       WHEN v_data_type = 'uuid' AND c.column_name LIKE '%\_id' ESCAPE '\' THEN
+                           jsonb_build_object('ref_hint', regexp_replace(c.column_name, '_id$', ''))
+                       ELSE NULL::jsonb
+                   END),
+                   fk_target_entity_id = COALESCE(ef.fk_target_entity_id, v_ref_entity_id),
+                   fk_target_field = COALESCE(ef.fk_target_field, CASE WHEN v_ref_entity_id IS NOT NULL THEN 'id' ELSE NULL END),
+                   validation = COALESCE(ef.validation, CASE WHEN v_ref_entity IS NOT NULL THEN jsonb_build_object('ref_entity', v_ref_entity) END),
+                   sort_order = c.ordinal_position * 10,
+                   updated_at = now(),
+                   updated_by = v_su_admin
+             WHERE ef.entity_version_id = r.entity_version_id
+               AND ef.name = v_field_name;
         END LOOP;
     END LOOP;
 
     -- Remove common-field rows that were stamped onto coverage entities but do
     -- not map to a physical column on the backing table/view.
-    DELETE FROM control.entity_field ef
-    USING control.entity_version ev, control.entity e
+    UPDATE control.entity_field ef
+       SET runtime_enabled = false
+    FROM control.entity_version ev, control.entity e
     WHERE ef.entity_version_id = ev.id
       AND ev.entity_id = e.id
       AND e.table_schema = 'master'
@@ -4590,6 +4629,10 @@ FROM (VALUES
 
     GET DIAGNOSTICS v_version_rows = ROW_COUNT;
 
+    -- 042_control_entity_field_contract.sql is the only physical-column
+    -- generator. This coverage section patches existing rows instead of
+    -- inserting another physical-column field set.
+    IF false THEN
     WITH coverage_entities AS (
         SELECT
             e.id AS entity_id,
@@ -4840,9 +4883,30 @@ FROM (VALUES
         updated_by = v_su;
 
     GET DIAGNOSTICS v_field_rows = ROW_COUNT;
+    END IF;
 
-    DELETE FROM control.entity_field ef
-    USING control.entity_version ev, control.entity e
+    UPDATE control.entity_field ef
+       SET is_read_only = true,
+           visibility = COALESCE(ef.visibility, jsonb_build_object('hidden', false)),
+           editability = COALESCE(ef.editability, jsonb_build_object('mode', 'readOnly', 'reason', 'governed_metadata_coverage')),
+           updated_at = now(),
+           updated_by = v_su
+      FROM control.entity_version ev
+      JOIN control.entity e ON e.id = ev.entity_id
+      JOIN information_schema.columns ic
+        ON ic.table_schema = e.table_schema
+       AND ic.table_name = e.table_name
+     WHERE ef.entity_version_id = ev.id
+       AND ev.version_no = 1
+       AND e.ownership_model = 'system'
+       AND e.feature_flags ->> 'metadata_coverage_source' = 'governed_schema_coverage'
+       AND ef.column_name = ic.column_name;
+
+    GET DIAGNOSTICS v_field_rows = ROW_COUNT;
+
+    UPDATE control.entity_field ef
+       SET runtime_enabled = false
+    FROM control.entity_version ev, control.entity e
     WHERE ef.entity_version_id = ev.id
       AND ev.entity_id = e.id
       AND e.feature_flags ->> 'metadata_coverage_source' = 'governed_schema_coverage'
@@ -5314,8 +5378,9 @@ FROM (VALUES
               ('is_regulated',               'is_regulated'),
               ('default_valuation_method',   'default_valuation_method')
         )
-        DELETE FROM control.entity_field stale
-        USING patch, control.entity_field target
+        UPDATE control.entity_field stale
+           SET runtime_enabled = false
+        FROM patch, control.entity_field target
         WHERE stale.entity_version_id = v_ev_ccat
           AND stale.column_name = patch.col
           AND stale.name <> patch.name
@@ -5920,8 +5985,9 @@ WHERE  ef.entity_version_id = ev.id
 
 -- Remove balance_type: it duplicates normal_balance (same column, different field name).
 -- normal_balance is already registered separately and is the canonical field.
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev
 JOIN  control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.name = 'gl_account' AND ev.version_no = 1
@@ -5954,8 +6020,9 @@ WHERE  ef.entity_version_id = ev.id
 
 -- currency_id registered as uuid/reference but legal_entity has no uuid currency FK.
 -- Functional currency is char(3) functional_currency â€” remove the orphaned field.
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev
 JOIN  control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.name = 'legal_entity' AND ev.version_no = 1
@@ -5987,8 +6054,9 @@ WHERE  ef.entity_version_id = ev.id
 -- Â§9 master.dimension_set
 --   DELETE company_code_id, is_mandatory â€” they live on dimension_entry / dimension_type,
 --   not the content-addressed set header.
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev
 JOIN  control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.name = 'dimension_set' AND ev.version_no = 1
@@ -5997,8 +6065,9 @@ WHERE ef.entity_version_id = ev.id
 
 -- Â§10 master.warehouse
 --   DELETE company_code_id (scoped through site_id), address_id (inherited from site).
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev
 JOIN  control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.name = 'warehouse' AND ev.version_no = 1
@@ -6035,8 +6104,9 @@ WHERE  ef.entity_version_id = ev.id
   AND  ef.name = 'checksum'
   AND  ef.column_name = 'checksum';
 
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev
 JOIN  control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.name = 'attachment' AND ev.version_no = 1
@@ -6054,8 +6124,9 @@ WHERE  ef.entity_version_id = ev.id
   AND  ef.name = 'mime_type'
   AND  ef.column_name = 'mime_type';
 
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev
 JOIN  control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.name = 'multipart_upload' AND ev.version_no = 1
@@ -6083,8 +6154,9 @@ WHERE  ef.entity_version_id = ev.id
   AND  ef.name = 'body'
   AND  ef.column_name = 'body';
 
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev
 JOIN  control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.name = 'comment' AND ev.version_no = 1
@@ -6138,8 +6210,9 @@ WHERE  ef.entity_version_id = ev.id
   AND  ef.name = 'subject'
   AND  ef.column_name = 'subject';
 
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev
 JOIN  control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.name = 'conversation' AND ev.version_no = 1
@@ -6209,8 +6282,9 @@ SET    feature_flags = COALESCE(e.feature_flags, '{}'::jsonb)
 WHERE  e.tenant_id IS NULL
   AND  e.name IN ('bank_account_link', 'commodity_classification');
 
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev
 JOIN  control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.tenant_id IS NULL
@@ -9894,4 +9968,3 @@ WHERE EXISTS (
       AND e.entity_code = v.entity_name
 )
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
-

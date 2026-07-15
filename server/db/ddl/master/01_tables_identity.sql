@@ -1358,7 +1358,7 @@ CREATE TABLE IF NOT EXISTS master.auth_group_role (
 
     -- Assignment scope: organizational or Mesh network boundary
     CONSTRAINT agr_assignment_scope_chk CHECK (
-        assignment_scope_type IN ('tenant', 'company_code', 'legal_entity', 'network_membership')
+        assignment_scope_type IN ('tenant', 'company_code', 'legal_entity', 'operating_organization', 'network_membership')
     ),
 
     -- Ref consistency: tenant -> NULL, scoped assignments -> NOT NULL
@@ -1366,6 +1366,7 @@ CREATE TABLE IF NOT EXISTS master.auth_group_role (
         (assignment_scope_type = 'tenant'        AND assignment_scope_ref_id IS NULL)
      OR (assignment_scope_type = 'company_code'  AND assignment_scope_ref_id IS NOT NULL)
      OR (assignment_scope_type = 'legal_entity'  AND assignment_scope_ref_id IS NOT NULL)
+     OR (assignment_scope_type = 'operating_organization' AND assignment_scope_ref_id IS NOT NULL)
      OR (assignment_scope_type = 'network_membership' AND assignment_scope_ref_id IS NOT NULL)
     ),
 
@@ -1393,7 +1394,7 @@ COMMENT ON COLUMN master.auth_group_role.assignment_scope_type IS
     'legal_entity (CCs under an LE, subtree per include_descendants), '
     'network_membership (Mesh business-network membership).';
 COMMENT ON COLUMN master.auth_group_role.assignment_scope_ref_id IS
-    'FK to master.company_code.id, master.legal_entity.id, or '
+    'FK to master.company_code.id, master.legal_entity.id, master.operating_organization.id, or '
     'master.business_network_membership.id depending on '
     'assignment_scope_type. NULL when assignment_scope_type = tenant. '
     'Validated by trg_validate_assignment_scope trigger (tenant-safe).';
@@ -1608,13 +1609,14 @@ CREATE TABLE IF NOT EXISTS master.access_grant (
     ),
     CONSTRAINT ag_assignment_scope_chk CHECK (
         assignment_scope_type IS NULL
-     OR assignment_scope_type IN ('tenant', 'company_code', 'legal_entity', 'network_membership')
+     OR assignment_scope_type IN ('tenant', 'company_code', 'legal_entity', 'operating_organization', 'network_membership')
     ),
     CONSTRAINT ag_assignment_ref_chk CHECK (
         (assignment_scope_type IS NULL AND assignment_scope_ref_id IS NULL)
      OR (assignment_scope_type = 'tenant'        AND assignment_scope_ref_id IS NULL)
      OR (assignment_scope_type = 'company_code'  AND assignment_scope_ref_id IS NOT NULL)
      OR (assignment_scope_type = 'legal_entity'  AND assignment_scope_ref_id IS NOT NULL)
+     OR (assignment_scope_type = 'operating_organization' AND assignment_scope_ref_id IS NOT NULL)
      OR (assignment_scope_type = 'network_membership' AND assignment_scope_ref_id IS NOT NULL)
     ),
     CONSTRAINT ag_status_chk     CHECK (status IN ('active', 'revoked', 'expired')),

@@ -50,6 +50,9 @@ export async function loadTriggerManagedChildren(
                jsonb_array_elements(e.feature_flags -> 'trigger_managed_children') AS child
           FROM control.entity e
          WHERE e.tenant_id IS NULL
+           AND e.runtime_enabled = true
+           AND e.status = 'ACTIVE'
+           AND e.is_active = true
            AND e.feature_flags ? 'trigger_managed_children'
            AND e.entity_code = ${parentEntityCode}
       `.execute(db)
@@ -57,8 +60,11 @@ export async function loadTriggerManagedChildren(
         SELECT e.entity_code,
                jsonb_array_elements(e.feature_flags -> 'trigger_managed_children') AS child
           FROM control.entity e
-         WHERE e.tenant_id IS NULL
-           AND e.feature_flags ? 'trigger_managed_children'
+          WHERE e.tenant_id IS NULL
+            AND e.runtime_enabled = true
+            AND e.status = 'ACTIVE'
+            AND e.is_active = true
+            AND e.feature_flags ? 'trigger_managed_children'
       `.execute(db);
 
   return rows.rows.map(r => ({

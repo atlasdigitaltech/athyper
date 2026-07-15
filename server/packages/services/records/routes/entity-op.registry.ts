@@ -35,7 +35,19 @@ import {
   type InvoiceFromReceiptLineInput,
   type InvoiceFromServiceSheetLineInput,
   type PaymentFromInvoiceAllocationInput,
+  aggregateSourcingDemand,
+  allocateSourcingAward,
+  convertSourcingAward,
+  createSourcingEvent,
+  SourcingDocumentError,
+  type SourcingPermissionDecision,
+  allocateSalesQuotation,
+  convertSalesQuotation,
+  createSalesOpportunity,
+  createSalesQuotation,
+  SalesDocumentError,
 } from "@athyper/svc-business";
+import { checkPermission as iamCheckPermission } from "@athyper/svc-iam";
 import { sql } from "kysely";
 import { entityHandlerRegistryFamily } from "../mutation/handler-registry-family.js";
 
@@ -212,6 +224,119 @@ function readPathValues(value: unknown, parts: string[]): unknown[] {
 export function resetEntityOpRegistryForTests(): void {
   entityHandlerRegistryFamily.clear("entity_operation");
 }
+
+function sourcingErrorOutcome(error: unknown): EntityOpOutcome {
+  if (error instanceof SourcingDocumentError || error instanceof SalesDocumentError) return { status: error.status, body: { error: error.code, message: error.message } };
+  if (error instanceof Error && ["SourcingAuthorizationError", "SalesAuthorizationError"].includes(error.name)) {
+    const authError = error as Error & { status?: number; code?: string };
+    return { status: authError.status ?? 403, body: { error: authError.code ?? "PERMISSION_DENIED", message: authError.message } };
+  }
+  throw error;
+}
+
+function sourcingPermissionChecker(deps: EntityOpDeps) {
+  return async (permissionCode: string, context?: Record<string, unknown>): Promise<SourcingPermissionDecision> => {
+    const permissionLogger = deps.logger
+      ? {
+          warn: deps.logger.warn,
+          error: deps.logger.error ?? (() => undefined),
+          info: deps.logger.info ?? (() => undefined),
+        }
+      : undefined;
+    const result = await iamCheckPermission(deps.db, deps.tenantId, deps.principalId, permissionCode, context, permissionLogger);
+    return result as unknown as SourcingPermissionDecision;
+  };
+}
+
+const sourcingCreateHandler: EntityOpHandler = async (deps, body) => {
+  try {
+    const input = body as { code?: string; name?: string; operatingOrganizationId?: string; eventType?: "rfp" | "rfq"; buyingModel?: "federated" | "central_buyer"; centralBuyerCompanyId?: string | null; participantCompanyCodeIds?: string[]; openAt?: string | null; closeAt?: string | null; metadata?: Record<string, unknown> };
+    return { status: 201, body: await createSourcingEvent({ ...deps, checkPermission: sourcingPermissionChecker(deps) }, {
+      code: input.code ?? "", name: input.name ?? "", operatingOrganizationId: input.operatingOrganizationId ?? "", eventType: input.eventType, buyingModel: input.buyingModel, centralBuyerCompanyId: input.centralBuyerCompanyId, participantCompanyCodeIds: input.participantCompanyCodeIds ?? [], openAt: input.openAt, closeAt: input.closeAt, metadata: input.metadata,
+    }) };
+  } catch (error) { return sourcingErrorOutcome(error); }
+};
+
+const sourcingAggregateDemandHandler: EntityOpHandler = async (deps, body) => {
+  try {
+    const input = body as { sourcingEventId?: string; demandLineIds?: string[] };
+    return { status: 200, body: await aggregateSourcingDemand({ ...deps, checkPermission: sourcingPermissionChecker(deps) }, { sourcingEventId: input.sourcingEventId ?? "", demandLineIds: input.demandLineIds ?? [] }) };
+  } catch (error) { return sourcingErrorOutcome(error); }
+};
+
+const sourcingAllocateAwardHandler: EntityOpHandler = async (deps, body) => {
+  try {
+    const input = body as { awardId?: string; allocations?: Array<{ companyCodeId: string; allocationPercent?: number | null; allocationAmount?: number | null }> };
+    return { status: 201, body: await allocateSourcingAward({ ...deps, checkPermission: sourcingPermissionChecker(deps) }, input.awardId ?? "", input.allocations ?? []) };
+  } catch (error) { return sourcingErrorOutcome(error); }
+};
+
+const sourcingConvertAwardHandler: EntityOpHandler = async (deps, body) => {
+  try {
+    const input = body as { awardId?: string; currencyCode?: string };
+    return { status: 201, body: await convertSourcingAward({ ...deps, checkPermission: sourcingPermissionChecker(deps) }, input.awardId ?? "", input.currencyCode) };
+  } catch (error) { return sourcingErrorOutcome(error); }
+};
+
+const salesOpportunityCreateHandler: EntityOpHandler = async (deps, body) => {
+  try {
+    const input = body as { code?: string; name?: string; customerId?: string; operatingOrganizationId?: string; sellingModel?: "federated" | "principal_seller"; principalSellerCompanyId?: string | null; participantCompanyCodeIds?: string[] };
+    return { status: 201, body: await createSalesOpportunity({ ...deps, checkPermission: sourcingPermissionChecker(deps) }, {
+      code: input.code ?? "", name: input.name ?? "", customerId: input.customerId ?? "", operatingOrganizationId: input.operatingOrganizationId ?? "",
+      sellingModel: input.sellingModel, principalSellerCompanyId: input.principalSellerCompanyId, participantCompanyCodeIds: input.participantCompanyCodeIds ?? [],
+    }) };
+  } catch (error) { return sourcingErrorOutcome(error); }
+};
+
+const salesQuotationCreateHandler: EntityOpHandler = async (deps, body) => {
+  try {
+    const input = body as { opportunityId?: string; code?: string; name?: string };
+    return { status: 201, body: await createSalesQuotation({ ...deps, checkPermission: sourcingPermissionChecker(deps) }, { opportunityId: input.opportunityId ?? "", code: input.code ?? "", name: input.name ?? "" }) };
+  } catch (error) { return sourcingErrorOutcome(error); }
+};
+
+const salesQuotationAllocateHandler: EntityOpHandler = async (deps, body) => {
+  try {
+    const input = body as { quotationId?: string; allocations?: Array<{ companyCodeId: string; allocationPercent?: number | null; allocationAmount?: number | null }> };
+    return { status: 201, body: await allocateSalesQuotation({ ...deps, checkPermission: sourcingPermissionChecker(deps) }, input.quotationId ?? "", input.allocations ?? []) };
+  } catch (error) { return sourcingErrorOutcome(error); }
+};
+
+const salesQuotationConvertHandler: EntityOpHandler = async (deps, body) => {
+  try {
+    const input = body as { quotationId?: string; currencyCode?: string };
+    return { status: 201, body: await convertSalesQuotation({ ...deps, checkPermission: sourcingPermissionChecker(deps) }, input.quotationId ?? "", input.currencyCode ?? "USD") };
+  } catch (error) { return sourcingErrorOutcome(error); }
+};
+
+registerEntityOp({
+  entityCode: "sales_opportunity",
+  opCode: "create",
+  outboxEvent: "sales.opportunity.created",
+  workspaceScope: sourcingScope("operating_organization", ["operatingOrganizationId"], "sales.opportunity.created", ["operatingOrganizationId", "code"], true, "sales_opportunity"),
+  handler: salesOpportunityCreateHandler,
+});
+registerEntityOp({
+  entityCode: "sales_quotation",
+  opCode: "create",
+  outboxEvent: "sales.quotation.created",
+  workspaceScope: sourcingScope("sales_opportunity", ["opportunityId"], "sales.quotation.created", ["opportunityId", "code"], true, "sales_quotation"),
+  handler: salesQuotationCreateHandler,
+});
+registerEntityOp({
+  entityCode: "sales_quotation",
+  opCode: "allocate",
+  outboxEvent: "sales.quotation.allocated",
+  workspaceScope: sourcingScope("sales_quotation", ["quotationId"], "sales.quotation.allocated", ["quotationId", "allocations[].companyCodeId"]),
+  handler: salesQuotationAllocateHandler,
+});
+registerEntityOp({
+  entityCode: "sales_quotation",
+  opCode: "convert",
+  outboxEvent: "sales.quotation.converted",
+  workspaceScope: sourcingScope("sales_quotation", ["quotationId"], "sales.quotation.converted", ["quotationId", "currencyCode"], true, "sales_order"),
+  handler: salesQuotationConvertHandler,
+});
 
 /**
  * Non-HTTP dispatch helper. Used by tests, background workers, and the
@@ -817,6 +942,56 @@ registerEntityOp({
   outboxEvent: "p2p.payment.created_from_invoice",
   workspaceScope: conversionScope("purchase_invoice", ["allocations[].invoiceId"], "payment_entry", "p2p.payment.created_from_invoice", ["allocations[].invoiceId", "allocations[].amount"], "approve", "multiple"),
   handler:     paymentFromInvoiceHandler,
+});
+
+function sourcingScope(
+  sourceEntityCode: string,
+  sourceIdPaths: readonly string[],
+  eventType: string,
+  requestIdentityPaths: readonly string[],
+  createsDocument = false,
+  targetEntityCode?: string,
+): EntityOpWorkspaceScope {
+  return {
+    sourceDocument: { entityCode: sourceEntityCode, acceptedIdPaths: sourceIdPaths, required: true, cardinality: "single" },
+    workspaceProfile: createsDocument ? "create" : "edit",
+    createsDocument,
+    ...(targetEntityCode ? { targetEntityCode } : {}),
+    runtimeEventPolicy: {
+      eventType, invalidationSource: "operation", invalidationOperationKey: "*", itemsMutated: true,
+      sourceBehavior: "none", targetBehavior: createsDocument ? "initialize" : "none",
+    },
+    idempotencyPolicy: { operationKey: eventType, requestIdentityPaths, replayResponsePolicy: "stored_response" },
+  };
+}
+
+registerEntityOp({
+  entityCode: "sourcing_event",
+  opCode: "create",
+  outboxEvent: "procurement.sourcing_event.created",
+  workspaceScope: sourcingScope("operating_organization", ["operatingOrganizationId"], "procurement.sourcing_event.created", ["operatingOrganizationId", "code"], true, "sourcing_event"),
+  handler: sourcingCreateHandler,
+});
+registerEntityOp({
+  entityCode: "sourcing_event",
+  opCode: "aggregate_demand",
+  outboxEvent: "procurement.sourcing_event.demand_aggregated",
+  workspaceScope: sourcingScope("sourcing_event", ["sourcingEventId"], "procurement.sourcing_event.demand_aggregated", ["sourcingEventId", "demandLineIds[]"]),
+  handler: sourcingAggregateDemandHandler,
+});
+registerEntityOp({
+  entityCode: "sourcing_event_award",
+  opCode: "allocate_award",
+  outboxEvent: "procurement.sourcing_event.award_allocated",
+  workspaceScope: sourcingScope("sourcing_event_award", ["awardId"], "procurement.sourcing_event.award_allocated", ["awardId", "allocations[].companyCodeId"]),
+  handler: sourcingAllocateAwardHandler,
+});
+registerEntityOp({
+  entityCode: "sourcing_event_award",
+  opCode: "convert_award",
+  outboxEvent: "procurement.sourcing_event.award_converted",
+  workspaceScope: sourcingScope("sourcing_event_award", ["awardId"], "procurement.sourcing_event.award_converted", ["awardId", "currencyCode"], true, "commitment"),
+  handler: sourcingConvertAwardHandler,
 });
 
 function conversionScope(

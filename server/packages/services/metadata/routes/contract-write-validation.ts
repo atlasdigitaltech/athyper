@@ -25,6 +25,14 @@ const FIELD_DIRECT_COLUMNS = new Set([
   "group_key",
 ]);
 
+const ENTITY_RUNTIME_COLUMNS = new Set([
+  "runtime_enabled",
+  "primary_key",
+  "tenant_column",
+  "read_capability",
+  "write_capability",
+]);
+
 
 const VALIDATION_REFERENCE_KEYS = new Set([
   "ref_entity",
@@ -420,7 +428,10 @@ export function validateEntityContractWrite(input: unknown): ContractWriteValida
     };
   }
 
-  const allowed = new Set(contractDefinitionsForScope("entity").map((entry) => entry.property));
+  const allowed = new Set([
+    ...contractDefinitionsForScope("entity").map((entry) => entry.property),
+    ...ENTITY_RUNTIME_COLUMNS,
+  ]);
   for (const [property, value] of Object.entries(body)) {
     if (!allowed.has(property)) {
       addError(errors, property, `${property} is not a registered entity contract property.`);
@@ -429,7 +440,26 @@ export function validateEntityContractWrite(input: unknown): ContractWriteValida
     values[property] = value;
   }
 
-  validateNormalizedProperties("entity", values, warnings, errors);
+  const runtimeEnabled = values["runtime_enabled"];
+  if (runtimeEnabled !== undefined && typeof runtimeEnabled !== "boolean") {
+    addError(errors, "runtime_enabled", "runtime_enabled must be boolean.");
+  }
+  for (const property of ["primary_key", "tenant_column"] as const) {
+    const value = values[property];
+    if (value !== undefined && value !== null && (typeof value !== "string" || !/^[a-z_][a-z0-9_]*$/.test(value))) {
+      addError(errors, property, `${property} must be a physical snake_case column name or null.`);
+    }
+  }
+  const readCapability = values["read_capability"];
+  if (readCapability !== undefined && !["none", "generic", "facade", "projection"].includes(String(readCapability))) {
+    addError(errors, "read_capability", "read_capability is invalid.");
+  }
+  const writeCapability = values["write_capability"];
+  if (writeCapability !== undefined && !["none", "generic", "facade", "append_only"].includes(String(writeCapability))) {
+    addError(errors, "write_capability", "write_capability is invalid.");
+  }
+
+  validateNormalizedProperties("entity", Object.fromEntries(Object.entries(values).filter(([key]) => !ENTITY_RUNTIME_COLUMNS.has(key))), warnings, errors);
   return { values, warnings, errors };
 }
 

@@ -125,8 +125,13 @@ export async function loadEntityDefaultsMap(
       JOIN control.entity e          ON e.id  = ev.entity_id
      WHERE e.table_name   = ${entityCode}
        AND e.tenant_id    IS NULL
-       AND ef.defaults    IS NOT NULL
-       AND ef.is_active   = true
+        AND e.runtime_enabled = true
+        AND e.status       = 'ACTIVE'
+        AND e.is_active    = true
+        AND ev.status      = 'EFFECTIVE'
+        AND ef.defaults    IS NOT NULL
+        AND ef.is_active   = true
+        AND ef.runtime_enabled = true
      ORDER BY ev.version_no DESC, ef.name
   `.execute(db);
 

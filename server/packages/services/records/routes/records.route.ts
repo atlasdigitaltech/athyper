@@ -524,6 +524,7 @@ async function resolveCompiledRuntimeInvalidationNodes(
   const snapshot = await (trx.selectFrom("snapshot.entity_compiled" as never) as any)
     .select("compiled_json")
     .where("entity_version_id", "=", input.entityVersionId)
+    .where("artifact_kind", "=", "execution")
     .executeTakeFirst() as { compiled_json?: unknown } | undefined;
   const compiled = snapshot?.compiled_json;
   const plan = compiled && typeof compiled === "object" && !Array.isArray(compiled)
@@ -621,9 +622,9 @@ async function normalizeEntityOperationSourceIds(input: {
     const values = readOperationPathValues(normalized, path.split("."));
     for (const value of values) {
       if (typeof value !== "string" || !value.trim()) return null;
-      const row = await resolveRecordRow(input.db, fullTable, value.trim(), table.natural_key_fields, fieldMap, input.tenantId);
-      const physicalId = typeof row?.["id"] === "string" ? row.id : null;
-      if (!physicalId || row?.["tenant_id"] !== input.tenantId) return null;
+      const row = await resolveRecordRow(input.db, fullTable, value.trim(), table.primary_key ?? "id", table.natural_key_fields, fieldMap, input.tenantId, table.tenant_column);
+      const physicalId = resolvePhysicalRecordId(row, table.primary_key);
+      if (!physicalId || (table.tenant_column && row?.[table.tenant_column] !== input.tenantId)) return null;
       replaceOperationPathValue(normalized, path.split("."), value, physicalId);
       ids.add(physicalId);
     }
@@ -662,6 +663,7 @@ async function resolveDocumentRuntimePlanHashes(db: Kysely<any>, entityVersionId
   const snapshot = await (db.selectFrom("snapshot.entity_compiled" as never) as any)
     .select("compiled_json")
     .where("entity_version_id", "=", entityVersionId)
+    .where("artifact_kind", "=", "execution")
     .executeTakeFirst() as { compiled_json?: unknown } | undefined;
   const compiled = snapshot?.compiled_json;
   const plan = compiled && typeof compiled === "object" && !Array.isArray(compiled)
@@ -685,6 +687,7 @@ async function resolveDocumentRuntimeChildCollections(
   const snapshot = await (db.selectFrom("snapshot.entity_compiled" as never) as any)
     .select("compiled_json")
     .where("entity_version_id", "=", entityVersionId)
+    .where("artifact_kind", "=", "execution")
     .executeTakeFirst() as { compiled_json?: unknown } | undefined;
   const compiled = snapshot?.compiled_json;
   const plan = compiled && typeof compiled === "object" && !Array.isArray(compiled)
@@ -728,7 +731,6 @@ export interface RecordsRouteDeps {
   /** P3 descriptor provider used by the P5 read kernel. */
   executionDescriptorProvider?: ExecutionDescriptorProvider;
   /** Explicit allow-list. An empty set keeps the extracted query path disabled. */
-  entityQueryPilotCodes?: ReadonlySet<string>;
   /** HMAC key for opaque keyset cursors. Required when a pilot is enabled. */
   entityQueryCursorSecret?: string;
 }
@@ -745,6 +747,10 @@ interface EntityTableInfo {
   entity_class:        string;
   ownership_model:     string;
   backing_type:        string;
+  primary_key:         string | null;
+  tenant_column:       string | null;
+  read_capability:     string;
+  write_capability:    string;
   mutability:          string;
   create_mode:         string;
   draft_ttl_hours:     number | null;
@@ -769,6 +775,15 @@ function rejectGenericDocumentMutation(res: Response, table: EntityTableInfo): b
   return true;
 }
 
+function rejectRuntimeWrite(res: Response, table: EntityTableInfo): boolean {
+  if (table.write_capability !== "none") return false;
+  res.status(405).json({
+    error: "ENTITY_WRITE_DISABLED",
+    message: `Entity '${table.name}' is compiled as read-only.`,
+  });
+  return true;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<EntityTableInfo | null> {
   // Normalise URL slug â†’ DB name (journal-entry â†’ journal_entry)
@@ -784,6 +799,10 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
       "e.entity_class",
       "e.ownership_model",
       "e.backing_type",
+      "e.primary_key",
+      "e.tenant_column",
+      "e.read_capability",
+      "e.write_capability",
       "e.mutability",
       "e.create_mode",
       "e.draft_ttl_hours",
@@ -795,6 +814,9 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
     ] as never[])
     .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
     .where("ev.status", "=", "EFFECTIVE")
     .executeTakeFirst() as Record<string, unknown> | undefined;
   if (!row) return null;
@@ -803,9 +825,8 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
   const featureFlags = (row["feature_flags"] && typeof row["feature_flags"] === "object")
     ? (row["feature_flags"] as Record<string, unknown>)
     : {};
-  if (featureFlags["generic_runtime_disabled"] === true || featureFlags["records_api_disabled"] === true) {
-    return null;
-  }
+  if (String(row["read_capability"] ?? "none") === "none") return null;
+  if (row["primary_key"] == null || String(row["primary_key"]).trim() === "") return null;
 
   const businessKeyFields = stringArray(identityConfig["business_key_fields"]);
   const identityNaturalKeyFields = stringArray(identityConfig["natural_key_fields"])
@@ -823,6 +844,10 @@ async function resolveEntityTable(db: Kysely<any>, entityCode: string): Promise<
     entity_class:        String(row["entity_class"] ?? ""),
     ownership_model:     String(row["ownership_model"] ?? "system"),
     backing_type:        String(row["backing_type"] ?? "table"),
+    primary_key:         row["primary_key"] == null ? null : String(row["primary_key"]),
+    tenant_column:       row["tenant_column"] == null ? null : String(row["tenant_column"]),
+    read_capability:     String(row["read_capability"] ?? "none"),
+    write_capability:    String(row["write_capability"] ?? "none"),
     mutability:          String(row["mutability"] ?? "controlled"),
     create_mode:         String(row["create_mode"] ?? "FORM_ONLY"),
     draft_ttl_hours:     row["draft_ttl_hours"] == null ? null : Number(row["draft_ttl_hours"]),
@@ -888,6 +913,10 @@ function toMutationTableInfo(table: EntityTableInfo): EntityMutationTableInfo {
     table_name: table.table_name,
     backing_type: table.backing_type,
     entity_class: table.entity_class,
+    primary_key: table.primary_key ?? "",
+    tenant_column: table.tenant_column,
+    read_capability: table.read_capability,
+    write_capability: table.write_capability,
     mutability: table.mutability,
     feature_flags: table.feature_flags,
   };
@@ -912,11 +941,11 @@ async function checkEntityOperationCompanyScope(input: {
   activeLegalEntityId?: string;
 }): Promise<EntityOperationCompanyScopeResult> {
   const qualifiedTable = `${input.table.table_schema}.${input.table.table_name}`;
-  const source = await (input.db.selectFrom(qualifiedTable as never) as any)
+  let sourceQuery = (input.db.selectFrom(qualifiedTable as never) as any)
     .select("company_code_id")
-    .where("tenant_id", "=", input.tenantId)
-    .where("id", "=", input.recordId)
-    .executeTakeFirst() as { company_code_id?: string | null } | undefined;
+    .where(input.table.primary_key, "=", input.recordId);
+  if (input.table.tenant_column) sourceQuery = sourceQuery.where(input.table.tenant_column, "=", input.tenantId);
+  const source = await sourceQuery.executeTakeFirst() as { company_code_id?: string | null } | undefined;
   const companyCodeId = source?.company_code_id;
   if (!companyCodeId) return { allowed: true };
 
@@ -1039,6 +1068,8 @@ async function fetchRecordStatus(
   fullTable: `${string}.${string}`,
   recordId: string,
   tenantId: string,
+  primaryKey = "id",
+  tenantColumn: string | null = "tenant_id",
 ): Promise<string | null> {
   const statusSource = resolveRecordStatusSource(fullTable);
 
@@ -1090,11 +1121,11 @@ async function fetchRecordStatus(
   // â”€â”€ Default: read own status column â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const row = await (db.selectFrom(fullTable) as any)
+    let query: any = (db.selectFrom(fullTable) as any)
       .select(["status"])
-      .where("id", "=", recordId)
-      .where("tenant_id", "=", tenantId)
-      .executeTakeFirst() as { status?: string } | undefined;
+      .where(primaryKey, "=", recordId);
+    if (tenantColumn) query = query.where(tenantColumn, "=", tenantId);
+    const row = await query.executeTakeFirst() as { status?: string } | undefined;
     if (!row) return null;
     return typeof row.status === "string" ? row.status : null;
   } catch {
@@ -1509,6 +1540,21 @@ function remapRecordRow(row: Record<string, unknown>, fieldMap: Map<string, stri
   for (const [fieldName, columnName] of fieldMap.entries()) {
     const value = readMappedValue(row, columnName);
     if (value !== undefined) out[fieldName] = value;
+  }
+  return out;
+}
+
+function exposeRuntimeIdentityAliases(
+  row: Record<string, unknown>,
+  primaryKey: string | null,
+  tenantColumn: string | null,
+): Record<string, unknown> {
+  const out = { ...row };
+  if (primaryKey && out["id"] === undefined && out[primaryKey] !== undefined) {
+    out["id"] = out[primaryKey];
+  }
+  if (tenantColumn && out["tenant_id"] === undefined && out[tenantColumn] !== undefined) {
+    out["tenant_id"] = out[tenantColumn];
   }
   return out;
 }
@@ -2094,6 +2140,11 @@ async function loadCreateGraphContract(
       FROM control.entity
      WHERE entity_code = ${entityCode}
        AND (tenant_id = ${tenantId}::uuid OR tenant_id IS NULL)
+       AND runtime_enabled = true
+       AND status = 'ACTIVE'
+       AND is_active = true
+       AND read_capability <> 'none'
+       AND EXISTS (SELECT 1 FROM control.entity_version ev WHERE ev.entity_id = control.entity.id AND ev.status = 'EFFECTIVE')
        AND feature_flags -> 'create_graph' IS NOT NULL
      ORDER BY (tenant_id IS NOT NULL) DESC
      LIMIT 1
@@ -2269,34 +2320,78 @@ async function resolveRecordRow(
   db:               Kysely<any>,
   fullTable:        `${string}.${string}`,
   id:               string,
+  primaryKey:       string,
   naturalKeyFields: string[],
   fieldMap:         Map<string, string>,
   tenantId:         string | null,
+  tenantColumn:     string | null,
 ): Promise<Record<string, unknown> | undefined> {
-  if (UUID_RE.test(id)) {
-    return db
-      .selectFrom(fullTable)
-      .selectAll()
-      .where("id" as never, "=", id as never)
-      .executeTakeFirst() as Promise<Record<string, unknown> | undefined>;
-  }
+  let primaryQuery: any = db
+    .selectFrom(fullTable)
+    .selectAll()
+    .where(primaryKey as never, "=", id as never);
+  if (tenantColumn) primaryQuery = primaryQuery.where(tenantColumn as never, "=", tenantId as never);
+  const primaryRow = await primaryQuery.executeTakeFirst() as Record<string, unknown> | undefined;
+  if (primaryRow) return primaryRow;
 
   // Business-key path â€” requires tenant scope and at least one natural key field
-  if (!tenantId || naturalKeyFields.length === 0) return undefined;
+  if ((tenantColumn && !tenantId) || naturalKeyFields.length === 0) return undefined;
 
   // Map logical field names â†’ physical column names
   const nkColumns = naturalKeyFields.map((f) => fieldMap.get(f) ?? f);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return db
+  let businessQuery: any = db
     .selectFrom(fullTable)
-    .selectAll()
-    .where("tenant_id" as never, "=", tenantId as never)
+    .selectAll();
+  if (tenantColumn) businessQuery = businessQuery.where(tenantColumn as never, "=", tenantId as never);
+  return businessQuery
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .where((eb: any) =>
       eb.or(nkColumns.map((col: string) => eb(col as never, "=", id as never))),
     )
     .executeTakeFirst() as Promise<Record<string, unknown> | undefined>;
+}
+
+function resolvePhysicalRecordId(row: Record<string, unknown> | undefined, primaryKey: string | null): string | null {
+  if (!row || !primaryKey) return null;
+  const value = row[primaryKey];
+  return value === undefined || value === null ? null : String(value);
+}
+
+async function resolveCanonicalRecordId(
+  db: Kysely<any>,
+  table: EntityTableInfo,
+  requestedId: string,
+  tenantId: string | null,
+): Promise<string | null> {
+  const fieldMap = await resolveFieldMap(db, table.name);
+  const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
+  return resolvePhysicalRecordId(
+    await resolveRecordRow(
+      db,
+      fullTable,
+      requestedId,
+      table.primary_key ?? "id",
+      table.natural_key_fields,
+      fieldMap,
+      tenantId,
+      table.tenant_column,
+    ),
+    table.primary_key,
+  );
+}
+
+function applyEntityIdentityScope(
+  query: any,
+  primaryKey: string,
+  tenantColumn: string | null,
+  tenantId: string | null,
+  recordId: string,
+): any {
+  let scoped = query.where(primaryKey, "=", recordId);
+  if (tenantColumn) scoped = scoped.where(tenantColumn, "=", tenantId);
+  return scoped;
 }
 
 // â”€â”€ Filter sigil parser (mirrors client parseFilterSigil, no shared dep) â”€â”€â”€â”€â”€
@@ -2511,8 +2606,7 @@ function parseEntityCountMode(raw: unknown): EntityCountMode | undefined {
 
 export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Router {
   const { db, auth, logger, cache, redis } = deps;
-  const queryPilots = new Set([...(deps.entityQueryPilotCodes ?? [])].map((code) => code.replace(/-/g, "_").toLowerCase()));
-  const entityQueryService = deps.executionDescriptorProvider && queryPilots.size > 0 && deps.entityQueryCursorSecret
+  const entityQueryService = deps.executionDescriptorProvider && deps.entityQueryCursorSecret
     ? new EntityQueryService({
         executor: new KyselyEntityQueryExecutor(db),
         cursorSecret: deps.entityQueryCursorSecret,
@@ -2538,7 +2632,6 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
   const shouldUseEntityQuery = (req: Request, entityCode: string): boolean =>
     entityQueryService !== undefined
-    && queryPilots.has(entityCode.replace(/-/g, "_").toLowerCase())
     && ["1", "true", "yes"].includes(String(req.query["query_v1"] ?? "").toLowerCase())
     && req.query["facets"] === undefined
     && req.query["group"] === undefined
@@ -2609,9 +2702,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           SELECT true AS ok
             FROM control.entity_field ef
             JOIN control.entity_version ev ON ev.id = ef.entity_version_id
-            JOIN control.entity e ON e.id = ev.entity_id
+           JOIN control.entity e ON e.id = ev.entity_id
            WHERE ev.status = 'EFFECTIVE'
+             AND e.tenant_id IS NULL
+             AND e.runtime_enabled = true
+             AND e.is_active = true
              AND ef.is_active = true
+             AND ef.runtime_enabled = true
              AND COALESCE(ef.reference_config->>'target_entity', ef.reference_config->>'ref_entity', ef.validation->>'ref_entity') = ${reference.entity}
              AND COALESCE(ef.reference_config->>'target_field', ef.reference_config->>'value_field', 'id') = ${reference.valueField}
              AND COALESCE(ef.reference_config->>'label_field', ef.reference_config->>'display_field', 'name') = ${reference.labelField}
@@ -2871,8 +2968,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           .select(["ef.name", "ef.column_name", "ef.is_computed", "ef.is_searchable", "ef.data_type", "ef.reference_config"])
           .where("e.name",       "=",  listCode)
           .where("e.tenant_id",  "is", null)
+          .where("e.runtime_enabled", "=", true)
+          .where("e.is_active", "=", true)
           .where("ev.status",    "=",  "EFFECTIVE")
           .where("ef.is_active", "=",  true)
+          .where("ef.runtime_enabled", "=", true)
           .execute() as Promise<{ name: string; column_name: string; is_computed: boolean; is_searchable: boolean; data_type: string; reference_config: Record<string, unknown> | null }[]>,
         db
           .selectFrom("control.entity_version as ev")
@@ -2900,7 +3000,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const metadataColumnNames = new Set(fieldMeta.map((f) => f.column_name));
       const physicalColumnNames = new Set(physicalColumns.map((f) => f.column_name));
       const queryableColumnNames = physicalColumnNames.size > 0 ? physicalColumnNames : metadataColumnNames;
-      const hasTenantColumn = queryableColumnNames.has("tenant_id");
+      const tenantColumn = listTable.tenant_column;
+      const hasTenantColumn = tenantColumn !== null && queryableColumnNames.has(tenantColumn);
 
       // Reject attempts to filter/sort on computed fields â€” with one
       // narrow carve-out. Presence-only ops (is_null / is_not_null)
@@ -2950,17 +3051,17 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         if (includeSystemConditionTypes) {
           const tenantOrSystemConditionType = sql<boolean>`
             (
-              tenant_id = ${tenantId}::uuid
-              OR (tenant_id IS NULL AND is_system = true)
+            ${sql.ref(tenantColumn ?? "tenant_id")} = ${tenantId}::uuid
+              OR (${sql.ref(tenantColumn ?? "tenant_id")} IS NULL AND is_system = true)
             )
           `;
           listQuery  = listQuery.where(tenantOrSystemConditionType as never);
           countQuery = countQuery.where(tenantOrSystemConditionType as never);
           if (groupCountQuery) groupCountQuery = groupCountQuery.where(tenantOrSystemConditionType as never);
         } else {
-          listQuery  = listQuery.where("tenant_id"  as never, "=", tenantId as never);
-          countQuery = countQuery.where("tenant_id" as never, "=", tenantId as never);
-          if (groupCountQuery) groupCountQuery = groupCountQuery.where("tenant_id" as never, "=", tenantId as never);
+          listQuery  = listQuery.where(tenantColumn as never, "=", tenantId as never);
+          countQuery = countQuery.where(tenantColumn as never, "=", tenantId as never);
+          if (groupCountQuery) groupCountQuery = groupCountQuery.where(tenantColumn as never, "=", tenantId as never);
         }
       }
 
@@ -3132,7 +3233,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       if (virtualFilterKeys.length > 0) {
         if (sigilFilters["__bookmarked"]) {
           if (tenantId && principalId) {
-            const recordIdRef = sql.ref(`${listTable.table_name}.id`);
+            const recordIdRef = sql.ref(`${listTable.table_name}.${listTable.primary_key ?? "id"}`);
             const bookmarkedPredicate = sql<boolean>`exists (
               select 1
               from master.record_bookmark rb
@@ -3179,10 +3280,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           // control.entity at runtime â€” nothing entity-specific is hardcoded here.
           const throughMeta = await db
             .selectFrom("control.entity as e")
-            .select(["e.table_schema", "e.table_name", "e.identity_config", "e.feature_flags"])
+            .select(["e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column", "e.identity_config", "e.feature_flags"])
             .where("e.entity_code", "=", throughEntityCode)
             .where("e.tenant_id",   "is", null)
-            .executeTakeFirst() as { table_schema: string; table_name: string; identity_config: unknown; feature_flags: unknown } | undefined;
+          .executeTakeFirst() as { table_schema: string; table_name: string; primary_key: string | null; tenant_column: string | null; identity_config: unknown; feature_flags: unknown } | undefined;
 
           if (throughMeta) {
             const throughParentFk = parentFkFromConfigs(
@@ -3191,9 +3292,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             );
             if (throughParentFk) {
               const throughTable = `${throughMeta.table_schema}.${throughMeta.table_name}`;
+              const throughPrimaryKey = throughMeta.primary_key ?? "id";
+              const throughTenantColumn = throughMeta.tenant_column;
               const inPredicate = tenantId
-                ? sql<boolean>`${sql.ref(parentFkCol)} IN (SELECT id FROM ${sql.raw(throughTable)} WHERE ${sql.raw(throughParentFk)} = ${parentIdParam}::uuid AND tenant_id = ${tenantId}::uuid)`
-                : sql<boolean>`${sql.ref(parentFkCol)} IN (SELECT id FROM ${sql.raw(throughTable)} WHERE ${sql.raw(throughParentFk)} = ${parentIdParam}::uuid)`;
+                ? sql<boolean>`${sql.ref(parentFkCol)} IN (SELECT ${sql.ref(throughPrimaryKey)} FROM ${sql.raw(throughTable)} WHERE ${sql.ref(throughParentFk)} = ${parentIdParam}::uuid ${throughTenantColumn ? sql`AND ${sql.ref(throughTenantColumn)} = ${tenantId}::uuid` : sql``})`
+                : sql<boolean>`${sql.ref(parentFkCol)} IN (SELECT ${sql.ref(throughPrimaryKey)} FROM ${sql.raw(throughTable)} WHERE ${sql.ref(throughParentFk)} = ${parentIdParam}::uuid)`;
               listQuery  = listQuery.where(inPredicate  as never);
               countQuery = countQuery.where(inPredicate as never);
               if (groupCountQuery) groupCountQuery = groupCountQuery.where(inPredicate as never);
@@ -3501,7 +3604,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         }
       }
       // Always append id ASC as tie-breaker to guarantee stable pagination
-      listQuery = listQuery.orderBy("id" as never, "asc" as never);
+      const stableTieBreaker = listTable.primary_key && queryableColumnNames.has(listTable.primary_key)
+        ? listTable.primary_key
+        : null;
+      if (stableTieBreaker) listQuery = listQuery.orderBy(stableTieBreaker as never, "asc" as never);
 
       const descriptorHash = stableEntityListCacheHash({
         versionHash: entityVersionRow?.version_hash,
@@ -3598,7 +3704,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const total = parseInt(String(countResult?.count ?? "0"), 10);
 
       const remappedRows = (rows as Record<string, unknown>[]).map((row) => {
-        return remapRecordRow(row, fieldMap);
+        const remapped = remapRecordRow(row, fieldMap);
+        // Keep `id` as a public compatibility alias while the canonical
+        // physical identity comes from control.entity.primary_key. Existing
+        // UI/shared consumers can therefore render natural-key entities
+        // without reintroducing an id assumption into SQL execution.
+        return exposeRuntimeIdentityAliases(remapped, listTable.primary_key, listTable.tenant_column);
       });
       let responseRows = remappedRows;
       if (isCertificationBackingTable(listTable)) {
@@ -3768,7 +3879,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         res.setHeader("X-Entity-Query", "v1");
         res.setHeader("X-Descriptor-Hash", resolved.descriptor.identity.compiledHash);
         res.setHeader("X-Descriptor-Cache", resolved.cacheState);
-        res.json({ id: result.data["id"] ?? id, entity_code: entityCode, data: result.data });
+        const primaryKeyField = resolved.descriptor.fields.get(resolved.descriptor.storage.primaryKey)?.name
+          ?? resolved.descriptor.storage.primaryKey;
+        res.json({ id: result.data[primaryKeyField] ?? id, entity_code: entityCode, data: result.data });
         return;
       }
       const table = await resolveEntityTable(db, entityCode);
@@ -3781,7 +3894,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       // Resolve field map early â€” needed for both business-key lookup and response remapping
       const fieldMap = await resolveFieldMap(db, entityCode);
-      const row = await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId);
+      const row = await resolveRecordRow(db, fullTable, id, table.primary_key ?? "id", table.natural_key_fields, fieldMap, tenantId, table.tenant_column);
 
       if (!row) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
@@ -3864,9 +3977,9 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       }
 
       const detailBody: Record<string, unknown> = {
-        id:               row.id,
+        id:               table.primary_key ? row[table.primary_key] : row.id,
         entity_code:      entityCode,
-        tenant_id:        row.tenant_id,
+        ...(table.tenant_column ? { tenant_id: row[table.tenant_column] } : {}),
         status:           row.status,
         is_active:        row.is_active,
         created_at:       row.created_at,
@@ -3878,9 +3991,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         data:             responseData,
       };
 
-      // Apply field-security masking using tenantId from the fetched row
-      if (typeof row.tenant_id === "string") {
-        await applyFieldSecurityMask(db, row.tenant_id, entityCode, roles, detailBody, logger);
+      // Global rows have no tenant column, but the caller still has a tenant
+      // security context. Use the verified context for policy evaluation.
+      const securityTenantId = table.tenant_column ? row[table.tenant_column] : tenantId;
+      if (typeof securityTenantId === "string") {
+        await applyFieldSecurityMask(db, securityTenantId, entityCode, roles, detailBody, logger);
       }
 
       // â”€â”€ BFF dependency warnings (Phase 5) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -3888,7 +4003,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // matches their dependent_filter against the row's own source values.
       // Picker UI renders "needs review" without silently clearing.
       // Spec: docs/specs/entity_field_defaults.md Â§5 (bff_on_load_hydrate)
-      if (typeof row.tenant_id === "string") {
+      if (typeof securityTenantId === "string") {
         try {
           const fieldMapForLogical = await resolveFieldMap(db, entityCode);
           const physicalToLogical = new Map<string, string>();
@@ -3903,7 +4018,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             entityCode,
             row:      logicalRow,
             db,
-            tenantId: row.tenant_id,
+            tenantId: securityTenantId,
           });
           if (Object.keys(warnings).length > 0) {
             detailBody["_dependency_warnings"] = warnings;
@@ -3933,6 +4048,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
       if (rejectGenericDocumentMutation(res, table)) return;
+      if (rejectRuntimeWrite(res, table)) return;
 
       // Remap form field names â†’ physical column names via entity_field
       const fieldMap = await resolveFieldMap(db, entityCode);
@@ -3992,7 +4108,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         }
       }
 
-      mappedData.tenant_id = tenantId;
+      if (table.tenant_column) mappedData[table.tenant_column] = tenantId;
 
       mappedData.created_by = principalId;
 
@@ -4119,7 +4235,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
             db: trx as unknown as Kysely<Record<string, any>>, tenantId, principalId, input: inputData,
           });
           if (!result.ok) return result;
-          const recordId = String(result.record["id"] ?? "");
+          const recordId = String((table.primary_key ? result.record[table.primary_key] : result.record["id"]) ?? "");
           if (recordId) {
             const eventType = `${entityCode}.created`;
             const version = result.record["row_version"] ?? 0;
@@ -4160,10 +4276,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           return;
         }
 
-        const newId = String(outcome.record["id"] ?? "");
+        const newId = String((table.primary_key ? outcome.record[table.primary_key] : outcome.record["id"]) ?? "");
         if (newId && createIdempotencyClaimId) createIdempotencyClaimId = undefined;
         await invalidateListCachesForEntity(tenantId, entityCode, table);
-        let createdRecord = outcome.record;
+        let createdRecord = exposeRuntimeIdentityAliases(outcome.record, table.primary_key, table.tenant_column);
         try {
           createdRecord = await enrichSingleReferenceLabels(db, {
             entityCode,
@@ -4633,6 +4749,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
       if (rejectGenericDocumentMutation(res, table)) return;
+      if (rejectRuntimeWrite(res, table)) return;
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
 
@@ -4648,15 +4765,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const inputData = body.data ?? {};
 
       // Resolve UUID from business key when caller passes a canonical key
-      const physicalId = UUID_RE.test(id)
-        ? id
-        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId))?.id ?? "");
+      const physicalId = resolvePhysicalRecordId(await resolveRecordRow(db, fullTable, id, table.primary_key ?? "id", table.natural_key_fields, fieldMap, tenantId, table.tenant_column), table.primary_key);
       if (!physicalId) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
         return;
       }
 
-      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId);
+      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId, table.primary_key ?? "id", table.tenant_column);
       const fieldDecision = validateEntityWriteFields({
         input: inputData,
         rules: writeRules,
@@ -4723,11 +4838,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         // Bind expectedVersion into the WHERE clause (null = skip version check)
         if (expectedVersion !== null) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const versionRow = await (db.selectFrom(fullTable) as any)
-            .select(["row_version"])
-            .where("id", "=", physicalId)
-            .where("tenant_id", "=", tenantId)
-            .executeTakeFirst() as { row_version: number } | undefined;
+          const versionRow = await applyEntityIdentityScope(
+            (db.selectFrom(fullTable) as any).select(["row_version"]),
+            table.primary_key ?? "id", table.tenant_column, tenantId, physicalId,
+          ).executeTakeFirst() as { row_version: number } | undefined;
 
           if (!versionRow) {
             res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
@@ -4743,11 +4857,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       // Fetch current state for before/after diff in activity log
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const oldRow = (await (db.selectFrom(fullTable) as any)
-        .selectAll()
-        .where("id", "=", physicalId)
-        .where("tenant_id", "=", tenantId)
-        .executeTakeFirst()) as Record<string, unknown> | undefined;
+      const oldRow = await applyEntityIdentityScope(
+        (db.selectFrom(fullTable) as any).selectAll(),
+        table.primary_key ?? "id", table.tenant_column, tenantId, physicalId,
+      ).executeTakeFirst() as Record<string, unknown> | undefined;
 
       // â”€â”€ Source-change validation (defaults.on_source_change, server layer) â”€â”€
       // Spec: docs/specs/entity_field_defaults.md Â§6
@@ -4809,11 +4922,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           await sql`select set_config('app.current_principal_id', ${principalId}, true)`.execute(trx);
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const updated = await (trx.updateTable(fullTable) as any)
-          .set(mappedData)
-          .where("id", "=", physicalId)
-          .where("tenant_id", "=", tenantId)
-          .returningAll()
+        const updated = await applyEntityIdentityScope(
+          (trx.updateTable(fullTable) as any).set(mappedData),
+          table.primary_key ?? "id", table.tenant_column, tenantId, physicalId,
+        ).returningAll()
           .executeTakeFirst() as Record<string, unknown> | undefined;
         if (!updated) return updated;
         const actorId = principalId ?? SYSTEM_PRINCIPAL_UUID;
@@ -4910,9 +5022,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
       const fieldMap = await resolveFieldMap(db, entityCode);
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
-      const physicalId = UUID_RE.test(id)
-        ? id
-        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId))?.id ?? "");
+      const physicalId = resolvePhysicalRecordId(await resolveRecordRow(db, fullTable, id, table.primary_key ?? "id", table.natural_key_fields, fieldMap, tenantId, table.tenant_column), table.primary_key);
       if (!physicalId) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
         return;
@@ -4924,8 +5034,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const initialRow = await (db.selectFrom(fullTable) as any)
         .select(["status", "row_version"])
-        .where("id", "=", physicalId)
-        .where("tenant_id", "=", tenantId)
+        .where(table.primary_key as never, "=", physicalId as never)
+        .$if(Boolean(table.tenant_column), (query: any) => query.where(table.tenant_column as never, "=", tenantId as never))
         .executeTakeFirst() as { status?: string; row_version?: number } | undefined;
       const initialEtag = String(initialRow?.row_version ?? 0);
       const initialStatus = typeof initialRow?.status === "string" ? initialRow.status : "unknown";
@@ -5154,7 +5264,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         ? { table: fullTable }
         : resolveLineOnlyTouchTarget(entityCode, table);
 
-      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId);
+      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId, table.primary_key ?? "id", table.tenant_column);
       const headerDecision = validateEntityWriteFields({
         input: headerPatch,
         rules: writeRules,
@@ -5615,7 +5725,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           });
         }
 
-        const finalStatusInTransaction = await fetchRecordStatus(trx, fullTable, physicalId, tenantId);
+        const finalStatusInTransaction = await fetchRecordStatus(trx, fullTable, physicalId, tenantId, table.primary_key ?? "id", table.tenant_column);
         const { fieldMask: committedFieldMask, sectionMask: committedSectionMask } = buildDocumentWorkspaceDraftMasks(
           writeRules,
           finalStatusInTransaction,
@@ -6045,16 +6155,16 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     }
     const fieldMap = await resolveFieldMap(db, entityCode);
     const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
-    const physicalId = UUID_RE.test(recordId)
-      ? recordId
-      : String((await resolveRecordRow(
+    const physicalId = resolvePhysicalRecordId(await resolveRecordRow(
         db,
         fullTable,
         recordId,
+        table.primary_key ?? "id",
         table.natural_key_fields,
         fieldMap,
         tenantId,
-      ))?.id ?? "");
+        table.tenant_column,
+      ), table.primary_key);
     if (!physicalId) {
       return {
         ok: false as const,
@@ -6157,6 +6267,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
       if (rejectGenericDocumentMutation(res, table)) return;
+      if (rejectRuntimeWrite(res, table)) return;
 
       // Unwrap body â€” support both flat and { data: {...} } forms
       const body = req.body as Record<string, unknown>;
@@ -6178,15 +6289,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
 
       // Resolve UUID from business key when caller passes a canonical key
-      const physicalId = UUID_RE.test(id)
-        ? id
-        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, fieldMap, tenantId))?.id ?? "");
+      const physicalId = resolvePhysicalRecordId(await resolveRecordRow(db, fullTable, id, table.primary_key ?? "id", table.natural_key_fields, fieldMap, tenantId, table.tenant_column), table.primary_key);
       if (!physicalId) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
         return;
       }
 
-      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId);
+      const recordStatus = await fetchRecordStatus(db, fullTable, physicalId, tenantId, table.primary_key ?? "id", table.tenant_column);
       const fieldDecision = validateEntityWriteFields({
         input: inputData,
         rules: writeRules,
@@ -6478,13 +6587,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         return;
       }
       if (rejectGenericDocumentMutation(res, table)) return;
+      if (rejectRuntimeWrite(res, table)) return;
 
       const fullTable = `${table.table_schema}.${table.table_name}` as `${string}.${string}`;
 
       // Resolve UUID from business key so the delete is always by primary key
-      const physicalId = UUID_RE.test(id)
-        ? id
-        : String((await resolveRecordRow(db, fullTable, id, table.natural_key_fields, new Map(), tenantId))?.id ?? "");
+      const physicalId = resolvePhysicalRecordId(await resolveRecordRow(db, fullTable, id, table.primary_key ?? "id", table.natural_key_fields, new Map(), tenantId, table.tenant_column), table.primary_key);
       if (!physicalId) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${id}' not found` });
         return;
@@ -6557,6 +6665,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         .select(["ef.name", "ef.column_name", "ef.data_type", "ef.is_active", "ef.is_required", "ef.origin", "ev.status as version_status"])
         .where("e.name", "=", entityCode)
         .where("e.tenant_id", "is", null)
+        .where("e.runtime_enabled", "=", true)
+        .where("e.is_active", "=", true)
+        .where("ev.status", "=", "EFFECTIVE")
+        .where("ef.is_active", "=", true)
+        .where("ef.runtime_enabled", "=", true)
         .execute();
 
       const xOrg = (req.headers["x-org"] as string) ?? "";
@@ -9624,11 +9737,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const { tenantId, principalId } = requireVerifiedContext(req, res);
 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
-      const recordId   = req.params["id"] as string;
-      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const requestedRecordId = req.params["id"] as string;
 
       const table = await resolveEntityTable(db, entityCode);
       if (!table) { res.status(404).json({ error: "ENTITY_NOT_FOUND" }); return; }
+      const recordId = await resolveCanonicalRecordId(db, table, requestedRecordId, tenantId);
+      if (!recordId) { res.status(404).json({ error: "RECORD_NOT_FOUND" }); return; }
 
       const body      = (req.body ?? {}) as Record<string, unknown>;
       const sessionId = typeof body["session_id"] === "string" ? body["session_id"] : undefined;
@@ -9652,8 +9766,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rec = await (db.selectFrom(fullTable) as any)
         .select(["row_version"])
-        .where("id", "=", recordId)
-        .where("tenant_id", "=", tenantId)
+        .where(table.primary_key as never, "=", recordId as never)
+        .$if(Boolean(table.tenant_column), (query: any) => query.where(table.tenant_column as never, "=", tenantId as never))
         .executeTakeFirst() as { row_version?: number } | undefined;
 
       res.json({ ok: true, lock_token: result.lockToken, expires_at: result.expiresAt, row_version: rec?.row_version ?? null });
@@ -9669,8 +9783,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const { tenantId } = requireVerifiedContext(req, res);
 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
-      const recordId   = req.params["id"] as string;
-      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const requestedRecordId = req.params["id"] as string;
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) { res.status(404).json({ error: "ENTITY_NOT_FOUND" }); return; }
+      const recordId = await resolveCanonicalRecordId(db, table, requestedRecordId, tenantId);
+      if (!recordId) { res.status(404).json({ error: "RECORD_NOT_FOUND" }); return; }
 
       const status = await getLockStatus(db, { tenantId, entityName: entityCode, recordId });
       res.json(status);
@@ -9686,8 +9803,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const { tenantId, principalId } = requireVerifiedContext(req, res);
 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
-      const recordId   = req.params["id"] as string;
-      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const requestedRecordId = req.params["id"] as string;
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) { res.status(404).json({ error: "ENTITY_NOT_FOUND" }); return; }
+      const recordId = await resolveCanonicalRecordId(db, table, requestedRecordId, tenantId);
+      if (!recordId) { res.status(404).json({ error: "RECORD_NOT_FOUND" }); return; }
 
       const body      = (req.body ?? {}) as Record<string, unknown>;
       const lockToken = typeof body["lock_token"] === "string" ? body["lock_token"] : "";
@@ -9712,8 +9832,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const { tenantId, principalId } = requireVerifiedContext(req, res);
 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
-      const recordId   = req.params["id"] as string;
-      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const requestedRecordId = req.params["id"] as string;
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) { res.status(404).json({ error: "ENTITY_NOT_FOUND" }); return; }
+      const recordId = await resolveCanonicalRecordId(db, table, requestedRecordId, tenantId);
+      if (!recordId) { res.status(404).json({ error: "RECORD_NOT_FOUND" }); return; }
 
       const body      = (req.body ?? {}) as Record<string, unknown>;
       const lockToken = typeof body["lock_token"] === "string" ? body["lock_token"] : "";
@@ -9733,8 +9856,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       const { tenantId, principalId } = requireVerifiedContext(req, res);
 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
-      const recordId   = req.params["id"] as string;
-      if (!UUID_RE.test(recordId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const requestedRecordId = req.params["id"] as string;
+      const table = await resolveEntityTable(db, entityCode);
+      if (!table) { res.status(404).json({ error: "ENTITY_NOT_FOUND" }); return; }
+      const recordId = await resolveCanonicalRecordId(db, table, requestedRecordId, tenantId);
+      if (!recordId) { res.status(404).json({ error: "RECORD_NOT_FOUND" }); return; }
 
       // Permission gate â€” caller must have records.lock.force_release
       const permissionCheck = await checkPermission(db, tenantId, principalId, "records.lock.force_release");
@@ -10116,14 +10242,19 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
   router.get  ("/records/:entity/:id/stream",         recordStreamHandler);
 
-  const phase3PilotEntities = new Set(
-    (process.env["ENTITY_MUTATION_SERVICE_PILOTS"] ?? "company_code,cost_center")
+  // The execution descriptor is now the mutation boundary for every runtime
+  // entity. Keep an explicit emergency escape hatch for entities that still
+  // require a domain-specific legacy handler; an allow-list of pilots would
+  // silently leave the rest of the runtime contract unused.
+  const legacyMutationEntities = new Set(
+    (process.env["ENTITY_MUTATION_SERVICE_LEGACY_ONLY"] ?? "")
       .split(",")
       .map((value) => value.trim().replace(/-/g, "_"))
       .filter(Boolean),
   );
   const isPhase3Pilot = (entityCode: string): boolean =>
-    phase3PilotEntities.has(entityCode.replace(/-/g, "_"));
+    deps.executionDescriptorProvider !== undefined
+    && !legacyMutationEntities.has(entityCode.replace(/-/g, "_"));
   const configuredMutationStage = ((): MutationKernelRolloutStage => {
     const value = process.env["MUTATION_KERNEL_STAGE"];
     return value === "shadow_validation" || value === "dual_read_comparison"

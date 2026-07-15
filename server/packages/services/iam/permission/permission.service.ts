@@ -95,7 +95,13 @@ export async function checkPermission(
     ) AS check_permission
   `.execute(db);
 
-  const rawDecision = (checkResult.rows[0]?.check_permission ?? "not_found") as string;
+  let rawDecision = (checkResult.rows[0]?.check_permission ?? "not_found") as string;
+  if (rawDecision === "allow") {
+    const resourceScopeSatisfied = await satisfiesResourceScopePolicy(
+      db, tenantId, principalId, permissionId, context,
+    );
+    if (!resourceScopeSatisfied) rawDecision = "deny";
+  }
   const evaluation_ms = Date.now() - startMs;
 
   // Map DB outcome to typed decision
@@ -204,6 +210,85 @@ export async function checkPermission(
  * Returns one row per permission. Does NOT write to permission_decision_log
  * (batch audit would insert hundreds of rows on every effective-access request).
  */
+async function satisfiesResourceScopePolicy(
+  db: Kysely<AnyDb>,
+  tenantId: string,
+  principalId: string,
+  permissionId: string,
+  context?: PermissionContext,
+): Promise<boolean> {
+  const result = await sql<{ is_satisfied: boolean }>`
+    WITH policy AS (
+      SELECT EXISTS (
+        SELECT 1 FROM shared.permission_scope_policy psp
+        WHERE psp.permission_id = ${permissionId}::uuid
+          AND psp.status = 'active'
+          AND psp.requires_resource_scope = true
+      ) AS is_required
+    ),
+    active_roles AS (
+      SELECT DISTINCT gr.role_id, gm.group_id
+      FROM master.auth_group_member gm
+      JOIN master.auth_group_role gr
+        ON gr.group_id = gm.group_id
+       AND gr.tenant_id = gm.tenant_id
+       AND gr.status = 'active'
+       AND (gr.expires_at IS NULL OR gr.expires_at > now())
+      WHERE gm.tenant_id = ${tenantId}::uuid
+        AND gm.principal_id = ${principalId}::uuid
+    ),
+    resource_allows AS (
+      SELECT 1
+      FROM master.access_grant ag
+      LEFT JOIN master.operating_organization oo
+        ON ag.assignment_scope_type = 'operating_organization'
+       AND oo.id = ag.assignment_scope_ref_id
+       AND oo.tenant_id = ag.tenant_id
+       AND oo.status <> 'archived'
+      JOIN shared.permission_scope_policy psp
+        ON psp.permission_id = ag.permission_id
+       AND psp.assignment_scope_type = ag.assignment_scope_type
+       AND psp.status = 'active'
+       AND psp.requires_resource_scope = true
+       AND (ag.assignment_scope_type <> 'operating_organization' OR psp.organization_domain = oo.domain)
+      WHERE ag.tenant_id = ${tenantId}::uuid
+        AND ag.permission_id = ${permissionId}::uuid
+        AND ag.effect = 'allow'
+        AND ag.status = 'active'
+        AND ag.resource_type = ${context?.entity_type ?? null}
+        AND ag.resource_id = ${context?.entity_id ?? null}::uuid
+        AND (ag.expires_at IS NULL OR ag.expires_at > now())
+        AND (
+          ag.principal_id = ${principalId}::uuid
+          OR ag.group_id IN (SELECT group_id FROM active_roles)
+          OR ag.role_id IN (SELECT role_id FROM active_roles)
+        )
+      LIMIT 1
+    ),
+    resource_denies AS (
+      SELECT 1 FROM master.access_grant ag
+      WHERE ag.tenant_id = ${tenantId}::uuid
+        AND ag.principal_id = ${principalId}::uuid
+        AND ag.permission_id = ${permissionId}::uuid
+        AND ag.effect = 'deny'
+        AND ag.status = 'active'
+        AND ag.resource_type = ${context?.entity_type ?? null}
+        AND ag.resource_id = ${context?.entity_id ?? null}::uuid
+        AND (ag.expires_at IS NULL OR ag.expires_at > now())
+      LIMIT 1
+    )
+    SELECT NOT policy.is_required OR (
+      ${context?.entity_type ?? null}::text IS NOT NULL
+      AND ${context?.entity_id ?? null}::uuid IS NOT NULL
+      AND EXISTS (SELECT 1 FROM resource_allows)
+      AND NOT EXISTS (SELECT 1 FROM resource_denies)
+    ) AS is_satisfied
+    FROM policy
+  `.execute(db);
+
+  return result.rows[0]?.is_satisfied ?? false;
+}
+
 export async function checkPermissionBatch(
   db: Kysely<AnyDb>,
   tenantId: string,
@@ -267,7 +352,8 @@ export async function checkPermissionBatch(
           OR ag.group_id IN (SELECT group_id FROM principal_group_roles)
         )
     ),
-    -- Step 5: access_grant denies (principal-targeted only per schema rule)
+    -- Step 5: only tenant-wide non-resource denies remove the capability.
+    -- Scoped/resource denies are subtracted by effective scope evaluation.
     grant_denies AS (
       SELECT ag.permission_id
       FROM master.access_grant ag
@@ -275,6 +361,9 @@ export async function checkPermissionBatch(
         AND ag.effect        = 'deny'
         AND ag.status        = 'active'
         AND ag.principal_id  = ${principalId}
+        AND ag.assignment_scope_type = 'tenant'
+        AND ag.resource_type IS NULL
+        AND ag.resource_id IS NULL
         AND (ag.expires_at IS NULL OR ag.expires_at > now())
     ),
     -- Step 1: plan gate (tenant_permission_override or included plan permission)

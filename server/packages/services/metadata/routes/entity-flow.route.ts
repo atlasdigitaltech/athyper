@@ -199,12 +199,17 @@ async function loadReferencePickerProfiles(
 
   let query = db
     .selectFrom("control.entity as e")
+    .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
     .select(["e.name", "e.entity_code", "e.display_config"])
     .where((eb: any) => eb.or([
       eb("e.name", "in", targetEntities),
       eb("e.entity_code", "in", targetEntities),
     ]))
-    .where("e.is_active", "=", true);
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("e.read_capability", "<>", "none")
+    .where("ev.status", "=", "EFFECTIVE");
 
   if (tenantId) {
     query = query
@@ -289,7 +294,11 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           sql<string>`ev.id`.as("version_id"),
         ])
         .where(sql`COALESCE(e.entity_code, e.name)`, "=", entityCode)
-        .where("ev.status", "=", "EFFECTIVE");
+        .where("ev.status", "=", "EFFECTIVE")
+        .where("e.runtime_enabled", "=", true)
+        .where("e.status", "=", "ACTIVE")
+        .where("e.is_active", "=", true)
+        .where("e.read_capability", "<>", "none");
 
       if (tenantId) {
         entityQuery = entityQuery
@@ -432,6 +441,8 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           "ef.lookup_config",
         ])
         .where("eff.flow_step_id", "in", stepIds)
+        .where("ef.is_active", "=", true)
+        .where("ef.runtime_enabled", "=", true)
         .orderBy("eff.sort_order", "asc")
         .execute();
       const referencePickerProfiles = await loadReferencePickerProfiles(db, fieldRows, tenantId);
@@ -506,6 +517,11 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             .where("e.tenant_id", "is", null)
             .where("ev.status", "=", "EFFECTIVE")
             .where("ef.is_active", "=", true)
+            .where("e.runtime_enabled", "=", true)
+            .where("e.status", "=", "ACTIVE")
+            .where("e.is_active", "=", true)
+            .where("e.read_capability", "<>", "none")
+            .where("ef.runtime_enabled", "=", true)
             .orderBy("ef.sort_order", "asc")
             .execute();
           mergeProfileMaps(referencePickerProfiles, await loadReferencePickerProfiles(db, rows, tenantId));

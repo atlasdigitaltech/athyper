@@ -82,6 +82,11 @@ function extractBearer(req: Request): string | null {
   return match?.[1] ?? null;
 }
 
+function contextMismatchCheck(message: string): string | undefined {
+  const match = /^auth_context_mismatch:(realm|plane|tenant|azp)$/.exec(message);
+  return match?.[1];
+}
+
 export function createRequirePlatformContext(
   deps: RequirePlatformContextDeps,
   options: RequirePlatformContextOptions = {},
@@ -130,6 +135,7 @@ export function createRequirePlatformContext(
         const message = err instanceof Error ? err.message : "Token verification failed.";
         const isContextMismatch = message.startsWith("auth_context_mismatch:");
         const isMalformedToken = message === "malformed_token";
+        const check = isContextMismatch ? contextMismatchCheck(message) : undefined;
         const code = isContextMismatch
           ? "AUTH_CONTEXT_MISMATCH"
           : isMalformedToken
@@ -148,6 +154,7 @@ export function createRequirePlatformContext(
           // logged server-side only (see verifyTokenForCurrentContext).
           message: isMalformedToken ? "Token failed schema validation." : message,
           requestId: ctx?.requestId,
+          ...(check ? { contextCheck: check } : {}),
         });
         return;
       }
@@ -199,6 +206,7 @@ export function createRequirePlatformContext(
           error: result.error.code,
           message: result.error.message,
           requestId: ctx?.requestId,
+          ...(result.error.check ? { contextCheck: result.error.check } : {}),
           ...(result.error.blockingAction
             ? { requiredAction: result.error.blockingAction }
             : {}),

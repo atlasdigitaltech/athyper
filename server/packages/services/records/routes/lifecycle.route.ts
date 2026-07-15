@@ -26,9 +26,6 @@
 
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
-import {
-  isUuid,
-} from "@athyper/svc-shared";
 import { requireVerifiedContext } from "@athyper/svc-iam";
 import { normalizeLifecycleStateCode } from "@athyper/svc-workflow";
 
@@ -80,8 +77,26 @@ export function createLifecycleRoute(router: Router, deps: LifecycleRouteDeps): 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_").toLowerCase();
       const recordId   = String(req.params["id"] ?? "");
 
-      if (!isUuid(recordId)) {
-        res.status(400).json({ error: "INVALID_ID", message: "Record id must be a valid UUID" });
+      if (!recordId || recordId.length > 256) {
+        res.status(400).json({ error: "INVALID_ID", message: "Record id must be a non-empty key of at most 256 characters" });
+        return;
+      }
+
+      const runtimeEntity = await (db as any)
+        .selectFrom("control.entity as e")
+        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+        .select(["e.id"])
+        .where("e.name", "=", entityCode)
+        .where("e.tenant_id", "is", null)
+        .where("e.runtime_enabled", "=", true)
+        .where("e.status", "=", "ACTIVE")
+        .where("e.is_active", "=", true)
+        .where("e.read_capability", "<>", "none")
+        .where("e.primary_key", "is not", null)
+        .where("ev.status", "=", "EFFECTIVE")
+        .executeTakeFirst();
+      if (!runtimeEntity) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' is not runtime eligible.` });
         return;
       }
 

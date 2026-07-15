@@ -1,6 +1,6 @@
 {
   "packages/shared/data-integration/api-contracts/src/schemas/common.ts": "19dcced9aef49bfb",
-  "packages/shared/data-integration/api-contracts/src/schemas/metadata.ts": "2e89bbb98f9ff242",
+  "packages/shared/data-integration/api-contracts/src/schemas/metadata.ts": "2d888d7d09c2417e",
   "packages/shared/data-integration/api-contracts/src/schemas/records.ts": "539be690de3d3f81",
   "packages/shared/data-integration/api-contracts/src/schemas/documents.ts": "617f881c1fb7e4d6",
   "packages/shared/data-integration/api-contracts/src/schemas/workflow.ts": "e9f737c86b929266",

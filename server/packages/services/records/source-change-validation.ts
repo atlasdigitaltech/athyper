@@ -261,9 +261,13 @@ export async function loadEntityFieldDefaults(
       JOIN control.entity e          ON e.id  = ev.entity_id
      WHERE e.name       = ${entityCode}
        AND e.tenant_id  IS NULL
-       AND ev.status    = 'EFFECTIVE'
-       AND ef.is_active = true
-       AND ef.defaults IS NOT NULL
+        AND e.runtime_enabled = true
+        AND e.status    = 'ACTIVE'
+        AND e.is_active = true
+        AND ev.status    = 'EFFECTIVE'
+        AND ef.is_active = true
+        AND ef.runtime_enabled = true
+        AND ef.defaults IS NOT NULL
   `.execute(db);
 
   const map: Record<string, EntityFieldDefaults> = {};
@@ -323,11 +327,15 @@ async function targetPassesDependentFilter(args: {
   if (!ref.referenceEntity || !ref.referenceValueField) return true;
 
   // Resolve the target_entity's physical table.
-  const tableRow = await sql<{ table_schema: string; table_name: string }>`
-    SELECT table_schema, table_name
-      FROM control.entity
+  const tableRow = await sql<{ table_schema: string; table_name: string; tenant_column: string | null }>`
+    SELECT table_schema, table_name, tenant_column
+     FROM control.entity
      WHERE name = ${ref.referenceEntity}
        AND tenant_id IS NULL
+       AND runtime_enabled = true
+       AND status = 'ACTIVE'
+       AND is_active = true
+       AND read_capability <> 'none'
      LIMIT 1
   `.execute(args.db);
   const t = tableRow.rows[0];
@@ -338,6 +346,9 @@ async function targetPassesDependentFilter(args: {
   // validation matches what the picker would actually return.
   const ident = (s: string) => sql.raw(`"${s.replace(/"/g, '""')}"`);
   const tbl = sql.raw(`"${t.table_schema}"."${t.table_name}"`);
+  const tenantClause = t.tenant_column
+    ? sql` AND ${ident(t.tenant_column)} = ${args.tenantId}::uuid`
+    : sql``;
 
   const staticPreds = buildStaticFilterPredicates(ref.staticFilters);
   const staticClause = staticPreds.length > 0
@@ -349,7 +360,7 @@ async function targetPassesDependentFilter(args: {
       FROM ${tbl}
      WHERE ${ident(ref.referenceValueField)} = ${args.targetValue}
        AND ${ident(targetColumn)}            = ${sourceValue}
-       AND tenant_id                         = ${args.tenantId}::uuid
+       ${tenantClause}
        ${staticClause}
      LIMIT 1
   `.execute(args.db);
@@ -434,7 +445,12 @@ async function loadFieldReferenceWiring(
       JOIN control.entity e          ON e.id  = ev.entity_id
      WHERE e.name       = ${entityCode}
        AND e.tenant_id  IS NULL
+       AND e.runtime_enabled = true
+       AND e.status      = 'ACTIVE'
+       AND e.is_active   = true
        AND ev.status    = 'EFFECTIVE'
+       AND ef.is_active = true
+       AND ef.runtime_enabled = true
        AND ef.name      = ${fieldName}
      LIMIT 1
   `.execute(db);

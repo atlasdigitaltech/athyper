@@ -16,6 +16,7 @@ const MutationBindingSchema = z.object({
 export const SerializedExecutionFieldSchema = z.object({
   name: z.string().min(1),
   column: PhysicalPathSchema,
+  projectionAliasOf: IdentifierSchema.optional(),
   dataType: z.string().min(1),
   coercion: z.enum(["scalar", "array", "json"]),
   required: z.boolean(),
@@ -63,7 +64,9 @@ export const SerializedExecutionDescriptorV1Schema = z.object({
     schema: IdentifierSchema,
     table: IdentifierSchema,
     primaryKey: IdentifierSchema,
-    tenantColumn: IdentifierSchema,
+    tenantColumn: IdentifierSchema.nullable(),
+    readCapability: z.enum(["generic", "facade", "projection"]),
+    writeCapability: z.enum(["none", "generic", "facade", "append_only"]),
     rowVersionColumn: IdentifierSchema.optional(),
     backingType: z.enum(["table", "view", "materialized_view"]),
   }).strict(),

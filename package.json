@@ -42,6 +42,7 @@
     "policy:legacy-package-ids": "node scripts/policy/verify-legacy-package-ids.mjs --report policy/reports/legacy-package-ids.json",
     "policy:legacy-runtime-retirement": "node scripts/policy/verify-legacy-runtime-retirement.mjs",
     "policy:meta-entity": "node scripts/policy/verify-meta-entity-governance.mjs && node scripts/policy/verify-meta-entity-test-matrix.mjs && node scripts/policy/verify-meta-entity-dependencies.mjs",
+    "policy:meta-entity-hygiene": "pnpm --dir server run meta:hygiene",
     "policy:records-identity-boundary": "node scripts/policy/verify-records-identity-boundary.mjs",
     "qualify:meta-entity": "node scripts/performance/qualify-meta-entity.mjs",
     "perf:capture:p0": "node scripts/performance/capture-p0-baseline.mjs",

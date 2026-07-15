@@ -1,6 +1,7 @@
--- Creates master.accounting_profile. Base DDL never creates this table, but
--- master.company_code_{supplier,customer}_profile carry FK stubs (undefined_table
--- guards) that activate as soon as this file runs.
+-- Compatibility module DDL for master.accounting_profile.
+-- The canonical table definition is in ddl/master/01q_tables_accounting_profile.sql
+-- so phase-2 metadata discovery can register the entity before this module seed
+-- runs. This file remains idempotent for standalone module installation.
 
 CREATE TABLE IF NOT EXISTS master.accounting_profile (
     id                  uuid            NOT NULL DEFAULT shared.uuidv7(),

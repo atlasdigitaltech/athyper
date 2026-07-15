@@ -20,6 +20,9 @@ export interface OrgMembership {
   legalEntityId?: string;
   legalEntityCode?: string;
   legalEntityName?: string;
+  workContextDomain?: "procurement" | "sales";
+  scopeVersion?: number;
+  authEpoch?: number;
 }
 
 export interface PlaneContextResponse {
@@ -135,6 +138,9 @@ function orgMetadata(input: Partial<OrgMembership>): Partial<OrgMembership> {
     ...(input.legalEntityId ? { legalEntityId: input.legalEntityId } : {}),
     ...(input.legalEntityCode ? { legalEntityCode: input.legalEntityCode } : {}),
     ...(input.legalEntityName ? { legalEntityName: input.legalEntityName } : {}),
+    ...(input.workContextDomain ? { workContextDomain: input.workContextDomain } : {}),
+    ...(input.scopeVersion !== undefined ? { scopeVersion: input.scopeVersion } : {}),
+    ...(input.authEpoch !== undefined ? { authEpoch: input.authEpoch } : {}),
   };
 }
 
@@ -372,6 +378,94 @@ async function resolveTenantLegalEntityContexts(
       legalEntityCode: row.legal_entity_code ?? undefined,
       legalEntityName: row.legal_entity_name ?? undefined,
     });
+  }
+
+  // Operating Organizations are independent work contexts. They are
+  // discovered from active RBAC assignments and are never expanded into a
+  // long-lived Company Code list in the session.
+  const operatingRows = await sql<{
+    tenant_id: string;
+    tenant_code: string;
+    tenant_name: string;
+    operating_organization_id: string;
+    domain: "procurement" | "sales";
+    code: string;
+    name: string;
+    scope_version: number;
+  }>`
+    SELECT DISTINCT
+      t.id::text AS tenant_id,
+      t.code AS tenant_code,
+      COALESCE(t.display_name, t.name) AS tenant_name,
+      oo.id::text AS operating_organization_id,
+      oo.domain,
+      oo.code,
+      oo.name,
+      oo.scope_version
+    FROM master.principal_identity_binding pib
+    JOIN master.principal p
+      ON p.id = pib.principal_id
+     AND p.tenant_id = pib.tenant_id
+    JOIN master.tenant t
+      ON t.id = p.tenant_id
+     AND t.status = 'active'
+    JOIN master.auth_group_member gm
+      ON gm.tenant_id = p.tenant_id
+     AND gm.principal_id = p.id
+    JOIN master.auth_group_role gr
+      ON gr.tenant_id = gm.tenant_id
+     AND gr.group_id = gm.group_id
+     AND gr.assignment_scope_type = 'operating_organization'
+     AND gr.is_active = true
+     AND (gr.expires_at IS NULL OR gr.expires_at > now())
+    JOIN master.operating_organization oo
+      ON oo.tenant_id = gr.tenant_id
+     AND oo.id = gr.assignment_scope_ref_id
+     AND oo.status = 'active'
+    WHERE pib.provider_code = 'keycloak'
+      AND ${identityBindingPredicate(query)}
+      AND pib.realm_key = ${query.realmKey}
+      AND pib.idp_enabled = true
+      AND pib.sync_status <> 'disabled'
+      AND p.is_active = true
+      AND p.is_locked = false
+  `.execute(db);
+
+  for (const row of operatingRows.rows) {
+    const alias = `${row.tenant_code}--oo--${row.domain}--${row.code.toLowerCase()}`;
+    addOrg(organizations, {
+      alias,
+      id: row.operating_organization_id,
+      name: row.name,
+      roles: workbenches,
+      tenantId: row.tenant_id,
+      tenantCode: row.tenant_code,
+      tenantName: row.tenant_name,
+      contextType: "operating_organization",
+      organizationId: row.operating_organization_id,
+      organizationCode: row.code,
+      organizationName: row.name,
+      workContextDomain: row.domain,
+      scopeVersion: Number(row.scope_version),
+    });
+  }
+  const epochRow = await sql<{ auth_epoch: number }>`
+    SELECT p.auth_epoch
+    FROM master.principal_identity_binding pib
+    JOIN master.principal p ON p.id = pib.principal_id AND p.tenant_id = pib.tenant_id
+    WHERE pib.provider_code = 'keycloak'
+      AND ${identityBindingPredicate(query)}
+      AND pib.realm_key = ${query.realmKey}
+      AND pib.idp_enabled = true
+      AND pib.sync_status <> 'disabled'
+      AND p.is_active = true
+      AND p.is_locked = false
+    ORDER BY p.auth_epoch DESC
+    LIMIT 1
+  `.execute(db);
+  const authEpoch = epochRow.rows[0]?.auth_epoch;
+  if (authEpoch !== undefined) {
+    for (const organization of Object.values(organizations)) organization.authEpoch = Number(authEpoch);
   }
   return organizations;
 }

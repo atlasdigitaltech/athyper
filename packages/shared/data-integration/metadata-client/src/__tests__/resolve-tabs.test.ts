@@ -46,7 +46,7 @@ function makeEntity(
     security_tier:   "standard",
     compiled_at:     "2026-04-20T00:00:00.000Z",
     compiled_hash:   "deadbeef",
-  };
+  } as unknown as CompiledEntity;
 }
 
 function tabs(

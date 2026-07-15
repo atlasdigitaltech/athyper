@@ -114,6 +114,27 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
         return;
       }
 
+      const executableEntity = await db
+        .selectFrom("control.entity as e")
+        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+        .select("e.id")
+        .where((eb) => eb.or([
+          eb("e.entity_code", "=", entityCode),
+          eb("e.name", "=", entityCode),
+          eb("e.slug", "=", entityCode.replace(/_/g, "-")),
+        ]))
+        .where("e.tenant_id", "is", null)
+        .where("e.runtime_enabled", "=", true)
+        .where("e.status", "=", "ACTIVE")
+        .where("e.is_active", "=", true)
+        .where("e.read_capability", "<>", "none")
+        .where("ev.status", "=", "EFFECTIVE")
+        .executeTakeFirst();
+      if (!executableEntity) {
+        res.json([]);
+        return;
+      }
+
       const sub = typeof claims.sub === "string" ? claims.sub : "";
       const upstreamCtxAvailable = Boolean(
         (res.locals as Record<string, unknown>)["effectivePermissionContext"],

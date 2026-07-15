@@ -139,7 +139,11 @@ export async function bffFetch<T = unknown>(
     let message = res.statusText;
     try {
       const err = (await res.json()) as { error?: string; message?: string };
-      message = err.error ?? err.message ?? message;
+      const code = typeof err.error === "string" ? err.error : "";
+      const detail = typeof err.message === "string" ? err.message.trim() : "";
+      message = code && detail && detail !== code
+        ? `${code}: ${detail}`
+        : code || detail || message;
     } catch {
       // ignore parse failure
     }

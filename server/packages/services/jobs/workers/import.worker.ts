@@ -109,14 +109,57 @@ async function parseFile(buffer: Buffer, fileFormat: string): Promise<string[][]
 
 // ── Entity table resolver ─────────────────────────────────────────────────────
 
-async function resolveEntityTable(db: AnyDb, entityName: string): Promise<string | null> {
+interface ImportEntityTarget {
+  tableName: string;
+  primaryKey: string;
+  tenantColumn: string | null;
+  writeCapability: string;
+  fieldMap: Map<string, string>;
+}
+
+async function resolveEntityTable(db: AnyDb, entityName: string): Promise<ImportEntityTarget | null> {
   const row = await db
     .selectFrom("control.entity as e")
-    .select(["e.table_name", "e.schema_name"])
-    .where("e.code", "=", entityName)
-    .where("e.status", "=", "active")
-    .executeTakeFirst() as { table_name: string; schema_name: string } | undefined;
-  return row ? `${row.schema_name}.${row.table_name}` : null;
+    .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+    .select(["e.id", "e.table_name", "e.table_schema", "e.primary_key", "e.tenant_column", "e.write_capability", sql<string>`ev.id`.as("version_id")])
+    .where((eb) => eb.or([
+      eb("e.entity_code", "=", entityName),
+      eb("e.name", "=", entityName),
+    ]))
+    .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("ev.status", "=", "EFFECTIVE")
+    .where("e.backing_type", "=", "table")
+    .where("e.read_capability", "<>", "none")
+    .where("e.write_capability", "in", ["generic", "append_only"])
+    .executeTakeFirst() as {
+      id: string;
+      table_name: string;
+      table_schema: string;
+      primary_key: string | null;
+      tenant_column: string | null;
+      write_capability: string;
+      version_id: string;
+    } | undefined;
+  if (!row?.primary_key) return null;
+
+  const fields = await db
+    .selectFrom("control.entity_field as ef")
+    .select(["ef.name", "ef.column_name"])
+    .where("ef.entity_version_id", "=", row.version_id)
+    .where("ef.is_active", "=", true)
+    .where("ef.runtime_enabled", "=", true)
+    .execute() as Array<{ name: string; column_name: string }>;
+
+  return {
+    tableName: `${row.table_schema}.${row.table_name}`,
+    primaryKey: row.primary_key,
+    tenantColumn: row.tenant_column,
+    writeCapability: row.write_capability,
+    fieldMap: new Map(fields.map((field) => [field.name, field.column_name])),
+  };
 }
 
 // ── Apply mapping to a parsed row ─────────────────────────────────────────────
@@ -142,6 +185,17 @@ function applyMapping(
     obj[m.fieldName] = colIdx >= 0 ? (row[colIdx] ?? null) : null;
   }
   return obj;
+}
+
+function mapImportValues(
+  values: Record<string, string | null>,
+  fieldMap: Map<string, string>,
+): Record<string, string | null> {
+  const mapped: Record<string, string | null> = {};
+  for (const [fieldName, value] of Object.entries(values)) {
+    mapped[fieldMap.get(fieldName) ?? fieldName] = value;
+  }
+  return mapped;
 }
 
 // ── Chunk processor ───────────────────────────────────────────────────────────
@@ -216,44 +270,49 @@ export function createImportWorker(deps: {
         const dataRows = rows.slice(rowStart, rowEnd + 1); // rows for this chunk
 
         // ── 4. Resolve entity table ───────────────────────────────────────────
-        const tableName = await resolveEntityTable(db, entityName);
-        if (!tableName) throw new Error(`Entity '${entityName}' not found or inactive`);
+        const target = await resolveEntityTable(db, entityName);
+        if (!target) throw new Error(`Entity '${entityName}' is not an eligible writable runtime entity`);
 
         // ── 5. Process rows ───────────────────────────────────────────────────
         for (let i = 0; i < dataRows.length; i++) {
           const rawRow    = dataRows[i]!;
           const rowNumber = rowStart + i + 1; // 1-based spreadsheet row (including header)
-          const values    = applyMapping(headers, rawRow, mappings);
+          const values    = mapImportValues(applyMapping(headers, rawRow, mappings), target.fieldMap);
 
           // Skip empty rows
           if (Object.values(values).every((v) => !v)) continue;
 
           try {
             if (importMode === "create") {
-              await db
-                .insertInto(tableName as never)
-                .values({
-                  ...(values as Record<string, unknown>),
-                  tenant_id:  tenantId,
+              const createValues: Record<string, unknown> = {
+                ...(values as Record<string, unknown>),
                   created_by: SYSTEM_ACTOR_ID,
                   created_at: sql`now()`,
-                } as never)
+              };
+              if (target.tenantColumn) createValues[target.tenantColumn] = tenantId;
+              await db
+                .insertInto(target.tableName as never)
+                .values(createValues as never)
                 .execute();
             } else if (importMode === "update" || importMode === "upsert") {
+              if (target.writeCapability !== "generic") {
+                throw new Error(`Entity '${entityName}' only supports append-only imports; use import_mode=create`);
+              }
               // For update/upsert, the natural key must be in mappings
               // Simplification: treat as insert with ON CONFLICT DO UPDATE
+              const upsertValues: Record<string, unknown> = {
+                ...(values as Record<string, unknown>),
+                created_by: SYSTEM_ACTOR_ID,
+                created_at: sql`now()`,
+                updated_by: SYSTEM_ACTOR_ID,
+                updated_at: sql`now()`,
+              };
+              if (target.tenantColumn) upsertValues[target.tenantColumn] = tenantId;
               await db
-                .insertInto(tableName as never)
-                .values({
-                  ...(values as Record<string, unknown>),
-                  tenant_id:  tenantId,
-                  created_by: SYSTEM_ACTOR_ID,
-                  created_at: sql`now()`,
-                  updated_by: SYSTEM_ACTOR_ID,
-                  updated_at: sql`now()`,
-                } as never)
+                .insertInto(target.tableName as never)
+                .values(upsertValues as never)
                 .onConflict((oc) =>
-                  oc.column("id" as never).doUpdateSet({
+                  oc.column(target.primaryKey as never).doUpdateSet({
                     ...(values as Record<string, unknown>),
                     updated_by: SYSTEM_ACTOR_ID,
                     updated_at: sql`now()`,

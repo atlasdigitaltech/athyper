@@ -23,6 +23,7 @@ function field(name: string, options: Partial<ExecutionCompiledEntitySource["fie
     id: `field-${name}`,
     name,
     column_name: name,
+    projection_alias_of: null,
     label: name,
     description: null,
     data_type: "text",
@@ -109,6 +110,11 @@ function entity(overrides: Partial<ExecutionCompiledEntitySource> = {}): Executi
     table_schema: "master",
     table_name: "supplier",
     backing_type: "table",
+    runtime_enabled: true,
+    primary_key: "id",
+    tenant_column: "tenant_id",
+    read_capability: "generic",
+    write_capability: "generic",
     concurrency_policy: { strategy: "version", row_version_field: "row_version", rollout: "enforced" },
     version_id: "version-1",
     version_no: 1,
@@ -188,7 +194,16 @@ describe("ExecutionDescriptorV1 compiler", () => {
       table_schema: "reporting",
       table_name: "supplier_reporting",
       backing_type: "view",
-      capability_manifest: capability({ handlers: { writeFacade: "ReportingWriteFacade" } }),
+      read_capability: "projection",
+      write_capability: "facade",
+      capability_manifest: capability({
+        handlers: { writeFacade: "ReportingWriteFacade" },
+        mutation: {
+          create: { enabled: true, kind: "write_facade", handler: "ReportingWriteFacade" },
+          update: { enabled: true, kind: "write_facade", handler: "ReportingWriteFacade" },
+          delete: { enabled: false, kind: "disabled", disabledReason: "projection_read_only" },
+        },
+      }),
     })],
     ["tenant overlay", entity()],
   ] as const)("shadow-compiles representative %s entity", (kind, source) => {
@@ -341,5 +356,21 @@ describe("ExecutionDescriptorV1 compiler", () => {
       compiledEntity: entity(), handlerRegistry: HANDLERS,
       tenantOverlay: { tenantId: "tenant-1", compiledHash: "overlay", policy: { dataPolicy: { principalId: "forbidden" } } },
     })).toThrow(/principal-specific key/);
+  });
+
+  it("permits a global runtime entity without a tenant column", () => {
+    const result = compileExecutionDescriptor({
+      compiledEntity: entity({
+        entity_code: "currency",
+        table_schema: "shared",
+        table_name: "currency",
+        fields: [field("id"), field("code")],
+        concurrency_policy: {},
+        identity_config: { primary_key: "id", tenant_column: null, natural_key_fields: ["code"] },
+      }),
+      handlerRegistry: HANDLERS,
+    });
+    expect(result.serialized.storage.primaryKey).toBe("id");
+    expect(result.serialized.storage.tenantColumn).toBeNull();
   });
 });

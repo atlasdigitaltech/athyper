@@ -22,6 +22,9 @@ SET LOCAL app.bypass_version_lock = 'true';
 
 -- Â§1 pricing_component entity registration
 
+/* Legacy registration retained as documentation only. Entity registration is
+   owned by 040/040a and version materialization by 041. */
+/*
 INSERT INTO control.entity (
     tenant_id,
     module_id,
@@ -144,6 +147,7 @@ SET label          = COALESCE(control.entity_version.label, EXCLUDED.label),
     updated_at     = now(),
     updated_by     = '00000000-0000-0000-0000-000000000000';
 
+*/
 -- Â§2 AP display and grouping contract
 
 UPDATE control.entity
@@ -603,11 +607,32 @@ SELECT NULL,
   JOIN control.entity e
     ON e.entity_code = 'purchase_invoice'
    AND e.tenant_id IS NULL
-  JOIN control.entity_version ev
-    ON ev.entity_id = e.id
-   AND ev.version_no = 1
-   AND ev.tenant_id IS NULL
-ON CONFLICT (entity_version_id, name) WHERE entity_version_id IS NOT NULL DO UPDATE
+   JOIN control.entity_version ev
+     ON ev.entity_id = e.id
+    AND ev.version_no = 1
+    AND ev.tenant_id IS NULL
+  WHERE (
+        e.backing_type IN ('view', 'materialized_view')
+        OR EXISTS (
+            SELECT 1
+            FROM information_schema.columns physical_column
+            WHERE physical_column.table_schema = e.table_schema
+              AND physical_column.table_name = e.table_name
+              AND physical_column.column_name = ptf.column_name
+        )
+      )
+    AND (
+        ptf.name = ptf.column_name
+        OR e.backing_type IN ('view', 'materialized_view')
+        OR NOT EXISTS (
+            SELECT 1
+            FROM control.entity_field existing_field
+            WHERE existing_field.entity_version_id = ev.id
+              AND existing_field.is_active = true
+              AND existing_field.column_name = ptf.column_name
+        )
+      )
+ ON CONFLICT (entity_version_id, name) WHERE entity_version_id IS NOT NULL DO UPDATE
 SET column_name      = EXCLUDED.column_name,
     label            = EXCLUDED.label,
     data_type        = EXCLUDED.data_type,
@@ -784,11 +809,32 @@ SELECT NULL,
   JOIN control.entity e
     ON e.entity_code = fr.entity_code
    AND e.tenant_id IS NULL
-  JOIN control.entity_version ev
-    ON ev.entity_id = e.id
-   AND ev.version_no = 1
-   AND ev.tenant_id IS NULL
-ON CONFLICT (entity_version_id, name) WHERE entity_version_id IS NOT NULL DO UPDATE
+   JOIN control.entity_version ev
+     ON ev.entity_id = e.id
+    AND ev.version_no = 1
+    AND ev.tenant_id IS NULL
+  WHERE (
+        e.backing_type IN ('view', 'materialized_view')
+        OR EXISTS (
+            SELECT 1
+            FROM information_schema.columns physical_column
+            WHERE physical_column.table_schema = e.table_schema
+              AND physical_column.table_name = e.table_name
+              AND physical_column.column_name = fr.column_name
+        )
+      )
+    AND (
+        fr.name = fr.column_name
+        OR e.backing_type IN ('view', 'materialized_view')
+        OR NOT EXISTS (
+            SELECT 1
+            FROM control.entity_field existing_field
+            WHERE existing_field.entity_version_id = ev.id
+              AND existing_field.is_active = true
+              AND existing_field.column_name = fr.column_name
+        )
+      )
+ ON CONFLICT (entity_version_id, name) WHERE entity_version_id IS NOT NULL DO UPDATE
 SET column_name      = EXCLUDED.column_name,
     label            = EXCLUDED.label,
     data_type        = EXCLUDED.data_type,
@@ -811,8 +857,9 @@ SET column_name      = EXCLUDED.column_name,
     updated_by       = '00000000-0000-0000-0000-000000000000';
 
 -- Retired PC fields: physical columns are dropped in 01u_tables_pricing_component.sql.
-DELETE FROM control.entity_field ef
-USING control.entity_version ev,
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev,
       control.entity e
  WHERE ef.entity_version_id = ev.id
    AND ev.entity_id = e.id
@@ -1212,12 +1259,10 @@ UPDATE control.entity_field ef
 
 WITH inactive_fields(entity_code, field_name) AS (
     VALUES
-    ('purchase_invoice','is_credit_note'),
-    ('purchase_invoice','code'),
-    ('purchase_invoice','code')
+    ('purchase_invoice','is_credit_note')
 )
 UPDATE control.entity_field ef
-   SET is_active = false,
+   SET runtime_enabled = false,
        updated_at = now(),
        updated_by = '00000000-0000-0000-0000-000000000000'
   FROM inactive_fields f
@@ -1268,6 +1313,7 @@ UPDATE control.entity_field ef
 DO $$
 DECLARE
     v_count integer;
+    v_missing text;
 BEGIN
     SELECT count(*) INTO v_count
       FROM control.entity e
@@ -1279,16 +1325,66 @@ BEGIN
         RAISE EXCEPTION '[ap_purchase_invoice_contract] expected pricing_component entity + v1, got %', v_count;
     END IF;
 
-    SELECT count(*) INTO v_count
-      FROM control.entity_field ef
-      JOIN control.entity_version ev ON ev.id = ef.entity_version_id
-      JOIN control.entity e ON e.id = ev.entity_id
-     WHERE e.entity_code = 'pricing_component'
+    -- 042_control_entity_field_contract.sql is the sole physical-column
+    -- generator.  Keep this assertion semantic rather than depending on a
+    -- historical total that changes when a DDL column is retired or a field
+    -- contract is consolidated.
+    SELECT string_agg(required.field_name, ', ' ORDER BY required.field_name)
+      INTO v_missing
+      FROM (VALUES
+          ('code'), ('invoice_type'), ('supplier_id'), ('posting_date'),
+          ('currency_code'), ('total_amount'), ('match_status'),
+          ('budget_check_result')
+      ) required(field_name)
+      JOIN control.entity e
+        ON e.entity_code = 'purchase_invoice'
        AND e.tenant_id IS NULL
-       AND ev.version_no = 1
-       AND ef.is_active = true;
-    IF v_count < 41 THEN
-        RAISE EXCEPTION '[ap_purchase_invoice_contract] expected at least 41 active PC fields, got %', v_count;
+      WHERE NOT EXISTS (
+          SELECT 1
+          FROM information_schema.columns c
+          WHERE c.table_schema = e.table_schema
+            AND c.table_name = e.table_name
+            AND c.column_name = required.field_name
+      );
+
+    IF v_missing IS NOT NULL THEN
+        RAISE EXCEPTION '[ap_purchase_invoice_contract] purchase_invoice physical contract is missing columns: %', v_missing;
+    END IF;
+
+    SELECT string_agg(required.field_name, ', ' ORDER BY required.field_name)
+      INTO v_missing
+      FROM (VALUES
+          ('id'),
+          ('tenant_id'),
+          ('source_doc_type'),
+          ('source_doc_id'),
+          ('term_type'),
+          ('condition_type_id'),
+          ('amount_value'),
+          ('currency_code'),
+          ('created_at'),
+          ('updated_at')
+      ) required(field_name)
+     WHERE NOT EXISTS (
+         SELECT 1
+           FROM control.entity_field ef
+           JOIN control.entity_version ev ON ev.id = ef.entity_version_id
+           JOIN control.entity e ON e.id = ev.entity_id
+          WHERE e.entity_code = 'pricing_component'
+            AND e.tenant_id IS NULL
+            AND ev.version_no = 1
+            AND ef.name = required.field_name
+            AND ef.is_active = true
+            AND EXISTS (
+                SELECT 1
+                  FROM information_schema.columns c
+                 WHERE c.table_schema = e.table_schema
+                   AND c.table_name = e.table_name
+                   AND c.column_name = ef.column_name
+            )
+     );
+    IF v_missing IS NOT NULL THEN
+        RAISE EXCEPTION '[ap_purchase_invoice_contract] pricing_component required fields are missing or not physical: %', v_missing;
     END IF;
 
     SELECT count(*) INTO v_count
@@ -1340,6 +1436,45 @@ BEGIN
         RAISE EXCEPTION '[ap_purchase_invoice_contract] expected PI + PIL list_columns display config, got %', v_count;
     END IF;
 
+    -- Type-specific metadata aliases that reuse a table column are patches,
+    -- not additional physical fields.  Assert the stable grouped contract and
+    -- ensure every grouped physical field still resolves to the DDL.
+    SELECT string_agg(required.field_name || ':' || required.group_key, ', ' ORDER BY required.field_name)
+      INTO v_missing
+      FROM (VALUES
+          ('code', 'purchase_invoice_general'),
+          ('invoice_type', 'purchase_invoice_general'),
+          ('supplier_id', 'purchase_invoice_parties'),
+          ('posting_date', 'dates'),
+          ('currency_code', 'currency'),
+          ('total_amount', 'purchase_invoice_amounts'),
+          ('match_status', 'matching'),
+          ('budget_check_result', 'dimensions')
+     ) required(field_name, group_key)
+     WHERE NOT EXISTS (
+         SELECT 1
+           FROM control.entity_field ef
+           JOIN control.entity_version ev ON ev.id = ef.entity_version_id
+           JOIN control.entity e ON e.id = ev.entity_id
+          WHERE e.entity_code = 'purchase_invoice'
+            AND e.tenant_id IS NULL
+            AND ev.version_no = 1
+            AND ef.name = required.field_name
+            AND ef.group_key = required.group_key
+            AND ef.is_active = true
+            AND COALESCE(ef.runtime_enabled, true) = true
+            AND EXISTS (
+                SELECT 1
+                FROM information_schema.columns c
+                WHERE c.table_schema = e.table_schema
+                  AND c.table_name = e.table_name
+                  AND c.column_name = ef.column_name
+            )
+      );
+     IF v_missing IS NOT NULL THEN
+         RAISE EXCEPTION '[ap_purchase_invoice_contract] purchase_invoice required field groups are incomplete: %', v_missing;
+     END IF;
+
     SELECT count(*) INTO v_count
       FROM control.entity_field ef
       JOIN control.entity_version ev ON ev.id = ef.entity_version_id
@@ -1347,10 +1482,19 @@ BEGIN
      WHERE e.entity_code = 'purchase_invoice'
        AND e.tenant_id IS NULL
        AND ev.version_no = 1
-       AND ef.group_key IS NOT NULL
-       AND ef.is_active = true;
-    IF v_count < 50 THEN
-        RAISE EXCEPTION '[ap_purchase_invoice_contract] expected at least 50 grouped active PI fields, got %', v_count;
+        AND ef.group_key IS NOT NULL
+        AND ef.is_active = true
+        AND COALESCE(ef.runtime_enabled, true) = true
+        AND ef.column_name <> ''
+       AND NOT EXISTS (
+           SELECT 1
+             FROM information_schema.columns c
+            WHERE c.table_schema = e.table_schema
+              AND c.table_name = e.table_name
+              AND c.column_name = ef.column_name
+       );
+    IF v_count <> 0 THEN
+        RAISE EXCEPTION '[ap_purchase_invoice_contract] grouped PI fields drift from physical columns: %', v_count;
     END IF;
 END $$;
 

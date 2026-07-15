@@ -327,9 +327,7 @@ WITH managed_entities(entity_code) AS (
         ('schedule_line'), ('service_sheet'), ('service_sheet_line')
 )
 UPDATE control.entity_field ef
-   SET is_active = false,
-       is_deprecated = true,
-       visibility = '{"hidden":true}'::jsonb,
+   SET runtime_enabled = false,
        updated_at = now(),
        updated_by = '00000000-0000-0000-0000-000000000000'
   FROM control.entity_version ev
@@ -1507,4 +1505,3 @@ UPDATE control.entity_field ef
    AND ef.name = dfc.field_name;
 
 COMMIT;
-

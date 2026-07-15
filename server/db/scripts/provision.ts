@@ -64,6 +64,7 @@ import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import pg from "pg";
+import { validateMetadataGraph } from "../../packages/services/metadata/src/metadata-graph-validator.js";
 
 const { Client } = pg;
 
@@ -1208,6 +1209,30 @@ async function runPhases(
           }
         }
       }
+    }
+
+    if (opts.rebuildEntityMetadata) {
+      const graphValidation = await validateMetadataGraph({
+        query: <T extends object>(text: string, values?: readonly unknown[]) =>
+          client.query<T>(text, values ? [...values] : undefined),
+      });
+      if (!graphValidation.passed) {
+        const diagnostics = graphValidation.diagnostics.map((diagnostic) => ({
+          entityCode: diagnostic.entityCode,
+          code: diagnostic.code,
+          path: diagnostic.path,
+          message: diagnostic.message,
+        }));
+        logError({
+          msg: "metadata_graph_preflight_failed",
+          diagnostics,
+        });
+        throw new Error(`Metadata graph preflight failed with ${diagnostics.length} diagnostic(s).`);
+      }
+      log({
+        msg: "metadata_graph_preflight_passed",
+        eligibleEntities: graphValidation.eligibleEntityCodes.length,
+      });
     }
 
     log({

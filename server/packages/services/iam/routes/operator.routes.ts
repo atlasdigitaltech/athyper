@@ -1208,8 +1208,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
       }
 
       const scopeType = body.assignment_scope_type ?? "tenant";
-      if (!["tenant", "company_code", "legal_entity"].includes(scopeType)) {
-        res.status(400).json({ error: "INVALID_VALUE", message: "'assignment_scope_type' must be one of: tenant, company_code, legal_entity" });
+      if (!["tenant", "company_code", "legal_entity", "operating_organization", "network_membership"].includes(scopeType)) {
+        res.status(400).json({ error: "INVALID_VALUE", message: "'assignment_scope_type' must be one of: tenant, company_code, legal_entity, operating_organization, network_membership" });
         return;
       }
       if (scopeType !== "tenant" && !body.assignment_scope_ref_id) {
@@ -1316,8 +1316,8 @@ export function createOperatorRoutes(router: Router, deps: OperatorRoutesDeps): 
         updates["visibility_scope"] = body.visibility_scope;
       }
       if (body.assignment_scope_type !== undefined) {
-        if (!["tenant", "company_code", "legal_entity"].includes(body.assignment_scope_type)) {
-          res.status(400).json({ error: "INVALID_VALUE", message: "'assignment_scope_type' must be one of: tenant, company_code, legal_entity" });
+        if (!["tenant", "company_code", "legal_entity", "operating_organization", "network_membership"].includes(body.assignment_scope_type)) {
+          res.status(400).json({ error: "INVALID_VALUE", message: "'assignment_scope_type' must be one of: tenant, company_code, legal_entity, operating_organization, network_membership" });
           return;
         }
         updates["assignment_scope_type"] = body.assignment_scope_type;

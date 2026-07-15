@@ -27,7 +27,6 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import {
   verifyBearer,
-  isUuid,
   resolveTenantId,
   extractOrgHeaders,
 } from "@athyper/svc-shared";
@@ -50,6 +49,41 @@ type BulkPreflightResult = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
+
+interface BulkPreflightEntityContract {
+  table_schema: string;
+  table_name: string;
+  primary_key: string;
+  tenant_column: string | null;
+  runtime_enabled: boolean;
+  write_capability: string;
+}
+
+async function resolvePreflightEntity(db: AnyDb, entityCode: string): Promise<BulkPreflightEntityContract | null> {
+  return db
+    .selectFrom("control.entity as e")
+    .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+    .select([
+      "e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column",
+      "e.runtime_enabled", "e.write_capability",
+    ] as never[])
+    .where("e.name", "=", entityCode)
+    .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("e.read_capability", "<>", "none")
+    .where("e.primary_key", "is not", null)
+    .where("e.backing_type", "=", "table")
+    .where("ev.status", "=", "EFFECTIVE")
+    .executeTakeFirst() as Promise<BulkPreflightEntityContract | null>;
+}
+
+function scopePreflightRecord(query: any, entity: BulkPreflightEntityContract, tenantId: string, recordId: string): any {
+  let scoped = query.where(entity.primary_key, "=", recordId);
+  if (entity.tenant_column) scoped = scoped.where(entity.tenant_column, "=", tenantId);
+  return scoped;
+}
 
 // ─── Deps ─────────────────────────────────────────────────────────────────────
 
@@ -175,17 +209,15 @@ async function classifyTransition(
   entityName:   string,
   tenantId:     string,
   fullTable:    `${string}.${string}`,
+  entity:       BulkPreflightEntityContract,
   id:           string,
   targetStatus: string,
   routeCache:   { route: StatusRouteCompiled | null | undefined; lc: Record<string, string[]> | null | undefined },
 ): Promise<EntityActionEligibility> {
   // 1. Fetch current record status
-  const current = await db
-    .selectFrom(fullTable)
-    .select(["status"] as never[])
-    .where("id"        as never, "=", id        as never)
-    .where("tenant_id" as never, "=", tenantId  as never)
-    .executeTakeFirst() as { status: string } | undefined;
+  let currentQuery = (db.selectFrom(fullTable) as any).select(["status"]);
+  currentQuery = scopePreflightRecord(currentQuery, entity, tenantId, id);
+  const current = await currentQuery.executeTakeFirst() as { status: string } | undefined;
 
   if (!current) {
     return { recordId: id, status: "denied", reason: "Record not found" };
@@ -241,19 +273,17 @@ async function classifyCopy(
   db: AnyDb,
   tenantId: string,
   fullTable: `${string}.${string}`,
+  entity: BulkPreflightEntityContract,
   id: string,
 ): Promise<EntityActionEligibility> {
-  const current = await db
-    .selectFrom(fullTable)
-    .select(["id", "status"] as never[])
-    .where("id" as never, "=", id as never)
-    .where("tenant_id" as never, "=", tenantId as never)
-    .executeTakeFirst() as { id: string; status?: string | null } | undefined;
+  let currentQuery = (db.selectFrom(fullTable) as any).select([entity.primary_key, "status"]);
+  currentQuery = scopePreflightRecord(currentQuery, entity, tenantId, id);
+  const current = await currentQuery.executeTakeFirst() as Record<string, unknown> | undefined;
 
   if (!current) {
     return { recordId: id, status: "denied", reason: "Record not found" };
   }
-  return { recordId: id, status: "eligible", currentState: current.status ?? undefined };
+  return { recordId: id, status: "eligible", currentState: typeof current["status"] === "string" ? current["status"] : undefined };
 }
 
 // ─── Route factory ─────────────────────────────────────────────────────────────
@@ -293,8 +323,8 @@ export function createBulkPreflightRoute(router: Router, deps: BulkPreflightRout
         res.status(400).json({ error: "TOO_MANY_IDS", message: `Maximum ${BULK_MAX_IDS} ids per request` });
         return;
       }
-      if (!ids.every((id) => isUuid(id))) {
-        res.status(400).json({ error: "INVALID_IDS", message: "All ids must be valid UUIDs" });
+      if (!ids.every((id) => id.length > 0 && id.length <= 256)) {
+        res.status(400).json({ error: "INVALID_IDS", message: "Record keys must be non-empty strings of at most 256 characters" });
         return;
       }
       if ((action === "status_transition" || TARGET_STATUS[action]) && !targetStatus) {
@@ -312,12 +342,7 @@ export function createBulkPreflightRoute(router: Router, deps: BulkPreflightRout
 
       // ── Resolve backing table ───────────────────────────────────────────────
 
-      const entityRow = await db
-        .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"])
-        .where("e.name",      "=", entityCode)
-        .where("e.tenant_id", "is", null)
-        .executeTakeFirst() as { table_schema: string; table_name: string } | undefined;
+      const entityRow = await resolvePreflightEntity(db, entityCode);
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -325,6 +350,11 @@ export function createBulkPreflightRoute(router: Router, deps: BulkPreflightRout
       }
 
       const fullTable = `${entityRow.table_schema}.${entityRow.table_name}` as `${string}.${string}`;
+
+      if (action === "copy" && entityRow.write_capability === "none") {
+        res.status(403).json({ error: "ENTITY_READ_ONLY", message: `Entity '${entityCode}' is not writable.` });
+        return;
+      }
 
       // ── Classify each record (shared cache: route/lifecycle loaded once per request) ──
 
@@ -336,8 +366,8 @@ export function createBulkPreflightRoute(router: Router, deps: BulkPreflightRout
       const records: EntityActionEligibility[] = [];
       for (const id of ids) {
         const result = action === "copy"
-          ? await classifyCopy(db, tenantId, fullTable, id)
-          : await classifyTransition(db, entityCode, tenantId, fullTable, id, targetStatus, routeCache);
+          ? await classifyCopy(db, tenantId, fullTable, entityRow, id)
+          : await classifyTransition(db, entityCode, tenantId, fullTable, entityRow, id, targetStatus, routeCache);
         records.push(result);
       }
 

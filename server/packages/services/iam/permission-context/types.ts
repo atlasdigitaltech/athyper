@@ -54,6 +54,17 @@ export interface EffectivePermissionEntry {
     | "plane_excluded";
 }
 
+/** Permission-specific authorization boundary after applicable scoped denies. */
+export interface EffectiveAuthorizationScope {
+  readonly permissionCode: string;
+  readonly tenantWide: boolean;
+  readonly legalEntityIds: ReadonlySet<string>;
+  readonly companyCodeIds: ReadonlySet<string>;
+  readonly operatingOrganizationIds: ReadonlySet<string>;
+  readonly networkMembershipIds: ReadonlySet<string>;
+  readonly visibility: "all" | "team" | "own";
+}
+
 // ─── Effective context DTO ──────────────────────────────────────────────────────
 
 /**
@@ -110,6 +121,8 @@ export interface EffectivePermissionContext {
   readonly planeExcluded: ReadonlySet<string>;
   /** Full per-code matrix. Iterate for descriptor disabledReason mapping. */
   readonly entries: ReadonlyMap<string, EffectivePermissionEntry>;
+  /** Authorization scope is permission-specific, never session-global. */
+  readonly authorizationScopes: ReadonlyMap<string, EffectiveAuthorizationScope>;
 
   /**
    * Composite SHA256 of (principalFingerprint, sorted allowed codes,

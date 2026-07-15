@@ -1294,3 +1294,30 @@ COMMENT ON INDEX master.content_item_fts_idx IS
 -- Supplier company-code extension indexes
 -- (company_code_supplier_spend_policy / intent_policy / posting_override)
 -- ============================================================================
+
+
+-- ============================================================================
+-- Operating Organization foundation indexes
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS operating_organization_tenant_status_idx
+    ON master.operating_organization (tenant_id, domain, status, code);
+
+CREATE INDEX IF NOT EXISTS operating_organization_parent_idx
+    ON master.operating_organization (tenant_id, parent_id)
+    WHERE parent_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS operating_organization_company_org_idx
+    ON master.operating_organization_company
+       (tenant_id, operating_organization_id, company_code_id)
+    WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS operating_organization_company_company_idx
+    ON master.operating_organization_company
+       (tenant_id, company_code_id, operating_organization_id)
+    WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS operating_organization_company_effective_idx
+    ON master.operating_organization_company
+       (tenant_id, operating_organization_id, effective_from, effective_until)
+    WHERE status = 'active';

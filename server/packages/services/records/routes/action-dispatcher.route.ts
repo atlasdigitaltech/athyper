@@ -35,6 +35,7 @@
  */
 
 import type { RequestHandler, Response, Router } from "express";
+import { randomUUID } from "node:crypto";
 import { sql, type Kysely } from "kysely";
 import {
   isUuid,
@@ -78,6 +79,20 @@ import { resolveLifecycleOrchestratorRollout } from "../lifecycle/lifecycle-orch
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
+
+interface ActionEntityContract {
+  table_schema: string;
+  table_name: string;
+  primary_key: string;
+  tenant_column: string | null;
+  write_capability: string;
+}
+
+function scopeActionRecord(query: any, entity: ActionEntityContract, tenantId: string, recordId: string): any {
+  let scoped = query.where(entity.primary_key, "=", recordId);
+  if (entity.tenant_column) scoped = scoped.where(entity.tenant_column, "=", tenantId);
+  return scoped;
+}
 
 // Cache of generated columns per (schema, table). Generated columns
 // (`GENERATED ALWAYS AS … STORED`) cannot accept user-supplied values on
@@ -422,10 +437,20 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
       // ── Resolve entity table ──────────────────────────────────────────────────
       const entityRow = await db
         .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"])
+        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+        .select([
+          "e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column", "e.write_capability",
+        ] as never[])
         .where("e.name", "=", entityCode)
         .where("e.tenant_id", "is", null)
-        .executeTakeFirst() as { table_schema: string; table_name: string } | undefined;
+        .where("e.runtime_enabled", "=", true)
+        .where("e.status", "=", "ACTIVE")
+        .where("e.is_active", "=", true)
+        .where("e.read_capability", "<>", "none")
+        .where("e.primary_key", "is not", null)
+        .where("e.backing_type", "=", "table")
+        .where("ev.status", "=", "EFFECTIVE")
+        .executeTakeFirst() as ActionEntityContract | undefined;
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -433,14 +458,15 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
       }
 
       const fullTable = `${entityRow.table_schema}.${entityRow.table_name}` as `${string}.${string}`;
+      if (entityRow.write_capability === "none") {
+        res.status(403).json({ error: "ENTITY_READ_ONLY", message: `Entity '${entityCode}' does not expose write actions.` });
+        return;
+      }
 
       // ── Fetch current record ──────────────────────────────────────────────────
-      const record = await db
-        .selectFrom(fullTable)
-        .selectAll()
-        .where("id" as never, "=", recordId as never)
-        .where("tenant_id" as never, "=", tenantId as never)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
+      let recordQuery = (db.selectFrom(fullTable) as any).selectAll();
+      recordQuery = scopeActionRecord(recordQuery, entityRow, tenantId, recordId);
+      const record = await recordQuery.executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!record) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${recordId}' not found` });
@@ -1141,13 +1167,11 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
             }
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const row = await (trx.updateTable(fullTable) as any)
+            let transitionQuery = (trx.updateTable(fullTable) as any)
               .set(effectiveTransitionPatch)
-              .where("id",        "=", recordId)
-              .where("tenant_id", "=", tenantId)
-              .where("status",    "=", currentStatus) // optimistic lock
-              .returningAll()
-              .executeTakeFirst() as Record<string, unknown> | undefined;
+            transitionQuery = scopeActionRecord(transitionQuery, entityRow, tenantId, recordId)
+              .where("status", "=", currentStatus); // optimistic lock
+            const row = await transitionQuery.returningAll().executeTakeFirst() as Record<string, unknown> | undefined;
 
             if (!row) return undefined;
 
@@ -1206,12 +1230,10 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
       if (target === "deactivate") {
         // Deactivation is an operational availability flag, not a lifecycle state transition.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const updated = await (db.updateTable(fullTable) as any)
+        let deactivateQuery = (db.updateTable(fullTable) as any)
           .set({ is_active: false, updated_at: now, updated_by: principalId })
-          .where("id",        "=", recordId)
-          .where("tenant_id", "=", tenantId)
-          .returningAll()
-          .executeTakeFirst() as Record<string, unknown> | undefined;
+        deactivateQuery = scopeActionRecord(deactivateQuery, entityRow, tenantId, recordId);
+        const updated = await deactivateQuery.returningAll().executeTakeFirst() as Record<string, unknown> | undefined;
 
         logger?.info("action_dispatch_deactivate", { entity: entityCode, tenantId, recordId });
         res.json({ ok: true, record: updated ?? record });
@@ -1226,6 +1248,8 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           "updated_at", "updated_by", "status_changed_at", "status_changed_by",
           "deleted_at", "deleted_by",
         ]);
+        EXCLUDE_COLS.add(entityRow.primary_key);
+        if (entityRow.tenant_column) EXCLUDE_COLS.add(entityRow.tenant_column);
 
         // Generated columns (e.g. is_active, net_amount) reject any value on
         // INSERT — discover and skip them per-table at runtime.
@@ -1244,8 +1268,11 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
         // (e.g. 'draft', 'posted'); DB triggers like document.trg_je_status_insert_guard
         // enforce that any new row starts in 'draft' (not 'DRAFT').
         copyData["status"]     = "draft";
-        copyData["tenant_id"]  = tenantId;
+        if (entityRow.tenant_column) copyData[entityRow.tenant_column] = tenantId;
         copyData["created_by"] = principalId;
+        if (isUuid(String(record[entityRow.primary_key] ?? ""))) {
+          copyData[entityRow.primary_key] = randomUUID();
+        }
 
         // For reverse: link back to original if the column exists
         if (target === "reverse" && Object.prototype.hasOwnProperty.call(record, "reversed_from_id")) {
@@ -1258,8 +1285,9 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           .returningAll()
           .executeTakeFirst() as Record<string, unknown>;
 
-        logger?.info(`action_dispatch_${target}`, { entity: entityCode, tenantId, recordId, newId: newRecord["id"] });
-        res.status(201).json({ ok: true, newRecord: { id: newRecord["id"] } });
+        const newRecordId = newRecord[entityRow.primary_key];
+        logger?.info(`action_dispatch_${target}`, { entity: entityCode, tenantId, recordId, newId: newRecordId });
+        res.status(201).json({ ok: true, newRecord: { id: newRecordId } });
         return;
       }
 

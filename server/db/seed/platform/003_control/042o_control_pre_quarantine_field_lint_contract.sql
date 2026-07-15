@@ -1,12 +1,9 @@
 ﻿-- Pre-quarantine seed-drift lint (Batch 5A).
 --
--- 042p Â§3 (line 287) auto-quarantines entity_field rows whose column_name is
--- missing from information_schema.columns (sets is_active=false,
--- is_deprecated=true). The post-quarantine 100_ assertions (Â§P2P.1/Â§P2P.2)
--- filter on is_active=true, so any drift silently disappears before CI can see
--- it. This file runs BEFORE 042p Â§3 quarantine (alphabetic ordering: 042o < 042p)
--- and enforces the drift contract on all seeded rows, regardless of quarantine
--- state.
+-- 042p Â§3 and 099b quarantine entity_field rows whose column_name is missing
+-- from information_schema.columns. Quarantine changes runtime_enabled only:
+-- registered metadata remains visible to discovery/UI. This lint therefore
+-- validates the runtime field surface, not the full metadata catalogue.
 --
 -- Execution mode is GUC-gated to match 100_control_seed_contract_assertions.sql:
 --   SET app.assert_seed_contracts = 'on'   -> hard fail on violations (CI)
@@ -59,7 +56,8 @@ BEGIN
         JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.tenant_id IS NULL
         JOIN control.entity_field ef ON ef.entity_version_id = ev.id
         WHERE ef.tenant_id IS NULL
-          AND ef.is_deprecated = false
+          AND ef.is_active = true
+          AND COALESCE(ef.runtime_enabled, true) = true
           AND COALESCE(ef.column_name, '') <> ''
           AND NOT EXISTS (
               SELECT 1 FROM information_schema.columns c
@@ -458,4 +456,3 @@ BEGIN
         RAISE NOTICE '[042o pre-quarantine lint] Completed in WARNING mode. Set app.assert_seed_contracts=on for CI strict.';
     END IF;
 END $$;
-

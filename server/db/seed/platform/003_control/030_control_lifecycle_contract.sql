@@ -1415,7 +1415,10 @@ VALUES
     (v_lc_id, NULL, 'partially_paid',   'Partially Paid',    false, false, 50, '{"ui_color":"#E8A020","icon_key":"banknote"}'::jsonb,                                         '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, 'on_hold',          'On Hold',           false, false, 55, '{"ui_color":"#B45309","icon_key":"pause-circle"}'::jsonb,                                     '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, 'fully_paid',       'Fully Paid',        false, true,  60, '{"ui_color":"#217346","icon_key":"circle-check"}'::jsonb,                                     '00000000-0000-0000-0000-000000000000'),
-    (v_lc_id, NULL, 'rejected',         'Rejected',          false, true,  70, '{"ui_color":"#C00000","icon_key":"x-circle"}'::jsonb,                                         '00000000-0000-0000-0000-000000000000'),
+    -- Rejected invoices return to draft through `amend`, so this state is
+    -- editable and must not be terminal. Terminal + is_mutable is rejected
+    -- by the capability compiler.
+    (v_lc_id, NULL, 'rejected',         'Rejected',          false, false, 70, '{"ui_color":"#C00000","icon_key":"x-circle"}'::jsonb,                                         '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, 'cancelled',        'Cancelled',         false, true,  80, '{"ui_color":"#666666","icon_key":"ban"}'::jsonb,                                              '00000000-0000-0000-0000-000000000000'),
     (v_lc_id, NULL, 'reversed',         'Reversed',          false, true,  90, '{"ui_color":"#E8A020","icon_key":"rotate-ccw"}'::jsonb,                                      '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (lifecycle_id, code) DO NOTHING;
@@ -1809,6 +1812,19 @@ UPDATE control.lifecycle
 --                   flag mirrors the state's own editable_in_status posture
 --                   for callers that want a lifecycle-level advisory.
 
+-- Repair the older rejected-state definition before canonical flags are
+-- normalized below. This keeps reruns deterministic when the row already
+-- exists from an earlier seed revision.
+UPDATE control.lifecycle_state ls
+   SET is_terminal = false,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+  FROM control.lifecycle lc
+ WHERE ls.lifecycle_id = lc.id
+   AND lc.code = 'purchase_invoice'
+   AND lc.tenant_id IS NULL
+   AND ls.code = 'rejected';
+
 UPDATE control.lifecycle_state ls
    SET state_flags = ls.state_flags || jsonb_build_object('is_mutable', true),
        updated_at = now(),
@@ -1872,4 +1888,3 @@ UPDATE control.lifecycle_state ls
    AND lc.code IN ('purchase_invoice', 'journal_entry', 'payment_entry')
    AND COALESCE((ls.state_flags ->> 'is_committed')::boolean, false)
    AND NOT ls.is_terminal;
-

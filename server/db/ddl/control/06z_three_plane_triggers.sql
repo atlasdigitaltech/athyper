@@ -137,9 +137,9 @@ BEGIN
     v_actor := COALESCE(NEW.created_by, OLD.created_by, '00000000-0000-0000-0000-000000000000'::uuid);
     INSERT INTO log.descriptor_cache_invalidation
         (tenant_id, entity_code, reason, triggered_by_table, triggered_by_id, created_by)
-    VALUES (v_tenant, v_entity, 'execution_binding_write', TG_TABLE_NAME, COALESCE(NEW.id, OLD.id), v_actor);
+    VALUES (v_tenant, v_entity, 'satellite_write', TG_TABLE_NAME, COALESCE(NEW.id, OLD.id), v_actor);
     PERFORM pg_notify('desc_invalidate', json_build_object(
-        'tenant_id', v_tenant, 'entity_code', v_entity, 'reason', 'execution_binding_write',
+        'tenant_id', v_tenant, 'entity_code', v_entity, 'reason', 'satellite_write',
         'source', TG_TABLE_NAME, 'at', extract(epoch FROM now()))::text);
     RETURN COALESCE(NEW, OLD);
 END;
@@ -195,9 +195,9 @@ BEGIN
     v_actor := COALESCE(NEW.created_by, OLD.created_by, '00000000-0000-0000-0000-000000000000'::uuid);
     INSERT INTO log.descriptor_cache_invalidation
         (tenant_id, entity_code, reason, triggered_by_table, triggered_by_id, created_by)
-    VALUES (NULL, NULL, 'execution_registry_write', TG_TABLE_NAME, COALESCE(NEW.id, OLD.id), v_actor);
+    VALUES (NULL, NULL, 'satellite_write', TG_TABLE_NAME, COALESCE(NEW.id, OLD.id), v_actor);
     PERFORM pg_notify('desc_invalidate', json_build_object(
-        'reason', 'execution_registry_write', 'source', TG_TABLE_NAME,
+        'reason', 'satellite_write', 'source', TG_TABLE_NAME,
         'at', extract(epoch FROM now()))::text);
     RETURN COALESCE(NEW, OLD);
 END;
@@ -218,7 +218,10 @@ CREATE TRIGGER trg_elsm_invalidate
     AFTER INSERT OR UPDATE OR DELETE ON control.entity_lifecycle_state_mask
     FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_by_entity_name();
 
--- entity_policy, entity_field, field_security_policy carry entity_id; resolve to entity_code
+-- entity_policy and field_security_policy carry entity_id; entity_field is
+-- version-bound and carries entity_version_id. Bind each trigger to the
+-- matching resolver so metadata writes cannot dereference a nonexistent
+-- NEW.entity_id column.
 DROP TRIGGER IF EXISTS trg_ep_invalidate ON control.entity_policy;
 CREATE TRIGGER trg_ep_invalidate
     AFTER INSERT OR UPDATE OR DELETE ON control.entity_policy
@@ -227,7 +230,7 @@ CREATE TRIGGER trg_ep_invalidate
 DROP TRIGGER IF EXISTS trg_ef_invalidate ON control.entity_field;
 CREATE TRIGGER trg_ef_invalidate
     AFTER INSERT OR UPDATE OR DELETE ON control.entity_field
-    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_by_entity_id();
+    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_by_entity_version_id();
 
 DROP TRIGGER IF EXISTS trg_fsp_invalidate ON control.field_security_policy;
 CREATE TRIGGER trg_fsp_invalidate

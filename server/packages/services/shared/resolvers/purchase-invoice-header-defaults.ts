@@ -218,9 +218,13 @@ async function loadPurchaseInvoiceFieldDefaults(
       JOIN control.entity e          ON e.id  = ev.entity_id
      WHERE e.name       = ${ENTITY_CODE}
        AND e.tenant_id  IS NULL
-       AND ev.status    = 'EFFECTIVE'
-       AND ef.is_active = true
-       AND ef.defaults IS NOT NULL
+        AND e.runtime_enabled = true
+        AND e.status    = 'ACTIVE'
+        AND e.is_active = true
+        AND ev.status    = 'EFFECTIVE'
+        AND ef.is_active = true
+        AND ef.runtime_enabled = true
+        AND ef.defaults IS NOT NULL
   `.execute(ctx.db);
 
   const map: Record<string, EntityFieldDefaults> = {};

@@ -355,6 +355,13 @@ const ENTITY_CONTRACT_COLUMNS = [
   "identity_config",
   "search_config",
 ] as const;
+const ENTITY_RUNTIME_COLUMNS = [
+  "runtime_enabled",
+  "primary_key",
+  "tenant_column",
+  "read_capability",
+  "write_capability",
+] as const;
 
 const ENTITY_FIELD_CONTRACT_COLUMNS: Record<string, string> = {
   reference_config: "reference_config",
@@ -432,7 +439,7 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
 
       const current = await db
         .selectFrom("control.entity")
-        .select(["id", "tenant_id", ...ENTITY_CONTRACT_COLUMNS])
+        .select(["id", "tenant_id", ...ENTITY_CONTRACT_COLUMNS, ...ENTITY_RUNTIME_COLUMNS])
         .where("id", "=", id)
         .executeTakeFirst() as Record<string, unknown> | undefined;
       if (!current) return notFound(res as never, `Entity '${id}' not found`);
@@ -454,6 +461,9 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
         updates[column] = value === null || column === "data_policy"
           ? (value ?? {})
           : mergeJsonPatch(current[column], value);
+      }
+      for (const column of ENTITY_RUNTIME_COLUMNS) {
+        if (column in validation.values) updates[column] = validation.values[column];
       }
 
       if (Object.keys(updates).length <= 2) {
@@ -1235,6 +1245,8 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
           "e.label_singular", "e.label_plural",
           "e.entity_class", "e.module_id", "e.kind", "e.ownership_model",
           "e.table_schema", "e.table_name", "e.backing_type",
+          "e.runtime_enabled", "e.primary_key", "e.tenant_column",
+          "e.read_capability", "e.write_capability",
           "e.icon_key", "e.color_token", "e.status",
           "m.code as module_code", "m.name as module_name",
           "w.id as workspace_id", "w.code as workspace_code",
@@ -1247,6 +1259,8 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
           "e.label_singular", "e.label_plural",
           "e.entity_class", "e.module_id", "e.kind", "e.ownership_model",
           "e.table_schema", "e.table_name", "e.backing_type",
+          "e.runtime_enabled", "e.primary_key", "e.tenant_column",
+          "e.read_capability", "e.write_capability",
           "e.icon_key", "e.color_token", "e.status",
           "m.code", "m.name",
           "w.id", "w.code", "w.name", "w.sort_order",
@@ -1329,6 +1343,11 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
           can_create: (operationsByEntity.get((r.entity_code ?? r.name) as string) ?? []).some((op) => op.is_enabled && operationMatches(op.permission_code, "create")),
           can_edit: (operationsByEntity.get((r.entity_code ?? r.name) as string) ?? []).some((op) => op.is_enabled && operationMatches(op.permission_code, "edit")),
           can_delete: (operationsByEntity.get((r.entity_code ?? r.name) as string) ?? []).some((op) => op.is_enabled && operationMatches(op.permission_code, "delete")),
+          runtime_enabled: Boolean(r.runtime_enabled),
+          primary_key: (r.primary_key ?? null) as string | null,
+          tenant_column: (r.tenant_column ?? null) as string | null,
+          read_capability: String(r.read_capability ?? "none"),
+          write_capability: String(r.write_capability ?? "none"),
           policy_access_mode: policyByEntityId.get(r.id as string)?.access_mode ?? null,
           policy_audit_mode: policyByEntityId.get(r.id as string)?.audit_mode ?? null,
           policy_company_scope_mode: policyByEntityId.get(r.id as string)?.company_scope_mode ?? null,

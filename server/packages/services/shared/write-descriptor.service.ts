@@ -132,13 +132,19 @@ export async function getWriteDescriptor(
            ef.editability,
            ev.id AS entity_version_id
       FROM control.entity_field ef
-      JOIN control.entity_version ev ON ev.id = ef.entity_version_id
-      JOIN control.entity e ON e.id = ev.entity_id
+     JOIN control.entity_version ev ON ev.id = ef.entity_version_id
+     JOIN control.entity e ON e.id = ev.entity_id
      WHERE e.entity_code = ${entityCode}::text
        AND e.tenant_id  IS NULL
-       AND ev.status = 'EFFECTIVE'
-       AND ef.tenant_id IS NULL
-       AND ef.is_active = true
+       AND e.runtime_enabled = true
+       AND e.status = 'ACTIVE'
+       AND e.is_active = true
+       AND e.read_capability <> 'none'
+       AND e.write_capability <> 'none'
+        AND ev.status = 'EFFECTIVE'
+        AND ef.tenant_id IS NULL
+        AND ef.is_active = true
+        AND ef.runtime_enabled = true
   `.execute(db);
 
   if (rows.rows.length === 0) {
@@ -242,8 +248,14 @@ async function loadCompiledWriteDescriptor(
       JOIN control.entity_version ev ON ev.id = ec.entity_version_id
       JOIN control.entity e ON e.id = ev.entity_id
      WHERE (e.entity_code = ${entityCode}::text OR e.name = ${entityCode}::text OR e.slug = ${entityCode}::text)
-       AND e.tenant_id IS NULL
+      AND e.tenant_id IS NULL
+       AND e.runtime_enabled = true
+       AND e.status = 'ACTIVE'
+       AND e.is_active = true
+       AND e.read_capability <> 'none'
+       AND e.write_capability <> 'none'
        AND ev.status = 'EFFECTIVE'
+       AND ec.artifact_kind = 'execution'
      LIMIT 1
   `.execute(db);
   const row = result.rows[0];

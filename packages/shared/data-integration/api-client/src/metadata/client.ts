@@ -7,6 +7,7 @@
 import { ApiError, encodePathSegment, type ApiFetch } from "../base";
 import {
   type CompiledEntity,
+  type CatalogEntity,
   type EntityOperation,
   type StatusRoute,
   type LookupDomainBundle,
@@ -19,6 +20,11 @@ export function createMetadataClient(fetch: ApiFetch) {
     /** Fetch compiled entity descriptor by entity code */
     async getCompiledEntity(entityCode: string): Promise<CompiledEntity> {
       return fetch(`/api/metadata/entities/${encodePathSegment(entityCode)}/compiled`);
+    },
+
+    /** Fetch catalog metadata for any registered entity, including non-runtime entities. */
+    async getCatalogEntity(entityCode: string): Promise<CatalogEntity> {
+      return fetch(`/api/metadata/catalog/${encodePathSegment(entityCode)}`);
     },
 
     /** Fetch operations registered for an entity */

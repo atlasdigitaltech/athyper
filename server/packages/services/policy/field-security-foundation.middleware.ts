@@ -76,8 +76,12 @@ async function loadFieldPolicies(db: Kysely<any>, entityCode: string): Promise<F
       "ef.write_permission",
     ] as never[])
     .where("e.name" as never, "=", entityCode as never)
+    .where("e.runtime_enabled" as never, "=", true as never)
+    .where("e.status" as never, "=", "ACTIVE" as never)
+    .where("e.is_active" as never, "=", true as never)
     .where("ev.status" as never, "=", "EFFECTIVE" as never)
     .where("ef.is_active" as never, "=", true as never)
+    .where("ef.runtime_enabled" as never, "=", true as never)
     .execute() as Array<{
       field_name: string;
       column_name: string;

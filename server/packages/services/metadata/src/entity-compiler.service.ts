@@ -4,12 +4,12 @@
  * Compiles current control.entity metadata into the snapshot.entity_compiled
  * cache used by runtime compliance checks. The HTTP metadata route still
  * builds descriptors on demand for request serving, but this service keeps the
- * append-only snapshot table populated for every active system entity.
+ * append-only snapshot table populated for every active runtime-enabled system entity.
  */
 
 import { createHash } from "node:crypto";
 import { withFrameworkPhase } from "@athyper/adapter-telemetry";
-import { sql, type Kysely } from "kysely";
+import { CompiledQuery, sql, type Kysely } from "kysely";
 import {
   compileEntityCapabilityManifest,
   type CapabilityHandlerManifest,
@@ -22,11 +22,23 @@ import {
 } from "./execution-descriptor/index.js";
 import type { ExecutionDescriptorDiagnostic } from "./execution-descriptor/validation.js";
 import { ExecutionDescriptorActivationError } from "./execution-descriptor/validation.js";
+import {
+  validateMetadataGraph,
+  type MetadataGraphValidationResult,
+} from "./metadata-graph-validator.js";
+import { createCanonicalGraphLoader } from "./canonical-metadata-graph.js";
+import { evaluateExecutionEligibility } from "./execution-eligibility.js";
+import {
+  applyTenantCatalogOverlay,
+  resolveTenantOverlay,
+  type TenantOverlayResolution,
+} from "./tenant-overlay-resolver.js";
 
 export interface CompiledField {
   id: string;
   name: string;
   column_name: string;
+  projection_alias_of: string | null;
   label: string | null;
   description: string | null;
   data_type: string;
@@ -80,6 +92,11 @@ export interface CompiledEntity {
   table_schema: string;
   table_name: string;
   backing_type: string;
+  runtime_enabled: boolean;
+  primary_key: string | null;
+  tenant_column: string | null;
+  read_capability: string;
+  write_capability: string;
   concurrency_policy: Record<string, unknown>;
   version_id: string;
   version_no: number;
@@ -136,6 +153,11 @@ export interface CompileAllSummary {
   total: number;
   compiled: number;
   failed: number;
+  eligibleEntityCodes: string[];
+  compiledEntityCodes: string[];
+  persistedEntityCodes: string[];
+  snapshotPersistenceFailedEntityCodes: string[];
+  graphValidation: MetadataGraphValidationResult;
 }
 
 interface EntityRow {
@@ -152,6 +174,11 @@ interface EntityRow {
   table_schema: string;
   table_name: string;
   backing_type: string;
+  runtime_enabled: boolean;
+  primary_key: string | null;
+  tenant_column: string | null;
+  read_capability: string;
+  write_capability: string;
   concurrency_policy: unknown;
   display_config: unknown;
   identity_config: unknown;
@@ -175,6 +202,7 @@ interface EntityFieldRow {
   id: string;
   name: string;
   column_name: string;
+  projection_alias_of: string | null;
   label: string | null;
   description: string | null;
   data_type: string;
@@ -496,8 +524,6 @@ const BOOLEAN_FEATURE_KEYS = new Set([
   "is_bulk_editable",
   "is_approvable",
   "is_readonly",
-  "records_api_disabled",
-  "generic_runtime_disabled",
   "is_hidden",
   "comments_enabled",
   "event_history",
@@ -822,6 +848,7 @@ function mapField(
     id: row.id,
     name: row.name,
     column_name: row.column_name,
+    projection_alias_of: row.projection_alias_of ?? null,
     label: row.label,
     description: row.description,
     data_type: row.data_type,
@@ -891,7 +918,14 @@ export class EntityCompilerService {
   }
 
   private async compileMeasured(entityCode: string): Promise<CompiledEntity | null> {
-
+    const graphValidation = await this.validateRuntimeGraph([entityCode]);
+    if (!graphValidation.passed) {
+      this.logger?.warn("entity_compile_preflight_failed", {
+        entityCode,
+        diagnostics: graphValidation.diagnostics,
+      });
+      return null;
+    }
     const now = Date.now();
     const cached = this.cache.get(entityCode);
     if (cached && (now - cached.fetchedAt) < CACHE_TTL_MS) {
@@ -913,6 +947,14 @@ export class EntityCompilerService {
    * descriptor or the small execution overlay consumed by the pure compiler.
    */
   async loadExecutionDescriptor(entityCode: string, tenantId: string): Promise<SerializedExecutionDescriptorV1 | null> {
+    const graphValidation = await this.validateRuntimeGraph([entityCode]);
+    if (!graphValidation.passed) {
+      this.logger?.warn("entity_descriptor_preflight_failed", {
+        entityCode,
+        diagnostics: graphValidation.diagnostics,
+      });
+      return null;
+    }
     const snapshot = await sql<{
       entity_version_id: string;
       compiled_json: unknown;
@@ -924,7 +966,10 @@ export class EntityCompilerService {
         JOIN control.entity e ON e.id = ev.entity_id
        WHERE ev.status = 'EFFECTIVE'
          AND e.is_active = true
-         AND e.tenant_id IS NULL
+         AND e.runtime_enabled = true
+       AND e.status = 'ACTIVE'
+       AND e.tenant_id IS NULL
+       AND ec.artifact_kind = 'execution'
          AND (e.entity_code = ${entityCode} OR e.name = ${entityCode} OR e.slug = ${entityCode.replace(/_/g, "-")})
        ORDER BY ec.created_at DESC
        LIMIT 1
@@ -936,11 +981,15 @@ export class EntityCompilerService {
     }
     if (!compiled?.execution_descriptor) return null;
 
+    const overlayResolution = await this.resolveTenantOverlay(compiled, tenantId);
+    if (!overlayResolution) return compiled.execution_descriptor;
+
     const overlay = await sql<{ compiled_json: unknown; compiled_hash: string }>`
       SELECT compiled_json, compiled_hash
         FROM snapshot.entity_compiled_overlay
        WHERE tenant_id = ${tenantId}::uuid
          AND entity_version_id = ${compiled.version_id}::uuid
+         AND overlay_hash = ${overlayResolution.overlayHash}
        ORDER BY created_at DESC
        LIMIT 1
     `.execute(this.db).catch(() => ({ rows: [] as Array<{ compiled_json: unknown; compiled_hash: string }> }));
@@ -948,46 +997,21 @@ export class EntityCompilerService {
     const precompiledOverlay = coerceRecord(overlayRecord?.["execution_descriptor"]);
     if (precompiledOverlay) return precompiledOverlay as unknown as SerializedExecutionDescriptorV1;
 
-    if (overlayRecord && overlay.rows[0]?.compiled_hash) {
-      const policy = coerceRecord(overlayRecord["policy"]);
-      const fieldOverrides = coerceRecord(overlayRecord["fieldOverrides"] ?? overlayRecord["field_overrides"]);
-      const defaultSort = overlayRecord["defaultSort"] ?? overlayRecord["default_sort"];
-      const result = compileExecutionDescriptor({
-        compiledEntity: compiled,
-        handlerRegistry: this.handlerManifest,
-        tenantOverlay: {
-          tenantId,
-          compiledHash: overlay.rows[0].compiled_hash,
-          ...(policy ? { policy } : {}),
-          ...(fieldOverrides ? { fieldOverrides: fieldOverrides as any } : {}),
-          ...(Array.isArray(defaultSort) ? { defaultSort: defaultSort as any } : {}),
-        },
-      });
-      return result.serialized;
-    }
-
-    return compiled.execution_descriptor;
+    const result = compileExecutionDescriptor({
+      compiledEntity: compiled,
+      handlerRegistry: this.handlerManifest,
+      tenantOverlay: overlayResolution.executionOverlay,
+    });
+    await this.writeOverlaySnapshot(compiled, overlayResolution, result.serialized);
+    return result.serialized;
   }
 
   /** Effective public compiled entity used by the one-call runtime bootstrap. */
   async loadRuntimeCompiledEntity(entityCode: string, tenantId: string): Promise<CompiledEntity | null> {
     const base = await this.compile(entityCode);
     if (!base) return null;
-    const overlay = await sql<{ compiled_json: unknown }>`
-      SELECT compiled_json
-        FROM snapshot.entity_compiled_overlay
-       WHERE tenant_id = ${tenantId}::uuid
-         AND entity_version_id = ${base.version_id}::uuid
-       ORDER BY created_at DESC
-       LIMIT 1
-    `.execute(this.db).catch(() => ({ rows: [] as Array<{ compiled_json: unknown }> }));
-    const record = coerceRecord(overlay.rows[0]?.compiled_json);
-    const effective = coerceRecord(record?.["compiled_entity"] ?? record?.["compiledEntity"]);
-    if (effective && Array.isArray(effective["fields"])) return effective as unknown as CompiledEntity;
-    if (record && Array.isArray(record["fields"]) && (record["entity_code"] || record["entityCode"])) {
-      return record as unknown as CompiledEntity;
-    }
-    return base;
+    const overlayResolution = await this.resolveTenantOverlay(base, tenantId);
+    return overlayResolution ? applyTenantCatalogOverlay(base, overlayResolution) : base;
   }
 
   /** Compile an IN_REVIEW/DRAFT version without persistence before activation. */
@@ -1006,31 +1030,71 @@ export class EntityCompilerService {
   }
 
   /**
-   * Compile every active system entity. This is best-effort by entity: one bad
-   * row is logged and the warm-up continues so the remaining snapshots are
-   * still generated before the compliance suite runs.
+   * Compile every active, runtime-enabled system entity. Internal metadata,
+   * coverage, view, and projection rows remain registered but are outside the
+   * generic records compiler boundary.
    */
   async compileAllSystemEntities(): Promise<CompileAllSummary> {
     let total = 0;
     let compiled = 0;
     let failed = 0;
+    const compiledEntityCodes: string[] = [];
+    const persistedEntityCodes: string[] = [];
+    const snapshotPersistenceFailedEntityCodes: string[] = [];
 
     try {
-      const rows = await this.db
-        .selectFrom("control.entity as e" as never)
-        .select("e.name" as never)
-        .where("e.tenant_id" as never, "is" as never, null as never)
-        .where("e.status" as never, "=" as never, "ACTIVE" as never)
-        .execute() as Array<{ name: string }>;
+      const graphValidation = await this.validateRuntimeGraph();
+      const canonicalGraph = await createCanonicalGraphLoader(this.db)();
+      const eligibilityByCode = new Map(canonicalGraph.entities.map((entity) => [entity.entity_code, evaluateExecutionEligibility(entity)]));
+      const eligibilityDiagnostics = canonicalGraph.entities.flatMap((entity) => {
+        const result = eligibilityByCode.get(entity.entity_code);
+        if (!result || result.eligible) return [];
+        return result.diagnostics.map((diagnostic) => ({
+          entityCode: diagnostic.entityCode,
+          code: "RUNTIME_WRITE_CAPABILITY_INVALID" as const,
+          path: diagnostic.path,
+          message: diagnostic.message,
+        }));
+      });
+      graphValidation.diagnostics.push(...eligibilityDiagnostics);
+      graphValidation.eligibleEntityCodes = graphValidation.eligibleEntityCodes.filter((code) => eligibilityByCode.get(code)?.eligible === true);
+      if (eligibilityDiagnostics.length > 0) graphValidation.passed = false;
+      total = graphValidation.eligibleEntityCodes.length;
+      if (!graphValidation.passed) {
+        this.logger?.error?.("entity_compile_graph_preflight_failed", {
+          total,
+          diagnostics: graphValidation.diagnostics,
+        });
+        return {
+          total,
+          compiled,
+          failed: total,
+          eligibleEntityCodes: graphValidation.eligibleEntityCodes,
+          compiledEntityCodes,
+          persistedEntityCodes,
+          snapshotPersistenceFailedEntityCodes,
+          graphValidation,
+        };
+      }
 
-      total = rows.length;
-
-      for (const row of rows) {
-        const entityCode = String(row.name);
+      for (const entityCode of graphValidation.eligibleEntityCodes) {
         try {
-          const result = await this.compile(entityCode);
+          const result = await this.fullCompile(entityCode);
           if (result) {
             compiled++;
+            compiledEntityCodes.push(entityCode);
+            try {
+              await this.writeSnapshot(result);
+              persistedEntityCodes.push(entityCode);
+              this.cache.set(entityCode, { compiled: result, fetchedAt: Date.now() });
+            } catch (snapshotError) {
+              failed++;
+              snapshotPersistenceFailedEntityCodes.push(entityCode);
+              this.logger?.warn("entity_snapshot_persistence_failed", {
+                entityCode,
+                err: snapshotError instanceof Error ? snapshotError.message : String(snapshotError),
+              });
+            }
           } else {
             failed++;
             this.logger?.warn("entity_compile_skipped", {
@@ -1052,12 +1116,40 @@ export class EntityCompilerService {
         }
       }
 
-      return { total, compiled, failed };
+      return {
+        total,
+        compiled,
+        failed,
+        eligibleEntityCodes: graphValidation.eligibleEntityCodes,
+        compiledEntityCodes,
+        persistedEntityCodes,
+        snapshotPersistenceFailedEntityCodes,
+        graphValidation,
+      };
     } catch (err) {
       this.logger?.warn("entity_compile_warmup_failed", {
         err: err instanceof Error ? err.message : String(err),
       });
-      return { total, compiled, failed: failed || 1 };
+      const graphValidation = {
+        passed: false,
+        eligibleEntityCodes: [],
+        diagnostics: [{
+          entityCode: "<graph>",
+          code: "GRAPH_QUERY_FAILED" as const,
+          path: "$",
+          message: err instanceof Error ? err.message : String(err),
+        }],
+      } satisfies MetadataGraphValidationResult;
+      return {
+        total,
+        compiled,
+        failed: failed || 1,
+        eligibleEntityCodes: graphValidation.eligibleEntityCodes,
+        compiledEntityCodes,
+        persistedEntityCodes,
+        snapshotPersistenceFailedEntityCodes,
+        graphValidation,
+      };
     }
   }
 
@@ -1095,6 +1187,11 @@ export class EntityCompilerService {
         "e.table_schema",
         "e.table_name",
         "e.backing_type",
+        "e.runtime_enabled",
+        "e.primary_key",
+        "e.tenant_column",
+        "e.read_capability",
+        "e.write_capability",
         "e.concurrency_policy",
         "e.display_config",
         "e.identity_config",
@@ -1114,6 +1211,8 @@ export class EntityCompilerService {
       ]))
       .where("e.tenant_id" as never, "is" as never, null as never)
       .where("e.is_active" as never, "=" as never, true as never)
+      .where("e.runtime_enabled" as never, "=" as never, true as never)
+      .where("e.status" as never, "=" as never, "ACTIVE" as never)
       .executeTakeFirst() as EntityRow | undefined;
 
     if (!entityRow) return null;
@@ -1121,11 +1220,14 @@ export class EntityCompilerService {
     let versionQuery = this.db
       .selectFrom("control.entity_version as ev" as never)
       .select(["ev.id", "ev.version_no", "ev.version_hash"] as never[])
-      .where("ev.entity_id" as never, "=" as never, entityRow.id as never);
+      .where("ev.entity_id" as never, "=" as never, entityRow.id as never)
+      .where("ev.tenant_id" as never, "is" as never, null as never);
     versionQuery = selectedVersionId
       ? versionQuery.where("ev.id" as never, "=" as never, selectedVersionId as never)
       : versionQuery.where("ev.status" as never, "=" as never, "EFFECTIVE" as never);
-    const versionRow = await versionQuery.executeTakeFirst() as EntityVersionRow | undefined;
+    const versionRows = await versionQuery.execute() as EntityVersionRow[];
+    if ((!selectedVersionId && versionRows.length !== 1) || (selectedVersionId && versionRows.length !== 1)) return null;
+    const versionRow = versionRows[0];
 
     if (!versionRow) return null;
 
@@ -1133,7 +1235,9 @@ export class EntityCompilerService {
       .selectFrom("control.entity_field as ef" as never)
       .selectAll("ef" as never)
       .where("ef.entity_version_id" as never, "=" as never, versionRow.id as never)
+      .where("ef.tenant_id" as never, "is" as never, null as never)
       .where("ef.is_active" as never, "=" as never, true as never)
+      .where("ef.runtime_enabled" as never, "=" as never, true as never)
       .orderBy("ef.sort_order" as never, "asc")
       .execute() as EntityFieldRow[];
 
@@ -1147,7 +1251,11 @@ export class EntityCompilerService {
       entityRow.icon_key,
       entityRow.color_token,
     );
-    const identityConfig = coerceRecord(entityRow.identity_config) ?? {};
+    const identityConfig = {
+      ...(coerceRecord(entityRow.identity_config) ?? {}),
+      primary_key: entityRow.primary_key,
+      tenant_column: entityRow.tenant_column,
+    };
     const searchConfig = coerceRecord(entityRow.search_config) ?? {};
     const dataPolicy = coerceRecord(entityRow.data_policy) ?? {};
     const featureFlags = normalizeFeatureFlags(coerceRecord(entityRow.feature_flags) ?? {});
@@ -1216,6 +1324,11 @@ export class EntityCompilerService {
       table_schema: entityRow.table_schema,
       table_name: entityRow.table_name,
       backing_type: entityRow.backing_type,
+      runtime_enabled: entityRow.runtime_enabled,
+      primary_key: entityRow.primary_key,
+      tenant_column: entityRow.tenant_column,
+      read_capability: entityRow.read_capability,
+      write_capability: entityRow.write_capability,
       concurrency_policy: coerceRecord(entityRow.concurrency_policy) ?? {},
       version_id: versionRow.id,
       version_no: Number(versionRow.version_no),
@@ -1274,6 +1387,7 @@ export class EntityCompilerService {
         "er.ui_behavior",
       ] as never[])
       .where("er.entity_version_id" as never, "=" as never, versionId as never)
+      .where("er.tenant_id" as never, "is" as never, null as never)
       .orderBy("er.name" as never, "asc" as never)
       .execute() as Promise<Array<Record<string, unknown>>>;
   }
@@ -1446,22 +1560,71 @@ export class EntityCompilerService {
     await this.db
       .insertInto("snapshot.entity_compiled" as never)
       .values({
-        tenant_id: SYSTEM_ACTOR_ID,
+        tenant_id: null,
         entity_version_id: compiled.version_id,
+        artifact_kind: "execution",
         compiled_json: compiled as never,
         compiled_hash: compiled.compiled_hash,
         compliance_report: {},
         created_by: SYSTEM_ACTOR_ID,
       } as never)
       .onConflict((oc: any) =>
-        oc.columns(["entity_version_id"] as never[])
-          .doUpdateSet({
-            compiled_json: compiled as never,
-            compiled_hash: compiled.compiled_hash,
-            compliance_report: {},
-          } as never)
+        oc.columns(["tenant_id", "entity_version_id", "artifact_kind"] as never[])
+          // Compiled snapshots are immutable. A version may already have been
+          // compiled by a prior startup or invalidation; retaining that row is
+          // correct because a changed definition must publish a new version.
+          .doNothing()
       )
       .execute();
+  }
+
+  private async writeOverlaySnapshot(
+    compiled: CompiledEntity,
+    resolution: TenantOverlayResolution,
+    descriptor: SerializedExecutionDescriptorV1,
+  ): Promise<void> {
+    const effectiveCatalog = applyTenantCatalogOverlay(compiled, resolution);
+    await this.db
+      .insertInto("snapshot.entity_compiled_overlay" as never)
+      .values({
+        tenant_id: resolution.tenantId,
+        entity_version_id: resolution.entityVersionId,
+        overlay_set: resolution.overlaySet as never,
+        overlay_hash: resolution.overlayHash,
+        base_compiled_hash: resolution.baseCompiledHash,
+        compiled_json: {
+          execution_descriptor: descriptor,
+          compiled_entity: effectiveCatalog,
+        } as never,
+        compiled_hash: descriptor.identity.compiledHash,
+        created_by: SYSTEM_ACTOR_ID,
+      } as never)
+      .onConflict((oc: any) => oc.columns(["tenant_id", "entity_version_id", "overlay_hash"] as never[]).doNothing())
+      .execute();
+  }
+
+  private async resolveTenantOverlay(
+    compiled: CompiledEntity,
+    tenantId: string,
+  ): Promise<TenantOverlayResolution | null> {
+    return resolveTenantOverlay({
+      query: <T extends object>(text: string, values?: readonly unknown[]) =>
+        this.db.executeQuery<T>(CompiledQuery.raw(text, values ? [...values] : [])),
+    }, {
+      tenantId,
+      entityId: compiled.entity_id,
+      entityCode: compiled.entity_code,
+      entityVersionId: compiled.version_id,
+      baseCompiledHash: compiled.compiled_hash,
+      fields: compiled.fields,
+    });
+  }
+
+  private async validateRuntimeGraph(entityCodes?: readonly string[]): Promise<MetadataGraphValidationResult> {
+    return validateMetadataGraph({
+      query: <T extends object>(text: string, values?: readonly unknown[]) =>
+        this.db.executeQuery<T>(CompiledQuery.raw(text, values ? [...values] : [])),
+    }, entityCodes ? { entityCodes } : {});
   }
 }
 

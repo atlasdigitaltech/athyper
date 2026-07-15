@@ -15,6 +15,7 @@ function collectFiles(patterns) {
   });
 
   return [...new Set(roots)]
+    .map((filePath) => filePath.replace(/\\/g, "/"))
     .sort()
     .filter((filePath) => filePath.endsWith(".test.ts") || filePath.endsWith(".test.tsx"));
 }
@@ -37,9 +38,10 @@ function main() {
   }
 
   const commandArgs = ["exec", "vitest", "run", ...candidates];
-  const runner = spawnSync("pnpm", commandArgs, {
+  const runner = spawnSync(process.platform === "win32" ? "pnpm.cmd" : "pnpm", commandArgs, {
     stdio: "inherit",
     cwd: process.cwd(),
+    shell: process.platform === "win32",
   });
 
   process.exit(runner.status ?? 1);

@@ -2,6 +2,7 @@ export {
   setClients,
   // Metadata
   useCompiledEntity,
+  useCatalogEntity,
   useEntityOperations,
   useLookupDomain,
   useStatusRoute,

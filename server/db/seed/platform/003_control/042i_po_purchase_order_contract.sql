@@ -210,8 +210,9 @@ UPDATE control.entity_field ef
 -- â”€â”€ Â§2b Purge legacy fields no longer part of the PO header contract â”€â”€â”€â”€â”€â”€â”€
 -- (buyer_id, delivery_site, delivery_date, order_date, document_no, payment_terms,
 --  supplier_id, tax_amount, total_amount, notes were on the prior 042i seed.)
-DELETE FROM control.entity_field ef
-USING control.entity_version ev,
+UPDATE control.entity_field ef
+   SET runtime_enabled = false
+FROM control.entity_version ev,
       control.entity e
 WHERE ef.entity_version_id = ev.id
   AND ev.entity_id         = e.id
@@ -419,7 +420,7 @@ UPDATE control.entity_field ef
 UPDATE control.entity_field ef
    SET reference_config = COALESCE(ef.reference_config, '{}'::jsonb)
                           || jsonb_build_object(
-                               'ref_entity',    'payment_terms',
+                               'ref_entity',    'payment_term',
                                'display_field', 'name'
                           ),
        updated_at = now(),
@@ -794,5 +795,3 @@ BEGIN
 END $$;
 
 COMMIT;
-
-

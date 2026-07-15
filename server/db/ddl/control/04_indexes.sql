@@ -184,6 +184,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS ev_single_effective_uidx
 CREATE UNIQUE INDEX IF NOT EXISTS ev_single_draft_uidx
     ON control.entity_version (entity_id) WHERE is_working_copy = true;
 
+CREATE INDEX IF NOT EXISTS evc_execution_status_idx
+    ON control.entity_version_contract (api_exposure, read_capability, write_capability);
+CREATE INDEX IF NOT EXISTS evc_physical_binding_idx
+    ON control.entity_version_contract (table_schema, table_name);
+
+-- Moved from the duplicate 01z runtime DDL so the fresh-install schema has
+-- one owner for the runtime contract indexes.
+CREATE INDEX IF NOT EXISTS entity_runtime_eligibility_idx
+    ON control.entity (runtime_enabled, tenant_id, status)
+    WHERE runtime_enabled = true;
+CREATE INDEX IF NOT EXISTS ef_projection_alias_idx
+    ON control.entity_field (entity_version_id, projection_alias_of)
+    WHERE projection_alias_of IS NOT NULL;
+
 -- ─── control.entity_field ───────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS ef_version_sort_idx

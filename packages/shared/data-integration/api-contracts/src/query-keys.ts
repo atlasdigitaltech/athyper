@@ -31,6 +31,10 @@ export const queryKeys = {
       code,
     ] as const,
   },
+  catalogEntity: {
+    all: ["catalog-entity"] as const,
+    byCode: (code: string) => ["catalog-entity", code] as const,
+  },
   entityOperations: {
     all: ["entity-operations"] as const,
     byEntity: (name: string) => ["entity-operations", name] as const,

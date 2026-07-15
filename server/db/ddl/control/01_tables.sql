@@ -1749,6 +1749,15 @@ CREATE TABLE IF NOT EXISTS control.entity (
     kind                        text        NOT NULL DEFAULT 'ent',
     backing_type                text        NOT NULL DEFAULT 'table',
 
+    -- Runtime eligibility and storage contract.  Classification fields above
+    -- describe what an entity is; these fields describe whether the generic
+    -- records runtime may use it and how it addresses a row.
+    runtime_enabled             boolean     NOT NULL DEFAULT false,
+    primary_key                 text,
+    tenant_column               text,
+    read_capability             text        NOT NULL DEFAULT 'none',
+    write_capability            text        NOT NULL DEFAULT 'none',
+
     -- Governance
     governance_level            text        NOT NULL DEFAULT 'full',
     security_tier               text        NOT NULL DEFAULT 'config',
@@ -1844,6 +1853,24 @@ CREATE TABLE IF NOT EXISTS control.entity (
     -- shared mapping requires discriminator
     CONSTRAINT entity_shared_disc_chk   CHECK (
         mapping_mode <> 'shared' OR discriminator_column IS NOT NULL
+    ),
+    CONSTRAINT entity_primary_key_fmt_chk CHECK (
+        primary_key IS NULL OR primary_key ~ '^[a-z][a-z0-9_]*$'
+    ),
+    CONSTRAINT entity_tenant_column_fmt_chk CHECK (
+        tenant_column IS NULL OR tenant_column ~ '^[a-z][a-z0-9_]*$'
+    ),
+    CONSTRAINT entity_read_capability_chk CHECK (read_capability = ANY (ARRAY[
+        'none','generic','facade','projection'
+    ])),
+    CONSTRAINT entity_write_capability_chk CHECK (write_capability = ANY (ARRAY[
+        'none','generic','facade','append_only'
+    ])),
+    CONSTRAINT entity_runtime_identity_chk CHECK (
+        NOT runtime_enabled OR primary_key IS NOT NULL
+    ),
+    CONSTRAINT entity_runtime_read_chk CHECK (
+        NOT runtime_enabled OR read_capability <> 'none'
     ),
     -- Tenant entities MUST use document.* schema with t_<short>_<code> naming
     CONSTRAINT entity_tenant_naming_chk CHECK (
@@ -1942,6 +1969,18 @@ CREATE TABLE IF NOT EXISTS control.entity_publish_state (
     last_compiled_hash          text,
     last_schema_change_at       timestamptz,
 
+    -- Catalog and API execution are separate compilation products. The
+    -- legacy last_compiled_* columns remain as a compatibility summary until
+    -- compiler consumers migrate to these typed statuses.
+    catalog_status              text        NOT NULL DEFAULT 'NOT_BUILT',
+    catalog_compiled_at         timestamptz,
+    catalog_compiled_hash       text,
+    catalog_diagnostics         jsonb       NOT NULL DEFAULT '{}',
+    execution_status             text        NOT NULL DEFAULT 'NOT_APPLICABLE',
+    execution_compiled_at       timestamptz,
+    execution_compiled_hash     text,
+    execution_diagnostics       jsonb       NOT NULL DEFAULT '{}',
+
     -- Provenance (how this entity came to exist: cloned, imported, generated)
     provenance                  jsonb       NOT NULL DEFAULT '{}',
 
@@ -1971,8 +2010,18 @@ CREATE TABLE IF NOT EXISTS control.entity_publish_state (
     CONSTRAINT eps_hash_fmt_chk         CHECK (
         last_compiled_hash IS NULL OR length(last_compiled_hash) >= 64
     ),
+    CONSTRAINT eps_catalog_hash_fmt_chk CHECK (
+        catalog_compiled_hash IS NULL OR length(catalog_compiled_hash) >= 64
+    ),
+    CONSTRAINT eps_execution_hash_fmt_chk CHECK (
+        execution_compiled_hash IS NULL OR length(execution_compiled_hash) >= 64
+    ),
     CONSTRAINT eps_provenance_chk       CHECK (jsonb_typeof(provenance) = 'object'),
     CONSTRAINT eps_summary_chk          CHECK (jsonb_typeof(status_summary) = 'object'),
+    CONSTRAINT eps_catalog_diag_chk      CHECK (jsonb_typeof(catalog_diagnostics) = 'object'),
+    CONSTRAINT eps_execution_diag_chk    CHECK (jsonb_typeof(execution_diagnostics) = 'object'),
+    CONSTRAINT eps_catalog_status_chk    CHECK (catalog_status IN ('NOT_BUILT', 'READY', 'BLOCKED')),
+    CONSTRAINT eps_execution_status_chk  CHECK (execution_status IN ('NOT_APPLICABLE', 'NOT_BUILT', 'READY', 'BLOCKED')),
     CONSTRAINT eps_source_layer_chk     CHECK (source_layer IN ('platform', 'blueprint', 'overlay')),
     CONSTRAINT eps_source_ref_chk       CHECK (source_ref IS NULL OR btrim(source_ref) <> ''),
     CONSTRAINT eps_precedence_chk       CHECK (applied_precedence >= 0)
@@ -1986,7 +2035,8 @@ COMMENT ON TABLE  control.entity_publish_state IS
     '  platform(0) < blueprint(1-99, by application order) < overlay(100). '
     '  Higher applied_precedence wins on conflict. source_ref names the contributing pack/overlay. '
     '  Admins can query this table to see "this entity came from blueprint X, overridden by overlay Y." '
-    'Auto-created by trg_fn_ensure_entity_publish_state on entity INSERT.';
+    'Auto-created by trg_fn_ensure_entity_publish_state on entity INSERT. '
+    'catalog_* tracks the all-entity metadata artifact; execution_* tracks the API-eligible artifact.';
 
 
 -- =============================================================================
@@ -2076,6 +2126,71 @@ COMMENT ON TABLE  control.entity_version IS
 
 
 -- =============================================================================
+-- §4a control.entity_version_contract
+-- =============================================================================
+-- Typed, version-bound contract for catalog and API execution decisions.
+-- The registry remains the stable identity/provenance record. This table is
+-- the versioned contract surface that Studio and future compilers will own.
+-- Existing entity columns remain readable during the compatibility period;
+-- this DDL phase does not switch runtime consumers.
+
+CREATE TABLE IF NOT EXISTS control.entity_version_contract (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    entity_version_id           uuid        NOT NULL,
+    tenant_id                   uuid,
+
+    -- Catalog exposure is independent from API execution eligibility.
+    catalog_enabled             boolean     NOT NULL DEFAULT true,
+    api_exposure                text        NOT NULL DEFAULT 'CATALOG_ONLY',
+
+    -- Versioned physical/storage declaration.
+    backing_type                text        NOT NULL DEFAULT 'table',
+    table_schema                text        NOT NULL,
+    table_name                  text        NOT NULL,
+    key_strategy                text        NOT NULL DEFAULT 'single',
+    primary_key                 text,
+    tenant_column               text,
+
+    -- Explicit API capability contract.
+    read_capability             text        NOT NULL DEFAULT 'none',
+    write_capability            text        NOT NULL DEFAULT 'none',
+    read_handler                text,
+    write_handler               text,
+
+    -- Contract provenance and deterministic compilation identity.
+    source_kind                 text        NOT NULL DEFAULT 'derived',
+    contract_hash               text,
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT evc_pkey                  PRIMARY KEY (id),
+    CONSTRAINT evc_version_uq            UNIQUE (entity_version_id),
+    CONSTRAINT evc_catalog_exposure_chk  CHECK (api_exposure IN ('NONE', 'CATALOG_ONLY', 'API')),
+    CONSTRAINT evc_backing_type_chk      CHECK (backing_type IN ('table', 'view', 'materialized_view', 'external', 'virtual')),
+    CONSTRAINT evc_key_strategy_chk      CHECK (key_strategy IN ('none', 'single', 'composite', 'natural')),
+    CONSTRAINT evc_primary_key_fmt_chk   CHECK (primary_key IS NULL OR primary_key ~ '^[a-z][a-z0-9_]*$'),
+    CONSTRAINT evc_tenant_column_fmt_chk CHECK (tenant_column IS NULL OR tenant_column ~ '^[a-z][a-z0-9_]*$'),
+    CONSTRAINT evc_read_capability_chk   CHECK (read_capability IN ('none', 'generic', 'facade', 'projection')),
+    CONSTRAINT evc_write_capability_chk CHECK (write_capability IN ('none', 'generic', 'facade', 'append_only')),
+    CONSTRAINT evc_source_kind_chk       CHECK (source_kind IN ('explicit', 'derived', 'overlay')),
+    CONSTRAINT evc_hash_fmt_chk          CHECK (contract_hash IS NULL OR length(contract_hash) >= 64),
+    CONSTRAINT evc_api_read_chk          CHECK (api_exposure <> 'API' OR read_capability <> 'none'),
+    CONSTRAINT evc_api_key_chk           CHECK (api_exposure <> 'API' OR key_strategy IN ('single', 'natural'))
+);
+
+COMMENT ON TABLE control.entity_version_contract IS
+    'Typed version-bound Entity Contract. Catalog eligibility is independent from API execution eligibility. '
+    'Physical facts are verified against information_schema; explicit values are owned by Studio/seeds. '
+    'Introduced before compiler consumers migrate so the schema contract can be validated independently.';
+COMMENT ON COLUMN control.entity_version_contract.primary_key IS
+    'Explicit single-column runtime key. Composite keys remain catalog-valid but API-ineligible until supported.';
+COMMENT ON COLUMN control.entity_version_contract.tenant_column IS
+    'Nullable physical row-scope column. NULL is valid for global entities and is distinct from metadata tenant ownership.';
+
+
+-- =============================================================================
 -- §5  control.entity_field
 -- =============================================================================
 -- Every field in the platform. Three roles via discriminator columns:
@@ -2106,6 +2221,10 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     -- Field identity
     name                        text        NOT NULL,
     column_name                 text        NOT NULL DEFAULT '',
+    -- For view/materialized-view projections only: the logical field name
+    -- intentionally aliases another projection field. Table-backed entities
+    -- must keep one active field per physical column.
+    projection_alias_of         text,
     label                       text,
     description                 text,
 
@@ -2133,6 +2252,11 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     is_computed                 boolean     NOT NULL DEFAULT false,
     is_write_once               boolean     NOT NULL DEFAULT false,
     is_active                   boolean     NOT NULL DEFAULT true,
+    -- Active metadata may remain registered for discovery/UI even when a
+    -- field is not safe for the runtime descriptor.  This flag is the field
+    -- side of the entity runtime contract and must not be confused with
+    -- metadata visibility (is_active).
+    runtime_enabled             boolean     NOT NULL DEFAULT true,
     -- P5 primary-field markers — drives currency/amount detection in the
     -- shared line-item runtime instead of hardcoded field-name candidate lists.
     -- At most one of each per entity_version (guarded by partial UNIQUE
@@ -2234,6 +2358,10 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     CONSTRAINT ef_column_name_fmt_chk   CHECK (
         column_name = '' OR column_name ~ '^[a-z][a-z0-9_]*$'
     ),
+    CONSTRAINT ef_projection_alias_fmt_chk CHECK (
+        projection_alias_of IS NULL
+        OR projection_alias_of ~ '^[a-z][a-z0-9_]*$'
+    ),
     -- computed fields: must have compute_mode
     CONSTRAINT ef_computed_chk          CHECK (
         NOT is_computed OR compute_mode IS NOT NULL
@@ -2325,12 +2453,18 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     )
 );
 
+-- The control schema is also upgraded in-place by local reset/provision runs;
+-- keep this additive guard so existing databases receive the same contract.
+ALTER TABLE control.entity_field
+    ADD COLUMN IF NOT EXISTS runtime_enabled boolean NOT NULL DEFAULT true;
+
 COMMENT ON TABLE  control.entity_field IS
     'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_active boolean NOT NULL DEFAULT true (not GENERATED). All fields in the platform — canonical, versioned, and custom. '
     'entity_version_id IS NULL: canonical/standard fields (replaces entity_canonical_field). '
     'entity_version_id IS NOT NULL: version-specific fields. '
     'origin=business + column_name~cus_: custom tenant fields (replaces field_extension). '
     'provisioned_at/by populated after ALTER TABLE ADD COLUMN for custom fields. '
+    'runtime_enabled controls descriptor eligibility without collapsing registered metadata. '
     'enum_domain_code replaces enum_set_code (FK to control.lookup_domain).';
 
 

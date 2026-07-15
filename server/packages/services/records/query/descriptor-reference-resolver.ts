@@ -18,13 +18,16 @@ export class DescriptorReferenceLabelResolver implements ReferenceLabelResolver 
       const key = resolveColumn(descriptor, descriptor.storage.primaryKey);
       const label = preferredLabelColumn(descriptor) ?? key;
       if (batch.ids.length === 0) return [];
+      const tenantPredicate = descriptor.storage.tenantColumn
+        ? sql`and ${sql.ref(descriptor.storage.tenantColumn)} = ${context.tenantId}`
+        : sql``;
       return [sql`
         select ${batch.relation}::text as relation_key,
                ${sql.ref(key)}::text as reference_id,
                coalesce(${sql.ref(label)}::text, ${sql.ref(key)}::text) as reference_label
-          from ${sql.table(`${descriptor.storage.schema}.${descriptor.storage.table}`)}
+         from ${sql.table(`${descriptor.storage.schema}.${descriptor.storage.table}`)}
          where ${sql.ref(key)} in (${sql.join(batch.ids)})
-           and ${sql.ref(descriptor.storage.tenantColumn)} = ${context.tenantId}
+           ${tenantPredicate}
       `];
     });
     if (statements.length === 0) return new Map();

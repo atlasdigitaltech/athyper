@@ -33,6 +33,7 @@ import {
   type ExecutionDescriptorProvider,
   type ExecutionDescriptorProviderResult,
 } from "../src/execution-descriptor/index.js";
+import { TenantOverlayValidationError } from "../src/tenant-overlay-resolver.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,8 @@ export interface CompiledEntityRoutesDeps {
    */
   cache?: DescriptorCache;
   executionDescriptorProvider?: ExecutionDescriptorProvider;
+  /** Resolves the tenant-effective catalog payload after overlay restrictions. */
+  loadEffectiveCompiledEntity?: (entityCode: string, tenantId: string) => Promise<Record<string, unknown> | null>;
   /** Tenant context already verified by the host gateway when available. */
   readAuthenticatedContext?: (req: Parameters<RequestHandler>[0]) => { tenantId?: string } | undefined;
   getEffectiveModuleAccess?: typeof getEffectiveModuleAccess;
@@ -264,8 +267,6 @@ const BOOLEAN_FEATURE_KEYS = new Set([
   "is_bulk_editable",
   "is_approvable",
   "is_readonly",
-  "records_api_disabled",
-  "generic_runtime_disabled",
   "is_hidden",
   "comments_enabled",
   "event_history",
@@ -696,7 +697,7 @@ async function loadReferencePickerProfiles(
 }
 
 export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRoutesDeps): Router {
-  const { db, auth, logger, cache, executionDescriptorProvider, getEffectiveModuleAccess } = deps;
+  const { db, auth, logger, cache, executionDescriptorProvider, loadEffectiveCompiledEntity, getEffectiveModuleAccess } = deps;
   const moduleAccessCache = cache
     ? {
       get: cache.get,
@@ -826,6 +827,10 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
           eb("e.entity_code", "=", entityCode),
           eb("e.slug", "=", entityCode.replace(/_/g, "-")),
         ]))
+        .where("e.runtime_enabled", "=", true)
+        .where("e.status", "=", "ACTIVE")
+        .where("e.is_active", "=", true)
+        .where("e.read_capability", "<>", "none")
         .where("ev.status", "=", "EFFECTIVE");
 
       if (tenantId) {
@@ -879,6 +884,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         .selectAll()
         .where("ef.entity_version_id", "=", entityRow.version_id)
         .where("ef.is_active", "=", true)
+        .where("ef.runtime_enabled", "=", true)
         .orderBy("ef.sort_order", "asc")
         .execute();
 
@@ -1084,6 +1090,12 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       const capabilityManifestHash = simpleHash(JSON.stringify(capabilityManifest));
       const compiledHash = simpleHash(`${versionHash}-${fieldsHash}-${relationsHash}-${displayConfigHash}-${identityConfigHash}-${searchConfigHash}-${dataPolicyHash}-${lifecycleHash}-${createContractHash}-${documentRuntimePlanHash}-${capabilityManifestHash}`);
 
+      const effectiveCatalog = tenantId && loadEffectiveCompiledEntity
+        ? await loadEffectiveCompiledEntity(entityCode, tenantId).catch((error) => {
+          logger?.warn("compiled_entity_overlay_resolution_failed", { entityCode, tenantId, err: String(error) });
+          return null;
+        })
+        : null;
       const payload = {
         entity_id: entityRow.id as string,
         entity_code: entityRow.entity_code as string,
@@ -1098,20 +1110,20 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         version_id: entityRow.version_id as string,
         version_no: Number(entityRow.version_no),
         version_hash: versionHash,
-        fields,
+        fields: (effectiveCatalog?.["fields"] as unknown[] | undefined) ?? fields,
         field_groups: fieldGroups,
         relations: relationRows,
-        display_config: displayConfig,
+        display_config: (effectiveCatalog?.["display_config"] as Record<string, unknown> | undefined) ?? displayConfig,
         identity_config: dbIdentityConfig,
         search_config: dbSearchConfig,
-        data_policy: dbDataPolicy,
+        data_policy: (effectiveCatalog?.["data_policy"] as Record<string, unknown> | undefined) ?? dbDataPolicy,
         feature_flags: featureFlags,
         ...(documentRuntimePlan ? { document_runtime_plan: documentRuntimePlan } : {}),
         capability_manifest: capabilityManifest,
         governance_level: entityRow.governance_level as string,
         security_tier: entityRow.security_tier as string,
         compiled_at: new Date().toISOString(),
-        compiled_hash: compiledHash,
+        compiled_hash: (effectiveCatalog?.["compiled_hash"] as string | undefined) ?? compiledHash,
       };
 
       // ETag / 304 — descriptor is content-addressed by compiled_hash
@@ -1195,12 +1207,54 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: error.message });
         return;
       }
+      if (error instanceof TenantOverlayValidationError) {
+        res.status(409).json({
+          error: "TENANT_OVERLAY_INVALID",
+          entity: error.entityCode,
+          diagnostics: error.diagnostics,
+        });
+        return;
+      }
       next(error);
     }
   };
 
   router.get("/metadata/entities/:entity/execution-descriptor", executionDescriptorHandler);
   router.get("/metadata/entities/:entity/compiled", handler);
+  // Catalog metadata is available for every registered entity, including
+  // internal, reference, projection, and non-runtime entities. It is never
+  // used as an execution descriptor and therefore does not require a tenant
+  // execution context.
+  router.get("/metadata/catalog/:entity", async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const entityCode = String(req.params["entity"] ?? "").replace(/-/g, "_");
+      const row = await db
+        .selectFrom("snapshot.entity_compiled as ec")
+        .innerJoin("control.entity_version as ev", "ev.id", "ec.entity_version_id")
+        .innerJoin("control.entity as e", "e.id", "ev.entity_id")
+        .select(["ec.compiled_json", "ec.compiled_hash", "ec.created_at"])
+        .where("ec.tenant_id", "is", null)
+        .where("ec.artifact_kind", "=", "catalog")
+        .where("ev.status", "=", "EFFECTIVE")
+        .where((eb: any) => eb.or([
+          eb("e.entity_code", "=", entityCode),
+          eb("e.name", "=", entityCode),
+          eb("e.slug", "=", entityCode.replace(/_/g, "-")),
+        ]))
+        .orderBy("ec.created_at", "desc")
+        .executeTakeFirst() as { compiled_json: unknown; compiled_hash: string; created_at: unknown } | undefined;
+      if (!row) {
+        res.status(404).json({ error: "CATALOG_ENTITY_NOT_FOUND", entity: entityCode });
+        return;
+      }
+      res.setHeader("ETag", `\"catalog-${row.compiled_hash}\"`);
+      res.json(row.compiled_json);
+    } catch (error) {
+      next(error);
+    }
+  });
   return router;
 }
 

@@ -38,13 +38,13 @@ BEGIN
         ('principal', 'personas',            'has_many',   'principal_persona',      'principal_id', 'cascade'),
         ('principal', 'group_memberships',   'has_many',   'auth_group_member',      'principal_id', 'cascade'),
         ('principal', 'access_grants',       'has_many',   'access_grant',           'principal_id', 'cascade'),
-        ('principal', 'delegation_grants',   'has_many',   'delegation_grant',       'grantee_id',  'cascade'),
+        ('principal', 'delegation_grants',   'has_many',   'delegation_grant',       'delegate_id',  'cascade'),
         ('principal', 'feature_grants',      'has_many',   'principal_feature_grant','principal_id', 'cascade'),
 
         -- â”€â”€ IAM: auth_group â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('auth_group', 'tenant',             'belongs_to', 'tenant',                'tenant_id',    'restrict'),
-        ('auth_group', 'members',            'has_many',   'auth_group_member',     'auth_group_id', 'cascade'),
-        ('auth_group', 'role_assignments',   'has_many',   'auth_group_role',       'auth_group_id', 'cascade'),
+        ('auth_group', 'members',            'has_many',   'auth_group_member',     'group_id', 'cascade'),
+        ('auth_group', 'role_assignments',   'has_many',   'auth_group_role',       'group_id', 'cascade'),
 
         -- â”€â”€ IAM: team â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('team', 'tenant',                   'belongs_to', 'tenant',                'tenant_id',   'restrict'),
@@ -55,7 +55,7 @@ BEGIN
 
         -- â”€â”€ IAM: delegation_grant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('delegation_grant', 'tenant',       'belongs_to', 'tenant',                'tenant_id',   'restrict'),
-        ('delegation_grant', 'grantee',      'belongs_to', 'principal',             'grantee_id',  'restrict'),
+        ('delegation_grant', 'grantee',      'belongs_to', 'principal',             'delegate_id',  'restrict'),
 
         -- â”€â”€ IAM: label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('label', 'tenant',                  'belongs_to', 'tenant',                'tenant_id',   'restrict'),
@@ -73,7 +73,6 @@ BEGIN
         ('company_code', 'cost_centers',     'has_many',   'cost_center',  'company_code_id', 'restrict'),
         ('company_code', 'profit_centers',   'has_many',   'profit_center','company_code_id', 'restrict'),
         ('company_code', 'sites',            'has_many',   'site',         'company_code_id', 'restrict'),
-        ('company_code', 'warehouses',       'has_many',   'warehouse',    'company_code_id', 'restrict'),
 
         -- â”€â”€ Finance org: cost_center â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('cost_center', 'company_code',      'belongs_to', 'company_code',          'company_code_id', 'restrict'),
@@ -101,12 +100,10 @@ BEGIN
         -- â”€â”€ Business partners: company_code_supplier_profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('company_code_supplier_profile', 'supplier',          'belongs_to', 'supplier',                              'supplier_id',        'restrict'),
         ('company_code_supplier_profile', 'company_code',      'belongs_to', 'company_code',                          'company_code_id',    'restrict'),
-        ('company_code_supplier_profile', 'intent_policies',   'has_many',   'company_code_supplier_intent_policy',   'supplier_profile_id','cascade'),
-        ('company_code_supplier_profile', 'posting_overrides', 'has_many',   'company_code_supplier_posting_override','supplier_profile_id','cascade'),
+        ('company_code_supplier_profile', 'posting_overrides', 'has_many',   'supplier_posting_override','supplier_profile_id','cascade'),
 
         -- â”€â”€ Business partners: supplier profile child extensions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        ('company_code_supplier_intent_policy',   'supplier_profile','belongs_to','company_code_supplier_profile','supplier_profile_id','restrict'),
-        ('company_code_supplier_posting_override','supplier_profile','belongs_to','company_code_supplier_profile','supplier_profile_id','restrict'),
+        ('supplier_posting_override','supplier_profile','belongs_to','company_code_supplier_profile','supplier_profile_id','restrict'),
 
         -- â”€â”€ Business partners: employee â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('employee', 'tenant',               'belongs_to', 'tenant',                'tenant_id',   'restrict'),
@@ -129,7 +126,6 @@ BEGIN
         -- â”€â”€ Budget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('budget_profile', 'tenant',         'belongs_to', 'tenant',                'tenant_id',   'restrict'),
         ('budget_allocation', 'budget_profile', 'belongs_to','budget_profile',      'budget_profile_id', 'restrict'),
-        ('budget_allocation', 'fiscal_period',  'belongs_to','fiscal_period',       'fiscal_period_id',  'restrict'),
         ('budget_allocation', 'company_code',   'belongs_to','company_code',        'company_code_id',   'restrict'),
 
         -- â”€â”€ Project â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -166,7 +162,7 @@ BEGIN
 
         -- â”€â”€ CMS: content_item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('content_item', 'tenant',           'belongs_to', 'tenant',                'tenant_id',        'restrict'),
-        ('content_item', 'links',            'has_many',   'content_item_link',     'content_item_id',  'cascade'),
+        ('content_item', 'links',            'has_many',   'content_item_link',     'source_content_item_id',  'cascade'),
         ('content_item', 'access_grants',    'has_many',   'content_item_access_grant','content_item_id','cascade'),
 
         -- â”€â”€ UI: dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -184,13 +180,12 @@ BEGIN
         ('warehouse',    'site',             'belongs_to', 'site',               'site_id',         'restrict'),
 
         -- â”€â”€ Finance Org: business_unit (no relations existed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        ('business_unit','tenant',           'belongs_to', 'tenant',             'tenant_id',       'restrict'),
-        ('business_unit','company_code',     'belongs_to', 'company_code',       'company_code_id', 'restrict'),
-        ('business_unit','parent',           'belongs_to', 'business_unit',      'parent_id',       'set_null'),
-        ('business_unit','head',             'belongs_to', 'principal',          'bu_head_id',      'set_null'),
+        ('org_unit','tenant',                'belongs_to', 'tenant',             'tenant_id',       'restrict'),
+        ('org_unit','company_code',          'belongs_to', 'company_code',       'company_code_id', 'restrict'),
+        ('org_unit','parent',                'belongs_to', 'org_unit',            'parent_id',       'set_null'),
 
         -- â”€â”€ Finance Org: company_code inverse for business_unit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        ('company_code', 'business_units',   'has_many',   'business_unit',      'company_code_id', 'restrict'),
+        ('company_code', 'business_units',   'has_many',   'org_unit',            'company_code_id', 'restrict'),
 
         -- â”€â”€ Finance Org: cost_center self-ref + dimension links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('cost_center',  'parent',           'belongs_to', 'cost_center',        'parent_id',       'set_null'),
@@ -215,7 +210,6 @@ BEGIN
 
         -- â”€â”€ Assets: asset_class (no relations existed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('asset_class',  'tenant',           'belongs_to', 'tenant',             'tenant_id',       'restrict'),
-        ('asset_class',  'company_code',     'belongs_to', 'company_code',       'company_code_id', 'restrict'),
         ('asset_class',  'parent',           'belongs_to', 'asset_class',        'parent_id',       'set_null'),
         ('asset_class',  'assets',           'has_many',   'asset',              'asset_class_id',  'restrict'),
 
@@ -252,11 +246,11 @@ BEGIN
         ('principal_persona','principal','belongs_to','principal','principal_id','cascade'),
 
         -- â”€â”€ IAM: auth_group_member â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        ('auth_group_member','auth_group','belongs_to','auth_group','auth_group_id','cascade'),
+        ('auth_group_member','auth_group','belongs_to','auth_group','group_id','cascade'),
         ('auth_group_member','principal', 'belongs_to','principal', 'principal_id', 'cascade'),
 
         -- â”€â”€ IAM: auth_group_role â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        ('auth_group_role',  'auth_group','belongs_to','auth_group','auth_group_id','cascade'),
+        ('auth_group_role',  'auth_group','belongs_to','auth_group','group_id','cascade'),
 
         -- â”€â”€ IAM: team_member â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('team_member',      'team',      'belongs_to','team',      'team_id',      'cascade'),
@@ -293,7 +287,7 @@ BEGIN
         ('commodity_category','items',  'has_many',  'item',               'commodity_category_id','restrict'),
 
         -- â”€â”€ CMS: content_item child entities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        ('content_item_link',        'content_item','belongs_to','content_item','content_item_id','cascade'),
+        ('content_item_link',        'content_item','belongs_to','content_item','source_content_item_id','cascade'),
         ('content_item_access_grant','content_item','belongs_to','content_item','content_item_id','cascade'),
 
         -- â”€â”€ UI: dashboard_widget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -305,7 +299,39 @@ BEGIN
     ) AS r(entity, rel_name, kind, target_entity, fk_field, on_del)
     JOIN control.entity         e  ON e.entity_code = r.entity AND e.tenant_id IS NULL
     JOIN control.entity_version ev ON ev.entity_id  = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
-    ON CONFLICT (entity_version_id, name) DO NOTHING;
+    ON CONFLICT (entity_version_id, name) DO UPDATE
+       SET relation_kind = EXCLUDED.relation_kind,
+           target_entity = EXCLUDED.target_entity,
+           resolution_kind = EXCLUDED.resolution_kind,
+           fk_field = EXCLUDED.fk_field,
+           source_type_field = EXCLUDED.source_type_field,
+           source_type_value = EXCLUDED.source_type_value,
+           source_id_field = EXCLUDED.source_id_field,
+           source_line_field = EXCLUDED.source_line_field,
+           runtime_role = EXCLUDED.runtime_role,
+           on_delete = EXCLUDED.on_delete,
+           record_filter = EXCLUDED.record_filter,
+           updated_at = now(),
+           updated_by = EXCLUDED.created_by;
+
+    -- Remove relation rows for physical relationships that no longer exist.
+    -- The metadata registry remains authoritative for discovery, but the
+    -- runtime graph must not retain bindings to removed columns/tables.
+    DELETE FROM control.entity_relation er
+    USING control.entity_version ev
+    JOIN control.entity e ON e.id = ev.entity_id
+    WHERE er.entity_version_id = ev.id
+      AND ev.tenant_id IS NULL
+      AND e.tenant_id IS NULL
+      AND (
+          (e.entity_code = 'asset_class' AND er.name = 'company_code')
+       OR (e.entity_code = 'budget_allocation' AND er.name = 'fiscal_period')
+       OR (e.entity_code = 'company_code' AND er.name = 'warehouses')
+       OR (e.entity_code = 'company_code_supplier_profile' AND er.name = 'intent_policies')
+       OR (e.entity_code = 'business_unit')
+       OR (e.entity_code = 'company_code_supplier_intent_policy')
+       OR (e.entity_code = 'company_code_supplier_posting_override')
+      );
 
     -- Fix: asset.components had fk_field='asset_id'; asset_component table uses parent_asset_id.
     UPDATE control.entity_relation er
@@ -720,6 +746,5 @@ BEGIN
      WHERE ef.entity_version_id = ev.id
        AND ef.name = p.field_name;
 END $$;
-
 
 

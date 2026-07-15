@@ -54,13 +54,37 @@ export function validateSerializedExecutionDescriptor(
 
   required(fields.size === value.fields.length, "EXEC_DUPLICATE_FIELD_NAME", "fields",
     "compiled field names must be unique");
-  required(columns.size === value.fields.length, "EXEC_DUPLICATE_FIELD_COLUMN", "fields",
-    "compiled physical field columns must be unique");
+  if (value.storage.backingType === "table") {
+    required(columns.size === value.fields.length, "EXEC_DUPLICATE_FIELD_COLUMN", "fields",
+      "compiled physical field columns must be unique for table-backed entities");
+  } else {
+    for (const field of value.fields) {
+      const duplicate = value.fields.filter((candidate) => candidate.column === field.column);
+      if (duplicate.length > 1) {
+        required(Boolean(field.projectionAliasOf), "EXEC_VIEW_ALIAS_REQUIRED", `fields.${field.name}.projectionAliasOf`,
+          `view/projection field '${field.name}' shares physical column '${field.column}' and requires an explicit alias`);
+        if (field.projectionAliasOf) {
+          const target = fields.get(field.projectionAliasOf);
+          required(Boolean(target), "EXEC_VIEW_ALIAS_TARGET_MISSING", `fields.${field.name}.projectionAliasOf`,
+            `projection alias target '${field.projectionAliasOf}' is not compiled`);
+          required(Boolean(target && target.column === field.column), "EXEC_VIEW_ALIAS_TARGET_MISMATCH", `fields.${field.name}.projectionAliasOf`,
+            `projection alias target '${field.projectionAliasOf}' must use the same physical column`);
+        }
+      }
+    }
+  }
+
+  required(value.storage.readCapability !== undefined, "EXEC_READ_CAPABILITY_MISSING", "storage.readCapability",
+    "runtime descriptors require an explicit read capability");
+  required(value.storage.writeCapability !== undefined, "EXEC_WRITE_CAPABILITY_MISSING", "storage.writeCapability",
+    "runtime descriptors require an explicit write capability");
 
   required(columns.has(value.storage.primaryKey), "EXEC_PRIMARY_KEY_MISSING", "storage.primaryKey",
     `primary key column '${value.storage.primaryKey}' is not present in the compiled field map`);
-  required(columns.has(value.storage.tenantColumn), "EXEC_TENANT_COLUMN_MISSING", "storage.tenantColumn",
-    `tenant column '${value.storage.tenantColumn}' is not present in the compiled field map`);
+  if (value.storage.tenantColumn !== null) {
+    required(columns.has(value.storage.tenantColumn), "EXEC_TENANT_COLUMN_MISSING", "storage.tenantColumn",
+      `tenant column '${value.storage.tenantColumn}' is not present in the compiled field map`);
+  }
   if (value.storage.rowVersionColumn) {
     required(columns.has(value.storage.rowVersionColumn), "EXEC_ROW_VERSION_MISSING", "storage.rowVersionColumn",
       `row-version column '${value.storage.rowVersionColumn}' is not present in the compiled field map`);
@@ -76,10 +100,27 @@ export function validateSerializedExecutionDescriptor(
     required(Boolean(value.write.concurrency.rowVersionField), "EXEC_CONCURRENCY_VERSION_MISSING", "write.concurrency",
       `${value.write.concurrency.strategy} requires a row-version field`);
   }
+  const mutations = Object.values(value.write.mutations).filter((binding): binding is NonNullable<typeof binding> => Boolean(binding));
+  const enabledMutations = mutations.filter((binding) => binding.enabled);
+  if (value.storage.writeCapability === "none") {
+    required(enabledMutations.length === 0, "EXEC_READ_ONLY_WRITE_FORBIDDEN", "write.mutations",
+      "read-only runtime capability cannot expose enabled mutations");
+  }
+  if (value.storage.writeCapability === "facade") {
+    required(Boolean(value.handlers.writeFacade), "EXEC_WRITE_FACADE_REQUIRED", "handlers.writeFacade",
+      "facade write capability requires a registered write facade");
+    required(enabledMutations.every((binding) => binding.kind !== "generic"), "EXEC_FACADE_GENERIC_WRITE_FORBIDDEN", "write.mutations",
+      "facade write capability cannot expose generic mutations");
+  }
+  if (value.storage.writeCapability === "append_only") {
+    required(value.write.mutations.create.enabled, "EXEC_APPEND_ONLY_CREATE_REQUIRED", "write.mutations.create",
+      "append-only runtime capability requires create");
+    required(!value.write.mutations.update.enabled && !value.write.mutations.delete.enabled,
+      "EXEC_APPEND_ONLY_MUTATION_FORBIDDEN", "write.mutations", "append-only runtime capability forbids update and delete");
+  }
   if (value.storage.backingType !== "table") {
-    const anyWrite = Object.values(value.write.mutations).some((binding) => binding?.enabled);
-    required(!anyWrite || Boolean(value.handlers.writeFacade), "EXEC_VIEW_WRITE_FACADE_REQUIRED", "handlers.writeFacade",
-      `mutable ${value.storage.backingType} requires a registered write facade`);
+    required(value.storage.writeCapability === "none" || value.storage.writeCapability === "facade",
+      "EXEC_VIEW_WRITE_MODE_INVALID", "storage.writeCapability", "view/projection writes must be none or facade");
   }
   if (value.write.mutations.delete.kind === "lifecycle") {
     required(Boolean(value.lifecycle), "EXEC_LIFECYCLE_REQUIRED", "lifecycle", "lifecycle deletion requires a lifecycle plan");

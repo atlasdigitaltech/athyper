@@ -98,8 +98,10 @@ export function createSearchOutboxHandler(deps: SearchOutboxHandlerDeps): Outbox
       const row = await db
         .selectFrom(fqTable as never)
         .selectAll()
-        .where("tenant_id" as never, "=", event.tenant_id as never)
-        .where("id" as never, "=", event.entity_id as never)
+        .where(meta.primaryKey as never, "=", event.entity_id as never)
+        .$if(meta.tenantColumn !== null, (query) =>
+          query.where(meta.tenantColumn! as never, "=", event.tenant_id as never),
+        )
         .executeTakeFirst();
 
       if (!row) {
@@ -111,7 +113,12 @@ export function createSearchOutboxHandler(deps: SearchOutboxHandlerDeps): Outbox
       const plainRow = row as Record<string, unknown>;
 
       // ── Default conventions + optional per-entity override ───────────────
-      const defaultDoc = defaultRowToSearchDocument(plainRow, event.entity_type);
+      const defaultDoc = defaultRowToSearchDocument(plainRow, event.entity_type, {
+        primaryKey: meta.primaryKey,
+        tenantColumn: meta.tenantColumn,
+        tenantId: event.tenant_id,
+        entityId: event.entity_id,
+      });
       if (!defaultDoc) {
         logger?.warn("search_outbox_default_map_failed", {
           outboxId:   event.id,

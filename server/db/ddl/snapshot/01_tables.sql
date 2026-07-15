@@ -172,10 +172,14 @@ COMMENT ON TABLE snapshot.status_route IS
 CREATE TABLE IF NOT EXISTS snapshot.entity_compiled (
     -- Identity
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id           uuid        NOT NULL,
+    tenant_id           uuid,
 
     -- Parent reference
     entity_version_id   uuid        NOT NULL,
+
+    -- One table can hold both products during the compatibility period.
+    -- catalog = all valid entity metadata; execution = API descriptor.
+    artifact_kind       text        NOT NULL DEFAULT 'execution',
 
     -- Compiled output
     compiled_json       jsonb       NOT NULL,
@@ -190,7 +194,8 @@ CREATE TABLE IF NOT EXISTS snapshot.entity_compiled (
     created_by          uuid        NOT NULL,
 
     CONSTRAINT ec_pkey          PRIMARY KEY (id),
-    CONSTRAINT ec_version_uq    UNIQUE (entity_version_id),
+    CONSTRAINT ec_version_uq    UNIQUE NULLS NOT DISTINCT (tenant_id, entity_version_id, artifact_kind),
+    CONSTRAINT ec_artifact_kind_chk CHECK (artifact_kind IN ('catalog', 'execution')),
     CONSTRAINT ec_hash_chk      CHECK (length(compiled_hash) >= 64),
     CONSTRAINT ec_score_chk     CHECK (compliance_score IS NULL OR compliance_score BETWEEN 0 AND 100),
     CONSTRAINT ec_json_chk      CHECK (jsonb_typeof(compiled_json) = 'object'),
@@ -198,9 +203,10 @@ CREATE TABLE IF NOT EXISTS snapshot.entity_compiled (
 );
 
 COMMENT ON TABLE snapshot.entity_compiled IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Pre-compiled entity version snapshot for fast API serving. '
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Compiled entity artifact for catalog metadata or API execution. '
     'Append-only — trg_fn_ec_immutable blocks UPDATE/DELETE. '
-    'UNIQUE(entity_version_id) — one compiled snapshot per version. '
+    'One artifact per tenant scope, entity version, and artifact_kind. '
+    'catalog includes every valid effective entity; execution is API-eligible only. '
     'compliance_score: 0–100 linting quality score.';
 
 
@@ -221,6 +227,9 @@ CREATE TABLE IF NOT EXISTS snapshot.entity_compiled_overlay (
 
     -- Which overlays are included in this compilation
     overlay_set         jsonb       NOT NULL,   -- [overlay_id, ...]
+    -- Content-addressed identity of the overlay set and its base artifact.
+    overlay_hash        text        NOT NULL,
+    base_compiled_hash  text        NOT NULL,
 
     -- Compiled delta
     compiled_json       jsonb       NOT NULL,
@@ -231,7 +240,10 @@ CREATE TABLE IF NOT EXISTS snapshot.entity_compiled_overlay (
     created_by          uuid        NOT NULL,
 
     CONSTRAINT eco_pkey     PRIMARY KEY (id),
+    CONSTRAINT eco_scope_uq  UNIQUE (tenant_id, entity_version_id, overlay_hash),
     CONSTRAINT eco_hash_chk CHECK (length(compiled_hash) >= 64),
+    CONSTRAINT eco_overlay_hash_chk CHECK (length(overlay_hash) >= 64),
+    CONSTRAINT eco_base_hash_chk CHECK (length(base_compiled_hash) >= 64),
     CONSTRAINT eco_set_chk  CHECK (jsonb_typeof(overlay_set) = 'array'),
     CONSTRAINT eco_json_chk CHECK (jsonb_typeof(compiled_json) = 'object')
 );

@@ -1201,7 +1201,6 @@
         "roles",
         "basic",
         "email",
-        "organization",
         "athyper-neon-plane"
       ],
       "optionalClientScopes": [
@@ -1211,21 +1210,6 @@
         "microprofile-jwt"
       ],
       "protocolMappers": [
-        {
-          "id": "c5b9ce43-96aa-4bf7-ac99-54074044f168",
-          "name": "group-membership",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-group-membership-mapper",
-          "consentRequired": false,
-          "config": {
-            "full.path": "true",
-            "id.token.claim": "true",
-            "introspection.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "groups",
-            "userinfo.token.claim": "true"
-          }
-        },
         {
           "id": "934782a8-8b21-4c73-9e0c-df5527907d91",
           "name": "athyper-api-runtime audience",
@@ -1933,7 +1917,7 @@
     {
       "id": "bf1eccc1-c88f-478c-a7bb-a78b2073ef03",
       "name": "organization",
-      "description": "Additional claims about the organization a subject belongs to",
+      "description": "Legal Entity discovery compatibility only; never an authorization source",
       "protocol": "openid-connect",
       "attributes": {
         "include.in.token.scope": "true",
@@ -1949,11 +1933,12 @@
           "consentRequired": false,
           "config": {
             "id.token.claim": "true",
-            "introspection.token.claim": "true",
-            "access.token.claim": "true",
+            "introspection.token.claim": "false",
+            "access.token.claim": "false",
             "claim.name": "organization",
             "jsonType.label": "String",
-            "multivalued": "true"
+            "multivalued": "true",
+            "userinfo.token.claim": "true"
           }
         }
       ]
@@ -2340,7 +2325,7 @@
     {
       "id": "f169944f-f586-4a7c-bee1-5bebb1dc7b21",
       "name": "athyper-neon-plane",
-      "description": "Neon plane, tenant, persona, and delegation claims consumed by the BFF.",
+      "description": "Neon discovery metadata for ID token/UserInfo; never an authorization source.",
       "protocol": "openid-connect",
       "attributes": {
         "include.in.token.scope": "true",
@@ -2359,7 +2344,7 @@
             "multivalued": "true",
             "user.attribute": "realm_key",
             "id.token.claim": "true",
-            "access.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "athyper.realm_key",
             "jsonType.label": "String"
           }
@@ -2376,7 +2361,7 @@
             "multivalued": "true",
             "user.attribute": "plane_access",
             "id.token.claim": "true",
-            "access.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "athyper.plane_access",
             "jsonType.label": "String"
           }
@@ -2393,7 +2378,7 @@
             "multivalued": "true",
             "user.attribute": "tenant_code",
             "id.token.claim": "true",
-            "access.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "athyper.tenant_code",
             "jsonType.label": "String"
           }
@@ -2410,7 +2395,7 @@
             "multivalued": "true",
             "user.attribute": "tenant_type",
             "id.token.claim": "true",
-            "access.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "athyper.tenant_type",
             "jsonType.label": "String"
           }
@@ -2427,7 +2412,7 @@
             "multivalued": "true",
             "user.attribute": "principal_type",
             "id.token.claim": "true",
-            "access.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "athyper.principal_type",
             "jsonType.label": "String"
           }
@@ -2444,7 +2429,7 @@
             "multivalued": "true",
             "user.attribute": "persona",
             "id.token.claim": "true",
-            "access.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "athyper.persona",
             "jsonType.label": "String"
           }
@@ -2461,7 +2446,7 @@
             "multivalued": "true",
             "user.attribute": "tenant_admin_surface",
             "id.token.claim": "true",
-            "access.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "athyper.tenant_admin_surface",
             "jsonType.label": "String"
           }
@@ -2478,7 +2463,7 @@
             "multivalued": "true",
             "user.attribute": "partner_access",
             "id.token.claim": "true",
-            "access.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "athyper.partner_access",
             "jsonType.label": "String"
           }
@@ -2495,7 +2480,7 @@
             "multivalued": "true",
             "user.attribute": "mesh_access_model",
             "id.token.claim": "true",
-            "access.token.claim": "true",
+            "access.token.claim": "false",
             "claim.name": "athyper.mesh_access_model",
             "jsonType.label": "String"
           }

@@ -7,7 +7,7 @@ const service = readFileSync(new URL("../mutation/entity-mutation.service.ts", i
 
 describe("Phase 3 pilot architecture contract", () => {
   it("routes classic POST, PUT, and PATCH pilots through EntityMutationService with legacy fallback", () => {
-    expect(route).toContain('"company_code,cost_center"');
+    expect(route).toContain('process.env["ENTITY_MUTATION_SERVICE_LEGACY_ONLY"]');
     expect(route).toContain("registerEntityMutationRoutes(router, {");
     expect(mutationRoute).toContain("if (!deps.isCanonicalEntity(entityCode)) return deps.legacy.create(req, res, next)");
     expect(mutationRoute).toContain("if (!deps.isCanonicalEntity(entityCode)) return deps.legacy.put(req, res, next)");

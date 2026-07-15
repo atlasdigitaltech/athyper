@@ -128,6 +128,7 @@ async function resolveRuntimeFieldOptionsUncached({
 
   return referenceOptions({
     sourceEntity: descriptor.entityCode,
+    sourceDescriptor: descriptor,
     sourceField: field,
     optionSource,
     targetEntity,
@@ -387,6 +388,7 @@ function storedLookupValue(code: string, field: MetaEntityField): string {
 
 async function referenceOptions({
   sourceEntity,
+  sourceDescriptor,
   sourceField,
   optionSource,
   targetEntity,
@@ -396,6 +398,7 @@ async function referenceOptions({
   signal,
 }: {
   sourceEntity: string;
+  sourceDescriptor: MetaEntityRuntimeDescriptor;
   sourceField: MetaEntityField;
   optionSource?: MetaEntityOptionSource;
   targetEntity: string;
@@ -413,7 +416,7 @@ async function referenceOptions({
     );
   }
 
-  const searchParams = buildReferenceSearchParams(sourceField, query, context, optionSource);
+  const searchParams = buildReferenceSearchParams(sourceField, query, context, optionSource, targetDescriptor);
   const list = await getMetaEntityRecordList(targetEntity, searchParams, targetDescriptor);
   throwIfAborted(signal);
   if (list.state.status === "unavailable") {
@@ -426,10 +429,13 @@ async function referenceOptions({
     );
   }
 
-  const currentRecordId = context["id"] ?? context["record_id"] ?? "";
+  const currentRecordId = context[sourceDescriptor.storage?.primaryKey ?? "id"]
+    ?? context["id"]
+    ?? context["record_id"]
+    ?? "";
   const orderedRecords = applyDefaultOrder(list.records, sourceField);
   const options = orderedRecords
-    .filter((record) => !isSelfParentOption(sourceEntity, targetEntity, sourceField, record, currentRecordId))
+    .filter((record) => !isSelfParentOption(sourceEntity, targetEntity, sourceField, record, currentRecordId, targetDescriptor))
     .map((record) => recordToOption(record, targetDescriptor, sourceField, optionSource))
     .filter((item): item is RuntimeOption => Boolean(item));
 
@@ -482,6 +488,7 @@ function buildReferenceSearchParams(
   query: string,
   context: Record<string, string>,
   optionSource?: MetaEntityOptionSource,
+  targetDescriptor?: MetaEntityRuntimeDescriptor,
 ): Record<string, string> {
   const params: Record<string, string> = {
     page: "1",
@@ -517,11 +524,11 @@ function buildReferenceSearchParams(
     } else if (emptyBehavior !== "all") {
       // `filter.id=in:` returns no rows — used when the dependency parent has no value
       // and the field is required to return an empty list rather than the full table.
-      params["filter.id"] = "in:";
+      params[`filter.${targetDescriptor?.storage?.primaryKey ?? "id"}`] = "in:";
     }
   }
 
-  applyLookupScopeFilters(field, context, params);
+  applyLookupScopeFilters(field, context, params, targetDescriptor);
 
   return params;
 }
@@ -530,6 +537,7 @@ function applyLookupScopeFilters(
   field: MetaEntityField,
   context: Record<string, string>,
   params: Record<string, string>,
+  targetDescriptor?: MetaEntityRuntimeDescriptor,
 ): void {
   const scope = readRecord(field.lookupConfig, "scope");
   if (!scope) return;
@@ -543,7 +551,7 @@ function applyLookupScopeFilters(
     const sourceValue = sourceField ? context[sourceField] : "";
     if (sourceField && targetField) {
       if (sourceValue) params[`filter.${targetField}`] = sourceValue;
-      else params["filter.id"] = "in:";
+      else params[`filter.${targetDescriptor?.storage?.primaryKey ?? "id"}`] = "in:";
     }
     return;
   }
@@ -552,7 +560,7 @@ function applyLookupScopeFilters(
     const sourceField = readString(scope, "source_field") ?? readString(scope, "sourceField") ?? "supplier_id";
     const supplierId = context[sourceField];
     if (supplierId) params["filter.supplier_id"] = supplierId;
-    else params["filter.id"] = "in:";
+    else params[`filter.${targetDescriptor?.storage?.primaryKey ?? "id"}`] = "in:";
     return;
   }
 
@@ -566,7 +574,7 @@ function applyLookupScopeFilters(
     } else if (companyCodeId) {
       params["filter.company_code_id"] = companyCodeId;
     } else {
-      params["filter.id"] = "in:";
+      params[`filter.${targetDescriptor?.storage?.primaryKey ?? "id"}`] = "in:";
     }
     return;
   }
@@ -575,7 +583,7 @@ function applyLookupScopeFilters(
     const headerField = readString(scope, "header_field") ?? readString(scope, "headerField") ?? "company_code_id";
     const companyCodeId = context[headerField];
     if (companyCodeId) params["filter.company_code_id"] = companyCodeId;
-    else params["filter.id"] = "in:";
+    else params[`filter.${targetDescriptor?.storage?.primaryKey ?? "id"}`] = "in:";
   }
 }
 
@@ -587,7 +595,7 @@ async function hydrateReferenceOption(
   optionSource?: MetaEntityOptionSource,
   context?: Record<string, string>,
 ): Promise<RuntimeOption | null> {
-  const valueField = referenceOptionValueField(sourceField, optionSource);
+  const valueField = referenceOptionValueField(sourceField, optionSource, descriptor);
   let record: RuntimeRecordRow | null = null;
   if (valueField !== "id") {
     const list = await getMetaEntityRecordList(
@@ -643,10 +651,12 @@ async function hydrateReferenceOption(
 function referenceOptionValueField(
   sourceField: MetaEntityField,
   optionSource?: MetaEntityOptionSource,
+  descriptor?: MetaEntityRuntimeDescriptor,
 ): string {
   return (optionSource?.kind === "reference" ? optionSource.valueField : undefined)
     ?? readString(sourceField.referenceConfig, "value_field")
     ?? readString(sourceField.referenceConfig, "target_field")
+    ?? descriptor?.storage?.primaryKey
     ?? "id";
 }
 
@@ -656,7 +666,7 @@ function recordToOption(
   sourceField: MetaEntityField,
   optionSource?: MetaEntityOptionSource,
 ): RuntimeOption | null {
-  const valueField = referenceOptionValueField(sourceField, optionSource);
+  const valueField = referenceOptionValueField(sourceField, optionSource, descriptor);
   const labelField = (optionSource?.kind === "reference" ? optionSource.labelField : undefined)
     ?? readString(sourceField.referenceConfig, "label_field")
     ?? readString(sourceField.referenceConfig, "display_field")
@@ -732,11 +742,13 @@ function isSelfParentOption(
   field: MetaEntityField,
   record: RuntimeRecordRow,
   currentRecordId: string,
+  targetDescriptor?: MetaEntityRuntimeDescriptor,
 ): boolean {
   if (!currentRecordId || sourceEntity !== targetEntity) return false;
   const fieldName = field.name.toLowerCase();
   if (fieldName !== "parent_id" && !fieldName.startsWith("parent_")) return false;
-  return record.id === currentRecordId || recordValue(record, "id") === currentRecordId;
+  const primaryKey = targetDescriptor?.storage?.primaryKey ?? "id";
+  return recordValue(record, primaryKey) === currentRecordId;
 }
 
 function isStatusField(fieldName: string): boolean {

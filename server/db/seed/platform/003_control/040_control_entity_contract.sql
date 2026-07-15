@@ -38,8 +38,12 @@ curated_overrides (
         ('document', 'journal_line_reference', 'ACC', 'JLR', 'DOCUMENT_RELATION', 'ent', 'table', 'full', 'tenant_critical', 'controlled', 'Journal Line Reference', 'Journal Line References', 'link', 'slate', '{"parent_entity":"journal_line","parent_fk":"journal_line_id","append_only_after_submission":true,"reference_picker":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('document', 'payment_entry', 'ACC', 'PAY', 'DOCUMENT', 'ent', 'table', 'full', 'tenant_critical', 'controlled', 'Payment Entry', 'Payment Entries', 'banknote', 'emerald', '{"is_approvable":true,"has_workflow":true,"document_category":"payments","allow_on_behalf_of":false,"has_lines":true,"auto_number":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('document', 'purchase_invoice', 'ACC', 'INV', 'DOCUMENT', 'ent', 'table', 'full', 'tenant_critical', 'controlled', 'Purchase Invoice', 'Purchase Invoices', 'file-text', 'violet', '{"is_approvable":true,"has_workflow":true,"document_category":"payables","allow_on_behalf_of":false,"has_lines":true,"catalog_feature_enabled":false,"auto_number":true}'::jsonb, '{"line_ui_variant":"procure","line_entity_code":"purchase_invoice_line"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
-        ('document', 'purchase_invoice_line', 'ACC', 'PINV_L', 'DOCUMENT_RELATION', 'ent', 'table', 'full', 'tenant_critical', 'controlled', 'Invoice Line', 'Invoice Lines', 'list', 'violet', '{"parent_entity":"purchase_invoice","has_accounting_distribution":true,"has_matching":true}'::jsonb, '{"line_ui_variant":"procure","default_sort_field":"line_no","default_sort_order":"asc"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
-        ('document', 'seed_gift', 'ACC', 'SGIFT', 'DOCUMENT', 'ent', 'table', 'standard', 'operational', 'controlled', 'Seed Gift', 'Seed Gifts', 'gift', 'emerald', '{"has_attachments":true,"is_importable":true,"is_exportable":true,"has_lifecycle":false,"has_workflow":false,"document_category":"prototype","prototype_scope":"ATHQ"}'::jsonb, '{"detail_renderer":"document","list_columns":["gift_code","title","recipient_name","gift_type","gift_value","currency_code","status"],"title_field":"title","subtitle_field":"gift_code","default_sort_field":"created_at"}'::jsonb, '{"natural_key_fields":["gift_code"],"business_key_fields":["gift_code"],"title_field":"title","subtitle_field":"gift_code"}'::jsonb, '{"enabled":true,"fields":["gift_code","title","description","recipient_name","recipient_email","source_ref"]}'::jsonb, '{"classification":"internal","retention_days":365,"legal_hold_eligible":false}'::jsonb, '{}'::jsonb, 'ACTIVE'),
+        -- Invoice lines are draft-owned children: their delete_draft
+        -- operation is a physical hard delete, not a retire/archive action.
+        ('document', 'purchase_invoice_line', 'ACC', 'PINV_L', 'DOCUMENT_RELATION', 'ent', 'table', 'full', 'tenant_critical', 'controlled', 'Invoice Line', 'Invoice Lines', 'list', 'violet', '{"parent_entity":"purchase_invoice","has_accounting_distribution":true,"has_matching":true,"deletion_mode":"hard_delete","allow_hard_delete":true}'::jsonb, '{"line_ui_variant":"procure","default_sort_field":"line_no","default_sort_order":"asc"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
+        -- Seed Gift has status/is_active storage but no lifecycle plan, so
+        -- delete is an explicit soft-delete capability.
+        ('document', 'seed_gift', 'ACC', 'SGIFT', 'DOCUMENT', 'ent', 'table', 'standard', 'operational', 'controlled', 'Seed Gift', 'Seed Gifts', 'gift', 'emerald', '{"has_attachments":true,"is_importable":true,"is_exportable":true,"has_lifecycle":false,"has_workflow":false,"deletion_mode":"soft_delete","document_category":"prototype","prototype_scope":"ATHQ"}'::jsonb, '{"detail_renderer":"document","list_columns":["gift_code","title","recipient_name","gift_type","gift_value","currency_code","status"],"title_field":"title","subtitle_field":"gift_code","default_sort_field":"created_at"}'::jsonb, '{"natural_key_fields":["gift_code"],"business_key_fields":["gift_code"],"title_field":"title","subtitle_field":"gift_code"}'::jsonb, '{"enabled":true,"fields":["gift_code","title","description","recipient_name","recipient_email","source_ref"]}'::jsonb, '{"classification":"internal","retention_days":365,"legal_hold_eligible":false}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('document', 'purchase_order', 'BUY', 'PO', 'DOCUMENT', 'ent', 'view', 'full', 'tenant_critical', 'controlled', 'Purchase Order', 'Purchase Orders', 'shopping-cart', 'orange', '{"is_approvable":true,"has_workflow":true,"document_category":"purchasing","allow_on_behalf_of":false,"has_lines":true,"auto_number":true,"write_facade":"PurchaseOrderFacade","backing_source":"commitment"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('document', 'user_profile_update_request', 'IAM', 'UPUPR', 'DOCUMENT', 'ent', 'table', 'full', 'tenant_critical', 'controlled', 'Profile Update Request', 'Profile Update Requests', 'user-pen', 'blue', '{"is_approvable":true,"document_category":"hr_request","allow_on_behalf_of":false,"requires_supervisor_approval":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('master', 'access_grant', 'IAM', 'AGRANT', 'CONTROL', 'ent', 'table', 'full', 'platform_critical', 'controlled', 'Access Grant', 'Access Grants', 'key', 'red', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
@@ -152,7 +156,7 @@ curated_overrides (
         ('master', 'supplier_app_index', 'BUY', 'SAI', 'AGGREGATE', 'aggregate', 'table', 'standard', 'operational', 'locked', 'Supplier Index', 'Supplier Index', 'building-2', 'blue', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('master', 'supplier_block', 'BUY', 'SBK', 'MASTER', 'ent', 'table', 'standard', 'tenant_critical', 'controlled', 'Supplier Block', 'Supplier Blocks', 'ban', 'red', '{"parent_entity":"supplier","parent_fk":"supplier_id"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('master', 'supplier_qualification', 'BUY', 'SQL', 'MASTER', 'ent', 'table', 'standard', 'tenant_critical', 'controlled', 'Qualification & Risk', 'Qualification & Risk', 'shield-check', 'red', '{"parent_entity":"supplier","parent_fk":"supplier_id","singleton":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
-        ('master', 'supplier_commodity_category', 'BUY', 'SCC', 'MASTER', 'ent', 'table', 'standard', 'operational', 'controlled', 'Supplier Commodity Category', 'Supplier Commodity Categories', 'tags', 'amber', '{"parent_entity":"supplier","parent_fk":"supplier_id","generic_runtime_disabled":false,"records_api_disabled":false,"is_hidden":false,"is_readonly":false,"is_exportable":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
+        ('master', 'supplier_commodity_category', 'BUY', 'SCC', 'MASTER', 'ent', 'table', 'standard', 'operational', 'controlled', 'Supplier Commodity Category', 'Supplier Commodity Categories', 'tags', 'amber', '{"parent_entity":"supplier","parent_fk":"supplier_id","is_hidden":false,"is_readonly":false,"is_exportable":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('master', 'tax_jurisdiction', 'ACC', 'TAXJ', 'MASTER', 'ent', 'table', 'full', 'operational', 'controlled', 'Tax Jurisdiction', 'Tax Jurisdictions', 'landmark', 'orange', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('master', 'tax_type', 'ACC', 'TAXTP', 'MASTER', 'ent', 'table', 'full', 'operational', 'controlled', 'Tax Type', 'Tax Types', 'percent', 'orange', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
         ('master', 'team', 'IAM', 'TEAM', 'MASTER', 'ent', 'table', 'full', 'operational', 'controlled', 'Team', 'Teams', 'users-round', 'cyan', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, 'ACTIVE'),
@@ -293,7 +297,8 @@ classified AS (
         COALESCE(o.search_config, '{}'::jsonb) AS search_config,
         COALESCE(o.data_policy, '{}'::jsonb) AS data_policy,
         COALESCE(o.concurrency_policy, '{}'::jsonb) AS concurrency_policy,
-        COALESCE(o.status, 'ACTIVE') AS status
+        COALESCE(o.status, 'ACTIVE') AS status,
+        (o.table_name IS NOT NULL) AS is_curated
     FROM relations r
     LEFT JOIN curated_overrides o
       ON o.table_schema = r.table_schema
@@ -410,9 +415,46 @@ column_config AS (
     FROM identity_candidates c
 ),
 resolved AS (
+    -- Runtime eligibility is deliberately owned here, at the curated
+    -- catalogue boundary.  Rows discovered only from information_schema are
+    -- metadata entities and remain runtime-disabled; the storage contract is
+    -- populated only when a curated row has a one-column physical identity.
     SELECT
         cc.*,
         COALESCE(module_match.id::text, module_fallback.id::text, cc.module_code) AS module_id,
+        storage.primary_key AS runtime_primary_key,
+        storage.tenant_column AS runtime_tenant_column,
+        (
+            cc.is_curated
+            AND cc.backing_type IN ('table', 'view', 'materialized_view')
+            AND cc.entity_class IN ('MASTER', 'DOCUMENT', 'DOCUMENT_RELATION', 'RELATION', 'REFERENCE')
+            AND storage.primary_key IS NOT NULL
+        ) AS runtime_enabled,
+        CASE
+            WHEN cc.is_curated
+             AND cc.backing_type IN ('table', 'view', 'materialized_view')
+             AND cc.entity_class IN ('MASTER', 'DOCUMENT', 'DOCUMENT_RELATION', 'RELATION', 'REFERENCE')
+             AND storage.primary_key IS NOT NULL
+                THEN CASE
+                    WHEN cc.backing_type IN ('view', 'materialized_view') THEN 'projection'
+                    ELSE 'generic'
+                END
+            ELSE 'none'
+        END AS read_capability,
+        CASE
+            WHEN cc.is_curated
+             AND cc.backing_type IN ('table', 'view', 'materialized_view')
+             AND cc.entity_class IN ('MASTER', 'DOCUMENT', 'DOCUMENT_RELATION', 'RELATION', 'REFERENCE')
+             AND storage.primary_key IS NOT NULL
+                THEN CASE
+                    WHEN cc.feature_flags ? 'write_facade' THEN 'facade'
+                    WHEN cc.backing_type IN ('view', 'materialized_view') THEN 'none'
+                    WHEN cc.mutability = 'locked'
+                      OR COALESCE((cc.feature_flags ->> 'is_readonly')::boolean, false) THEN 'none'
+                    ELSE 'generic'
+                END
+            ELSE 'none'
+        END AS write_capability,
         jsonb_build_object(
             'list_renderer', CASE WHEN cc.entity_class IN ('DOCUMENT', 'DOCUMENT_RELATION') THEN 'document' ELSE 'master' END,
             'detail_renderer', CASE WHEN cc.entity_class = 'DOCUMENT' THEN 'document' ELSE 'master' END,
@@ -426,6 +468,48 @@ resolved AS (
             ELSE cc.identity_config || jsonb_build_object('header', cc.identity_header_config)
         END AS resolved_identity_config
     FROM column_config cc
+    LEFT JOIN LATERAL (
+        SELECT
+            CASE
+                WHEN cc.backing_type IN ('view', 'materialized_view') THEN (
+                    SELECT c.column_name
+                    FROM information_schema.columns c
+                    WHERE c.table_schema = cc.table_schema
+                      AND c.table_name = cc.table_name
+                      AND c.column_name = 'id'
+                    LIMIT 1
+                )
+                ELSE (
+                    SELECT min(kcu.column_name)
+                    FROM information_schema.table_constraints tc
+                    JOIN information_schema.key_column_usage kcu
+                      ON kcu.constraint_schema = tc.constraint_schema
+                     AND kcu.constraint_name = tc.constraint_name
+                     AND kcu.table_schema = tc.table_schema
+                     AND kcu.table_name = tc.table_name
+                    WHERE tc.table_schema = cc.table_schema
+                      AND tc.table_name = cc.table_name
+                      AND tc.constraint_type = 'PRIMARY KEY'
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM information_schema.key_column_usage kcu2
+                          WHERE kcu2.constraint_schema = kcu.constraint_schema
+                            AND kcu2.constraint_name = kcu.constraint_name
+                            AND kcu2.table_schema = kcu.table_schema
+                            AND kcu2.table_name = kcu.table_name
+                            AND kcu2.ordinal_position > 1
+                      )
+                )
+            END AS primary_key,
+            (
+                SELECT c.column_name
+                FROM information_schema.columns c
+                WHERE c.table_schema = cc.table_schema
+                  AND c.table_name = cc.table_name
+                  AND c.column_name = 'tenant_id'
+                LIMIT 1
+            ) AS tenant_column
+    ) storage ON true
     LEFT JOIN shared.module module_match
       ON module_match.code = cc.module_code
     LEFT JOIN shared.module module_fallback
@@ -442,6 +526,11 @@ INSERT INTO control.entity (
     ownership_model,
     kind,
     backing_type,
+    runtime_enabled,
+    primary_key,
+    tenant_column,
+    read_capability,
+    write_capability,
     governance_level,
     security_tier,
     mutability,
@@ -473,6 +562,11 @@ SELECT
     'system',
     r.kind,
     r.backing_type,
+    r.runtime_enabled,
+    r.runtime_primary_key,
+    r.runtime_tenant_column,
+    r.read_capability,
+    r.write_capability,
     r.governance_level,
     r.security_tier,
     r.mutability,
@@ -505,6 +599,11 @@ SET
     ownership_model = EXCLUDED.ownership_model,
     kind = EXCLUDED.kind,
     backing_type = EXCLUDED.backing_type,
+    runtime_enabled = EXCLUDED.runtime_enabled,
+    primary_key = EXCLUDED.primary_key,
+    tenant_column = EXCLUDED.tenant_column,
+    read_capability = EXCLUDED.read_capability,
+    write_capability = EXCLUDED.write_capability,
     governance_level = EXCLUDED.governance_level,
     security_tier = EXCLUDED.security_tier,
     mutability = EXCLUDED.mutability,
@@ -573,4 +672,3 @@ SET feature_flags = COALESCE(feature_flags, '{}'::jsonb)
     updated_by = '00000000-0000-0000-0000-000000000000'
 WHERE tenant_id IS NULL
   AND name IN ('purchase_requisition', 'receipt', 'service_sheet', 'purchase_invoice');
-

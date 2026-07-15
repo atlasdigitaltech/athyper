@@ -60,6 +60,7 @@ export interface MetadataRoutesDeps {
   };
   cache?: DescriptorCache;
   executionDescriptorProvider?: ExecutionDescriptorProvider;
+  loadEffectiveCompiledEntity?: (entityCode: string, tenantId: string) => Promise<Record<string, unknown> | null>;
   readAuthenticatedContext?: (req: Parameters<import("express").RequestHandler>[0]) => { tenantId?: string } | undefined;
   runtimeBootstrapProvider?: RuntimeBootstrapProvider;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

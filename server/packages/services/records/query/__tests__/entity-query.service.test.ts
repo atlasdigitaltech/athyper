@@ -8,7 +8,7 @@ const HASH = "a".repeat(64);
 const descriptor = hydrateExecutionDescriptor({
   schemaVersion: 1,
   identity: { entityCode: "supplier", entityVersionId: "v1", versionHash: "vh", compiledHash: HASH, entityClass: "MASTER" },
-  storage: { schema: "master", table: "supplier", primaryKey: "id", tenantColumn: "tenant_id", backingType: "table" },
+  storage: { schema: "master", table: "supplier", primaryKey: "id", tenantColumn: "tenant_id", readCapability: "generic", writeCapability: "generic", backingType: "table" },
   fields: [
     field("id", "id", { filterable: true, sortable: true }),
     field("tenant_id", "tenant_id"),
@@ -64,6 +64,22 @@ describe("EntityQueryService", () => {
     expect(result.pagination).toMatchObject({ has_more: true, page_size: 2, count_mode: "none" });
     expect(result.pagination.next_cursor).toBeTypeOf("string");
     expect(executor.executeExactCount).not.toHaveBeenCalled();
+  });
+
+  it("does not invent a tenant predicate for a compiled global entity", async () => {
+    const globalDescriptor = hydrateExecutionDescriptor({
+      ...serialized(descriptor),
+      identity: { ...descriptor.identity, entityCode: "currency" },
+      storage: { ...descriptor.storage, table: "currency", tenantColumn: null },
+      policy: { ...descriptor.policy, governanceLevel: "global" },
+    });
+    const executor = fakeExecutor([{ id: "usd", name: "US Dollar" }]);
+    const service = new EntityQueryService({ executor, cursorSecret: "test-secret" });
+    await service.list({ context, descriptor: globalDescriptor, generation: "1", countMode: "none" });
+    const plan = vi.mocked(executor.executeData).mock.calls[0]![0];
+    expect(plan.predicates).not.toEqual(expect.arrayContaining([
+      { column: "tenant_id", operator: "eq", value: context.tenantId },
+    ]));
   });
 
   it("reuses the opaque cursor tuple without offset and has stable deep-page cost", async () => {

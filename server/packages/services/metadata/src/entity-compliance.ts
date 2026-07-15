@@ -1,7 +1,7 @@
 /**
  * Entity Compliance Suite — RUNTIME_ROUTING_SPEC §10
  *
- * 10-point checklist that validates every system entity's metadata posture
+ * 10-point checklist that validates every runtime-enabled system entity's metadata posture
  * at dev/staging startup. Never blocks production boot — only logs warnings.
  *
  * Checks (in order):
@@ -19,7 +19,9 @@
  * Checks 5–6 are skipped (marked as not-applicable) when check 4 fails.
  */
 
-import type { Kysely } from "kysely";
+import { CompiledQuery, type Kysely } from "kysely";
+import type { CompileAllSummary } from "./entity-compiler.service.js";
+import { validateMetadataGraph } from "./metadata-graph-validator.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,7 +46,11 @@ interface Logger {
 // ── Single-entity check ───────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function checkEntityCompliance(db: Kysely<any>, entityCode: string): Promise<ComplianceResult> {
+export async function checkEntityCompliance(
+  db: Kysely<any>,
+  entityCode: string,
+  options: { snapshotExpected?: boolean } = {},
+): Promise<ComplianceResult> {
   const items: ComplianceItem[] = [];
 
   const pass = (check: string) => items.push({ check, passed: true });
@@ -59,8 +65,14 @@ export async function checkEntityCompliance(db: Kysely<any>, entityCode: string)
       "e.table_schema", "e.table_name",
       "e.module_id", "e.display_config", "e.identity_config",
     ])
-    .where("e.name", "=", entityCode)
+    .where((eb: any) => eb.or([
+      eb("e.name", "=", entityCode),
+      eb("e.entity_code", "=", entityCode),
+      eb("e.slug", "=", entityCode.replace(/_/g, "-")),
+    ]))
     .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.is_active", "=", true)
     .executeTakeFirst() as Record<string, unknown> | undefined;
 
   if (!entity) {
@@ -107,6 +119,7 @@ export async function checkEntityCompliance(db: Kysely<any>, entityCode: string)
       .select(["ef.id"])
       .where("ef.entity_version_id", "=", version.id)
       .where("ef.is_active", "=", true)
+      .where("ef.runtime_enabled", "=", true)
       .execute() as unknown[];
 
     if (fields.length > 0) {
@@ -116,16 +129,21 @@ export async function checkEntityCompliance(db: Kysely<any>, entityCode: string)
     }
 
     // ── 6. snapshot_compiled (requires effective_version) ──────────────────
-    const snapshot = await db
-      .selectFrom("snapshot.entity_compiled as ec")
-      .select(["ec.id"])
-      .where("ec.entity_version_id", "=", version.id)
-      .executeTakeFirst() as { id: string } | undefined;
-
-    if (snapshot) {
-      pass("snapshot_compiled");
+    if (options.snapshotExpected !== true) {
+      na("snapshot_compiled", "graph validation or descriptor compilation did not succeed; snapshot persistence is not evaluated");
     } else {
-      fail("snapshot_compiled", "No snapshot.entity_compiled row — run the entity compiler to generate it");
+      const snapshot = await db
+        .selectFrom("snapshot.entity_compiled as ec")
+        .select(["ec.id"])
+        .where("ec.entity_version_id", "=", version.id)
+        .where("ec.artifact_kind", "=", "execution")
+        .executeTakeFirst() as { id: string } | undefined;
+
+      if (snapshot) {
+        pass("snapshot_compiled");
+      } else {
+        fail("snapshot_compiled", "No snapshot.entity_compiled row — descriptor compilation succeeded but persistence failed");
+      }
     }
   }
 
@@ -170,27 +188,38 @@ export async function checkEntityCompliance(db: Kysely<any>, entityCode: string)
 // ── Dev-startup runner ────────────────────────────────────────────────────────
 
 /**
- * Run the 10-point compliance suite for all active system entities.
+ * Run the 10-point compliance suite for all active, runtime-enabled system entities.
  * No-ops in production. Logs warnings for each failing entity but never
  * throws — a misconfigured entity is a warning, not a boot failure.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function runComplianceSuiteIfDev(db: Kysely<any>, logger: Logger): Promise<void> {
+export async function runComplianceSuiteIfDev(
+  db: Kysely<any>,
+  logger: Logger,
+  compileSummary?: CompileAllSummary,
+): Promise<void> {
   if (process.env["NODE_ENV"] === "production") return;
 
-  const entityRows = await db
-    .selectFrom("control.entity as e")
-    .select(["e.name"])
-    .where("e.tenant_id", "is", null)
-    .where("e.status", "=", "ACTIVE")
-    .execute() as Array<{ name: string }>;
+  const graphValidation = compileSummary?.graphValidation ?? await validateMetadataGraph({
+    query: <T extends object>(text: string, values?: readonly unknown[]) =>
+      db.executeQuery<T>(CompiledQuery.raw(text, values ? [...values] : [])),
+  });
+  if (!graphValidation.passed) {
+    logger.warn("entity_compliance_graph_preflight_failed", {
+      diagnostics: graphValidation.diagnostics,
+    });
+    return;
+  }
 
-  const entityCodes = entityRows.map((r) => String(r.name));
+  const entityCodes = compileSummary?.eligibleEntityCodes ?? graphValidation.eligibleEntityCodes;
+  const compiledEntityCodes = new Set(compileSummary?.compiledEntityCodes ?? []);
 
   let totalFailed = 0;
 
   for (const code of entityCodes) {
-    const result = await checkEntityCompliance(db, code);
+    const result = await checkEntityCompliance(db, code, {
+      snapshotExpected: compileSummary ? compiledEntityCodes.has(code) : false,
+    });
     if (!result.passed) {
       totalFailed++;
       logger.warn("entity_compliance_failed", {

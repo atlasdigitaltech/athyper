@@ -61,6 +61,7 @@ export function compileExecutionDescriptor(input: CompileExecutionDescriptorInpu
     return {
       name: field.name,
       column: field.column_name,
+      ...(field.projection_alias_of ? { projectionAliasOf: field.projection_alias_of } : {}),
       dataType: field.data_type,
       coercion: fieldCoercion(field),
       required: field.is_required,
@@ -81,8 +82,13 @@ export function compileExecutionDescriptor(input: CompileExecutionDescriptorInpu
     };
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  const primaryKey = text(entity.identity_config["primary_key"]) ?? "id";
-  const tenantColumn = text(entity.identity_config["tenant_column"]) ?? "tenant_id";
+  const primaryKey = text(entity.identity_config["primary_key"]);
+  if (!primaryKey) {
+    throw new Error(`Runtime entity '${entity.entity_code}' is missing an explicit primary_key contract.`);
+  }
+  const tenantColumn = text(entity.identity_config["tenant_column"]) ?? null;
+  const readCapability = normalizeReadCapability(entity.read_capability);
+  const writeCapability = normalizeWriteCapability(entity.write_capability);
   const concurrency = compileConcurrency(entity);
   const naturalKeyFields = strings(entity.identity_config["natural_key_fields"]);
   const defaultSort = compileDefaultSort(entity, overlay, fields, primaryKey);
@@ -138,6 +144,8 @@ export function compileExecutionDescriptor(input: CompileExecutionDescriptorInpu
       table: entity.table_name,
       primaryKey,
       tenantColumn,
+      readCapability,
+      writeCapability,
       ...(concurrency.rowVersionField ? { rowVersionColumn: storageColumn(concurrency.rowVersionField) } : {}),
       backingType: normalizeBackingType(entity.backing_type),
     },
@@ -275,12 +283,23 @@ function fieldCoercion(field: ExecutionCompiledEntitySource["fields"][number]): 
 function storageColumn(value: string): string { return value.includes(".") ? value.slice(0, value.indexOf(".")) : value; }
 function record(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function text(value: unknown): string | undefined { return typeof value === "string" && value.trim() ? value.trim() : undefined; }
+function normalizeReadCapability(value: string): "generic" | "facade" | "projection" {
+  if (value === "generic" || value === "facade" || value === "projection") return value;
+  throw new Error(`Runtime entity has invalid read capability '${value}'.`);
+}
+function normalizeWriteCapability(value: string): "none" | "generic" | "facade" | "append_only" {
+  if (value === "none" || value === "generic" || value === "facade" || value === "append_only") return value;
+  throw new Error(`Runtime entity has invalid write capability '${value}'.`);
+}
 function strings(value: unknown): string[] {
   if (typeof value === "string") return value.trim() ? [value.trim()] : [];
   return Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim()))].sort() : [];
 }
 function sortRecord<T>(value: Record<string, T>): Record<string, T> { return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))); }
-function normalizeBackingType(value: string): "table" | "view" | "materialized_view" { return value === "view" || value === "materialized_view" ? value : "table"; }
+function normalizeBackingType(value: string): "table" | "view" | "materialized_view" {
+  if (value === "table" || value === "view" || value === "materialized_view") return value;
+  throw new Error(`Runtime entity has invalid backing type '${value}'.`);
+}
 function normalizeCreateMode(value: string | undefined): SerializedExecutionDescriptorV1["write"]["create"]["mode"] {
   return value === "EARLY_DRAFT" || value === "DIRECT_CREATE" || value === "SOURCE_DOCUMENT_CREATE" ? value : "FORM_ONLY";
 }

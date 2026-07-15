@@ -114,8 +114,6 @@ export const ENTITY_CONTRACT_DEFINITIONS: PropertyContractDefinition[] = [
       "is_bulk_editable",
       "is_approvable",
       "is_readonly",
-      "records_api_disabled",
-      "generic_runtime_disabled",
       "is_hidden",
       "comments_enabled",
       "event_history",

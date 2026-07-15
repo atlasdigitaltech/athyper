@@ -136,11 +136,27 @@ describe("SessionService.resolve", () => {
       workbenches: ["user", "partner"],
     };
 
+    const executeRawQuery = makeExecuteQuery([
+      { rows: [{ plan_version_id: "pv-basic" }] },
+      {
+        rows: [
+          { module_id: "m-acc", module_code: "ACC", workspace_id: "w-core" },
+          { module_id: "m-pay", module_code: "PAY", workspace_id: "w-core" },
+        ],
+      },
+      { rows: [{ has_tenant_scope: true, widest_visibility: "all", cc_codes: null }] },
+    ]);
     const db = {
       selectFrom(table: string) {
         const rows: Record<string, unknown> = {
-          "master.tenant":                   { id: "t-athyper", status: "active" },
-          "master.company_code as cc":       { cc_name: "Athyper Group Holdings", country_code: "MY" },
+          "master.tenant as t":              { id: "t-athyper", status: "active" },
+          "master.legal_entity as le":       {
+            legal_entity_code: "ATHQ",
+            legal_entity_name: "Athyper Group Holdings",
+            legal_entity_display_name: "Athyper Group Holdings",
+            country_code: "MY",
+            company_code: "ATHQ",
+          },
           "master.principal_identity_binding as pab": { principal_id: KUMAR_SUB, is_active: true, is_locked: false },
           "master.principal_persona as pp":  { persona_id: "ps-manager", persona_code: "manager" },
           "shared.permission as p":          [
@@ -169,17 +185,11 @@ describe("SessionService.resolve", () => {
         };
         return b;
       },
-      // Step 8: effective modules, then Step 9: raw SQL scope CTE (Kumar has tenant-wide access)
-      executeQuery: makeExecuteQuery([
-        { rows: [{ plan_version_id: "pv-basic" }] },
-        {
-          rows: [
-            { module_id: "m-acc", module_code: "ACC", workspace_id: "w-core" },
-            { module_id: "m-pay", module_code: "PAY", workspace_id: "w-core" },
-          ],
-        },
-        { rows: [{ has_tenant_scope: true, widest_visibility: "all", cc_codes: null }] },
-      ]),
+      getExecutor: () => ({
+        transformQuery: (query: unknown) => query,
+        compileQuery: (query: unknown) => query,
+        executeQuery: executeRawQuery,
+      }),
     };
 
     const cache = makeMockCache();
@@ -213,11 +223,22 @@ describe("SessionService.resolve", () => {
   // Rama only has one entity (athyper:ATHQ) with explicit company_code scope.
 
   it("resolves session for Rama with explicit company_code scope (scope=own)", async () => {
+    const executeRawQuery = makeExecuteQuery([
+      { rows: [{ plan_version_id: "pv-basic" }] },
+      { rows: [{ module_id: "m-acc", module_code: "ACC", workspace_id: "w-core" }] },
+      { rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["ATHQ"] }] },
+    ]);
     const db = {
       selectFrom(table: string) {
         const rows: Record<string, unknown> = {
-          "master.tenant":                   { id: "t-athyper", status: "active" },
-          "master.company_code as cc":       { cc_name: "Athyper Group Holdings", country_code: "MY" },
+          "master.tenant as t":              { id: "t-athyper", status: "active" },
+          "master.legal_entity as le":       {
+            legal_entity_code: "ATHQ",
+            legal_entity_name: "Athyper Group Holdings",
+            legal_entity_display_name: "Athyper Group Holdings",
+            country_code: "MY",
+            company_code: "ATHQ",
+          },
           "master.principal_identity_binding as pab": { principal_id: RAMA_SUB, is_active: true, is_locked: false },
           "master.principal_persona as pp":  { persona_id: "ps-agent", persona_code: "agent" },
           "shared.permission as p":          [
@@ -244,12 +265,11 @@ describe("SessionService.resolve", () => {
         };
         return b;
       },
-      // Step 8: effective modules, then Step 9: scope CTE (Rama has company_code scope for ATHQ)
-      executeQuery: makeExecuteQuery([
-        { rows: [{ plan_version_id: "pv-basic" }] },
-        { rows: [{ module_id: "m-acc", module_code: "ACC", workspace_id: "w-core" }] },
-        { rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["ATHQ"] }] },
-      ]),
+      getExecutor: () => ({
+        transformQuery: (query: unknown) => query,
+        compileQuery: (query: unknown) => query,
+        executeQuery: executeRawQuery,
+      }),
     };
 
     const svc = createSessionService({ db: db as never, cache: makeMockCache() });
@@ -289,11 +309,22 @@ describe("SessionService.resolve", () => {
   });
 
   it("resolves partner session for Priya (demo_in, partner workbench)", async () => {
+    const executeRawQuery = makeExecuteQuery([
+      { rows: [{ plan_version_id: "pv-basic" }] },
+      { rows: [{ module_id: "m-acc", module_code: "ACC", workspace_id: "w-core" }] },
+      { rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["DEMOIN"] }] },
+    ]);
     const db = {
       selectFrom(table: string) {
         const rows: Record<string, unknown> = {
-          "master.tenant":                   { id: "t-demo-in", status: "active" },
-          "master.company_code as cc":       { cc_name: "Demo India", country_code: "IN" },
+          "master.tenant as t":              { id: "t-demo-in", status: "active" },
+          "master.legal_entity as le":       {
+            legal_entity_code: "DEMOIN",
+            legal_entity_name: "Demo India",
+            legal_entity_display_name: "Demo India",
+            country_code: "IN",
+            company_code: "DEMOIN",
+          },
           "master.principal_identity_binding as pab": { principal_id: PRIYA_SUB, is_active: true, is_locked: false },
           "master.principal_persona as pp":  { persona_id: "ps-agent", persona_code: "agent" },
           "shared.permission as p":          [{ code: "invoice.view", is_granted: true }],
@@ -318,12 +349,11 @@ describe("SessionService.resolve", () => {
         };
         return b;
       },
-      // Step 8: effective modules, then Step 9: scope CTE (Priya has company_code scope for DEMOIN)
-      executeQuery: makeExecuteQuery([
-        { rows: [{ plan_version_id: "pv-basic" }] },
-        { rows: [{ module_id: "m-acc", module_code: "ACC", workspace_id: "w-core" }] },
-        { rows: [{ has_tenant_scope: false, widest_visibility: "own", cc_codes: ["DEMOIN"] }] },
-      ]),
+      getExecutor: () => ({
+        transformQuery: (query: unknown) => query,
+        compileQuery: (query: unknown) => query,
+        executeQuery: executeRawQuery,
+      }),
     };
 
     const svc = createSessionService({ db: db as never, cache: makeMockCache() });
@@ -348,8 +378,14 @@ describe("SessionService.resolve", () => {
     const db = {
       selectFrom(table: string) {
         const rows: Record<string, unknown> = {
-          "master.tenant": { id: "t-athyper", status: "active" },
-          "master.company_code as cc": { cc_name: "Athyper Group Holdings", country_code: "MY" },
+          "master.tenant as t": { id: "t-athyper", status: "active" },
+          "master.legal_entity as le": {
+            legal_entity_code: "ATHQ",
+            legal_entity_name: "Athyper Group Holdings",
+            legal_entity_display_name: "Athyper Group Holdings",
+            country_code: "MY",
+            company_code: "ATHQ",
+          },
           "master.principal_identity_binding as pab": {
             principal_id: KUMAR_SUB,
             is_active: true,

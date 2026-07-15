@@ -22,7 +22,7 @@ function makeEntity(overrides: Partial<CompiledEntity> = {}): CompiledEntity {
     compiled_at: "2026-04-20T00:00:00.000Z",
     compiled_hash: "deadbeef",
     ...overrides,
-  };
+  } as unknown as CompiledEntity;
 }
 
 describe("resolveRendererFamily", () => {

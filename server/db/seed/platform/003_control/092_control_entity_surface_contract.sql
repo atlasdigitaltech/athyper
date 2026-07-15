@@ -95,7 +95,7 @@ surfaces AS (
                 ARRAY[]::text[],
                 NULL::jsonb,
                 10::smallint,
-                (eb.kind <> 'aggregate' AND COALESCE((eb.flags->>'generic_runtime_disabled')::boolean, false) = false),
+                (eb.runtime_enabled = true AND eb.read_capability <> 'none' AND eb.entity_class <> 'AGGREGATE'),
                 jsonb_strip_nulls(jsonb_build_object(
                     'title_field', eb.dc->>'title_field',
                     'subtitle_field', eb.dc->>'subtitle_field',
@@ -123,7 +123,7 @@ surfaces AS (
                 ARRAY[]::text[],
                 NULL::jsonb,
                 10::smallint,
-                COALESCE((eb.flags->>'generic_runtime_disabled')::boolean, false) = false,
+                eb.runtime_enabled = true AND eb.read_capability <> 'none',
                 jsonb_strip_nulls(jsonb_build_object(
                     'detail_profile', eb.dc->>'detail_profile',
                     'title_field', eb.dc->>'title_field',
@@ -149,7 +149,9 @@ surfaces AS (
                 NULL::jsonb,
                 10::smallint,
                 COALESCE((eb.flags->>'is_readonly')::boolean, false) = false
-                    AND COALESCE((eb.flags->>'generic_runtime_disabled')::boolean, false) = false
+                    AND eb.runtime_enabled = true
+                    AND eb.read_capability <> 'none'
+                    AND eb.write_capability <> 'none'
                     AND eb.mutability <> 'locked'
                     AND eb.entity_class NOT IN ('LOG','AGGREGATE'),
                 '{}'::jsonb
@@ -174,7 +176,9 @@ surfaces AS (
                 10::smallint,
                 eb.create_mode <> 'DIRECT_CREATE'
                     AND COALESCE((eb.flags->>'is_readonly')::boolean, false) = false
-                    AND COALESCE((eb.flags->>'generic_runtime_disabled')::boolean, false) = false
+                    AND eb.runtime_enabled = true
+                    AND eb.read_capability <> 'none'
+                    AND eb.write_capability <> 'none'
                     AND eb.mutability <> 'locked'
                     AND eb.entity_class NOT IN ('LOG','AGGREGATE'),
                 jsonb_build_object('create_mode', eb.create_mode)
@@ -327,7 +331,8 @@ relations AS (
     WHERE ev.tenant_id IS NULL
       AND ev.version_no = 1
       AND parent.status IN ('ACTIVE','DEPRECATED')
-      AND COALESCE((parent.feature_flags->>'generic_runtime_disabled')::boolean, false) = false
+      AND parent.runtime_enabled = true
+      AND parent.read_capability <> 'none'
       AND COALESCE((er.ui_behavior->>'visible_as_tab')::boolean, true) = true
 )
 INSERT INTO control.entity_surface (
@@ -380,11 +385,14 @@ WITH constants AS (
 entity_base AS (
     SELECT
         e.id AS entity_id,
+        e.runtime_enabled,
+        e.read_capability,
         COALESCE(e.feature_flags, '{}'::jsonb) AS flags
     FROM control.entity e
     WHERE e.tenant_id IS NULL
       AND e.status IN ('ACTIVE','DEPRECATED')
-      AND COALESCE((e.feature_flags->>'generic_runtime_disabled')::boolean, false) = false
+      AND e.runtime_enabled = true
+      AND e.read_capability <> 'none'
 ),
 surface_specs AS (
     SELECT
@@ -665,5 +673,3 @@ BEGIN
 END $$;
 
 COMMIT;
-
-

@@ -63,6 +63,10 @@ export interface VerifiedRequestContext {
   correlationId?: string;
   workspace?: string;
   profile?: string;
+  workContextType?: "legal_entity" | "operating_organization";
+  workContextId?: string;
+  workContextDomain?: "procurement" | "sales";
+  scopeVersion?: number;
   headerOrg?: string | null;
   headerRealm?: string | null;
 }
@@ -97,6 +101,11 @@ export interface VerifiedRequestContextHints {
   organizationId?: string | null;
   legalEntityId?: string | null;
   orgContextType?: string | null;
+  workContextType?: string | null;
+  workContextId?: string | null;
+  workContextDomain?: string | null;
+  scopeVersion?: number | null;
+  authEpoch?: number | null;
   correlationId?: string | null;
   /** Trusted tenant UUID already resolved by the authenticated host boundary. */
   trustedTenantId?: string | null;
@@ -118,7 +127,9 @@ function defaultRealmKey(): string {
 
 export function extractOrgHeaders(req: Parameters<RequestHandler>[0]): { xOrg: string; xRealm: string } {
   return {
-    xOrg:   (req.headers["x-org"]   as string) ?? "",
+    xOrg:   (req.headers["x-org"] as string | undefined)
+      ?? (req.headers["x-tenant-code"] as string | undefined)
+      ?? "",
     xRealm:
       (req.headers["x-realm-key"] as string | undefined)
       ?? (req.headers["x-realm"] as string | undefined)
@@ -143,6 +154,11 @@ export function extractVerifiedRequestContextHints(
     organizationId: header("x-organization-id"),
     legalEntityId: header("x-legal-entity-id"),
     orgContextType: header("x-org-context-type"),
+    workContextType: header("x-work-context-type"),
+    workContextId: header("x-work-context-id"),
+    workContextDomain: header("x-work-context-domain"),
+    scopeVersion: Number.isFinite(Number(header("x-scope-version"))) ? Number(header("x-scope-version")) : undefined,
+    authEpoch: Number.isFinite(Number(header("x-auth-epoch"))) ? Number(header("x-auth-epoch")) : undefined,
     correlationId: header("x-trace-id") ?? header("x-request-id"),
   };
 }
@@ -156,11 +172,6 @@ export function getAttachmentAuthFlags(): { attachmentAuthStrict: boolean; multi
 
 function normalizeClaimString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
-
-function readStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim());
 }
 
 function splitOrgHeader(value: string | null | undefined): { tenantCode: string; companyCode: string } {
@@ -181,10 +192,6 @@ function parseTenantFromClaims(claims: Record<string, unknown>): string | null {
   const candidates = [
     normalizeClaimString(claims["tenant_code"]),
     normalizeClaimString(claims["tenant"]),
-    normalizeClaimString(claims["org"]),
-    normalizeClaimString(claims["organization"]),
-    normalizeClaimString(claims["organization_code"]),
-    normalizeClaimString(claims["x-org"]),
   ];
   return candidates.find((value): value is string => Boolean(value)) ?? null;
 }
@@ -250,7 +257,8 @@ export async function resolveVerifiedRequestContext(
   const tenantCodeFromClaims = parseTenantFromClaims(claims);
   const tenantIdClaim = normalizeClaimString(claims["tenant_id"]) ?? normalizeClaimString(claims["tenant_uuid"]);
   const headerOrgScope = splitOrgHeader(headerOrg);
-  if (!headerOrgScope.tenantCode) {
+  const requestedTenantCode = normalizeClaimString(hints.tenantCode) ?? headerOrgScope.tenantCode;
+  if (!requestedTenantCode && !normalizeClaimString(hints.tenantId)) {
     return {
       ok: false,
       error: "ORG_CONTEXT_REQUIRED",
@@ -266,7 +274,7 @@ export async function resolveVerifiedRequestContext(
     const org = splitOrgHeader(tenantCodeFromClaims);
     tenantCode = org.tenantCode;
     companyCode = org.companyCode;
-    if (tenantCode !== headerOrgScope.tenantCode) {
+    if (tenantCode !== requestedTenantCode) {
       return {
         ok: false,
         error: "AUTH_CONTEXT_MISMATCH",
@@ -290,13 +298,8 @@ export async function resolveVerifiedRequestContext(
   if (!tenantCode && tenantCodeFromClaims) {
     return { ok: false, error: "AUTH_CONTEXT_REQUIRED", message: "Token tenant context is invalid.", status: 403 };
   }
-  const allowedTenants = readStringArray(claims["allowed_tenants"]);
-  if (!tenantCode && allowedTenants.length > 0) {
-    if (!allowedTenants.includes(headerOrgScope.tenantCode)) {
-      return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "Requested organization is not authorized by the verified token.", status: 403 };
-    }
-    tenantCode = headerOrgScope.tenantCode;
-  }
+  // allowed_tenants is discovery metadata only. Tenant authorization is
+  // resolved from the BFF tenant header and the DB identity binding.
   if (!tenantCode && !tenantId) {
     return { ok: false, error: "AUTH_CONTEXT_REQUIRED", message: "The verified token has no tenant authorization context.", status: 403 };
   }
@@ -313,15 +316,11 @@ export async function resolveVerifiedRequestContext(
     tenantCode = (row.code as string) || tenantCode;
   }
 
-  if (allowedTenants.length > 0) {
-    if (!tenantCode || !allowedTenants.includes(tenantCode)) {
-      return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "Requested organization is not authorized by the verified token.", status: 403 };
-    }
-  } else if (tenantIdClaim && tenantId !== tenantIdClaim) {
+  if (tenantIdClaim && tenantId !== tenantIdClaim) {
     return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "Requested organization is not authorized by the verified token.", status: 403 };
   }
 
-  if (tenantCode !== headerOrgScope.tenantCode) {
+  if (requestedTenantCode && tenantCode !== requestedTenantCode) {
     return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "The requested organization does not match the verified tenant.", status: 403 };
   }
   const hintedTenantId = normalizeClaimString(hints.tenantId);
@@ -374,12 +373,17 @@ export async function resolveVerifiedRequestContext(
     };
   }
 
-  const organizationId = normalizeClaimString(hints.organizationId);
+  const rawWorkContextType = normalizeClaimString(hints.workContextType) ?? normalizeClaimString(hints.orgContextType);
+  const workContextType = rawWorkContextType?.toLowerCase();
+  const workContextId = normalizeClaimString(hints.workContextId)
+    ?? (workContextType === "legal_entity" ? normalizeClaimString(hints.organizationId) : undefined);
+  const workContextDomain = normalizeClaimString(hints.workContextDomain)?.toLowerCase();
+  const organizationId = normalizeClaimString(hints.organizationId)
+    ?? (workContextType === "legal_entity" ? workContextId : undefined);
   const legalEntityId = normalizeClaimString(hints.legalEntityId);
   const companyCodeIdHint = normalizeClaimString(hints.companyCodeId);
-  const orgContextType = normalizeClaimString(hints.orgContextType)?.toLowerCase();
-  const companyCodeId = orgContextType === "company_code" ? organizationId : companyCodeIdHint;
-  if (orgContextType === "company_code" && !companyCodeId) {
+  const companyCodeId = workContextType === "company_code" ? organizationId : companyCodeIdHint;
+  if (workContextType === "company_code" && !companyCodeId) {
     return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "A company organization context requires a company code.", status: 403 };
   }
   if (companyCodeId) {
@@ -394,6 +398,36 @@ export async function resolveVerifiedRequestContext(
       return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "The requested company context is outside the verified tenant scope.", status: 403 };
     }
     companyCode = company.code as string;
+  }
+
+  if (hints.authEpoch !== undefined && hints.authEpoch !== Number(principal.auth_epoch)) {
+    return { ok: false, error: "AUTH_CONTEXT_STALE", message: "The authenticated session epoch is stale.", status: 401 };
+  }
+  if (workContextType === "operating_organization") {
+    if (!workContextId || (workContextDomain !== "procurement" && workContextDomain !== "sales")) {
+      return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "An Operating Organization context requires an id and domain.", status: 403 };
+    }
+    const operatingOrganization = await db.selectFrom("master.operating_organization")
+      .select(["id", "domain", "scope_version"])
+      .where("tenant_id", "=", tenantId).where("id", "=", workContextId).where("status", "=", "active")
+      .executeTakeFirst();
+    if (!operatingOrganization || operatingOrganization.domain !== workContextDomain) {
+      return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "The requested work context is outside the verified tenant scope.", status: 403 };
+    }
+    if (hints.scopeVersion !== undefined && Number(operatingOrganization.scope_version) !== hints.scopeVersion) {
+      return { ok: false, error: "AUTH_CONTEXT_STALE", message: "The selected Operating Organization scope is stale.", status: 409 };
+    }
+  } else if (workContextType === "legal_entity") {
+    if (!workContextId) {
+      return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "A Legal Entity context requires an id.", status: 403 };
+    }
+    const legalEntity = await db.selectFrom("master.legal_entity").select("id")
+      .where("tenant_id", "=", tenantId).where("id", "=", workContextId).executeTakeFirst();
+    if (!legalEntity) {
+      return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "The requested Legal Entity is outside the verified tenant scope.", status: 403 };
+    }
+  } else if (workContextType && workContextType !== "company_code") {
+    return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "The requested work context type is not supported.", status: 403 };
   }
 
   return {
@@ -414,6 +448,10 @@ export async function resolveVerifiedRequestContext(
       correlationId: normalizeClaimString(hints.correlationId) ?? undefined,
       workspace: normalizeClaimString(claims["workspace"]) ?? normalizeClaimString(claims["workspace_id"]) ?? undefined,
       profile: normalizeClaimString(claims["profile"]) ?? normalizeClaimString(claims["profile_id"]) ?? undefined,
+      workContextType: workContextType === "legal_entity" || workContextType === "operating_organization" ? workContextType : undefined,
+      workContextId: workContextId ?? undefined,
+      workContextDomain: workContextDomain === "procurement" || workContextDomain === "sales" ? workContextDomain : undefined,
+      scopeVersion: hints.scopeVersion ?? undefined,
       headerOrg: headerOrg ?? null,
       headerRealm: headerRealm ?? null,
     },
@@ -662,8 +700,12 @@ export async function resolveFieldMap(db: Kysely<any>, entityCode: string): Prom
     .select(["ef.name", "ef.column_name", "ef.json_config"])
     .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
     .where("ev.status", "=", "EFFECTIVE")
     .where("ef.is_active", "=", true)
+    .where("ef.runtime_enabled", "=", true)
     .execute();
 
   const map = new Map<string, string>();
@@ -692,8 +734,12 @@ export async function resolveArrayColumns(db: Kysely<any>, entityCode: string): 
     .select(["ef.column_name", "ef.data_type"])
     .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
     .where("ev.status", "=", "EFFECTIVE")
     .where("ef.is_active", "=", true)
+    .where("ef.runtime_enabled", "=", true)
     .where((eb) => eb.or([
       eb("ef.data_type", "like", "%[]"),
       eb("ef.data_type", "in", ["text_array", "uuid_array", "int_array", "jsonb_array"]),
@@ -721,8 +767,12 @@ export async function resolveJsonColumns(db: Kysely<any>, entityCode: string): P
     .select(["ef.column_name", "ef.data_type"])
     .where("e.name", "=", name)
     .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
     .where("ev.status", "=", "EFFECTIVE")
     .where("ef.is_active", "=", true)
+    .where("ef.runtime_enabled", "=", true)
     .where("ef.data_type", "in", ["json", "jsonb"])
     .execute();
 

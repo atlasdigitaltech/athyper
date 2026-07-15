@@ -104,6 +104,50 @@ function JsonEditor({
   );
 }
 
+function RuntimeContractPanel({ entity }: { entity: EntityDetail }) {
+  const [enabled, setEnabled] = useState(entity.runtime_enabled === true);
+  const [primaryKey, setPrimaryKey] = useState(entity.primary_key ?? "");
+  const [tenantColumn, setTenantColumn] = useState(entity.tenant_column ?? "");
+  const [readCapability, setReadCapability] = useState(entity.read_capability ?? "none");
+  const [writeCapability, setWriteCapability] = useState(entity.write_capability ?? "none");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      await saveEntityContract(entity.id, {
+        runtime_enabled: enabled,
+        primary_key: primaryKey.trim() || null,
+        tenant_column: tenantColumn.trim() || null,
+        read_capability: readCapability,
+        write_capability: writeCapability,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <WorkPanel title="Runtime execution contract" description="Controls whether this registered entity can enter the API execution compiler.">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="flex items-center justify-between rounded border p-2">
+          <div><Label className="text-xs">Runtime enabled</Label><p className="text-xs text-muted-foreground">Catalog entities remain disabled.</p></div>
+          <Switch checked={enabled} onCheckedChange={setEnabled} />
+        </div>
+        <div className="space-y-1"><Label className="text-xs">Primary key column</Label><Input value={primaryKey} onChange={(event) => setPrimaryKey(event.target.value)} placeholder="id" /></div>
+        <div className="space-y-1"><Label className="text-xs">Tenant column</Label><Input value={tenantColumn} onChange={(event) => setTenantColumn(event.target.value)} placeholder="Empty for global entities" /></div>
+        <div className="space-y-1"><Label className="text-xs">Read capability</Label><Select value={readCapability} onValueChange={setReadCapability}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["none", "generic", "facade", "projection"].map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div>
+        <div className="space-y-1"><Label className="text-xs">Write capability</Label><Select value={writeCapability} onValueChange={setWriteCapability}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["none", "generic", "facade", "append_only"].map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div>
+      </div>
+      <div className="mt-3 flex items-center gap-2"><Button size="sm" onClick={() => void save()} disabled={saving}>{saving ? "Saving…" : "Save runtime contract"}</Button>{error && <span className="text-xs text-destructive">{error}</span>}</div>
+    </WorkPanel>
+  );
+}
+
 function ContractHealthPanel({ entity }: { entity: EntityDetail }) {
   const flags = asRecord(entity.feature_flags);
   const display = asRecord(entity.display_config);
@@ -582,6 +626,7 @@ export function ContractEditor({ entity }: { entity: EntityDetail }) {
   return (
     <div className="space-y-4">
       <ContractHealthPanel entity={{ ...entity, feature_flags: featureFlags, display_config: displayConfig, identity_config: identityConfig, search_config: searchConfig, data_policy: dataPolicy }} />
+      <RuntimeContractPanel entity={entity} />
       <FeatureFlagsPanel flags={featureFlags} entityId={entity.id} onSaved={setFeatureFlags} />
       <DataPolicyPanel policy={dataPolicy} fields={entity.fields} entityId={entity.id} onSaved={setDataPolicy} />
       <IdentityConfigPanel value={identityConfig} fields={entity.fields} entityId={entity.id} onSaved={setIdentityConfig} />

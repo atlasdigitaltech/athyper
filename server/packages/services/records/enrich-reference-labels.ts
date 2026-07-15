@@ -73,6 +73,8 @@ export interface TargetTableInfo {
   schema:    string;
   table:     string;
   hasTenant: boolean;
+  tenantColumn?: string | null;
+  primaryKey?: string | null;
 }
 
 export interface ResolvedTargetLabels {
@@ -290,8 +292,13 @@ export async function discoverReferenceFields(
     ])
     .where("e.name", "=", normalized)
     .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("e.read_capability", "<>", "none")
     .where("ev.status", "=", "EFFECTIVE")
     .where("ef.is_active", "=", true)
+    .where("ef.runtime_enabled", "=", true)
     .where("ef.tenant_id", "is", null)
     .where(sql`
       (ef.reference_config ? 'target_entity')
@@ -358,11 +365,15 @@ export async function resolveTargetTable(
   const row = await (db as any)
     .selectFrom("control.entity as e")
     .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
-    .select(["e.table_schema", "e.table_name", "e.feature_flags"])
+    .select(["e.table_schema", "e.table_name", "e.feature_flags", "e.tenant_column", "e.primary_key"])
     .where("e.name", "=", normalized)
     .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("e.read_capability", "<>", "none")
     .where("ev.status", "=", "EFFECTIVE")
-    .executeTakeFirst() as { table_schema: string; table_name: string; feature_flags: Record<string, unknown> | null } | undefined;
+    .executeTakeFirst() as { table_schema: string; table_name: string; feature_flags: Record<string, unknown> | null; tenant_column: string | null; primary_key: string | null } | undefined;
   if (!row) return null;
 
   // Role entities such as supplier/customer delegate identity to a BP-backed
@@ -378,25 +389,8 @@ export async function resolveTargetTable(
   const table  = String(row.table_name);
   if (!SAFE_IDENTIFIER.test(schema) || !SAFE_IDENTIFIER.test(table)) return null;
 
-  const hasTenant = await targetHasTenantColumn(db, schema, table);
-  return { schema, table, hasTenant };
-}
-
-async function targetHasTenantColumn(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: Kysely<any>,
-  schema: string,
-  table: string,
-): Promise<boolean> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const row = await (db as any)
-    .selectFrom("information_schema.columns as c")
-    .select(["c.column_name"])
-    .where("c.table_schema", "=", schema)
-    .where("c.table_name", "=", table)
-    .where("c.column_name", "=", "tenant_id")
-    .executeTakeFirst() as { column_name: string } | undefined;
-  return row !== undefined;
+  const tenantColumn = row.tenant_column ?? null;
+  return { schema, table, hasTenant: tenantColumn !== null, tenantColumn, primaryKey: row.primary_key ?? null };
 }
 
 export async function fetchTargetLabels(
@@ -429,7 +423,8 @@ export async function fetchTargetLabels(
     },
   ]));
 
-  const targetCol = spec.targetField && columnSet.has(spec.targetField) && SAFE_IDENTIFIER.test(spec.targetField)
+  const targetField = spec.targetField || target.primaryKey || "id";
+  const targetCol = targetField && columnSet.has(targetField) && SAFE_IDENTIFIER.test(targetField)
     ? spec.targetField
     : "id";
   const labelCol = spec.labelField && columnSet.has(spec.labelField) && SAFE_IDENTIFIER.test(spec.labelField)
@@ -456,8 +451,9 @@ export async function fetchTargetLabels(
   const codeSelect        = codeCol  ? sql.raw(`"${codeCol}"::text`)  : sql.raw("NULL::text");
   const formattedSelect   = formattedCol ? sql.raw(`"${formattedCol}"::text`) : sql.raw("NULL::text");
   const jurisdictionSelect = jurisdictionCol ? sql.raw(`"${jurisdictionCol}"`) : sql.raw("NULL::uuid");
-  const tenantPredicate = target.hasTenant && tenantId
-    ? sql`AND tenant_id = ${tenantId}::uuid`
+  const tenantColumn = target.tenantColumn ?? (target.hasTenant ? "tenant_id" : null);
+  const tenantPredicate = tenantColumn && tenantId
+    ? sql`AND ${sql.raw(`"${tenantColumn.replace(/"/g, '""')}"`)} = ${tenantId}::uuid`
     : sql``;
   const lookupPredicate = targetIsUuid
     ? sql`${targetSelect} = ANY(${ids}::uuid[])`

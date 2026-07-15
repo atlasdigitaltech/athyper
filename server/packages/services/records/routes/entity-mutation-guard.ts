@@ -19,6 +19,10 @@ export interface EntityMutationTableInfo {
   table_name: string;
   backing_type: string;
   entity_class: string;
+  primary_key: string;
+  tenant_column: string | null;
+  read_capability: string;
+  write_capability: string;
   mutability: string;
   feature_flags: Record<string, unknown>;
 }
@@ -31,6 +35,8 @@ export interface EntityWriteFieldRule {
   is_computed: boolean;
   is_write_once: boolean;
   editability: Record<string, unknown>;
+  /** Identity/scope fields are system-managed by the storage contract. */
+  system_managed?: boolean;
   /** Present when the rule came from the compiler-owned capability snapshot. */
   compiled?: {
     createWritable: boolean;
@@ -285,11 +291,19 @@ export async function resolveEntityWriteFieldRules(
       "ef.is_computed",
       "ef.is_write_once",
       "ef.editability",
+      "e.primary_key",
+      "e.tenant_column",
     ] as never[])
     .where("e.name" as never, "=" as never, name as never)
     .where("e.tenant_id" as never, "is", null)
+    .where("e.runtime_enabled" as never, "=", true as never)
+    .where("e.status" as never, "=", "ACTIVE" as never)
+    .where("e.is_active" as never, "=", true as never)
+    .where("e.read_capability" as never, "<>", "none" as never)
+    .where("e.write_capability" as never, "<>", "none" as never)
     .where("ev.status" as never, "=", "EFFECTIVE" as never)
     .where("ef.is_active" as never, "=", true as never)
+    .where("ef.runtime_enabled" as never, "=", true as never)
     .execute() as Array<{
       name: string;
       column_name: string;
@@ -298,6 +312,8 @@ export async function resolveEntityWriteFieldRules(
       is_computed: boolean;
       is_write_once: boolean;
       editability: unknown;
+      primary_key: string | null;
+      tenant_column: string | null;
     }>;
 
   const rules = new Map<string, EntityWriteFieldRule>();
@@ -310,6 +326,8 @@ export async function resolveEntityWriteFieldRules(
       is_computed: row.is_computed,
       is_write_once: row.is_write_once,
       editability: asRecord(row.editability),
+      system_managed: row.column_name === row.primary_key
+        || (row.tenant_column !== null && row.column_name === row.tenant_column),
     });
   }
   return rules;
@@ -329,7 +347,13 @@ async function resolveCompiledEntityWriteFieldRules(
       eb("e.slug", "=", entityCode),
     ]))
     .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("e.read_capability", "<>", "none")
+    .where("e.write_capability", "<>", "none")
     .where("ev.status", "=", "EFFECTIVE")
+    .where("ec.artifact_kind", "=", "execution")
     .executeTakeFirst() as { compiled_json?: unknown; effective_version_id?: string } | undefined;
   if (!row?.compiled_json) return null;
 
@@ -438,6 +462,7 @@ export function isEntityFieldWritable(
   if (rule.is_read_only) return deny("FIELD_READ_ONLY");
   if (rule.is_computed) return deny("FIELD_COMPUTED");
   if (rule.is_write_once && action === "update") return deny("FIELD_WRITE_ONCE");
+  if (rule.system_managed) return deny("FIELD_SYSTEM_MANAGED");
   if (SYSTEM_WRITE_COLUMNS.has(storageColumnName(rule.column_name))) return deny("FIELD_SYSTEM_MANAGED");
   if (rule.origin === "system" && rule.name !== "status") return deny("FIELD_SYSTEM_ORIGIN");
 
@@ -465,12 +490,35 @@ function mutationTableBlock(
   table: EntityMutationTableInfo,
   action: EntityMutationAction,
 ): { status: number; error: string; message: string } | null {
-  if (readBoolean(table.feature_flags, "records_api_disabled")
-    || readBoolean(table.feature_flags, "generic_runtime_disabled")) {
+  if (table.read_capability === "none") {
     return {
       status: 404,
       error: "ENTITY_NOT_FOUND",
-      message: `Entity '${table.name}' is not exposed through the generic records API.`,
+      message: `Entity '${table.name}' is not readable through the records API.`,
+    };
+  }
+
+  if (!table.primary_key.trim()) {
+    return {
+      status: 404,
+      error: "ENTITY_NOT_FOUND",
+      message: `Entity '${table.name}' has no runtime storage identity.`,
+    };
+  }
+
+  if (table.write_capability === "none") {
+    return {
+      status: 405,
+      error: "ENTITY_WRITE_DISABLED",
+      message: `Entity '${table.name}' is compiled as read-only.`,
+    };
+  }
+
+  if (table.write_capability === "append_only" && action !== "create") {
+    return {
+      status: 405,
+      error: "ENTITY_APPEND_ONLY",
+      message: `Entity '${table.name}' accepts append-only writes; '${action}' is not supported.`,
     };
   }
 

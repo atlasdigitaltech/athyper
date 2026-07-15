@@ -36,6 +36,8 @@ interface EntityDescriptor {
   entityCode: string;
   tableSchema: string;
   tableName: string;
+  primaryKey: string;
+  tenantColumn: string | null;
   displayConfig: unknown;
   identityConfig: unknown;
   createMode: string;
@@ -71,6 +73,8 @@ interface BuildValuesParams {
   sourceRecord: Record<string, unknown>;
   fields: EntityFieldRow[];
   generatedColumns: Set<string>;
+  primaryKey: string;
+  tenantColumn: string | null;
   tenantId: string;
   actorId: string;
   targetStatus: string | null;
@@ -111,6 +115,21 @@ function qualifiedTable(entity: EntityDescriptor): `${string}.${string}` {
   return `${entity.tableSchema}.${entity.tableName}` as `${string}.${string}`;
 }
 
+function applyEntityScope(
+  query: any,
+  entity: EntityDescriptor,
+  recordId: string,
+  tenantId: string,
+): any {
+  assertIdentifier(entity.primaryKey, "primary key");
+  let scoped = query.where(entity.primaryKey, "=", recordId);
+  if (entity.tenantColumn) {
+    assertIdentifier(entity.tenantColumn, "tenant column");
+    scoped = scoped.where(entity.tenantColumn, "=", tenantId);
+  }
+  return scoped;
+}
+
 function asObject(value: unknown): JsonObject {
   if (!value) return {};
   if (typeof value === "string") {
@@ -147,10 +166,14 @@ function copyPolicyForField(field: EntityFieldRow): CopyPolicy | null {
   return raw as CopyPolicy;
 }
 
-function defaultPolicyForField(field: EntityFieldRow, generatedColumns: Set<string>): CopyPolicy {
+function defaultPolicyForField(
+  field: EntityFieldRow,
+  generatedColumns: Set<string>,
+  systemColumns: Set<string>,
+): CopyPolicy {
   if (!field.isActive || field.isDeprecated) return "exclude";
   if (!field.columnName) return "exclude";
-  if (SYSTEM_COLUMNS.has(field.columnName)) return "exclude";
+  if (systemColumns.has(field.columnName)) return "exclude";
   if (generatedColumns.has(field.columnName)) return "exclude";
   if (field.isUnique) return "regenerate";
   if (field.isComputed) return "derive";
@@ -197,11 +220,20 @@ function defaultValueForField(field: EntityFieldRow): { hasValue: boolean; value
 
 function buildInsertValues(params: BuildValuesParams): Record<string, unknown> {
   const overrides = params.overrides ?? {};
-  const values: Record<string, unknown> = {
-    id:         randomUUID(),
-    tenant_id: params.tenantId,
-    created_by: params.actorId,
-  };
+  const systemColumns = new Set(SYSTEM_COLUMNS);
+  systemColumns.add(params.primaryKey);
+  if (params.tenantColumn) systemColumns.add(params.tenantColumn);
+  const values: Record<string, unknown> = { created_by: params.actorId };
+
+  // Preserve the legacy generated-UUID behavior only for UUID primary keys.
+  // Numeric, text, and composite keys must be supplied by their declared
+  // database/default strategy; inventing an id would violate the contract.
+  const primaryField = params.fields.find((field) => field.columnName === params.primaryKey);
+  if (primaryField?.dataType.toLowerCase() === "uuid"
+    && !params.generatedColumns.has(params.primaryKey)) {
+    values[params.primaryKey] = randomUUID();
+  }
+  if (params.tenantColumn) values[params.tenantColumn] = params.tenantId;
 
   const fieldsByColumn = new Map(params.fields.map((field) => [field.columnName, field]));
   for (const field of params.fields) {
@@ -213,7 +245,8 @@ function buildInsertValues(params: BuildValuesParams): Record<string, unknown> {
       continue;
     }
 
-    const policy = copyPolicyForField(field) ?? defaultPolicyForField(field, params.generatedColumns);
+    const policy = copyPolicyForField(field)
+      ?? defaultPolicyForField(field, params.generatedColumns, systemColumns);
     switch (policy) {
       case "preserve":
         if (Object.prototype.hasOwnProperty.call(params.sourceRecord, field.columnName)) {
@@ -288,6 +321,8 @@ async function loadEntityDescriptor(db: AnyDb, entityCode: string, tenantId: str
       "e.entity_code as entityCode",
       "e.table_schema as tableSchema",
       "e.table_name as tableName",
+      "e.primary_key as primaryKey",
+      "e.tenant_column as tenantColumn",
       "e.display_config as displayConfig",
       "e.identity_config as identityConfig",
       "e.create_mode as createMode",
@@ -295,6 +330,12 @@ async function loadEntityDescriptor(db: AnyDb, entityCode: string, tenantId: str
       "e.draft_ttl_hours as draftTtlHours",
     ] as never[])
     .where("e.entity_code" as never, "=", entityCode as never)
+    .where("e.runtime_enabled" as never, "=", true as never)
+    .where("e.status" as never, "=", "ACTIVE" as never)
+    .where("e.is_active" as never, "=", true as never)
+    .where("e.read_capability" as never, "<>", "none" as never)
+    .where("e.write_capability" as never, "<>", "none" as never)
+    .where("ev.status" as never, "=", "EFFECTIVE" as never)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .where((eb: any) =>
       eb.or([
@@ -315,6 +356,11 @@ async function loadEntityDescriptor(db: AnyDb, entityCode: string, tenantId: str
   const descriptor = sorted[0];
   if (!descriptor) {
     throw Object.assign(new Error(`Entity '${entityCode}' not found`), { code: "ENTITY_NOT_FOUND" });
+  }
+  if (!descriptor.primaryKey) {
+    throw Object.assign(new Error(`Entity '${entityCode}' has no declared primary key`), {
+      code: "ENTITY_STORAGE_CONTRACT_INVALID",
+    });
   }
   return descriptor;
 }
@@ -339,6 +385,7 @@ async function loadEntityFields(db: AnyDb, versionId: string): Promise<EntityFie
     ] as never[])
     .where("ef.entity_version_id" as never, "=", versionId as never)
     .where("ef.is_active" as never, "=", true as never)
+    .where("ef.runtime_enabled" as never, "=", true as never)
     .orderBy("ef.sort_order" as never, "asc")
     .execute() as Promise<EntityFieldRow[]>;
 }
@@ -461,8 +508,11 @@ async function generateDocumentNumber(
 
   const fullTable = qualifiedTable(entity);
   let countQuery = (db.selectFrom(fullTable) as any)
-    .select(db.fn.countAll().as("cnt"))
-    .where("tenant_id", "=", tenantId);
+    .select(db.fn.countAll().as("cnt"));
+  if (entity.tenantColumn) {
+    assertIdentifier(entity.tenantColumn, "tenant column");
+    countQuery = countQuery.where(entity.tenantColumn, "=", tenantId);
+  }
 
   if (Object.prototype.hasOwnProperty.call(sourceRecord, "company_code_id") && sourceRecord["company_code_id"] != null) {
     countQuery = countQuery.where("company_code_id", "=", sourceRecord["company_code_id"]);
@@ -504,8 +554,11 @@ async function cloneChildRelation(
 
   let query = (db.selectFrom(childTable) as any)
     .selectAll()
-    .where(fkColumn, "=", params.sourceParentId)
-    .where("tenant_id", "=", params.tenantId);
+    .where(fkColumn, "=", params.sourceParentId);
+  if (child.tenantColumn) {
+    assertIdentifier(child.tenantColumn, "tenant column");
+    query = query.where(child.tenantColumn, "=", params.tenantId);
+  }
 
   if (childFields.some((field) => field.columnName === "line_no")) {
     query = query.orderBy("line_no", "asc");
@@ -519,6 +572,8 @@ async function cloneChildRelation(
       sourceRecord: childRow,
       fields: childFields,
       generatedColumns: childGenerated,
+      primaryKey: child.primaryKey,
+      tenantColumn: child.tenantColumn,
       tenantId: params.tenantId,
       actorId: params.actorId,
       targetStatus: null,
@@ -558,11 +613,9 @@ export async function copyRecordFromMetadata(
     const fullTable = qualifiedTable(entity);
     const targetStatus = targetStatusForCopy(entity);
 
-    const sourceRecord = await (trx.selectFrom(fullTable) as any)
-      .selectAll()
-      .where("id", "=", recordId)
-      .where("tenant_id", "=", tenantId)
-      .executeTakeFirst() as Record<string, unknown> | undefined;
+    let sourceQuery = (trx.selectFrom(fullTable) as any).selectAll();
+    sourceQuery = applyEntityScope(sourceQuery, entity, recordId, tenantId);
+    const sourceRecord = await sourceQuery.executeTakeFirst() as Record<string, unknown> | undefined;
 
     if (!sourceRecord) {
       throw Object.assign(new Error(`Record '${recordId}' not found`), { code: "RECORD_NOT_FOUND" });
@@ -572,6 +625,8 @@ export async function copyRecordFromMetadata(
       sourceRecord,
       fields,
       generatedColumns,
+      primaryKey: entity.primaryKey,
+      tenantColumn: entity.tenantColumn,
       tenantId,
       actorId,
       targetStatus,
@@ -616,11 +671,11 @@ export async function copyRecordFromMetadata(
       .returningAll()
       .executeTakeFirst() as Record<string, unknown> | undefined;
 
-    if (!inserted?.["id"]) {
+    if (inserted?.[entity.primaryKey] === undefined || inserted?.[entity.primaryKey] === null) {
       throw Object.assign(new Error("Copy insert did not return a record"), { code: "COPY_INSERT_FAILED" });
     }
 
-    const newRecordId = String(inserted["id"]);
+    const newRecordId = String(inserted[entity.primaryKey]);
     const copiedChildren: Record<string, number> = {};
     if (entity.entityCode === "purchase_order") {
       const sourceLines = await sql<{ id: string }>`
@@ -685,14 +740,14 @@ export async function copyRecordFromMetadata(
 
     let record = inserted;
     if (targetStatus && targetStatus !== "draft" && Object.prototype.hasOwnProperty.call(inserted, "status")) {
-      const updated = await (trx.updateTable(fullTable) as any)
+      let updateQuery = (trx.updateTable(fullTable) as any)
         .set({
           status: targetStatus,
           updated_by: actorId,
-        })
-        .where("id", "=", newRecordId)
-        .where("tenant_id", "=", tenantId)
-        .where("status", "=", "draft")
+        });
+      updateQuery = applyEntityScope(updateQuery, entity, newRecordId, tenantId)
+        .where("status", "=", "draft");
+      const updated = await updateQuery
         .returningAll()
         .executeTakeFirst() as Record<string, unknown> | undefined;
 

@@ -26,6 +26,8 @@ interface FieldPickerMetadata {
 interface TargetEntityLocation {
   table_schema: string;
   table_name:   string;
+  primary_key: string;
+  tenant_column: string | null;
 }
 
 interface OrderSpec {
@@ -55,11 +57,11 @@ const impl: ServerResolver<string> = async (inputs, ctx) => {
 
   const valueField = readString(field.referenceConfig["value_field"])
     ?? readString(field.referenceConfig["target_field"])
-    ?? "id";
+    ?? target.primary_key;
 
-  const predicates = [
-    sql`${ident("tenant_id")} = ${ctx.tenantId}::uuid`,
-  ];
+  const predicates = target.tenant_column
+    ? [sql`${ident(target.tenant_column)} = ${ctx.tenantId}::uuid`]
+    : [];
 
   for (const [filterField, rawValue] of Object.entries(readFilterRecord(field.lookupConfig))) {
     const values = splitFilterValues(rawValue);
@@ -88,7 +90,7 @@ const impl: ServerResolver<string> = async (inputs, ctx) => {
   const orderSpecs = readOrderSpecs(field.lookupConfig)
     ?? readOrderSpecs(field.referenceConfig)
     ?? [];
-  const orderSql = [...orderSpecs, { field: "id", dir: "asc" as const }]
+  const orderSql = [...orderSpecs, { field: target.primary_key, dir: "asc" as const }]
     .filter((item, index, arr) => arr.findIndex((other) => other.field === item.field) === index)
     .map((item) => sql`${ident(item.field)} ${sql.raw(item.dir)}`);
 
@@ -120,9 +122,13 @@ async function loadFieldPickerMetadata(
       JOIN control.entity e          ON e.id  = ev.entity_id
      WHERE e.name       = ${entityCode}
        AND e.tenant_id  IS NULL
-       AND ev.status    = 'EFFECTIVE'
-       AND ef.is_active = true
-       AND ef.name      = ${fieldName}
+        AND e.runtime_enabled = true
+        AND e.status    = 'ACTIVE'
+        AND e.is_active = true
+        AND ev.status    = 'EFFECTIVE'
+        AND ef.is_active = true
+        AND ef.runtime_enabled = true
+        AND ef.name      = ${fieldName}
      LIMIT 1
   `.execute(db);
   const row = rows.rows[0];
@@ -139,10 +145,15 @@ async function loadTargetEntityLocation(
   entityCode: string,
 ): Promise<TargetEntityLocation | null> {
   const rows = await sql<TargetEntityLocation>`
-    SELECT table_schema, table_name
+    SELECT table_schema, table_name, COALESCE(primary_key, 'id') AS primary_key, tenant_column
       FROM control.entity
      WHERE name = ${entityCode}
        AND tenant_id IS NULL
+       AND runtime_enabled = true
+       AND status = 'ACTIVE'
+       AND is_active = true
+       AND read_capability <> 'none'
+       AND EXISTS (SELECT 1 FROM control.entity_version ev WHERE ev.entity_id = control.entity.id AND ev.status = 'EFFECTIVE')
      LIMIT 1
   `.execute(db);
   return rows.rows[0] ?? null;

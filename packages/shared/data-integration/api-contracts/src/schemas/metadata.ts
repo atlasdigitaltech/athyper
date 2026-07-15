@@ -752,8 +752,6 @@ export const EntityFeatureFlagsSchema = z.object({
   is_readonly: z.boolean().optional(),
 
   // Runtime exposure/guard rails. These are operational switches, not identity.
-  records_api_disabled: z.boolean().optional(),
-  generic_runtime_disabled: z.boolean().optional(),
   is_hidden: z.boolean().optional(),
 
   // Detail tab and subroute capabilities.
@@ -937,12 +935,81 @@ export const EntityCapabilityManifestSchema = z.object({
 });
 export type EntityCapabilityManifest = z.infer<typeof EntityCapabilityManifestSchema>;
 
+export const EntityArtifactKindSchema = z.enum(["catalog", "execution"]);
+export const EntityCatalogStatusSchema = z.enum(["NOT_BUILT", "READY", "BLOCKED"]);
+export const EntityExecutionStatusSchema = z.enum(["NOT_APPLICABLE", "NOT_BUILT", "READY", "BLOCKED"]);
+export const EntityApiExposureSchema = z.enum(["NONE", "CATALOG_ONLY", "API"]);
+export const EntityReadCapabilitySchema = z.enum(["none", "generic", "facade", "projection"]);
+export const EntityWriteCapabilitySchema = z.enum(["none", "generic", "facade", "append_only"]);
+export const EntityKeyStrategySchema = z.enum(["none", "single", "composite", "natural"]);
+
+export const EntityVersionContractSchema = z.object({
+  catalog_enabled: z.boolean(),
+  api_exposure: EntityApiExposureSchema,
+  backing_type: z.enum(["table", "view", "materialized_view", "external", "virtual"]),
+  table_schema: z.string().min(1),
+  table_name: z.string().min(1),
+  key_strategy: EntityKeyStrategySchema,
+  primary_key: z.string().min(1).nullable(),
+  tenant_column: z.string().min(1).nullable(),
+  read_capability: EntityReadCapabilitySchema,
+  write_capability: EntityWriteCapabilitySchema,
+  read_handler: z.string().min(1).nullable().optional(),
+  write_handler: z.string().min(1).nullable().optional(),
+  source_kind: z.enum(["explicit", "derived", "overlay"]),
+  contract_hash: z.string().min(1).nullable().optional(),
+}).strict();
+export type EntityVersionContract = z.infer<typeof EntityVersionContractSchema>;
+
+export const EntityCompilationSummarySchema = z.object({
+  artifact_kind: EntityArtifactKindSchema,
+  catalog_status: EntityCatalogStatusSchema,
+  execution_status: EntityExecutionStatusSchema,
+  catalog_hash: z.string().min(1).nullable().optional(),
+  execution_hash: z.string().min(1).nullable().optional(),
+  diagnostics: z.array(z.object({
+    code: z.string().min(1),
+    severity: z.enum(["info", "warning", "error"]),
+    path: z.string().min(1).optional(),
+    message: z.string().min(1),
+  }).strict()).default([]),
+}).strict();
+export type EntityCompilationSummary = z.infer<typeof EntityCompilationSummarySchema>;
+
+/** Catalog artifact returned for registered entities that are not API-executable. */
+export const CatalogEntitySchema = z.object({
+  artifact_kind: z.literal("catalog"),
+  entity_id: UuidSchema,
+  entity_code: z.string().min(1),
+  name: z.string().min(1),
+  entity_class: EntityClassSchema,
+  backing_type: z.string().min(1),
+  table_schema: z.string().min(1),
+  table_name: z.string().min(1),
+  runtime_enabled: z.boolean(),
+  primary_key: z.string().nullable(),
+  tenant_column: z.string().nullable(),
+  fields: z.array(z.unknown()),
+  relations: z.array(z.unknown()),
+  diagnostics: z.array(z.object({
+    entityCode: z.string(), path: z.string(), message: z.string(),
+  }).strict()).default([]),
+}).passthrough();
+export type CatalogEntity = z.infer<typeof CatalogEntitySchema>;
+
 export const CompiledEntitySchema = z.object({
   entity_id: UuidSchema,
   entity_code: z.string(),
   slug: z.string(),
   entity_name: z.string(),
   entity_class: EntityClassSchema,
+  artifact_kind: EntityArtifactKindSchema.optional(),
+  api_exposure: EntityApiExposureSchema.optional(),
+  primary_key: z.string().min(1).nullable().optional(),
+  tenant_column: z.string().min(1).nullable().optional(),
+  read_capability: EntityReadCapabilitySchema.optional(),
+  write_capability: EntityWriteCapabilitySchema.optional(),
+  compilation: EntityCompilationSummarySchema.optional(),
   create_mode: z.enum(["FORM_ONLY", "EARLY_DRAFT", "DIRECT_CREATE", "SOURCE_DOCUMENT_CREATE"]).default("FORM_ONLY"),
   draft_ttl_hours: z.number().int().positive().nullable().optional(),
   numbering_strategy: z.enum(["none", "manual", "auto", "auto_or_manual", "AUTO_ON_CREATE", "AUTO_ON_PROMOTE", "AUTO_ON_SUBMIT"]).default("none"),
@@ -1391,8 +1458,6 @@ export const CompiledEntitySchema = z.object({
      * Set true for master data entities that are managed through dedicated intake flows.
      */
     is_readonly: z.boolean().optional(),
-    records_api_disabled: z.boolean().optional(),
-    generic_runtime_disabled: z.boolean().optional(),
     is_hidden: z.boolean().optional(),
     line_references: z.boolean().optional(),
     catalog_feature_enabled: z.boolean().optional(),
@@ -1523,6 +1588,8 @@ export type EntityLifecycleBinding = z.infer<typeof EntityLifecycleBindingSchema
 export const CompiledOverlaySchema = z.object({
   entity_version_id: UuidSchema,
   overlay_set: z.array(UuidSchema),
+  overlay_hash: z.string().min(64),
+  base_compiled_hash: z.string().min(64),
   compiled_json: z.record(z.string(), z.unknown()),
   compiled_hash: z.string(),
 });

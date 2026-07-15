@@ -73,6 +73,7 @@ BEGIN
         JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1 AND ev.tenant_id IS NULL
         JOIN control.entity_field ef ON ef.entity_version_id = ev.id
         WHERE ef.is_active = true
+          AND COALESCE(ef.runtime_enabled, true) = true
           AND ef.is_deprecated = false
           AND COALESCE(ef.column_name, '') <> ''
           AND NOT EXISTS (
@@ -132,8 +133,9 @@ BEGIN
         LEFT JOIN control.entity_field ef
                ON ef.entity_version_id = ev.id
               AND ef.name = lc.field_name
-              AND ef.is_active = true
-              AND ef.is_deprecated = false
+               AND ef.is_active = true
+               AND COALESCE(ef.runtime_enabled, true) = true
+               AND ef.is_deprecated = false
         WHERE ef.id IS NULL
     )
     SELECT count(*),
@@ -229,8 +231,9 @@ BEGIN
         LEFT JOIN control.entity_field ef
                ON ef.entity_version_id = ev.id
               AND ef.name = rf.field_name
-              AND ef.is_active = true
-              AND ef.is_deprecated = false
+               AND ef.is_active = true
+               AND COALESCE(ef.runtime_enabled, true) = true
+               AND ef.is_deprecated = false
         WHERE ef.id IS NULL
     )
     SELECT count(*),
@@ -1169,6 +1172,7 @@ BEGIN
         JOIN control.entity e ON e.id = ev.entity_id AND e.tenant_id IS NULL
         WHERE ef.tenant_id IS NULL
           AND ef.is_active = true
+          AND COALESCE(ef.runtime_enabled, true) = true
           AND ef.is_deprecated = false
           AND (ef.reference_config->>'target_entity') IS NOT NULL
     ),
@@ -1213,6 +1217,7 @@ BEGIN
         JOIN control.entity e ON e.id = ev.entity_id AND e.tenant_id IS NULL
         WHERE ef.tenant_id IS NULL
           AND ef.is_active = true
+          AND COALESCE(ef.runtime_enabled, true) = true
           AND ef.is_deprecated = false
           AND ef.ui_type = 'enum'
           AND COALESCE(ef.enum_domain_code, '') = ''
@@ -1253,6 +1258,7 @@ BEGIN
         JOIN control.entity e ON e.id = ev.entity_id AND e.tenant_id IS NULL
         WHERE ef.tenant_id IS NULL
           AND ef.is_active = true
+          AND COALESCE(ef.runtime_enabled, true) = true
           AND ef.is_deprecated = false
           AND ef.is_computed = true
           AND ef.editability IS NOT NULL
@@ -1300,6 +1306,7 @@ BEGIN
         JOIN control.entity e ON e.id = ev.entity_id AND e.tenant_id IS NULL
         WHERE ef.tenant_id IS NULL
           AND ef.is_active = true
+          AND COALESCE(ef.runtime_enabled, true) = true
           AND ef.is_deprecated = false
           AND ef.origin = 'business'
           AND ef.is_read_only = true
@@ -1770,6 +1777,213 @@ BEGIN
 END $$;
 
 
+-- §Entity-class alignment
+-- The physical schema is not the logical entity class.  Governed coverage
+-- rows must use the same deterministic mapping as 040a; otherwise a replay of
+-- the seed can silently turn document children into document headers.
+DO $$
+DECLARE
+    v_strict boolean := lower(COALESCE(current_setting('app.assert_seed_contracts', true), 'off'))
+        IN ('on','true','1');
+    v_findings text;
+BEGIN
+    WITH expected AS (
+        SELECT
+            e.entity_code,
+            e.entity_class,
+            CASE
+                WHEN e.backing_type IN ('view', 'materialized_view') THEN 'AGGREGATE'
+                WHEN e.table_schema = 'ledger' THEN 'LEDGER'
+                WHEN e.table_schema = 'log' THEN 'LOG'
+                WHEN e.table_schema = 'aggregate' THEN 'AGGREGATE'
+                WHEN e.table_schema = 'document'
+                 AND (
+                    e.table_name IN ('accounting_distribution', 'journal_line_reference', 'payment_entry_allocation')
+                    OR e.table_name LIKE '%\_line' ESCAPE '\'
+                    OR e.table_name LIKE '%\_lines' ESCAPE '\'
+                    OR e.table_name LIKE '%\_item' ESCAPE '\'
+                    OR e.table_name LIKE '%\_items' ESCAPE '\'
+                    OR e.table_name LIKE '%\_allocation' ESCAPE '\'
+                    OR e.table_name LIKE '%\_reference' ESCAPE '\'
+                    OR e.table_name LIKE '%\_link' ESCAPE '\'
+                    OR e.table_name LIKE '%\_snapshot' ESCAPE '\'
+                 ) THEN 'DOCUMENT_RELATION'
+                WHEN e.table_schema = 'document' THEN 'DOCUMENT'
+                WHEN e.table_schema = 'shared'
+                 AND e.table_name ~ '(^workspace$|^module$|permission|persona|(^|_)role$|subscription_plan|enterprise_feature|plan_.*_access$)'
+                    THEN 'CONTROL'
+                WHEN e.table_schema = 'shared'
+                 AND e.table_name ~ '(_link|_links|_member|_members|_mapping|_mappings|_crosswalk|_access)$'
+                    THEN 'RELATION'
+                WHEN e.table_schema = 'shared' THEN 'REFERENCE'
+                WHEN e.table_schema = 'master'
+                 AND e.table_name ~ '(_link|_links|_member|_members|_role|_roles|_assignment|_assignments|_mapping|_mappings|_crosswalk|_access|_grant|_grants|_item|_items|_relation|_relations)$'
+                    THEN 'RELATION'
+                WHEN e.table_schema = 'master'
+                 AND e.table_name ~ '(^dimension_|_dimension$|_dimension_)'
+                    THEN 'DIMENSION'
+                WHEN e.table_schema = 'master' THEN 'MASTER'
+                ELSE 'CONTROL'
+            END AS expected_class
+        FROM control.entity e
+        WHERE e.tenant_id IS NULL
+          AND e.feature_flags ->> 'metadata_coverage_source' = 'governed_schema_coverage'
+    )
+    SELECT string_agg(format('%s expected %s but has %s', entity_code, expected_class, entity_class),
+                       E'\n - ' ORDER BY entity_code)
+      INTO v_findings
+      FROM expected
+     WHERE entity_class IS DISTINCT FROM expected_class;
+
+    IF v_findings IS NOT NULL THEN
+        IF v_strict THEN
+            RAISE EXCEPTION '[100.entity-class alignment] findings:%', E'\n - ' || v_findings;
+        ELSE
+            RAISE WARNING '[100.entity-class alignment] findings:%', E'\n - ' || v_findings;
+        END IF;
+    ELSE
+        RAISE NOTICE '[100.entity-class alignment] PASSED.';
+    END IF;
+END $$;
+
+-- Phase 3 semantic metadata contract checks. These validate relationships and
+-- physical facts rather than historical row totals, so adding a column or a
+-- domain patch does not create a false failure.
+DO $$
+DECLARE
+    v_strict boolean := lower(COALESCE(current_setting('app.assert_seed_contracts', true), 'off')) IN ('on','true','1');
+    v_findings text;
+BEGIN
+    WITH findings AS (
+        SELECT format('entity %s has no EFFECTIVE version', e.entity_code) AS finding
+        FROM control.entity e
+        WHERE e.tenant_id IS NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM control.entity_version ev
+              WHERE ev.entity_id = e.id AND ev.status = 'EFFECTIVE'
+          )
+        UNION ALL
+        SELECT format('entity %s has multiple EFFECTIVE versions', e.entity_code)
+        FROM control.entity e
+        JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.status = 'EFFECTIVE'
+        WHERE e.tenant_id IS NULL
+        GROUP BY e.entity_code
+        HAVING count(*) > 1
+        UNION ALL
+        SELECT format('effective version %s has no typed contract', ev.id)
+        FROM control.entity_version ev
+        WHERE ev.status = 'EFFECTIVE'
+          AND NOT EXISTS (
+              SELECT 1 FROM control.entity_version_contract evc
+              WHERE evc.entity_version_id = ev.id
+          )
+    )
+    SELECT string_agg(finding, E'\n - ' ORDER BY finding)
+      INTO v_findings
+      FROM findings;
+
+    IF v_findings IS NOT NULL THEN
+        IF v_strict THEN
+            RAISE EXCEPTION '[100.semantic versions/contracts] findings:%', E'\n - ' || v_findings;
+        ELSE
+            RAISE WARNING '[100.semantic versions/contracts] findings:%', E'\n - ' || v_findings;
+        END IF;
+    ELSE
+        RAISE NOTICE '[100.semantic versions/contracts] PASSED.';
+    END IF;
+END $$;
+
+DO $$
+DECLARE
+    v_strict boolean := lower(COALESCE(current_setting('app.assert_seed_contracts', true), 'off')) IN ('on','true','1');
+    v_findings text;
+BEGIN
+    WITH findings AS (
+        SELECT format('%s.%s maps to missing physical column %s', e.entity_code, ef.name, ef.column_name) AS finding
+        FROM control.entity_field ef
+        JOIN control.entity_version ev ON ev.id = ef.entity_version_id AND ev.status = 'EFFECTIVE'
+        JOIN control.entity e ON e.id = ev.entity_id
+        WHERE ef.is_active = true
+          AND COALESCE(ef.column_name, '') <> ''
+          AND e.backing_type IN ('table', 'view', 'materialized_view')
+          AND NOT EXISTS (
+              SELECT 1 FROM information_schema.columns c
+              WHERE c.table_schema = e.table_schema
+                AND c.table_name = e.table_name
+                AND c.column_name = ef.column_name
+          )
+        UNION ALL
+        SELECT format('%s has duplicate active physical column %s (%s logical fields)',
+                     duplicate_fields.entity_code,
+                     duplicate_fields.column_name,
+                     duplicate_fields.field_count)
+        FROM (
+            SELECT e.entity_code, ev.id AS entity_version_id, ef.column_name,
+                   count(*) AS field_count
+            FROM control.entity_field ef
+            JOIN control.entity_version ev ON ev.id = ef.entity_version_id AND ev.status = 'EFFECTIVE'
+            JOIN control.entity e ON e.id = ev.entity_id
+            WHERE ef.is_active = true
+              AND COALESCE(ef.column_name, '') <> ''
+              AND e.backing_type = 'table'
+            GROUP BY e.entity_code, ev.id, ef.column_name
+            HAVING count(*) > 1
+        ) duplicate_fields
+        UNION ALL
+        SELECT format('%s has multiple active fields with logical name %s', e.entity_code, ef.name)
+        FROM control.entity_field ef
+        JOIN control.entity_version ev ON ev.id = ef.entity_version_id AND ev.status = 'EFFECTIVE'
+        JOIN control.entity e ON e.id = ev.entity_id
+        WHERE ef.is_active = true
+        GROUP BY e.entity_code, ev.id, ef.name
+        HAVING count(*) > 1
+    )
+    SELECT string_agg(finding, E'\n - ' ORDER BY finding)
+      INTO v_findings
+      FROM findings;
+
+    IF v_findings IS NOT NULL THEN
+        IF v_strict THEN
+            RAISE EXCEPTION '[100.semantic fields] findings:%', E'\n - ' || v_findings;
+        ELSE
+            RAISE WARNING '[100.semantic fields] findings:%', E'\n - ' || v_findings;
+        END IF;
+    ELSE
+        RAISE NOTICE '[100.semantic fields] PASSED.';
+    END IF;
+END $$;
+
+-- Phase 3 ownership boundary: discovery may register physical relations, but
+-- it must never grant runtime execution or invent storage identity. Curated
+-- 040 rows are the only source allowed to enable runtime behavior.
+DO $$
+DECLARE
+    v_strict boolean := lower(COALESCE(current_setting('app.assert_seed_contracts', true), 'off')) IN ('on','true','1');
+    v_findings text;
+BEGIN
+    SELECT string_agg(format('%s has discovery defaults that are not inert', e.entity_code), E'\n - ' ORDER BY e.entity_code)
+      INTO v_findings
+    FROM control.entity e
+    WHERE e.tenant_id IS NULL
+      AND e.feature_flags ->> 'metadata_coverage_source' = 'governed_schema_coverage'
+      AND (e.runtime_enabled IS DISTINCT FROM false
+           OR e.primary_key IS NOT NULL
+           OR e.tenant_column IS NOT NULL
+           OR e.read_capability IS DISTINCT FROM 'none'
+           OR e.write_capability IS DISTINCT FROM 'none');
+
+    IF v_findings IS NOT NULL THEN
+        IF v_strict THEN
+            RAISE EXCEPTION '[100.seed ownership] findings:%', E'\n - ' || v_findings;
+        ELSE
+            RAISE WARNING '[100.seed ownership] findings:%', E'\n - ' || v_findings;
+        END IF;
+    ELSE
+        RAISE NOTICE '[100.seed ownership] PASSED.';
+    END IF;
+END $$;
+
+
 -- Final notice
 DO $$
 DECLARE
@@ -1781,6 +1995,3 @@ BEGIN
         RAISE NOTICE '[100_control_seed_contract_assertions] Completed in WARNING mode. Set app.assert_seed_contracts=on for CI strict.';
     END IF;
 END $$;
-
-
-

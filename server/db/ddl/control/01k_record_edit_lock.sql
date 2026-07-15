@@ -12,9 +12,12 @@ CREATE TABLE IF NOT EXISTS control.record_edit_lock (
     id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid        NOT NULL,
 
-    -- Aggregate root identity (entity_code + record UUID)
+    -- Aggregate root identity (entity_code + declared runtime record key).
+    -- The key is text because compiled entities may use UUID, integer, code,
+    -- or another scalar primary key. The entity descriptor remains the source
+    -- of truth for interpreting this value.
     aggregate_entity_name   text        NOT NULL,
-    aggregate_record_id     uuid        NOT NULL,
+    aggregate_record_id     text        NOT NULL,
 
     -- Lock holder
     locked_by               uuid        NOT NULL,   -- master.principal_id of the lock holder

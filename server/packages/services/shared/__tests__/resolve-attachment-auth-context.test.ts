@@ -13,8 +13,15 @@ describe("resolveAttachmentAuthContext", () => {
       const filters: Record<string, unknown> = {};
       const chain = {
         select: () => chain,
-        innerJoin: () => chain,
-        leftJoin: () => chain,
+        innerJoin: (_table: unknown, callback?: (join: typeof chain) => typeof chain) => {
+          callback?.(chain);
+          return chain;
+        },
+        leftJoin: (_table: unknown, callback?: (join: typeof chain) => typeof chain) => {
+          callback?.(chain);
+          return chain;
+        },
+        onRef: () => chain,
         where(column: string, _op: string, value: unknown) {
           filters[column] = value;
           return chain;
@@ -28,17 +35,24 @@ describe("resolveAttachmentAuthContext", () => {
             return rows.find((r) => r.id === filters["t.id"] && r.realm_key === filters["t.realm_key"]);
           }
           if (filters["pab.subject_id"] !== undefined && filters["pab.tenant_id"] !== undefined && filters["pab.realm_key"] !== undefined) {
-            return bindings.find(
+            const binding = bindings.find(
               (b) =>
                 b.subject_id === filters["pab.subject_id"] &&
                 b.tenant_id === filters["pab.tenant_id"] &&
                 b.realm_key === filters["pab.realm_key"],
             );
+            if (!binding) return undefined;
+            const principal = principals.find((item) => item.principal_id === binding.principal_id);
+            return principal
+              ? { id: principal.principal_id, ...principal }
+              : { id: binding.principal_id, is_service_account: false, status: "active", keycloak_service_client_id: null };
           }
           if (filters["p.id"] !== undefined && filters["p.tenant_id"] !== undefined) {
             const binding = bindings.find((b) => b.principal_id === filters["p.id"] && b.tenant_id === filters["p.tenant_id"]);
-            return principals.find((principal) => principal.principal_id === filters["p.id"])
-              ?? (binding ? { is_service_account: false, status: "active", keycloak_service_client_id: null } : undefined);
+            const principal = principals.find((item) => item.principal_id === filters["p.id"]);
+            return principal
+              ? { id: principal.principal_id, ...principal }
+              : (binding ? { id: binding.principal_id, is_service_account: false, status: "active", keycloak_service_client_id: null } : undefined);
           }
           return undefined;
         }),
@@ -98,7 +112,7 @@ describe("resolveAttachmentAuthContext", () => {
     });
   });
 
-  it("rejects cross-tenant mismatch from allowed_tenants", async () => {
+  it("treats allowed_tenants as discovery metadata, not authorization", async () => {
     const { db } = dbWith(tenants, bindings);
     const result = await resolveAttachmentAuthContext(db, {
       sub: "subject-1",
@@ -106,11 +120,7 @@ describe("resolveAttachmentAuthContext", () => {
       tenant_code: "tenant-a",
       allowed_tenants: ["tenant-b"],
     }, "tenant-a--company", "athyper");
-    expect(result).toMatchObject({
-      ok: false,
-      error: "AUTH_CONTEXT_MISMATCH",
-      status: 403,
-    });
+    expect(result).toMatchObject({ ok: true, context: { tenantId: "tenant-a-id" } });
   });
 
   it("returns AUTH_CONTEXT_REQUIRED when token is missing realm binding", async () => {

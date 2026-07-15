@@ -26,7 +26,6 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import {
   verifyBearer,
-  isUuid,
   resolveTenantId,
   extractOrgHeaders,
 } from "@athyper/svc-shared";
@@ -53,6 +52,39 @@ interface LifecycleLogRow {
   revision_label: string | null;
   created_at:     string;
   display_name:   string | null;
+}
+
+interface VersionEntityContract {
+  table_schema: string;
+  table_name: string;
+  primary_key: string;
+  tenant_column: string | null;
+  write_capability: string;
+}
+
+async function resolveVersionEntity(db: AnyDb, entityCode: string): Promise<VersionEntityContract | null> {
+  return (db as any)
+    .selectFrom("control.entity as e")
+    .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+    .select([
+      "e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column", "e.write_capability",
+    ])
+    .where("e.name", "=", entityCode)
+    .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("e.read_capability", "<>", "none")
+    .where("e.primary_key", "is not", null)
+    .where("e.backing_type", "=", "table")
+    .where("ev.status", "=", "EFFECTIVE")
+    .executeTakeFirst() as Promise<VersionEntityContract | null>;
+}
+
+function scopeVersionRecord(query: any, entity: VersionEntityContract, tenantId: string, recordId: string): any {
+  let scoped = query.where(entity.primary_key, "=", recordId);
+  if (entity.tenant_column) scoped = scoped.where(entity.tenant_column, "=", tenantId);
+  return scoped;
 }
 
 const CHANGE_TYPE_VALUES = new Set(["original", "amendment", "reversal", "correction"]);
@@ -83,8 +115,8 @@ export function createVersionsRoute(router: Router, deps: VersionsRouteDeps): Ro
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_").toLowerCase();
       const recordId   = String(req.params["id"] ?? "");
 
-      if (!isUuid(recordId)) {
-        res.status(400).json({ error: "INVALID_ID", message: "Record id must be a valid UUID" });
+      if (!recordId || recordId.length > 256) {
+        res.status(400).json({ error: "INVALID_ID", message: "Record id must be a non-empty key of at most 256 characters" });
         return;
       }
 
@@ -177,8 +209,8 @@ export function createVersionsRoute(router: Router, deps: VersionsRouteDeps): Ro
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_").toLowerCase();
       const recordId   = String(req.params["id"] ?? "");
 
-      if (!isUuid(recordId)) {
-        res.status(400).json({ error: "INVALID_ID", message: "Record id must be a valid UUID" });
+      if (!recordId || recordId.length > 256) {
+        res.status(400).json({ error: "INVALID_ID", message: "Record id must be a non-empty key of at most 256 characters" });
         return;
       }
 
@@ -190,12 +222,7 @@ export function createVersionsRoute(router: Router, deps: VersionsRouteDeps): Ro
       }
 
       // Resolve entity table
-      const entityRow = await (db as any)
-        .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"] as never[])
-        .where("e.name" as never, "=", entityCode as never)
-        .where("e.tenant_id" as never, "is", null as never)
-        .executeTakeFirst() as { table_schema: string; table_name: string } | undefined;
+      const entityRow = await resolveVersionEntity(db, entityCode);
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -204,13 +231,17 @@ export function createVersionsRoute(router: Router, deps: VersionsRouteDeps): Ro
 
       const fullTable = `${entityRow.table_schema}.${entityRow.table_name}`;
 
+      if (entityRow.write_capability === "none") {
+        res.status(403).json({ error: "ENTITY_READ_ONLY", message: `Entity '${entityCode}' does not allow amendments.` });
+        return;
+      }
+
       // Fetch current record status
-      const record = await (db as any)
+      let recordQuery = (db as any)
         .selectFrom(fullTable)
-        .select(["id", "status", "row_version"] as never[])
-        .where("id" as never, "=", recordId as never)
-        .where("tenant_id" as never, "=", tenantId as never)
-        .executeTakeFirst() as { id: string; status: string; row_version?: number } | undefined;
+        .select([entityRow.primary_key, "status", "row_version"]);
+      recordQuery = scopeVersionRecord(recordQuery, entityRow, tenantId, recordId);
+      const record = await recordQuery.executeTakeFirst() as { status: string; row_version?: number } | undefined;
 
       if (!record) {
         res.status(404).json({ error: "RECORD_NOT_FOUND", message: `Record '${recordId}' not found` });
@@ -228,18 +259,16 @@ export function createVersionsRoute(router: Router, deps: VersionsRouteDeps): Ro
       }
 
       const now = new Date();
-      const updated = await (db as any)
+      let updateQuery = (db as any)
         .updateTable(fullTable)
         .set({
           status:            "amending",
           status_changed_at: now,
           updated_at:        now,
-        })
-        .where("id" as never, "=", recordId as never)
-        .where("tenant_id" as never, "=", tenantId as never)
-        .where("status" as never, "=", record.status as never) // optimistic lock
-        .returningAll()
-        .executeTakeFirst() as Record<string, unknown> | undefined;
+        });
+      updateQuery = scopeVersionRecord(updateQuery, entityRow, tenantId, recordId)
+        .where("status", "=", record.status); // optimistic lock
+      const updated = await updateQuery.returningAll().executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!updated) {
         res.status(409).json({ error: "CONFLICT", message: "Record was modified by another process. Please retry." });

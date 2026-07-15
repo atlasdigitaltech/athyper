@@ -33,7 +33,10 @@ describe("Redis ACL contract", () => {
       "~ff:*",
       "~oauth2:token:*",
       "~ai:*",
+      "~desc:*",
       "~desc:v4:*",
+      "~descriptor-runtime:*",
+      "~execdesc:*",
       "~kc_admin_token",
       "~__health_probe__",
     ];

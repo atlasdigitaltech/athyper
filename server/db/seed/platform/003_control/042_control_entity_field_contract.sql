@@ -1,7 +1,8 @@
--- Generic pg_catalog-derived field seed (matches the entity coverage in 040*).
+-- The single physical-column field generator for control.entity_field.
 -- Reads pg_catalog directly because information_schema.columns omits materialized views.
--- Curated blocks below override labels/types/config for high-touch runtime entities;
--- fold metadata changes into the existing upserts rather than appending update passes.
+-- Every other contract file may patch an existing field keyed by
+-- (entity_version_id, name), or add a computed/projection field with an empty
+-- column_name; no other file should discover physical columns.
 WITH relation_columns AS (
     SELECT
         n.nspname AS table_schema,
@@ -63,6 +64,7 @@ INSERT INTO control.entity_field (
     entity_version_id,
     name,
     column_name,
+    projection_alias_of,
     label,
     data_type,
     ui_type,
@@ -86,6 +88,7 @@ SELECT
     ev.id,
     col.column_name,
     col.column_name,
+    NULL::text,
     initcap(replace(col.column_name, '_', ' ')),
     CASE
         WHEN col.column_name LIKE '%\_id' ESCAPE '\' THEN 'reference'
@@ -200,6 +203,11 @@ SET
     is_searchable = EXCLUDED.is_searchable,
     is_filterable = EXCLUDED.is_filterable,
     is_sortable = EXCLUDED.is_sortable,
+    -- Physical discovery is the canonical runtime field authority. Re-enable
+    -- the row on reruns without changing metadata registration semantics.
+    is_active = true,
+    is_deprecated = false,
+    runtime_enabled = true,
     temporal_kind = EXCLUDED.temporal_kind,
     affects_posting_period = EXCLUDED.affects_posting_period,
     -- Auto-detection flags id/tenant_id/created_*/updated_* as is_read_only=true,
@@ -213,6 +221,7 @@ SET
         WHEN entity_field.is_write_once THEN entity_field.is_read_only
         ELSE EXCLUDED.is_read_only
     END,
+    projection_alias_of = COALESCE(entity_field.projection_alias_of, EXCLUDED.projection_alias_of),
     sort_order = EXCLUDED.sort_order,
     updated_at = now(),
     updated_by = EXCLUDED.created_by;
@@ -640,8 +649,11 @@ BEGIN
   GET DIAGNOSTICS updated = ROW_COUNT;
   RAISE NOTICE 'payment_term_id ref_entity corrected (% rows updated)', updated;
 
-  DELETE FROM control.entity_field ef
-  USING control.entity_version ev
+  UPDATE control.entity_field ef
+     SET runtime_enabled = false,
+         updated_at = now(),
+         updated_by = '00000000-0000-0000-0000-000000000000'
+  FROM control.entity_version ev
   JOIN  control.entity e ON e.id = ev.entity_id
   WHERE ef.entity_version_id = ev.id
     AND ef.name        IN ('name', 'code', 'description')
@@ -701,7 +713,8 @@ CROSS JOIN (VALUES
     ('metadata',                   'metadata',                   'Metadata',                  'jsonb',         'zero_or_one', NULL::text,                          false, false, NULL::jsonb,                220)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
        is_required, is_filterable, validation, sort_order)
-WHERE e.table_schema = 'master' AND e.table_name = 'business_partner'
+ WHERE e.entity_code = 'business_partner'
+   AND e.table_schema = 'master' AND e.table_name = 'business_partner'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT (entity_version_id, name) WHERE entity_version_id IS NOT NULL DO UPDATE
 SET
@@ -761,7 +774,8 @@ CROSS JOIN (VALUES
     ('search_text',         'search_text',         'Search',          'text',            'one',         NULL::text,                   true,  false, true,  900)
 ) AS f(name, column_name, label, data_type, cardinality, enum_domain_code,
        is_required, is_filterable, is_searchable, sort_order)
-WHERE e.table_schema = 'master' AND e.table_name = 'business_partner'
+WHERE e.entity_code = 'v_business_partner_app_index'
+  AND e.table_schema = 'master' AND e.table_name = 'v_business_partner_app_index'
   AND e.tenant_id IS NULL AND ev.version_no = 1
 ON CONFLICT (entity_version_id, name) WHERE entity_version_id IS NOT NULL DO UPDATE
 SET
@@ -794,7 +808,8 @@ WHERE id IN (
     FROM control.entity_field ef
     JOIN control.entity_version ev ON ef.entity_version_id = ev.id
     JOIN control.entity e ON e.id = ev.entity_id
-    WHERE e.table_schema = 'master' AND e.table_name = 'business_partner'
+    WHERE e.entity_code = 'business_partner'
+      AND e.table_schema = 'master' AND e.table_name = 'business_partner'
       AND e.tenant_id IS NULL AND ev.version_no = 1
       AND ef.name = 'legal_form'
       AND (ef.data_type IS DISTINCT FROM 'enum'
@@ -1063,8 +1078,11 @@ END $filters$;
 
 -- Ã¢â€â‚¬Ã¢â€â‚¬ 2b. Remove stale field registrations from pre-BP-first schema Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 -- Identity columns (code, name, legal_name, etc.) moved to master.business_partner.
-DELETE FROM control.entity_field ef
-USING control.entity_version ev,
+UPDATE control.entity_field ef
+   SET runtime_enabled = false,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev,
       control.entity e
 WHERE ef.entity_version_id = ev.id
   AND e.id = ev.entity_id
@@ -1361,8 +1379,11 @@ WHERE ef.entity_version_id = ev.id
 
 -- Ã¢â€â‚¬Ã¢â€â‚¬ 0b. Remove stale field registrations from pre-BP-first schema Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 -- These columns no longer exist on the thin customer table.
-DELETE FROM control.entity_field ef
-USING control.entity_version ev,
+UPDATE control.entity_field ef
+   SET runtime_enabled = false,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev,
       control.entity e
 WHERE ef.entity_version_id = ev.id
   AND e.id = ev.entity_id
@@ -1678,7 +1699,7 @@ WHERE ef.entity_version_id = ev.id
 
 -- Ã¢â€â‚¬Ã¢â€â‚¬ 4. Deactivate stale inline contact/address fields Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 UPDATE control.entity_field ef
-SET is_active = false
+SET runtime_enabled = false
 FROM control.entity_version ev
 JOIN control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
@@ -2024,7 +2045,7 @@ WHERE ef.entity_version_id = ev.id
 
 -- Ã¢â€â‚¬Ã¢â€â‚¬ Ã‚Â§1. Deactivate stale fields Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 UPDATE control.entity_field ef
-SET is_active = false
+SET runtime_enabled = false
 FROM control.entity_version ev
 JOIN control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
@@ -3390,8 +3411,11 @@ UPDATE control.entity_field ef
 
 
 
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
 JOIN control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'document'
@@ -4866,8 +4890,11 @@ UPDATE control.entity_field ef
 --      re-run of 001_invoice.sql before the field-name fix landed.
 --      Safe no-op on a clean DB: these names never exist there.
 -- ---------------------------------------------------------------------------
-DELETE FROM control.entity_field ef
-USING control.entity_version ev
+UPDATE control.entity_field ef
+   SET runtime_enabled = false,
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
 JOIN control.entity e ON e.id = ev.entity_id
 WHERE ef.entity_version_id = ev.id
   AND e.table_schema = 'document'
@@ -5192,7 +5219,6 @@ SET
            feature_flags = COALESCE(feature_flags, '{}'::jsonb)
                || jsonb_build_object(
                     'is_hidden', true,
-                    'records_api_disabled', true,
                     'replacement_entity', CASE entity_code
                         WHEN 'company_code_supplier_posting_override' THEN 'supplier_posting_override'
                         ELSE 'commodity_category_buy_policy'
@@ -5581,5 +5607,3 @@ BEGIN
        AND ev.version_no = 1
        AND ef.name IN ('fx_rate_snapshot', 'payment_fx_rate_snapshot');
 END $$;
-
-

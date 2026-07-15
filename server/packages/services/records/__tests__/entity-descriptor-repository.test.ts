@@ -10,16 +10,24 @@ function queryReturning(row: Record<string, unknown> | undefined) {
 }
 
 describe("descriptor-native record identity resolution", () => {
-  it("does not resolve metadata for UUID record ids", async () => {
-    const get = vi.fn();
-    const db = { selectFrom: vi.fn() };
+  it("resolves UUID-shaped values through the declared primary key and scope", async () => {
+    const get = vi.fn(async () => ({
+      descriptor: {
+        identity: { entityCode: "supplier" },
+        storage: { schema: "master", table: "supplier", primaryKey: "supplier_id", tenantColumn: "tenant_id" },
+        read: { naturalKeyFields: [] },
+        fields: new Map(),
+      },
+    }));
+    const query = queryReturning({ supplier_id: "11111111-1111-4111-8111-111111111111" });
+    const db = { selectFrom: vi.fn(() => query) };
     const repository = new KyselyEntityDescriptorRepository(db as never, { get } as never);
 
     await expect(repository.resolveRecordId(
       "supplier", "11111111-1111-4111-8111-111111111111", "tenant-1", "neon",
     )).resolves.toBe("11111111-1111-4111-8111-111111111111");
-    expect(get).not.toHaveBeenCalled();
-    expect(db.selectFrom).not.toHaveBeenCalled();
+    expect(get).toHaveBeenCalledOnce();
+    expect(query["where"]).toHaveBeenCalledWith("tenant_id", "=", "tenant-1");
   });
 
   it("uses the execution descriptor for natural keys without control-plane SQL", async () => {

@@ -2462,3 +2462,92 @@ CREATE POLICY tenant_read   ON master.party_risk_review_event FOR SELECT USING  
 CREATE POLICY tenant_insert ON master.party_risk_review_event FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.party_risk_review_event FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.party_risk_review_event FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ============================================================================
+-- Operating Organization foundation RLS
+-- ============================================================================
+
+ALTER TABLE master.operating_organization ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.operating_organization FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read ON master.operating_organization;
+DROP POLICY IF EXISTS tenant_insert ON master.operating_organization;
+DROP POLICY IF EXISTS tenant_update ON master.operating_organization;
+DROP POLICY IF EXISTS tenant_delete ON master.operating_organization;
+DROP POLICY IF EXISTS admin_read ON master.operating_organization;
+DROP POLICY IF EXISTS admin_write ON master.operating_organization;
+CREATE POLICY tenant_read ON master.operating_organization FOR SELECT
+    USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.operating_organization FOR INSERT
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.operating_organization FOR UPDATE
+    USING (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.operating_organization FOR DELETE
+    USING (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read ON master.operating_organization FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.operating_organization FOR ALL TO athyperadmin
+    USING (true) WITH CHECK (true);
+
+ALTER TABLE master.operating_organization_company ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.operating_organization_company FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read ON master.operating_organization_company;
+DROP POLICY IF EXISTS tenant_insert ON master.operating_organization_company;
+DROP POLICY IF EXISTS tenant_update ON master.operating_organization_company;
+DROP POLICY IF EXISTS tenant_delete ON master.operating_organization_company;
+DROP POLICY IF EXISTS admin_read ON master.operating_organization_company;
+DROP POLICY IF EXISTS admin_write ON master.operating_organization_company;
+CREATE POLICY tenant_read ON master.operating_organization_company FOR SELECT
+    USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.operating_organization_company FOR INSERT
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.operating_organization_company FOR UPDATE
+    USING (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.operating_organization_company FOR DELETE
+    USING (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read ON master.operating_organization_company FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.operating_organization_company FOR ALL TO athyperadmin
+    USING (true) WITH CHECK (true);
+
+ALTER TABLE master.procurement_organization_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.procurement_organization_profile FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read ON master.procurement_organization_profile;
+DROP POLICY IF EXISTS tenant_insert ON master.procurement_organization_profile;
+DROP POLICY IF EXISTS tenant_update ON master.procurement_organization_profile;
+DROP POLICY IF EXISTS tenant_delete ON master.procurement_organization_profile;
+DROP POLICY IF EXISTS admin_read ON master.procurement_organization_profile;
+DROP POLICY IF EXISTS admin_write ON master.procurement_organization_profile;
+CREATE POLICY tenant_read ON master.procurement_organization_profile FOR SELECT
+    USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.procurement_organization_profile FOR INSERT
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.procurement_organization_profile FOR UPDATE
+    USING (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.procurement_organization_profile FOR DELETE
+    USING (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read ON master.procurement_organization_profile FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.procurement_organization_profile FOR ALL TO athyperadmin
+    USING (true) WITH CHECK (true);
+
+ALTER TABLE master.sales_organization_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.sales_organization_profile FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read ON master.sales_organization_profile;
+DROP POLICY IF EXISTS tenant_insert ON master.sales_organization_profile;
+DROP POLICY IF EXISTS tenant_update ON master.sales_organization_profile;
+DROP POLICY IF EXISTS tenant_delete ON master.sales_organization_profile;
+DROP POLICY IF EXISTS admin_read ON master.sales_organization_profile;
+DROP POLICY IF EXISTS admin_write ON master.sales_organization_profile;
+CREATE POLICY tenant_read ON master.sales_organization_profile FOR SELECT
+    USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.sales_organization_profile FOR INSERT
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.sales_organization_profile FOR UPDATE
+    USING (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.sales_organization_profile FOR DELETE
+    USING (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read ON master.sales_organization_profile FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.sales_organization_profile FOR ALL TO athyperadmin
+    USING (true) WITH CHECK (true);

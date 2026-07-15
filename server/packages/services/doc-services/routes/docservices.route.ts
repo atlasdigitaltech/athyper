@@ -1286,12 +1286,21 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
       // Resolve entity metadata
       const entityRow = await db
         .selectFrom("control.entity as e")
+        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+        .innerJoin("snapshot.entity_compiled as ec", "ec.entity_version_id", "ev.id")
         .selectAll("e")
+        .select("ec.compiled_json as compiled_json")
         .where("e.entity_code", "=", entity_code)
         .where((eb) => eb.or([
           eb("e.tenant_id", "=", ctx.tenantId),
           eb("e.tenant_id", "is", null as never),
         ]))
+        .where("e.runtime_enabled", "=", true)
+        .where("e.status", "=", "ACTIVE")
+        .where("e.is_active", "=", true)
+        .where("e.read_capability", "<>", "none")
+        .where("ev.status", "=", "EFFECTIVE")
+        .where("ec.artifact_kind", "=", "execution")
         .orderBy(sql`CASE WHEN e.tenant_id IS NOT NULL THEN 0 ELSE 1 END`, "asc")
         .limit(1)
         .executeTakeFirst() as Record<string, unknown> | undefined;
@@ -1303,13 +1312,15 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
 
       const tableSchema = entityRow["table_schema"] as string;
       const tableName   = entityRow["table_name"]   as string;
+      const primaryKey = String(entityRow["primary_key"] ?? "id");
+      const tenantColumn = (entityRow["tenant_column"] as string | null) ?? null;
 
       // Fetch the record
       const recordRow = await db
         .selectFrom(`${tableSchema}.${tableName}`)
         .selectAll()
-        .where("id" as never, "=" as never, record_id as never)
-        .where("tenant_id" as never, "=" as never, ctx.tenantId as never)
+        .where(primaryKey as never, "=" as never, record_id as never)
+        .$if(Boolean(tenantColumn), (query) => query.where(tenantColumn as never, "=" as never, ctx.tenantId as never))
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!recordRow) {
@@ -1317,34 +1328,27 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         return;
       }
 
-      // Build a minimal CompiledEntity from DB rows
-      // entity_field rows carry group_key directly; field_group is a global lookup table
-      const fieldsRows = await db
-        .selectFrom("control.entity_field as ef")
-        .selectAll("ef")
-        .where("ef.entity_id", "=", entityRow["id"] as string)
-        .where((eb) => eb.or([
-          eb("ef.tenant_id", "=", ctx.tenantId),
-          eb("ef.tenant_id", "is", null as never),
-        ]))
-        .orderBy("ef.sort_order", "asc")
-        .execute() as Record<string, unknown>[];
+      const compiledSnapshot = (() => {
+        const raw = entityRow["compiled_json"];
+        if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, unknown>;
+        if (typeof raw === "string") {
+          try {
+            const parsed = JSON.parse(raw) as unknown;
+            return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+              ? parsed as Record<string, unknown>
+              : null;
+          } catch { return null; }
+        }
+        return null;
+      })();
+      if (!compiledSnapshot || !Array.isArray(compiledSnapshot["fields"])) {
+        res.status(503).json({ error: "ENTITY_EXECUTION_SNAPSHOT_INVALID", message: `Entity '${entity_code}' has no valid execution snapshot` });
+        return;
+      }
 
-      // Collect unique group_keys from entity fields to look up labels
-      const usedGroupKeys = [...new Set(
-        fieldsRows.map((f) => f["group_key"] as string | null).filter(Boolean) as string[],
-      )];
-
-      const groupsRows: Record<string, unknown>[] = usedGroupKeys.length > 0
-        ? await db
-            .selectFrom("control.field_group as fg")
-            .select(["fg.group_key", "fg.label", "fg.description", "fg.sort_order", "fg.columns", "fg.page_span"])
-            .where("fg.group_key", "in", usedGroupKeys)
-            .orderBy("fg.sort_order", "asc")
-            .execute() as Record<string, unknown>[]
-        : [];
-
-      const compiledEntity = {
+      // The execution snapshot is the authoritative print contract.
+      const compiledEntity = compiledSnapshot as any;
+      /* const legacyCompiledEntity = {
         entity_id:      entityRow["id"],
         entity_code:    entityRow["entity_code"],
         slug:           entityRow["entity_code"],
@@ -1389,7 +1393,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
             .map((f) => f["name"] as string),
         })),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any;
+      } as any; */
 
       // Resolve print sections
       const sections = resolveEntityPrintSections(compiledEntity);

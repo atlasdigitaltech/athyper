@@ -201,7 +201,7 @@ function descriptor(hashCharacter: string): SerializedExecutionDescriptorV1 {
       entityClass: "DOCUMENT",
     },
     storage: {
-      schema: "document", table: "purchase_order", primaryKey: "id", tenantColumn: "tenant_id", backingType: "table",
+      schema: "document", table: "purchase_order", primaryKey: "id", tenantColumn: "tenant_id", readCapability: "generic", writeCapability: "generic", backingType: "table",
     },
     fields: [
       field("id"), field("tenant_id"),

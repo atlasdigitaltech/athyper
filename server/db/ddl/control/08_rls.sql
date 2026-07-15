@@ -359,7 +359,7 @@ END $body$;
 
 DO $body$ DECLARE t text; BEGIN
     FOR t IN SELECT unnest(ARRAY[
-        'control.entity','control.entity_publish_state','control.entity_version',
+        'control.entity','control.entity_publish_state','control.entity_version','control.entity_version_contract',
         'control.entity_field','control.field_group','control.field_group_member',
         'control.entity_surface','control.entity_field_surface',
         'control.field_security_policy','control.overlay','control.overlay_change',
@@ -385,7 +385,7 @@ END $body$;
 
 DO $body$ DECLARE t text; BEGIN
     FOR t IN SELECT unnest(ARRAY[
-        'control.entity','control.entity_publish_state','control.entity_version',
+        'control.entity','control.entity_publish_state','control.entity_version','control.entity_version_contract',
         'control.entity_field','control.entity_surface','control.entity_field_surface',
         'control.entity_lifecycle','control.entity_operation',
         'control.entity_relation','snapshot.entity_compiled',

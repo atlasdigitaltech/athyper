@@ -15,6 +15,33 @@ export interface WorkflowRuntimeFeatureFlags {
   bulkCheck(codes: string[], tenantId?: string): Promise<Map<string, boolean>>;
 }
 
+/** Minimal structural view of the API execution descriptor used by workflow. */
+export interface WorkflowExecutionDescriptorProvider {
+  get(identity: {
+    plane: "mesh";
+    tenantId: string;
+    entityCode: string;
+  }): Promise<{
+    descriptor: {
+      storage: {
+        schema: string;
+        table: string;
+        primaryKey: string;
+        tenantColumn: string | null;
+        writeCapability: string;
+      };
+    };
+  }>;
+}
+
+export interface RuntimeEntityStorage {
+  schema: string;
+  table: string;
+  primaryKey: string;
+  tenantColumn: string | null;
+  writeCapability?: string;
+}
+
 export interface ExecuteOperationCommand {
   tenantId: string;
   entityName: string;
@@ -133,6 +160,7 @@ export interface RuntimeSourceMutationContext {
   workflowRequestId?: string;
   remarks?: string;
   payload: Record<string, unknown>;
+  storage?: RuntimeEntityStorage;
 }
 
 export interface RuntimeSourceMutationResult {

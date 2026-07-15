@@ -116,6 +116,7 @@ ALTER TABLE shared.enterprise_feature    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.subscription_plan     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.permission_category   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.permission            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shared.permission_scope_policy ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.persona_permission    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.plan_module_access    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.plan_permission_access ENABLE ROW LEVEL SECURITY;
@@ -125,6 +126,7 @@ ALTER TABLE shared.enterprise_feature    FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.subscription_plan     FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.permission_category   FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.permission            FORCE ROW LEVEL SECURITY;
+ALTER TABLE shared.permission_scope_policy FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.persona_permission    FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.plan_module_access    FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.plan_permission_access FORCE ROW LEVEL SECURITY;
@@ -142,6 +144,9 @@ CREATE POLICY open_read ON shared.permission_category   FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS open_read ON shared.permission;
 CREATE POLICY open_read ON shared.permission            FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS open_read ON shared.permission_scope_policy;
+CREATE POLICY open_read ON shared.permission_scope_policy FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS open_read ON shared.persona_permission;
 CREATE POLICY open_read ON shared.persona_permission    FOR SELECT USING (true);
@@ -167,6 +172,9 @@ CREATE POLICY seed_write ON shared.permission_category FOR ALL TO athyperadmin U
 
 DROP POLICY IF EXISTS seed_write ON shared.permission;
 CREATE POLICY seed_write ON shared.permission FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS seed_write ON shared.permission_scope_policy;
+CREATE POLICY seed_write ON shared.permission_scope_policy FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS seed_write ON shared.persona_permission;
 CREATE POLICY seed_write ON shared.persona_permission FOR ALL TO athyperadmin USING (true) WITH CHECK (true);

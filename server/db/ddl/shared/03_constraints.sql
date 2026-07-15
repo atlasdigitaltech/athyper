@@ -91,6 +91,15 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- permission_scope_policy → permission
+DO $$ BEGIN
+    ALTER TABLE shared.permission_scope_policy
+        ADD CONSTRAINT permission_scope_policy_permission_fk
+        FOREIGN KEY (permission_id) REFERENCES shared.permission (id)
+        ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- persona_permission → persona
 DO $$ BEGIN
     ALTER TABLE shared.persona_permission

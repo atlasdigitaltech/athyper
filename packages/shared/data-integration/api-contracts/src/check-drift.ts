@@ -15,7 +15,10 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dir = fileURLToPath(new URL(".", import.meta.url));
-const REPO_ROOT = resolve(__dir, "../../../..");
+// __dir is .../packages/shared/data-integration/api-contracts/src. Five
+// parent steps are required to reach the repository root (the previous four
+// step path resolved to .../packages and made the checker unusable).
+const REPO_ROOT = resolve(__dir, "../../../../..");
 
 const WATCHED = [
   "packages/shared/data-integration/api-contracts/src/schemas/common.ts",

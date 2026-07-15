@@ -79,7 +79,6 @@ export interface RecordsRoutesDeps {
   /** Bridges the exact immutable context into the host request ALS. */
   onVerifiedContext?: (context: VerifiedRequestContext) => void;
   executionDescriptorProvider?: ExecutionDescriptorProvider;
-  entityQueryPilotCodes?: ReadonlySet<string>;
   entityQueryCursorSecret?: string;
 }
 

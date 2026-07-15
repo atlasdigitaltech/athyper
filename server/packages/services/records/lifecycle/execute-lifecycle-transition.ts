@@ -94,6 +94,20 @@ interface ActionRule {
   reason: string | null;
 }
 
+interface LifecycleEntityContract {
+  table_schema: string;
+  table_name: string;
+  primary_key: string;
+  tenant_column: string | null;
+  write_capability: string;
+}
+
+function scopeLifecycleRecord(query: any, entity: LifecycleEntityContract, tenantId: string, recordId: string): any {
+  let scoped = query.where(entity.primary_key, "=", recordId);
+  if (entity.tenant_column) scoped = scoped.where(entity.tenant_column, "=", tenantId);
+  return scoped;
+}
+
 export async function executeLifecycleTransition(
   input: ExecuteLifecycleTransitionInput,
 ): Promise<ExecuteLifecycleTransitionResult> {
@@ -103,10 +117,20 @@ export async function executeLifecycleTransition(
     return await input.db.transaction().execute(async (trx) => {
       const entity = await trx
         .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"])
+        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+        .select([
+          "e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column", "e.write_capability",
+        ] as never[])
         .where("e.name", "=", input.entityCode)
         .where("e.tenant_id", "is", null)
-        .executeTakeFirst() as { table_schema: string; table_name: string } | undefined;
+        .where("e.runtime_enabled", "=", true)
+        .where("e.status", "=", "ACTIVE")
+        .where("e.is_active", "=", true)
+        .where("e.read_capability", "<>", "none")
+        .where("e.primary_key", "is not", null)
+        .where("e.backing_type", "=", "table")
+        .where("ev.status", "=", "EFFECTIVE")
+        .executeTakeFirst() as LifecycleEntityContract | undefined;
 
       if (!entity) {
         throw new LifecycleTransitionError(
@@ -116,14 +140,18 @@ export async function executeLifecycleTransition(
         );
       }
 
+      if (entity.write_capability === "none") {
+        throw new LifecycleTransitionError(
+          "ENTITY_READ_ONLY",
+          `Entity '${input.entityCode}' does not expose a lifecycle write capability.`,
+          403,
+        );
+      }
+
       const fullTable = `${entity.table_schema}.${entity.table_name}` as `${string}.${string}`;
-      const lockedRecord = await trx
-        .selectFrom(fullTable)
-        .selectAll()
-        .where("id" as never, "=", input.recordId as never)
-        .where("tenant_id" as never, "=", input.tenantId as never)
-        .forUpdate()
-        .executeTakeFirst() as Record<string, unknown> | undefined;
+      let lockQuery = (trx.selectFrom(fullTable) as any).selectAll();
+      lockQuery = scopeLifecycleRecord(lockQuery, entity, input.tenantId, input.recordId);
+      const lockedRecord = await lockQuery.forUpdate().executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!lockedRecord) {
         throw new LifecycleTransitionError(
@@ -251,8 +279,7 @@ export async function executeLifecycleTransition(
       // Every registered lifecycle entity has row_version and a BEFORE UPDATE
       // trigger that normalizes it to OLD + 1. The explicit expression also
       // keeps the contract correct on deployments where the trigger lags DDL.
-      const updated = await trx
-        .updateTable(fullTable)
+      let updateQuery = (trx.updateTable(fullTable) as any)
         .set({
           ...preparedPatch,
           status: transition.toStatus,
@@ -261,12 +288,10 @@ export async function executeLifecycleTransition(
           updated_at: now,
           updated_by: input.principalId,
           row_version: sql`row_version + 1`,
-        } as never)
-        .where("id" as never, "=", input.recordId as never)
-        .where("tenant_id" as never, "=", input.tenantId as never)
-        .where("status" as never, "=", currentStatus as never)
-        .returningAll()
-        .executeTakeFirst() as Record<string, unknown> | undefined;
+        } as never);
+      updateQuery = scopeLifecycleRecord(updateQuery, entity, input.tenantId, input.recordId)
+        .where("status", "=", currentStatus);
+      const updated = await updateQuery.returningAll().executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!updated) {
         throw new LifecycleTransitionError(
@@ -298,12 +323,9 @@ export async function executeLifecycleTransition(
         ...hookContext, timing: "after", logger: input.logger, strictRequired: true,
       });
 
-      const finalRecord = await trx
-        .selectFrom(fullTable)
-        .selectAll()
-        .where("id" as never, "=", input.recordId as never)
-        .where("tenant_id" as never, "=", input.tenantId as never)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
+      let finalQuery = (trx.selectFrom(fullTable) as any).selectAll();
+      finalQuery = scopeLifecycleRecord(finalQuery, entity, input.tenantId, input.recordId);
+      const finalRecord = await finalQuery.executeTakeFirst() as Record<string, unknown> | undefined;
 
       return {
         record: finalRecord ?? updated,

@@ -30,7 +30,6 @@ import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import {
   verifyBearer,
-  isUuid,
   resolveTenantId,
   resolvePrincipalIdOrNull,
   resolveFieldMap,
@@ -105,6 +104,42 @@ const PROTECTED_PATCH_COLUMNS = new Set([
   "status_changed_by", "status_changed_at", "deleted_at", "deleted_by",
 ]);
 
+interface BulkEntityContract {
+  table_schema: string;
+  table_name: string;
+  primary_key: string;
+  tenant_column: string | null;
+  backing_type: string;
+  write_capability: string;
+}
+
+async function resolveBulkEntity(db: AnyDb, entityCode: string): Promise<BulkEntityContract | null> {
+  return db
+    .selectFrom("control.entity as e")
+    .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+    .select([
+      "e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column",
+      "e.backing_type", "e.write_capability",
+    ] as never[])
+    .where("e.name", "=", entityCode)
+    .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("e.read_capability", "<>", "none")
+    .where("e.primary_key", "is not", null)
+    .where("e.backing_type", "=", "table")
+    .where("ev.status", "=", "EFFECTIVE")
+    .where("e.write_capability", "<>", "none")
+    .executeTakeFirst() as Promise<BulkEntityContract | null>;
+}
+
+function scopeBulkRecord(query: any, entity: BulkEntityContract, tenantId: string, recordId: string): any {
+  let scoped = query.where(entity.primary_key, "=", recordId);
+  if (entity.tenant_column) scoped = scoped.where(entity.tenant_column, "=", tenantId);
+  return scoped;
+}
+
 // ─── Result shape ──────────────────────────────────────────────────────────────
 
 interface BulkRowResult {
@@ -164,8 +199,8 @@ function parseIds(
     res.status(400).json({ error: "TOO_MANY_IDS", message: `Maximum ${BULK_MAX_IDS} ids per request` });
     return null;
   }
-  if (!rawIds.every(isUuid)) {
-    res.status(400).json({ error: "INVALID_IDS", message: "All ids must be valid UUIDs" });
+  if (!rawIds.every((id) => id.length > 0 && id.length <= 256)) {
+    res.status(400).json({ error: "INVALID_IDS", message: "Record keys must be non-empty strings of at most 256 characters" });
     return null;
   }
   return rawIds;
@@ -202,12 +237,7 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
       }
 
       // Resolve entity table
-      const entityRow = await db
-        .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"])
-        .where("e.name", "=", entityCode)
-        .where("e.tenant_id", "is", null)
-        .executeTakeFirst() as { table_schema: string; table_name: string } | undefined;
+      const entityRow = await resolveBulkEntity(db, entityCode);
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -217,10 +247,21 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
       // Resolve logical field names → physical column names
       const fieldMap = await resolveFieldMap(db, entityCode);
       const columnPatch: Record<string, unknown> = {};
+      const protectedColumns = new Set(PROTECTED_PATCH_COLUMNS);
+      protectedColumns.add(entityRow.primary_key);
+      if (entityRow.tenant_column) protectedColumns.add(entityRow.tenant_column);
+
+      if (entityRow.write_capability !== "generic") {
+        res.status(403).json({
+          error: "ENTITY_WRITE_CAPABILITY_UNSUPPORTED",
+          message: `Entity '${entityCode}' does not expose generic bulk writes.`,
+        });
+        return;
+      }
 
       for (const [field, value] of Object.entries(patch)) {
         const col = fieldMap.get(field) ?? field;
-        if (PROTECTED_PATCH_COLUMNS.has(col)) {
+        if (protectedColumns.has(col)) {
           res.status(400).json({
             error:   "PROTECTED_FIELD",
             message: `Field '${field}' cannot be set via bulk patch`,
@@ -243,8 +284,7 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
               updated_at: new Date(),
               updated_by: principalId,
             })
-            .where("id",        "=", id)
-            .where("tenant_id", "=", tenantId)
+            .$call((query: any) => scopeBulkRecord(query, entityRow, tenantId, id))
             .executeTakeFirst() as { numUpdatedRows?: bigint } | undefined;
 
           if (Number(result?.numUpdatedRows ?? 0) > 0) {
@@ -298,12 +338,7 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
       if (!ids) return;
 
       // Resolve entity table
-      const entityRow = await db
-        .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"])
-        .where("e.name", "=", entityCode)
-        .where("e.tenant_id", "is", null)
-        .executeTakeFirst() as { table_schema: string; table_name: string } | undefined;
+      const entityRow = await resolveBulkEntity(db, entityCode);
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -311,6 +346,14 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
       }
 
       const fullTable = `${entityRow.table_schema}.${entityRow.table_name}` as `${string}.${string}`;
+
+      if (entityRow.write_capability !== "generic") {
+        res.status(403).json({
+          error: "ENTITY_WRITE_CAPABILITY_UNSUPPORTED",
+          message: `Entity '${entityCode}' does not expose generic bulk deletes.`,
+        });
+        return;
+      }
 
       // ── Guard 1: Legal hold ───────────────────────────────────────────────
       // Check governance.legal_hold_manifest for any unreleased manifest entries
@@ -344,12 +387,11 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
       const hasLifecycle = statusRoute !== null;
 
       // ── Probe for deleted_at column ───────────────────────────────────────
-      const probe = await db
+      let probeQuery = db
         .selectFrom(fullTable)
-        .selectAll()
-        .where("tenant_id" as never, "=", tenantId as never)
-        .limit(1)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
+        .selectAll();
+      if (entityRow.tenant_column) probeQuery = (probeQuery as any).where(entityRow.tenant_column, "=", tenantId);
+      const probe = await probeQuery.limit(1).executeTakeFirst() as Record<string, unknown> | undefined;
 
       const hasDeletedAt = probe !== undefined
         ? Object.prototype.hasOwnProperty.call(probe, "deleted_at")
@@ -362,11 +404,10 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
         try {
           // Fetch current record status for lifecycle check
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const current = await (db.selectFrom(fullTable) as any)
+          let currentQuery = (db.selectFrom(fullTable) as any)
             .select(["status"])
-            .where("id",        "=", id)
-            .where("tenant_id", "=", tenantId)
-            .executeTakeFirst() as { status: string } | undefined;
+          currentQuery = scopeBulkRecord(currentQuery, entityRow, tenantId, id);
+          const current = await currentQuery.executeTakeFirst() as { status: string } | undefined;
 
           if (!current) {
             failed.push({ id, success: false, error: { code: "RECORD_NOT_FOUND", message: "Record not found" } });
@@ -389,7 +430,7 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
             }
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const result = await (db.updateTable(fullTable) as any)
+            let archiveQuery = (db.updateTable(fullTable) as any)
               .set({
                 status:            archiveTarget,
                 status_changed_at: new Date(),
@@ -397,10 +438,9 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
                 updated_at:        new Date(),
                 updated_by:        principalId,
               })
-              .where("id",        "=", id)
-              .where("tenant_id", "=", tenantId)
-              .where("status",    "=", current.status) // optimistic lock
-              .executeTakeFirst() as { numUpdatedRows?: bigint } | undefined;
+            archiveQuery = scopeBulkRecord(archiveQuery, entityRow, tenantId, id)
+              .where("status", "=", current.status); // optimistic lock
+            const result = await archiveQuery.executeTakeFirst() as { numUpdatedRows?: bigint } | undefined;
 
             if (Number(result?.numUpdatedRows ?? 0) > 0) {
               succeeded.push({ id, success: true });
@@ -416,13 +456,12 @@ export function createBulkCrudRoutes(router: Router, deps: BulkCrudRouteDeps): R
             : { status: "deleted" as const, updated_at: new Date(), updated_by: principalId };
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const result = await (db.updateTable(fullTable) as any)
+          let deleteQuery = (db.updateTable(fullTable) as any)
             .set(setClause)
-            .where("id",        "=", id)
-            .where("tenant_id", "=", tenantId)
+          deleteQuery = scopeBulkRecord(deleteQuery, entityRow, tenantId, id)
             // Don't re-delete already deleted rows — optimistic guard
-            .$if(hasDeletedAt, (qb: any) => qb.where("deleted_at" as never, "is", null))
-            .executeTakeFirst() as { numUpdatedRows?: bigint } | undefined;
+            .$if(hasDeletedAt, (qb: any) => qb.where("deleted_at" as never, "is", null));
+          const result = await deleteQuery.executeTakeFirst() as { numUpdatedRows?: bigint } | undefined;
 
           if (Number(result?.numUpdatedRows ?? 0) > 0) {
             succeeded.push({ id, success: true });

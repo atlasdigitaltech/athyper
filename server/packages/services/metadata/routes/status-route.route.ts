@@ -16,7 +16,7 @@
  */
 
 import type { RequestHandler, Router } from "express";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import {
   verifyBearer,
   resolveTenantId,
@@ -60,6 +60,18 @@ export function createStatusRouteRoute(router: Router, deps: StatusRouteRouteDep
         .select(["sr.compiled_json"])
         .where("sr.entity_name" as never, "=", entityCode as never)
         .where("sr.tenant_id"   as never, "=", tenantId  as never)
+        .where(sql<boolean>`EXISTS (
+          SELECT 1
+            FROM control.entity e
+            JOIN control.entity_version ev ON ev.entity_id = e.id
+           WHERE (e.entity_code = ${entityCode} OR e.name = ${entityCode})
+             AND e.runtime_enabled = true
+             AND e.status = 'ACTIVE'
+             AND e.is_active = true
+             AND e.read_capability <> 'none'
+             AND ev.status = 'EFFECTIVE'
+             AND (e.tenant_id IS NULL OR e.tenant_id = ${tenantId})
+        )` as never)
         .executeTakeFirst();
 
       if (snapshot) {
@@ -78,6 +90,18 @@ export function createStatusRouteRoute(router: Router, deps: StatusRouteRouteDep
           eb("el.tenant_id" as never, "is", null),
           eb("el.tenant_id" as never, "=", tenantId as never),
         ]))
+        .where(sql<boolean>`EXISTS (
+          SELECT 1
+            FROM control.entity e
+            JOIN control.entity_version ev ON ev.entity_id = e.id
+           WHERE (e.entity_code = ${entityCode} OR e.name = ${entityCode})
+             AND e.runtime_enabled = true
+             AND e.status = 'ACTIVE'
+             AND e.is_active = true
+             AND e.read_capability <> 'none'
+             AND ev.status = 'EFFECTIVE'
+             AND (e.tenant_id IS NULL OR e.tenant_id = ${tenantId})
+        )` as never)
         .where("lc.is_active" as never, "=", true as never)
         .orderBy("el.priority" as never, "desc")
         .executeTakeFirst() as { lifecycle_id: string; lifecycle_code: string } | undefined;
@@ -94,9 +118,15 @@ export function createStatusRouteRoute(router: Router, deps: StatusRouteRouteDep
           ]))
           .where("e.tenant_id" as never, "is", null)
           .where("ev.tenant_id" as never, "is", null)
-          .where("ev.version_no" as never, "=", 1 as never)
+          .where("ev.status" as never, "=", "EFFECTIVE" as never)
+          .where("e.runtime_enabled" as never, "=", true as never)
+          .where("e.status" as never, "=", "ACTIVE" as never)
+          .where("e.is_active" as never, "=", true as never)
+          .where("e.read_capability" as never, "<>", "none" as never)
           .where("ef.name" as never, "=", "status" as never)
           .where("ef.data_type" as never, "=", "lifecycle_state" as never)
+          .where("ef.is_active" as never, "=", true as never)
+          .where("ef.runtime_enabled" as never, "=", true as never)
           .executeTakeFirst();
 
         if (statusField) {

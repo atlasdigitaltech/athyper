@@ -33,7 +33,6 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import {
   verifyBearer,
-  isUuid,
   resolveTenantId,
   resolvePrincipalIdOrNull,
   resolveFieldMap,
@@ -78,6 +77,39 @@ type BulkActionRecordResult = {
   reason?: string;
   policyAction?: "allow" | "deny" | "warn" | "require_workflow" | "escalate";
 };
+
+interface BulkActionEntityContract {
+  table_schema: string;
+  table_name: string;
+  primary_key: string;
+  tenant_column: string | null;
+  write_capability: string;
+}
+
+async function resolveBulkActionEntity(db: AnyDb, entityCode: string): Promise<BulkActionEntityContract | null> {
+  return db
+    .selectFrom("control.entity as e")
+    .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+    .select([
+      "e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column", "e.write_capability",
+    ] as never[])
+    .where("e.name", "=", entityCode)
+    .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("e.read_capability", "<>", "none")
+    .where("e.primary_key", "is not", null)
+    .where("e.backing_type", "=", "table")
+    .where("ev.status", "=", "EFFECTIVE")
+    .executeTakeFirst() as Promise<BulkActionEntityContract | null>;
+}
+
+function scopeBulkActionRecord(query: any, entity: BulkActionEntityContract, tenantId: string, recordId: string): any {
+  let scoped = query.where(entity.primary_key, "=", recordId);
+  if (entity.tenant_column) scoped = scoped.where(entity.tenant_column, "=", tenantId);
+  return scoped;
+}
 
 function requestIds(body: Record<string, unknown>): string[] {
   const raw = Array.isArray(body["ids"])
@@ -242,19 +274,13 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
         return;
       }
 
-      // Validate all IDs are UUIDs
-      if (!ids.every((id) => isUuid(id))) {
-        res.status(400).json({ error: "INVALID_IDS", message: "All ids must be valid UUIDs" });
+      if (!ids.every((id) => id.length > 0 && id.length <= 256)) {
+        res.status(400).json({ error: "INVALID_IDS", message: "Record keys must be non-empty strings of at most 256 characters" });
         return;
       }
 
       // Resolve backing table
-      const entityRow = await db
-        .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"])
-        .where("e.name", "=", entityCode)
-        .where("e.tenant_id", "is", null)
-        .executeTakeFirst() as { table_schema: string; table_name: string } | undefined;
+      const entityRow = await resolveBulkActionEntity(db, entityCode);
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -262,6 +288,10 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
       }
 
       const fullTable = `${entityRow.table_schema}.${entityRow.table_name}` as `${string}.${string}`;
+      if (entityRow.write_capability !== "generic") {
+        res.status(403).json({ error: "ENTITY_WRITE_CAPABILITY_UNSUPPORTED", message: `Entity '${entityCode}' does not expose generic bulk actions.` });
+        return;
+      }
       const succeeded: string[] = [];
       const failed: { id: string; reason: string }[] = [];
 
@@ -305,12 +335,9 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
         for (const id of ids) {
           try {
             // Fetch current status
-            const current = await db
-              .selectFrom(fullTable)
-              .select(["status"] as never[])
-              .where("id" as never, "=", id as never)
-              .where("tenant_id" as never, "=", tenantId as never)
-              .executeTakeFirst() as { status: string } | undefined;
+            let currentQuery = (db.selectFrom(fullTable) as any).select(["status"]);
+            currentQuery = scopeBulkActionRecord(currentQuery, entityRow, tenantId, id);
+            const current = await currentQuery.executeTakeFirst() as { status: string } | undefined;
 
             if (!current) {
               failed.push({ id, reason: "RECORD_NOT_FOUND" });
@@ -349,12 +376,11 @@ export function createBulkActionRoute(router: Router, deps: BulkActionRouteDeps)
 
             // Apply transition
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (db.updateTable(fullTable) as any)
+            let updateQuery = (db.updateTable(fullTable) as any)
               .set(patch)
-              .where("id", "=", id)
-              .where("tenant_id", "=", tenantId)
-              .where("status", "=", current.status) // optimistic lock
-              .execute();
+            updateQuery = scopeBulkActionRecord(updateQuery, entityRow, tenantId, id)
+              .where("status", "=", current.status); // optimistic lock
+            await updateQuery.execute();
 
             succeeded.push(id);
             records.push({ id, status: "success" });

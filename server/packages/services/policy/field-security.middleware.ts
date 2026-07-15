@@ -169,6 +169,9 @@ async function loadPolicies(
       "fsp.pii_classification",
     ])
     .where("e.entity_code", "=", normalizedEntityType)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
     .where("fsp.is_active", "=", true)
     .where((eb: any) =>
       eb.or([

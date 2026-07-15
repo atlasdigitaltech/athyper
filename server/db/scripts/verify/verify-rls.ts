@@ -59,9 +59,9 @@ if (RLS_APP_ROLE !== null && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(RLS_APP_ROLE)) {
 }
 
 // Stable test UUIDs — chosen to be obviously synthetic (version-7 format)
-const TENANT_A = "01900000-0000-7000-aaaa-000000000001";
-const TENANT_B = "01900000-0000-7000-bbbb-000000000002";
-const ACTOR_ID = "01900000-0000-7000-cccc-000000000003";
+let TENANT_A = "";
+let TENANT_B = "";
+let ACTOR_ID = "";
 
 // ── Table descriptors ─────────────────────────────────────────────────────────
 
@@ -99,7 +99,7 @@ const TABLES_UNDER_TEST: TableUnderTest[] = [
   },
   // ── IAM ──────────────────────────────────────────────────────────────────────
   {
-    table: "iam.auth_group",
+    table: "master.auth_group",
     values: (t) => ({
       tenant_id: t, code: `rls-grp-${t.slice(0, 8)}`,
       name: "RLS Test Group", status: "active", created_by: ACTOR_ID,
@@ -125,7 +125,7 @@ const TABLES_UNDER_TEST: TableUnderTest[] = [
     table: "event.webhook_subscription",
     values: (t) => ({
       tenant_id: t, target_url: "https://example.com/hook",
-      topics: JSON.stringify(["*"]), max_retries: 3,
+      topics: ["*"], max_retries: 3,
       timeout_ms: 10000, failure_count: 0, is_active: true,
       created_by: ACTOR_ID,
     }),
@@ -134,10 +134,9 @@ const TABLES_UNDER_TEST: TableUnderTest[] = [
   {
     table: "governance.legal_hold",
     values: (t) => ({
-      tenant_id: t, hold_code: `rls-hold-${t.slice(0, 8)}`,
-      name: "RLS Test Hold", status: "active",
-      log_schemas: JSON.stringify(["audit"]),
-      custodian_id: ACTOR_ID, created_by: ACTOR_ID,
+      tenant_id: t, hold_name: "RLS Test Hold",
+      hold_code: `rls-hold-${t.slice(0, 8)}`, status: "active",
+      custodian_id: ACTOR_ID, scope_log_schemas: ["log"], created_by: ACTOR_ID,
     }),
   },
 ];
@@ -267,6 +266,33 @@ async function run() {
     // isolation — real policy enforcement happens via SET LOCAL.
     onnotice:    () => {},
   });
+
+  const tenantRows = await sql<{ id: string }[]>`
+    SELECT id
+    FROM master.tenant
+    WHERE status = 'active' AND code <> 'system'
+    ORDER BY code
+    LIMIT 2
+  `;
+  if (tenantRows.length < 2) {
+    await sql.end();
+    throw new Error("RLS verification requires at least two active non-system tenants");
+  }
+  TENANT_A = tenantRows[0].id;
+  TENANT_B = tenantRows[1].id;
+
+  const actorRows = await sql<{ id: string }[]>`
+    SELECT id
+    FROM master.principal
+    WHERE tenant_id = ${TENANT_A} AND status = 'active'
+    ORDER BY id
+    LIMIT 1
+  `;
+  if (actorRows.length < 1) {
+    await sql.end();
+    throw new Error(`RLS verification requires an active principal for tenant ${TENANT_A}`);
+  }
+  ACTOR_ID = actorRows[0].id;
 
   console.log("\n\x1b[1mAthyper RLS Verification Suite\x1b[0m");
   console.log(`${"─".repeat(65)}`);

@@ -2404,7 +2404,8 @@ BEGIN
         ) INTO v_has_allow;
     END IF;
 
-    -- Step 5: Final deny check — ALWAYS runs, beats all allows
+    -- Step 5: only an explicit tenant-wide non-resource deny is a capability
+    -- deny. Narrower denies are subtracted by effective scope resolution.
     IF EXISTS (
         SELECT 1 FROM master.access_grant ag
         WHERE ag.tenant_id     = p_tenant_id
@@ -2412,6 +2413,9 @@ BEGIN
           AND ag.permission_id = p_permission_id
           AND ag.effect        = 'deny'
           AND ag.status        = 'active'
+          AND ag.assignment_scope_type = 'tenant'
+          AND ag.resource_type IS NULL
+          AND ag.resource_id IS NULL
           AND (ag.expires_at IS NULL OR ag.expires_at > now())
     ) THEN
         RETURN 'deny';
@@ -2849,6 +2853,19 @@ BEGIN
                     USING ERRCODE = 'foreign_key_violation';
             END IF;
 
+        WHEN 'operating_organization' THEN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM master.operating_organization oo
+                WHERE oo.id = NEW.assignment_scope_ref_id
+                  AND oo.tenant_id = NEW.tenant_id
+                  AND oo.status <> 'archived'
+            ) THEN
+                RAISE EXCEPTION '%: ref_id % not found as an active operating_organization for tenant %',
+                    v_source, NEW.assignment_scope_ref_id, NEW.tenant_id
+                    USING ERRCODE = 'foreign_key_violation';
+            END IF;
+
         ELSE
             RAISE EXCEPTION '%: unknown assignment_scope_type %',
                 v_source, NEW.assignment_scope_type
@@ -2861,7 +2878,7 @@ $$;
 
 COMMENT ON FUNCTION master.trg_validate_assignment_scope IS
     'Validates assignment_scope_ref_id exists in the target table (company_code '
-    'legal_entity, or business_network_membership) and belongs to the same tenant. Shared by auth_group_role and '
+    'legal_entity, operating_organization, or business_network_membership) and belongs to the same tenant. Shared by auth_group_role and '
     'access_grant. TG_ARGV[0] = source table name for error messages.';
 
 
@@ -5726,3 +5743,237 @@ $$;
 COMMENT ON FUNCTION master.fn_resolve_owner_jurisdiction IS
     'Returns the derived tax_jurisdiction_id only (convenience wrapper). Used by '
     'document services to snapshot ship-side jurisdictions on PI/PO/SI/SO lines.';
+
+
+-- ============================================================================
+-- Operating Organization foundation functions
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION master.resolve_operating_organization_companies(
+    p_tenant_id uuid,
+    p_operating_organization_id uuid,
+    p_as_of date DEFAULT current_date
+)
+RETURNS TABLE (
+    company_code_id uuid,
+    legal_entity_id uuid,
+    participation_role text
+)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = master, shared, pg_catalog
+AS $$
+    SELECT
+        ooc.company_code_id,
+        cc.legal_entity_id,
+        ooc.participation_role
+    FROM master.operating_organization_company ooc
+    JOIN master.operating_organization oo
+      ON oo.tenant_id = ooc.tenant_id
+     AND oo.id = ooc.operating_organization_id
+    JOIN master.company_code cc
+      ON cc.tenant_id = ooc.tenant_id
+     AND cc.id = ooc.company_code_id
+    WHERE ooc.tenant_id = p_tenant_id
+      AND ooc.operating_organization_id = p_operating_organization_id
+      AND oo.status = 'active'
+      AND cc.status = 'active'
+      AND ooc.status = 'active'
+      AND (oo.effective_from IS NULL OR oo.effective_from <= p_as_of)
+      AND (oo.effective_until IS NULL OR oo.effective_until >= p_as_of)
+      AND ooc.effective_from <= p_as_of
+      AND (ooc.effective_until IS NULL OR ooc.effective_until >= p_as_of);
+$$;
+
+COMMENT ON FUNCTION master.resolve_operating_organization_companies IS
+    'Returns active, effective Company Codes for one tenant-owned Operating '
+    'Organization. Legal Entity is derived from the Company Code.';
+
+
+CREATE OR REPLACE FUNCTION master.trg_validate_operating_organization_hierarchy()
+RETURNS trigger LANGUAGE plpgsql STABLE
+SET search_path = master, pg_temp
+AS $$
+BEGIN
+    IF NEW.parent_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM master.operating_organization parent
+        WHERE parent.tenant_id = NEW.tenant_id
+          AND parent.id = NEW.parent_id
+          AND parent.domain = NEW.domain
+    ) THEN
+        RAISE EXCEPTION
+            'operating_organization: parent % is missing or belongs to another tenant/domain',
+            NEW.parent_id USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF EXISTS (
+        WITH RECURSIVE lineage AS (
+            SELECT oo.id, oo.parent_id
+            FROM master.operating_organization oo
+            WHERE oo.tenant_id = NEW.tenant_id AND oo.id = NEW.parent_id
+            UNION ALL
+            SELECT parent.id, parent.parent_id
+            FROM master.operating_organization parent
+            JOIN lineage child ON child.parent_id = parent.id
+            WHERE parent.tenant_id = NEW.tenant_id
+        )
+        SELECT 1 FROM lineage WHERE id = NEW.id
+    ) THEN
+        RAISE EXCEPTION 'operating_organization: hierarchy cycle detected for %',
+            NEW.id USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION master.trg_validate_operating_organization_company()
+RETURNS trigger LANGUAGE plpgsql STABLE
+SET search_path = master, pg_temp
+AS $$
+DECLARE
+    v_domain text;
+BEGIN
+    SELECT domain INTO v_domain
+    FROM master.operating_organization
+    WHERE tenant_id = NEW.tenant_id
+      AND id = NEW.operating_organization_id;
+
+    IF v_domain IS NULL THEN
+        RAISE EXCEPTION 'operating_organization_company: organization % not found for tenant %',
+            NEW.operating_organization_id, NEW.tenant_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF v_domain = 'procurement'
+       AND NEW.participation_role NOT IN (
+           'lead_buyer', 'participant', 'beneficiary',
+           'central_buyer', 'contracting_company'
+       ) THEN
+        RAISE EXCEPTION 'operating_organization_company: role % is invalid for procurement',
+            NEW.participation_role USING ERRCODE = 'check_violation';
+    ELSIF v_domain = 'sales'
+       AND NEW.participation_role NOT IN (
+           'lead_seller', 'participant', 'beneficiary', 'booking_company',
+           'invoicing_company', 'fulfillment_company'
+       ) THEN
+        RAISE EXCEPTION 'operating_organization_company: role % is invalid for sales',
+            NEW.participation_role USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION master.trg_validate_operating_organization_profile()
+RETURNS trigger LANGUAGE plpgsql STABLE
+SET search_path = master, pg_temp
+AS $$
+DECLARE
+    v_domain text;
+    v_expected_domain text := TG_ARGV[0];
+BEGIN
+    SELECT domain INTO v_domain
+    FROM master.operating_organization
+    WHERE tenant_id = NEW.tenant_id
+      AND id = NEW.operating_organization_id;
+
+    IF v_domain IS NULL THEN
+        RAISE EXCEPTION 'operating organization % not found for tenant %',
+            NEW.operating_organization_id, NEW.tenant_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF v_domain <> v_expected_domain THEN
+        RAISE EXCEPTION 'operating organization % has domain %, expected %',
+            NEW.operating_organization_id, v_domain, v_expected_domain
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION master.trg_operating_organization_domain_immutable()
+RETURNS trigger LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.domain IS DISTINCT FROM OLD.domain THEN
+        RAISE EXCEPTION 'operating_organization.domain is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION master.trg_operating_organization_scope_version()
+RETURNS trigger LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF ROW(NEW.parent_id, NEW.effective_from, NEW.effective_until, NEW.status)
+       IS DISTINCT FROM
+       ROW(OLD.parent_id, OLD.effective_from, OLD.effective_until, OLD.status) THEN
+        NEW.scope_version := OLD.scope_version + 1;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION master.trg_bump_operating_organization_membership_scope()
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = master, pg_temp
+AS $$
+DECLARE
+    v_tenant_id uuid := COALESCE(NEW.tenant_id, OLD.tenant_id);
+    v_org_id uuid := COALESCE(NEW.operating_organization_id, OLD.operating_organization_id);
+    v_actor_id uuid := COALESCE(NEW.updated_by, NEW.created_by, OLD.updated_by, OLD.created_by);
+BEGIN
+    IF TG_OP = 'UPDATE'
+       AND ROW(
+           NEW.tenant_id,
+           NEW.operating_organization_id,
+           NEW.company_code_id,
+           NEW.participation_role,
+           NEW.effective_from,
+           NEW.effective_until,
+           NEW.status
+       ) IS NOT DISTINCT FROM ROW(
+           OLD.tenant_id,
+           OLD.operating_organization_id,
+           OLD.company_code_id,
+           OLD.participation_role,
+           OLD.effective_from,
+           OLD.effective_until,
+           OLD.status
+       ) THEN
+        RETURN NEW;
+    END IF;
+
+    UPDATE master.operating_organization
+       SET scope_version = scope_version + 1,
+           updated_at = now(),
+           updated_by = v_actor_id
+     WHERE tenant_id = v_tenant_id
+       AND id = v_org_id;
+
+    IF TG_OP = 'UPDATE'
+       AND OLD.operating_organization_id IS DISTINCT FROM NEW.operating_organization_id THEN
+        UPDATE master.operating_organization
+           SET scope_version = scope_version + 1,
+               updated_at = now(),
+               updated_by = v_actor_id
+         WHERE tenant_id = OLD.tenant_id
+           AND id = OLD.operating_organization_id;
+    END IF;
+
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;

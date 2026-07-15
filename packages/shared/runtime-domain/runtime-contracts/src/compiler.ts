@@ -67,6 +67,8 @@ export interface CompiledMetaEntityInput {
   table_schema?: string;
   table_name?: string;
   backing_type?: string;
+  primary_key?: string | null;
+  tenant_column?: string | null;
   ownership_model?: string;
   version_id?: string;
   version_no?: number;
@@ -483,6 +485,10 @@ export function compileMetaEntityRuntimeDescriptor(
     entityCode,
     entityName: resolveEntityName(entity),
     routeSlug: resolveRouteSlug(entity),
+    storage: {
+      primaryKey: entity.primary_key ?? null,
+      tenantColumn: entity.tenant_column ?? null,
+    },
     createMode: normalizeCreateMode(entity.create_mode),
     draftTtlHours: normalizeDraftTtlHours(entity.draft_ttl_hours),
     numberingStrategy: normalizeNumberingStrategy(entity.numbering_strategy),
@@ -661,8 +667,6 @@ function resolveCapabilities(context: ResolutionContext): MetaEntityCapabilities
     permissionAliasMap,
   } = context;
 
-  const recordsDisabled = readBoolean(featureFlags, "records_api_disabled")
-    || readBoolean(featureFlags, "generic_runtime_disabled");
   const hardDeleteEnabled = readBoolean(featureFlags, "generic_hard_delete_enabled")
     || readBoolean(featureFlags, "hard_delete_enabled")
     || readBoolean(featureFlags, "allow_hard_delete");
@@ -679,22 +683,21 @@ function resolveCapabilities(context: ResolutionContext): MetaEntityCapabilities
     || normalizeToken(entity.mutability) === "IMMUTABLE"
     || normalizeToken(entity.mutability) === "LOCKED";
 
-  const canRead = !recordsDisabled && !hidden && policy.accessMode !== "default_deny";
+  const canRead = !hidden && policy.accessMode !== "default_deny";
 
   // Resolve each CRUD capability via the cascading gate:
-  //   records_api_disabled → entity hidden → default_deny → entity_readonly
   //   → (delete only: hard_delete_enabled) → operation present
   // Each gate carries a stable DisabledReason so the UI can surface it.
   const { allow: canCreate, reason: canCreateReason } = resolveCrudCapability({
-    canRead, readOnly, recordsDisabled, hidden, accessMode: policy.accessMode,
+    canRead, readOnly, hidden, accessMode: policy.accessMode,
     operations, permissionAliasMap, action: "create",
   });
   const { allow: canEdit, reason: canEditReason } = resolveCrudCapability({
-    canRead, readOnly, recordsDisabled, hidden, accessMode: policy.accessMode,
+    canRead, readOnly, hidden, accessMode: policy.accessMode,
     operations, permissionAliasMap, action: "edit",
   });
   const { allow: canDelete, reason: canDeleteReason } = resolveCrudCapability({
-    canRead, readOnly, recordsDisabled, hidden, accessMode: policy.accessMode,
+    canRead, readOnly, hidden, accessMode: policy.accessMode,
     operations, permissionAliasMap, action: "delete",
     extraGate: compiledDeletionMode
       ? compiledDeleteEnabled ? null : { reason: "lifecycle_locked" }
@@ -740,7 +743,6 @@ function resolveCapabilities(context: ResolutionContext): MetaEntityCapabilities
 interface CrudCapabilityInput {
   canRead: boolean;
   readOnly: boolean;
-  recordsDisabled: boolean;
   hidden: boolean;
   accessMode: MetaEntityPolicySummary["accessMode"];
   operations: MetaEntityOperation[];
@@ -754,7 +756,6 @@ function resolveCrudCapability(input: CrudCapabilityInput): {
   allow: boolean;
   reason: DisabledReason | null;
 } {
-  if (input.recordsDisabled) return { allow: false, reason: "records_api_disabled" };
   if (input.hidden) return { allow: false, reason: "entity_hidden" };
   if (input.accessMode === "default_deny") return { allow: false, reason: "default_deny_policy" };
   if (!input.canRead) return { allow: false, reason: "default_deny_policy" };

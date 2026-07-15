@@ -101,10 +101,25 @@ const SYSTEM_COLS = new Set([
   "created_at", "created_by", "updated_at", "updated_by",
 ]);
 
+function exposeDocumentIdentityAliases(
+  row: Record<string, unknown>,
+  primaryKey: string,
+  tenantColumn: string | null,
+): Record<string, unknown> {
+  const out = { ...row };
+  if (out["id"] === undefined && out[primaryKey] !== undefined) out["id"] = out[primaryKey];
+  if (tenantColumn && out["tenant_id"] === undefined && out[tenantColumn] !== undefined) {
+    out["tenant_id"] = out[tenantColumn];
+  }
+  return out;
+}
+
 function buildDocumentHeader(
   row: Record<string, unknown>,
   reverseMap: Map<string, string>,
   entityName: string,
+  primaryKey = "id",
+  tenantColumn: string | null = "tenant_id",
 ) {
   let document_number = "";
   let party_id: string | null = null;
@@ -120,7 +135,7 @@ function buildDocumentHeader(
   for (const [col, val] of Object.entries(row)) {
     const fieldName = reverseMap.get(col) ?? col;
 
-    if (SYSTEM_COLS.has(fieldName) || SYSTEM_COLS.has(col)) continue;
+    if (SYSTEM_COLS.has(fieldName) || SYSTEM_COLS.has(col) || fieldName === primaryKey || col === primaryKey) continue;
 
     if (DOCUMENT_NUMBER_KEYS.has(fieldName)) {
       document_number = String(val ?? "");
@@ -146,8 +161,8 @@ function buildDocumentHeader(
   }
 
   return {
-    id:              row.id as string,
-    tenant_id:       row.tenant_id as string,
+    id:              row[primaryKey] as string,
+    tenant_id:       tenantColumn ? (row[tenantColumn] as string) : null,
     document_type:   entityName,
     document_number,
     status:          String(row.status ?? "draft"),
@@ -245,6 +260,7 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       const offset   = (page - 1) * pageSize;
 
       const fullTable = `${entity.table_schema as string}.${entity.table_name as string}` as `${string}.${string}`;
+      const tenantColumn = (entity.tenant_column as string | null) ?? null;
 
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
@@ -253,9 +269,9 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       let listQuery  = db.selectFrom(fullTable).selectAll();
       let countQuery = db.selectFrom(fullTable).select(db.fn.countAll<string>().as("count"));
 
-      if (tenantId) {
-        listQuery  = listQuery.where("tenant_id"  as never, "=", tenantId as never);
-        countQuery = countQuery.where("tenant_id" as never, "=", tenantId as never);
+      if (tenantId && tenantColumn) {
+        listQuery  = listQuery.where(tenantColumn as never, "=", tenantId as never);
+        countQuery = countQuery.where(tenantColumn as never, "=", tenantId as never);
       }
 
       const [rows, countResult, fieldMap] = await Promise.all([
@@ -276,7 +292,11 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
         for (const [col, val] of Object.entries(row)) {
           out[reverseMap.get(col) ?? col] = val;
         }
-        return out;
+        return exposeDocumentIdentityAliases(
+          out,
+          String(entity.primary_key ?? "id"),
+          (entity.tenant_column as string | null) ?? null,
+        );
       });
 
       res.json({
@@ -298,21 +318,23 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       const docType = req.params["docType"] as string;
       const id      = req.params["id"]      as string;
 
-      if (!isUuid(id)) {
-        res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
-        return;
-      }
-
       const entity = await resolveDocumentEntity(db, docType);
       if (!entity) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
         return;
       }
 
+      const primaryKey = String(entity.primary_key ?? "id");
+      if (!id || (primaryKey === "id" && !isUuid(id))) {
+        res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
+        return;
+      }
+
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
+      const tenantColumn = (entity.tenant_column as string | null) ?? null;
+      if (tenantColumn && !tenantId) {
         res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
         return;
       }
@@ -322,8 +344,8 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
 
       const [row, fieldMap] = await Promise.all([
         db.selectFrom(fullTable).selectAll()
-          .where("id" as never, "=", id as never)
-          .where("tenant_id" as never, "=", tenantId as never)
+          .where(primaryKey as never, "=", id as never)
+          .$if(Boolean(tenantColumn && tenantId), (query) => query.where(tenantColumn as never, "=", tenantId as never))
           .executeTakeFirst(),
         resolveFieldMap(db, entity.name as string),
       ]);
@@ -339,7 +361,7 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
         reverseMap.set(columnName, fieldName);
       }
 
-      const header = buildDocumentHeader(row as Record<string, unknown>, reverseMap, entity.name as string);
+      const header = buildDocumentHeader(row as Record<string, unknown>, reverseMap, entity.name as string, primaryKey, tenantColumn);
 
       // Query lines (table by convention: {table_name}_line, FK: {table_name}_id)
       const linesFkCol = `${entity.table_name as string}_id`;
@@ -349,7 +371,7 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
           .selectFrom(linesTable)
           .selectAll()
           .where(linesFkCol as never, "=", id as never)
-          .where("tenant_id" as never, "=", tenantId as never)
+          .$if(Boolean(tenantColumn && tenantId), (query) => query.where(tenantColumn as never, "=", tenantId as never))
           .orderBy("line_no" as never, "asc")
           .execute() as Record<string, unknown>[];
       } catch (e) {
@@ -379,6 +401,10 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
         return;
       }
+      if (["none", "append_only"].includes(String(entity.write_capability ?? "none"))) {
+        res.status(405).json({ error: "ENTITY_NOT_WRITABLE", message: `Entity '${entity.name as string}' does not allow document creation.` });
+        return;
+      }
 
       const fieldMap  = await resolveFieldMap(db, entity.name as string);
       const body      = req.body as { data?: Record<string, unknown> };
@@ -393,16 +419,17 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
+      const tenantColumn = (entity.tenant_column as string | null) ?? null;
+      if (tenantColumn && !tenantId) {
         res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant from session" });
         return;
       }
-      mappedData.tenant_id = tenantId;
+      if (tenantColumn && tenantId) mappedData[tenantColumn] = tenantId;
 
       // ── Auto-inject system columns not captured in the form ───────────────
 
       // company_code_id — from X-Org second segment (e.g. "athyper--ACFB")
-      if (!mappedData.company_code_id) {
+      if (!mappedData.company_code_id && tenantId) {
         const companyCodeId = await resolveCompanyCodeId(db, xOrg, tenantId);
         if (companyCodeId) {
           mappedData.company_code_id = companyCodeId;
@@ -461,7 +488,7 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
 
       // created_by — resolve principal from JWT sub
       const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub
+      const principalId = sub && tenantId
         ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
         : SYSTEM_PRINCIPAL_UUID;
       if (!mappedData.created_by) mappedData.created_by = principalId;
@@ -472,14 +499,14 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       // Emit search-topic outbox event — best-effort; must not fail the request.
       // The generic search outbox handler routes this to Meilisearch via
       // control.entity lookup → defaultRowToSearchDocument → optional override.
-      if (row) {
+      if (row && tenantId) {
         try {
           await emitOutboxEvent(db, {
             tenantId,
             topic:      "search",
             eventType:  `${entity.name as string}.created`,
             entityType: entity.name as string,
-            entityId:   String((row as { id: string }).id),
+            entityId:   String((row as Record<string, unknown>)[String(entity.primary_key ?? "id")]),
             actorId:    principalId,
           });
         } catch (emitErr) {
@@ -490,7 +517,11 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
         }
       }
 
-      res.status(201).json(row);
+      res.status(201).json(exposeDocumentIdentityAliases(
+        row as Record<string, unknown>,
+        String(entity.primary_key ?? "id"),
+        (entity.tenant_column as string | null) ?? null,
+      ));
     } catch (err) {
       logger?.error("documents_create_error", { err: String(err) });
       next(err);
@@ -506,14 +537,18 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       const docType = req.params["docType"] as string;
       const id      = req.params["id"]      as string;
 
-      if (!isUuid(id)) {
-        res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
-        return;
-      }
-
       const entity = await resolveDocumentEntity(db, docType);
       if (!entity) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
+        return;
+      }
+      const primaryKey = String(entity.primary_key ?? "id");
+      if (!id || (primaryKey === "id" && !isUuid(id))) {
+        res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
+        return;
+      }
+      if (["none", "append_only"].includes(String(entity.write_capability ?? "none"))) {
+        res.status(405).json({ error: "ENTITY_NOT_WRITABLE", message: `Entity '${entity.name as string}' does not allow status transitions.` });
         return;
       }
 
@@ -526,7 +561,8 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       const xOrg   = (req.headers["x-org"]   as string) ?? "";
       const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
+      const tenantColumn = (entity.tenant_column as string | null) ?? null;
+      if (tenantColumn && !tenantId) {
         res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
         return;
       }
@@ -535,8 +571,8 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       const row = await db
         .updateTable(fullTable)
         .set({ status: body.to_status, updated_at: new Date().toISOString() } as never)
-        .where("id" as never, "=", id as never)
-        .where("tenant_id" as never, "=", tenantId as never)
+        .where(String(entity.primary_key ?? "id") as never, "=", id as never)
+        .$if(Boolean(tenantColumn && tenantId), (query) => query.where(tenantColumn as never, "=", tenantId as never))
         .returningAll()
         .executeTakeFirst();
 
@@ -549,11 +585,11 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
       // record updated_by on the row today, but the outbox event still
       // captures who triggered the change.
       const transSub = typeof claims.sub === "string" ? claims.sub : "";
-      const transPrincipalId = transSub
+      const transPrincipalId = transSub && tenantId
         ? await resolvePrincipalIdOrNull(db, transSub, tenantId, xRealm)
         : null;
 
-      try {
+      if (tenantId) try {
         await emitOutboxEvent(db, {
           tenantId,
           topic:      "search",
@@ -599,4 +635,3 @@ export function createDocumentsRoute(router: Router, deps: DocumentsRouteDeps): 
 
   return router;
 }
-

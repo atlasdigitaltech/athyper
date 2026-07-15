@@ -22,7 +22,6 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import {
   verifyBearer,
-  isUuid,
   resolveTenantId,
   resolvePrincipalIdOrNull,
   resolveFieldMap,
@@ -160,18 +159,18 @@ async function toXlsx(headers: string[], rows: Record<string, unknown>[]): Promi
 async function fetchRows(
   db:        AnyDb,
   fullTable: `${string}.${string}`,
+  primaryKey: string,
+  tenantColumn: string | null,
   tenantId:  string,
   ids:       string[] | null,
   maxRows:   number = EXPORT_MAX_ROWS,
 ): Promise<Record<string, unknown>[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let q: any = (db.selectFrom(fullTable) as any)
-    .selectAll()
-    .where("tenant_id" as never, "=", tenantId as never)
-    .limit(maxRows);
+  let q: any = (db.selectFrom(fullTable) as any).selectAll().limit(maxRows);
+  if (tenantColumn) q = q.where(tenantColumn as never, "=", tenantId as never);
 
   if (ids && ids.length > 0) {
-    q = q.where("id" as never, "in", ids as never);
+    q = q.where(primaryKey as never, "in", ids as never);
   }
 
   return q.execute() as Promise<Record<string, unknown>[]>;
@@ -190,6 +189,10 @@ async function resolveExportColumns(
     .select(["ev.id as version_id"])
     .where("e.name", "=", entityCode)
     .where("e.tenant_id", "is", null)
+    .where("e.runtime_enabled", "=", true)
+    .where("e.status", "=", "ACTIVE")
+    .where("e.is_active", "=", true)
+    .where("e.read_capability", "<>", "none")
     .where("ev.status", "=", "EFFECTIVE")
     .limit(1)
     .executeTakeFirst() as { version_id: string } | undefined;
@@ -201,6 +204,7 @@ async function resolveExportColumns(
     .select(["ef.name", "ef.column_name", "ef.sort_order"])
     .where("ef.entity_version_id", "=", entityRow.version_id)
     .where("ef.is_active", "=", true)
+    .where("ef.runtime_enabled", "=", true)
     .orderBy("ef.sort_order", "asc")
     .execute() as { name: string; column_name: string; sort_order: number }[];
 
@@ -264,8 +268,8 @@ export function createExportRoutes(router: Router, deps: ExportRouteDeps): Route
           res.status(400).json({ error: "MISSING_IDS", message: "'ids' is required for selectionMode=ids" });
           return;
         }
-        if (!rawIds.every(isUuid)) {
-          res.status(400).json({ error: "INVALID_IDS", message: "All ids must be valid UUIDs" });
+        if (!rawIds.every((id) => id.length > 0 && id.length <= 256)) {
+          res.status(400).json({ error: "INVALID_IDS", message: "All record identifiers must be non-empty strings of at most 256 characters" });
           return;
         }
         ids = rawIds;
@@ -278,10 +282,16 @@ export function createExportRoutes(router: Router, deps: ExportRouteDeps): Route
       // ── Verify entity exists ───────────────────────────────────────────────────
       const entityRow = await db
         .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"])
+        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+        .select(["e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column"])
         .where("e.name", "=", entityCode)
         .where("e.tenant_id", "is", null)
-        .executeTakeFirst() as { table_schema: string; table_name: string } | undefined;
+        .where("e.runtime_enabled", "=", true)
+        .where("e.status", "=", "ACTIVE")
+        .where("e.is_active", "=", true)
+        .where("e.read_capability", "<>", "none")
+        .where("ev.status", "=", "EFFECTIVE")
+        .executeTakeFirst() as { table_schema: string; table_name: string; primary_key: string; tenant_column: string | null } | undefined;
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -290,11 +300,13 @@ export function createExportRoutes(router: Router, deps: ExportRouteDeps): Route
 
       // ── Row count (for response metadata) ────────────────────────────────────
       const fullTable = `${entityRow.table_schema}.${entityRow.table_name}` as `${string}.${string}`;
+      const primaryKey = entityRow.primary_key;
+      const tenantColumn = entityRow.tenant_column;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let countQ: any = (db.selectFrom(fullTable) as any)
-        .select(db.fn.count("id" as never).as("cnt"))
-        .where("tenant_id" as never, "=", tenantId as never);
-      if (ids) countQ = countQ.where("id" as never, "in", ids as never);
+        .select(db.fn.count(primaryKey as never).as("cnt"));
+      if (tenantColumn) countQ = countQ.where(tenantColumn as never, "=", tenantId as never);
+      if (ids) countQ = countQ.where(primaryKey as never, "in", ids as never);
 
       const exportSnap = cache
         ? await resolveParameterSnapshot(db, cache, tenantId, "api.export").catch(() => null)
@@ -341,10 +353,16 @@ export function createExportRoutes(router: Router, deps: ExportRouteDeps): Route
 
       const entityRow = await db
         .selectFrom("control.entity as e")
-        .select(["e.table_schema", "e.table_name"])
+        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+        .select(["e.table_schema", "e.table_name", "e.primary_key", "e.tenant_column"])
         .where("e.name", "=", entityCode)
         .where("e.tenant_id", "is", null)
-        .executeTakeFirst() as { table_schema: string; table_name: string } | undefined;
+        .where("e.runtime_enabled", "=", true)
+        .where("e.status", "=", "ACTIVE")
+        .where("e.is_active", "=", true)
+        .where("e.read_capability", "<>", "none")
+        .where("ev.status", "=", "EFFECTIVE")
+        .executeTakeFirst() as { table_schema: string; table_name: string; primary_key: string; tenant_column: string | null } | undefined;
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND" });
@@ -358,7 +376,15 @@ export function createExportRoutes(router: Router, deps: ExportRouteDeps): Route
         : null;
       const dlMaxRows = getIntParam(dlSnap, "api.export.records_max_rows", EXPORT_MAX_ROWS);
 
-      const rows    = await fetchRows(db, fullTable, token.tenantId, token.ids, dlMaxRows);
+      const rows    = await fetchRows(
+        db,
+        fullTable,
+        entityRow.primary_key,
+        entityRow.tenant_column,
+        token.tenantId,
+        token.ids,
+        dlMaxRows,
+      );
       const columns = await resolveExportColumns(db, entityCode, token.columns);
       const headers = columns.length > 0 ? columns : (rows[0] ? Object.keys(rows[0]) : []);
 

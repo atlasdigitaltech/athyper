@@ -134,7 +134,14 @@ function compilePlan(
   if (command.offset !== undefined && command.offset > 0 && !allowsOffset(descriptor)) {
     throw new EntityQueryValidationError("OFFSET_PAGINATION_NOT_ALLOWED", "Offset pagination is restricted to explicitly bounded administrative entities.");
   }
-  const predicates: QueryPredicate[] = [{ column: descriptor.storage.tenantColumn, operator: "eq", value: context.tenantId }];
+  const tenantColumn = descriptor.storage.tenantColumn;
+  // A compiled global entity is intentionally queryable without a tenant
+  // predicate. The request context may still carry a tenant (for auth and
+  // policy evaluation), but the physical contract decides whether row scope
+  // is applied.
+  const predicates: QueryPredicate[] = tenantColumn
+    ? [{ column: tenantColumn, operator: "eq", value: context.tenantId }]
+    : [];
   for (const filter of command.filters ?? []) predicates.push(compileFilter(descriptor, filter));
   addVerifiedScopePredicates(predicates, descriptor, context);
   addScopePredicate(predicates, descriptor, "organization_id", context.organizationId);

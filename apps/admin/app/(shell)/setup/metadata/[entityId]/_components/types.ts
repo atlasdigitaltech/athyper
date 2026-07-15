@@ -66,6 +66,11 @@ export interface EntityDetail {
   icon_key: string | null;
   color_token: string | null;
   status: string;
+  runtime_enabled?: boolean;
+  primary_key?: string | null;
+  tenant_column?: string | null;
+  read_capability?: string;
+  write_capability?: string;
   feature_flags: Record<string, unknown>;
   display_config: Record<string, unknown>;
   identity_config: Record<string, unknown>;

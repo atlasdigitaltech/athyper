@@ -11,6 +11,18 @@ BEGIN
         SELECT string_agg(format('%s', to_regclass(table_name)), ', ' ORDER BY ord)
           INTO v_tables
           FROM unnest(ARRAY[
+              -- Compiled snapshots reference entity versions and are immutable.
+              -- Clear them before rebuilding the control metadata graph so the
+              -- compiler cannot collide with stale snapshots from the old graph.
+              'snapshot.entity_compiled_overlay',
+              'snapshot.entity_compiled',
+
+              -- Tenant overlay definitions are version-bound metadata inputs.
+              -- Clear them with the entity graph so an old overlay cannot be
+              -- re-applied to a newly rebuilt entity/version identity.
+              'control.overlay_change',
+              'control.overlay',
+
               -- Flow/editor metadata children
               'control.entity_flow_field',
               'control.entity_flow_section',
@@ -32,6 +44,7 @@ BEGIN
 
               -- Core entity metadata
               'control.entity_field',
+              'control.entity_version_contract',
               'control.entity_version',
               'control.entity',
 
@@ -57,4 +70,3 @@ BEGIN
         END IF;
     END IF;
 END $$;
-

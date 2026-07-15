@@ -1,6 +1,7 @@
 export {
   setClients,
   useCompiledEntity,
+  useCatalogEntity,
   useEntityCapabilities,
   useEntityFlow,
   useEntityOperations,

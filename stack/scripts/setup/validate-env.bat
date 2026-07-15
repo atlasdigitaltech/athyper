@@ -146,6 +146,8 @@ REM ----------------------------
 echo [2/6] Required variables...
 call :require_var DATABASE_URL
 call :require_var REDIS_URL
+call :require_var ATTACHMENT_AUTH_STRICT
+call :require_var ATTACHMENT_MULTIPART_CLEANUP_STRICT
 call :require_var PUBLIC_BASE_URL
 call :require_var PUBLIC_WEB_URL
 call :require_var APPS_ATHYPER_WEB_HOST

@@ -89,3 +89,7 @@ export * from "./ledger/post-journal-gl.service.js";
 // ── Lifecycle ────────────────────────────────────────────────────────────────
 export * from "./lifecycle/hook-runner.service.js";
 export * from "./lifecycle/lifecycle-sync-hook.js";
+export * from "./procurement/sourcing/sourcing-authorization.service.js";
+export * from "./procurement/sourcing/sourcing-document.service.js";
+export * from "./sales/sales-authorization.service.js";
+export * from "./sales/sales-document.service.js";

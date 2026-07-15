@@ -97,6 +97,7 @@ const DEPRECATED_ROUTE_SUNSET_HTTP_DATE = "Sat, 12 Sep 2026 00:00:00 GMT";
 import { makeAuditEvent } from "../audit.js";
 import { runComplianceSuiteIfDev } from "../../packages/services/metadata/src/entity-compliance.js";
 import { createEntityCompilerService } from "../../packages/services/metadata/src/entity-compiler.service.js";
+import { createCatalogCompiler } from "../../packages/services/metadata/src/catalog-compiler.js";
 import { createPlatformMetricCollector } from "@athyper/server-foundation/monitoring/platform-metrics";
 import {
   bindVerifiedRequestContext,
@@ -578,11 +579,14 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       (req.headers["x-realm-key"] as string | undefined) ??
       (req.headers["x-realm"] as string | undefined);
 
+    const xOrg =
+      (req.headers["x-org"] as string | undefined) ??
+      (req.headers["x-tenant-code"] as string | undefined);
     runWithContext({
       requestId,
       ...(planeKey ? { planeKey } : {}),
       ...(realmKey ? { realmKey, realm: realmKey } : {}),
-      ...parseOrgHeader(req.headers["x-org"]),
+      ...parseOrgHeader(xOrg),
     }, next);
   });
 
@@ -732,7 +736,10 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       // mounted on `app`, so the apiRouter tenant-stamp middleware doesn't run
       // here and the ALS ctx will not carry tenantId/planeKey. The pipeline
       // resolves them via headers + claims directly.
-      const xOrg = (req.headers["x-org"] as string | undefined) ?? "";
+      const xOrg =
+        (req.headers["x-org"] as string | undefined) ??
+        (req.headers["x-tenant-code"] as string | undefined) ??
+        "";
       const xRealm =
         (req.headers["x-realm-key"] as string | undefined)
         ?? (req.headers["x-realm"] as string | undefined);
@@ -844,7 +851,14 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   const effectiveDefaultRealm = kernelConfig?.iam.defaultRealmKey ?? config.iam.realm;
   apiRouter.use(async (req: Request, _res: Response, next: NextFunction) => {
     const endRequestContext = startFrameworkPhase("request_context");
-    const xOrg   = (req.headers["x-org"]   as string) ?? "";
+    const xOrg =
+      (req.headers["x-org"] as string | undefined) ??
+      (req.headers["x-tenant-code"] as string | undefined) ??
+      "";
+    // A few legacy handlers still read req.headers["x-org"] directly. Keep
+    // that internal compatibility surface aligned with the canonical tenant
+    // header while all authorization checks continue to validate the value.
+    if (xOrg && !req.headers["x-org"]) req.headers["x-org"] = xOrg;
     const xRealm =
       (req.headers["x-realm-key"] as string | undefined) ??
       (req.headers["x-realm"] as string | undefined) ??
@@ -1059,6 +1073,8 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
     cache: descriptorCache,
     executionDescriptorProvider,
+    loadEffectiveCompiledEntity: async (entityCode, tenantId) =>
+      deps.entityCompiler.loadRuntimeCompiledEntity(entityCode, tenantId) as unknown as Promise<Record<string, unknown> | null>,
     readAuthenticatedContext: () => {
       const context = tryGetContext();
       return context ? { tenantId: context.tenantId } : undefined;
@@ -1080,8 +1096,6 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     checkPermissionBatch,
     permissionResolverRegistry,
     executionDescriptorProvider,
-    entityQueryPilotCodes: new Set((process.env["ENTITY_QUERY_V1_PILOTS"] ?? "")
-      .split(",").map((value) => value.trim()).filter(Boolean)),
     entityQueryCursorSecret: process.env["ENTITY_QUERY_CURSOR_SECRET"] ?? process.env["EXPORT_TOKEN_SECRET"],
     tokenSecret:          process.env["EXPORT_TOKEN_SECRET"],
     redis,
@@ -1476,8 +1490,10 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // Compiles all system entities first so snapshot.entity_compiled rows exist,
   // then validates the 10-point checklist. Never blocks boot or affects /readyz.
   lifecycle.onReady(async () => {
-    await createEntityCompilerService(_db, logger, getRecordsCapabilityHandlerManifest()).compileAllSystemEntities();
-    await runComplianceSuiteIfDev(_db, logger);
+    await createCatalogCompiler(_db, logger).compileAll();
+    const compiler = createEntityCompilerService(_db, logger, getRecordsCapabilityHandlerManifest());
+    const compileSummary = await compiler.compileAllSystemEntities();
+    await runComplianceSuiteIfDev(_db, logger, compileSummary);
   });
 
   // ─── Signal handlers ───────────────────────────────────────────────────────

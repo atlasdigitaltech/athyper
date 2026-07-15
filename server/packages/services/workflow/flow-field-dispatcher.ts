@@ -132,6 +132,13 @@ export async function dispatchFlowFieldBindings(
       AND  ef0.tenant_id IS NULL
       AND  efs.tenant_id IS NULL
       AND  eff.tenant_id IS NULL
+      AND  e.runtime_enabled = true
+      AND  e.status = 'ACTIVE'
+      AND  e.is_active = true
+      AND  e.read_capability <> 'none'
+      AND  ev.status = 'EFFECTIVE'
+      AND  ef.is_active = true
+      AND  ef.runtime_enabled = true
       AND  eff.metadata ? 'target'
   `.execute(db);
 

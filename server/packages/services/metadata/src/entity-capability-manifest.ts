@@ -371,16 +371,17 @@ export function compileEntityCapabilityManifest(
   if (deletionMode !== "hard_delete" && hardDelete) {
     issues.push(`${deletionMode.replaceAll("_", "-")} entity cannot expose hard delete`);
   }
+  const deleteOperationEnabled = operationFor(input.operations, "delete")?.enabled === true;
   const storageColumns = new Set(input.fields.map((field) => storageColumn(field.column_name)));
-  if (deletionMode === "soft_delete"
+  if (deleteOperationEnabled && deletionMode === "soft_delete"
     && !["is_deleted", "deleted_at", "is_active"].some((column) => storageColumns.has(column))) {
     issues.push("soft-delete entity requires is_deleted, deleted_at, or is_active storage");
   }
-  if (deletionMode === "archive"
+  if (deleteOperationEnabled && deletionMode === "archive"
     && !["archived_at", "status", "is_active"].some((column) => storageColumns.has(column))) {
     issues.push("archive entity requires archived_at, status, or is_active storage");
   }
-  if (deletionMode === "retire"
+  if (deleteOperationEnabled && deletionMode === "retire"
     && !["retired_at", "status", "is_active"].some((column) => storageColumns.has(column))) {
     issues.push("retire entity requires retired_at, status, or is_active storage");
   }

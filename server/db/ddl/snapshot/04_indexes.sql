@@ -20,7 +20,10 @@ CREATE INDEX IF NOT EXISTS sr_hash_idx
 -- ─── snapshot.entity_compiled ───────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS ec_version_idx
-    ON snapshot.entity_compiled (entity_version_id);
+    ON snapshot.entity_compiled (entity_version_id, artifact_kind);
+
+CREATE INDEX IF NOT EXISTS ec_artifact_scope_idx
+    ON snapshot.entity_compiled (tenant_id, artifact_kind, entity_version_id);
 
 
 -- =============================================================================

@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { queryKeys } from "@athyper/api-contracts/query-keys";
 import { runtimePath } from "@athyper/api-contracts/runtime-paths";
-import { type CompiledEntity, type LookupDomainBundle, type EntityOperation, type StatusRoute, type EntityCapability } from "@athyper/api-contracts/metadata";
+import { type CatalogEntity, type CompiledEntity, type LookupDomainBundle, type EntityOperation, type StatusRoute, type EntityCapability } from "@athyper/api-contracts/metadata";
 import { type MasterRecord } from "@athyper/api-contracts/records";
 import { type InboxItem, type ApprovalAction, type ApprovalContext, type WorkflowEvent, type ActivityEntry } from "@athyper/api-contracts/workflow";
 import { type Notification, type SavedView } from "@athyper/api-contracts/platform";
@@ -82,6 +82,16 @@ export function useCompiledEntity(entityCode: string, opts?: { enabled?: boolean
     queryFn: () => meta().getCompiledEntity(entityCode),
     staleTime: COMPILED_ENTITY_STALE_TIME_MS, // production descriptors change infrequently
     refetchOnMount: IS_DEVELOPMENT_RUNTIME ? "always" : true,
+    enabled: Boolean(entityCode) && (opts?.enabled ?? true),
+  });
+}
+
+/** Catalog metadata is for registry/studio consumers and does not imply API execution. */
+export function useCatalogEntity(entityCode: string, opts?: { enabled?: boolean }) {
+  return useQuery<CatalogEntity>({
+    queryKey: queryKeys.catalogEntity.byCode(entityCode),
+    queryFn: () => meta().getCatalogEntity(entityCode),
+    staleTime: 5 * 60 * 1000,
     enabled: Boolean(entityCode) && (opts?.enabled ?? true),
   });
 }

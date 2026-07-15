@@ -211,8 +211,17 @@ export function createDocumentRuntimeRegistryRoute(
                capability,
                required_permission,
                reason
-          FROM control.entity_action_rule
+         FROM control.entity_action_rule
          WHERE entity_code = ${entityCode}
+           AND EXISTS (
+             SELECT 1 FROM control.entity e
+              WHERE (e.entity_code = ${entityCode} OR e.name = ${entityCode})
+                AND e.tenant_id IS NULL
+                AND e.runtime_enabled = true
+                AND e.status = 'ACTIVE'
+                AND e.is_active = true
+                AND e.read_capability <> 'none'
+           )
          ORDER BY action_code, status
       `.execute(db);
 
@@ -253,8 +262,14 @@ export function createDocumentRuntimeRegistryRoute(
             JOIN control.entity_version ev ON ev.id = ef.entity_version_id
             JOIN control.entity e          ON e.id  = ev.entity_id
            WHERE e.entity_code = ${entityCode}
+             AND e.tenant_id IS NULL
+             AND e.runtime_enabled = true
+             AND e.status = 'ACTIVE'
+             AND e.is_active = true
+             AND e.read_capability <> 'none'
              AND ev.status = 'EFFECTIVE'
              AND ef.is_active = true
+             AND ef.runtime_enabled = true
              AND ef.editability ? 'editable_in_status'
              AND jsonb_array_length(ef.editability->'editable_in_status') > 0
         `.execute(db),
@@ -265,8 +280,17 @@ export function createDocumentRuntimeRegistryRoute(
                  capability,
                  required_permission,
                  reason
-            FROM control.entity_action_rule
+           FROM control.entity_action_rule
            WHERE entity_code = ${entityCode}
+             AND EXISTS (
+               SELECT 1 FROM control.entity e
+                WHERE (e.entity_code = ${entityCode} OR e.name = ${entityCode})
+                  AND e.tenant_id IS NULL
+                  AND e.runtime_enabled = true
+                  AND e.status = 'ACTIVE'
+                  AND e.is_active = true
+                  AND e.read_capability <> 'none'
+             )
            ORDER BY action_code, status
         `.execute(db),
       ]);

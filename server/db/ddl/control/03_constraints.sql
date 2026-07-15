@@ -289,6 +289,21 @@ DO $$ BEGIN ALTER TABLE control.entity_version ADD CONSTRAINT ev_tenant_fk
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- control.entity_field
+-- control.entity_version_contract
+DO $$ BEGIN ALTER TABLE control.entity_version_contract ADD CONSTRAINT evc_version_fk
+    FOREIGN KEY (entity_version_id) REFERENCES control.entity_version(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_version_contract ADD CONSTRAINT evc_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_version_contract ADD CONSTRAINT evc_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_version_contract ADD CONSTRAINT evc_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- control.entity_field
 DO $$ BEGIN ALTER TABLE control.entity_field ADD CONSTRAINT ef_version_fk
     FOREIGN KEY (entity_version_id) REFERENCES control.entity_version(id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;

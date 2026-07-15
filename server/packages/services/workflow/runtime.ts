@@ -27,6 +27,8 @@ import type {
   WorkflowSubmissionResult,
   WorkItemActionCommand,
   SubmitWorkflowCommand,
+  RuntimeEntityStorage,
+  WorkflowExecutionDescriptorProvider,
 } from "./runtime.types.js";
 
 const GLOBAL_RUNTIME_FLAG = "workflow_runtime.enabled";
@@ -43,6 +45,7 @@ export interface WorkflowLifecycleRuntimeDeps {
   operationAuthorizer?: OperationAuthorizer;
   gateEvaluator?: GateEvaluator;
   entityAdapterRegistry?: EntityAdapterRegistry;
+  executionDescriptorProvider?: WorkflowExecutionDescriptorProvider;
   createWorkflowEngineForDb?: (db: WorkflowRuntimeDb | WorkflowRuntimeTransaction) => WorkflowEngine;
 }
 
@@ -63,6 +66,7 @@ interface RuntimeExecutionContext {
   entityName: string;
   operationCode: string;
   record: Record<string, unknown>;
+  storage: RuntimeEntityStorage;
   lifecycle: {
     instanceId: string;
     lifecycleId: string;
@@ -144,6 +148,7 @@ export class DefaultWorkflowLifecycleRuntime implements WorkflowLifecycleRuntime
           workflowRequestId: workflow.id,
           remarks: normalized.remarks,
           payload: ctx.record,
+          storage: ctx.storage,
         });
 
         const operationResult: OperationResult = {
@@ -260,6 +265,27 @@ export class DefaultWorkflowLifecycleRuntime implements WorkflowLifecycleRuntime
     // Throws UNSUPPORTED_ENTITY if entity has no registered adapter.
     const entityAdapter = this.adapterRegistry.resolve(entityName);
 
+    const compiled = this.deps.executionDescriptorProvider
+      ? await this.deps.executionDescriptorProvider.get({
+          plane: "mesh",
+          tenantId: command.tenantId,
+          entityCode: entityName,
+        })
+      : null;
+    const storage: RuntimeEntityStorage = compiled?.descriptor.storage ?? {
+      schema: entityAdapter.sourceTable.split(".")[0] ?? "",
+      table: entityAdapter.sourceTable.split(".")[1] ?? entityAdapter.sourceTable,
+      primaryKey: "id",
+      tenantColumn: "tenant_id",
+    };
+    if (compiled && storage.writeCapability === "none") {
+      throw new WorkflowRuntimeError(
+        "OPERATION_DENIED",
+        `Entity '${entityName}' does not expose a workflow write capability.`,
+        403,
+      );
+    }
+
     await this.authorizer.authorize({
       tenantId: command.tenantId,
       principalId: command.actorId,
@@ -268,12 +294,12 @@ export class DefaultWorkflowLifecycleRuntime implements WorkflowLifecycleRuntime
       operationCode,
     });
 
-    const record = await db
-      .selectFrom(`${entityAdapter.sourceTable} as src` as never)
+    let recordQuery = (db
+      .selectFrom(`${storage.schema}.${storage.table} as src` as never) as any)
       .selectAll()
-      .where("src.id" as never, "=" as never, command.entityId as never)
-      .where("src.tenant_id" as never, "=" as never, command.tenantId as never)
-      .executeTakeFirst() as Record<string, unknown> | undefined;
+      .where(`src.${storage.primaryKey}`, "=", command.entityId);
+    if (storage.tenantColumn) recordQuery = recordQuery.where(`src.${storage.tenantColumn}`, "=", command.tenantId);
+    const record = await recordQuery.executeTakeFirst() as Record<string, unknown> | undefined;
 
     if (!record) {
       throw new WorkflowRuntimeError("ENTITY_NOT_FOUND", `${entityName} '${command.entityId}' not found`);
@@ -388,6 +414,7 @@ export class DefaultWorkflowLifecycleRuntime implements WorkflowLifecycleRuntime
       entityName,
       operationCode,
       record,
+      storage,
       lifecycle: {
         instanceId: lifecycle.instance_id,
         lifecycleId: lifecycle.lifecycle_id,

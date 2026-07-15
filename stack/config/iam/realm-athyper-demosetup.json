@@ -1309,6 +1309,25 @@
       "requiredActions": []
     },
     {
+      "id": "aa000002-0000-0000-0000-000000000001",
+      "username": "priya",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Priya",
+      "lastName": "Demo",
+      "email": "priya@athyper.demo",
+      "realmRoles": [
+        "default-roles-athyper",
+        "NEON_USER"
+      ],
+      "clientRoles": {
+        "neon-web": [
+          "AUTHORIZED"
+        ]
+      },
+      "requiredActions": []
+    },
+    {
       "id": "cc001000-0000-0000-0000-000000000005",
       "username": "sdtx.admin",
       "enabled": true,

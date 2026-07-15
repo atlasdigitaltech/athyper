@@ -23,6 +23,11 @@ interface EntityRow {
   color_token: string | null;
   status: string;
   field_count: number;
+  runtime_enabled: boolean;
+  primary_key: string | null;
+  tenant_column: string | null;
+  read_capability: string;
+  write_capability: string;
 }
 
 // ─── Entity class badge colours ───────────────────────────────────────────────
@@ -107,6 +112,22 @@ const columns: ColumnDef<EntityRow>[] = [
         {row.original.status}
       </Badge>
     ),
+  },
+  {
+    id: "runtime_enabled",
+    accessorKey: "runtime_enabled",
+    header: "API",
+    cell: ({ row }) => (
+      <Badge variant={row.original.runtime_enabled ? "default" : "outline"}>
+        {row.original.runtime_enabled ? "Execution" : "Catalog"}
+      </Badge>
+    ),
+  },
+  {
+    id: "write_capability",
+    accessorKey: "write_capability",
+    header: "Write",
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.write_capability}</span>,
   },
 ];
 

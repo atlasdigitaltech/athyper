@@ -86,12 +86,42 @@ missing_relations AS (
 classified AS (
     SELECT
         r.*,
+        -- entity_class is the logical runtime/rendering family; it is not a
+        -- copy of table_schema.  Keep the ten-class taxonomy stable and use
+        -- schema + relation shape only for deterministic discovery defaults.
+        -- Curated rows in 040_control_entity_contract.sql remain authoritative
+        -- through the left join above.
         CASE
+            WHEN r.backing_type IN ('view', 'materialized_view') THEN 'AGGREGATE'
             WHEN r.table_schema = 'ledger' THEN 'LEDGER'
             WHEN r.table_schema = 'log' THEN 'LOG'
-            WHEN r.table_schema = 'aggregate' OR r.backing_type IN ('view', 'materialized_view') THEN 'AGGREGATE'
+            WHEN r.table_schema = 'aggregate' THEN 'AGGREGATE'
+            WHEN r.table_schema = 'document'
+             AND (
+                r.table_name IN ('accounting_distribution', 'journal_line_reference', 'payment_entry_allocation')
+                OR r.table_name LIKE '%\_line' ESCAPE '\'
+                OR r.table_name LIKE '%\_lines' ESCAPE '\'
+                OR r.table_name LIKE '%\_item' ESCAPE '\'
+                OR r.table_name LIKE '%\_items' ESCAPE '\'
+                OR r.table_name LIKE '%\_allocation' ESCAPE '\'
+                OR r.table_name LIKE '%\_reference' ESCAPE '\'
+                OR r.table_name LIKE '%\_link' ESCAPE '\'
+                OR r.table_name LIKE '%\_snapshot' ESCAPE '\'
+             ) THEN 'DOCUMENT_RELATION'
             WHEN r.table_schema = 'document' THEN 'DOCUMENT'
+            WHEN r.table_schema = 'shared'
+             AND r.table_name ~ '(^workspace$|^module$|permission|persona|(^|_)role$|subscription_plan|enterprise_feature|plan_.*_access$)'
+                THEN 'CONTROL'
+            WHEN r.table_schema = 'shared'
+             AND r.table_name ~ '(_link|_links|_member|_members|_mapping|_mappings|_crosswalk|_access)$'
+                THEN 'RELATION'
             WHEN r.table_schema = 'shared' THEN 'REFERENCE'
+            WHEN r.table_schema = 'master'
+             AND r.table_name ~ '(_link|_links|_member|_members|_role|_roles|_assignment|_assignments|_mapping|_mappings|_crosswalk|_access|_grant|_grants|_item|_items|_relation|_relations)$'
+                THEN 'RELATION'
+            WHEN r.table_schema = 'master'
+             AND r.table_name ~ '(^dimension_|_dimension$|_dimension_)'
+                THEN 'DIMENSION'
             WHEN r.table_schema = 'master' THEN 'MASTER'
             ELSE 'CONTROL'
         END AS entity_class,
@@ -314,6 +344,11 @@ inserted_entities AS (
         ownership_model,
         kind,
         backing_type,
+        runtime_enabled,
+        primary_key,
+        tenant_column,
+        read_capability,
+        write_capability,
         governance_level,
         security_tier,
         mutability,
@@ -345,6 +380,11 @@ inserted_entities AS (
         'system',
         r.resolved_kind,
         r.backing_type,
+        false,
+        NULL::text,
+        NULL::text,
+        'none',
+        'none',
         'standard',
         r.security_tier,
         'locked',
@@ -372,32 +412,13 @@ inserted_entities AS (
         c.system_user_id
     FROM resolved r
     CROSS JOIN constants c
-    RETURNING id, tenant_id
+    -- Discovery may create missing registrations only. Curated rows from 040
+    -- are never overwritten by schema coverage replay.
+    ON CONFLICT (table_schema, table_name) DO NOTHING
+    RETURNING id
 )
-INSERT INTO control.entity_version (
-    entity_id,
-    tenant_id,
-    version_no,
-    status,
-    label,
-    change_type,
-    effective_from,
-    created_by,
-    updated_by
-)
-SELECT
-    e.id,
-    e.tenant_id,
-    1,
-    'EFFECTIVE',
-    'Initial Version',
-    'structural',
-    now(),
-    c.system_user_id,
-    c.system_user_id
-FROM inserted_entities e
-CROSS JOIN constants c
-ON CONFLICT (entity_id, version_no) DO NOTHING;
+SELECT count(*) AS discovered_entity_count
+FROM inserted_entities;
 
 -- Repair rows inserted by earlier versions of this coverage seed. Materialized
 -- views are not exposed consistently through information_schema.columns, so use
@@ -601,15 +622,10 @@ SET
         WHEN e.table_schema IN ('ledger', 'aggregate') OR cc.backing_type IN ('view', 'materialized_view') THEN 'aggregate'
         ELSE e.kind
     END,
-    entity_class = CASE
-        WHEN e.table_schema = 'ledger' THEN 'LEDGER'
-        WHEN e.table_schema = 'log' THEN 'LOG'
-        WHEN e.table_schema = 'aggregate' OR cc.backing_type IN ('view', 'materialized_view') THEN 'AGGREGATE'
-        WHEN e.table_schema = 'document' THEN 'DOCUMENT'
-        WHEN e.table_schema = 'shared' THEN 'REFERENCE'
-        WHEN e.table_schema = 'master' THEN 'MASTER'
-        ELSE 'CONTROL'
-    END,
+    -- entity_class is assigned exactly once by the discovery classifier in
+    -- the INSERT above.  Do not recompute it here: the old replay-time
+    -- schema-only update erased DOCUMENT_RELATION/RELATION classifications
+    -- and also made this repair step override curated metadata.
     display_config = e.display_config || jsonb_build_object(
         'list_columns', to_jsonb(cc.list_columns),
         'code_field', cc.natural_key_fields[1],
@@ -640,6 +656,11 @@ WHERE e.tenant_id IS NULL
 -- affordances as the curated catalogue.
 UPDATE control.entity
 SET
+    runtime_enabled = false,
+    primary_key = NULL,
+    tenant_column = NULL,
+    read_capability = 'none',
+    write_capability = 'none',
     feature_flags = feature_flags || '{"comments_enabled":true,"has_attachments":true,"event_history":true}'::jsonb,
     updated_at = now(),
     updated_by = '00000000-0000-0000-0000-000000000000'
@@ -656,5 +677,5 @@ WHERE tenant_id IS NULL
       'public',
       'shared',
       'snapshot'
-  );
-
+  )
+  AND feature_flags ->> 'metadata_coverage_source' = 'governed_schema_coverage';

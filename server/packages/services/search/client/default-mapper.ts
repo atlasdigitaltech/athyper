@@ -68,10 +68,23 @@ function toMillis(value: unknown): number | undefined {
 export function defaultRowToSearchDocument(
   row:        Record<string, unknown>,
   entityType: string,
+  options: {
+    primaryKey?: string;
+    tenantColumn?: string | null;
+    tenantId?: string;
+    entityId?: string;
+  } = {},
 ): SearchDocument | null {
-  const id        = row["id"];
-  const tenantId  = row["tenant_id"];
-  if (typeof id !== "string" || typeof tenantId !== "string") return null;
+  const primaryKey = options.primaryKey ?? "id";
+  const idValue = row[primaryKey] ?? options.entityId;
+  const id = typeof idValue === "string" || typeof idValue === "number"
+    ? String(idValue)
+    : null;
+  const tenantValue = options.tenantColumn === null
+    ? options.tenantId
+    : row[options.tenantColumn ?? "tenant_id"] ?? options.tenantId;
+  const tenantId = typeof tenantValue === "string" ? tenantValue : null;
+  if (!id || !tenantId) return null;
 
   const titleKeys = ["name", "code", `${entityType}_number`, "document_number", "short_name"];
   const title =

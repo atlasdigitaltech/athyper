@@ -606,7 +606,6 @@ BEGIN
     RAISE NOTICE 'control.entity_version: % rows inserted (version 1 for master system entities)', cnt;
 END $$;
 
-
 -- Final sweep across all entities (any schema): normalise version-1 fields then
 -- insert a missing version-1 row. UPDATE guard skips rows already matching.
 DO $$
@@ -651,3 +650,46 @@ BEGIN
     RAISE NOTICE 'entity_version backfill: % rows normalised, % new version-1 rows inserted', v_upd, v_ins;
 END $$;
 
+-- Phase 3: materialize one typed contract row for every effective version.
+-- This is a compatibility backfill only; compiler consumers still read the
+-- legacy entity columns until the execution compiler migration phase.
+INSERT INTO control.entity_version_contract (
+    entity_version_id, tenant_id, catalog_enabled, api_exposure,
+    backing_type, table_schema, table_name, key_strategy, primary_key,
+    tenant_column, read_capability, write_capability, source_kind,
+    created_by, updated_by
+)
+SELECT
+    ev.id, ev.tenant_id, true,
+    CASE WHEN e.runtime_enabled THEN 'API' ELSE 'CATALOG_ONLY' END,
+    e.backing_type, e.table_schema, e.table_name,
+    CASE WHEN e.primary_key IS NULL THEN 'none' ELSE 'single' END,
+    e.primary_key, e.tenant_column, e.read_capability, e.write_capability,
+    CASE WHEN e.feature_flags ->> 'metadata_coverage_source' = 'governed_schema_coverage'
+         THEN 'derived' ELSE 'explicit' END,
+    '00000000-0000-0000-0000-000000000000',
+    '00000000-0000-0000-0000-000000000000'
+FROM control.entity_version ev
+JOIN control.entity e ON e.id = ev.entity_id
+WHERE ev.status = 'EFFECTIVE'
+ON CONFLICT (entity_version_id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    catalog_enabled = EXCLUDED.catalog_enabled,
+    api_exposure = EXCLUDED.api_exposure,
+    backing_type = EXCLUDED.backing_type,
+    table_schema = EXCLUDED.table_schema,
+    table_name = EXCLUDED.table_name,
+    key_strategy = EXCLUDED.key_strategy,
+    primary_key = EXCLUDED.primary_key,
+    tenant_column = EXCLUDED.tenant_column,
+    read_capability = EXCLUDED.read_capability,
+    write_capability = EXCLUDED.write_capability,
+    source_kind = EXCLUDED.source_kind,
+    updated_at = now(),
+    updated_by = EXCLUDED.updated_by;
+
+DO $$
+BEGIN
+    RAISE NOTICE 'entity_version_contract: % effective version contracts materialized',
+        (SELECT count(*) FROM control.entity_version_contract);
+END $$;

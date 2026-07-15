@@ -65,6 +65,13 @@ CREATE INDEX IF NOT EXISTS permission_category_idx ON shared.permission (categor
 CREATE INDEX IF NOT EXISTS permission_active_pidx ON shared.permission (code) WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS permission_plan_restricted_pidx ON shared.permission (id) WHERE is_plan_restricted = true;
 
+-- permission_scope_policy
+CREATE INDEX IF NOT EXISTS permission_scope_policy_permission_pidx
+    ON shared.permission_scope_policy (permission_id) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS permission_scope_policy_lookup_pidx
+    ON shared.permission_scope_policy (assignment_scope_type, organization_domain, permission_id)
+    WHERE status = 'active';
+
 -- persona_permission
 CREATE INDEX IF NOT EXISTS persona_permission_persona_idx ON shared.persona_permission (persona_id);
 CREATE INDEX IF NOT EXISTS persona_permission_granted_pidx ON shared.persona_permission (persona_id, permission_id) WHERE is_granted = true;

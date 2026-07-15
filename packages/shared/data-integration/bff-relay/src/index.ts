@@ -11,6 +11,19 @@ const DEFAULT_UPSTREAM_TIMEOUT_MS = 30_000;
 const DEFAULT_UPLOAD_CAP_BYTES = 100 * 1024 * 1024;
 const CONTROL_CHARS = new RegExp("[\\x00-\\x1F\\x7F]");
 
+type RelayWorkContext = {
+  type: "legal_entity" | "operating_organization";
+  id: string;
+  tenantId: string;
+  domain?: "procurement" | "sales";
+  scopeVersion?: number;
+};
+
+type RelaySession = V4Session & {
+  activeWorkContext?: RelayWorkContext;
+  authEpoch?: number;
+};
+
 // ─── Runtime header construction ──────────────────────────────────────────────
 
 export function buildRuntimeHeaders(session: V4Session): Record<string, string> {
@@ -21,19 +34,50 @@ export function buildRuntimeHeaders(session: V4Session): Record<string, string> 
   };
 
   const orgAliases = Object.keys(session.organizations);
-  const activeOrgAlias = session.activeOrg && session.organizations[session.activeOrg]
-    ? session.activeOrg
-    : orgAliases[0] ?? null;
-  if (activeOrgAlias) headers["X-Org"] = activeOrgAlias;
-
+  const contextAlias = session.activeWorkContext
+    ? orgAliases.find((alias) => {
+        const membership = session.organizations[alias];
+        return [membership?.id, membership?.organizationId, membership?.legalEntityId]
+          .includes(session.activeWorkContext?.id);
+      })
+    : undefined;
+  // Prefer the membership identified by the typed context. A session can be
+  // read while an older context activation is being migrated; choosing
+  // activeOrg first in that case would emit X-Org for one membership and
+  // X-Work-Context-* for another, which the runtime must reject.
+  const activeOrgAlias = contextAlias
+    ?? (session.activeOrg && session.organizations[session.activeOrg]
+      ? session.activeOrg
+      : orgAliases[0] ?? null);
   const activeMembership = activeOrgAlias ? session.organizations[activeOrgAlias] : undefined;
-  if (activeMembership?.tenantId) headers["X-Tenant-ID"] = activeMembership.tenantId;
-  if (activeMembership?.tenantCode) headers["X-Tenant-Code"] = activeMembership.tenantCode;
+  const activeContext = activeMembership ? toRelayWorkContext(activeMembership) : undefined;
+
+  // X-Org remains the compatibility contract for the runtime tenant stamp and
+  // the platform/notification handlers. The typed headers below are the
+  // authoritative work-context contract; both are derived from the same
+  // session-selected membership and are never caller-controlled.
+  if (activeOrgAlias) headers["X-Org"] = activeOrgAlias;
+  const tenantId = activeContext?.tenantId ?? activeMembership?.tenantId;
+  const tenantCode = activeMembership?.tenantCode ?? tenantCodeFromAlias(activeOrgAlias);
+  if (tenantId) headers["X-Tenant-ID"] = tenantId;
+  if (tenantCode) headers["X-Tenant-Code"] = tenantCode;
+
   if (activeMembership?.contextType) headers["X-Org-Context-Type"] = activeMembership.contextType;
-  if (activeMembership?.organizationId) headers["X-Organization-ID"] = activeMembership.organizationId;
+  const organizationId = activeMembership?.organizationId
+    ?? (activeContext?.type === "legal_entity" ? activeContext.id : undefined);
+  if (organizationId) headers["X-Organization-ID"] = organizationId;
   if (activeMembership?.organizationCode) headers["X-Organization-Code"] = activeMembership.organizationCode;
   if (activeMembership?.legalEntityId) headers["X-Legal-Entity-ID"] = activeMembership.legalEntityId;
   if (activeMembership?.legalEntityCode) headers["X-Legal-Entity-Code"] = activeMembership.legalEntityCode;
+
+  if (activeContext) {
+    headers["X-Work-Context-Type"] = activeContext.type;
+    headers["X-Work-Context-ID"] = activeContext.id;
+    if (activeContext.domain) headers["X-Work-Context-Domain"] = activeContext.domain;
+    if (activeContext.scopeVersion !== undefined) headers["X-Scope-Version"] = String(activeContext.scopeVersion);
+  }
+  const authEpoch = session.authEpoch ?? activeMembership?.authEpoch;
+  if (authEpoch !== undefined) headers["X-Auth-Epoch"] = String(authEpoch);
 
   // Fiscal-context header — read by @athyper/svc-shared::resolveActiveFiscalContext
   // to resolve the caller's timezone, week-start, and fiscal-year-start when
@@ -50,6 +94,29 @@ export function buildRuntimeHeaders(session: V4Session): Record<string, string> 
   }
 
   return headers;
+}
+
+function tenantCodeFromAlias(alias: string | null): string | undefined {
+  const code = alias?.split("--", 1)[0]?.trim();
+  return code || undefined;
+}
+
+function toRelayWorkContext(membership: RelaySession["organizations"][string]): RelayWorkContext | undefined {
+  const type = membership.contextType === "operating_organization"
+    ? "operating_organization"
+    : membership.contextType === "legal_entity"
+      ? "legal_entity"
+      : undefined;
+  const id = membership.organizationId ?? membership.legalEntityId ?? membership.id;
+  const tenantId = membership.tenantId;
+  if (!type || !id || !tenantId) return undefined;
+  return {
+    type,
+    id,
+    tenantId,
+    ...(membership.workContextDomain ? { domain: membership.workContextDomain } : {}),
+    ...(membership.scopeVersion !== undefined ? { scopeVersion: membership.scopeVersion } : {}),
+  };
 }
 
 // ─── Path & URL helpers ───────────────────────────────────────────────────────

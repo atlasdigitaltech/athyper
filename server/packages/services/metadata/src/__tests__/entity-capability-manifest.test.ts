@@ -181,6 +181,58 @@ describe("entity capability manifest compiler", () => {
     expect(manifest.deletionMode).toBe("lifecycle_only");
   });
 
+  it("accepts amendable rejected document states", () => {
+    const manifest = compileEntityCapabilityManifest(input({
+      entityCode: "purchase_invoice",
+      renderer: "document",
+      hasDocumentRuntime: true,
+      featureFlags: { has_lifecycle: true },
+      operations: [],
+      lifecycleStates: [{
+        code: "rejected",
+        isInitial: false,
+        isTerminal: false,
+        stateFlags: {
+          is_mutable: true,
+          is_editable: true,
+          is_terminal: false,
+          is_committed: false,
+          is_deletable: false,
+          is_reversible: false,
+        },
+      }],
+    }));
+    expect(manifest.lifecycle?.states.rejected).toMatchObject({
+      isEditable: true,
+      isTerminal: false,
+      isCommitted: false,
+    });
+  });
+
+  it("supports explicit hard delete for draft-owned lines", () => {
+    const manifest = compileEntityCapabilityManifest(input({
+      entityCode: "purchase_invoice_line",
+      featureFlags: { deletion_mode: "hard_delete", allow_hard_delete: true },
+      fields: [{ ...input().fields[0]!, name: "id", column_name: "id" }],
+      operations: [{ permissionCode: "delete_draft", enabled: true }],
+    }));
+    expect(manifest.deletionMode).toBe("hard_delete");
+    expect(manifest.mutation.delete.enabled).toBe(true);
+  });
+
+  it("supports explicit soft delete for document entities without lifecycle", () => {
+    const manifest = compileEntityCapabilityManifest(input({
+      entityCode: "seed_gift",
+      renderer: "document",
+      hasDocumentRuntime: true,
+      featureFlags: { has_lifecycle: false, deletion_mode: "soft_delete" },
+      fields: [{ ...input().fields[0]!, name: "is_active", column_name: "is_active" }],
+      operations: [{ permissionCode: "delete", enabled: true }],
+    }));
+    expect(manifest.deletionMode).toBe("soft_delete");
+    expect(manifest.mutation.delete.enabled).toBe(true);
+  });
+
   it("rejects contradictory lifecycle flags and physical document deletion", () => {
     expect(() => compileEntityCapabilityManifest(input({
       renderer: "document",

@@ -600,7 +600,6 @@ export const DisabledReasonSchema = z.enum([
   "handler_invalid",
   "deprecated_alias",
   "hard_delete_disabled",
-  "records_api_disabled",
   "default_deny_policy",
   "entity_hidden",
 ]);
@@ -1164,6 +1163,10 @@ export const MetaEntityRuntimeDescriptorSchema = z.object({
   entityCode: z.string().min(1),
   entityName: z.string().min(1),
   routeSlug: z.string().min(1),
+  storage: z.object({
+    primaryKey: z.string().min(1).nullable(),
+    tenantColumn: z.string().min(1).nullable(),
+  }).optional(),
   createMode: z.enum(["FORM_ONLY", "EARLY_DRAFT", "DIRECT_CREATE", "SOURCE_DOCUMENT_CREATE"]).default("FORM_ONLY"),
   draftTtlHours: z.number().int().positive().optional(),
   numberingStrategy: z.enum(["none", "manual", "auto", "auto_or_manual", "AUTO_ON_CREATE", "AUTO_ON_PROMOTE", "AUTO_ON_SUBMIT"]).default("none"),

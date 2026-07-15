@@ -104,7 +104,7 @@ function testService(manifest: Record<string, any>, extra: Record<string, unknow
   const descriptor = hydrateExecutionDescriptor({
     schemaVersion: 1,
     identity: { entityCode: manifest.entityCode, entityVersionId: manifest.write.entityVersionId, versionHash: "v1", compiledHash: "a".repeat(64), entityClass: String(manifest.renderer).toUpperCase() },
-    storage: { schema: "master", table: manifest.entityCode, primaryKey: "id", tenantColumn: "tenant_id", rowVersionColumn: "row_version", backingType: "table" },
+    storage: { schema: "master", table: manifest.entityCode, primaryKey: "id", tenantColumn: "tenant_id", readCapability: "generic", writeCapability: "generic", rowVersionColumn: "row_version", backingType: "table" },
     fields,
     read: { projection: fields.map((field: Record<string, unknown>) => field.name), searchableFields: [], filterableFields: [], defaultSort: [{ field: "id", direction: "asc", nulls: "last" }], stableTieBreaker: "id", naturalKeyFields: [] },
     write: {

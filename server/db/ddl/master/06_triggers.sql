@@ -3565,3 +3565,72 @@ CREATE TRIGGER trg_prd_child_consistency
     BEFORE INSERT OR UPDATE OF dimension_score_id, assessment_id, evidence_id
     ON master.party_risk_driver
     FOR EACH ROW EXECUTE FUNCTION master.trg_prd_child_consistency_fn();
+
+
+-- ============================================================================
+-- Operating Organization foundation triggers
+-- ============================================================================
+
+DROP TRIGGER IF EXISTS trg_oo_updated_at ON master.operating_organization;
+CREATE TRIGGER trg_oo_updated_at BEFORE UPDATE ON master.operating_organization
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_oo_status_changed ON master.operating_organization;
+CREATE TRIGGER trg_oo_status_changed BEFORE UPDATE ON master.operating_organization
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+DROP TRIGGER IF EXISTS trg_oo_hierarchy ON master.operating_organization;
+CREATE TRIGGER trg_oo_hierarchy
+    BEFORE INSERT OR UPDATE OF tenant_id, domain, parent_id
+    ON master.operating_organization
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_operating_organization_hierarchy();
+
+DROP TRIGGER IF EXISTS trg_oo_domain_immutable ON master.operating_organization;
+CREATE TRIGGER trg_oo_domain_immutable
+    BEFORE UPDATE OF domain ON master.operating_organization
+    FOR EACH ROW EXECUTE FUNCTION master.trg_operating_organization_domain_immutable();
+
+DROP TRIGGER IF EXISTS trg_oo_scope_version ON master.operating_organization;
+CREATE TRIGGER trg_oo_scope_version
+    BEFORE UPDATE OF parent_id, effective_from, effective_until, status
+    ON master.operating_organization
+    FOR EACH ROW EXECUTE FUNCTION master.trg_operating_organization_scope_version();
+
+DROP TRIGGER IF EXISTS trg_ooc_updated_at ON master.operating_organization_company;
+CREATE TRIGGER trg_ooc_updated_at BEFORE UPDATE ON master.operating_organization_company
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_ooc_status_changed ON master.operating_organization_company;
+CREATE TRIGGER trg_ooc_status_changed BEFORE UPDATE ON master.operating_organization_company
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+DROP TRIGGER IF EXISTS trg_ooc_validate ON master.operating_organization_company;
+CREATE TRIGGER trg_ooc_validate
+    BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id, participation_role
+    ON master.operating_organization_company
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_operating_organization_company();
+
+DROP TRIGGER IF EXISTS trg_ooc_bump_scope ON master.operating_organization_company;
+CREATE TRIGGER trg_ooc_bump_scope
+    AFTER INSERT OR UPDATE OR DELETE ON master.operating_organization_company
+    FOR EACH ROW EXECUTE FUNCTION master.trg_bump_operating_organization_membership_scope();
+
+DROP TRIGGER IF EXISTS trg_pop_updated_at ON master.procurement_organization_profile;
+CREATE TRIGGER trg_pop_updated_at BEFORE UPDATE ON master.procurement_organization_profile
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_pop_validate_domain ON master.procurement_organization_profile;
+CREATE TRIGGER trg_pop_validate_domain
+    BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id
+    ON master.procurement_organization_profile
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_operating_organization_profile('procurement');
+
+DROP TRIGGER IF EXISTS trg_sop_updated_at ON master.sales_organization_profile;
+CREATE TRIGGER trg_sop_updated_at BEFORE UPDATE ON master.sales_organization_profile
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_sop_validate_domain ON master.sales_organization_profile;
+CREATE TRIGGER trg_sop_validate_domain
+    BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id
+    ON master.sales_organization_profile
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_operating_organization_profile('sales');

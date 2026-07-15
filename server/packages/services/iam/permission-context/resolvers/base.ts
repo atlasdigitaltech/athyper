@@ -43,10 +43,12 @@ export function computePersonaFingerprint(args: {
   personaId: string | null | undefined;
   roleIds: readonly string[];
   groupIds: readonly string[];
+  scopeVersions?: readonly string[];
 }): string {
   const roleStr = [...args.roleIds].sort().join(",");
   const groupStr = [...args.groupIds].sort().join(",");
-  const material = `persona=${args.personaId ?? "none"}|roles=${roleStr}|groups=${groupStr}`;
+  const scopeStr = [...(args.scopeVersions ?? [])].sort().join(",");
+  const material = `persona=${args.personaId ?? "none"}|roles=${roleStr}|groups=${groupStr}|scopes=${scopeStr}`;
   return createHash("sha256").update(material).digest("hex");
 }
 

@@ -3120,3 +3120,80 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.legal_entity_network_account ADD CONSTRAINT lena_updated_by_fk
     FOREIGN KEY (updated_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- Operating Organization foundation
+-- ============================================================================
+
+DO $$ BEGIN ALTER TABLE master.operating_organization ADD CONSTRAINT oo_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.operating_organization ADD CONSTRAINT oo_parent_fk
+    FOREIGN KEY (tenant_id, parent_id)
+    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.operating_organization ADD CONSTRAINT oo_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.operating_organization ADD CONSTRAINT oo_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.operating_organization ADD CONSTRAINT oo_status_changed_by_fk
+    FOREIGN KEY (status_changed_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.operating_organization_company ADD CONSTRAINT ooc_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.operating_organization_company ADD CONSTRAINT ooc_org_fk
+    FOREIGN KEY (tenant_id, operating_organization_id)
+    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.operating_organization_company ADD CONSTRAINT ooc_company_fk
+    FOREIGN KEY (tenant_id, company_code_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.operating_organization_company ADD CONSTRAINT ooc_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.operating_organization_company ADD CONSTRAINT ooc_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.operating_organization_company ADD CONSTRAINT ooc_status_changed_by_fk
+    FOREIGN KEY (status_changed_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.procurement_organization_profile ADD CONSTRAINT pop_org_fk
+    FOREIGN KEY (tenant_id, operating_organization_id)
+    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.procurement_organization_profile ADD CONSTRAINT pop_lead_company_fk
+    FOREIGN KEY (tenant_id, default_lead_company_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.procurement_organization_profile ADD CONSTRAINT pop_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.procurement_organization_profile ADD CONSTRAINT pop_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE master.sales_organization_profile ADD CONSTRAINT sop_org_fk
+    FOREIGN KEY (tenant_id, operating_organization_id)
+    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.sales_organization_profile ADD CONSTRAINT sop_booking_company_fk
+    FOREIGN KEY (tenant_id, default_booking_company_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.sales_organization_profile ADD CONSTRAINT sop_invoicing_company_fk
+    FOREIGN KEY (tenant_id, default_invoicing_company_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.sales_organization_profile ADD CONSTRAINT sop_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.sales_organization_profile ADD CONSTRAINT sop_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

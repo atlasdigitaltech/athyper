@@ -24,6 +24,7 @@
     "lookup:diff": "tsx scripts/lookup-diff.ts",
     "meili:backfill": "tsx scripts/meilisearch-backfill.ts",
     "runtime:server-path-check": "tsx scripts/check-runtime-server-paths.ts",
+    "meta:hygiene": "tsx scripts/check-meta-entity-hygiene.ts",
     "pi-line-defaults:verify": "tsx scripts/verify-pi-line-default-resolver-coverage.ts",
     "p2p:field-contract:audit": "tsx scripts/audit-p2p-field-contract.ts",
     "lint": "tsx scripts/check-runtime-server-paths.ts --strict && tsx scripts/verify-pi-line-default-resolver-coverage.ts"
