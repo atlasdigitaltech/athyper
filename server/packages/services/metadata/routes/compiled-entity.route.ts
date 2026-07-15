@@ -22,6 +22,17 @@ import {
 } from "@athyper/svc-shared";
 import { hasModuleAccess, type ModuleAccessResolverOptions } from "./module-visibility.guard.js";
 import { getEffectiveModuleAccess } from "@athyper/svc-iam";
+import {
+  compileDocumentRuntimePlan,
+  hasCompiledDocumentItems,
+  resolveCompiledEntityRenderer,
+} from "../src/entity-compiler.service.js";
+import { compileEntityCapabilityManifest } from "../src/entity-capability-manifest.js";
+import {
+  ExecutionDescriptorNotFoundError,
+  type ExecutionDescriptorProvider,
+  type ExecutionDescriptorProviderResult,
+} from "../src/execution-descriptor/index.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +41,7 @@ export interface DescriptorCache {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
   del(key: string): Promise<void>;
+  incr?(key: string): Promise<number>;
 }
 
 export interface CompiledEntityRoutesDeps {
@@ -49,18 +61,18 @@ export interface CompiledEntityRoutesDeps {
    * (detected by ETag mismatch on the cached payload vs recomputed hash).
    */
   cache?: DescriptorCache;
+  executionDescriptorProvider?: ExecutionDescriptorProvider;
   getEffectiveModuleAccess?: typeof getEffectiveModuleAccess;
 }
 
 // ─── Cache helpers ─────────────────────────────────────────────────────────────
 
 const DESCRIPTOR_CACHE_TTL_S = 300; // 5 min
-// v4 (Phase 3): adds plane segment so plane-filtered descriptors don't collide,
-// and schemaHash so runtime-contract bumps invalidate caches without manual ops.
-// Format: desc:v4:{plane}:{tenantId}:{schemaHash}:{entityCode}:{compiledHash}
-// Old v3 keys age out naturally via TTL; the new namespace prevents reads of
-// stale payloads with a stripped capability shape.
-const DESCRIPTOR_CACHE_NAMESPACE = "desc:v4";
+// v5 (Phase 4): compiled payloads now carry the authoritative
+// document_runtime_plan. The namespace bump prevents cached v4 document
+// descriptors (which have no plan) from reaching the fail-closed compiler.
+// Format: desc:v5:{plane}:{tenantId}:{schemaHash}:{entityCode}:{compiledHash}
+const DESCRIPTOR_CACHE_NAMESPACE = "desc:v6";
 
 /**
  * Compose a stable schemaHash that goes into the descriptor cache key. Mirrors
@@ -82,7 +94,7 @@ function computeDescriptorSchemaHash(): string {
 
 /**
  * Content-addressed payload key.
- * Format: desc:v4:{plane}:{tenantId}:{schemaHash}:{entityCode}:{compiledHash}
+ * Format: desc:v5:{plane}:{tenantId}:{schemaHash}:{entityCode}:{compiledHash}
  * Different hashes create different keys → stale entries expire naturally (no explicit DEL needed).
  */
 function descriptorCacheKey(
@@ -611,6 +623,8 @@ function mapField(row: Record<string, any>, referencePickerProfiles?: Map<string
     is_pii: false,
     is_computed: Boolean(row.is_computed),
     is_write_once: Boolean(row.is_write_once),
+    is_primary_amount: Boolean(row.is_primary_amount),
+    is_primary_currency: Boolean(row.is_primary_currency),
     default_value: row.default_value ?? null,
     validation_rules: normalizeValidationRules(row.validation),
     enum_domain_code: (row.enum_domain_code ?? null) as string | null,
@@ -680,7 +694,7 @@ async function loadReferencePickerProfiles(
 }
 
 export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRoutesDeps): Router {
-  const { db, auth, logger, cache, getEffectiveModuleAccess } = deps;
+  const { db, auth, logger, cache, executionDescriptorProvider, getEffectiveModuleAccess } = deps;
   const moduleAccessCache = cache
     ? {
       get: cache.get,
@@ -706,8 +720,11 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
   const handler: RequestHandler = async (req, res, next) => {
     try {
       // ── Auth ──────────────────────────────────────────────────────────────
+      const authenticationStartedAt = process.hrtime.bigint();
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
+      (res.locals as Record<string, unknown>)["authenticationMs"] =
+        Number(process.hrtime.bigint() - authenticationStartedAt) / 1_000_000;
       const sub = typeof claims.sub === "string" ? claims.sub : "";
 
       // ── Resolve entity + effective version ────────────────────────────────
@@ -717,11 +734,49 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // ── Resolve tenant (required for tenant-isolated cache key) ───────────
       // Fail-open: if X-Org is absent we skip the cache (prevents cross-tenant leakage).
       const { xOrg, xRealm } = extractOrgHeaders(req);
+      const requestContextStartedAt = process.hrtime.bigint();
       const tenantId = xOrg ? await resolveTenantId(db, xOrg, xRealm) : null;
+      (res.locals as Record<string, unknown>)["requestContextMs"] =
+        Number(process.hrtime.bigint() - requestContextStartedAt) / 1_000_000;
 
       // Plane + schemaHash scoping for the v4 cache key.
       const plane = resolvePlaneSegment(req.headers["x-plane"]);
       const schemaHash = computeDescriptorSchemaHash();
+
+      let executionResolution: ExecutionDescriptorProviderResult | undefined;
+      if (executionDescriptorProvider && tenantId) {
+        const locals = res.locals as Record<string, unknown>;
+        const requestMemo = (locals["executionDescriptorMemo"] ??= new Map()) as Map<string, Promise<ExecutionDescriptorProviderResult>>;
+        executionResolution = await executionDescriptorProvider.get({ plane, tenantId, entityCode }, requestMemo);
+        locals["descriptorCacheState"] = executionResolution.cacheState;
+        locals["descriptorHash"] = executionResolution.descriptor.identity.compiledHash;
+        res.setHeader("X-Descriptor-Cache", executionResolution.cacheState);
+        res.setHeader("X-Descriptor-Hash", executionResolution.descriptor.identity.compiledHash);
+      }
+
+      // Production path: validate the legacy UI payload against the provider's
+      // generation vector. This replaces the PostgreSQL fingerprint query.
+      if (cache && tenantId && executionResolution) {
+        try {
+          const ptrRaw = await cache.get(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash));
+          const pointer = ptrRaw ? JSON.parse(ptrRaw) as { generation?: string; compiledHash?: string } : null;
+          if (pointer?.generation === executionResolution.generation && pointer.compiledHash) {
+            const cached = await cache.get(descriptorCacheKey(plane, tenantId, entityCode, schemaHash, pointer.compiledHash));
+            if (cached) {
+              const payload = JSON.parse(cached) as Record<string, unknown>;
+              const etagValue = `"ced-${payload["compiled_hash"]}"`;
+              res.setHeader("ETag", etagValue);
+              res.setHeader("Cache-Control", "no-cache");
+              res.setHeader("X-Cache", "HIT");
+              if (req.headers["if-none-match"] === etagValue) { res.status(304).end(); return; }
+              res.json(payload);
+              return;
+            }
+          }
+        } catch (cacheErr) {
+          logger?.warn("compiled_entity_generation_cache_read_failed", { entityCode, tenantId, err: String(cacheErr) });
+        }
+      }
 
       // ── Server-side cache check ───────────────────────────────────────────
       // Only use cache when tenantId is known — prevents v1-style cross-tenant leakage.
@@ -733,7 +788,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // no field join) to validate the fingerprint before serving the cached payload.
       // If the fingerprint mismatches (post-reseed or display_config patch) we delete the
       // stale pointer and fall through to the full compile path.
-      if (cache && tenantId) {
+      if (cache && tenantId && !executionResolution) {
         try {
           const ptrRaw = await cache.get(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash));
           if (ptrRaw) {
@@ -746,11 +801,16 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
               identityConfigHash?: string;
               searchConfigHash?: string;
               dataPolicyHash?: string;
+              createContractHash?: string;
+              // Hash of (entity_field.name, entity_field.defaults) for the version.
+              // Added 2026-06-28 so re-seeding `defaults` (e.g. on_source_change rules)
+              // busts the descriptor cache without bumping version_hash.
+              fieldDefaultsHash?: string;
             } | null = null;
             try { fingerprint = JSON.parse(ptrRaw); } catch { /* old format — fall through */ }
 
             if (fingerprint?.compiledHash && fingerprint.versionHash && fingerprint.displayConfigHash) {
-              // Lightweight validation query — only display_config + version columns, no field join.
+              // Lightweight validation query — display_config + version columns + defaults aggregate.
               let fpQuery = db
                 .selectFrom("control.entity as e")
                 .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
@@ -759,9 +819,22 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
                   "e.identity_config",
                   "e.search_config",
                   "e.data_policy",
+                  "e.create_mode",
+                  "e.draft_ttl_hours",
+                  "e.numbering_strategy",
                   sql<number>`ev.version_no`.as("version_no"),
                   sql<string | null>`ev.version_hash`.as("version_hash"),
                   sql<string>`e.id::text`.as("entity_id"),
+                  sql<string>`
+                    coalesce(
+                      (SELECT md5(string_agg(ef.name || ':' || coalesce(ef.defaults::text, ''), '|' ORDER BY ef.name))
+                         FROM control.entity_field ef
+                        WHERE ef.entity_version_id = ev.id
+                          AND ef.is_active = true
+                          AND ef.defaults IS NOT NULL),
+                      ''
+                    )
+                  `.as("field_defaults_hash"),
                 ])
                 .where((eb: any) => eb.or([
                   eb("e.name", "=", entityCode),
@@ -782,16 +855,25 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
                 const currentIC = (fpRow.identity_config ?? {}) as Record<string, unknown>;
                 const currentSC = (fpRow.search_config ?? {}) as Record<string, unknown>;
                 const currentDP = (fpRow.data_policy ?? {}) as Record<string, unknown>;
+                const currentCreateContract = {
+                  create_mode: fpRow.create_mode ?? "FORM_ONLY",
+                  draft_ttl_hours: fpRow.draft_ttl_hours ?? null,
+                  numbering_strategy: fpRow.numbering_strategy ?? "none",
+                };
                 const currentVH = fpRow.version_hash ?? simpleHash(`${fpRow.entity_id}-v${fpRow.version_no}`);
                 const currentDCH = simpleHash(JSON.stringify(currentDC));
                 const currentICH = simpleHash(JSON.stringify(currentIC));
                 const currentSCH = simpleHash(JSON.stringify(currentSC));
                 const currentDPH = simpleHash(JSON.stringify(currentDP));
+                const currentCCH = simpleHash(JSON.stringify(currentCreateContract));
+                const currentFDH = String((fpRow as Record<string, unknown>)["field_defaults_hash"] ?? "");
                 const fpValid = currentVH === fingerprint.versionHash
                   && currentDCH === fingerprint.displayConfigHash
                   && currentICH === fingerprint.identityConfigHash
                   && currentSCH === fingerprint.searchConfigHash
-                  && currentDPH === fingerprint.dataPolicyHash;
+                  && currentDPH === fingerprint.dataPolicyHash
+                  && currentCCH === fingerprint.createContractHash
+                  && currentFDH === (fingerprint.fieldDefaultsHash ?? "");
 
                 if (fpValid) {
                   const cached = await cache.get(descriptorCacheKey(plane, tenantId, entityCode, schemaHash, fingerprint.compiledHash));
@@ -823,6 +905,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // When tenantId is known:  prefer tenant-specific row over platform row
       //   (ORDER BY tenant_id NULLS LAST → non-null tenant wins, NULL platform fallback)
       // When tenantId is null:   platform entities only (tenant_id IS NULL)
+    const descriptorCompileStartedAt = process.hrtime.bigint();
     let entityQuery = db
       .selectFrom("control.entity as e")
       .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
@@ -833,8 +916,13 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         sql<string>`COALESCE(e.entity_code, e.name)`.as("entity_code"),
           "e.label_singular",
           "e.entity_class",
+          "e.create_mode",
+          "e.draft_ttl_hours",
+          "e.numbering_strategy",
         "e.table_schema",
         "e.table_name",
+        "e.backing_type",
+        "e.mutability",
         sql<string | null>`e.module_id`.as("module_id"),
         "e.display_config",
         "e.identity_config",
@@ -889,7 +977,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
             entityRow.module_id as string,
             moduleResolver,
             logger,
-            { authEpoch },
+            { authEpoch, mode: "read_metadata" },
           );
           if (!hasAccess) {
             res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -939,10 +1027,36 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         }));
       }
 
+      const relationRows = await (db as any)
+        .selectFrom("control.entity_relation as er")
+        .select([
+          sql<string>`er.id::text`.as("id"),
+          "er.name",
+          "er.relation_kind",
+          "er.target_entity",
+          "er.resolution_kind",
+          "er.fk_field",
+          "er.target_key",
+          "er.source_type_field",
+          "er.source_type_value",
+          "er.source_id_field",
+          "er.source_line_field",
+          "er.runtime_role",
+          "er.on_delete",
+          "er.record_filter",
+          "er.ui_behavior",
+        ] as never[])
+        .where("er.entity_version_id", "=", entityRow.version_id)
+        .orderBy("er.name", "asc")
+        .execute() as Array<Record<string, unknown>>;
+
       // ── Lifecycle states ──────────────────────────────────────────────────
       // Query the canonical state list for this entity so the compiled
       // descriptor carries it — the frontend stepper reads lifecycle_stages.
-      let lifecycleStages: Array<{ key: string; label: string; sort_order: number }> = [];
+      let lifecycleStages: Array<{
+        key: string; label: string; sort_order: number; is_initial: boolean;
+        is_terminal: boolean; state_flags: Record<string, unknown>;
+      }> = [];
       try {
         const lcRows = await (db as any)
           .selectFrom("control.entity_lifecycle as el")
@@ -952,7 +1066,9 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
             "ls.code as key",
             "ls.name as label",
             "ls.sort_order",
+            "ls.is_initial",
             "ls.is_terminal",
+            "ls.state_flags",
           ] as never[])
           .where("el.entity_name" as never, "=", (entityRow.entity_code ?? entityCode) as never)
           .where((eb: any) => eb.or([
@@ -963,7 +1079,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
           .orderBy("el.priority" as never, "asc" as never)
           .orderBy("ls.sort_order" as never, "asc" as never)
           .limit(60)
-          .execute() as Array<{ key: string; label: string; sort_order: number; is_terminal: boolean }>;
+          .execute() as typeof lifecycleStages;
         lifecycleStages = lcRows;
       } catch {
         // lifecycle binding is optional
@@ -994,6 +1110,78 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // ── Compiled hash ─────────────────────────────────────────────────────
       const versionHash = entityRow.version_hash
         ?? simpleHash(`${String(entityRow.id)}-v${entityRow.version_no}`);
+      const documentRuntimePlan = compileDocumentRuntimePlan({
+        renderer: resolveCompiledEntityRenderer({
+          entityClass: String(entityRow.entity_class),
+          tableSchema: String(entityRow.table_schema),
+          displayConfig,
+          featureFlags,
+        }),
+        versionHash,
+        hasItems: hasCompiledDocumentItems({
+          relations: relationRows as Array<Record<string, unknown>>,
+          displayConfig,
+          featureFlags,
+        }),
+        fields: fields as Parameters<typeof compileDocumentRuntimePlan>[0]["fields"],
+        contractMaterial: {
+          documentRuntime: displayConfig["document_runtime"] ?? null,
+          relations: relationRows,
+        },
+      });
+      const operationRows = await (db as any)
+        .selectFrom("control.entity_operation as eo")
+        .leftJoin("shared.permission as p", "p.code", "eo.permission_code")
+        .select([
+          "eo.permission_code",
+          "eo.is_enabled",
+          sql<boolean>`p.code IS NOT NULL AND p.status = 'active'`.as("permission_registered"),
+        ])
+        .where("eo.entity_name", "=", entityRow.entity_code ?? entityCode)
+        .where((eb: any) => tenantId
+          ? eb.or([eb("eo.tenant_id", "=", tenantId), eb("eo.tenant_id", "is", null)])
+          : eb("eo.tenant_id", "is", null))
+        .execute() as Array<{ permission_code: string; is_enabled: boolean; permission_registered: boolean }>;
+      const renderer = resolveCompiledEntityRenderer({
+        entityClass: String(entityRow.entity_class),
+        tableSchema: String(entityRow.table_schema),
+        displayConfig,
+        featureFlags,
+      });
+      const capabilityManifest = compileEntityCapabilityManifest({
+        entityCode: String(entityRow.entity_code ?? entityCode),
+        entityVersionId: String(entityRow.version_id),
+        renderer,
+        backingType: String(entityRow.backing_type ?? "table"),
+        mutability: String(entityRow.mutability ?? "mutable"),
+        featureFlags,
+        displayConfig,
+        dataPolicy: dbDataPolicy,
+        fields: fieldRows.map((field) => ({
+          name: String(field.name),
+          column_name: String(field.column_name),
+          data_type: String(field.data_type),
+          origin: typeof field.origin === "string" ? field.origin : null,
+          is_required: field.is_required === true,
+          is_read_only: field.is_read_only === true,
+          is_computed: field.is_computed === true,
+          is_write_once: field.is_write_once === true,
+          editability: field.editability,
+        })),
+        relations: relationRows,
+        operations: operationRows.map((operation) => ({
+          permissionCode: operation.permission_code,
+          enabled: operation.is_enabled,
+          permissionRegistered: operation.permission_registered,
+        })),
+        hasDocumentRuntime: documentRuntimePlan !== undefined,
+        lifecycleStates: lifecycleStages.map((state) => ({
+          code: state.key,
+          isInitial: state.is_initial,
+          isTerminal: state.is_terminal,
+          stateFlags: state.state_flags ?? {},
+        })),
+      });
       // Include display_config in hash so changes to document_header or
       // detail_renderer bust the Redis descriptor cache automatically.
       const displayConfigHash = simpleHash(JSON.stringify(dbDisplayConfig));
@@ -1001,8 +1189,16 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       const searchConfigHash = simpleHash(JSON.stringify(dbSearchConfig));
       const dataPolicyHash = simpleHash(JSON.stringify(dbDataPolicy));
       const fieldsHash = simpleHash(JSON.stringify(fields));
+      const relationsHash = simpleHash(JSON.stringify(relationRows));
       const lifecycleHash = simpleHash(JSON.stringify(lifecycleStages));
-      const compiledHash = simpleHash(`${versionHash}-${fieldsHash}-${displayConfigHash}-${identityConfigHash}-${searchConfigHash}-${dataPolicyHash}-${lifecycleHash}`);
+      const createContractHash = simpleHash(JSON.stringify({
+        create_mode: entityRow.create_mode ?? "FORM_ONLY",
+        draft_ttl_hours: entityRow.draft_ttl_hours ?? null,
+        numbering_strategy: entityRow.numbering_strategy ?? "none",
+      }));
+      const documentRuntimePlanHash = simpleHash(JSON.stringify(documentRuntimePlan ?? null));
+      const capabilityManifestHash = simpleHash(JSON.stringify(capabilityManifest));
+      const compiledHash = simpleHash(`${versionHash}-${fieldsHash}-${relationsHash}-${displayConfigHash}-${identityConfigHash}-${searchConfigHash}-${dataPolicyHash}-${lifecycleHash}-${createContractHash}-${documentRuntimePlanHash}-${capabilityManifestHash}`);
 
       const payload = {
         entity_id: entityRow.id as string,
@@ -1010,17 +1206,24 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
         slug: (entityRow.slug ?? String(entityRow.table_name).replace(/_/g, "-")) as string,
         entity_name: (entityRow.label_singular ?? entityRow.name) as string,
         entity_class: entityRow.entity_class as string,
+        create_mode: entityRow.create_mode as string,
+        draft_ttl_hours: entityRow.draft_ttl_hours == null ? null : Number(entityRow.draft_ttl_hours),
+        numbering_strategy: entityRow.numbering_strategy as string,
         table_schema: entityRow.table_schema as string,
         table_name: entityRow.table_name as string,
+        version_id: entityRow.version_id as string,
         version_no: Number(entityRow.version_no),
         version_hash: versionHash,
         fields,
         field_groups: fieldGroups,
+        relations: relationRows,
         display_config: displayConfig,
         identity_config: dbIdentityConfig,
         search_config: dbSearchConfig,
         data_policy: dbDataPolicy,
         feature_flags: featureFlags,
+        ...(documentRuntimePlan ? { document_runtime_plan: documentRuntimePlan } : {}),
+        capability_manifest: capabilityManifest,
         governance_level: entityRow.governance_level as string,
         security_tier: entityRow.security_tier as string,
         compiled_at: new Date().toISOString(),
@@ -1032,6 +1235,8 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       res.setHeader("ETag", etagValue);
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("X-Cache", "MISS");
+      (res.locals as Record<string, unknown>)["descriptorCompileMs"] =
+        Number(process.hrtime.bigint() - descriptorCompileStartedAt) / 1_000_000;
 
       if (req.headers["if-none-match"] === etagValue) {
         res.status(304).end();
@@ -1042,7 +1247,21 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // Pointer stores a JSON fingerprint {compiledHash, versionHash, displayConfigHash}
       // so the read path can validate against current DB state with one lightweight query.
       if (cache && tenantId) {
-        const pointerFingerprint = JSON.stringify({ compiledHash, versionHash, displayConfigHash, identityConfigHash, searchConfigHash, dataPolicyHash });
+        // Hash the per-field defaults JSONB so reseeding on_source_change rules
+        // (without bumping version_hash) busts the cache on the next request.
+        const fieldDefaultsMaterial = fields
+          .filter((f) => (f as Record<string, unknown>)["defaults"])
+          .map((f) => `${(f as Record<string, unknown>)["name"]}:${JSON.stringify((f as Record<string, unknown>)["defaults"])}`)
+          .sort()
+          .join("|");
+        const fieldDefaultsHash = simpleHash(fieldDefaultsMaterial);
+        const pointerFingerprint = executionResolution
+          ? JSON.stringify({
+            compiledHash,
+            generation: executionResolution.generation,
+            executionDescriptorHash: executionResolution.descriptor.identity.compiledHash,
+          })
+          : JSON.stringify({ compiledHash, versionHash, displayConfigHash, identityConfigHash, searchConfigHash, dataPolicyHash, createContractHash, fieldDefaultsHash });
         Promise.all([
           cache.set(descriptorCacheKey(plane, tenantId, entityCode, schemaHash, compiledHash), JSON.stringify(payload), DESCRIPTOR_CACHE_TTL_S),
           cache.set(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash), pointerFingerprint, DESCRIPTOR_CACHE_TTL_S),
@@ -1057,13 +1276,52 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
     }
   };
 
+  const executionDescriptorHandler: RequestHandler = async (req, res, next) => {
+    try {
+      if (!executionDescriptorProvider) {
+        res.status(503).json({ error: "EXECUTION_DESCRIPTOR_PROVIDER_UNAVAILABLE" });
+        return;
+      }
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = xOrg ? await resolveTenantId(db, xOrg, xRealm) : null;
+      if (!tenantId) {
+        res.status(400).json({ error: "TENANT_CONTEXT_REQUIRED" });
+        return;
+      }
+      const plane = resolvePlaneSegment(req.headers["x-plane"]);
+      const locals = res.locals as Record<string, unknown>;
+      const requestMemo = (locals["executionDescriptorMemo"] ??= new Map()) as Map<string, Promise<ExecutionDescriptorProviderResult>>;
+      const result = await executionDescriptorProvider.get({ plane, tenantId, entityCode }, requestMemo);
+      const etag = `"execdesc-${result.descriptor.identity.compiledHash}"`;
+      locals["descriptorCacheState"] = result.cacheState;
+      locals["descriptorHash"] = result.descriptor.identity.compiledHash;
+      res.setHeader("ETag", etag);
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("X-Descriptor-Cache", result.cacheState);
+      res.setHeader("X-Descriptor-Hash", result.descriptor.identity.compiledHash);
+      res.setHeader("X-Descriptor-Generation", result.generation);
+      if (req.headers["if-none-match"] === etag) { res.status(304).end(); return; }
+      res.json(result.serialized);
+    } catch (error) {
+      if (error instanceof ExecutionDescriptorNotFoundError) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: error.message });
+        return;
+      }
+      next(error);
+    }
+  };
+
+  router.get("/metadata/entities/:entity/execution-descriptor", executionDescriptorHandler);
   router.get("/metadata/entities/:entity/compiled", handler);
   return router;
 }
 
 /**
  * Invalidate the server-side descriptor cache for a specific entity + tenant.
- * Deletes the pointer key; the content-addressed payload expires naturally after TTL.
+ * Increments the exact generation; content-addressed payloads expire naturally.
  * Call this after any schema change (entity version publish, field add/remove).
  */
 export async function invalidateDescriptorCache(
@@ -1071,14 +1329,16 @@ export async function invalidateDescriptorCache(
   tenantId:   string,
   entityCode: string,
 ): Promise<void> {
-  const schemaHash = computeDescriptorSchemaHash();
-  // Invalidate across all three planes; a satellite write or version publish
-  // can affect any plane's descriptor for this tenant + entity.
+  if (!cache.incr) return;
   const planes: Array<"neon" | "mesh" | "admin"> = ["neon", "mesh", "admin"];
-  await Promise.all(
-    planes.map((plane) =>
-      cache.del(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash))
-        .catch(() => { /* best-effort */ }),
-    ),
-  );
+  const keys = new Set<string>([
+    "execdesc:gen:v1:__all__:__all__:__all__",
+  ]);
+  for (const plane of planes) {
+    keys.add(`execdesc:gen:v1:${plane}:__all__:__all__`);
+    keys.add(`execdesc:gen:v1:${plane}:__all__:${entityCode}`);
+    keys.add(`execdesc:gen:v1:${plane}:${tenantId}:__all__`);
+    keys.add(`execdesc:gen:v1:${plane}:${tenantId}:${entityCode}`);
+  }
+  await Promise.all([...keys].map((key) => cache.incr!(key).catch(() => { /* best-effort */ })));
 }

@@ -7,19 +7,19 @@
 //   `desc_invalidate` — published by the satellite-write triggers (Phase 1)
 //                       and the Studio approve / emergency-override paths.
 //                       Payload: { tenant_id, entity_code, reason, source, at }.
-//                       We DEL all `desc:*:v4:{tenant}:*:*:{entity}:*` keys.
+//                       We increment exact execution-descriptor generations.
 //
 //   `grant_revoke`    — published by mesh.account_grant revoke trigger
 //                       (Phase 1). Payload: { grant_id, principal_id,
 //                       account_id, tenant_id, fingerprint, new_status, at }.
-//                       We DEL `desc:mesh:v4:{tenant}:{fingerprint}:*` keys
-//                       so the partner's next request rebuilds from scratch.
+//                       Permission-local runtime caches are invalidated; shared
+//                       execution descriptors remain principal-agnostic.
 //
 // We also run a 30s poller against `log.descriptor_cache_invalidation` for
 // rows where `processed_at IS NULL`. This is the fallback for missed
 // notifications (LISTEN connection dropped, listener restarted, etc.).
-// Every successful purge updates `processed_at`, `processed_by`,
-// `redis_keys_deleted` so ops can verify the listener is healthy.
+// Every successful recovery updates `processed_at` and `processed_by`;
+// `redis_keys_deleted` remains zero during the generation compatibility window.
 
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
@@ -31,14 +31,8 @@ import { createDirectPgClient } from "./direct-pg-client.js";
 // ─── Public types ──────────────────────────────────────────────────────────────
 
 export interface DescriptorCacheRedis {
-  scan(
-    cursor: string,
-    matchFlag: "MATCH",
-    pattern: string,
-    countFlag: "COUNT",
-    count: number,
-  ): Promise<[string, string[]]>;
-  del(...keys: string[]): Promise<number>;
+  incr(key: string): Promise<number>;
+  publish(channel: string, message: string): Promise<number>;
 }
 
 export interface DescriptorCacheLogDb {
@@ -62,20 +56,28 @@ export interface CreateDescriptorCacheListenerOptions {
   pollIntervalMs?: number;
   /** Reconnect delay after a LISTEN error. Defaults to 2s, capped at 30s. */
   reconnectInitialDelayMs?: number;
-  /** Maximum keys deleted per Redis DEL batch. Defaults to 200. */
+  /** Test seam for LISTEN reconnect coverage. */
+  createListenClient?: () => Promise<pg.Client>;
+  /** Test seam for reconnect backoff. */
+  sleep?: (delayMs: number) => Promise<void>;
+  /** @deprecated Generation invalidation no longer scans or deletes keys. */
   delBatchSize?: number;
 }
 
 export interface DescriptorCacheListener {
   start(): Promise<void>;
   stop(): Promise<void>;
+  /** Runs one durable-log recovery pass (operational probe/tests). */
+  recoverNow(): Promise<void>;
   /** For probes/tests: number of notifications processed since start. */
   readonly stats: () => Readonly<{
     notifications: number;
     pollerRuns: number;
     keysDeleted: number;
+    generationsIncremented: number;
     errors: number;
     reconnects: number;
+    invalidationLagSeconds: number;
     instanceId: string;
   }>;
 }
@@ -90,6 +92,7 @@ interface NotifyPayload {
   fingerprint?: string | null;
   account_id?: string | null;
   new_status?: string | null;
+  principal_id?: string | null;
   at?: number | null;
 }
 
@@ -106,6 +109,10 @@ interface InvalidationLogRow {
 
 const CHANNEL_DESC_INVALIDATE = "desc_invalidate";
 const CHANNEL_GRANT_REVOKE    = "grant_revoke";
+const RUNTIME_INVALIDATION_CHANNEL = "descriptor-runtime:invalidate:v1";
+const RUNTIME_GENERATION_KEY = "descriptor-runtime:generation:v1";
+const EXECUTION_DESCRIPTOR_INVALIDATION_CHANNEL = "execdesc:invalidate:v1";
+const GLOBAL_SCOPE = "__all__";
 
 export function createDescriptorCacheListener(
   options: CreateDescriptorCacheListenerOptions,
@@ -113,7 +120,6 @@ export function createDescriptorCacheListener(
   const { redis, logDb, logger } = options;
   const pollIntervalMs = options.pollIntervalMs ?? 30_000;
   const reconnectInitialDelay = options.reconnectInitialDelayMs ?? 2_000;
-  const delBatchSize = options.delBatchSize ?? 200;
   const instanceId = `${hostname()}:${process.pid}:${randomUUID().slice(0, 8)}`;
 
   let listenClient: pg.Client | null = null;
@@ -125,37 +131,13 @@ export function createDescriptorCacheListener(
     notifications: 0,
     pollerRuns: 0,
     keysDeleted: 0,
+    generationsIncremented: 0,
     errors: 0,
     reconnects: 0,
+    invalidationLagSeconds: 0,
   };
 
   // ─── Redis helpers ────────────────────────────────────────────────────────────
-
-  async function scanAndDelete(pattern: string): Promise<number> {
-    let cursor = "0";
-    let total = 0;
-    const buffer: string[] = [];
-    do {
-      const [next, keys] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 200);
-      cursor = next;
-      for (const key of keys) {
-        buffer.push(key);
-        if (buffer.length >= delBatchSize) {
-          total += await redis.del(...buffer.splice(0, delBatchSize));
-        }
-      }
-    } while (cursor !== "0");
-    if (buffer.length > 0) total += await redis.del(...buffer);
-    return total;
-  }
-
-  function patternForDescInvalidate(tenant: string | null, entity: string | null): string {
-    return composeDescInvalidatePattern(tenant, entity);
-  }
-
-  function patternForGrantRevoke(tenant: string | null, fingerprint: string | null): string {
-    return composeGrantRevokePattern(tenant, fingerprint);
-  }
 
   // ─── Log mark ─────────────────────────────────────────────────────────────────
 
@@ -173,58 +155,102 @@ export function createDescriptorCacheListener(
   // ─── Notification handler ────────────────────────────────────────────────────
 
   async function onDescInvalidate(payload: NotifyPayload): Promise<void> {
-    const pattern = patternForDescInvalidate(payload.tenant_id ?? null, payload.entity_code ?? null);
     try {
-      const deleted = await scanAndDelete(pattern);
-      counters.keysDeleted += deleted;
+      counters.invalidationLagSeconds = lagSeconds(payload.at);
+      const incremented = await incrementDescriptorGenerations(
+        payload.tenant_id ?? null,
+        payload.entity_code ?? null,
+        null,
+        payload.reason ?? "metadata_publication",
+      );
+      await publishRuntimeInvalidation({
+        ...(payload.tenant_id ? { tenant: payload.tenant_id } : {}),
+        ...(payload.entity_code ? { entity: payload.entity_code } : {}),
+        reason: payload.reason ?? "metadata_publication",
+      });
       counters.notifications += 1;
       logger.info("cache_invalidation_processed", {
         channel: CHANNEL_DESC_INVALIDATE,
-        pattern,
         reason: payload.reason ?? null,
         source: payload.source ?? null,
-        keys_deleted: deleted,
+        generations_incremented: incremented,
+        keys_deleted: 0,
       });
     } catch (err) {
       counters.errors += 1;
       logger.warn("cache_invalidation_purge_failed", {
         channel: CHANNEL_DESC_INVALIDATE,
-        pattern,
         err: String(err),
       });
     }
   }
 
   async function onGrantRevoke(payload: NotifyPayload): Promise<void> {
-    const pattern = patternForGrantRevoke(payload.tenant_id ?? null, payload.fingerprint ?? null);
     try {
-      const deleted = await scanAndDelete(pattern);
-      counters.keysDeleted += deleted;
+      await publishRuntimeInvalidation({
+        ...(payload.tenant_id ? { tenant: payload.tenant_id } : {}),
+        ...(payload.principal_id ? { principal: payload.principal_id } : {}),
+        reason: "permission_change",
+      });
       counters.notifications += 1;
       logger.info("cache_invalidation_processed", {
         channel: CHANNEL_GRANT_REVOKE,
-        pattern,
         new_status: payload.new_status ?? null,
         account_id: payload.account_id ?? null,
-        keys_deleted: deleted,
+        keys_deleted: 0,
       });
     } catch (err) {
       counters.errors += 1;
       logger.warn("cache_invalidation_purge_failed", {
         channel: CHANNEL_GRANT_REVOKE,
-        pattern,
         err: String(err),
       });
     }
   }
 
+  async function publishRuntimeInvalidation(scope: Record<string, string>): Promise<void> {
+    const generation = await redis.incr(RUNTIME_GENERATION_KEY);
+    await redis.publish(RUNTIME_INVALIDATION_CHANNEL, JSON.stringify({
+      ...scope,
+      generation,
+      emittedAt: Date.now(),
+      origin: instanceId,
+    }));
+  }
+
+  async function incrementDescriptorGenerations(
+    tenant: string | null,
+    entity: string | null,
+    plane: string | null,
+    reason: string,
+  ): Promise<number> {
+    const keys = composeExecutionDescriptorGenerationKeys(tenant, entity, plane);
+    for (const key of keys) {
+      const planeKey = key.split(":")[3] ?? GLOBAL_SCOPE;
+      const generation = await redis.incr(key);
+      counters.generationsIncremented += 1;
+      await redis.publish(EXECUTION_DESCRIPTOR_INVALIDATION_CHANNEL, JSON.stringify({
+        plane: planeKey,
+        ...(tenant ? { tenant } : {}),
+        ...(entity ? { entity } : {}),
+        generation,
+        reason,
+        emittedAt: Date.now(),
+        origin: instanceId,
+      }));
+    }
+    return keys.length;
+  }
+
   // ─── LISTEN bootstrap + reconnect ─────────────────────────────────────────────
 
   async function attach(): Promise<void> {
-    const client = await createDirectPgClient({
-      connectionString: options.listenConnectionString,
-      applicationName: `athyper-cache-listener-${instanceId}`,
-    });
+    const client = options.createListenClient
+      ? await options.createListenClient()
+      : await createDirectPgClient({
+        connectionString: options.listenConnectionString,
+        applicationName: `athyper-cache-listener-${instanceId}`,
+      });
     listenClient = client;
 
     client.on("error", (err) => {
@@ -255,7 +281,7 @@ export function createDescriptorCacheListener(
     reconnectDelay = Math.min(reconnectDelay * 2, 30_000);
     counters.reconnects += 1;
     logger.warn("cache_invalidation_listener_reconnecting", { delay_ms: delay });
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    await (options.sleep?.(delay) ?? new Promise((resolve) => setTimeout(resolve, delay)));
     if (stopped) return;
     try {
       await attach();
@@ -280,17 +306,23 @@ export function createDescriptorCacheListener(
           LIMIT 200`,
       );
       for (const row of result.rows) {
-        const pattern = row.plane_key === "mesh"
-          ? patternForGrantRevoke(row.tenant_id, null)
-          : patternForDescInvalidate(row.tenant_id, row.entity_code);
         try {
-          const deleted = await scanAndDelete(pattern);
-          counters.keysDeleted += deleted;
-          await markProcessedById(row.id, deleted);
+          counters.invalidationLagSeconds = lagSeconds(row.created_at);
+          const isPermissionOnly = row.plane_key === "mesh" && !row.entity_code;
+          if (!isPermissionOnly) {
+            await incrementDescriptorGenerations(row.tenant_id, row.entity_code, row.plane_key, row.reason);
+          }
+          await publishRuntimeInvalidation({
+            ...(row.tenant_id ? { tenant: row.tenant_id } : {}),
+            ...(row.plane_key ? { plane: row.plane_key } : {}),
+            ...(row.entity_code ? { entity: row.entity_code } : {}),
+            reason: row.reason,
+          });
+          await markProcessedById(row.id, 0);
         } catch (err) {
           counters.errors += 1;
           logger.warn("cache_invalidation_poller_row_failed", {
-            id: row.id, pattern, err: String(err),
+            id: row.id, err: String(err),
           });
         }
       }
@@ -335,8 +367,17 @@ export function createDescriptorCacheListener(
   return {
     start,
     stop,
+    recoverNow: runPollerOnce,
     stats: () => Object.freeze({ ...counters, instanceId }),
   };
+}
+
+function lagSeconds(value: number | string | null | undefined): number {
+  if (value === null || value === undefined) return 0;
+  const timestamp = typeof value === "number"
+    ? (value > 10_000_000_000 ? value : value * 1_000)
+    : Date.parse(value);
+  return Number.isFinite(timestamp) ? Math.max(0, (Date.now() - timestamp) / 1_000) : 0;
 }
 
 /**
@@ -352,7 +393,42 @@ export function composeDescInvalidatePattern(
 ): string {
   const t = tenant ?? "*";
   const e = entity ?? "*";
-  return `desc:v4:*:${t}:*:${e}:*`;
+  return `desc:v5:*:${t}:*:${e}:*`;
+}
+
+/** Exact generation key used by the provider and recovery worker. */
+export function composeExecutionDescriptorGenerationKey(
+  plane: string,
+  tenant: string,
+  entity: string,
+): string {
+  return `execdesc:gen:v1:${plane}:${tenant}:${entity}`;
+}
+
+export function composeExecutionDescriptorGenerationKeys(
+  tenant: string | null,
+  entity: string | null,
+  plane: string | null,
+): readonly string[] {
+  const planes = plane ? [plane] : ["neon", "mesh", "admin"];
+  // Increment only the narrowest generation that covers this publication.
+  // The provider's vector still includes broader generations, but a
+  // publication for a known entity must not fan out into unrelated global
+  // scopes (or inflate invalidation work across every tenant).
+  if (entity && tenant) return planes.map((planeKey) => composeExecutionDescriptorGenerationKey(planeKey, tenant, entity));
+  if (entity && !tenant) return planes.map((planeKey) => composeExecutionDescriptorGenerationKey(planeKey, GLOBAL_SCOPE, entity));
+  if (!entity && tenant) return planes.map((planeKey) => composeExecutionDescriptorGenerationKey(planeKey, tenant, GLOBAL_SCOPE));
+
+  // A publication with no tenant/entity scope is genuinely global. Increment
+  // the global sentinel plus each plane sentinel so every provider vector
+  // observes the change without wildcard deletion.
+  const keys: string[] = [];
+  for (const planeKey of planes) {
+    keys.push(composeExecutionDescriptorGenerationKey(planeKey, GLOBAL_SCOPE, GLOBAL_SCOPE));
+  }
+  keys.unshift(composeExecutionDescriptorGenerationKey(GLOBAL_SCOPE, GLOBAL_SCOPE, GLOBAL_SCOPE));
+  const seen = new Set<string>();
+  return keys.filter((key) => !seen.has(key) && (seen.add(key), true));
 }
 
 /**
@@ -368,7 +444,7 @@ export function composeGrantRevokePattern(
   _fingerprint: string | null,
 ): string {
   const t = tenant ?? "*";
-  return `desc:mesh:v4:${t}:*:*:*:*`;
+  return `desc:v5:mesh:${t}:*:*:*`;
 }
 
 function safeParseJson(raw: string | undefined): NotifyPayload {
