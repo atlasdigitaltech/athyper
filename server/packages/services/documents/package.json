@@ -25,7 +25,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@athyper/adapter-objectstorage": "workspace:*",
+    "@athyper/adapter-object-storage": "workspace:*",
+    "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-jobs": "workspace:*",
     "@athyper/svc-shared": "workspace:*",
     "busboy": "^1.6.0"
@@ -43,3 +44,4 @@
     "vitest": "^4.1.4"
   }
 }
+

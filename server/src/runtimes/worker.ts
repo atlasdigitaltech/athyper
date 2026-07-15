@@ -39,8 +39,10 @@ function renderListenerMetrics(stats: Readonly<{
   notifications: number;
   pollerRuns: number;
   keysDeleted: number;
+  generationsIncremented: number;
   errors: number;
   reconnects: number;
+  invalidationLagSeconds: number;
   instanceId: string;
 }>): string[] {
   const label = `instance="${stats.instanceId.replace(/"/g, '\\"')}"`;
@@ -57,6 +59,10 @@ function renderListenerMetrics(stats: Readonly<{
     "# TYPE athyper_cache_listener_keys_deleted_total counter",
     `athyper_cache_listener_keys_deleted_total{${label}} ${stats.keysDeleted}`,
     "",
+    "# HELP athyper_cache_listener_generations_incremented_total Exact descriptor generations incremented",
+    "# TYPE athyper_cache_listener_generations_incremented_total counter",
+    `athyper_cache_listener_generations_incremented_total{${label}} ${stats.generationsIncremented}`,
+    "",
     "# HELP athyper_cache_listener_errors_total Listener-side errors (purge failures, NOTIFY parse errors, etc.)",
     "# TYPE athyper_cache_listener_errors_total counter",
     `athyper_cache_listener_errors_total{${label}} ${stats.errors}`,
@@ -64,6 +70,10 @@ function renderListenerMetrics(stats: Readonly<{
     "# HELP athyper_cache_listener_reconnects_total LISTEN reconnect cycles (broken pg.Client)",
     "# TYPE athyper_cache_listener_reconnects_total counter",
     `athyper_cache_listener_reconnects_total{${label}} ${stats.reconnects}`,
+    "",
+    "# HELP athyper_execution_descriptor_invalidation_lag_seconds Observed delay from durable invalidation creation to generation increment",
+    "# TYPE athyper_execution_descriptor_invalidation_lag_seconds gauge",
+    `athyper_execution_descriptor_invalidation_lag_seconds{${label}} ${stats.invalidationLagSeconds}`,
   ];
 }
 
@@ -118,6 +128,7 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
     eval: (script: string, numKeys: number, ...args: Array<string | number>) =>
       redis.eval(script, numKeys, ...args),
     incr: (k: string) => redis.incr(k),
+    publish: (channel: string, message: string) => redis.publish(channel, message),
   };
 
   await audit.write(
@@ -149,7 +160,7 @@ export async function startWorker(deps: ServerDeps): Promise<void> {
   // ─── Descriptor cache invalidation listener ────────────────────────────────
   // Subscribes to `desc_invalidate` and `grant_revoke` pg_notify channels via
   // a dedicated session-mode pg.Client (PgBouncer transaction mode disallows
-  // LISTEN). Purges matching Redis keys and marks log.descriptor_cache_
+  // LISTEN). Increments exact Redis generations and marks log.descriptor_cache_
   // invalidation rows processed. A 30s poller drains rows missed during
   // listener restarts. See server/src/services/cache-invalidation/listener.ts.
   const cacheListener = createDescriptorCacheListener({

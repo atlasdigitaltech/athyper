@@ -21,16 +21,22 @@ import busboy from "busboy";
 import {
   verifyBearer,
   isUuid,
-  resolveTenantId,
-  SYSTEM_PRINCIPAL_UUID,
+  extractVerifiedRequestContextHints,
+  resolveVerifiedRequestContext,
 } from "@athyper/svc-shared";
-import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
 import { JOB_NAME, type ExtractTextJobData, type SweepJobData } from "@athyper/svc-jobs";
+import { createHash } from "node:crypto";
 import { resolveDocumentEntity } from "./entity-resolver.js";
 import {
   ContentAttachmentService,
   type UploadResult,
+  type UploadReplayResult,
 } from "../services/attachment.service.js";
+import {
+  authorizeAttachmentAccess,
+  type AttachmentAuthorizationAction,
+} from "../services/attachment-authorization.service.js";
 
 // ── Response shape (shared by JSON and multipart paths) ───────────────────────
 
@@ -44,7 +50,9 @@ function toAttachmentResponse(result: UploadResult, docType: string, docId: stri
     status:          result.status,
     version_no:      result.versionNo,
     created_by_name: null,
-    download_url: `/api/relay/api/documents/${encodeURIComponent(docType)}/${encodeURIComponent(docId)}/attachments/${encodeURIComponent(result.id)}/download`,
+    ...(result.status === "active" ? {
+      download_url: `/api/relay/api/documents/${encodeURIComponent(docType)}/${encodeURIComponent(docId)}/attachments/${encodeURIComponent(result.id)}/download`,
+    } : {}),
   };
 }
 
@@ -75,40 +83,39 @@ export interface AttachmentsRouteDeps {
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
+    info?(event: string, fields?: Record<string, unknown>): void;
   };
 }
 
 // ── Principal resolver ────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolvePrincipalId(db: Kysely<any>, sub: string, tenantId: string, realmKey = "athyper"): Promise<string> {
-  if (!sub) return SYSTEM_PRINCIPAL_UUID;
-  const existing = await db
-    .selectFrom("master.principal_identity_binding as pab")
-    .select("pab.principal_id")
-    .where("pab.subject_id", "=", sub)
-    .where("pab.realm_key", "=", realmKey)
-    .where("pab.tenant_id", "=", tenantId)
-    .executeTakeFirst();
-  return existing ? (existing.principal_id as string) : SYSTEM_PRINCIPAL_UUID;
-}
-
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteDeps): void {
   const { db, auth, objectStorage, tikaQueue, logger } = deps;
+  const attachmentLogger = logger
+    ? {
+        info: (...args: Parameters<typeof logger.warn>) => logger.warn(...args),
+        warn: (...args: Parameters<typeof logger.warn>) => logger.warn(...args),
+      }
+    : undefined;
 
   /**
    * Fire-and-forget enqueue of a Tika extraction job. Never throws — upload
    * completion must not depend on Redis availability. Missing queue (no
    * DOCPARSER_URL configured) is a silent no-op.
    */
-  function enqueueTikaExtract(attachmentId: string, tenantId: string): void {
+  function enqueueTikaExtract(
+    attachmentId: string,
+    tenantId: string,
+    versionNo?: number,
+    sha256?: string,
+  ): void {
     if (!tikaQueue) return;
     void tikaQueue
       .add(
         JOB_NAME.EXTRACT_TEXT,
-        { attachmentId, tenantId },
+        { attachmentId, tenantId, versionNo, sha256 },
         {
           jobId:       `tika:${attachmentId}`,  // dedup: repeat uploads of same id collapse
           attempts:    3,
@@ -140,8 +147,181 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
     return;
   }
 
-  const svc = new ContentAttachmentService(db, objectStorage.adapter, objectStorage.bucket);
+  const svc = new ContentAttachmentService(
+    db,
+    objectStorage.adapter,
+    objectStorage.bucket,
+    attachmentLogger,
+  );
   const maxUploadBytes = (objectStorage.maxUploadMb ?? 100) * 1024 * 1024;
+  // JSON/base64 is retained only for small compatibility uploads; larger
+  // files must use the streaming/direct-object-storage path.
+  const maxCompatibilityJsonBytes = 5 * 1024 * 1024;
+  const maxUploadMb = objectStorage.maxUploadMb ?? 100;
+  const parseTimeoutMs = 30_000;
+
+  function parseUploadedByteLimit(header: unknown): number | null {
+    if (typeof header !== "string") return null;
+    const parsed = Number.parseInt(header, 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  function parseIdempotencyKey(req: Parameters<RequestHandler>[0]): string | undefined {
+    const value = req.headers["idempotency-key"];
+    if (typeof value !== "string" || value.trim().length === 0) return undefined;
+    return value.trim();
+  }
+
+  function parseContentShaHeader(req: Parameters<RequestHandler>[0]): string | undefined {
+    const value = req.headers["content-sha256"];
+    return typeof value === "string" && /^[a-fA-F0-9]{64}$/.test(value.trim())
+      ? value.toLowerCase()
+      : undefined;
+  }
+
+ function respondFileTooLarge(res: Parameters<RequestHandler>[1], path: "json" | "multipart", sizeBytes?: number): void {
+    res.status(413).json({
+      error: "FILE_TOO_LARGE",
+      message: `File exceeds the ${maxUploadMb} MB limit`,
+      details: {
+        limit_bytes: maxUploadBytes,
+        limit_mb: maxUploadMb,
+        ...(typeof sizeBytes === "number" ? { received_bytes: sizeBytes } : {}),
+      },
+    });
+  }
+
+  function respondTypedUploadError(
+    res: Parameters<RequestHandler>[1],
+    error: string,
+    message: string,
+    status = 400,
+    details: Record<string, unknown> = {},
+  ): void {
+    res.status(status).json({ error, message, details });
+  }
+
+  function normalizeUploadError(err: unknown): { error: string; message: string; status: number; details?: Record<string, unknown> } {
+    if (err instanceof Error && (err.name === "AbortError" || /aborted/i.test(err.message))) {
+      return { error: "UPLOAD_STREAM_ABORTED", message: "Upload stream aborted before completion", status: 400, details: { reason: "stream_aborted" } };
+    }
+    if (err instanceof Error && (err as { code?: string }).code === "ECONNRESET") {
+      return { error: "UPLOAD_STREAM_ABORTED", message: "Upload stream connection reset", status: 400, details: { reason: "stream_reset" } };
+    }
+    return {
+      error: "UPLOAD_FAILED",
+      message: err instanceof Error ? err.message : String(err),
+      status: 500,
+    };
+  }
+
+  function toReplayResponse(result: UploadReplayResult): UploadResult {
+    return {
+      id: result.id,
+      fileName: result.fileName,
+      contentType: result.contentType,
+      sizeBytes: result.sizeBytes,
+      sha256: result.sha256,
+      status: result.status,
+      versionNo: result.versionNo,
+      createdAt: result.createdAt,
+      storageKey: result.storageKey,
+    };
+  }
+
+  async function findExistingUpload(params: {
+    tenantId: string;
+    idempotencyKey?: string;
+    hash?: string;
+  }): Promise<UploadReplayResult | null> {
+    if (!params.idempotencyKey && !params.hash) return null;
+    return svc.findReplayAttachment({
+      tenantId: params.tenantId,
+      statuses: ["active", "quarantined"],
+      idempotencyKey: params.idempotencyKey,
+      hash: params.hash,
+    });
+  }
+
+  async function authorize(
+    req: Parameters<RequestHandler>[0],
+    res: Parameters<RequestHandler>[1],
+    claims: Record<string, unknown>,
+    entityType: string,
+    entityId: string,
+    action: AttachmentAuthorizationAction,
+  ): Promise<{ tenantId: string; principalId: string; tenantCode: string; companyCode?: string } | null> {
+    const headerOrg = (req.headers["x-org"] as string) ?? "";
+    const headerRealm = (req.headers["x-realm-key"] as string | undefined) ?? (req.headers["x-realm"] as string | undefined) ?? null;
+    const authSource = {
+      type: "token",
+      headerOrgPresent: Boolean(headerOrg),
+      headerRealmPresent: Boolean(headerRealm),
+    };
+    logger?.info?.("attachments_authorization_attempt", {
+      action,
+      entityType,
+      entityId,
+      authSource,
+      orgHeader: headerOrg,
+      realmHeader: headerRealm,
+      claimSub: typeof claims["sub"] === "string" ? "present" : "absent",
+      claimRealm: typeof (claims["realm_key"] ?? claims["realm"]) === "string" ? "present" : "absent",
+      claimIssuerRealm: typeof claims["iss"] === "string" ? "present" : "absent",
+    });
+    const resolved = await resolveVerifiedRequestContext(
+      db,
+      claims,
+      extractVerifiedRequestContextHints(req),
+    );
+    if (!resolved.ok) {
+      logger?.warn?.("attachments_authorization_denied", {
+        action,
+        entityType,
+        entityId,
+        authSource: "token",
+        reason: resolved.error,
+        orgHeader: headerOrg,
+        realmHeader: headerRealm,
+      });
+      res.status(resolved.status).json({ error: resolved.error, message: resolved.message });
+      return null;
+    }
+    const outcome = await authorizeAttachmentAccess({
+      db,
+      context: resolved.context,
+      entityCode: entityType,
+      entityId,
+      action,
+      logger: attachmentLogger,
+    });
+    if (!outcome.allowed) {
+      logger?.warn?.("attachments_authorization_denied", {
+      action,
+      entityType,
+      entityId,
+      reason: outcome.error,
+      orgHeader: headerOrg,
+      realmHeader: headerRealm,
+    });
+      res.status(403).json({ error: outcome.error, message: outcome.message });
+      return null;
+    }
+    logger?.info?.("attachments_authorization_allowed", {
+      action,
+      tenantId: outcome.tenantId,
+      entityType,
+      entityId,
+      principalId: outcome.principalId,
+      realmKey: outcome.realmKey,
+    });
+    return {
+      tenantId: outcome.tenantId,
+      principalId: outcome.principalId,
+      tenantCode: resolved.context.tenantCode,
+      companyCode: resolved.context.companyCode,
+    };
+  }
 
   // ── LIST attachments ──────────────────────────────────────────────────────────
   const listHandler: RequestHandler = async (req, res, next) => {
@@ -161,13 +341,9 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         return;
       }
 
-      const xOrg    = (req.headers["x-org"]   as string) ?? "";
-      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant" });
-        return;
-      }
+      const authorized = await authorize(req, res, claims, entity.name as string, id, "read");
+      if (!authorized) return;
+      const { tenantId } = authorized;
 
       const items = await svc.list({
         tenantId,
@@ -232,13 +408,9 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         return;
       }
 
-      const xOrg    = (req.headers["x-org"]   as string) ?? "";
-      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant" });
-        return;
-      }
+      const authorized = await authorize(req, res, claims, entity.name as string, id, "create_attachment");
+      if (!authorized) return;
+      const { tenantId, principalId, tenantCode, companyCode } = authorized;
 
       const body = req.body as {
         filename?:     string;
@@ -246,25 +418,73 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         size_bytes?:   number;
         data_base64?:  string;
       };
+      const idempotencyKey = parseIdempotencyKey(req);
+      const headerSha = parseContentShaHeader(req);
 
       if (!body.filename || !body.data_base64) {
+        logger?.warn?.("attachments_upload_request_invalid", {
+          path: "json",
+          docType,
+          id,
+          reason: "missing_fields",
+        });
         res.status(400).json({ error: "MISSING_FIELDS", message: "filename and data_base64 are required" });
         return;
       }
 
-      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(body.data_base64)) {
+      if (!isCanonicalBase64(body.data_base64)) {
+        logger?.warn?.("attachments_upload_request_invalid", {
+          path: "json",
+          docType,
+          id,
+          reason: "invalid_base64",
+        });
         res.status(400).json({ error: "INVALID_BASE64", message: "data_base64 must be valid base64" });
         return;
       }
 
-      const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
+      const declaredSize = typeof body.size_bytes === "number" ? body.size_bytes : decodedBase64Size(body.data_base64);
+      if (declaredSize > maxCompatibilityJsonBytes) {
+        logger?.warn?.("attachments_upload_request_invalid", {
+          path: "json",
+          docType,
+          id,
+          reason: "file_too_large",
+          maxBytes: maxCompatibilityJsonBytes,
+          declaredBytes: declaredSize,
+        });
+        respondFileTooLarge(res, "json", declaredSize);
+        return;
+      }
+
       const fileBuffer  = Buffer.from(body.data_base64, "base64");
-      const sizeBytes   = body.size_bytes ?? fileBuffer.length;
+      const sizeBytes   = fileBuffer.length;
       const contentType = (body.content_type ?? "application/octet-stream").slice(0, 200);
 
-      const tenantCode  = (xOrg.split("--")[0] ?? "").trim() || undefined;
-      const companyCode = (xOrg.split("--")[1] ?? "").trim() || undefined;
+      if (sizeBytes > maxCompatibilityJsonBytes) {
+        logger?.warn?.("attachments_upload_request_invalid", {
+          path: "json",
+          docType,
+          id,
+          reason: "file_too_large",
+          actualBytes: sizeBytes,
+          maxBytes: maxCompatibilityJsonBytes,
+        });
+        respondFileTooLarge(res, "json", sizeBytes);
+        return;
+      }
+
+      const bodySha = createHash("sha256").update(fileBuffer).digest("hex");
+      const replay = await findExistingUpload({
+        tenantId,
+        idempotencyKey,
+        hash: headerSha ?? bodySha,
+      });
+      if (replay && ["active", "quarantined"].includes(replay.status)) {
+        const replayResult = toReplayResponse(replay);
+        res.status(200).json(toAttachmentResponse(replayResult, docType, id));
+        return;
+      }
 
       const result = await svc.upload({
         tenantId,
@@ -277,10 +497,20 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         contentType,
         sizeBytes,
         principalId,
+        idempotencyKey,
         linkKind: "related",
       });
 
-      enqueueTikaExtract(result.id, tenantId);
+      enqueueTikaExtract(result.id, tenantId, result.versionNo, result.sha256);
+      logger?.info?.("attachments_upload_success", {
+        path: "json",
+        tenantId,
+        attachmentId: result.id,
+        entityType: entity.name as string,
+        entityId: id,
+        status: result.status,
+        sizeBytes: result.sizeBytes,
+      });
 
       res.status(201).json(toAttachmentResponse(result, docType, id));
     } catch (err) {
@@ -296,113 +526,229 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
   //   field "link_kind" — optional, defaults to "related"
   // File part: any field name; first file part wins.
   const uploadMultipartHandler: RequestHandler = (req, res, next) => {
-    // Auth and param validation — must happen synchronously before piping
     void (async () => {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
-
-      const { docType, id } = req.params as { docType: string; id: string };
-      if (!isUuid(id)) {
-        res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
-        return;
-      }
-
-      const entity = await resolveDocumentEntity(db, docType);
-      if (!entity) {
-        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
-        return;
-      }
-
-      const xOrg    = (req.headers["x-org"]   as string) ?? "";
-      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant" });
-        return;
-      }
-
-      const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
-
-      // ── Parse multipart with busboy ────────────────────────────────────────
-      const bb = busboy({
-        headers: req.headers,
-        limits: {
-          files:    1,                // accept first file only
-          fileSize: maxUploadBytes,
-        },
-      });
-
-      // Collect form fields (link_kind etc.) before/alongside the file part
-      const fields: Record<string, string> = {};
-      bb.on("field", (name, val) => { fields[name] = val; });
-
-      // uploadPromise resolves when S3 + DB are both done
-      let uploadPromise: Promise<UploadResult> | null = null;
-      let fileLimitExceeded = false;
-
-      const tenantCode  = (xOrg.split("--")[0] ?? "").trim() || undefined;
-      const companyCode = (xOrg.split("--")[1] ?? "").trim() || undefined;
-
-      bb.on("file", (_fieldName, fileStream, info) => {
-        const { filename, mimeType } = info;
-
-        fileStream.on("limit", () => {
-          fileLimitExceeded = true;
-          // Drain and abort — busboy won't emit "finish" until stream is consumed
-          fileStream.resume();
+      try {
+        logger?.info?.("attachments_upload_request_started", {
+          path: "multipart",
+          docType: req.params["docType"] as string,
+          id: req.params["id"] as string,
         });
+        const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+        if (!claims) return;
 
-        uploadPromise = svc.uploadStream({
+        const { docType, id } = req.params as { docType: string; id: string };
+        if (!isUuid(id)) {
+          res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
+          return;
+        }
+
+        const entity = await resolveDocumentEntity(db, docType);
+        if (!entity) {
+          res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
+          return;
+        }
+
+        const authorized = await authorize(req, res, claims, entity.name as string, id, "create_attachment");
+        if (!authorized) return;
+        const { tenantId, principalId, tenantCode, companyCode } = authorized;
+        const idempotencyKey = parseIdempotencyKey(req);
+        const declaredContentLength = parseUploadedByteLimit(req.headers["content-length"]);
+        const headerSha = parseContentShaHeader(req);
+        const fields: Record<string, string> = {};
+
+        if (declaredContentLength !== null && declaredContentLength > maxUploadBytes) {
+          respondFileTooLarge(res, "multipart", declaredContentLength);
+          return;
+        }
+
+        const replay = await findExistingUpload({
           tenantId,
-          tenantCode,
-          companyCode,
-          entityType:    entity.name as string,
-          entityId:      id,
-          stream:        fileStream,
-          fileName:      (filename || "upload").slice(0, 500),
-          contentType:   (mimeType || "application/octet-stream").slice(0, 200),
-          principalId,
-          linkKind:      (fields["link_kind"] as "related" | undefined) ?? "related",
+          idempotencyKey,
+          hash: headerSha,
         });
-      });
-
-      bb.on("finish", () => {
-        if (fileLimitExceeded) {
-          res.status(413).json({
-            error:   "FILE_TOO_LARGE",
-            message: `File exceeds the ${objectStorage.maxUploadMb ?? 100} MB limit`,
-          });
+        if (replay) {
+          req.resume();
+          res.status(200).json(toAttachmentResponse(toReplayResponse(replay), docType, id));
           return;
         }
 
-        if (!uploadPromise) {
-          res.status(400).json({ error: "NO_FILE", message: "No file part found in multipart body" });
+        const result = await new Promise<UploadResult>((resolve, reject) => {
+          let settled = false;
+          let uploadPromise: Promise<UploadResult> | null = null;
+          let seenFiles = 0;
+          let receivedBytes = 0;
+          let parseTimeout: NodeJS.Timeout | null = null;
+
+          const bb = busboy({
+            headers: req.headers,
+            limits: {
+              files: 1,
+              fileSize: maxUploadBytes,
+            },
+          });
+
+          const finish = (
+            error: { status?: number; error: string; message: string; details?: Record<string, unknown> } | null,
+            value?: UploadResult,
+          ) => {
+            if (settled) return;
+            settled = true;
+            if (parseTimeout) clearTimeout(parseTimeout);
+            req.unpipe(bb);
+            req.removeAllListeners();
+            bb.removeAllListeners();
+            if (error) {
+              reject(error);
+            } else if (value) {
+              resolve(value);
+            }
+          };
+
+          const fail = (
+            code: string,
+            message: string,
+            status = 400,
+            details: Record<string, unknown> = {},
+          ) => {
+            logger?.warn?.("attachments_upload_request_invalid", {
+              path: "multipart",
+              docType,
+              id,
+              reason: code,
+            });
+            finish({ status, error: code, message, details });
+          };
+
+          parseTimeout = setTimeout(() => {
+            fail("MULTIPART_PARSE_TIMEOUT", `Multipart parsing exceeded ${parseTimeoutMs} ms`, 408, {
+              timeout_ms: parseTimeoutMs,
+            });
+            bb.removeAllListeners("file");
+            req.destroy(new Error("multipart parse timeout"));
+          }, parseTimeoutMs);
+
+          bb.on("field", (name, value) => {
+            fields[name] = value;
+          });
+
+          bb.on("file", (_fieldName, fileStream, info) => {
+            seenFiles += 1;
+            if (seenFiles > 1) {
+              fileStream.resume();
+              return;
+            }
+
+            const { filename, mimeType } = info;
+            fileStream.on("data", (chunk: Buffer) => {
+              receivedBytes += chunk.length;
+              if (receivedBytes > maxUploadBytes) {
+                fail("FILE_TOO_LARGE", `File exceeds the ${maxUploadMb} MB limit`, 413, {
+                  limit_bytes: maxUploadBytes,
+                  limit_mb: maxUploadMb,
+                  received_bytes: receivedBytes,
+                });
+                fileStream.destroy();
+                req.destroy();
+              }
+            });
+
+            fileStream.on("limit", () => {
+              fail("FILE_TOO_LARGE", `File exceeds the ${maxUploadMb} MB limit`, 413, {
+                limit_bytes: maxUploadBytes,
+                limit_mb: maxUploadMb,
+              });
+              fileStream.destroy();
+              req.destroy();
+            });
+
+            fileStream.on("error", (streamErr: unknown) => {
+              fail("MULTIPART_STREAM_ERROR", String(streamErr ?? "Multipart stream error"), 400, {
+                reason: "stream_error",
+              });
+            });
+
+            uploadPromise = svc.uploadStream({
+              tenantId,
+              tenantCode,
+              companyCode,
+              entityType: entity.name as string,
+              entityId: id,
+              stream: fileStream,
+              fileName: (filename || "upload").slice(0, 500),
+              contentType: (mimeType || "application/octet-stream").slice(0, 200),
+              contentLength: declaredContentLength ?? undefined,
+              principalId,
+              linkKind: (fields["link_kind"] as "related" | undefined) ?? "related",
+              idempotencyKey,
+            });
+          });
+
+          bb.on("finish", () => {
+            if (settled) return;
+            if (!uploadPromise) {
+              fail("NO_FILE", "No file part found in multipart body", 400, {
+                reason: "missing_file",
+              });
+              return;
+            }
+
+            uploadPromise
+              .then((uploadResult) => finish(null, uploadResult))
+              .catch((err: unknown) => {
+                const uploadErr = normalizeUploadError(err);
+                logger?.warn?.("attachments_upload_cleanup_outcome", {
+                  path: "multipart",
+                  error: uploadErr.error,
+                  reason: uploadErr.details?.reason ?? "stream_error",
+                });
+                finish(uploadErr);
+              });
+          });
+
+          bb.on("error", (err: unknown) => {
+            fail("MULTIPART_PARSE_ERROR", String(err ?? "Multipart parser error"), 400, {
+              reason: "parser_error",
+            });
+          });
+
+        req.on("aborted", () => {
+          fail("UPLOAD_STREAM_ABORTED", "Request aborted by client", 400, {
+            reason: "request_aborted",
+          });
+        });
+
+          req.pipe(bb);
+        });
+
+        enqueueTikaExtract(result.id, tenantId, result.versionNo, result.sha256);
+        logger?.info?.("attachments_upload_success", {
+          path: "multipart",
+          tenantId,
+          attachmentId: result.id,
+          entityType: entity.name as string,
+          entityId: id,
+          status: result.status,
+        });
+        res.status(201).json(toAttachmentResponse(result, docType, id));
+      } catch (err: unknown) {
+        if (
+          typeof err === "object"
+          && err !== null
+          && "error" in err
+          && "message" in err
+          && typeof (err as { error?: unknown }).error === "string"
+          && typeof (err as { message?: unknown }).message === "string"
+        ) {
+          const e = err as { error: string; message: string; status?: number; details?: Record<string, unknown> };
+          respondTypedUploadError(res, e.error, e.message, e.status ?? 400, e.details ?? {});
           return;
         }
 
-        uploadPromise
-          .then((result) => {
-            enqueueTikaExtract(result.id, tenantId);
-            res.status(201).json(toAttachmentResponse(result, docType, id));
-          })
-          .catch((err: unknown) => {
-            logger?.error("attachments_multipart_upload_error", { err: String(err) });
-            next(err instanceof Error ? err : new Error(String(err)));
-          });
-      });
-
-      bb.on("error", (err: unknown) => {
-        logger?.error("attachments_multipart_parse_error", { err: String(err) });
+        logger?.error("attachments_upload_error", { err: String(err) });
         next(err instanceof Error ? err : new Error(String(err)));
-      });
-
-      req.pipe(bb);
+      }
     })();
   };
-
-  // ── Content-type dispatcher ───────────────────────────────────────────────────
-  // Single POST route; delegates to the right handler based on Content-Type.
   const uploadHandler: RequestHandler = (req, res, next) => {
     const ct = (req.headers["content-type"] ?? "").toLowerCase();
     if (ct.includes("multipart/form-data")) {
@@ -430,22 +776,15 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         return;
       }
 
-      const xOrg    = (req.headers["x-org"]   as string) ?? "";
-      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant" });
-        return;
-      }
-
       const entity = await resolveDocumentEntity(db, docType);
       if (!entity) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
         return;
       }
 
-      const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
+      const authorized = await authorize(req, res, claims, entity.name as string, id, "read_attachment");
+      if (!authorized) return;
+      const { tenantId, principalId } = authorized;
 
       const file = await svc.downloadStream({
         tenantId,
@@ -458,6 +797,20 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       });
 
       if (!file) {
+        const attachment = await db
+          .selectFrom("master.attachment as a")
+          .select("status")
+          .where("a.id", "=", attachmentId)
+          .where("a.tenant_id", "=", tenantId)
+          .executeTakeFirst();
+        if (attachment && attachment.status !== "active") {
+          res.status(409).json({
+            error: "QUARANTINE_VIOLATION",
+            message: "Attachment download blocked while quarantine/scan is not complete.",
+            status: attachment.status,
+          });
+          return;
+        }
         res.status(404).json({ error: "ATTACHMENT_NOT_FOUND", message: "Attachment not found" });
         return;
       }
@@ -465,6 +818,8 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       const safeFileName = file.fileName.replace(/"/g, '\\"');
       res.setHeader("Content-Type", file.contentType);
       res.setHeader("Content-Disposition", `attachment; filename="${safeFileName}"`);
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "private, no-store");
       if (file.sizeBytes > 0) {
         res.setHeader("Content-Length", file.sizeBytes);
       }
@@ -503,22 +858,15 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         return;
       }
 
-      const xOrg    = (req.headers["x-org"]   as string) ?? "";
-      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant" });
-        return;
-      }
-
       const entity = await resolveDocumentEntity(db, docType);
       if (!entity) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
         return;
       }
 
-      const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
+      const authorized = await authorize(req, res, claims, entity.name as string, id, "delete_attachment");
+      if (!authorized) return;
+      const { tenantId, principalId } = authorized;
 
       await svc.unlink({
         tenantId,
@@ -554,19 +902,15 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         return;
       }
 
-      const xOrg    = (req.headers["x-org"]   as string) ?? "";
-      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant" });
-        return;
-      }
-
       const entity = await resolveDocumentEntity(db, docType);
       if (!entity) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
         return;
       }
+
+      const authorized = await authorize(req, res, claims, entity.name as string, id, "reindex_attachment");
+      if (!authorized) return;
+      const { tenantId, principalId } = authorized;
 
       if (!tikaQueue) {
         res.status(503).json({
@@ -581,7 +925,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       const link = await db
         .selectFrom("master.entity_document_link as edl")
         .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
-        .select(["a.id" as never])
+        .select(["a.id" as never, "a.version_no" as never, "a.sha256" as never])
         .where("edl.tenant_id" as never,  "=", tenantId as never)
         .where("edl.entity_type" as never,"=", (entity.name as string) as never)
         .where("edl.entity_id" as never,  "=", id as never)
@@ -593,9 +937,6 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         res.status(404).json({ error: "ATTACHMENT_NOT_FOUND", message: "Attachment not found" });
         return;
       }
-
-      const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
 
       // Reset extraction + PII state so the worker doesn't short-circuit on
       // the "already extracted" check.
@@ -618,9 +959,15 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         .execute();
 
       // Fresh jobId so BullMQ doesn't collapse this onto an existing / stale job.
+      const linkRow = link as Record<string, unknown>;
       await tikaQueue.add(
         JOB_NAME.EXTRACT_TEXT,
-        { attachmentId, tenantId },
+        {
+          attachmentId,
+          tenantId,
+          versionNo: Number(linkRow["version_no"] ?? 1),
+          sha256: linkRow["sha256"] as string | undefined,
+        },
         {
           jobId:    `tika:${attachmentId}:reindex:${Date.now()}`,
           attempts: 3,
@@ -659,22 +1006,15 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         return;
       }
 
-      const xOrg    = (req.headers["x-org"]   as string) ?? "";
-      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) {
-        res.status(400).json({ error: "MISSING_TENANT", message: "Could not resolve tenant" });
-        return;
-      }
-
       const entity = await resolveDocumentEntity(db, docType);
       if (!entity) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
         return;
       }
 
-      const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
+      const authorized = await authorize(req, res, claims, entity.name as string, id, "update_attachment");
+      if (!authorized) return;
+      const { tenantId, principalId } = authorized;
 
       // Verify attachment belongs to this entity before renaming
       const link = await db
@@ -718,4 +1058,14 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
   router.get(    "/documents/:docType/:id/attachments",                        listHandler);
   router.post(   "/documents/:docType/:id/attachments",                        uploadHandler);
   router.delete( "/documents/:docType/:id/attachments/:attachmentId",          deleteHandler);
+}
+
+function isCanonicalBase64(value: string): boolean {
+  return value.length > 0 && value.length % 4 === 0 && /^[A-Za-z0-9+/]*={0,2}$/.test(value)
+    && (value.indexOf("=") === -1 || /^[A-Za-z0-9+/]+={1,2}$/.test(value));
+}
+
+function decodedBase64Size(value: string): number {
+  const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+  return (value.length / 4) * 3 - padding;
 }

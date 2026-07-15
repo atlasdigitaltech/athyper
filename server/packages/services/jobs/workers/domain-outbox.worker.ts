@@ -50,6 +50,9 @@ export interface OutboxEvent {
   aggregate_id: string | null;
   payload:      Record<string, unknown>;
   actor_id:     string | null;
+  attempts:     number;
+  max_attempts: number;
+  created_at:   Date;
 }
 
 export interface OutboxTopicHandler {
@@ -67,13 +70,33 @@ const LOCK_OWNER_PREFIX = `domain-outbox-${process.pid}`;
 const BATCH_SIZE        = 50;
 const RETRY_DELAY_MS    = 30_000;
 
-async function drain(
+export function nextOutboxFailureState(attempts: number, maxAttempts: number): {
+  status: "failed" | "dead_letter";
+  retryDelayMs: number;
+} {
+  return {
+    status: attempts >= maxAttempts ? "dead_letter" : "failed",
+    retryDelayMs: RETRY_DELAY_MS * Math.min(2 ** Math.max(attempts - 1, 0), 32),
+  };
+}
+
+export async function drainDomainOutbox(
   db:      DB,
   topic:   DrainTopic,
   handlers: Map<string, OutboxTopicHandler>,
   logger?: JobLogger,
 ): Promise<void> {
   const lockOwner = `${LOCK_OWNER_PREFIX}-${topic}`;
+
+  await sql`
+    UPDATE event.outbox
+    SET status = CASE WHEN attempts >= max_attempts THEN 'dead_letter' ELSE 'failed' END,
+        locked_at = NULL, locked_by = NULL, locked_until = NULL,
+        last_error = COALESCE(last_error, 'worker_lock_expired')
+    WHERE topic = ${topic}
+      AND status = 'processing'
+      AND locked_until < now()
+  `.execute(db);
 
   const claimed = await sql<OutboxEvent>`
     UPDATE event.outbox
@@ -86,7 +109,8 @@ async function drain(
       SELECT id
       FROM   event.outbox
       WHERE  topic        = ${topic}
-        AND  status       = 'pending'
+        AND  status       IN ('pending', 'failed')
+        AND  attempts     < max_attempts
         AND  available_at <= now()
       ORDER  BY available_at ASC
       LIMIT  ${BATCH_SIZE}
@@ -96,7 +120,8 @@ async function drain(
       id, tenant_id, topic, event_type, event_key,
       entity_type, entity_id::text AS entity_id,
       aggregate_id::text AS aggregate_id,
-      payload, actor_id::text AS actor_id
+      payload, actor_id::text AS actor_id,
+      attempts, max_attempts, created_at
   `.execute(db);
 
   if (claimed.rows.length === 0) return;
@@ -109,10 +134,18 @@ async function drain(
     if (!handler) {
       // No handler registered — release the lock and leave status 'pending' so the
       // event is not lost. It will retry on the next drain cycle.
-      logger?.warn("domain_outbox_no_handler", { topic, eventType: event.event_type, id: event.id });
+      const failure = nextOutboxFailureState(event.attempts, event.max_attempts);
+      logger?.warn("domain_outbox_no_handler", {
+        topic,
+        eventType: event.event_type,
+        id: event.id,
+        poisonEvent: failure.status === "dead_letter",
+      });
       await sql`
         UPDATE event.outbox
-        SET    status    = 'pending',
+        SET    status    = ${failure.status},
+               available_at = ${new Date(Date.now() + failure.retryDelayMs).toISOString()},
+               last_error = 'no_topic_handler_registered',
                locked_at = NULL,
                locked_by = NULL,
                locked_until = NULL
@@ -122,7 +155,15 @@ async function drain(
     }
 
     try {
+      const startedAt = Date.now();
       await handler.handle(event);
+      logger?.info("domain_outbox_handler_latency", {
+        topic,
+        id: event.id,
+        eventKey: event.event_key,
+        handlerLatencyMs: Date.now() - startedAt,
+        retryCount: Math.max(event.attempts - 1, 0),
+      });
 
       await sql`
         UPDATE event.outbox
@@ -134,12 +175,19 @@ async function drain(
         WHERE  id = ${event.id}::uuid
       `.execute(db);
     } catch (err) {
-      logger?.error("domain_outbox_event_error", { topic, id: event.id, err: String(err) });
+      const failure = nextOutboxFailureState(event.attempts, event.max_attempts);
+      logger?.error("domain_outbox_event_error", {
+        topic,
+        id: event.id,
+        err: String(err),
+        retryCount: Math.max(event.attempts - 1, 0),
+        poisonEvent: failure.status === "dead_letter",
+      });
 
       await sql`
         UPDATE event.outbox
-        SET    status       = 'pending',
-               available_at = ${new Date(Date.now() + RETRY_DELAY_MS).toISOString()},
+        SET    status       = ${failure.status},
+               available_at = ${new Date(Date.now() + failure.retryDelayMs).toISOString()},
                locked_at    = NULL,
                locked_by    = NULL,
                locked_until = NULL,
@@ -208,7 +256,7 @@ export function createDomainOutboxWorker(deps: DomainOutboxWorkerDeps): Worker {
         return;
       }
 
-      await drain(db, topic, handlers, logger);
+      await drainDomainOutbox(db, topic, handlers, logger);
     },
     {
       connection,

@@ -8,3 +8,4 @@ export {
   type UploadResult,
   type UploadStreamParams,
 } from "./services/attachment.service.js";
+export { authorizeAttachmentAccess, type AttachmentAuthorizationAction } from "./services/attachment-authorization.service.js";

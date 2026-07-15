@@ -20,7 +20,7 @@ import { createHash } from "node:crypto";
 import { Transform, type TransformCallback } from "node:stream";
 import { sql } from "kysely";
 import type { Kysely } from "kysely";
-import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
 
 // ── Param / result types ──────────────────────────────────────────────────────
 
@@ -39,17 +39,14 @@ export interface UploadParams {
   sizeBytes:   number;
   principalId: string;
   linkKind?:   "primary" | "related" | "supporting" | "compliance" | "audit";
-  /**
-   * Override the initial attachment status.
-   * Default: "active". Set to "quarantined" when a virus is detected so the
-   * file is stored for admin review but blocked from normal downloads.
-   */
-  initialStatus?: "active" | "quarantined";
+  /** Uploads start as quarantined and enter active/failed via scan orchestration. */
+  initialStatus?: "uploaded" | "active" | "quarantined";
   /**
    * Whether the file has been through virus scanning.
    * Default: false (scanning not configured or not yet run).
    */
   isVirusScanned?: boolean;
+  idempotencyKey?: string;
   /**
    * Structured scan result stored in metadata.scan JSONB.
    * Included for both clean and quarantined results so admins have context.
@@ -62,7 +59,8 @@ export interface UploadResult {
   fileName:    string;
   contentType: string;
   sizeBytes:   number;
-  status:      string;
+  sha256:      string;
+  status:      AttachmentStatus;
   versionNo:   number;
   createdAt:   unknown;
   storageKey:  string;
@@ -93,6 +91,11 @@ export interface DownloadStreamResult {
   contentType: string;
   sizeBytes:   number;
 }
+
+type AttachmentLifecycleLogger = {
+  info(event: string, fields?: Record<string, unknown>): void;
+  warn?(event: string, fields?: Record<string, unknown>): void;
+};
 
 // ── Sha256PassThrough ─────────────────────────────────────────────────────────
 // Wraps a readable stream, hashes every chunk inline, forwards data unchanged.
@@ -135,7 +138,55 @@ export interface UploadStreamParams {
   contentLength?: number;
   principalId: string;
   linkKind?:   "primary" | "related" | "supporting" | "compliance" | "audit";
+  idempotencyKey?: string;
 }
+
+export interface UploadReplayResult {
+  id:            string;
+  fileName:      string;
+  contentType:   string;
+  sizeBytes:     number;
+  sha256:        string;
+  status:        AttachmentStatus;
+  versionNo:     number;
+  createdAt:     unknown;
+  storageKey:    string;
+}
+
+export interface FindAttachmentReplayParams {
+  tenantId:      string;
+  statuses:      Array<AttachmentStatus>;
+  hash?:         string;
+  idempotencyKey?: string;
+}
+
+export interface UploadSession {
+  attachmentId: string;
+  storageKey:   string;
+  sha256:       string;
+  sizeBytes:    number;
+  status:       AttachmentStatus;
+}
+
+export type AttachmentStatus = "uploaded" | "active" | "quarantined" | "failed" | "orphaned" | "deleted" | "archived";
+const isActiveAttachmentStatus: ReadonlySet<AttachmentStatus> = new Set(["active"]);
+const allowedStatusTransitions: ReadonlyMap<AttachmentStatus, ReadonlySet<AttachmentStatus>> = new Map([
+  ["uploaded",    new Set<AttachmentStatus>(["quarantined", "failed"])],
+  ["quarantined", new Set<AttachmentStatus>(["active", "failed", "orphaned", "deleted", "archived"])],
+  ["active",      new Set<AttachmentStatus>(["orphaned", "deleted", "archived"])],
+  ["failed",      new Set<AttachmentStatus>(["active", "orphaned", "deleted", "archived"])],
+  ["orphaned",    new Set<AttachmentStatus>(["deleted", "archived"])],
+  ["deleted",     new Set<AttachmentStatus>()],
+  ["archived",    new Set<AttachmentStatus>()],
+]);
+
+type AttachmentTransitionMetadata = {
+  source?: string;
+  actor?: string | null;
+  reasonCode?: string | null;
+  reason?: string | null;
+  details?: Record<string, unknown>;
+};
 
 // ── UUID guard ────────────────────────────────────────────────────────────────
 
@@ -149,6 +200,7 @@ export class ContentAttachmentService {
     private readonly db: Kysely<any>,
     private readonly storage: ObjectStorageAdapter,
     private readonly storageBucket: string,
+    private readonly logger?: AttachmentLifecycleLogger,
   ) {}
 
   // ── Storage key ─────────────────────────────────────────────────────────────
@@ -197,19 +249,42 @@ export class ContentAttachmentService {
       tenantId, tenantCode, companyCode, entityType, entityId,
       fileBuffer, fileName, contentType, sizeBytes,
       principalId, linkKind = "related",
-      initialStatus = "active",
+      initialStatus = "quarantined",
       isVirusScanned = false,
+      idempotencyKey,
       scanMeta,
     } = params;
 
     const attachmentId = crypto.randomUUID();
-    const storageKey   = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName, 1, companyCode, tenantCode);
-    const sha256       = createHash("sha256").update(fileBuffer).digest("hex");
+    const storageKey = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName, 1, companyCode, tenantCode);
+    const sha256 = createHash("sha256").update(fileBuffer).digest("hex");
 
-    // ── Step 1: upload to S3 before touching the DB ──────────────────────────
-    await this.storage.put(storageKey, fileBuffer, { contentType });
+    // Step 1: upload to S3 before touching the DB
+    try {
+      await this.storage.put(storageKey, fileBuffer, { contentType });
+    } catch (err) {
+      try {
+        await this.storage.delete(storageKey).catch(() => {});
+        this.logger?.warn?.("attachment_upload_cleanup_outcome", {
+          attachmentId,
+          tenantId,
+          storageKey,
+          phase: "json",
+          outcome: "object_deleted_on_failure",
+        });
+      } catch {
+        this.logger?.warn?.("attachment_upload_cleanup_outcome", {
+          attachmentId,
+          tenantId,
+          storageKey,
+          phase: "json",
+          outcome: "object_delete_failed",
+        });
+      }
+      throw err;
+    }
 
-    // ── Step 2: DB transaction — compensate S3 on failure ────────────────────
+    // Step 2: DB transaction — compensate S3 on failure
     try {
       const attachment = await this.db.transaction().execute(async (trx) => {
         const row = await trx
@@ -228,114 +303,18 @@ export class ContentAttachmentService {
             version_no:                1,
             reference_count:           1,
             is_current:                true,
-            is_active:                 initialStatus !== "quarantined",
+            is_active:                 isActiveAttachmentStatus.has(initialStatus),
             is_virus_scanned:          isVirusScanned,
             is_preview_generation_failed: false,
             is_auto_delete_on_expiry:  false,
+            metadata:                  {
+              ...(scanMeta ? { scan: scanMeta } : {}),
+              ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
+            },
             status:                    initialStatus,
-            status_changed_at:         initialStatus === "quarantined" ? new Date() : null,
+            status_changed_at:         new Date(),
             uploaded_by:               principalId,
             created_by:                principalId,
-            metadata:                  scanMeta ? { scan: scanMeta } : {},
-          } as never)
-          .returning([
-            "id", "file_name", "content_type", "size_bytes",
-            "created_at", "status", "version_no", "storage_key",
-          ] as never[])
-          .executeTakeFirstOrThrow();
-
-        await trx
-          .insertInto("master.entity_document_link" as never)
-          .values({
-            tenant_id:     tenantId,
-            entity_type:   entityType,
-            entity_id:     entityId,   // text column — no cast needed
-            attachment_id: attachmentId,
-            link_kind:     linkKind,
-            display_order: 0,
-            created_by:    principalId,
-          } as never)
-          .execute();
-
-        return row as Record<string, unknown>;
-      });
-
-      return {
-        id:          attachment["id"] as string,
-        fileName:    attachment["file_name"] as string,
-        contentType: attachment["content_type"] as string,
-        sizeBytes:   Number(attachment["size_bytes"] ?? 0),
-        status:      attachment["status"] as string,
-        versionNo:   Number(attachment["version_no"] ?? 1),
-        createdAt:   attachment["created_at"],
-        storageKey:  attachment["storage_key"] as string,
-      };
-    } catch (err) {
-      // Compensating delete — best effort; log silently
-      await this.storage.delete(storageKey).catch(() => {});
-      throw err;
-    }
-  }
-
-  // ── Upload (streaming) ───────────────────────────────────────────────────────
-  // Uses putStream() so file bytes are never fully buffered in memory.
-  // SHA-256 and byte count are computed inline via Sha256PassThrough.
-  // Same transaction boundary as upload(): S3 first, DB on success, compensating
-  // S3 delete on DB failure.
-
-  async uploadStream(params: UploadStreamParams): Promise<UploadResult> {
-    const {
-      tenantId, tenantCode, companyCode, entityType, entityId,
-      stream, fileName, contentType,
-      contentLength,
-      principalId, linkKind = "related",
-    } = params;
-
-    const attachmentId  = crypto.randomUUID();
-    const storageKey    = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName, 1, companyCode, tenantCode);
-
-    // Pipe the incoming stream through the hashing transform before S3
-    const sha256Stream  = new Sha256PassThrough();
-    stream.pipe(sha256Stream);
-
-    // ── Step 1: stream to S3 via multipart ──────────────────────────────────
-    await this.storage.putStream(storageKey, sha256Stream, {
-      contentType,
-      contentLength,
-      partSize: 5 * 1024 * 1024,  // 5 MiB
-    });
-
-    // Stream fully consumed — hash and byte count are now stable
-    const sha256    = sha256Stream.digest();
-    const sizeBytes = sha256Stream.byteCount;
-
-    // ── Step 2: DB transaction — compensate S3 on failure ───────────────────
-    try {
-      const attachment = await this.db.transaction().execute(async (trx) => {
-        const row = await trx
-          .insertInto("master.attachment" as never)
-          .values({
-            id:                           attachmentId,
-            tenant_id:                    tenantId,
-            file_name:                    fileName.slice(0, 500),
-            original_filename:            fileName.slice(0, 500),
-            content_type:                 contentType.slice(0, 200),
-            size_bytes:                   sizeBytes,
-            sha256,
-            kind:                         "attachment",
-            storage_bucket:               this.storageBucket,
-            storage_key:                  storageKey,
-            version_no:                   1,
-            reference_count:              1,
-            is_current:                   true,
-            is_active:                    true,
-            is_virus_scanned:             false,
-            is_preview_generation_failed: false,
-            is_auto_delete_on_expiry:     false,
-            status:                       "active",
-            uploaded_by:                  principalId,
-            created_by:                   principalId,
-            metadata:                     {},
           } as never)
           .returning([
             "id", "file_name", "content_type", "size_bytes",
@@ -359,18 +338,198 @@ export class ContentAttachmentService {
         return row as Record<string, unknown>;
       });
 
+      this.logger?.info("attachment_status_transition", {
+        attachmentId,
+        tenantId,
+        entityType,
+        entityId,
+        fromStatus: null,
+        toStatus: initialStatus,
+        source: "upload",
+      });
+
       return {
         id:          attachment["id"] as string,
         fileName:    attachment["file_name"] as string,
         contentType: attachment["content_type"] as string,
-        sizeBytes:   Number(attachment["size_bytes"] ?? sizeBytes),
-        status:      attachment["status"] as string,
+        sizeBytes:   Number(attachment["size_bytes"] ?? 0),
+        sha256,
+        status:      attachment["status"] as AttachmentStatus,
         versionNo:   Number(attachment["version_no"] ?? 1),
         createdAt:   attachment["created_at"],
         storageKey:  attachment["storage_key"] as string,
       };
     } catch (err) {
-      await this.storage.delete(storageKey).catch(() => {});
+      try {
+        await this.storage.delete(storageKey).catch(() => {});
+        this.logger?.warn?.("attachment_upload_cleanup_outcome", {
+          attachmentId,
+          tenantId,
+          storageKey,
+          phase: "json",
+          outcome: "object_deleted_on_db_failure",
+        });
+      } catch {
+        this.logger?.warn?.("attachment_upload_cleanup_outcome", {
+          attachmentId,
+          tenantId,
+          storageKey,
+          phase: "json",
+          outcome: "object_delete_failed_on_db_failure",
+        });
+      }
+      throw err;
+    }
+  }
+  // ── Upload (streaming) ───────────────────────────────────────────────────────
+  // Uses putStream() so file bytes are never fully buffered in memory.
+  // SHA-256 and byte count are computed inline via Sha256PassThrough.
+  // Same transaction boundary as upload(): S3 first, DB on success, compensating
+  // S3 delete on DB failure.
+
+  async uploadStream(params: UploadStreamParams): Promise<UploadResult> {
+    const {
+      tenantId, tenantCode, companyCode, entityType, entityId,
+      stream, fileName, contentType,
+      contentLength,
+      principalId, linkKind = "related",
+      idempotencyKey,
+    } = params;
+
+    const attachmentId  = crypto.randomUUID();
+    const storageKey    = this.generateStorageKey(tenantId, entityType, entityId, attachmentId, fileName, 1, companyCode, tenantCode);
+
+    // Pipe the incoming stream through the hashing transform before S3
+    const sha256Stream  = new Sha256PassThrough();
+    stream.pipe(sha256Stream);
+
+    let finalSha256    = "";
+    let finalSizeBytes = 0;
+
+    // Step 1: stream to S3 via multipart
+    try {
+      await this.storage.putStream(storageKey, sha256Stream, {
+        contentType,
+        contentLength,
+        partSize: 5 * 1024 * 1024,  // 5 MiB
+      });
+      finalSha256    = sha256Stream.digest();
+      finalSizeBytes = sha256Stream.byteCount;
+    } catch (err) {
+      try {
+        await this.storage.delete(storageKey).catch(() => {});
+        this.logger?.warn?.("attachment_upload_cleanup_outcome", {
+          attachmentId,
+          tenantId,
+          storageKey,
+          phase: "stream",
+          outcome: "object_deleted_on_stream_failure",
+        });
+      } catch {
+        this.logger?.warn?.("attachment_upload_cleanup_outcome", {
+          attachmentId,
+          tenantId,
+          storageKey,
+          phase: "stream",
+          outcome: "object_delete_failed_on_stream_failure",
+        });
+      }
+      throw err;
+    }
+
+    // ── Step 2: DB transaction — compensate S3 on failure ───────────────────
+    try {
+      const attachment = await this.db.transaction().execute(async (trx) => {
+        const row = await trx
+          .insertInto("master.attachment" as never)
+          .values({
+            id:                           attachmentId,
+            tenant_id:                    tenantId,
+            file_name:                    fileName.slice(0, 500),
+            original_filename:            fileName.slice(0, 500),
+            content_type:                 contentType.slice(0, 200),
+            size_bytes:                   finalSizeBytes,
+            sha256:                      finalSha256,
+            kind:                         "attachment",
+            storage_bucket:               this.storageBucket,
+            storage_key:                  storageKey,
+            version_no:                   1,
+            reference_count:              1,
+            is_current:                   true,
+            is_active:                    isActiveAttachmentStatus.has("quarantined"),
+            is_virus_scanned:             false,
+            is_preview_generation_failed: false,
+            is_auto_delete_on_expiry:     false,
+            status:                       "quarantined",
+            status_changed_at:            new Date(),
+            uploaded_by:                  principalId,
+            created_by:                   principalId,
+            metadata:                     {
+              ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
+            },
+          } as never)
+          .returning([
+            "id", "file_name", "content_type", "size_bytes",
+            "created_at", "status", "version_no", "storage_key",
+          ] as never[])
+          .executeTakeFirstOrThrow();
+
+        await trx
+          .insertInto("master.entity_document_link" as never)
+          .values({
+            tenant_id:     tenantId,
+            entity_type:   entityType,
+            entity_id:     entityId,
+            attachment_id: attachmentId,
+            link_kind:     linkKind,
+            display_order: 0,
+            created_by:    principalId,
+          } as never)
+          .execute();
+
+        return row as Record<string, unknown>;
+      });
+
+      this.logger?.info("attachment_status_transition", {
+        attachmentId,
+        tenantId,
+        entityType,
+        entityId,
+        fromStatus: null,
+        toStatus: "quarantined",
+        source: "uploadStream",
+      });
+
+      return {
+        id:          attachment["id"] as string,
+        fileName:    attachment["file_name"] as string,
+        contentType: attachment["content_type"] as string,
+        sizeBytes:   Number(attachment["size_bytes"] ?? finalSizeBytes),
+        sha256:      finalSha256,
+        status:      attachment["status"] as AttachmentStatus,
+        versionNo:   Number(attachment["version_no"] ?? 1),
+        createdAt:   attachment["created_at"],
+        storageKey:  attachment["storage_key"] as string,
+      };
+    } catch (err) {
+      try {
+        await this.storage.delete(storageKey).catch(() => {});
+        this.logger?.warn?.("attachment_upload_cleanup_outcome", {
+          attachmentId,
+          tenantId,
+          storageKey,
+          phase: "stream",
+          outcome: "object_deleted_on_db_failure",
+        });
+      } catch {
+        this.logger?.warn?.("attachment_upload_cleanup_outcome", {
+          attachmentId,
+          tenantId,
+          storageKey,
+          phase: "stream",
+          outcome: "object_delete_failed_on_db_failure",
+        });
+      }
       throw err;
     }
   }
@@ -420,6 +579,48 @@ export class ContentAttachmentService {
       displayOrder:   Number(row["display_order"] ?? 0),
       uploadedByName: (row["uploaded_by_name"] as string) ?? null,
     }));
+  }
+
+  async findReplayAttachment(params: FindAttachmentReplayParams): Promise<UploadReplayResult | null> {
+    let query = this.db
+      .selectFrom("master.attachment as a")
+      .select([
+        "a.id",
+        "a.file_name",
+        "a.content_type",
+        "a.size_bytes",
+        "a.sha256",
+        "a.status",
+        "a.version_no",
+        "a.created_at",
+        "a.storage_key",
+      ])
+      .where("a.tenant_id", "=", params.tenantId)
+      .where("a.storage_bucket", "=", this.storageBucket)
+      .where("a.status", "in", params.statuses as never);
+
+    if (params.idempotencyKey) {
+      query = query.where(sql`a.metadata ->> 'idempotency_key'`, "=", params.idempotencyKey);
+    }
+    if (params.hash) {
+      query = query.where("a.sha256", "=", params.hash);
+    }
+    const row = await query
+      .orderBy("a.created_at", "desc")
+      .limit(1)
+      .executeTakeFirst();
+    if (!row) return null;
+    return {
+      id:         row["id"] as string,
+      fileName:   row["file_name"] as string,
+      contentType: row["content_type"] as string,
+      sizeBytes: Number(row["size_bytes"] ?? 0),
+      sha256:    row["sha256"] as string,
+      status:     row["status"] as AttachmentStatus,
+      versionNo:  Number(row["version_no"] ?? 1),
+      createdAt:  row["created_at"],
+      storageKey: row["storage_key"] as string,
+    };
   }
 
   // ── Download ─────────────────────────────────────────────────────────────────
@@ -558,6 +759,7 @@ export class ContentAttachmentService {
     principalId: string;
   }): Promise<boolean> {
     const { tenantId, entityType, entityId, attachmentId, principalId } = params;
+    const authContext = `${entityType}:${entityId}`;
 
     // Remove the specific link first
     await this.db
@@ -577,23 +779,14 @@ export class ContentAttachmentService {
       .executeTakeFirst();
 
     const remaining = Number((countRow as Record<string, unknown>)?.count ?? 0);
-
     if (remaining === 0) {
       // Logical delete — no active links remain
-      await this.db
-        .updateTable("master.attachment" as never)
-        .set({
-          status:             "deleted",
-          status_changed_at:  new Date(),
-          status_changed_by:  principalId,
-          is_active:          false,
-          reference_count:    0,
-          updated_at:         new Date(),
-          updated_by:         principalId,
-        } as never)
-        .where("id"        as never, "=", attachmentId as never)
-        .where("tenant_id" as never, "=", tenantId     as never)
-        .execute();
+      await this.markDeleted({
+        tenantId,
+        attachmentId,
+        principalId,
+        metadata: { authContext, remainingLinks: 0 },
+      });
     } else {
       // Decrement reference_count (floor at 0)
       await this.db
@@ -606,9 +799,142 @@ export class ContentAttachmentService {
         .where("id"        as never, "=", attachmentId as never)
         .where("tenant_id" as never, "=", tenantId     as never)
         .execute();
+
+      this.logger?.info("attachment_reference_count_decremented", {
+        attachmentId,
+        tenantId,
+        authContext,
+        principalId,
+        source: "unlink",
+        remainingLinks: remaining,
+      });
     }
 
     return true;
+  }
+
+  async markUploaded(params: {
+    tenantId: string;
+    attachmentId: string;
+    principalId?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.transitionStatus({ ...params, toStatus: "uploaded" });
+  }
+
+  async markQuarantined(params: {
+    tenantId: string;
+    attachmentId: string;
+    principalId?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.transitionStatus({ ...params, toStatus: "quarantined" });
+  }
+
+  async markActive(params: {
+    tenantId: string;
+    attachmentId: string;
+    principalId?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.transitionStatus({ ...params, toStatus: "active" });
+  }
+
+  async markFailed(params: {
+    tenantId: string;
+    attachmentId: string;
+    principalId?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.transitionStatus({ ...params, toStatus: "failed" });
+  }
+
+  async markOrphaned(params: {
+    tenantId: string;
+    attachmentId: string;
+    principalId?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.transitionStatus({ ...params, toStatus: "orphaned" });
+  }
+
+  async markDeleted(params: {
+    tenantId: string;
+    attachmentId: string;
+    principalId?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.transitionStatus({ ...params, toStatus: "deleted" });
+  }
+
+  async markArchived(params: {
+    tenantId: string;
+    attachmentId: string;
+    principalId?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await this.transitionStatus({ ...params, toStatus: "archived" });
+  }
+
+  private async transitionStatus(params: {
+    tenantId: string;
+    attachmentId: string;
+    toStatus: AttachmentStatus;
+    principalId?: string;
+    metadata?: AttachmentTransitionMetadata | Record<string, unknown>;
+  }): Promise<void> {
+    const {
+      tenantId,
+      attachmentId,
+      toStatus,
+      principalId,
+      metadata = {},
+    } = params;
+
+    const before = await this.db
+      .selectFrom("master.attachment" as never)
+      .select(["status" as never, "reference_count" as never])
+      .where("id"        as never, "=", attachmentId as never)
+      .where("tenant_id" as never, "=", tenantId     as never)
+      .executeTakeFirst();
+
+    const beforeStatus = (before as Record<string, unknown> | undefined)?.status as AttachmentStatus | undefined;
+    const beforeReferenceCount = Number((before as Record<string, unknown> | undefined)?.reference_count ?? 0);
+
+    if (!beforeStatus) {
+      throw new Error(`attachment_not_found:${attachmentId}`);
+    }
+    if (!allowedStatusTransitions.get(beforeStatus)?.has(toStatus)) {
+      throw new Error(`invalid_attachment_transition:${beforeStatus}->${toStatus}`);
+    }
+
+    await this.db
+      .updateTable("master.attachment" as never)
+      .set({
+        status:            toStatus,
+        status_changed_at:  new Date(),
+        status_changed_by:  principalId ?? null,
+        is_active:         isActiveAttachmentStatus.has(toStatus),
+        updated_at:        new Date(),
+        updated_by:        principalId ?? null,
+        ...(toStatus === "deleted" && {
+          reference_count: 0,
+        }),
+      } as never)
+      .where("id"        as never, "=", attachmentId as never)
+      .where("tenant_id" as never, "=", tenantId     as never)
+      .execute();
+
+    this.logger?.info("attachment_status_transition", {
+      attachmentId,
+      tenantId,
+      fromStatus: beforeStatus ?? "unknown",
+      toStatus,
+      source: "attachment_service",
+      principalId: principalId ?? null,
+      beforeReferenceCount,
+      metadata,
+    });
   }
 
   // ── Access audit (best-effort) ────────────────────────────────────────────────

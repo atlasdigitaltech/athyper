@@ -111,6 +111,8 @@ const ServerConfigSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .default("info"),
   shutdownTimeoutMs: z.coerce.number().int().positive().default(15_000),
+  attachmentAuthStrict: Bool.default(false),
+  attachmentMultipartCleanupStrict: Bool.default(false),
 
   /**
    * Master key for AES-256-GCM field encryption (audit PII, integration
@@ -326,11 +328,11 @@ const ServerConfigSchema = z.object({
    * Keycloak realm and switch into any tenant's context (read-only, v1).
    * Disabled by default — enable via PLATFORM_CONTROL_ENABLED=true.
    */
-  platformControl: z
-    .object({
-      enabled: Bool.default(false),
-      /** The realmKey that identifies the platform-control Keycloak realm. */
-      realmKey: z.string().min(1).default("platform-control"),
+    platformControl: z
+      .object({
+        enabled: Bool.default(false),
+        /** The realmKey that identifies the platform-control Keycloak realm. */
+        realmKey: z.string().min(1).default("platform-control"),
       /**
        * Keycloak realm role names (realm_access.roles) for each platform role.
        * Override via config if your KC realm uses different role names.
@@ -547,6 +549,8 @@ export function loadConfig(): ServerConfig {
       enabled: process.env.PLATFORM_CONTROL_ENABLED,
       realmKey: process.env.PLATFORM_CONTROL_REALM_KEY,
     },
+    attachmentAuthStrict: process.env.ATTACHMENT_AUTH_STRICT,
+    attachmentMultipartCleanupStrict: process.env.ATTACHMENT_MULTIPART_CLEANUP_STRICT,
   };
 
   const result = ServerConfigSchema.safeParse(raw);

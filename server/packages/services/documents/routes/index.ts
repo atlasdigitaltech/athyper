@@ -15,7 +15,7 @@
 import type { Router } from "express";
 import type { Kysely } from "kysely";
 import type { Queue } from "bullmq";
-import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
 import type { ExtractTextJobData, SweepJobData } from "@athyper/svc-jobs";
 import { createDocumentsRoute } from "./documents.route.js";
 
@@ -42,3 +42,4 @@ export function registerDocumentsRoutes(router: Router, deps: DocumentsRoutesDep
   createDocumentsRoute(router, deps);
   return router;
 }
+

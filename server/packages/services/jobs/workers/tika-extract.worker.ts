@@ -1,10 +1,10 @@
-/**
- * Tika Extract Worker — attachment text extraction + PII classification
+﻿/**
+ * Tika Extract Worker â€” attachment text extraction + PII classification
  *
  * Consumes `jobs-tika-extract` jobs. Two job names supported:
- *   - JOB_NAME.EXTRACT_TEXT — process one attachment id (enqueued by uploads
+ *   - JOB_NAME.EXTRACT_TEXT â€” process one attachment id (enqueued by uploads
  *     or by the admin reindex endpoint).
- *   - JOB_NAME.SWEEP        — scan master.attachment for rows where
+ *   - JOB_NAME.SWEEP        â€” scan master.attachment for rows where
  *     text_extraction_status IS NULL and self-enqueue extract-text jobs. Runs
  *     periodically to catch uploads that missed the inline enqueue (e.g. a
  *     runtime restart between S3 commit and queue add).
@@ -13,7 +13,7 @@
  *   1. Load attachment row (tenant-scoped)
  *   2. Skip if already extracted, not supported, or over size cap
  *   3. Download blob from object storage
- *   4. PUT to ${DOCPARSER_URL}/tika with Accept: text/plain — receive extracted text
+ *   4. PUT to ${DOCPARSER_URL}/tika with Accept: text/plain â€” receive extracted text
  *   5. Classify PII in the extracted text (inline, regex-based)
  *   6. UPDATE master.attachment with text + PII columns in a single write
  *
@@ -23,6 +23,7 @@
 
 import { Worker, type ConnectionOptions, type Queue } from "bullmq";
 import { sql, type Kysely } from "kysely";
+import { extname } from "node:path";
 import {
   QUEUE_NAME,
   JOB_NAME,
@@ -38,9 +39,10 @@ type DB = Kysely<Record<string, any>>;
 /** Minimal object storage surface the worker relies on. */
 export interface TikaObjectStorage {
   get(key: string): Promise<Buffer>;
+  delete?(key: string): Promise<void>;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const DEFAULT_MAX_EXTRACT_BYTES = 50 * 1024 * 1024;  // 50 MiB
 const DEFAULT_MAX_TEXT_CHARS    = 5_000_000;         // ~5 MB of plain text
@@ -62,14 +64,34 @@ const SUPPORTED_MIME_PREFIXES: ReadonlyArray<string> = [
   "image/",
 ];
 
+const BLOCKED_EXTENSIONS: ReadonlyArray<string> = [
+  ".exe",
+  ".bat",
+  ".cmd",
+  ".com",
+  ".scr",
+  ".vbs",
+  ".js",
+  ".ps1",
+  ".jar",
+  ".sh",
+  ".msi",
+];
+
+function isSupportedAttachment(contentType: string | null | undefined, fileName: string | null | undefined): boolean {
+  if (!isSupportedMime(contentType)) return false;
+  const ext = extname((fileName ?? "").toLowerCase());
+  return !BLOCKED_EXTENSIONS.includes(ext);
+}
+
 function isSupportedMime(contentType: string | null | undefined): boolean {
   if (!contentType) return false;
   const lower = contentType.toLowerCase();
   return SUPPORTED_MIME_PREFIXES.some((p) => lower.startsWith(p));
 }
 
-// ── PII classifier (regex-only, coarse; labels only) ─────────────────────────
-// Raw substrings are NEVER persisted — only the category label. This keeps
+// â”€â”€ PII classifier (regex-only, coarse; labels only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Raw substrings are NEVER persisted â€” only the category label. This keeps
 // classifier output safe to expose in admin dashboards / audit logs.
 //
 // Ordered roughly by specificity so boardline matches favour the narrower type.
@@ -79,9 +101,9 @@ const PII_PATTERNS: ReadonlyArray<{ type: string; rx: RegExp }> = [
   { type: "ssn",         rx: /\b\d{3}-\d{2}-\d{4}\b/ },
   // Email
   { type: "email",       rx: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i },
-  // IBAN (very broad — 15–34 alnum with country prefix)
+  // IBAN (very broad â€” 15â€“34 alnum with country prefix)
   { type: "iban",        rx: /\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/ },
-  // Credit-card-like 13–19 digit run, optionally separated by spaces or dashes
+  // Credit-card-like 13â€“19 digit run, optionally separated by spaces or dashes
   { type: "credit_card", rx: /\b(?:\d[ -]?){12,18}\d\b/ },
   // US / E.164 phone number, reasonably conservative
   { type: "phone",       rx: /\b(?:\+\d{1,3}[ -]?)?\(?\d{3}\)?[ -]?\d{3}[ -]?\d{4}\b/ },
@@ -98,7 +120,7 @@ function classifyPii(text: string): string[] {
   return Array.from(hits).sort();
 }
 
-// ── Tika HTTP client (fetch-based, no external deps) ─────────────────────────
+// â”€â”€ Tika HTTP client (fetch-based, no external deps) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function extractViaTika(
   tikaUrl: string,
@@ -128,7 +150,7 @@ async function extractViaTika(
   }
 }
 
-// ── Worker factory ────────────────────────────────────────────────────────────
+// â”€â”€ Worker factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface TikaExtractWorkerDeps {
   db:              DB;
@@ -136,7 +158,7 @@ export interface TikaExtractWorkerDeps {
   objectStorage:   TikaObjectStorage;
   /** Base URL (no trailing slash required). Example: http://docparser:9998 */
   tikaUrl:         string;
-  /** Queue handle — required so sweep jobs can self-enqueue extract-text jobs. */
+  /** Queue handle â€” required so sweep jobs can self-enqueue extract-text jobs. */
   queue:           Queue<ExtractTextJobData | SweepJobData>;
   logger?:         JobLogger;
   /** Overrides (mainly for tests). */
@@ -182,7 +204,7 @@ export function createTikaExtractWorker(
   );
 }
 
-// ── Per-attachment processing ────────────────────────────────────────────────
+// â”€â”€ Per-attachment processing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function processOne(args: {
   db:               DB;
@@ -198,21 +220,26 @@ async function processOne(args: {
     db, objectStorage, tikaUrl, logger,
     maxExtractBytes, maxTextChars, tikaTimeoutMs, data,
   } = args;
-  const { attachmentId, tenantId } = data;
+  const { attachmentId, tenantId, versionNo, sha256 } = data;
+  const startedAt = Date.now();
 
   const row = await db
     .selectFrom("master.attachment" as never)
     .select([
+      "file_name" as never,
       "id" as never,
       "content_type" as never,
       "size_bytes" as never,
       "storage_key" as never,
+      "status" as never,
+      "version_no" as never,
+      "sha256" as never,
       "text_extraction_status" as never,
     ])
     .where("id" as never, "=", attachmentId as never)
     .where("tenant_id" as never, "=", tenantId as never)
     .executeTakeFirst() as
-      | { id: string; content_type: string | null; size_bytes: number | null; storage_key: string; text_extraction_status: string | null }
+      | { file_name: string | null; id: string; content_type: string | null; size_bytes: number | null; storage_key: string; status: string; version_no: number | null; sha256: string | null; text_extraction_status: string | null }
       | undefined;
 
   if (!row) {
@@ -227,14 +254,55 @@ async function processOne(args: {
   const contentType = row.content_type ?? "";
   const sizeBytes   = Number(row.size_bytes ?? 0);
 
-  if (!isSupportedMime(contentType)) {
-    await markStatus(db, attachmentId, tenantId, "skipped", `unsupported_mime:${contentType}`);
+  const effectiveVersionNo = versionNo ?? row.version_no ?? 1;
+  const effectiveSha256 = sha256 ?? row.sha256 ?? null;
+
+  if (!isSupportedAttachment(contentType, row.file_name)) {
+    await markStatus(
+      db,
+      attachmentId,
+      tenantId,
+      "failed",
+      `unsupported_mime:${contentType}`,
+      "SCAN_UNSUPPORTED_MEDIA_TYPE",
+      row.status === "quarantined" || row.status === "failed" ? "failed" : undefined,
+      {
+        versionNo: effectiveVersionNo,
+        sha256: effectiveSha256,
+      },
+    );
     logger?.info("tika_skip_mime", { attachmentId, tenantId, contentType });
+    logger?.info("attachment_scan_outcome", {
+      attachmentId,
+      tenantId,
+      status: "failed",
+      code: "SCAN_UNSUPPORTED_MEDIA_TYPE",
+      duration_ms: Date.now() - startedAt,
+    });
     return;
   }
   if (sizeBytes > maxExtractBytes) {
-    await markStatus(db, attachmentId, tenantId, "skipped", `size_exceeds_cap:${sizeBytes}`);
+    await markStatus(
+      db,
+      attachmentId,
+      tenantId,
+      "failed",
+      `size_exceeds_cap:${sizeBytes}`,
+      "SCAN_SIZE_EXCEEDED",
+      row.status === "quarantined" || row.status === "failed" ? "failed" : undefined,
+      {
+        versionNo: effectiveVersionNo,
+        sha256: effectiveSha256,
+      },
+    );
     logger?.info("tika_skip_size", { attachmentId, tenantId, sizeBytes, cap: maxExtractBytes });
+    logger?.info("attachment_scan_outcome", {
+      attachmentId,
+      tenantId,
+      status: "failed",
+      code: "SCAN_SIZE_EXCEEDED",
+      duration_ms: Date.now() - startedAt,
+    });
     return;
   }
 
@@ -246,11 +314,37 @@ async function processOne(args: {
       attachmentId, tenantId, storageKey: row.storage_key,
       err: err instanceof Error ? err.message : String(err),
     });
-    throw err;  // transient — let BullMQ retry
+    logger?.warn("attachment_scan_outcome", {
+      attachmentId,
+      tenantId,
+      status: "failed",
+      code: "SCAN_BLOB_FETCH_FAILED",
+      duration_ms: Date.now() - startedAt,
+    });
+    throw err;  // transient â€” let BullMQ retry
   }
 
   if (blob.byteLength > maxExtractBytes) {
-    await markStatus(db, attachmentId, tenantId, "skipped", `size_exceeds_cap_actual:${blob.byteLength}`);
+    await markStatus(
+      db,
+      attachmentId,
+      tenantId,
+      "failed",
+      `size_exceeds_cap_actual:${blob.byteLength}`,
+      "SCAN_SIZE_EXCEEDED",
+      row.status === "quarantined" || row.status === "failed" ? "failed" : undefined,
+      {
+        versionNo: effectiveVersionNo,
+        sha256: effectiveSha256,
+      },
+    );
+    logger?.info("attachment_scan_outcome", {
+      attachmentId,
+      tenantId,
+      status: "failed",
+      code: "SCAN_SIZE_EXCEEDED",
+      duration_ms: Date.now() - startedAt,
+    });
     return;
   }
 
@@ -260,7 +354,26 @@ async function processOne(args: {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logger?.error("tika_extract_http_failed", { attachmentId, tenantId, err: msg });
-    await markStatus(db, attachmentId, tenantId, "failed", msg.slice(0, 1000));
+    await markStatus(
+      db,
+      attachmentId,
+      tenantId,
+      "failed",
+      msg.slice(0, 1000),
+      "SCAN_HTTP_FAILURE",
+      row.status === "quarantined" || row.status === "failed" ? "failed" : undefined,
+      {
+        versionNo: effectiveVersionNo,
+        sha256: effectiveSha256,
+      },
+    );
+    logger?.warn("attachment_scan_outcome", {
+      attachmentId,
+      tenantId,
+      status: "failed",
+      code: "SCAN_HTTP_FAILURE",
+      duration_ms: Date.now() - startedAt,
+    });
     throw err;
   }
 
@@ -270,24 +383,51 @@ async function processOne(args: {
     : normalised;
 
   const piiTypes = classifyPii(truncated);
+  const shouldActivate = row.status === "quarantined" || row.status === "failed";
+
+  const setValues: Record<string, unknown> = {
+    extracted_text:         truncated || null,
+    extracted_text_chars:   truncated.length,
+    text_extracted_at:      new Date(),
+    text_extraction_status: "extracted",
+    text_extraction_error:  null,
+    pii_detected:           piiTypes.length > 0,
+    pii_types:              JSON.stringify(piiTypes),
+    pii_scanned_at:         new Date(),
+    metadata:               sql`jsonb_set(COALESCE(metadata, '{}'::jsonb), '{scan}', jsonb_build_object('status', 'ok', 'code', 'SCAN_SUCCESS', 'attempts', COALESCE((metadata->'scan'->>'attempts')::int, 0) + 1, 'version_no', ${sql.val(effectiveVersionNo)}, 'sha256', ${effectiveSha256 ?? null}, 'reason', 'ok', 'updated_at', now()::text)::jsonb, true)`,
+    updated_at:             new Date(),
+    updated_by:             SYSTEM_ACTOR_ID,
+  };
+
+  if (shouldActivate) {
+    Object.assign(setValues, {
+      status:           "active",
+      status_changed_at: new Date(),
+      status_changed_by: SYSTEM_ACTOR_ID,
+      is_active:        true,
+    });
+  }
 
   await db
     .updateTable("master.attachment" as never)
-    .set({
-      extracted_text:         truncated || null,
-      extracted_text_chars:   truncated.length,
-      text_extracted_at:      new Date(),
-      text_extraction_status: "extracted",
-      text_extraction_error:  null,
-      pii_detected:           piiTypes.length > 0,
-      pii_types:              JSON.stringify(piiTypes),
-      pii_scanned_at:         new Date(),
-      updated_at:             new Date(),
-      updated_by:             SYSTEM_ACTOR_ID,
-    } as never)
+    .set(setValues as never)
     .where("id" as never, "=", attachmentId as never)
     .where("tenant_id" as never, "=", tenantId as never)
     .execute();
+
+  if (shouldActivate) {
+    logger?.info("attachment_scan_promotion", {
+      attachmentId,
+      tenantId,
+      toStatus: "active",
+      fromStatus: row.status,
+      versionNo: effectiveVersionNo,
+      sha256Match: row.sha256 === effectiveSha256,
+      hash: effectiveSha256,
+      promoted: true,
+      promotion_count: 1,
+    });
+  }
 
   logger?.info("tika_extract_ok", {
     attachmentId, tenantId,
@@ -296,9 +436,19 @@ async function processOne(args: {
     piiTypes,
     piiCount:   piiTypes.length,
   });
+  logger?.info("attachment_scan_outcome", {
+    attachmentId,
+    tenantId,
+    status: "success",
+    code: "SCAN_SUCCESS",
+    scan_result_count: 1,
+    duration_ms: Date.now() - startedAt,
+    fromStatus: row.status,
+    toStatus: shouldActivate ? "active" : row.status,
+  });
 }
 
-// ── Sweep: scan for rows missing extraction ──────────────────────────────────
+// â”€â”€ Sweep: scan for rows missing extraction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function runSweep(args: {
   db:              DB;
@@ -312,8 +462,7 @@ async function runSweep(args: {
     .selectFrom("master.attachment" as never)
     .select(["id" as never, "tenant_id" as never])
     .where(sql<boolean>`text_extraction_status IS NULL`)
-    .where("is_active" as never, "=", true as never)
-    .where("status" as never, "=", "active" as never)
+    .where(sql<boolean>`status IN ('quarantined','failed','active')`)
     .where(sql<boolean>`content_type IS NOT NULL`)
     .orderBy("created_at" as never, "asc")
     .limit(sweepBatchSize)
@@ -328,7 +477,7 @@ async function runSweep(args: {
     name: JOB_NAME.EXTRACT_TEXT,
     data: { attachmentId: r.id, tenantId: r.tenant_id } satisfies ExtractTextJobData,
     opts: {
-      // Same dedup key as the inline enqueue — ensures a sweep never races
+      // Same dedup key as the inline enqueue â€” ensures a sweep never races
       // a still-pending job for the same attachment.
       jobId:       `tika:${r.id}`,
       attempts:    3,
@@ -342,7 +491,7 @@ async function runSweep(args: {
   logger?.info("tika_sweep_enqueued", { count: rows.length });
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function markStatus(
   db:            DB,
@@ -350,16 +499,47 @@ async function markStatus(
   tenantId:      string,
   status:        "skipped" | "failed",
   reason:        string,
+  scanCode:      string,
+  attachmentStatus?: "active" | "failed",
+  metadata?: {
+    versionNo?: number | null;
+    sha256?: string | null;
+  },
 ): Promise<void> {
+  const update: Record<string, unknown> = {
+    text_extraction_status: status,
+    text_extraction_error:  reason.slice(0, 1000),
+    text_extracted_at:      new Date(),
+    updated_at:             new Date(),
+    updated_by:             SYSTEM_ACTOR_ID,
+    metadata:               sql`jsonb_set(
+      COALESCE(metadata, '{}'::jsonb),
+      '{scan}',
+      jsonb_build_object(
+        'status', ${status},
+        'code', ${scanCode},
+        'attempts', COALESCE((metadata->'scan'->>'attempts')::int, 0) + 1,
+        'version_no', ${sql.val(metadata?.versionNo)},
+        'sha256', ${metadata?.sha256 ?? null},
+        'reason', ${reason.slice(0, 1000)},
+        'updated_at', now()::text
+      )::jsonb,
+      true
+    )`,
+  };
+
+  if (attachmentStatus) {
+    Object.assign(update, {
+      status:           attachmentStatus,
+      status_changed_at: new Date(),
+      status_changed_by: SYSTEM_ACTOR_ID,
+      is_active:        attachmentStatus === "active",
+    });
+  }
+
   await db
     .updateTable("master.attachment" as never)
-    .set({
-      text_extraction_status: status,
-      text_extraction_error:  reason.slice(0, 1000),
-      text_extracted_at:      new Date(),
-      updated_at:             new Date(),
-      updated_by:             SYSTEM_ACTOR_ID,
-    } as never)
+    .set(update as never)
     .where("id" as never, "=", attachmentId as never)
     .where("tenant_id" as never, "=", tenantId as never)
     .execute();
