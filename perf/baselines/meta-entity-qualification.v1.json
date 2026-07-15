@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "environment": "performance-reference",
+  "capturedAt": "2026-07-15T00:00:00.000Z",
+  "minimumSamples": 100,
+  "routes": {
+    "descriptor": { "p95Ms": 25, "transactionP95Ms": 0, "sqlP95": 0 },
+    "bootstrap": { "p95Ms": 100, "transactionP95Ms": 0, "sqlP95": 0 },
+    "list": { "p95Ms": 150, "transactionP95Ms": 0, "sqlP95": 1 },
+    "detail": { "p95Ms": 250, "transactionP95Ms": 0, "sqlP95": 2 },
+    "create": { "p95Ms": 400, "transactionP95Ms": 100, "sqlP95": 7 },
+    "patch": { "p95Ms": 400, "transactionP95Ms": 50, "sqlP95": 8 },
+    "delete": { "p95Ms": 400, "transactionP95Ms": 100, "sqlP95": 8 },
+    "aggregate": { "p95Ms": 800, "transactionP95Ms": 250, "sqlP95": 15 },
+    "transition": { "p95Ms": 800, "transactionP95Ms": 250, "sqlP95": 15 }
+  }
+}
