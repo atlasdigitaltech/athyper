@@ -11,7 +11,9 @@ const load = (path) => JSON.parse(readFileSync(resolve(root, path), "utf8"));
 const config = load("config/governance/release-gate.json");
 const failures = [];
 const warnings = [];
-const advisory = args.advisory === true || args.advisory === "true";
+// The repository policy is now blocking. Keep the flag parsing for callers
+// that still pass it, but never allow CI to downgrade a blocking policy.
+const advisory = config.mode !== "blocking" && (args.advisory === true || args.advisory === "true");
 const qualificationPath = args.qualification || "perf/qualification/result.json";
 
 const evidence = (name, path) => {
@@ -19,13 +21,18 @@ const evidence = (name, path) => {
     failures.push(`${name}: missing evidence artifact ${path}`);
     return null;
   }
-  return load(path);
+  const artifact = load(path);
+  if (artifact?.schemaVersion !== 1) failures.push(`${name}: schemaVersion must be 1`);
+  return artifact;
 };
 
 const report = evidence("performanceReport", config.requiredEvidence.performanceReport);
 const qualification = existsSync(resolve(root, qualificationPath)) ? load(qualificationPath) : null;
 if (!qualification) failures.push(`qualification: missing result artifact ${qualificationPath}`);
-else if (qualification.passed !== true) failures.push("qualification: performance qualification did not pass");
+else {
+  if (qualification.schemaVersion !== 1) failures.push("qualification: schemaVersion must be 1");
+  if (qualification.passed !== true) failures.push("qualification: performance qualification did not pass");
+}
 if (report && !qualification) {
   for (const field of ["queryCountBudget", "latencyBudget", "transactionDurationBudget"]) {
     if (report[field]?.passed !== true && report.budgets?.[field]?.passed !== true) {

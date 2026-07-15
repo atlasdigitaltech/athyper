@@ -361,15 +361,12 @@ jobs:
   # what makes RLS policies operationally verified — running the suite as the
   # superuser DATABASE_URL bypasses RLS and every test would trivially pass.
   #
-  # continue-on-error: true for now — P1a lands the mechanism; the first
-  # failures this surfaces (missing grants, queries that assumed superuser
-  # privileges) get fixed in a follow-up PR (P1b) and then this job becomes
-  # blocking. See findings writeup for background.
+  # Blocking release gate: this job intentionally runs under NOBYPASSRLS so
+  # schema-owner/superuser bypass cannot make tenant isolation appear green.
   # ─────────────────────────────────────────────────────────────────
   rls-verify:
     name: RLS + Tenant Stamp Verify
     runs-on: ubuntu-latest
-    continue-on-error: true
     needs: quality
 
     services:
@@ -445,7 +442,19 @@ jobs:
           SQL
 
       - name: Verify RLS under non-superuser role
-        run: pnpm --filter @athyper/runtime-server run rls:verify
+        env:
+          DATABASE_URL: postgresql://athyperapp_test:athyperapp_test@127.0.0.1:5432/athyper_test
+        run: |
+          mkdir -p perf/qualification/evidence
+          pnpm --dir server exec tsx scripts/verify-rls.ts --json > perf/qualification/evidence/rls.json
+
+      - name: Upload blocking RLS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rls-qualification-${{ github.run_id }}
+          path: perf/qualification/evidence/rls.json
+          if-no-files-found: error
 
       # Audit P3-S1 — entity_policy coverage gate. Asserts that every active
       # tenant has policy rows for every entity in MUST_HAVE_POLICY_ENTITIES
@@ -686,23 +695,25 @@ jobs:
 
   # ─── CI Status Gate ──────────────────────────────────────────────
   # Required check — PRs must pass this to be mergeable.
-  # rls-verify is intentionally NOT required yet (see job comment).
+  # RLS is blocking and runs under NOBYPASSRLS.
   # three-plane-verify is blocking as of Phase 8.
   # ─────────────────────────────────────────────────────────────────
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [quality, build, three-plane-verify]
+    needs: [quality, build, rls-verify, three-plane-verify]
     if: always()
     steps:
       - name: Evaluate results
         run: |
           quality="${{ needs.quality.result }}"
           build="${{ needs.build.result }}"
+          rls="${{ needs.rls-verify.result }}"
           threeplane="${{ needs.three-plane-verify.result }}"
 
           echo "quality           : $quality"
           echo "build             : $build"
+          echo "rls-verify        : $rls"
           echo "three-plane-verify: $threeplane"
 
           if [[ "$quality" != "success" ]]; then
@@ -712,6 +723,11 @@ jobs:
 
           if [[ "$build" != "success" ]]; then
             echo "Build failed — package compilation did not succeed."
+            exit 1
+          fi
+
+          if [[ "$rls" != "success" ]]; then
+            echo "RLS verification failed under NOBYPASSRLS — tenant isolation is a release blocker."
             exit 1
           fi
 

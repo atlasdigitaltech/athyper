@@ -130,13 +130,13 @@ function cli() {
   });
   if (args.readOutput) {
     const slice = qualifyCompanyCodeSlices(load("current", "perf/qualification/current-report.json"));
-    writeFileSync(resolve(root, args.readOutput), JSON.stringify({ ...slice, entity: "company_code", slice: "read", generatedAt: new Date().toISOString() }, null, 2) + "\n");
+    writeFileSync(resolve(root, args.readOutput), JSON.stringify({ schemaVersion: 1, kind: "athyper.performance.slice-qualification", ...slice, entity: "company_code", slice: "read", generatedAt: new Date().toISOString() }, null, 2) + "\n");
   }
   if (args.mutationOutput) {
     const slice = qualifyCompanyCodeSlices(load("current", "perf/qualification/current-report.json"));
-    writeFileSync(resolve(root, args.mutationOutput), JSON.stringify({ ...slice, entity: "company_code", slice: "mutation", generatedAt: new Date().toISOString() }, null, 2) + "\n");
+    writeFileSync(resolve(root, args.mutationOutput), JSON.stringify({ schemaVersion: 1, kind: "athyper.performance.slice-qualification", ...slice, entity: "company_code", slice: "mutation", generatedAt: new Date().toISOString() }, null, 2) + "\n");
   }
-  if (args.output) writeFileSync(resolve(root, args.output), JSON.stringify(result, null, 2) + "\n");
+  if (args.output) writeFileSync(resolve(root, args.output), JSON.stringify({ schemaVersion: 1, kind: "athyper.performance.qualification", ...result }, null, 2) + "\n");
   for (const warning of result.warnings) console.warn(`WARN: ${warning}`);
   if (!result.passed) {
     console.error(result.failures.map((failure) => `FAIL: ${failure}`).join("\n"));

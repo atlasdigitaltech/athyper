@@ -246,6 +246,10 @@ async function run(): Promise<void> {
     if (JSON_OUTPUT) {
       console.log(JSON.stringify(
         {
+          schemaVersion: 1,
+          kind: "athyper.release.evidence",
+          artifact: "rlsVerification",
+          passed: allFindings.length === 0,
           tablesScanned: coverage.length,
           findings: allFindings,
         },
