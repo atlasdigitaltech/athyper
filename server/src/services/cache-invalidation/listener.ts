@@ -411,22 +411,17 @@ export function composeExecutionDescriptorGenerationKeys(
   plane: string | null,
 ): readonly string[] {
   const planes = plane ? [plane] : ["neon", "mesh", "admin"];
-  // Increment only the narrowest generation that covers this publication.
-  // The provider's vector still includes broader generations, but a
-  // publication for a known entity must not fan out into unrelated global
-  // scopes (or inflate invalidation work across every tenant).
-  if (entity && tenant) return planes.map((planeKey) => composeExecutionDescriptorGenerationKey(planeKey, tenant, entity));
-  if (entity && !tenant) return planes.map((planeKey) => composeExecutionDescriptorGenerationKey(planeKey, GLOBAL_SCOPE, entity));
-  if (!entity && tenant) return planes.map((planeKey) => composeExecutionDescriptorGenerationKey(planeKey, tenant, GLOBAL_SCOPE));
-
-  // A publication with no tenant/entity scope is genuinely global. Increment
-  // the global sentinel plus each plane sentinel so every provider vector
-  // observes the change without wildcard deletion.
+  // Provider vectors include global, plane, entity, tenant, and exact scopes.
+  // Increment every applicable scope so any descriptor depending on this
+  // publication observes the change without wildcard deletion or SCAN.
   const keys: string[] = [];
   for (const planeKey of planes) {
+    keys.push(composeExecutionDescriptorGenerationKey(GLOBAL_SCOPE, GLOBAL_SCOPE, GLOBAL_SCOPE));
     keys.push(composeExecutionDescriptorGenerationKey(planeKey, GLOBAL_SCOPE, GLOBAL_SCOPE));
+    keys.push(composeExecutionDescriptorGenerationKey(planeKey, GLOBAL_SCOPE, entity ?? GLOBAL_SCOPE));
+    keys.push(composeExecutionDescriptorGenerationKey(planeKey, tenant ?? GLOBAL_SCOPE, GLOBAL_SCOPE));
+    keys.push(composeExecutionDescriptorGenerationKey(planeKey, tenant ?? GLOBAL_SCOPE, entity ?? GLOBAL_SCOPE));
   }
-  keys.unshift(composeExecutionDescriptorGenerationKey(GLOBAL_SCOPE, GLOBAL_SCOPE, GLOBAL_SCOPE));
   const seen = new Set<string>();
   return keys.filter((key) => !seen.has(key) && (seen.add(key), true));
 }

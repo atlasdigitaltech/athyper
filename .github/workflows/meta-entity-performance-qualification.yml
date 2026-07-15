@@ -1,0 +1,42 @@
+name: Meta-entity performance qualification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 2 * * 1-5"
+
+concurrency:
+  group: meta-entity-performance-qualification
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    name: Stable environment qualification
+    if: ${{ vars.META_ENTITY_QUALIFICATION_REPORT_URL != '' }}
+    runs-on: ubuntu-latest
+    environment: performance
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch signed qualification report
+        env:
+          REPORT_URL: ${{ vars.META_ENTITY_QUALIFICATION_REPORT_URL }}
+          REPORT_TOKEN: ${{ secrets.META_ENTITY_QUALIFICATION_TOKEN }}
+        run: |
+          mkdir -p perf/qualification/artifacts
+          curl --fail --silent --show-error \
+            --retry 3 --retry-all-errors \
+            -H "Authorization: Bearer ${REPORT_TOKEN}" \
+            "${REPORT_URL}" \
+            -o perf/qualification/artifacts/current-report.json
+
+      - name: Enforce budgets, regression ceiling, and parity
+        run: node scripts/performance/qualify-meta-entity.mjs --current=perf/qualification/artifacts/current-report.json --output=perf/qualification/artifacts/result.json
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meta-entity-qualification-${{ github.run_id }}
+          path: perf/qualification/artifacts/
+          retention-days: 90

@@ -1,5 +1,7 @@
 export {
   composeDescInvalidatePattern,
+  composeExecutionDescriptorGenerationKey,
+  composeExecutionDescriptorGenerationKeys,
   composeGrantRevokePattern,
   createDescriptorCacheListener,
   type CreateDescriptorCacheListenerOptions,
