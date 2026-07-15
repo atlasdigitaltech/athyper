@@ -8,7 +8,14 @@ generic route:
 ```bash
 pnpm policy:meta-entity
 pnpm test:meta-entity-governance
+pnpm test:meta-entity-dependencies
 ```
+
+The dependency contract in `config/governance/meta-entity-dependencies.json`
+keeps phase-8 prerequisites (durable invalidation, stable handler names,
+seeded execution metadata, and representative performance fixtures) explicit.
+It also records the plan exclusions so a later optimization cannot silently
+expand the base-framework scope.
 
 The stable-environment qualification job consumes a signed report and the
 checked-in baseline. It fails on a query-budget violation, missing security or
